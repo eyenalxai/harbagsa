@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 use bevy::window::WindowResolution;
+use harbagsa::GamePlugin;
 
 fn main() {
     App::new()
@@ -11,19 +12,7 @@ fn main() {
             }),
             ..default()
         }))
-        .insert_resource(ClearColor(Color::srgb(0.07, 0.08, 0.10)))
-        .add_systems(Startup, setup)
+        .insert_resource(ClearColor(Color::srgb(0.45, 0.60, 0.80)))
+        .add_plugins(GamePlugin)
         .run();
-}
-
-fn setup(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-) {
-    commands.spawn(Camera2d);
-    commands.spawn((
-        Mesh2d(meshes.add(Circle::new(100.0))),
-        MeshMaterial2d(materials.add(Color::srgb(0.95, 0.55, 0.25))),
-    ));
 }

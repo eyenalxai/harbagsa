@@ -6,7 +6,7 @@ license = "MIT"
 
 [dependencies]
 bevy = "0.20"
-bevy_rapier3d = "0.37"
+bevy_rapier3d = { version = "0.37", features = ["debug-render-3d"] }
 
 [lints.clippy]
 unwrap_used = "deny"
