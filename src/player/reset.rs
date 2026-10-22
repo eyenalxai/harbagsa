@@ -1,29 +1,53 @@
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::Collider;
 
 use crate::arena::PlayerSpawn;
 
+use super::dive::DiveState;
+use super::gait::PlayerGaitInput;
+use super::stance::PlayerStanceInput;
 use super::{
-    Player, PlayerCamera, PlayerConfig, PlayerGround, PlayerIntent, PlayerLook, PlayerVelocity,
-    Stance,
+    Gait, Player, PlayerCamera, PlayerConfig, PlayerGround, PlayerIntent, PlayerLook,
+    PlayerVelocity, Stance,
 };
+
+type ResetQuery<'w, 's> = Query<
+    'w,
+    's,
+    (
+        &'static mut Transform,
+        &'static mut PlayerVelocity,
+        &'static mut PlayerLook,
+        &'static mut PlayerGround,
+        &'static mut Stance,
+        &'static mut PlayerStanceInput,
+        &'static mut PlayerGaitInput,
+        &'static mut Gait,
+        &'static mut DiveState,
+        &'static mut Collider,
+    ),
+    With<Player>,
+>;
 
 pub fn reset_player(
     intent: Res<PlayerIntent>,
     spawn: Res<PlayerSpawn>,
     config: Res<PlayerConfig>,
-    mut player: Query<
-        (
-            &mut Transform,
-            &mut PlayerVelocity,
-            &mut PlayerLook,
-            &mut PlayerGround,
-            &mut Stance,
-        ),
-        With<Player>,
-    >,
+    mut player: ResetQuery,
     mut camera: Query<&mut Transform, (With<PlayerCamera>, Without<Player>)>,
 ) {
-    let Ok((mut transform, mut velocity, mut look, mut ground, mut stance)) = player.single_mut()
+    let Ok((
+        mut transform,
+        mut velocity,
+        mut look,
+        mut ground,
+        mut stance,
+        mut stance_input,
+        mut gait_input,
+        mut gait,
+        mut dive,
+        mut collider,
+    )) = player.single_mut()
     else {
         return;
     };
@@ -42,6 +66,11 @@ pub fn reset_player(
     transform.rotation = Quat::IDENTITY;
 
     *stance = standing;
+    *collider = Collider::capsule_y(config.half_height(standing), config.capsule_radius);
+    *stance_input = PlayerStanceInput::default();
+    *gait_input = PlayerGaitInput::default();
+    *gait = Gait::Walk;
+    *dive = DiveState::None;
     velocity.0 = Vec3::ZERO;
     *look = PlayerLook::default();
     *ground = PlayerGround::default();

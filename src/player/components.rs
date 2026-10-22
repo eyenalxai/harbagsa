@@ -13,6 +13,8 @@ pub struct PlayerVelocity(pub Vec3);
 pub struct PlayerGround {
     pub grounded: bool,
     pub coyote: f32,
+    pub jump_buffer: f32,
+    pub air_cap: f32,
 }
 
 #[derive(Component, Debug, Default, Clone, Copy)]

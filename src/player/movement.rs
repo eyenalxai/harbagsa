@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
+use super::dive::DiveState;
 use super::{
     Gait, Player, PlayerConfig, PlayerGround, PlayerIntent, PlayerLook, PlayerVelocity, Stance,
 };
@@ -10,12 +11,12 @@ type MovementQuery<'w, 's> = Query<
     's,
     (
         &'static mut KinematicCharacterController,
-        Option<&'static KinematicCharacterControllerOutput>,
         &'static PlayerLook,
         &'static mut PlayerVelocity,
-        &'static mut PlayerGround,
+        &'static PlayerGround,
         &'static Stance,
         &'static Gait,
+        &'static mut DiveState,
     ),
     With<Player>,
 >;
@@ -31,29 +32,47 @@ pub fn move_player(
         return;
     }
 
-    let Ok((mut controller, output, look, mut velocity, mut ground, stance, gait)) =
+    let Ok((mut controller, look, mut velocity, ground, stance, gait, mut dive)) =
         player.single_mut()
     else {
         return;
     };
 
-    let grounded = output.is_some_and(|output| output.grounded);
-    ground.grounded = grounded;
-
     let direction = yaw_direction(look.yaw, intent.move_axis);
-    let target_speed = config.speed(*stance, *gait);
-    let target = direction * target_speed;
-
     let horizontal = Vec3::new(velocity.0.x, 0.0, velocity.0.z);
-    let acceleration = if intent.move_axis.length_squared() > 0.0 {
-        config.ground_accel
-    } else {
-        config.ground_decel
+
+    let horizontal = match *dive {
+        DiveState::Sliding => {
+            let heading = horizontal.normalize_or_zero();
+            let target = heading * config.prone_speed;
+            let next = move_towards(horizontal, target, config.slide_decel * dt);
+            if next.length() <= config.prone_speed + 0.02 {
+                *dive = DiveState::None;
+            }
+            next
+        }
+        DiveState::Diving => horizontal,
+        DiveState::None if ground.grounded => {
+            let target = direction * config.speed(*stance, *gait);
+            let acceleration = if direction.length_squared() > 0.0 {
+                config.ground_accel
+            } else {
+                config.ground_decel
+            };
+            move_towards(horizontal, target, acceleration * dt)
+        }
+        DiveState::None => {
+            if direction.length_squared() > 0.0 {
+                let cap = ground.air_cap.max(config.walk_speed);
+                move_towards(horizontal, direction * cap, config.air_accel * dt)
+            } else {
+                horizontal
+            }
+        }
     };
-    let horizontal = move_towards(horizontal, target, acceleration * dt);
 
     let mut vertical = velocity.0.y;
-    if grounded && vertical < 0.0 {
+    if ground.grounded && vertical < 0.0 {
         vertical = 0.0;
     }
     vertical -= config.gravity * dt;

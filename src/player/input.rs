@@ -8,6 +8,13 @@ pub struct PlayerIntent {
     pub look_delta: Vec2,
     pub reset: bool,
     pub toggle_debug: bool,
+    pub crouch_held: bool,
+    pub crouch_pressed: bool,
+    pub prone_held: bool,
+    pub prone_pressed: bool,
+    pub sprint_held: bool,
+    pub sprint_pressed: bool,
+    pub jump_pressed: bool,
 }
 
 #[derive(Resource, Debug, Default)]
@@ -42,6 +49,13 @@ pub fn sample_input(
     intent.toggle_debug = keyboard.just_pressed(KeyCode::F1);
     intent.move_axis = Vec2::ZERO;
     intent.look_delta = Vec2::ZERO;
+    intent.crouch_held = false;
+    intent.crouch_pressed = false;
+    intent.prone_held = false;
+    intent.prone_pressed = false;
+    intent.sprint_held = false;
+    intent.sprint_pressed = false;
+    intent.jump_pressed = false;
 
     if !is_captured || !window.focused {
         return;
@@ -63,6 +77,15 @@ pub fn sample_input(
 
     intent.move_axis = axis.normalize_or_zero();
     intent.look_delta = motion.delta;
+    intent.crouch_held = keyboard.pressed(KeyCode::KeyC);
+    intent.crouch_pressed = keyboard.just_pressed(KeyCode::KeyC);
+    intent.prone_held = keyboard.pressed(KeyCode::KeyZ);
+    intent.prone_pressed = keyboard.just_pressed(KeyCode::KeyZ);
+    intent.sprint_held =
+        keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight);
+    intent.sprint_pressed =
+        keyboard.just_pressed(KeyCode::ShiftLeft) || keyboard.just_pressed(KeyCode::ShiftRight);
+    intent.jump_pressed = keyboard.just_pressed(KeyCode::Space);
 }
 
 fn release_cursor(cursor: &mut CursorOptions) {

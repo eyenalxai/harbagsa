@@ -3,6 +3,9 @@ use bevy_rapier3d::prelude::Collider;
 
 use crate::arena::PlayerSpawn;
 
+use super::dive::DiveState;
+use super::gait::PlayerGaitInput;
+use super::stance::PlayerStanceInput;
 use super::{
     Gait, Player, PlayerCamera, PlayerConfig, PlayerGround, PlayerLook, PlayerVelocity, Stance,
     controller::character_controller,
@@ -20,6 +23,9 @@ pub fn spawn_player(mut commands: Commands, config: Res<PlayerConfig>, spawn: Re
             PlayerVelocity::default(),
             PlayerLook::default(),
             PlayerGround::default(),
+            PlayerStanceInput::default(),
+            PlayerGaitInput::default(),
+            DiveState::default(),
             Transform::from_xyz(feet.x, feet.y + config.height(stance) * 0.5, feet.z),
             Visibility::default(),
             Collider::capsule_y(config.half_height(stance), config.capsule_radius),
