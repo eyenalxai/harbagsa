@@ -6,6 +6,7 @@ license = "MIT"
 
 [dependencies]
 bevy = "0.20"
+bevy_rapier3d = "0.37"
 
 [lints.clippy]
 unwrap_used = "deny"
