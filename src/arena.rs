@@ -259,7 +259,8 @@ fn spawn_tunnels(commands: &mut Commands, meshes: &mut Assets<Mesh>, materials: 
         TunnelSpec {
             center_x: 3.0,
             center_z: -8.0,
-            clearance: 1.2,
+            // The controller keeps a 0.01 m gap under the feet, so 1.20 m would not fit a crouch.
+            clearance: 1.22,
             length: 4.0,
         },
         TunnelSpec {
