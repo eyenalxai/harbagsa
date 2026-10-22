@@ -122,6 +122,7 @@ fn spawn_shell(commands: &mut Commands, meshes: &mut Assets<Mesh>, materials: &A
     ));
 
     for (position, intensity) in [
+        (Vec3::new(3.0, 1.00, -8.0), 60_000.0),
         (Vec3::new(9.0, 1.10, -8.0), 80_000.0),
         (Vec3::new(15.0, 0.70, -8.0), 50_000.0),
         (Vec3::new(-12.0, 4.0, 12.0), 100_000.0),
@@ -255,6 +256,12 @@ fn spawn_ramps(commands: &mut Commands, meshes: &mut Assets<Mesh>, materials: &A
 
 fn spawn_tunnels(commands: &mut Commands, meshes: &mut Assets<Mesh>, materials: &ArenaMaterials) {
     let tunnels = [
+        TunnelSpec {
+            center_x: 3.0,
+            center_z: -8.0,
+            clearance: 1.2,
+            length: 4.0,
+        },
         TunnelSpec {
             center_x: 9.0,
             center_z: -8.0,

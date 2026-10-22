@@ -14,7 +14,7 @@ pub mod spawn;
 pub mod stance;
 
 pub use components::{
-    Gait, Player, PlayerCamera, PlayerGround, PlayerLook, PlayerVelocity, Stance,
+    Gait, Player, PlayerCamera, PlayerLook, PlayerMotion, PlayerVelocity, Stance,
 };
 pub use config::{InputMode, PlayerConfig};
 pub use dive::DiveState;

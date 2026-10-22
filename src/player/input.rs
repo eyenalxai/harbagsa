@@ -81,10 +81,8 @@ pub fn sample_input(
     intent.crouch_pressed = keyboard.just_pressed(KeyCode::KeyC);
     intent.prone_held = keyboard.pressed(KeyCode::KeyZ);
     intent.prone_pressed = keyboard.just_pressed(KeyCode::KeyZ);
-    intent.sprint_held =
-        keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight);
-    intent.sprint_pressed =
-        keyboard.just_pressed(KeyCode::ShiftLeft) || keyboard.just_pressed(KeyCode::ShiftRight);
+    intent.sprint_held = keyboard.pressed(KeyCode::ShiftLeft);
+    intent.sprint_pressed = keyboard.just_pressed(KeyCode::ShiftLeft);
     intent.jump_pressed = keyboard.just_pressed(KeyCode::Space);
 }
 

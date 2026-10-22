@@ -7,7 +7,7 @@ use super::dive::DiveState;
 use super::gait::PlayerGaitInput;
 use super::stance::PlayerStanceInput;
 use super::{
-    Gait, Player, PlayerCamera, PlayerConfig, PlayerGround, PlayerLook, PlayerVelocity, Stance,
+    Gait, Player, PlayerCamera, PlayerConfig, PlayerLook, PlayerMotion, PlayerVelocity, Stance,
     controller::character_controller,
 };
 
@@ -22,7 +22,7 @@ pub fn spawn_player(mut commands: Commands, config: Res<PlayerConfig>, spawn: Re
             Gait::Walk,
             PlayerVelocity::default(),
             PlayerLook::default(),
-            PlayerGround::default(),
+            PlayerMotion::default(),
             PlayerStanceInput::default(),
             PlayerGaitInput::default(),
             DiveState::default(),

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
 use crate::player::{
-    CursorCaptured, DiveState, Gait, Player, PlayerGround, PlayerVelocity, Stance,
+    CursorCaptured, DiveState, Gait, Player, PlayerMotion, PlayerVelocity, Stance,
 };
 
 pub struct HudPlugin;
@@ -128,7 +128,7 @@ fn spawn_capture_overlay(commands: &mut Commands) {
 }
 
 fn update_readout(
-    player: Query<(&Stance, &Gait, &PlayerGround, &PlayerVelocity, &DiveState), With<Player>>,
+    player: Query<(&Stance, &Gait, &PlayerMotion, &PlayerVelocity, &DiveState), With<Player>>,
     mut readout: Query<&mut Text, With<HudReadout>>,
 ) {
     let Ok((stance, gait, ground, velocity, dive)) = player.single() else {
@@ -138,7 +138,7 @@ fn update_readout(
         return;
     };
 
-    let speed = Vec3::new(velocity.0.x, 0.0, velocity.0.z).length();
+    let speed = velocity.horizontal().length();
     **readout = format!(
         "Stance: {}\nGait: {}\nSpeed: {:.1} m/s\nGrounded: {}\nDive: {}",
         stance_label(*stance),
@@ -179,9 +179,5 @@ fn gait_label(gait: Gait) -> &'static str {
 }
 
 fn dive_label(dive: DiveState) -> &'static str {
-    match dive {
-        DiveState::None => "none",
-        DiveState::Diving => "diving",
-        DiveState::Sliding => "sliding",
-    }
+    if dive == DiveState::None { "no" } else { "yes" }
 }

@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::{Gait, InputMode, Player, PlayerConfig, PlayerIntent};
+use super::{InputMode, Player, PlayerConfig, PlayerIntent};
 
 #[derive(Component, Debug, Default)]
 pub struct PlayerGaitInput {
@@ -38,9 +38,9 @@ impl GaitSelection {
 pub fn apply_gait_input(
     config: Res<PlayerConfig>,
     intent: Res<PlayerIntent>,
-    mut players: Query<(&mut PlayerGaitInput, &mut Gait), With<Player>>,
+    mut players: Query<&mut PlayerGaitInput, With<Player>>,
 ) {
-    let Ok((mut input, mut gait)) = players.single_mut() else {
+    let Ok(mut input) = players.single_mut() else {
         return;
     };
 
@@ -57,10 +57,6 @@ pub fn apply_gait_input(
     input.sprint_engaged = selection.sprint_engaged;
     input.sprint_started = started;
     input.blocked = false;
-
-    if !selection.sprint_engaged {
-        *gait = Gait::Walk;
-    }
 }
 
 #[cfg(test)]

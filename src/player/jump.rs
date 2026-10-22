@@ -2,9 +2,10 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::{Collider, ReadRapierContext};
 
 use super::dive::DiveState;
+use super::ground::air_cap;
 use super::stance::{PlayerStanceInput, has_headroom, transition_stance};
 use super::{
-    Player, PlayerCamera, PlayerConfig, PlayerGround, PlayerIntent, PlayerVelocity, Stance,
+    Player, PlayerCamera, PlayerConfig, PlayerIntent, PlayerMotion, PlayerVelocity, Stance,
 };
 
 type JumpQuery<'w, 's> = Query<
@@ -17,7 +18,7 @@ type JumpQuery<'w, 's> = Query<
         &'static mut Collider,
         &'static mut PlayerStanceInput,
         &'static mut PlayerVelocity,
-        &'static mut PlayerGround,
+        &'static mut PlayerMotion,
         &'static DiveState,
     ),
     With<Player>,
@@ -26,7 +27,7 @@ type JumpQuery<'w, 's> = Query<
 pub fn buffer_jump(
     intent: Res<PlayerIntent>,
     config: Res<PlayerConfig>,
-    mut players: Query<&mut PlayerGround, With<Player>>,
+    mut players: Query<&mut PlayerMotion, With<Player>>,
 ) {
     if !intent.jump_pressed {
         return;
@@ -62,10 +63,7 @@ pub fn apply_jump(
         ground.jump_buffer = 0.0;
         return;
     }
-    if ground.jump_buffer <= 0.0 {
-        return;
-    }
-    if !ground.grounded && ground.coyote <= 0.0 {
+    if !can_jump(ground.grounded, ground.coyote, ground.jump_buffer) {
         return;
     }
 
@@ -90,10 +88,39 @@ pub fn apply_jump(
         stance_input.selection.release();
     }
 
-    let horizontal = Vec3::new(velocity.0.x, 0.0, velocity.0.z);
-    ground.air_cap = config.walk_speed.max(horizontal.length());
+    let horizontal = velocity.horizontal();
+    ground.air_cap = air_cap(config.walk_speed, horizontal.length());
     velocity.0.y = config.jump_speed;
     ground.grounded = false;
     ground.coyote = 0.0;
     ground.jump_buffer = 0.0;
+}
+
+pub fn can_jump(grounded: bool, coyote: f32, buffer: f32) -> bool {
+    buffer > 0.0 && (grounded || coyote > 0.0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn jump_from_the_ground_works() {
+        assert!(can_jump(true, 0.0, 0.1));
+    }
+
+    #[test]
+    fn jump_from_coyote_time_works() {
+        assert!(can_jump(false, 0.05, 0.1));
+    }
+
+    #[test]
+    fn jump_in_the_air_without_coyote_fails() {
+        assert!(!can_jump(false, 0.0, 0.1));
+    }
+
+    #[test]
+    fn jump_without_a_buffer_fails() {
+        assert!(!can_jump(true, 0.1, 0.0));
+    }
 }

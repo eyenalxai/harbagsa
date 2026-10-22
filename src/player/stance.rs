@@ -146,8 +146,8 @@ pub fn apply_stance(
     gait_input.sprint_started = false;
 
     let mut requested = stance_input.selection.target();
+    let release_on_sprint = sprint_started;
     if sprint_started {
-        stance_input.selection.release();
         requested = Stance::Standing;
     }
     if *dive != DiveState::None {
@@ -163,6 +163,9 @@ pub fn apply_stance(
     if sprinting {
         if *stance == Stance::Standing {
             new_gait = Gait::Sprint;
+            if release_on_sprint {
+                stance_input.selection.release();
+            }
         } else {
             let Ok(context) = rapier.single() else {
                 *gait = Gait::Walk;
@@ -172,6 +175,9 @@ pub fn apply_stance(
             if has_headroom(&context, entity, &config, feet, Stance::Standing) {
                 new_stance = Stance::Standing;
                 new_gait = Gait::Sprint;
+                if release_on_sprint {
+                    stance_input.selection.release();
+                }
             } else if config.sprint_mode == InputMode::Toggle {
                 gait_input.blocked = true;
             }
@@ -230,15 +236,26 @@ fn tallest_fitting(
     feet: Vec3,
     target: Stance,
 ) -> Stance {
-    for stance in [Stance::Standing, Stance::Crouching, Stance::Prone] {
-        if stance_rank(stance) > stance_rank(target) {
-            continue;
-        }
-        if stance == Stance::Prone || has_headroom(context, player, config, feet, stance) {
-            return stance;
-        }
+    if target == Stance::Prone {
+        return Stance::Prone;
     }
-    Stance::Prone
+
+    let standing_fits = stance_rank(target) >= stance_rank(Stance::Standing)
+        && has_headroom(context, player, config, feet, Stance::Standing);
+    let crouching_fits = stance_rank(target) >= stance_rank(Stance::Crouching)
+        && has_headroom(context, player, config, feet, Stance::Crouching);
+
+    choose_stance(target, standing_fits, crouching_fits)
+}
+
+pub(super) fn choose_stance(target: Stance, standing_fits: bool, crouching_fits: bool) -> Stance {
+    if stance_rank(target) >= stance_rank(Stance::Standing) && standing_fits {
+        Stance::Standing
+    } else if stance_rank(target) >= stance_rank(Stance::Crouching) && crouching_fits {
+        Stance::Crouching
+    } else {
+        Stance::Prone
+    }
 }
 
 pub(super) fn has_headroom(
@@ -445,5 +462,39 @@ mod tests {
     fn stance_rank_orders_standing_above_prone() {
         assert!(stance_rank(Stance::Standing) > stance_rank(Stance::Crouching));
         assert!(stance_rank(Stance::Crouching) > stance_rank(Stance::Prone));
+    }
+
+    #[test]
+    fn standing_is_kept_when_it_fits() {
+        assert_eq!(
+            choose_stance(Stance::Standing, true, true),
+            Stance::Standing
+        );
+    }
+
+    #[test]
+    fn standing_falls_back_to_crouching() {
+        assert_eq!(
+            choose_stance(Stance::Standing, false, true),
+            Stance::Crouching
+        );
+    }
+
+    #[test]
+    fn standing_falls_back_to_prone() {
+        assert_eq!(choose_stance(Stance::Standing, false, false), Stance::Prone);
+    }
+
+    #[test]
+    fn crouching_never_chooses_standing() {
+        assert_eq!(
+            choose_stance(Stance::Crouching, true, true),
+            Stance::Crouching
+        );
+    }
+
+    #[test]
+    fn a_prone_target_never_grows() {
+        assert_eq!(choose_stance(Stance::Prone, true, true), Stance::Prone);
     }
 }

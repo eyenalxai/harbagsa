@@ -1,9 +1,9 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 
-use super::dive::DiveState;
+use super::dive::{DiveState, slide_step};
 use super::{
-    Gait, Player, PlayerConfig, PlayerGround, PlayerIntent, PlayerLook, PlayerVelocity, Stance,
+    Gait, Player, PlayerConfig, PlayerIntent, PlayerLook, PlayerMotion, PlayerVelocity, Stance,
 };
 
 type MovementQuery<'w, 's> = Query<
@@ -13,7 +13,7 @@ type MovementQuery<'w, 's> = Query<
         &'static mut KinematicCharacterController,
         &'static PlayerLook,
         &'static mut PlayerVelocity,
-        &'static PlayerGround,
+        &'static PlayerMotion,
         &'static Stance,
         &'static Gait,
         &'static mut DiveState,
@@ -39,17 +39,21 @@ pub fn move_player(
     };
 
     let direction = yaw_direction(look.yaw, intent.move_axis);
-    let horizontal = Vec3::new(velocity.0.x, 0.0, velocity.0.z);
+    let horizontal = velocity.horizontal();
 
     let horizontal = match *dive {
         DiveState::Sliding => {
             let heading = horizontal.normalize_or_zero();
-            let target = heading * config.prone_speed;
-            let next = move_towards(horizontal, target, config.slide_decel * dt);
-            if next.length() <= config.prone_speed + 0.02 {
+            let next_speed = slide_step(
+                horizontal.length(),
+                config.prone_speed,
+                config.slide_decel,
+                dt,
+            );
+            if next_speed <= config.prone_speed + 0.02 {
                 *dive = DiveState::None;
             }
-            next
+            heading * next_speed
         }
         DiveState::Diving => horizontal,
         DiveState::None if ground.grounded => {

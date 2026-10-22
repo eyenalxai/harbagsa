@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use super::{Player, PlayerCamera, PlayerConfig, PlayerIntent, PlayerLook};
 
-const PITCH_LIMIT: f32 = std::f32::consts::FRAC_PI_2 - 0.01;
+const PITCH_LIMIT: f32 = 89.0 * std::f32::consts::PI / 180.0;
 
 pub fn mouse_look(
     intent: Res<PlayerIntent>,
@@ -10,10 +10,6 @@ pub fn mouse_look(
     mut player: Query<(&mut Transform, &mut PlayerLook), With<Player>>,
     mut camera: Query<&mut Transform, (With<PlayerCamera>, Without<Player>)>,
 ) {
-    if intent.look_delta == Vec2::ZERO {
-        return;
-    }
-
     let Ok((mut body, mut look)) = player.single_mut() else {
         return;
     };

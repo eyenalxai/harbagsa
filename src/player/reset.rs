@@ -7,7 +7,7 @@ use super::dive::DiveState;
 use super::gait::PlayerGaitInput;
 use super::stance::PlayerStanceInput;
 use super::{
-    Gait, Player, PlayerCamera, PlayerConfig, PlayerGround, PlayerIntent, PlayerLook,
+    Gait, Player, PlayerCamera, PlayerConfig, PlayerIntent, PlayerLook, PlayerMotion,
     PlayerVelocity, Stance,
 };
 
@@ -18,7 +18,7 @@ type ResetQuery<'w, 's> = Query<
         &'static mut Transform,
         &'static mut PlayerVelocity,
         &'static mut PlayerLook,
-        &'static mut PlayerGround,
+        &'static mut PlayerMotion,
         &'static mut Stance,
         &'static mut PlayerStanceInput,
         &'static mut PlayerGaitInput,
@@ -73,7 +73,7 @@ pub fn reset_player(
     *dive = DiveState::None;
     velocity.0 = Vec3::ZERO;
     *look = PlayerLook::default();
-    *ground = PlayerGround::default();
+    *ground = PlayerMotion::default();
 
     let Ok(mut camera) = camera.single_mut() else {
         return;

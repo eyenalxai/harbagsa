@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::KinematicCharacterControllerOutput;
 
-use super::{Player, PlayerConfig, PlayerGround, PlayerVelocity};
+use super::{Player, PlayerConfig, PlayerMotion, PlayerVelocity};
 
 pub fn update_ground(
     time: Res<Time<Fixed>>,
@@ -10,7 +10,7 @@ pub fn update_ground(
         (
             Option<&KinematicCharacterControllerOutput>,
             &PlayerVelocity,
-            &mut PlayerGround,
+            &mut PlayerMotion,
         ),
         With<Player>,
     >,
@@ -20,13 +20,13 @@ pub fn update_ground(
         return;
     };
 
-    let horizontal_speed = Vec3::new(velocity.0.x, 0.0, velocity.0.z).length();
+    let horizontal_speed = velocity.horizontal().length();
     let grounded = output.is_some_and(|output| output.grounded) && velocity.0.y <= 0.0;
 
     if grounded && !ground.grounded {
         ground.air_cap = 0.0;
     } else if !grounded && ground.grounded {
-        ground.air_cap = config.walk_speed.max(horizontal_speed);
+        ground.air_cap = air_cap(config.walk_speed, horizontal_speed);
     }
 
     ground.grounded = grounded;
@@ -36,4 +36,23 @@ pub fn update_ground(
         (ground.coyote - dt).max(0.0)
     };
     ground.jump_buffer = (ground.jump_buffer - dt).max(0.0);
+}
+
+pub fn air_cap(walk_speed: f32, takeoff_speed: f32) -> f32 {
+    walk_speed.max(takeoff_speed)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn air_cap_never_drops_below_walk_speed() {
+        assert!((air_cap(5.0, 2.4) - 5.0).abs() < f32::EPSILON);
+    }
+
+    #[test]
+    fn air_cap_keeps_sprint_speed() {
+        assert!((air_cap(5.0, 8.0) - 8.0).abs() < f32::EPSILON);
+    }
 }
