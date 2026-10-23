@@ -38,6 +38,14 @@ create_graphics_pipeline :: proc(
 		log.errorf("renderer: %s pipeline has too many color formats", desc.name)
 		return false
 	}
+	if len(desc.color_formats) == 0 && desc.depth_format == .UNDEFINED {
+		log.errorf("renderer: %s pipeline needs a color or depth attachment", desc.name)
+		return false
+	}
+	if len(desc.fragment_spirv) == 0 && len(desc.color_formats) > 0 {
+		log.errorf("renderer: %s pipeline has color attachments but no fragment shader", desc.name)
+		return false
+	}
 	if !desc.dynamic_viewport && (desc.viewport.width <= 0 || desc.viewport.height <= 0) {
 		log.errorf("renderer: %s pipeline needs a viewport or dynamic viewport", desc.name)
 		return false

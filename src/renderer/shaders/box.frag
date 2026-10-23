@@ -6,14 +6,7 @@ layout(location = 2) in vec3 v_world_position;
 
 layout(location = 0) out vec4 out_color;
 
-layout(set = 0, binding = 0) uniform Camera {
-    mat4 view;
-    mat4 projection;
-    vec4 light_direction;
-    vec4 ambient;
-    vec4 gamma;
-    mat4 light_view_projection;
-} camera;
+#include "camera.glsl"
 
 layout(set = 0, binding = 1) uniform sampler2DShadow shadow_map;
 

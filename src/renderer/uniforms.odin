@@ -24,16 +24,19 @@ Push_Constants :: struct {
 #assert(size_of(Camera_Uniform) == 240)
 #assert(size_of(Push_Constants) == 80)
 
+CAMERA_BINDING :: 0
+SHADOW_MAP_BINDING :: 1
+
 create_camera_resources :: proc(r: ^Renderer) -> bool {
 	bindings := [2]vk.DescriptorSetLayoutBinding {
 		{
-			binding = 0,
+			binding = CAMERA_BINDING,
 			descriptorType = .UNIFORM_BUFFER,
 			descriptorCount = 1,
 			stageFlags = {.VERTEX, .FRAGMENT},
 		},
 		{
-			binding = 1,
+			binding = SHADOW_MAP_BINDING,
 			descriptorType = .COMBINED_IMAGE_SAMPLER,
 			descriptorCount = 1,
 			stageFlags = {.FRAGMENT},
@@ -101,7 +104,7 @@ create_camera_resources :: proc(r: ^Renderer) -> bool {
 		write := vk.WriteDescriptorSet {
 			sType = .WRITE_DESCRIPTOR_SET,
 			dstSet = r.scene.descriptor_sets[i],
-			dstBinding = 0,
+			dstBinding = CAMERA_BINDING,
 			descriptorCount = 1,
 			descriptorType = .UNIFORM_BUFFER,
 			pBufferInfo = &buffer_info,

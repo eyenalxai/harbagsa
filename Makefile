@@ -10,7 +10,7 @@ BIN := bin/harbagsa
 GLSLC ?= glslc
 SHADER_SRC := src/renderer/shaders
 SHADER_OUT := build/shaders
-SHADER_INCLUDE := $(SHADER_SRC)/gamma.glsl
+SHADER_INCLUDE := $(SHADER_SRC)/gamma.glsl $(SHADER_SRC)/camera.glsl
 SHADERS := $(SHADER_OUT)/box.vert.spv $(SHADER_OUT)/box.frag.spv \
 	$(SHADER_OUT)/shadow.vert.spv \
 	$(SHADER_OUT)/debug.vert.spv $(SHADER_OUT)/debug.frag.spv \
@@ -35,7 +35,7 @@ build/box3d/%.o: $(BOX3D_DIR)/src/src/%.c
 	@mkdir -p $(@D)
 	$(CC) -c -O2 -std=c17 -fPIC -I$(BOX3D_DIR)/src/include $< -o $@
 
-$(SHADER_OUT)/%.vert.spv: $(SHADER_SRC)/%.vert
+$(SHADER_OUT)/%.vert.spv: $(SHADER_SRC)/%.vert $(SHADER_INCLUDE)
 	@mkdir -p $(@D)
 	$(GLSLC) --target-env=vulkan1.3 -fshader-stage=vert $< -o $@
 

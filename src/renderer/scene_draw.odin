@@ -37,7 +37,7 @@ record_scene :: proc(
 		return false
 	}
 
-	record_shadow_pass(r, command_buffer, r.frame_index, boxes)
+	record_shadow_pass(r, command_buffer, boxes)
 
 	to_color := vk.ImageMemoryBarrier {
 		sType = .IMAGE_MEMORY_BARRIER,
@@ -48,16 +48,6 @@ record_scene :: proc(
 		dstQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
 		image = r.swapchain_images[image_index],
 		subresourceRange = COLOR_SUBRESOURCE,
-	}
-	to_depth := vk.ImageMemoryBarrier {
-		sType = .IMAGE_MEMORY_BARRIER,
-		dstAccessMask = {.DEPTH_STENCIL_ATTACHMENT_WRITE},
-		oldLayout = .UNDEFINED,
-		newLayout = .DEPTH_ATTACHMENT_OPTIMAL,
-		srcQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
-		dstQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
-		image = r.scene.depth[image_index].image,
-		subresourceRange = DEPTH_SUBRESOURCE,
 	}
 	vk.CmdPipelineBarrier(
 		command_buffer,
@@ -71,18 +61,7 @@ record_scene :: proc(
 		1,
 		&to_color,
 	)
-	vk.CmdPipelineBarrier(
-		command_buffer,
-		{.TOP_OF_PIPE},
-		{.EARLY_FRAGMENT_TESTS, .LATE_FRAGMENT_TESTS},
-		{},
-		0,
-		nil,
-		0,
-		nil,
-		1,
-		&to_depth,
-	)
+	record_depth_write_barrier(command_buffer, r.scene.depth[image_index].image)
 
 	clear := r.clear_color
 	if !r.swapchain_is_srgb {
@@ -99,16 +78,7 @@ record_scene :: proc(
 		clearValue = clear_color,
 	}
 
-	clear_depth := vk.ClearValue{}
-	clear_depth.depthStencil = {depth = 1.0, stencil = 0}
-	depth_attachment := vk.RenderingAttachmentInfo {
-		sType = .RENDERING_ATTACHMENT_INFO,
-		imageView = r.scene.depth[image_index].view,
-		imageLayout = .DEPTH_ATTACHMENT_OPTIMAL,
-		loadOp = .CLEAR,
-		storeOp = .STORE,
-		clearValue = clear_depth,
-	}
+	depth_attachment := make_depth_attachment(r.scene.depth[image_index].view, .DEPTH_ATTACHMENT_OPTIMAL)
 
 	rendering_info := vk.RenderingInfo {
 		sType = .RENDERING_INFO,
@@ -120,22 +90,11 @@ record_scene :: proc(
 	}
 	vk.CmdBeginRendering(command_buffer, &rendering_info)
 
-	viewport := vk.Viewport {
-		x = 0,
-		y = 0,
-		width = f32(r.swapchain_extent.width),
-		height = f32(r.swapchain_extent.height),
-		minDepth = 0,
-		maxDepth = 1,
-	}
-	scissor := vk.Rect2D{extent = r.swapchain_extent}
-	vk.CmdSetViewport(command_buffer, 0, 1, &viewport)
-	vk.CmdSetScissor(command_buffer, 0, 1, &scissor)
+	set_viewport(command_buffer, r.swapchain_extent.width, r.swapchain_extent.height)
 
 	vk.CmdBindPipeline(command_buffer, .GRAPHICS, r.scene.pipeline)
 
-	descriptor_set := r.scene.descriptor_sets[r.frame_index]
-	vk.CmdBindDescriptorSets(command_buffer, .GRAPHICS, r.scene.pipeline_layout, 0, 1, &descriptor_set, 0, nil)
+	bind_camera(command_buffer, r.scene.pipeline_layout, r.scene.descriptor_sets[r.frame_index])
 
 	draw_boxes(r, command_buffer, r.scene.pipeline_layout, boxes)
 
@@ -169,42 +128,3 @@ record_scene :: proc(
 	return check(vk.EndCommandBuffer(command_buffer), "vkEndCommandBuffer")
 }
 
-box_model_matrix :: proc(box: geometry.Box) -> Mat4 {
-	scale := [3]f32 {
-		box.half_extents.x * 2,
-		box.half_extents.y * 2,
-		box.half_extents.z * 2,
-	}
-	return mat4_multiply(
-		mat4_translation(box.center),
-		mat4_multiply(mat4_rotation(box.rotation), mat4_scale(scale)),
-	)
-}
-
-draw_boxes :: proc(
-	r: ^Renderer,
-	command_buffer: vk.CommandBuffer,
-	layout: vk.PipelineLayout,
-	boxes: []geometry.Box,
-) {
-	vertex_buffer := r.scene.vertex_buffer
-	vertex_offset: vk.DeviceSize = 0
-	vk.CmdBindVertexBuffers(command_buffer, 0, 1, &vertex_buffer, &vertex_offset)
-	vk.CmdBindIndexBuffer(command_buffer, r.scene.index_buffer, 0, .UINT16)
-
-	for box in boxes {
-		push := Push_Constants {
-			model = box_model_matrix(box),
-			color = box.color,
-		}
-		vk.CmdPushConstants(
-			command_buffer,
-			layout,
-			{.VERTEX},
-			0,
-			u32(size_of(Push_Constants)),
-			&push,
-		)
-		vk.CmdDrawIndexed(command_buffer, r.scene.index_count, 1, 0, 0, 0)
-	}
-}
