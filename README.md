@@ -54,6 +54,162 @@ The HUD shows the player speed, grounded state, and position, or the debug
 mode selection, crate count, and sun angles. It also shows the control list.
 The window is resizable.
 
+## Agent harness
+
+`bin/harbagsa-agent` drives the simulation and writes screenshots without a
+window or compositor. `make build` builds it next to the game.
+
+### Run a scenario
+
+```sh
+./bin/harbagsa-agent run scenarios/smoke.json
+```
+
+The default run directory is `runs/<scenario-stem>`:
+
+```text
+runs/smoke/
+  report.json
+  state.json
+  frames/frame_0000.png
+  frames/frame_0090.png
+  frames/frame_0121.png
+  run.log
+```
+
+`report.json` holds the pass/fail result, the final state, absolute screenshot
+paths, checks, and the state digest. `state.json` holds the final state alone.
+`run.log` holds the log lines. Standard output is one JSON summary.
+
+Exit codes:
+
+- `0`: every check passed.
+- `1`: a check or an invariant failed.
+- `2`: the arguments or the scenario are bad.
+- `3`: renderer or backend initialization failed.
+
+Options:
+
+- `--out DIR`: replace this run directory atomically. Default: `runs/<stem>`.
+- `--size WxH`: capture size. Default: `1280x720`.
+- `--no-render`: run the simulation and checks only. No Vulkan device is created.
+- `--present`: render the real SDL window and capture the swapchain image
+  before present. No compositor and no `grim`.
+
+The harness view starts with the HUD off, the debug draw off, and the capture
+hint off. A scenario captures the final frame by default. `capture` adds more
+frames, and `"capture": []` turns rendering off for that scenario.
+
+### Scenario format
+
+```json
+{
+  "view": {"hud": false, "debug": false, "hint": false},
+  "steps": [
+    {"frames": 90, "forward": 1, "look": [220, 0]},
+    {"frames": 1, "jump": true},
+    {"frames": 30, "forward": 1}
+  ],
+  "capture": [0, 90, 121],
+  "checks": [
+    {"field": "crates.0.position.z", "op": "lt", "value": 7.5}
+  ]
+}
+```
+
+One step means one fixed `SIMULATION_STEP`. `look` applies once before the
+step. `forward`, `right`, and `jump` persist; `jump` is an edge on the first
+frame of its block. Capture frames are zero-based frame numbers. Check operators
+are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. Check fields use the `state.json`
+shape, for example `player.position.y`, `player.grounded`, `crates.0.position.z`,
+or `crates.count`.
+
+A scenario may use `commands` instead of `steps`:
+
+```json
+{
+  "commands": [
+    {"cmd": "view", "hud": false},
+    {"cmd": "input", "forward": 1},
+    {"cmd": "step", "frames": 90},
+    {"cmd": "capture", "name": "after-walk"}
+  ]
+}
+```
+
+### Commands
+
+The batch runner and the live session share one command set:
+
+- `{"cmd": "reset"}`: fresh simulation. Crates return to spawn.
+- `{"cmd": "look", "dx": 220, "dy": 0}`: pixel look delta through the game
+  sensitivity and pitch clamp.
+- `{"cmd": "face", "yaw": 0, "pitch": 0}`: set the player view directly.
+- `{"cmd": "input", "forward": 1, "right": 0, "jump": false}`: set persistent
+  input. Omitted fields keep their value.
+- `{"cmd": "step", "frames": 60}`: fixed steps with no wall clock.
+- `{"cmd": "state"}`: player, eye, velocity, yaw, pitch, grounded, crates,
+  frame, and digest.
+- `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`: write a PNG.
+  `frame` is optional. A past frame is an error; a future frame queues.
+- `{"cmd": "camera", "position": [0, 2, 12], "yaw": 0, "pitch": 0}`: inspection
+  camera. It does not move the player. `{"cmd": "camera", "clear": true}` drops
+  the override.
+- `{"cmd": "view", "hud": true, "debug": false, "hint": false}`: toggle the HUD,
+  the debug draw, and the capture hint.
+- `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`:
+  evaluate a predicate now.
+- `{"cmd": "record", "path": "scenarios/walk.json"}`: start recording. Send
+  `{"cmd": "record"}` to stop and write the scenario.
+- `{"cmd": "replay", "path": "scenarios/walk.json"}`: reset and run a scenario.
+- `{"cmd": "quit"}`: stop the session.
+
+Unknown keys, wrong types, and out-of-range values are per-command errors. The
+session stays usable.
+
+### Live session
+
+Standard input is one JSON command per line and standard output is one JSON
+reply per line:
+
+```sh
+printf '%s\n' \
+  '{"cmd": "step", "frames": 60}' \
+  '{"cmd": "state"}' \
+  '{"cmd": "quit"}' |
+  ./bin/harbagsa-agent session
+```
+
+A Unix socket does the same:
+
+```sh
+./bin/harbagsa-agent session --socket /tmp/harbagsa.sock
+socat - UNIX-CONNECT:/tmp/harbagsa.sock
+```
+
+The server prints one ready line on standard output. Capture files go to
+`runs/session/frames/` unless `--out` selects another directory. The offscreen
+target is created on the first `capture` or `replay`, so a simulation-only
+session never creates a Vulkan device.
+
+### Screenshot workflow
+
+```sh
+make build
+./bin/harbagsa-agent run scenarios/smoke.json
+```
+
+Read `runs/smoke/report.json` and use the absolute paths in `screenshots`. The
+PNG is RGBA, sRGB, and `1280x720` by default. To capture the owner's real
+window instead:
+
+```sh
+./bin/harbagsa-agent run scenarios/smoke.json --present --out runs/present
+```
+
+The compositor may resize the window. The PNG has the actual swapchain size and
+matches an offscreen capture at the same size.
+
 ## Build
 
 ```sh
@@ -75,9 +231,10 @@ make check
 make test
 ```
 
-`make check` runs the strict compiler checks on the main program and every
-library package. `make test` runs the physics, simulation, and renderer math
-tests headless.
+`make check` runs the strict compiler checks on the game, the agent, and every
+library package. `make test` runs the physics, simulation, frame, harness, and
+renderer tests headless. The offscreen render test logs a skip when no Vulkan
+device is available.
 
 If more than one agent or terminal can build in this checkout, use the
 wrapper. It serializes Make with `flock` and needs `flock` from util-linux.
