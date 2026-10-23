@@ -58,9 +58,11 @@ Render_Snapshot :: struct {
 }
 
 Simulation :: struct {
-	world_id: b3.WorldId,
-	player:   Player,
-	crates:   [ARENA_CRATE_COUNT]b3.BodyId,
+	world_id:         b3.WorldId,
+	player:           Player,
+	crates:           [MAX_CRATES]Crate,
+	crate_count:      int,
+	next_crate_color: int,
 }
 
 simulation_create :: proc() -> Simulation {
@@ -74,7 +76,7 @@ simulation_create :: proc() -> Simulation {
 	}
 
 	create_arena(&sim)
-	create_crates(&sim)
+	simulation_reset_crates(&sim)
 	simulation_reset(&sim)
 	return sim
 }
@@ -148,18 +150,12 @@ simulation_snapshot :: proc(sim: ^Simulation) -> Render_Snapshot {
 	}
 }
 
-simulation_crate_position :: proc(sim: ^Simulation, index: int) -> b3.Vec3 {
-	if index < 0 || index >= ARENA_CRATE_COUNT {
-		return b3.Vec3_zero
+// The debug mode keeps the crates alive while the player is not simulated.
+simulation_step_world :: proc(sim: ^Simulation, time_step: f32) {
+	if !b3.World_IsValid(sim.world_id) || time_step <= 0.0 {
+		return
 	}
-	return b3.ToVec3(b3.Body_GetPosition(sim.crates[index]))
-}
-
-simulation_crate_rotation :: proc(sim: ^Simulation, index: int) -> b3.Quat {
-	if index < 0 || index >= ARENA_CRATE_COUNT {
-		return b3.Quat_identity
-	}
-	return b3.Body_GetRotation(sim.crates[index])
+	b3.World_Step(sim.world_id, time_step, SIMULATION_SUB_STEPS)
 }
 
 @(private)
@@ -178,21 +174,4 @@ create_static_box :: proc(world_id: b3.WorldId, position: b3.Vec3, half_extents:
 	hull := b3.MakeBoxHull(half_extents.x, half_extents.y, half_extents.z)
 	shape_def := b3.DefaultShapeDef()
 	_ = b3.CreateHullShape(body_id, shape_def, &hull.base)
-}
-
-@(private)
-create_crates :: proc(sim: ^Simulation) {
-	for box, index in arena_crates() {
-		body_def := b3.DefaultBodyDef()
-		body_def.type = .dynamicBody
-		body_def.position = box.center
-		body_id := b3.CreateBody(sim.world_id, body_def)
-
-		hull := b3.MakeBoxHull(box.half_extents.x, box.half_extents.y, box.half_extents.z)
-		shape_def := b3.DefaultShapeDef()
-		shape_def.density = CRATE_DENSITY
-		_ = b3.CreateHullShape(body_id, shape_def, &hull.base)
-
-		sim.crates[index] = body_id
-	}
 }

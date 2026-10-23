@@ -11,6 +11,7 @@ record_scene :: proc(
 	command_buffer: vk.CommandBuffer,
 	image_index: u32,
 	camera: Camera,
+	light_direction: [3]f32,
 	boxes: []geometry.Box,
 	debug_lines: []geometry.Line,
 	hud: HUD_State,
@@ -33,7 +34,7 @@ record_scene :: proc(
 		return false
 	}
 
-	if !update_camera(r, camera) {
+	if !update_camera(r, camera, light_direction) {
 		return false
 	}
 
