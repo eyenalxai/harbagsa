@@ -18,6 +18,13 @@ Frame :: struct {
 	command_buffer: vk.CommandBuffer,
 }
 
+create_semaphore :: proc(r: ^Renderer, semaphore: ^vk.Semaphore) -> bool {
+	info := vk.SemaphoreCreateInfo {
+		sType = .SEMAPHORE_CREATE_INFO,
+	}
+	return check(vk.CreateSemaphore(r.device, &info, nil, semaphore), "vkCreateSemaphore")
+}
+
 init_frames :: proc(r: ^Renderer) -> Error {
 	pool_info := vk.CommandPoolCreateInfo{
 		sType            = .COMMAND_POOL_CREATE_INFO,
@@ -38,18 +45,12 @@ init_frames :: proc(r: ^Renderer) -> Error {
 		return .Create_Frames
 	}
 
-	semaphore_info := vk.SemaphoreCreateInfo {
-		sType = .SEMAPHORE_CREATE_INFO,
-	}
 	fence_info := vk.FenceCreateInfo {
 		sType = .FENCE_CREATE_INFO,
 		flags = {.SIGNALED},
 	}
 	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		if !check(
-			vk.CreateSemaphore(r.device, &semaphore_info, nil, &r.image_available[i]),
-			"vkCreateSemaphore",
-		) {
+		if !create_semaphore(r, &r.image_available[i]) {
 			return .Create_Frames
 		}
 		if !check(vk.CreateFence(r.device, &fence_info, nil, &r.in_flight[i]), "vkCreateFence") {
@@ -84,6 +85,9 @@ begin_frame :: proc(
 		status = recreate_swapchain(r)
 		if status != .Ok {
 			return {}, status
+		}
+		if validation_failed() {
+			return {}, .Fatal
 		}
 	}
 
@@ -132,6 +136,9 @@ begin_frame :: proc(
 	) {
 		return {}, .Fatal
 	}
+	if validation_failed() {
+		return {}, .Fatal
+	}
 
 	return Frame{image_index = image_index, command_buffer = command_buffer}, .Ok
 }
@@ -154,6 +161,9 @@ end_frame :: proc(r: ^Renderer, frame: Frame) -> Frame_Status {
 		pSignalSemaphores    = &render_finished,
 	}
 	if !check(vk.QueueSubmit(r.graphics_queue, 1, &submit, r.in_flight[r.frame_index]), "vkQueueSubmit") {
+		return .Fatal
+	}
+	if validation_failed() {
 		return .Fatal
 	}
 

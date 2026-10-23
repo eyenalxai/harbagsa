@@ -21,6 +21,8 @@ DEPTH_SUBRESOURCE :: vk.ImageSubresourceRange {
 }
 
 create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
+	// A failure after the swapchain exists is terminal: the caller exits, and
+	// deinit destroys the partial objects.
 	support, support_ok := query_swapchain_support(r.physical_device, r.surface, r.allocator)
 	if !support_ok {
 		log.error("renderer: could not query swapchain support")
@@ -101,11 +103,8 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	}
 
 	r.render_finished = make([]vk.Semaphore, image_count_actual, r.allocator)
-	semaphore_info := vk.SemaphoreCreateInfo {
-		sType = .SEMAPHORE_CREATE_INFO,
-	}
 	for i in 0 ..< image_count_actual {
-		if !check(vk.CreateSemaphore(r.device, &semaphore_info, nil, &r.render_finished[i]), "vkCreateSemaphore") {
+		if !create_semaphore(r, &r.render_finished[i]) {
 			return .Fatal
 		}
 	}
