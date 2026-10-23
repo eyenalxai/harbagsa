@@ -198,33 +198,22 @@ scenario_step :: proc(value: json.Value) -> (Step, string) {
 	if key, unknown := json_unknown_key(object, {"frames", "forward", "right", "jump", "look"}); unknown {
 		return {}, fmt.aprintf("unknown key %q", key, allocator = context.allocator)
 	}
-	step: Step
-	frames, frames_ok := integer_field(object, "frames")
-	if !frames_ok || frames < 1 || frames > MAX_STEP_FRAMES {
-		return {}, format_error("'frames' must be an integer in [1, %d]", MAX_STEP_FRAMES)
+	frames, frames_error := parse_frames(object)
+	if frames_error != "" {
+		return {}, frames_error
 	}
-	step.frames = frames
-	if forward, has := number_field(object, "forward"); has {
-		if forward < -1 || forward > 1 {
-			return {}, format_error("'forward' must be a number in [-1, 1]")
-		}
-		step.forward = f32(forward)
-		step.has_forward = true
+	input, input_error := parse_input_fields(object)
+	if input_error != "" {
+		return {}, input_error
 	}
-	if right, has := number_field(object, "right"); has {
-		if right < -1 || right > 1 {
-			return {}, format_error("'right' must be a number in [-1, 1]")
-		}
-		step.right = f32(right)
-		step.has_right = true
-	}
-	if jump_value, has := json_get(object, "jump"); has {
-		jump, jump_ok := json_boolean(jump_value)
-		if !jump_ok {
-			return {}, format_error("'jump' must be a boolean")
-		}
-		step.jump = jump
-		step.has_jump = true
+	step := Step {
+		frames      = frames,
+		forward     = input.forward,
+		right       = input.right,
+		jump        = input.jump,
+		has_forward = input.has_forward,
+		has_right   = input.has_right,
+		has_jump    = input.has_jump,
 	}
 	if look_value, has := json_get(object, "look"); has {
 		look_array, array_ok := json_array(look_value)

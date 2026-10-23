@@ -68,10 +68,9 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 		reply.state = new(State, session.allocator)
 		reply.state^ = session_state(session)
 	case .Capture:
-		capture, immediate, capture_error := session_queue_capture(session, command.capture)
+		immediate, capture_error := session_queue_capture(session, command.capture)
 		command_error = capture_error
 		owns_error = true
-		_ = capture
 		if command_error == "" && immediate && len(session.captures) > 0 {
 			reply.capture = &session.captures[len(session.captures) - 1]
 		}

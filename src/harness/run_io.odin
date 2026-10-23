@@ -73,14 +73,22 @@ summary_destroy :: proc(summary: ^Run_Summary) {
 }
 
 swap_run_dir :: proc(final, staging: string) -> string {
-	_ = os.remove_all(final)
+	previous := fmt.aprintf("%s.previous", final, allocator = context.temp_allocator)
+	_ = os.remove_all(previous)
+	had_previous := os.rename(final, previous) == nil
 	if rename_error := os.rename(staging, final); rename_error != nil {
+		if had_previous {
+			_ = os.rename(previous, final)
+		}
 		return fmt.aprintf(
 			"cannot replace %s: %v",
 			final,
 			rename_error,
 			allocator = context.allocator,
 		)
+	}
+	if had_previous {
+		_ = os.remove_all(previous)
 	}
 	return ""
 }
