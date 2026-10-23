@@ -159,7 +159,7 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 			return .Fatal
 		}
 	}
-	if r.overlay.pipeline_format != .UNDEFINED && r.overlay.pipeline_format != r.swapchain_format {
+	if r.overlay.pipeline_format != r.swapchain_format {
 		destroy_overlay_pipelines(r)
 		if !create_overlay_pipelines(r) {
 			return .Fatal
@@ -179,100 +179,32 @@ create_depth_resources :: proc(r: ^Renderer) -> bool {
 		return false
 	}
 
-	r.scene.depth_images = make([]vk.Image, image_count, r.allocator)
-	r.scene.depth_memory = make([]vk.DeviceMemory, image_count, r.allocator)
-	r.scene.depth_views = make([]vk.ImageView, image_count, r.allocator)
+	r.scene.depth = make([]Image, image_count, r.allocator)
 
 	for i in 0 ..< image_count {
-		image_info := vk.ImageCreateInfo {
-			sType = .IMAGE_CREATE_INFO,
-			imageType = .D2,
-			format = DEPTH_FORMAT,
-			extent = {r.swapchain_extent.width, r.swapchain_extent.height, 1},
-			mipLevels = 1,
-			arrayLayers = 1,
-			samples = {._1},
-			tiling = .OPTIMAL,
-			usage = {.DEPTH_STENCIL_ATTACHMENT},
-			sharingMode = .EXCLUSIVE,
-			initialLayout = .UNDEFINED,
-		}
-		if !check(vk.CreateImage(r.device, &image_info, nil, &r.scene.depth_images[i]), "vkCreateImage") {
+		image, ok := create_image(
+			r,
+			r.swapchain_extent.width,
+			r.swapchain_extent.height,
+			DEPTH_FORMAT,
+			{.DEPTH_STENCIL_ATTACHMENT},
+			{.DEPTH},
+		)
+		if !ok {
 			return false
 		}
-
-		requirements: vk.MemoryRequirements
-		vk.GetImageMemoryRequirements(r.device, r.scene.depth_images[i], &requirements)
-		memory_type, found := find_memory_type(r, requirements.memoryTypeBits, {.DEVICE_LOCAL})
-		if !found {
-			log.error("renderer: no device-local memory type for the depth image")
-			return false
-		}
-		allocate_info := vk.MemoryAllocateInfo {
-			sType = .MEMORY_ALLOCATE_INFO,
-			allocationSize = requirements.size,
-			memoryTypeIndex = memory_type,
-		}
-		if !check(
-			vk.AllocateMemory(r.device, &allocate_info, nil, &r.scene.depth_memory[i]),
-			"vkAllocateMemory",
-		) {
-			return false
-		}
-		if !check(
-			vk.BindImageMemory(r.device, r.scene.depth_images[i], r.scene.depth_memory[i], 0),
-			"vkBindImageMemory",
-		) {
-			return false
-		}
-
-		view_info := vk.ImageViewCreateInfo {
-			sType = .IMAGE_VIEW_CREATE_INFO,
-			image = r.scene.depth_images[i],
-			viewType = .D2,
-			format = DEPTH_FORMAT,
-			subresourceRange = DEPTH_SUBRESOURCE,
-		}
-		if !check(vk.CreateImageView(r.device, &view_info, nil, &r.scene.depth_views[i]), "vkCreateImageView") {
-			return false
-		}
+		r.scene.depth[i] = image
 	}
 
 	return true
 }
 
 destroy_depth_resources :: proc(r: ^Renderer) {
-	if r.device != nil {
-		for &view in r.scene.depth_views {
-			if view != 0 {
-				vk.DestroyImageView(r.device, view, nil)
-				view = 0
-			}
-		}
-		for &image in r.scene.depth_images {
-			if image != 0 {
-				vk.DestroyImage(r.device, image, nil)
-				image = 0
-			}
-		}
-		for &memory in r.scene.depth_memory {
-			if memory != 0 {
-				vk.FreeMemory(r.device, memory, nil)
-				memory = 0
-			}
-		}
+	for &image in r.scene.depth {
+		destroy_image(r, &image)
 	}
-
-	if r.scene.depth_views != nil {
-		delete(r.scene.depth_views, r.allocator)
-		r.scene.depth_views = nil
-	}
-	if r.scene.depth_images != nil {
-		delete(r.scene.depth_images, r.allocator)
-		r.scene.depth_images = nil
-	}
-	if r.scene.depth_memory != nil {
-		delete(r.scene.depth_memory, r.allocator)
-		r.scene.depth_memory = nil
+	if r.scene.depth != nil {
+		delete(r.scene.depth, r.allocator)
+		r.scene.depth = nil
 	}
 }

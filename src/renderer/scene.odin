@@ -17,7 +17,6 @@ Camera :: struct {
 	fov_x:    f32,
 }
 
-LIGHT_DIRECTION :: [3]f32{-0.45, -1.0, -0.35}
 AMBIENT_COLOR :: [3]f32{0.24, 0.25, 0.28}
 
 Scene :: struct {
@@ -38,9 +37,7 @@ Scene :: struct {
 	camera_memory:  [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
 	camera_mapped:  [MAX_FRAMES_IN_FLIGHT]rawptr,
 
-	depth_images: []vk.Image,
-	depth_memory: []vk.DeviceMemory,
-	depth_views:  []vk.ImageView,
+	depth: []Image,
 }
 
 init_scene :: proc(r: ^Renderer) -> Error {
@@ -53,6 +50,9 @@ init_scene :: proc(r: ^Renderer) -> Error {
 	if !create_pipeline(r) {
 		return .Create_Pipeline
 	}
+	if !create_shadow_resources(r) {
+		return .Create_Shadow
+	}
 	return .None
 }
 
@@ -61,6 +61,7 @@ destroy_scene :: proc(r: ^Renderer) {
 		return
 	}
 
+	destroy_shadow(r)
 	destroy_pipeline_pair(r, &r.scene.pipeline, &r.scene.pipeline_layout)
 	if r.scene.descriptor_pool != 0 {
 		vk.DestroyDescriptorPool(r.device, r.scene.descriptor_pool, nil)
@@ -84,7 +85,7 @@ destroy_scene :: proc(r: ^Renderer) {
 	r.scene.index_count = 0
 }
 
-update_camera :: proc(r: ^Renderer, camera: Camera) -> bool {
+update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> bool {
 	height := f32(r.swapchain_extent.height)
 	if height <= 0 {
 		log.error("renderer: cannot build a projection for a zero-height swapchain")
@@ -119,9 +120,11 @@ update_camera :: proc(r: ^Renderer, camera: Camera) -> bool {
 	buffer^ = Camera_Uniform {
 		view = view,
 		projection = mat4_perspective(fov_y, aspect, CAMERA_NEAR, CAMERA_FAR),
-		light_direction = {LIGHT_DIRECTION.x, LIGHT_DIRECTION.y, LIGHT_DIRECTION.z, 0},
+		// The fragment shader normalizes the direction.
+		light_direction = {light_direction.x, light_direction.y, light_direction.z, 0},
 		ambient = {AMBIENT_COLOR.x, AMBIENT_COLOR.y, AMBIENT_COLOR.z, 0},
 		gamma = {gamma, 0, 0, 0},
+		light_view_projection = r.shadow.light_view_projection,
 	}
 	return true
 }

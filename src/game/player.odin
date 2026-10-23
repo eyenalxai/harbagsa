@@ -1,35 +1,54 @@
 #+vet explicit-allocators
 package game
 
-import "core:math"
 import b3 "libs:box3d"
 
 // Plain player state. Position is the feet, not the capsule center.
 Player :: struct {
-	position:          b3.Vec3,
-	previous_position: b3.Vec3,
-	velocity:          b3.Vec3,
-	yaw:               f32,
-	pitch:             f32,
-	grounded:          bool,
-	stance:            Stance,
-	gait:              Gait,
-	movement_state:    Movement_State,
-	crouch_engaged:    bool,
-	prone_engaged:     bool,
-	sprint_toggled:    bool,
-	sprint_wanted:  bool,
-	eye_height:        f32,
+	position:           b3.Vec3,
+	previous_position:  b3.Vec3,
+	velocity:           b3.Vec3,
+	yaw:                f32,
+	pitch:              f32,
+	grounded:           bool,
+	stance:             Stance,
+	gait:               Gait,
+	movement_state:     Movement_State,
+	crouch_engaged:     bool,
+	prone_engaged:      bool,
+	sprint_toggled:     bool,
+	sprint_wanted:      bool,
+	eye_height:         f32,
 	previous_eye_height: f32,
-	on_steep_slope:    bool,
-	steep_normal:      b3.Vec3,
-	jump_buffer:       f32,
-	coyote:            f32,
-	air_cap:           f32,
+	on_steep_slope:     bool,
+	steep_normal:       b3.Vec3,
+	jump_buffer:        f32,
+	coyote:             f32,
+	air_cap:            f32,
 	slide_direction:    b3.Vec3,
-	slide_speed:       f32,
-	slide_elapsed:     f32,
-	mantle:            Mantle_State,
+	slide_speed:        f32,
+	slide_elapsed:      f32,
+	mantle:             Mantle_State,
+}
+
+// Places the player without carrying motion or an action into the new position.
+player_place :: proc(player: ^Player, position: b3.Vec3, yaw, pitch: f32) {
+	player.position = position
+	player.previous_position = position
+	player.velocity = b3.Vec3_zero
+	player.yaw = yaw
+	player.pitch = pitch
+	player.grounded = false
+	player.movement_state = .None
+	player.jump_buffer = 0.0
+	player.coyote = 0.0
+	player.air_cap = PLAYER_WALK_SPEED
+	player.slide_direction = {}
+	player.slide_speed = 0.0
+	player.slide_elapsed = 0.0
+	player.mantle = {}
+	player.on_steep_slope = false
+	player.steep_normal = {}
 }
 
 @(private)
@@ -50,9 +69,9 @@ simulation_look :: proc(sim: ^Simulation, look_delta: b3.Vec2) {
 
 @(private)
 movement_direction :: proc(player: ^Player, input: Input_Snapshot) -> b3.Vec3 {
-	forward := b3.Vec3{-math.sin(player.yaw), 0.0, -math.cos(player.yaw)}
-	right := b3.Vec3{math.cos(player.yaw), 0.0, -math.sin(player.yaw)}
-	direction := forward * input.move_forward + right * input.move_right
+	direction :=
+		yaw_forward_horizontal(player.yaw) * input.move_forward +
+		yaw_right(player.yaw) * input.move_right
 	length := b3.Length(direction)
 	if length > 1.0 {
 		direction /= length
@@ -109,4 +128,3 @@ update_horizontal_velocity :: proc(player: ^Player, input: Input_Snapshot, time_
 	player.velocity.x = current.x
 	player.velocity.z = current.z
 }
-

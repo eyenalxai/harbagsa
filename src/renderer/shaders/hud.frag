@@ -8,12 +8,8 @@ layout(push_constant) uniform PushConstants {
     vec4 viewport;
 } hud;
 
+#include "gamma.glsl"
+
 void main() {
-    vec3 color = v_color.rgb;
-
-    if (hud.viewport.z > 0.5) {
-        color = pow(color, vec3(1.0 / 2.2));
-    }
-
-    out_color = vec4(color, v_color.a);
+    out_color = vec4(apply_gamma(v_color.rgb, hud.viewport.z), v_color.a);
 }
