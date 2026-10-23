@@ -14,7 +14,7 @@ record_scene :: proc(
 	light_direction: [3]f32,
 	boxes: []geometry.Box,
 	debug_lines: []geometry.Line,
-	hud: HUD_State,
+	hud: HUD_Frame,
 ) -> bool {
 	if int(image_index) >= len(r.swapchain_views) || int(image_index) >= len(r.scene.depth_views) {
 		log.errorf("renderer: swapchain image index %d is out of range", image_index)

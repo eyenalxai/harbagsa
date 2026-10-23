@@ -1,31 +1,13 @@
 #+vet explicit-allocators
 package renderer
 
-import "core:fmt"
-
 import stb_easy_font "vendor:stb/easy_font"
 
-HUD_Selection :: enum {
-	None,
-	Crate,
-	Sun,
-}
-
-HUD_Debug_State :: struct {
-	selection:     HUD_Selection,
-	crate_index:   int,
-	crate_count:   int,
-	sun_azimuth:   f32,
-	sun_elevation: f32,
-}
-
-HUD_State :: struct {
-	speed:        f32,
-	grounded:     bool,
-	position:     [3]f32,
-	captured:     bool,
-	debug_active: bool,
-	debug:        HUD_Debug_State,
+HUD_Frame :: struct {
+	status_lines:  []string,
+	control_lines: []string,
+	capture_hint:  string,
+	captured:      bool,
 }
 
 HUD_TEXT_COLOR :: [4]f32{1.0, 1.0, 1.0, 1.0}
@@ -65,19 +47,17 @@ hud_emit_text :: proc(o: ^Overlay, x, y: f32, text: string, color: [4]f32, scale
 	}
 }
 
-hud_emit_panel :: proc(o: ^Overlay, x, y: f32, lines: []string, scale, padding: f32) {
-	panel_width := 0
+hud_panel_height :: proc(lines: []string, scale: f32) -> f32 {
+	return f32(len(lines)) * HUD_LINE_HEIGHT * scale
+}
+
+hud_emit_panel :: proc(o: ^Overlay, lines: []string, x, y, scale, padding: f32) {
+	width: f32
 	for line in lines {
-		panel_width = max(panel_width, stb_easy_font.width(line))
+		width = max(width, f32(stb_easy_font.width(line)) * scale)
 	}
-	hud_emit_rect(
-		o,
-		x,
-		y,
-		f32(panel_width) * scale + padding * 2,
-		hud_panel_height(len(lines), scale, padding),
-		HUD_PANEL_COLOR,
-	)
+	height := hud_panel_height(lines, scale)
+	hud_emit_rect(o, x, y, width + padding * 2, height + padding * 2, HUD_PANEL_COLOR)
 	for line, index in lines {
 		hud_emit_text(
 			o,
@@ -90,53 +70,104 @@ hud_emit_panel :: proc(o: ^Overlay, x, y: f32, lines: []string, scale, padding: 
 	}
 }
 
-hud_panel_height :: proc(line_count: int, scale, padding: f32) -> f32 {
-	return f32(line_count) * HUD_LINE_HEIGHT * scale + padding * 2
-}
-
-snap_near_zero :: proc(value: f32) -> f32 {
-	if value > -0.05 && value < 0.05 {
-		return 0
-	}
-	return value
-}
-
-build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_State) {
+build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
 	scale := 2.0 * clamp(height / 720.0, 1.0, 2.0)
 	margin := 8.0 * scale
 	padding := 5.0 * scale
 
-	build_state_panel(o, hud, scale, margin, padding)
-	build_hints(o, height, hud, scale, margin, padding)
-	build_capture_overlay(o, width, height, hud, scale, padding)
-	build_crosshair(o, width, height, scale)
-}
+	hud_emit_panel(o, hud.status_lines, margin, margin, scale, padding)
 
-@(private)
-build_state_panel :: proc(o: ^Overlay, hud: HUD_State, scale, margin, padding: f32) {
-	if hud.debug_active {
-		build_debug_panel(o, hud, scale, margin, padding)
-		return
+	control_y := height - margin - hud_panel_height(hud.control_lines, scale) - padding * 2
+	hud_emit_panel(o, hud.control_lines, margin, control_y, scale, padding)
+
+	center_x := width * 0.5
+	center_y := height * 0.5
+	if !hud.captured {
+		overlay_scale := scale * 1.1
+		text_width := f32(stb_easy_font.width(hud.capture_hint)) * overlay_scale
+		text_height := f32(stb_easy_font.height(hud.capture_hint)) * overlay_scale
+		text_x := (width - text_width) * 0.5
+		text_y := center_y - text_height * 0.5
+		panel_padding := padding * 1.5
+		hud_emit_rect(
+			o,
+			text_x - panel_padding,
+			text_y - panel_padding,
+			text_width + panel_padding * 2,
+			text_height + panel_padding * 2,
+			HUD_PANEL_COLOR,
+		)
+		hud_emit_text(o, text_x, text_y, hud.capture_hint, HUD_TEXT_COLOR, overlay_scale)
 	}
 
-	grounded := "no"
-	if hud.grounded {
-		grounded = "yes"
-	}
-
-	speed_buffer: [64]u8
-	speed_text := fmt.bprintf(speed_buffer[:], "Speed %.1f m/s", hud.speed)
-	grounded_buffer: [32]u8
-	grounded_text := fmt.bprintf(grounded_buffer[:], "Grounded %s", grounded)
-	position_buffer: [96]u8
-	position_text := fmt.bprintf(
-		position_buffer[:],
-		"Position %.1f  %.1f  %.1f",
-		snap_near_zero(hud.position.x),
-		snap_near_zero(hud.position.y),
-		snap_near_zero(hud.position.z),
+	// The crosshair is emitted last so it stays on top of the panels.
+	arm := 10.0 * (scale * 0.5)
+	gap := 4.0 * (scale * 0.5)
+	thickness := max(1.0, scale * 0.5)
+	outline := max(1.0, scale * 0.5)
+	crosshair_outline := [4]f32{0, 0, 0, 0.55}
+	hud_emit_rect(
+		o,
+		center_x - gap - arm - outline,
+		center_y - thickness * 0.5 - outline,
+		arm + 2 * outline,
+		thickness + 2 * outline,
+		crosshair_outline,
 	)
-
-	lines := [3]string{speed_text, grounded_text, position_text}
-	hud_emit_panel(o, margin, margin, lines[:], scale, padding)
+	hud_emit_rect(
+		o,
+		center_x - gap - arm,
+		center_y - thickness * 0.5,
+		arm,
+		thickness,
+		HUD_CROSSHAIR_COLOR,
+	)
+	hud_emit_rect(
+		o,
+		center_x + gap - outline,
+		center_y - thickness * 0.5 - outline,
+		arm + 2 * outline,
+		thickness + 2 * outline,
+		crosshair_outline,
+	)
+	hud_emit_rect(
+		o,
+		center_x + gap,
+		center_y - thickness * 0.5,
+		arm,
+		thickness,
+		HUD_CROSSHAIR_COLOR,
+	)
+	hud_emit_rect(
+		o,
+		center_x - thickness * 0.5 - outline,
+		center_y - gap - arm - outline,
+		thickness + 2 * outline,
+		arm + 2 * outline,
+		crosshair_outline,
+	)
+	hud_emit_rect(
+		o,
+		center_x - thickness * 0.5,
+		center_y - gap - arm,
+		thickness,
+		arm,
+		HUD_CROSSHAIR_COLOR,
+	)
+	hud_emit_rect(
+		o,
+		center_x - thickness * 0.5 - outline,
+		center_y + gap - outline,
+		thickness + 2 * outline,
+		arm + 2 * outline,
+		crosshair_outline,
+	)
+	hud_emit_rect(
+		o,
+		center_x - thickness * 0.5,
+		center_y + gap,
+		thickness,
+		arm,
+		HUD_CROSSHAIR_COLOR,
+	)
 }

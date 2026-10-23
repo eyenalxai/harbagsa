@@ -10,6 +10,7 @@ BIN := bin/harbagsa
 GLSLC ?= glslc
 SHADER_SRC := src/renderer/shaders
 SHADER_OUT := build/shaders
+SHADER_INCLUDE := $(SHADER_SRC)/gamma.glsl
 SHADERS := $(SHADER_OUT)/box.vert.spv $(SHADER_OUT)/box.frag.spv \
 	$(SHADER_OUT)/debug.vert.spv $(SHADER_OUT)/debug.frag.spv \
 	$(SHADER_OUT)/hud.vert.spv $(SHADER_OUT)/hud.frag.spv
@@ -37,7 +38,7 @@ $(SHADER_OUT)/%.vert.spv: $(SHADER_SRC)/%.vert
 	@mkdir -p $(@D)
 	$(GLSLC) --target-env=vulkan1.3 -fshader-stage=vert $< -o $@
 
-$(SHADER_OUT)/%.frag.spv: $(SHADER_SRC)/%.frag
+$(SHADER_OUT)/%.frag.spv: $(SHADER_SRC)/%.frag $(SHADER_INCLUDE)
 	@mkdir -p $(@D)
 	$(GLSLC) --target-env=vulkan1.3 -fshader-stage=frag $< -o $@
 

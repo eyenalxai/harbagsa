@@ -56,6 +56,7 @@ run :: proc() -> bool {
 	debug_view := false
 	debug := game.debug_mode_create()
 	debug_lines: game.Debug_Lines
+	hud: game.HUD_State
 	last_time := time.now()
 
 	for {
@@ -168,7 +169,6 @@ run :: proc() -> bool {
 
 		snapshot := game.simulation_snapshot(&sim)
 		camera: renderer.Camera
-		hud_position: [3]f32
 		if debug.active {
 			debug_camera := debug.camera
 			camera = renderer.Camera {
@@ -177,7 +177,6 @@ run :: proc() -> bool {
 				pitch    = debug_camera.pitch,
 				fov_x    = PLAYER_FOV_X,
 			}
-			hud_position = debug_camera.position
 		} else {
 			alpha := clamp(accumulator / game.SIMULATION_STEP, 0, 1)
 			eye := snapshot.previous_eye_position +
@@ -188,7 +187,6 @@ run :: proc() -> bool {
 				pitch    = snapshot.pitch,
 				fov_x    = PLAYER_FOV_X,
 			}
-			hud_position = snapshot.position
 		}
 
 		boxes: [game.MAX_SCENE_BOXES]geometry.Box
@@ -210,32 +208,7 @@ run :: proc() -> bool {
 			game.collect_editor_lines(&debug, &sim, &debug_lines)
 		}
 
-		debug_selection := renderer.HUD_Selection.None
-		#partial switch debug.selection {
-		case .Crate:
-			debug_selection = .Crate
-		case .Sun:
-			debug_selection = .Sun
-		}
-		sun_azimuth, sun_elevation := game.debug_mode_sun_angles(&debug)
-
-		hud := renderer.HUD_State {
-			speed = math.sqrt(
-				snapshot.velocity.x * snapshot.velocity.x +
-				snapshot.velocity.z * snapshot.velocity.z,
-			),
-			grounded = snapshot.grounded,
-			position = hud_position,
-			captured = events.captured,
-			debug_active = debug.active,
-			debug = renderer.HUD_Debug_State {
-				selection = debug_selection,
-				crate_index = debug.selected_crate,
-				crate_count = game.simulation_crate_count(&sim),
-				sun_azimuth = sun_azimuth,
-				sun_elevation = sun_elevation,
-			},
-		}
+		game.hud_state_update(&hud, &sim, &debug, snapshot, events.captured)
 
 		frame, begin_status := renderer.begin_frame(
 			&state,
@@ -243,7 +216,12 @@ run :: proc() -> bool {
 			game.debug_mode_sun_direction(&debug),
 			boxes[:box_count],
 			debug_lines.lines[:debug_lines.count],
-			hud,
+			renderer.HUD_Frame {
+				status_lines = hud.status_lines,
+				control_lines = hud.control_lines,
+				capture_hint = hud.capture_hint,
+				captured = hud.captured,
+			},
 		)
 		switch begin_status {
 		case .Ok:
