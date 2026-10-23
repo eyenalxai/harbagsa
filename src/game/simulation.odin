@@ -37,10 +37,8 @@ MAX_COLLISION_PLANES :: 16
 MOVE_ITERATIONS :: 5
 MOVE_TOLERANCE :: 0.01
 
-// One frame of player intent. The main loop fills this once per frame.
-// jump_pressed and reset_pressed are frame edges: apply them on one fixed step
-// only and pass false for the other steps in the same frame. Look is separate,
-// so a mouse move works even when no fixed step runs.
+// jump and reset are frame edges: apply them on one fixed step. Look is a
+// separate call so it works when no fixed step runs.
 Input_Snapshot :: struct {
 	move_forward:  f32,
 	move_right:    f32,
@@ -48,8 +46,6 @@ Input_Snapshot :: struct {
 	reset_pressed: bool,
 }
 
-// The main loop reads this after the last fixed step and interpolates between
-// previous_position and position.
 Render_Snapshot :: struct {
 	position:              b3.Vec3,
 	previous_position:     b3.Vec3,
@@ -67,7 +63,6 @@ Simulation :: struct {
 	crates:   [ARENA_CRATE_COUNT]b3.BodyId,
 }
 
-// Build the arena and the player. The world lives until simulation_destroy.
 simulation_create :: proc() -> Simulation {
 	sim: Simulation
 
@@ -95,8 +90,6 @@ simulation_is_valid :: proc(sim: ^Simulation) -> bool {
 	return b3.World_IsValid(sim.world_id)
 }
 
-// Return the player to spawn and clear velocity, look angles, and controller
-// state. The crates stay where they are.
 simulation_reset :: proc(sim: ^Simulation) {
 	sim.player.position = SPAWN_POSITION
 	sim.player.previous_position = SPAWN_POSITION
@@ -106,8 +99,6 @@ simulation_reset :: proc(sim: ^Simulation) {
 	sim.player.grounded = false
 }
 
-// Advance the simulation by one fixed step. This never reads a clock and never
-// touches a window, renderer, or platform API.
 simulation_step :: proc(sim: ^Simulation, input: Input_Snapshot, time_step: f32) {
 	if !b3.World_IsValid(sim.world_id) || time_step <= 0.0 {
 		return
@@ -157,8 +148,6 @@ simulation_snapshot :: proc(sim: ^Simulation) -> Render_Snapshot {
 	}
 }
 
-// Crate positions and rotations are exposed for the main loop's draw list and
-// for headless assertions.
 simulation_crate_position :: proc(sim: ^Simulation, index: int) -> b3.Vec3 {
 	if index < 0 || index >= ARENA_CRATE_COUNT {
 		return b3.Vec3_zero

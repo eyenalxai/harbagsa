@@ -8,6 +8,10 @@ Backwards compatibility does not matter. Rip and tear if needed. Refactor anythi
 
 All new commits must be written in conventional commit style.
 
+## Comments
+
+Write a comment only when it answers a hard "Why this way?" question. Do not narrate what the code does, restate a name, or explain how it works. If the signature and the names already say it, delete the comment.
+
 ## Agent skills
 
 ### Issue tracker

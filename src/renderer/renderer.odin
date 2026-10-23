@@ -10,9 +10,6 @@ import "src:geometry"
 import "src:platform"
 import vk "vendor:vulkan"
 
-// Validation layers are optional. Build with
-//   odin build . -define:ENABLE_VALIDATION_LAYERS=true
-// to turn them on when the layer is installed.
 ENABLE_VALIDATION_LAYERS :: #config(ENABLE_VALIDATION_LAYERS, false)
 
 MAX_FRAMES_IN_FLIGHT :: 2
@@ -43,9 +40,6 @@ Error :: enum {
 	Create_Pipeline,
 }
 
-// Frame_Status tells the main loop what to do with the frame it just started.
-// Skipped means the swapchain moved out of date (or the window had no drawable
-// area) and the frame must not be presented.
 Frame_Status :: enum {
 	Ok,
 	Skipped,
@@ -180,9 +174,7 @@ deinit :: proc(r: ^Renderer) {
 	}
 }
 
-// destroy_pipeline_pair releases a pipeline and the layout it was created
-// with. The two handles always live and die together, so clearing both here
-// keeps every caller from repeating the check.
+// The two handles always live and die together.
 destroy_pipeline_pair :: proc(r: ^Renderer, pipeline: ^vk.Pipeline, layout: ^vk.PipelineLayout) {
 	if r.device == nil {
 		return
@@ -197,9 +189,7 @@ destroy_pipeline_pair :: proc(r: ^Renderer, pipeline: ^vk.Pipeline, layout: ^vk.
 	}
 }
 
-// notify_resize marks the swapchain for recreation on the next frame. The
-// platform sends this on window resize and pixel-size changes, so the
-// renderer does not compare the window size every frame.
+// The platform sends this on resize, so the renderer does not compare sizes every frame.
 notify_resize :: proc(r: ^Renderer) {
 	r.swapchain_dirty = true
 }
@@ -242,7 +232,6 @@ begin_frame :: proc(
 	#partial switch acquire {
 	case .SUCCESS:
 	case .SUBOPTIMAL_KHR:
-		// The image is usable, but the swapchain should be rebuilt soon.
 		r.swapchain_dirty = true
 	case .ERROR_OUT_OF_DATE_KHR:
 		r.swapchain_dirty = true
@@ -907,8 +896,7 @@ choose_surface_format :: proc(formats: []vk.SurfaceFormatKHR) -> vk.SurfaceForma
 			return format
 		}
 	}
-	// Fall back to the first advertised format. The fragment stage will need
-	// manual gamma when this is not an sRGB format.
+	// The fragment stage needs manual gamma when this is not sRGB.
 	log.warnf("renderer: no sRGB swapchain format; falling back to %v", formats[0].format)
 	return formats[0]
 }

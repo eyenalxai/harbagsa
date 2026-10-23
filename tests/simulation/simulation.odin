@@ -190,7 +190,6 @@ wall_blocks_player :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 
-	// Spawn is close to the +Z wall, so walking backward reaches it quickly.
 	step(&sim, game.Input_Snapshot{move_forward = -1.0}, 180)
 
 	testing.expectf(

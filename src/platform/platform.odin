@@ -7,10 +7,6 @@ import "core:strings"
 import "vendor:sdl3"
 import vk "vendor:vulkan"
 
-// Window and event handling backed by SDL3, plus the SDL3 Vulkan surface
-// helpers. The renderer owns every Vulkan object; this module only creates the
-// window, hands out the instance extension list, and makes the surface.
-
 Error :: enum {
 	None,
 	SDL_Init,
@@ -23,11 +19,7 @@ Window :: struct {
 	handle: ^sdl3.Window,
 }
 
-// One frame of window and player input. Movement axes come from the keyboard
-// state while the cursor is captured. look_delta is the relative mouse motion
-// accumulated since the previous poll. jump_pressed, reset_pressed, and
-// debug_pressed are true only on the key-down edge, so a held key does not
-// repeat them.
+// jump, reset, and debug are key-down edges so a held key does not repeat.
 Events :: struct {
 	quit:          bool,
 	resized:       bool,
@@ -68,15 +60,11 @@ deinit :: proc(window: ^Window) {
 	sdl3.Quit()
 }
 
-// vulkan_loader_proc returns vkGetInstanceProcAddr from the Vulkan loader that
-// SDL opened for the window.
 vulkan_loader_proc :: proc() -> rawptr {
 	return rawptr(sdl3.Vulkan_GetVkGetInstanceProcAddr())
 }
 
-// vulkan_extensions returns the instance extensions that the window needs.
-// The slice points into SDL-owned storage and stays valid for the window's
-// lifetime.
+// The slice points into SDL storage and stays valid for the window's lifetime.
 vulkan_extensions :: proc() -> (extensions: []cstring, err: Error) {
 	count: u32
 	names := sdl3.Vulkan_GetInstanceExtensions(&count)
@@ -103,9 +91,6 @@ poll_events :: proc(window: ^Window) -> (events: Events) {
 	return drain_events(window, nil)
 }
 
-// wait_events blocks until one event arrives or the timeout expires, then
-// drains the queue. The main loop uses it while the window is minimized so the
-// process does not spin.
 wait_events :: proc(window: ^Window, timeout_ms: i32) -> (events: Events) {
 	event: sdl3.Event
 	if !sdl3.WaitEventTimeout(&event, timeout_ms) {
@@ -131,8 +116,6 @@ drain_events :: proc(window: ^Window, first: ^sdl3.Event) -> (events: Events) {
 	return
 }
 
-// read_movement samples the keyboard state after the event drain. Held keys
-// move the player; a free cursor always gives zero movement.
 read_movement :: proc(events: ^Events) {
 	key_count: c.int
 	keys := sdl3.GetKeyboardState(&key_count)
@@ -158,8 +141,6 @@ is_minimized :: proc(window: ^Window) -> bool {
 	return .MINIMIZED in sdl3.GetWindowFlags(window.handle)
 }
 
-// pixel_size returns the drawable size in pixels, or zero when the window has
-// no drawable area (for example while minimized).
 pixel_size :: proc(window: ^Window) -> (width, height: u32) {
 	w, h: c.int
 	if !sdl3.GetWindowSizeInPixels(window.handle, &w, &h) {

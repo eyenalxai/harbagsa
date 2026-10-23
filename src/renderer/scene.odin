@@ -12,9 +12,6 @@ CAMERA_UP :: [3]f32{0, 1, 0}
 CAMERA_NEAR :: 0.05
 CAMERA_FAR :: 200.0
 
-// Camera is the per-frame view the main loop builds from the interpolated
-// player state. Yaw is measured around +Y and pitch is the look angle in
-// radians. fov_x is the horizontal field of view in radians.
 Camera :: struct {
 	position: [3]f32,
 	yaw:      f32,
@@ -64,32 +61,26 @@ Vertex :: struct {
 
 // The unit cube has four vertices per face so every face has its own normal.
 CUBE_VERTICES := [24]Vertex {
-	// +Z
 	{{-0.5, -0.5, 0.5}, {0, 0, 1}},
 	{{0.5, -0.5, 0.5}, {0, 0, 1}},
 	{{0.5, 0.5, 0.5}, {0, 0, 1}},
 	{{-0.5, 0.5, 0.5}, {0, 0, 1}},
-	// -Z
 	{{0.5, -0.5, -0.5}, {0, 0, -1}},
 	{{-0.5, -0.5, -0.5}, {0, 0, -1}},
 	{{-0.5, 0.5, -0.5}, {0, 0, -1}},
 	{{0.5, 0.5, -0.5}, {0, 0, -1}},
-	// +X
 	{{0.5, -0.5, 0.5}, {1, 0, 0}},
 	{{0.5, -0.5, -0.5}, {1, 0, 0}},
 	{{0.5, 0.5, -0.5}, {1, 0, 0}},
 	{{0.5, 0.5, 0.5}, {1, 0, 0}},
-	// -X
 	{{-0.5, -0.5, -0.5}, {-1, 0, 0}},
 	{{-0.5, -0.5, 0.5}, {-1, 0, 0}},
 	{{-0.5, 0.5, 0.5}, {-1, 0, 0}},
 	{{-0.5, 0.5, -0.5}, {-1, 0, 0}},
-	// +Y
 	{{-0.5, 0.5, 0.5}, {0, 1, 0}},
 	{{0.5, 0.5, 0.5}, {0, 1, 0}},
 	{{0.5, 0.5, -0.5}, {0, 1, 0}},
 	{{-0.5, 0.5, -0.5}, {0, 1, 0}},
-	// -Y
 	{{-0.5, -0.5, -0.5}, {0, -1, 0}},
 	{{0.5, -0.5, -0.5}, {0, -1, 0}},
 	{{0.5, -0.5, 0.5}, {0, -1, 0}},
@@ -202,8 +193,7 @@ create_camera_resources :: proc(r: ^Renderer) -> bool {
 		return false
 	}
 
-	// Allocate one set per call. The per-frame set then matches the per-frame
-	// camera buffer without relying on an array allocation.
+	// One set per frame matches the per-frame camera buffer.
 	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
 		allocate_info := vk.DescriptorSetAllocateInfo {
 			sType = .DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -826,9 +816,7 @@ create_buffer :: proc(
 	return true
 }
 
-// create_mapped_buffer makes a host-visible buffer and keeps it mapped for the
-// lifetime of the buffer. The caller writes through the mapped pointer and
-// must unmap it before destroy_buffer.
+// Host-visible and permanently mapped. Unmap before destroy_buffer.
 create_mapped_buffer :: proc(
 	r: ^Renderer,
 	size: vk.DeviceSize,
@@ -860,8 +848,6 @@ destroy_buffer :: proc(r: ^Renderer, buffer: ^vk.Buffer, memory: ^vk.DeviceMemor
 	}
 }
 
-// create_device_buffer uploads data through a host-visible staging buffer and
-// leaves the result in device-local memory.
 create_device_buffer :: proc(
 	r: ^Renderer,
 	data: rawptr,
