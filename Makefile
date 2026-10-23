@@ -28,11 +28,12 @@ build: $(BOX3D_LIB)
 
 check: $(BOX3D_LIB)
 	$(ODIN) check . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
+	$(ODIN) check src/game $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 
+# Box3D's world registry is not safe for concurrent world creation, so the
+# simulation tests share one runner thread.
 test: $(BOX3D_LIB)
 	$(ODIN) test tests/physics $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
-	# Box3D's world registry is not safe for concurrent world creation, so the
-	# simulation tests share one runner thread.
 	$(ODIN) test tests/simulation $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
 
 run: $(BOX3D_LIB)
