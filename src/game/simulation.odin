@@ -29,19 +29,7 @@ PITCH_LIMIT :: 89.0 * b3.DEG_TO_RAD
 
 SPAWN_POSITION :: b3.Vec3{0.0, 0.05, 14.0}
 
-ARENA_HALF_EXTENT :: 20.0
-ARENA_FLOOR_THICKNESS :: 1.0
-ARENA_WALL_HEIGHT :: 4.0
-ARENA_WALL_THICKNESS :: 0.5
-
-CRATE_COUNT :: 3
-CRATE_SIZE :: 1.0
 CRATE_DENSITY :: 20.0
-CRATE_POSITIONS := [CRATE_COUNT]b3.Vec3{
-	{0.0, 0.5, 8.0},
-	{-3.0, 0.5, 6.0},
-	{3.0, 0.5, 6.0},
-}
 
 SIMULATION_STEP :: 1.0 / 60.0
 SIMULATION_SUB_STEPS :: 4
@@ -51,12 +39,12 @@ MOVE_ITERATIONS :: 5
 MOVE_TOLERANCE :: 0.01
 
 // One frame of player intent. The platform layer fills this once per frame.
-// look_delta and jump_pressed are frame edges: apply them on one fixed step
-// only and pass zero or false for the other steps in the same frame.
+// jump_pressed and reset_pressed are frame edges: apply them on one fixed step
+// only and pass false for the other steps in the same frame. Look is separate,
+// so a mouse move works even when no fixed step runs.
 Input_Snapshot :: struct {
 	move_forward:  f32,
 	move_right:    f32,
-	look_delta:    b3.Vec2,
 	jump_pressed:  bool,
 	reset_pressed: bool,
 }
@@ -71,7 +59,7 @@ Player :: struct {
 	grounded:          bool,
 }
 
-// The renderer reads this after the last fixed step and interpolates between
+// The main loop reads this after the last fixed step and interpolates between
 // previous_position and position.
 Render_Snapshot :: struct {
 	position:              b3.Vec3,
@@ -87,7 +75,7 @@ Render_Snapshot :: struct {
 Simulation :: struct {
 	world_id: b3.WorldId,
 	player:   Player,
-	crates:   [CRATE_COUNT]b3.BodyId,
+	crates:   [ARENA_CRATE_COUNT]b3.BodyId,
 }
 
 // Build the arena and the player. The world lives until simulation_destroy.
@@ -143,8 +131,6 @@ simulation_step :: proc(sim: ^Simulation, input: Input_Snapshot, time_step: f32)
 
 	sim.player.previous_position = sim.player.position
 
-	update_look(&sim.player, input.look_delta)
-
 	probe := probe_ground(sim)
 	sim.player.grounded = is_grounded(sim, probe)
 	if input.jump_pressed && sim.player.grounded {
@@ -179,9 +165,10 @@ simulation_snapshot :: proc(sim: ^Simulation) -> Render_Snapshot {
 	}
 }
 
-// Crate positions are exposed for the renderer and for headless assertions.
+// Crate positions are exposed for the main loop's draw list and for headless
+// assertions.
 simulation_crate_position :: proc(sim: ^Simulation, index: int) -> b3.Vec3 {
-	if index < 0 || index >= CRATE_COUNT {
+	if index < 0 || index >= ARENA_CRATE_COUNT {
 		return b3.Vec3_zero
 	}
 	return b3.ToVec3(b3.Body_GetPosition(sim.crates[index]))
@@ -189,40 +176,9 @@ simulation_crate_position :: proc(sim: ^Simulation, index: int) -> b3.Vec3 {
 
 @(private)
 create_arena :: proc(sim: ^Simulation) {
-	floor_center := b3.Vec3{0.0, -ARENA_FLOOR_THICKNESS * 0.5, 0.0}
-	floor_half_extents := b3.Vec3{
-		ARENA_HALF_EXTENT,
-		ARENA_FLOOR_THICKNESS * 0.5,
-		ARENA_HALF_EXTENT,
+	for box in arena_static_boxes() {
+		create_static_box(sim.world_id, box.center, box.half_extents)
 	}
-	create_static_box(sim.world_id, floor_center, floor_half_extents)
-
-	wall_center_y: f32 = ARENA_WALL_HEIGHT * 0.5
-	wall_offset: f32 = ARENA_HALF_EXTENT + ARENA_WALL_THICKNESS * 0.5
-	wall_half_thickness: f32 = ARENA_WALL_THICKNESS * 0.5
-	wall_half_height: f32 = ARENA_WALL_HEIGHT * 0.5
-	wall_half_length: f32 = ARENA_HALF_EXTENT + ARENA_WALL_THICKNESS
-
-	create_static_box(
-		sim.world_id,
-		{-wall_offset, wall_center_y, 0.0},
-		{wall_half_thickness, wall_half_height, wall_half_length},
-	)
-	create_static_box(
-		sim.world_id,
-		{wall_offset, wall_center_y, 0.0},
-		{wall_half_thickness, wall_half_height, wall_half_length},
-	)
-	create_static_box(
-		sim.world_id,
-		{0.0, wall_center_y, -wall_offset},
-		{wall_half_length, wall_half_height, wall_half_thickness},
-	)
-	create_static_box(
-		sim.world_id,
-		{0.0, wall_center_y, wall_offset},
-		{wall_half_length, wall_half_height, wall_half_thickness},
-	)
 }
 
 @(private)
@@ -238,13 +194,13 @@ create_static_box :: proc(world_id: b3.WorldId, position: b3.Vec3, half_extents:
 
 @(private)
 create_crates :: proc(sim: ^Simulation) {
-	for position, index in CRATE_POSITIONS {
+	for box, index in arena_crates() {
 		body_def := b3.DefaultBodyDef()
 		body_def.type = .dynamicBody
-		body_def.position = position
+		body_def.position = box.center
 		body_id := b3.CreateBody(sim.world_id, body_def)
 
-		hull := b3.MakeCubeHull(CRATE_SIZE * 0.5)
+		hull := b3.MakeBoxHull(box.half_extents.x, box.half_extents.y, box.half_extents.z)
 		shape_def := b3.DefaultShapeDef()
 		shape_def.density = CRATE_DENSITY
 		_ = b3.CreateHullShape(body_id, shape_def, &hull.base)

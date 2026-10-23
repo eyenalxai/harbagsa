@@ -1,8 +1,9 @@
 #+vet explicit-allocators
 package game
 
-// The static arena from the walking-demo spec. The renderer draws these boxes
-// and the simulation will build its static bodies from the same list.
+// The static arena from the walking-demo spec. This file is the single source
+// of arena geometry and colors: the simulation builds bodies from these boxes
+// and the main loop hands them to the renderer.
 //
 // The floor's top face is at y = 0. Walls stand on the floor and enclose the
 // 40 m x 40 m play area. Crate placeholders are 1 m cubes that rest on the
@@ -15,7 +16,14 @@ ARENA_WALL_THICKNESS :: 0.5
 ARENA_CRATE_SIZE :: 1.0
 ARENA_CRATE_HALF_SIZE :: ARENA_CRATE_SIZE * 0.5
 
-ARENA_CRATE_POSITIONS :: [3][3]f32 {
+// The arena list is split in two: the floor and walls are static bodies, and
+// the crates are dynamic bodies that the player can push. Keep the static
+// boxes first so both the simulation and the renderer can slice the list.
+ARENA_STATIC_BOX_COUNT :: 5
+ARENA_CRATE_COUNT :: 3
+ARENA_BOX_COUNT :: ARENA_STATIC_BOX_COUNT + ARENA_CRATE_COUNT
+
+ARENA_CRATE_POSITIONS :: [ARENA_CRATE_COUNT][3]f32 {
 	{0, ARENA_CRATE_HALF_SIZE, 8},
 	{-3, ARENA_CRATE_HALF_SIZE, 6},
 	{3, ARENA_CRATE_HALF_SIZE, 6},
@@ -39,7 +47,7 @@ Arena_Box :: struct {
 }
 
 arena_boxes :: proc() -> []Arena_Box {
-	@(static) boxes := [8]Arena_Box {
+	@(static) boxes := [ARENA_BOX_COUNT]Arena_Box {
 		{
 			center = {0, -0.5, 0},
 			half_extents = {ARENA_HALF_SIZE, 0.5, ARENA_HALF_SIZE},
@@ -98,4 +106,15 @@ arena_boxes :: proc() -> []Arena_Box {
 		},
 	}
 	return boxes[:]
+}
+
+// arena_static_boxes returns the floor and wall boxes.
+arena_static_boxes :: proc() -> []Arena_Box {
+	return arena_boxes()[:ARENA_STATIC_BOX_COUNT]
+}
+
+// arena_crates returns the crate boxes. Their center is the resting position;
+// the simulation owns the live position once the world starts.
+arena_crates :: proc() -> []Arena_Box {
+	return arena_boxes()[ARENA_STATIC_BOX_COUNT:]
 }

@@ -71,10 +71,8 @@ walk_follows_camera_yaw :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 
-	turn := game.Input_Snapshot{
-		look_delta = {-math.PI / 2.0 / game.YAW_SENSITIVITY, 0.0},
-	}
-	step(&sim, turn, 1)
+	turn := b3.Vec2{-math.PI / 2.0 / game.YAW_SENSITIVITY, 0.0}
+	game.simulation_look(&sim, turn)
 	expect_near(t, sim.player.yaw, math.PI / 2.0, 0.0001, "yaw")
 
 	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 30)
@@ -197,13 +195,13 @@ wall_blocks_player :: proc(t: ^testing.T) {
 
 	testing.expectf(
 		t,
-		sim.player.position.z < game.ARENA_HALF_EXTENT,
+		sim.player.position.z < game.ARENA_HALF_SIZE,
 		"player passed through the wall: z=%v",
 		sim.player.position.z,
 	)
 	testing.expectf(
 		t,
-		sim.player.position.z > game.ARENA_HALF_EXTENT - 1.0,
+		sim.player.position.z > game.ARENA_HALF_SIZE - 1.0,
 		"player stopped short of the wall: z=%v",
 		sim.player.position.z,
 	)
@@ -352,11 +350,8 @@ reset_returns_player_to_spawn :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 
-	turning := game.Input_Snapshot{
-		move_forward = 1.0,
-		look_delta = {10.0, 5.0},
-	}
-	step(&sim, turning, 30)
+	game.simulation_look(&sim, {10.0, 5.0})
+	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 30)
 	step(&sim, game.Input_Snapshot{reset_pressed = true}, 1)
 
 	testing.expect(t, sim.player.position == game.SPAWN_POSITION, "position is not spawn")

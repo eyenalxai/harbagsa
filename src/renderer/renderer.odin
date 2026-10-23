@@ -172,7 +172,7 @@ deinit :: proc(r: ^Renderer) {
 	}
 }
 
-begin_frame :: proc(r: ^Renderer) -> (frame: Frame, status: Frame_Status) {
+begin_frame :: proc(r: ^Renderer, camera: Camera, boxes: []Draw_Box) -> (frame: Frame, status: Frame_Status) {
 	width, height := platform.pixel_size(r.window)
 	if width == 0 || height == 0 {
 		return {}, .Skipped
@@ -219,7 +219,7 @@ begin_frame :: proc(r: ^Renderer) -> (frame: Frame, status: Frame_Status) {
 	if !check(vk.ResetCommandBuffer(command_buffer, {}), "vkResetCommandBuffer") {
 		return {}, .Fatal
 	}
-	if !record_scene(r, command_buffer, image_index) {
+	if !record_scene(r, command_buffer, image_index, camera, boxes) {
 		return {}, .Fatal
 	}
 
