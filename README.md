@@ -229,6 +229,10 @@ The compositor may resize the window. The PNG has the actual swapchain size. It
 matches an offscreen capture at the same size when both frames share the same
 TAA history; the first frame always matches.
 
+`scenarios/taa-static.json` captures 25 consecutive frames from a static camera.
+Use it to check TAA edge stability without a window. The first frames converge;
+compare later frames to see the steady-state ripple.
+
 ## Build
 
 ```sh
