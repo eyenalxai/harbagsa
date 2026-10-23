@@ -115,7 +115,7 @@ destroy_overlay :: proc(r: ^Renderer) {
 	}
 }
 
-prepare_overlay :: proc(r: ^Renderer, debug_lines: []geometry.Line, hud: HUD_State) -> bool {
+prepare_overlay :: proc(r: ^Renderer, debug_lines: []geometry.Line, hud: HUD_Frame) -> bool {
 	o := &r.overlay
 	o.debug_count = 0
 	o.hud_count = 0

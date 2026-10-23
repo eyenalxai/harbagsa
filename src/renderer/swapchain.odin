@@ -159,7 +159,7 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 			return .Fatal
 		}
 	}
-	if r.overlay.pipeline_format != .UNDEFINED && r.overlay.pipeline_format != r.swapchain_format {
+	if r.overlay.pipeline_format != r.swapchain_format {
 		destroy_overlay_pipelines(r)
 		if !create_overlay_pipelines(r) {
 			return .Fatal

@@ -183,7 +183,7 @@ begin_frame :: proc(
 	light_direction: [3]f32,
 	boxes: []geometry.Box,
 	debug_lines: []geometry.Line,
-	hud: HUD_State,
+	hud: HUD_Frame,
 ) -> (
 	frame: Frame,
 	status: Frame_Status,
