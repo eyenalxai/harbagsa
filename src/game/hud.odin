@@ -5,16 +5,17 @@ package game
 import "core:fmt"
 import "core:math"
 
-HUD_STATUS_LINE_COUNT :: 3
+HUD_STATUS_LINE_COUNT :: 6
 HUD_DEBUG_STATUS_LINE_COUNT :: 5
-HUD_MAX_STATUS_LINES :: 5
+HUD_MAX_STATUS_LINES :: 6
 HUD_LINE_BYTES :: 96
 
-HUD_CONTROL_LINES := [4]string {
-	"WASD move    Mouse look",
-	"Space jump    R reset",
-	"F1 debug view    F2 debug mode",
-	"Esc release mouse",
+HUD_CONTROL_LINES := [5]string {
+	"WASD move    Mouse look    Left click capture",
+	"Shift sprint    Space jump or mantle",
+	"C crouch or slide    Z prone, crawl, or dive",
+	"R reset    Shift+R scene    F1 debug view",
+	"F2 debug mode    Esc release mouse",
 }
 
 HUD_DEBUG_CONTROL_LINES := [5]string {
@@ -57,15 +58,29 @@ hud_state_update :: proc(
 		grounded = "yes"
 	}
 
-	speed := math.sqrt(
-		snapshot.velocity.x * snapshot.velocity.x +
-		snapshot.velocity.z * snapshot.velocity.z,
+	hud.status_strings[0] = fmt.bprintf(
+		hud.status_storage[0][:],
+		"Stance %s",
+		stance_name(snapshot.stance),
 	)
-
-	hud.status_strings[0] = fmt.bprintf(hud.status_storage[0][:], "Speed %.1f m/s", speed)
-	hud.status_strings[1] = fmt.bprintf(hud.status_storage[1][:], "Grounded %s", grounded)
+	hud.status_strings[1] = fmt.bprintf(
+		hud.status_storage[1][:],
+		"Gait %s",
+		gait_name(snapshot.gait),
+	)
 	hud.status_strings[2] = fmt.bprintf(
 		hud.status_storage[2][:],
+		"Speed %.1f m/s",
+		horizontal_speed(snapshot.velocity),
+	)
+	hud.status_strings[3] = fmt.bprintf(hud.status_storage[3][:], "Grounded %s", grounded)
+	hud.status_strings[4] = fmt.bprintf(
+		hud.status_storage[4][:],
+		"State %s",
+		movement_state_name(snapshot.movement_state),
+	)
+	hud.status_strings[5] = fmt.bprintf(
+		hud.status_storage[5][:],
 		"Position %.1f  %.1f  %.1f",
 		snap_near_zero(snapshot.position.x),
 		snap_near_zero(snapshot.position.y),

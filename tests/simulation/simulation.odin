@@ -9,6 +9,17 @@ import game "src:game"
 
 DT :: game.SIMULATION_STEP
 
+DIRECTIONS :: [8][2]f32 {
+	{1.0, 0.0},
+	{1.0, 1.0},
+	{0.0, 1.0},
+	{-1.0, 1.0},
+	{-1.0, 0.0},
+	{-1.0, -1.0},
+	{0.0, -1.0},
+	{1.0, -1.0},
+}
+
 @(private)
 create :: proc(t: ^testing.T) -> game.Simulation {
 	sim := game.simulation_create()
@@ -21,12 +32,6 @@ step :: proc(sim: ^game.Simulation, input: game.Input_Snapshot, count: int) {
 	for _ in 0 ..< count {
 		game.simulation_step(sim, input, DT)
 	}
-}
-
-@(private)
-horizontal_speed :: proc(velocity: b3.Vec3) -> f32 {
-	horizontal := b3.Vec3{velocity.x, 0.0, velocity.z}
-	return b3.Length(horizontal)
 }
 
 @(private)
@@ -63,7 +68,7 @@ walk_forward_moves_along_facing :: proc(t: ^testing.T) {
 		sim.player.position.z,
 	)
 	expect_near(t, sim.player.position.x, game.SPAWN_POSITION.x, 0.001, "x drift")
-	expect_near(t, horizontal_speed(sim.player.velocity), game.PLAYER_WALK_SPEED, 0.01, "walk speed")
+	expect_near(t, game.horizontal_speed(sim.player.velocity), game.PLAYER_WALK_SPEED, 0.01, "walk speed")
 }
 
 @(test)
@@ -97,7 +102,7 @@ walk_accelerates_and_decelerates :: proc(t: ^testing.T) {
 	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 1)
 	expect_near(
 		t,
-		horizontal_speed(sim.player.velocity),
+		game.horizontal_speed(sim.player.velocity),
 		game.PLAYER_GROUND_ACCELERATION * DT,
 		0.01,
 		"first acceleration step",
@@ -106,7 +111,7 @@ walk_accelerates_and_decelerates :: proc(t: ^testing.T) {
 	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 4)
 	expect_near(
 		t,
-		horizontal_speed(sim.player.velocity),
+		game.horizontal_speed(sim.player.velocity),
 		game.PLAYER_WALK_SPEED,
 		0.01,
 		"accelerated to walk speed",
@@ -115,14 +120,14 @@ walk_accelerates_and_decelerates :: proc(t: ^testing.T) {
 	step(&sim, {}, 1)
 	expect_near(
 		t,
-		horizontal_speed(sim.player.velocity),
+		game.horizontal_speed(sim.player.velocity),
 		game.PLAYER_WALK_SPEED - game.PLAYER_GROUND_DECELERATION * DT,
 		0.01,
 		"first deceleration step",
 	)
 
 	step(&sim, {}, 5)
-	expect_near(t, horizontal_speed(sim.player.velocity), 0.0, 0.01, "stopped after deceleration")
+	expect_near(t, game.horizontal_speed(sim.player.velocity), 0.0, 0.01, "stopped after deceleration")
 }
 
 @(test)
@@ -152,7 +157,7 @@ walk_in_eight_directions :: proc(t: ^testing.T) {
 			30,
 		)
 
-		speed := horizontal_speed(sim.player.velocity)
+		speed := game.horizontal_speed(sim.player.velocity)
 		expect_near(t, speed, game.PLAYER_WALK_SPEED, 0.01, "direction speed")
 
 		displacement := sim.player.position - game.SPAWN_POSITION
@@ -176,8 +181,8 @@ diagonal_speed_equals_straight_speed :: proc(t: ^testing.T) {
 	step(&straight, game.Input_Snapshot{move_forward = 1.0}, 60)
 	step(&diagonal, game.Input_Snapshot{move_forward = 1.0, move_right = 1.0}, 60)
 
-	straight_speed := horizontal_speed(straight.player.velocity)
-	diagonal_speed := horizontal_speed(diagonal.player.velocity)
+	straight_speed := game.horizontal_speed(straight.player.velocity)
+	diagonal_speed := game.horizontal_speed(diagonal.player.velocity)
 	expect_near(t, diagonal_speed, straight_speed, 0.01, "diagonal speed")
 
 	straight_distance := horizontal_distance(game.SPAWN_POSITION, straight.player.position)
@@ -206,9 +211,9 @@ wall_blocks_player :: proc(t: ^testing.T) {
 	)
 	testing.expectf(
 		t,
-		horizontal_speed(sim.player.velocity) < 0.1,
+		game.horizontal_speed(sim.player.velocity) < 0.1,
 		"player kept moving into the wall: speed=%v",
-		horizontal_speed(sim.player.velocity),
+		game.horizontal_speed(sim.player.velocity),
 	)
 }
 
@@ -221,6 +226,12 @@ player_pushes_crate :: proc(t: ^testing.T) {
 	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 120)
 	crate_end := game.simulation_crate_box(&sim, 0).center
 
+	testing.expectf(
+		t,
+		sim.player.position.y < 0.2,
+		"player stepped onto the crate: y=%v",
+		sim.player.position.y,
+	)
 	testing.expectf(
 		t,
 		crate_end.z < crate_start.z - 0.25,

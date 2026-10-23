@@ -29,11 +29,76 @@ The state where the character controller finds a floor under the player.
 _Avoid_: On floor
 
 **Air control**:
-Steering while airborne. It changes direction without gaining horizontal speed.
+Steering while airborne. It changes direction up to the air cap; it never exceeds the cap.
 _Avoid_: Air strafe
 
+**Stance**:
+The player's body height: Standing, Crouching, or Prone. It sets the capsule height, the eye height, and the movement speed.
+_Avoid_: Posture, state
+
+**Standing**:
+The tallest stance. The capsule is 1.80 m high and the eye is 1.65 m above the feet.
+
+**Crouching**:
+The middle stance. The capsule is 1.20 m high and the eye is 1.05 m above the feet.
+
+**Prone**:
+The lowest stance. The capsule is 0.70 m high and the eye is 0.30 m above the feet. A prone player can crawl.
+
+**Crawl**:
+Movement while Prone. The crawl speed is 1.2 m/s in any horizontal direction.
+_Avoid_: Prone walk
+
+**Gait**:
+The ground movement mode: Walk or Sprint. Sprint applies only while Standing.
+_Avoid_: Run mode
+
+**Sprint**:
+The 8.0 m/s gait in any horizontal direction.
+_Avoid_: Run
+
+**Headroom**:
+The clear space above the feet that a taller stance needs. The controller tests it before the capsule grows. A floor-level side obstacle does not reduce headroom; an overhead shape does.
+_Avoid_: Ceiling check
+
+**Dive**:
+An 11.0 m/s lunge that starts in the air or from a sprint. The player lands Prone and slides.
+_Avoid_: Lunge
+
+**Slide**:
+The locked-direction glide after a dive or a crouch slide. A dive slide ends Prone; a crouch slide ends Crouching.
+_Avoid_: Skid
+
+**Crouch slide**:
+A 10.0 m/s slide that starts from Sprint. It ends Crouching.
+_Avoid_: Power slide
+
+**Mantle**:
+A 0.25 s climb onto a ledge up to 1.5 m above the feet.
+_Avoid_: Climb, vault
+
+**Step-up**:
+The automatic climb onto an obstacle up to 0.35 m high while grounded.
+_Avoid_: Autostep
+
+**Ground snap**:
+The downward correction that keeps a grounded player on a walkable surface within 0.30 m. A walkable slope can give a small positive vertical velocity; the surface clearance decides, not the sign of the velocity.
+_Avoid_: Stick to ground
+
+**Coyote time**:
+The 0.10 s after leaving a walkable surface during which a jump still works.
+_Avoid_: Grace period
+
+**Jump buffer**:
+The 0.12 s before landing during which a jump press is remembered.
+_Avoid_: Input buffer
+
+**Movement state**:
+The exclusive action state: None, Diving, Sliding, or Mantling. Stance and gait are separate.
+_Avoid_: Action state
+
 **Arena**:
-The fixed test level: a floor, walls, and a few crates.
+The fixed test level: a floor, walls, stairs, ramps, tunnels, mantle walls, a dive platform, a slide lane, and a few crates.
 _Avoid_: Map, level
 
 **Light volume**:
@@ -56,6 +121,18 @@ _Avoid_: Light pass
 A dynamic box that the player can push.
 _Avoid_: Prop, box
 
+**Slide lane**:
+The marked arena strip for crouch slides.
+_Avoid_: Runway
+
+**Mantle wall**:
+The arena wall with a top at mantle height.
+_Avoid_: Ledge
+
+**Dive platform**:
+The 2.5 m arena platform that starts dives.
+_Avoid_: Tower
+
 **Spawn**:
 The point where the player starts and returns after a reset.
 _Avoid_: Start, origin
@@ -65,7 +142,7 @@ The headless fixed-step update that owns the world and the player state.
 _Avoid_: Game loop, engine
 
 **Input snapshot**:
-One frame of player intent: movement axes, jump, and reset. Look is a separate frame call.
+One frame of player intent: movement axes, sprint, crouch, prone, jump, and reset. Look is a separate frame call.
 _Avoid_: Input state, controls
 
 **Render snapshot**:
