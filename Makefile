@@ -26,10 +26,12 @@ BOX3D_LIB := $(BOX3D_DIR)/lib/linux-amd64/libbox3d.a
 
 all: build
 
+# Build aside so a failed ar never leaves a broken archive.
 $(BOX3D_LIB): $(BOX3D_OBJ)
 	@mkdir -p $(@D)
-	rm -f $@
-	ar rcs $@ $(BOX3D_OBJ)
+	rm -f $@.tmp
+	ar rcs $@.tmp $(BOX3D_OBJ)
+	mv $@.tmp $@
 
 build/box3d/%.o: $(BOX3D_DIR)/src/src/%.c
 	@mkdir -p $(@D)
