@@ -53,7 +53,8 @@ float sun_visibility(vec3 world_position, vec3 normal, vec3 to_light) {
         vec4(world_position + normal * SHADOW_NORMAL_OFFSET, 1.0);
     vec3 projected = light_position.xyz / light_position.w;
     vec2 uv = projected.xy * 0.5 + 0.5;
-    if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
+    if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0))) ||
+        projected.z < 0.0 || projected.z > 1.0) {
         return 1.0;
     }
 
