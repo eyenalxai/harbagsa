@@ -8,6 +8,8 @@ ODIN_LIB_CHECK_FLAGS := $(filter-out -vet-unused-procedures,$(ODIN_FLAGS))
 BIN := bin/harbagsa
 
 GLSLC ?= glslc
+SPIRV_VAL ?= spirv-val
+VULKANINFO ?= vulkaninfo
 SHADER_SRC := src/renderer/shaders
 SHADER_OUT := build/shaders
 SHADER_INCLUDES := $(SHADER_SRC)/gamma.glsl $(SHADER_SRC)/camera.glsl
@@ -23,7 +25,16 @@ BOX3D_SRC := $(wildcard $(BOX3D_DIR)/src/src/*.c)
 BOX3D_OBJ := $(patsubst $(BOX3D_DIR)/src/src/%.c,build/box3d/%.o,$(BOX3D_SRC))
 BOX3D_LIB := $(BOX3D_DIR)/lib/linux-amd64/libbox3d.a
 
-.PHONY: all build check check-lines test run shaders clean
+VULKAN_LAYER_DIRS ?= \
+	$(HOME)/.config/vulkan/explicit_layer.d \
+	/etc/xdg/vulkan/explicit_layer.d \
+	/etc/vulkan/explicit_layer.d \
+	$(HOME)/.local/share/vulkan/explicit_layer.d \
+	/usr/local/share/vulkan/explicit_layer.d \
+	/usr/share/vulkan/explicit_layer.d
+VALIDATION_LAYER := VK_LAYER_KHRONOS_validation
+
+.PHONY: all build check check-spirv check-lines test run shaders validate clean
 
 all: build
 
@@ -48,11 +59,22 @@ $(SHADER_OUT)/%.frag.spv: $(SHADER_SRC)/%.frag $(SHADER_INCLUDES)
 
 shaders: $(SHADERS)
 
+check-spirv: shaders
+	@if ! command -v $(SPIRV_VAL) >/dev/null 2>&1; then \
+		printf '%s\n' '$(SPIRV_VAL) not found; skipping SPIR-V validation'; \
+	else \
+		status=0; \
+		for file in $(SHADERS); do \
+			$(SPIRV_VAL) --target-env vulkan1.3 "$$file" || status=1; \
+		done; \
+		exit $$status; \
+	fi
+
 build: $(BOX3D_LIB) shaders
 	mkdir -p bin
 	$(ODIN) build . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -out:$(BIN)
 
-check: check-lines $(BOX3D_LIB) shaders
+check: check-lines check-spirv $(BOX3D_LIB) shaders
 	$(ODIN) check . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
 	$(ODIN) check src/platform $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/renderer $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
@@ -79,6 +101,23 @@ test: $(BOX3D_LIB) shaders
 
 run: $(BOX3D_LIB) shaders
 	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
+
+validate: $(BOX3D_LIB) shaders
+	@found=false; \
+	if command -v $(VULKANINFO) >/dev/null 2>&1; then \
+		$(VULKANINFO) --summary 2>/dev/null | grep -qF '$(VALIDATION_LAYER)' && found=true; \
+	fi; \
+	if [ "$$found" = false ]; then \
+		grep -rqsE '"name"[[:space:]]*:[[:space:]]*"$(VALIDATION_LAYER)"' \
+			$(VULKAN_LAYER_DIRS) 2>/dev/null && found=true; \
+	fi; \
+	if [ "$$found" = false ]; then \
+		printf '%s\n' \
+			'Vulkan validation layer not found.' \
+			'Install it with: sudo pacman -S vulkan-validation-layers'; \
+		exit 1; \
+	fi
+	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ENABLE_VALIDATION_LAYERS=true
 
 clean:
 	rm -rf bin build $(BOX3D_LIB)
