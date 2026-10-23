@@ -1,18 +1,13 @@
 #+vet explicit-allocators
 package renderer
 
-import "core:fmt"
-
 import stb_easy_font "vendor:stb/easy_font"
 
-HUD_State :: struct {
-	speed:    f32,
-	grounded: bool,
-	position: [3]f32,
-	captured: bool,
-	stance:   string,
-	gait:     string,
-	state:    string,
+HUD_Frame :: struct {
+	status_lines:  []string,
+	control_lines: []string,
+	capture_hint:  string,
+	captured:      bool,
 }
 
 HUD_TEXT_COLOR :: [4]f32{1.0, 1.0, 1.0, 1.0}
@@ -52,109 +47,45 @@ hud_emit_text :: proc(o: ^Overlay, x, y: f32, text: string, color: [4]f32, scale
 	}
 }
 
-snap_near_zero :: proc(value: f32) -> f32 {
-	if value > -0.05 && value < 0.05 {
-		return 0
-	}
-	return value
+hud_panel_height :: proc(lines: []string, scale: f32) -> f32 {
+	return f32(len(lines)) * HUD_LINE_HEIGHT * scale
 }
 
-build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_State) {
+hud_emit_panel :: proc(o: ^Overlay, lines: []string, x, y, scale, padding: f32) {
+	width: f32
+	for line in lines {
+		width = max(width, f32(stb_easy_font.width(line)) * scale)
+	}
+	height := hud_panel_height(lines, scale)
+	hud_emit_rect(o, x, y, width + padding * 2, height + padding * 2, HUD_PANEL_COLOR)
+	for line, index in lines {
+		hud_emit_text(
+			o,
+			x + padding,
+			y + padding + f32(index) * HUD_LINE_HEIGHT * scale,
+			line,
+			HUD_TEXT_COLOR,
+			scale,
+		)
+	}
+}
+
+build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
 	scale := 2.0 * clamp(height / 720.0, 1.0, 2.0)
 	margin := 8.0 * scale
 	padding := 5.0 * scale
 
-	grounded := "no"
-	if hud.grounded {
-		grounded = "yes"
-	}
+	hud_emit_panel(o, hud.status_lines, margin, margin, scale, padding)
 
-	stance_buffer: [32]u8
-	stance_text := fmt.bprintf(stance_buffer[:], "Stance %s", hud.stance)
-	gait_buffer: [32]u8
-	gait_text := fmt.bprintf(gait_buffer[:], "Gait %s", hud.gait)
-	speed_buffer: [64]u8
-	speed_text := fmt.bprintf(speed_buffer[:], "Speed %.1f m/s", hud.speed)
-	grounded_buffer: [32]u8
-	grounded_text := fmt.bprintf(grounded_buffer[:], "Grounded %s", grounded)
-	state_buffer: [32]u8
-	state_text := fmt.bprintf(state_buffer[:], "State %s", hud.state)
-	position_buffer: [96]u8
-	position_text := fmt.bprintf(
-		position_buffer[:],
-		"Position %.1f  %.1f  %.1f",
-		snap_near_zero(hud.position.x),
-		snap_near_zero(hud.position.y),
-		snap_near_zero(hud.position.z),
-	)
-
-	state_lines := [6]string {
-		stance_text,
-		gait_text,
-		speed_text,
-		grounded_text,
-		state_text,
-		position_text,
-	}
-	state_width := 0
-	for line in state_lines {
-		state_width = max(state_width, stb_easy_font.width(line))
-	}
-	state_panel_width := f32(state_width) * scale + padding * 2
-	state_height := f32(len(state_lines)) * HUD_LINE_HEIGHT * scale
-	hud_emit_rect(
-		o,
-		margin,
-		margin,
-		state_panel_width,
-		state_height + padding * 2,
-		HUD_PANEL_COLOR,
-	)
-	for line, index in state_lines {
-		hud_emit_text(
-			o,
-			margin + padding,
-			margin + padding + f32(index) * HUD_LINE_HEIGHT * scale,
-			line,
-			HUD_TEXT_COLOR,
-			scale,
-		)
-	}
-
-	hint_lines := [5]string {
-		"WASD move    Mouse look",
-		"Shift sprint    Space jump or mantle",
-		"C crouch or slide    Z prone, crawl, or dive",
-		"Left click capture    Esc release mouse",
-		"R reset    F1 debug",
-	}
-	hint_width := 0
-	for line in hint_lines {
-		hint_width = max(hint_width, stb_easy_font.width(line))
-	}
-	hint_panel_width := f32(hint_width) * scale + padding * 2
-	hint_height := f32(len(hint_lines)) * HUD_LINE_HEIGHT * scale
-	hint_x := margin
-	hint_y := height - margin - hint_height - padding * 2
-	hud_emit_rect(o, hint_x, hint_y, hint_panel_width, hint_height + padding * 2, HUD_PANEL_COLOR)
-	for line, index in hint_lines {
-		hud_emit_text(
-			o,
-			hint_x + padding,
-			hint_y + padding + f32(index) * HUD_LINE_HEIGHT * scale,
-			line,
-			HUD_TEXT_COLOR,
-			scale,
-		)
-	}
+	control_y := height - margin - hud_panel_height(hud.control_lines, scale) - padding * 2
+	hud_emit_panel(o, hud.control_lines, margin, control_y, scale, padding)
 
 	center_x := width * 0.5
 	center_y := height * 0.5
 	if !hud.captured {
-		overlay_text := "Click to capture mouse"
 		overlay_scale := scale * 1.1
-		text_width := f32(stb_easy_font.width(overlay_text)) * overlay_scale
-		text_height := f32(stb_easy_font.height(overlay_text)) * overlay_scale
+		text_width := f32(stb_easy_font.width(hud.capture_hint)) * overlay_scale
+		text_height := f32(stb_easy_font.height(hud.capture_hint)) * overlay_scale
 		text_x := (width - text_width) * 0.5
 		text_y := center_y - text_height * 0.5
 		panel_padding := padding * 1.5
@@ -166,7 +97,7 @@ build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_State) {
 			text_height + panel_padding * 2,
 			HUD_PANEL_COLOR,
 		)
-		hud_emit_text(o, text_x, text_y, overlay_text, HUD_TEXT_COLOR, overlay_scale)
+		hud_emit_text(o, text_x, text_y, hud.capture_hint, HUD_TEXT_COLOR, overlay_scale)
 	}
 
 	// The crosshair is emitted last so it stays on top of the panels.

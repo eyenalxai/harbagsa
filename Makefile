@@ -1,16 +1,18 @@
 ODIN ?= odin
 ODIN_FLAGS ?= -vet -vet-style -vet-semicolon -vet-tabs -vet-using-param -vet-unused-procedures -vet-packages:main,platform,renderer,game,geometry -strict-style -warnings-as-errors -disallow-do
 ODIN_COLLECTIONS := -collection:libs=vendor -collection:src=src
-# Libraries cannot know which procedures another package calls, so the
-# standalone package checks omit -vet-unused-procedures. The main check still
-# runs it across every imported package.
+# Library checks and the renderer test cannot know which procedures another
+# package calls, so they omit -vet-unused-procedures. The main check still runs
+# it across every imported package.
 ODIN_LIB_CHECK_FLAGS := $(filter-out -vet-unused-procedures,$(ODIN_FLAGS))
 BIN := bin/harbagsa
 
 GLSLC ?= glslc
 SHADER_SRC := src/renderer/shaders
 SHADER_OUT := build/shaders
+SHADER_INCLUDE := $(SHADER_SRC)/gamma.glsl $(SHADER_SRC)/camera.glsl
 SHADERS := $(SHADER_OUT)/box.vert.spv $(SHADER_OUT)/box.frag.spv \
+	$(SHADER_OUT)/shadow.vert.spv \
 	$(SHADER_OUT)/debug.vert.spv $(SHADER_OUT)/debug.frag.spv \
 	$(SHADER_OUT)/hud.vert.spv $(SHADER_OUT)/hud.frag.spv
 
@@ -33,11 +35,11 @@ build/box3d/%.o: $(BOX3D_DIR)/src/src/%.c
 	@mkdir -p $(@D)
 	$(CC) -c -O2 -std=c17 -fPIC -I$(BOX3D_DIR)/src/include $< -o $@
 
-$(SHADER_OUT)/%.vert.spv: $(SHADER_SRC)/%.vert
+$(SHADER_OUT)/%.vert.spv: $(SHADER_SRC)/%.vert $(SHADER_INCLUDE)
 	@mkdir -p $(@D)
 	$(GLSLC) --target-env=vulkan1.3 -fshader-stage=vert $< -o $@
 
-$(SHADER_OUT)/%.frag.spv: $(SHADER_SRC)/%.frag
+$(SHADER_OUT)/%.frag.spv: $(SHADER_SRC)/%.frag $(SHADER_INCLUDE)
 	@mkdir -p $(@D)
 	$(GLSLC) --target-env=vulkan1.3 -fshader-stage=frag $< -o $@
 
@@ -65,11 +67,12 @@ check-lines:
 	done; \
 	exit $$status
 
-# Box3D's world registry is not safe for concurrent world creation, so both
-# test programs share one runner thread.
-test: $(BOX3D_LIB)
+# Box3D's world registry is not safe for concurrent world creation, so the test
+# programs share one runner thread.
+test: $(BOX3D_LIB) shaders
 	$(ODIN) test tests/physics $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
 	$(ODIN) test tests/simulation $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
+	$(ODIN) test tests/renderer $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
 
 run: $(BOX3D_LIB) shaders
 	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)

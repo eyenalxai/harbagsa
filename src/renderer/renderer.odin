@@ -29,6 +29,7 @@ Error :: enum {
 	Create_Swapchain,
 	Create_Frames,
 	Create_Scene,
+	Create_Shadow,
 	Create_Overlay,
 	Create_Pipeline,
 }
@@ -75,6 +76,7 @@ Renderer :: struct {
 	clear_color:     [4]f32,
 
 	scene: Scene,
+	shadow: Shadow,
 	overlay: Overlay,
 }
 
@@ -180,9 +182,10 @@ notify_resize :: proc(r: ^Renderer) {
 begin_frame :: proc(
 	r: ^Renderer,
 	camera: Camera,
+	light_direction: [3]f32,
 	boxes: []geometry.Box,
 	debug_lines: []geometry.Line,
-	hud: HUD_State,
+	hud: HUD_Frame,
 ) -> (
 	frame: Frame,
 	status: Frame_Status,
@@ -232,7 +235,7 @@ begin_frame :: proc(
 	if !check(vk.ResetCommandBuffer(command_buffer, {}), "vkResetCommandBuffer") {
 		return {}, .Fatal
 	}
-	if !record_scene(r, command_buffer, image_index, camera, boxes, debug_lines, hud) {
+	if !record_scene(r, command_buffer, image_index, camera, light_direction, boxes, debug_lines, hud) {
 		return {}, .Fatal
 	}
 

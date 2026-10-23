@@ -222,9 +222,9 @@ player_pushes_crate :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 
-	crate_start := game.simulation_crate_position(&sim, 0)
+	crate_start := game.simulation_crate_box(&sim, 0).center
 	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 120)
-	crate_end := game.simulation_crate_position(&sim, 0)
+	crate_end := game.simulation_crate_box(&sim, 0).center
 
 	testing.expectf(
 		t,
