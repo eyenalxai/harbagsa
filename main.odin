@@ -35,7 +35,7 @@ main :: proc() {
 
 	ok := run()
 	log.destroy_console_logger(logger, allocator = context.allocator)
-	if !ok {
+	if !ok || renderer.validation_failed() {
 		os.exit(1)
 	}
 }
