@@ -3,18 +3,13 @@ package renderer
 
 import "core:log"
 
-import "src:geometry"
 import vk "vendor:vulkan"
 
 record_scene :: proc(
 	r: ^Renderer,
 	command_buffer: vk.CommandBuffer,
 	image_index: u32,
-	camera: Camera,
-	light_direction: [3]f32,
-	boxes: []geometry.Box,
-	debug_lines: []geometry.Line,
-	hud: HUD_Frame,
+	view: Frame_View,
 	capture: bool,
 ) -> bool {
 	if int(image_index) >= len(r.target.views) || int(image_index) >= len(r.target.depth) {
@@ -22,7 +17,7 @@ record_scene :: proc(
 		return false
 	}
 
-	if !prepare_overlay(r, debug_lines, hud) {
+	if !prepare_overlay(r, view.debug_lines, view.hud) {
 		log.error("renderer: overlay vertex upload failed")
 		return false
 	}
@@ -36,12 +31,12 @@ record_scene :: proc(
 	}
 
 	// The shadow matrix feeds the camera uniform, so rebuild it first.
-	r.shadow.light_view_projection = shadow_light_matrix(light_direction)
-	if !update_camera(r, camera, light_direction) {
+	r.shadow.light_view_projection = shadow_light_matrix(view.light_direction)
+	if !update_camera(r, view.camera, view.light_direction) {
 		return false
 	}
 
-	record_shadow_pass(r, command_buffer, boxes)
+	record_shadow_pass(r, command_buffer, view.boxes)
 
 	to_color := vk.ImageMemoryBarrier {
 		sType = .IMAGE_MEMORY_BARRIER,
@@ -103,7 +98,7 @@ record_scene :: proc(
 
 	bind_camera(command_buffer, r.scene.pipeline_layout, r.scene.descriptor_sets[r.frame_index])
 
-	draw_boxes(r, command_buffer, r.scene.pipeline_layout, boxes)
+	draw_boxes(r, command_buffer, r.scene.pipeline_layout, view.boxes)
 
 	record_overlay(r, command_buffer)
 
