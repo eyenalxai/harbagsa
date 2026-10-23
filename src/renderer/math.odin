@@ -70,6 +70,19 @@ mat4_perspective :: proc(fov_y, aspect, near, far: f32) -> (m: Mat4) {
 	return
 }
 
+// mat4_orthographic builds a right-handed projection with a Vulkan clip space:
+// depth in 0..1 and the Y axis pointing down.
+mat4_orthographic :: proc(left, right, bottom, top, near, far: f32) -> (m: Mat4) {
+	m[0] = 2 / (right - left)
+	m[5] = -2 / (top - bottom)
+	m[10] = 1 / (near - far)
+	m[12] = -(right + left) / (right - left)
+	m[13] = (top + bottom) / (top - bottom)
+	m[14] = near / (near - far)
+	m[15] = 1
+	return
+}
+
 mat4_look_at :: proc(eye, target, up: [3]f32) -> (m: Mat4) {
 	forward := linalg.vector_normalize0(target - eye)
 	side := linalg.vector_normalize0(linalg.vector_cross3(forward, up))

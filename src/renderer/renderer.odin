@@ -29,6 +29,7 @@ Error :: enum {
 	Create_Swapchain,
 	Create_Frames,
 	Create_Scene,
+	Create_Shadow,
 	Create_Overlay,
 	Create_Pipeline,
 }
@@ -75,6 +76,7 @@ Renderer :: struct {
 	clear_color:     [4]f32,
 
 	scene: Scene,
+	shadow: Shadow,
 	overlay: Overlay,
 }
 
