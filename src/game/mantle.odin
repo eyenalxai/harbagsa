@@ -17,7 +17,15 @@ Mantle_State :: struct {
 @(private)
 try_mantle :: proc(sim: ^Simulation, input: Input_Snapshot) -> bool {
 	player := &sim.player
-	if player.movement_state != .None || player.grounded || !input.jump_pressed {
+	if player.movement_state != .None || player.grounded {
+		return false
+	}
+	if !input.jump_pressed && !input.jump_held {
+		return false
+	}
+	// A held jump is a continuous check, so require movement intent. A fresh
+	// press keeps the old deliberate behavior and works without movement input.
+	if !input.jump_pressed && input.move_forward == 0.0 && input.move_right == 0.0 {
 		return false
 	}
 
