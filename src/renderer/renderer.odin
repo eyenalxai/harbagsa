@@ -33,6 +33,7 @@ Error :: enum {
 	Create_Overlay,
 	Create_Pipeline,
 	Validation,
+	Validation_Unavailable,
 }
 
 Renderer :: struct {
@@ -55,12 +56,14 @@ Renderer :: struct {
 	swapchain_is_srgb: bool,
 	swapchain_images: []vk.Image,
 	swapchain_views:  []vk.ImageView,
+	// The present wait may still be pending when a frame slot submits again, so
+	// each swapchain image owns its signal semaphore.
+	render_finished:  []vk.Semaphore,
 	swapchain_dirty:  bool,
 
 	command_pool:    vk.CommandPool,
 	command_buffers: [MAX_FRAMES_IN_FLIGHT]vk.CommandBuffer,
 	image_available: [MAX_FRAMES_IN_FLIGHT]vk.Semaphore,
-	render_finished: []vk.Semaphore,
 	in_flight:       [MAX_FRAMES_IN_FLIGHT]vk.Fence,
 	frame_index:     int,
 	clear_color:     [4]f32,
@@ -84,6 +87,7 @@ validation_failed :: proc() -> bool {
 }
 
 init :: proc(window: ^platform.Window, allocator: mem.Allocator) -> (r: Renderer, err: Error) {
+	g_validation_failed = false
 	r.window = window
 	r.allocator = allocator
 	r.clear_color = DEFAULT_CLEAR_COLOR
