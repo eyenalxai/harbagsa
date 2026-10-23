@@ -10,27 +10,34 @@ ARENA_WALL_THICKNESS :: 0.5
 ARENA_CRATE_SIZE :: 1.0
 ARENA_CRATE_HALF_SIZE :: ARENA_CRATE_SIZE * 0.5
 
-// Static boxes first, crates last. The simulation and the renderer slice the list.
 ARENA_STATIC_BOX_COUNT :: 5
-ARENA_CRATE_COUNT :: 3
-ARENA_BOX_COUNT :: ARENA_STATIC_BOX_COUNT + ARENA_CRATE_COUNT
+INITIAL_CRATE_COUNT :: 3
+MAX_CRATES :: 64
+MAX_SCENE_BOXES :: ARENA_STATIC_BOX_COUNT + MAX_CRATES
 
-ARENA_CRATE_POSITIONS :: [ARENA_CRATE_COUNT][3]f32 {
+INITIAL_CRATE_POSITIONS :: [INITIAL_CRATE_COUNT][3]f32 {
 	{0, ARENA_CRATE_HALF_SIZE, 8},
 	{-3, ARENA_CRATE_HALF_SIZE, 6},
 	{3, ARENA_CRATE_HALF_SIZE, 6},
 }
 
+CRATE_HALF_EXTENTS :: [3]f32{ARENA_CRATE_HALF_SIZE, ARENA_CRATE_HALF_SIZE, ARENA_CRATE_HALF_SIZE}
+
 FLOOR_COLOR :: [4]f32{0.42, 0.43, 0.46, 1.0}
 WALL_COLOR :: [4]f32{0.55, 0.34, 0.26, 1.0}
-CRATE_COLORS :: [ARENA_CRATE_COUNT][4]f32 {
+INITIAL_CRATE_COLORS :: [INITIAL_CRATE_COUNT][4]f32 {
 	{0.30, 0.68, 0.38, 1.0},
 	{0.86, 0.56, 0.20, 1.0},
 	{0.26, 0.48, 0.84, 1.0},
 }
 
-arena_boxes :: proc() -> []geometry.Box {
-	@(static) boxes := [ARENA_BOX_COUNT]geometry.Box {
+initial_crate_colors :: proc() -> [][4]f32 {
+	@(static) colors := INITIAL_CRATE_COLORS
+	return colors[:]
+}
+
+arena_static_boxes :: proc() -> []geometry.Box {
+	@(static) boxes := [ARENA_STATIC_BOX_COUNT]geometry.Box {
 		{
 			center = {0, -0.5, 0},
 			half_extents = {ARENA_HALF_SIZE, 0.5, ARENA_HALF_SIZE},
@@ -77,33 +84,6 @@ arena_boxes :: proc() -> []geometry.Box {
 			color = WALL_COLOR,
 			rotation = geometry.IDENTITY_ROTATION,
 		},
-		{
-			center = ARENA_CRATE_POSITIONS[0],
-			half_extents = {ARENA_CRATE_HALF_SIZE, ARENA_CRATE_HALF_SIZE, ARENA_CRATE_HALF_SIZE},
-			color = CRATE_COLORS[0],
-			rotation = geometry.IDENTITY_ROTATION,
-		},
-		{
-			center = ARENA_CRATE_POSITIONS[1],
-			half_extents = {ARENA_CRATE_HALF_SIZE, ARENA_CRATE_HALF_SIZE, ARENA_CRATE_HALF_SIZE},
-			color = CRATE_COLORS[1],
-			rotation = geometry.IDENTITY_ROTATION,
-		},
-		{
-			center = ARENA_CRATE_POSITIONS[2],
-			half_extents = {ARENA_CRATE_HALF_SIZE, ARENA_CRATE_HALF_SIZE, ARENA_CRATE_HALF_SIZE},
-			color = CRATE_COLORS[2],
-			rotation = geometry.IDENTITY_ROTATION,
-		},
 	}
 	return boxes[:]
-}
-
-arena_static_boxes :: proc() -> []geometry.Box {
-	return arena_boxes()[:ARENA_STATIC_BOX_COUNT]
-}
-
-// The center is the resting position; the simulation owns the live position and rotation.
-arena_crates :: proc() -> []geometry.Box {
-	return arena_boxes()[ARENA_STATIC_BOX_COUNT:]
 }

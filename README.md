@@ -28,10 +28,29 @@ into the binary.
 - Mouse: look. Left click captures the cursor.
 - `Space`: jump. The player must be grounded.
 - `R`: return the player to spawn.
+- `Shift+R`: reset the crates, the sun, and the player.
 - `F1`: toggle the debug draw.
+- `F2`: toggle debug mode.
 - `Esc`: release the cursor capture.
 
-The HUD shows the player speed, grounded state, position, and this control list.
+### Debug mode
+
+`F2` replaces the player with a free-fly camera and enables scene editing.
+
+- `WASD`: fly horizontally.
+- Mouse: look while not dragging; drag the selection while the left button is held.
+- `Space` / `Ctrl`: fly up / down.
+- Left click: select a crate. Drag it on a horizontal plane.
+- Wheel: raise or lower the selected crate.
+- `E`: add a crate on the surface under the crosshair.
+- `Delete` or `X`: remove the selected crate.
+- `L`: select the sun. Drag to rotate it.
+- `R`: reset the player and return the camera to spawn.
+- `Shift+R`: reset the crates, the sun, and the player.
+- `F2`: leave debug mode. The player returns to the saved position and view.
+
+The HUD shows the player speed, grounded state, and position, or the debug
+mode selection, crate count, and sun angles. It also shows the control list.
 The window is resizable.
 
 ## Build

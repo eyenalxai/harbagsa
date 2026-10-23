@@ -180,6 +180,7 @@ notify_resize :: proc(r: ^Renderer) {
 begin_frame :: proc(
 	r: ^Renderer,
 	camera: Camera,
+	light_direction: [3]f32,
 	boxes: []geometry.Box,
 	debug_lines: []geometry.Line,
 	hud: HUD_Frame,
@@ -232,7 +233,7 @@ begin_frame :: proc(
 	if !check(vk.ResetCommandBuffer(command_buffer, {}), "vkResetCommandBuffer") {
 		return {}, .Fatal
 	}
-	if !record_scene(r, command_buffer, image_index, camera, boxes, debug_lines, hud) {
+	if !record_scene(r, command_buffer, image_index, camera, light_direction, boxes, debug_lines, hud) {
 		return {}, .Fatal
 	}
 

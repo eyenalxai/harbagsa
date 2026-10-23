@@ -15,6 +15,15 @@ Player :: struct {
 	grounded:          bool,
 }
 
+player_place :: proc(player: ^Player, position: b3.Vec3, yaw, pitch: f32) {
+	player.position = position
+	player.previous_position = position
+	player.velocity = b3.Vec3_zero
+	player.yaw = yaw
+	player.pitch = pitch
+	player.grounded = false
+}
+
 // One call to World_CollideMover can report several planes for the same shape.
 // Keep the shape id and the origin-relative contact point with each plane so
 // the controller can push dynamic bodies after the slide is resolved.
@@ -60,8 +69,8 @@ update_horizontal_velocity :: proc(player: ^Player, input: Input_Snapshot, time_
 		input_length = 1.0
 	}
 
-	forward := b3.Vec3{-math.sin(player.yaw), 0.0, -math.cos(player.yaw)}
-	right := b3.Vec3{math.cos(player.yaw), 0.0, -math.sin(player.yaw)}
+	forward := yaw_forward_horizontal(player.yaw)
+	right := yaw_right(player.yaw)
 	desired_direction := forward * move_forward + right * move_right
 	current := b3.Vec3{player.velocity.x, 0.0, player.velocity.z}
 

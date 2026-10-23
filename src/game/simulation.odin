@@ -37,13 +37,12 @@ MAX_COLLISION_PLANES :: 16
 MOVE_ITERATIONS :: 5
 MOVE_TOLERANCE :: 0.01
 
-// jump and reset are frame edges: apply them on one fixed step. Look is a
-// separate call so it works when no fixed step runs.
+// jump is a frame edge: apply it on one fixed step. Look is a separate call so
+// it works when no fixed step runs.
 Input_Snapshot :: struct {
-	move_forward:  f32,
-	move_right:    f32,
-	jump_pressed:  bool,
-	reset_pressed: bool,
+	move_forward: f32,
+	move_right:   f32,
+	jump_pressed: bool,
 }
 
 Render_Snapshot :: struct {
@@ -58,9 +57,11 @@ Render_Snapshot :: struct {
 }
 
 Simulation :: struct {
-	world_id: b3.WorldId,
-	player:   Player,
-	crates:   [ARENA_CRATE_COUNT]b3.BodyId,
+	world_id:               b3.WorldId,
+	player:                 Player,
+	crates:                 [MAX_CRATES]Crate,
+	crate_count:            int,
+	next_crate_color_index: int,
 }
 
 simulation_create :: proc() -> Simulation {
@@ -74,7 +75,7 @@ simulation_create :: proc() -> Simulation {
 	}
 
 	create_arena(&sim)
-	create_crates(&sim)
+	simulation_reset_crates(&sim)
 	simulation_reset(&sim)
 	return sim
 }
@@ -91,12 +92,7 @@ simulation_is_valid :: proc(sim: ^Simulation) -> bool {
 }
 
 simulation_reset :: proc(sim: ^Simulation) {
-	sim.player.position = SPAWN_POSITION
-	sim.player.previous_position = SPAWN_POSITION
-	sim.player.velocity = b3.Vec3_zero
-	sim.player.yaw = 0.0
-	sim.player.pitch = 0.0
-	sim.player.grounded = false
+	player_place(&sim.player, SPAWN_POSITION, 0.0, 0.0)
 }
 
 simulation_step :: proc(sim: ^Simulation, input: Input_Snapshot, time_step: f32) {
@@ -104,7 +100,7 @@ simulation_step :: proc(sim: ^Simulation, input: Input_Snapshot, time_step: f32)
 		return
 	}
 
-	if input.reset_pressed || sim.player.position.y < FALL_RESET_Y {
+	if sim.player.position.y < FALL_RESET_Y {
 		simulation_reset(sim)
 		return
 	}
@@ -148,18 +144,12 @@ simulation_snapshot :: proc(sim: ^Simulation) -> Render_Snapshot {
 	}
 }
 
-simulation_crate_position :: proc(sim: ^Simulation, index: int) -> b3.Vec3 {
-	if index < 0 || index >= ARENA_CRATE_COUNT {
-		return b3.Vec3_zero
+// The debug mode keeps the crates alive while the player is not simulated.
+simulation_step_world :: proc(sim: ^Simulation, time_step: f32) {
+	if !b3.World_IsValid(sim.world_id) || time_step <= 0.0 {
+		return
 	}
-	return b3.ToVec3(b3.Body_GetPosition(sim.crates[index]))
-}
-
-simulation_crate_rotation :: proc(sim: ^Simulation, index: int) -> b3.Quat {
-	if index < 0 || index >= ARENA_CRATE_COUNT {
-		return b3.Quat_identity
-	}
-	return b3.Body_GetRotation(sim.crates[index])
+	b3.World_Step(sim.world_id, time_step, SIMULATION_SUB_STEPS)
 }
 
 @(private)
@@ -178,21 +168,4 @@ create_static_box :: proc(world_id: b3.WorldId, position: b3.Vec3, half_extents:
 	hull := b3.MakeBoxHull(half_extents.x, half_extents.y, half_extents.z)
 	shape_def := b3.DefaultShapeDef()
 	_ = b3.CreateHullShape(body_id, shape_def, &hull.base)
-}
-
-@(private)
-create_crates :: proc(sim: ^Simulation) {
-	for box, index in arena_crates() {
-		body_def := b3.DefaultBodyDef()
-		body_def.type = .dynamicBody
-		body_def.position = box.center
-		body_id := b3.CreateBody(sim.world_id, body_def)
-
-		hull := b3.MakeBoxHull(box.half_extents.x, box.half_extents.y, box.half_extents.z)
-		shape_def := b3.DefaultShapeDef()
-		shape_def.density = CRATE_DENSITY
-		_ = b3.CreateHullShape(body_id, shape_def, &hull.base)
-
-		sim.crates[index] = body_id
-	}
 }

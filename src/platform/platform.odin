@@ -19,17 +19,28 @@ Window :: struct {
 	handle: ^sdl3.Window,
 }
 
-// jump, reset, and debug are key-down edges so a held key does not repeat.
+// jump, reset, debug, and the editor actions are key-down edges so a held key
+// does not repeat. The fly axes and the wheel are polled while captured.
 Events :: struct {
-	quit:          bool,
-	resized:       bool,
-	move_forward:  f32,
-	move_right:    f32,
-	look_delta:    [2]f32,
-	jump_pressed:  bool,
-	reset_pressed: bool,
-	debug_pressed: bool,
-	captured:      bool,
+	quit:                bool,
+	resized:             bool,
+	move_forward:        f32,
+	move_right:          f32,
+	look_delta:          [2]f32,
+	wheel_delta:         f32,
+	jump_pressed:        bool,
+	reset_pressed:       bool,
+	reset_scene_pressed: bool,
+	debug_view_pressed:  bool,
+	debug_mode_pressed:  bool,
+	add_pressed:         bool,
+	delete_pressed:      bool,
+	sun_pressed:         bool,
+	primary_pressed:     bool,
+	primary_released:    bool,
+	fly_up:              bool,
+	fly_down:            bool,
+	captured:            bool,
 }
 
 init :: proc(title: cstring, width, height: i32) -> (window: Window, err: Error) {
@@ -135,6 +146,12 @@ read_movement :: proc(events: ^Events) {
 	if keys[int(sdl3.Scancode.A)] {
 		events.move_right -= 1.0
 	}
+	if keys[int(sdl3.Scancode.SPACE)] {
+		events.fly_up = true
+	}
+	if keys[int(sdl3.Scancode.LCTRL)] || keys[int(sdl3.Scancode.RCTRL)] {
+		events.fly_down = true
+	}
 }
 
 is_minimized :: proc(window: ^Window) -> bool {
@@ -161,7 +178,19 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 		events.resized = true
 	case .MOUSE_BUTTON_DOWN:
 		if event.button.button == sdl3.BUTTON_LEFT {
-			events.captured = set_capture(window, true)
+			if events.captured {
+				events.primary_pressed = true
+			} else {
+				events.captured = set_capture(window, true)
+			}
+		}
+	case .MOUSE_BUTTON_UP:
+		if event.button.button == sdl3.BUTTON_LEFT {
+			events.primary_released = true
+		}
+	case .MOUSE_WHEEL:
+		if events.captured {
+			events.wheel_delta += event.wheel.y
 		}
 	case .KEY_DOWN:
 		if event.key.repeat {
@@ -176,9 +205,21 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 		case .SPACE:
 			events.jump_pressed = true
 		case .R:
-			events.reset_pressed = true
+			if .LSHIFT in event.key.mod || .RSHIFT in event.key.mod {
+				events.reset_scene_pressed = true
+			} else {
+				events.reset_pressed = true
+			}
 		case .F1:
-			events.debug_pressed = true
+			events.debug_view_pressed = true
+		case .F2:
+			events.debug_mode_pressed = true
+		case .E:
+			events.add_pressed = true
+		case .DELETE, .X:
+			events.delete_pressed = true
+		case .L:
+			events.sun_pressed = true
 		}
 	case .MOUSE_MOTION:
 		if events.captured {
