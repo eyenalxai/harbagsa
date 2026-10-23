@@ -17,13 +17,6 @@ Check_Result :: struct {
 	error:    string `json:"error,omitempty"`,
 }
 
-Field_Value :: struct {
-	kind:    Value_Kind,
-	number:  f64,
-	boolean: bool,
-	text:    string,
-}
-
 check_evaluate :: proc(
 	command: Check_Command,
 	state: State,
@@ -39,7 +32,7 @@ check_evaluate :: proc(
 		result.error = field_error
 		return result
 	}
-	result.actual = field_value_display(actual, allocator)
+	result.actual = check_value_display(actual, allocator)
 	ok, compare_error := check_compare(actual, command.op, command.value)
 	if compare_error != "" {
 		result.error = compare_error
@@ -59,7 +52,7 @@ check_result_destroy :: proc(result: ^Check_Result, allocator: mem.Allocator) {
 	result^ = {}
 }
 
-check_compare :: proc(actual: Field_Value, op: Check_Op, expected: Check_Value) -> (bool, string) {
+check_compare :: proc(actual: Check_Value, op: Check_Op, expected: Check_Value) -> (bool, string) {
 	if actual.kind != expected.kind {
 		return false, "check value type does not match the field type"
 	}
@@ -101,7 +94,7 @@ compare_number :: proc(actual: f64, op: Check_Op, expected: f64) -> (bool, strin
 	return false, "unknown check op"
 }
 
-state_field :: proc(state: State, path: string) -> (Field_Value, string) {
+state_field :: proc(state: State, path: string) -> (Check_Value, string) {
 	if path == "frame" {
 		return {kind = .Number, number = f64(state.frame)}, ""
 	}
@@ -126,7 +119,7 @@ state_field :: proc(state: State, path: string) -> (Field_Value, string) {
 }
 
 @(private)
-player_field :: proc(player: Player_State, path: string) -> (Field_Value, string) {
+player_field :: proc(player: Player_State, path: string) -> (Check_Value, string) {
 	head, tail, has_tail := split_field(path)
 	switch head {
 	case "position":
@@ -155,7 +148,7 @@ player_field :: proc(player: Player_State, path: string) -> (Field_Value, string
 }
 
 @(private)
-crates_field :: proc(crates: []Crate_State, path: string) -> (Field_Value, string) {
+crates_field :: proc(crates: []Crate_State, path: string) -> (Check_Value, string) {
 	head, tail, has_tail := split_field(path)
 	if head == "count" {
 		return {kind = .Number, number = f64(len(crates))}, ""
@@ -185,7 +178,7 @@ crates_field :: proc(crates: []Crate_State, path: string) -> (Field_Value, strin
 }
 
 @(private)
-vec_field :: proc(value: Vec_State, axis: string) -> (Field_Value, string) {
+vec_field :: proc(value: Vec_State, axis: string) -> (Check_Value, string) {
 	switch axis {
 	case "x":
 		return {kind = .Number, number = f64(value.x)}, ""
@@ -198,7 +191,7 @@ vec_field :: proc(value: Vec_State, axis: string) -> (Field_Value, string) {
 }
 
 @(private)
-quat_field :: proc(value: Quat_State, axis: string) -> (Field_Value, string) {
+quat_field :: proc(value: Quat_State, axis: string) -> (Check_Value, string) {
 	switch axis {
 	case "x":
 		return {kind = .Number, number = f64(value.x)}, ""
@@ -226,22 +219,10 @@ check_value_display :: proc(value: Check_Value, allocator: mem.Allocator) -> str
 	case .Number:
 		return fmt.aprintf("%g", value.number, allocator = allocator)
 	case .Bool:
-		return "true" if value.boolean else "false"
+		return strings.clone(value.boolean ? "true" : "false", allocator)
 	case .String:
-		return value.text
+		return strings.clone(value.text, allocator)
 	}
 	return ""
 }
 
-@(private)
-field_value_display :: proc(value: Field_Value, allocator: mem.Allocator) -> string {
-	switch value.kind {
-	case .Number:
-		return fmt.aprintf("%g", value.number, allocator = allocator)
-	case .Bool:
-		return "true" if value.boolean else "false"
-	case .String:
-		return value.text
-	}
-	return ""
-}

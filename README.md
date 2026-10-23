@@ -137,6 +137,9 @@ A scenario may use `commands` instead of `steps`:
 }
 ```
 
+A `commands` scenario runs verbatim. It does not add a default capture, so
+include a `capture` command when you want a PNG.
+
 ### Commands
 
 The batch runner and the live session share one command set:
@@ -200,8 +203,9 @@ make build
 ```
 
 Read `runs/smoke/report.json` and use the absolute paths in `screenshots`. The
-PNG is RGBA, sRGB, and `1280x720` by default. To capture the owner's real
-window instead:
+PNG is RGBA, sRGB, and `1280x720` by default. The repository samples are
+`docs/evidence/harness-smoke.png` and `docs/evidence/present-window.png`. To
+capture the owner's real window instead:
 
 ```sh
 ./bin/harbagsa-agent run scenarios/smoke.json --present --out runs/present

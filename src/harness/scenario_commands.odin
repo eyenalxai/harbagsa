@@ -14,32 +14,7 @@ scenario_view :: proc(value: json.Value) -> (View_Command, string) {
 	if key, unknown := json_unknown_key(object, {"hud", "debug", "hint"}); unknown {
 		return {}, fmt.aprintf("unknown view key %q", key, allocator = context.allocator)
 	}
-	view: View_Command
-	if flag_value, has := json_get(object, "hud"); has {
-		flag, ok := json_boolean(flag_value)
-		if !ok {
-			return {}, "view 'hud' must be a boolean"
-		}
-		view.hud = flag
-		view.has_hud = true
-	}
-	if flag_value, has := json_get(object, "debug"); has {
-		flag, ok := json_boolean(flag_value)
-		if !ok {
-			return {}, "view 'debug' must be a boolean"
-		}
-		view.debug = flag
-		view.has_debug = true
-	}
-	if flag_value, has := json_get(object, "hint"); has {
-		flag, ok := json_boolean(flag_value)
-		if !ok {
-			return {}, "view 'hint' must be a boolean"
-		}
-		view.hint = flag
-		view.has_hint = true
-	}
-	return view, ""
+	return parse_view_fields(object)
 }
 
 @(private)
