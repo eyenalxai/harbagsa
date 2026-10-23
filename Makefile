@@ -8,6 +8,9 @@ ODIN_LIB_CHECK_FLAGS := $(filter-out -vet-unused-procedures,$(ODIN_FLAGS))
 BIN := bin/harbagsa
 AGENT_BIN := bin/harbagsa-agent
 AGENT := cmd/harbagsa-agent
+VALIDATE_AGENT_BIN := bin/harbagsa-agent-validate
+VALIDATE_SCENARIO := scenarios/smoke.json
+VALIDATE_OUT := build/validate
 
 GLSLC ?= glslc
 SPIRV_VAL ?= spirv-val
@@ -36,7 +39,7 @@ VULKAN_LAYER_DIRS ?= \
 	/usr/share/vulkan/explicit_layer.d
 VALIDATION_LAYER := VK_LAYER_KHRONOS_validation
 
-.PHONY: all build check check-spirv check-lines test run shaders validate clean
+.PHONY: all build check check-spirv check-lines test run shaders validate validate-demo check-validation-layer clean
 
 all: build
 
@@ -110,7 +113,7 @@ test: $(BOX3D_LIB) shaders
 run: $(BOX3D_LIB) shaders
 	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
 
-validate: $(BOX3D_LIB) shaders
+check-validation-layer:
 	@found=false; \
 	if command -v $(VULKANINFO) >/dev/null 2>&1; then \
 		$(VULKANINFO) --summary 2>/dev/null | grep -qF '$(VALIDATION_LAYER)' && found=true; \
@@ -125,6 +128,20 @@ validate: $(BOX3D_LIB) shaders
 			'Install it with: sudo pacman -S vulkan-validation-layers'; \
 		exit 1; \
 	fi
+
+# The harness keeps validation bounded: a fixed scenario exits on its own.
+validate: check-validation-layer $(BOX3D_LIB) shaders
+	@mkdir -p $(dir $(VALIDATE_AGENT_BIN))
+	$(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) \
+		-define:ENABLE_VALIDATION_LAYERS=true -out:$(VALIDATE_AGENT_BIN)
+	$(VALIDATE_AGENT_BIN) run $(VALIDATE_SCENARIO) --out $(VALIDATE_OUT)/offscreen
+	@if [ -n "$${WAYLAND_DISPLAY:-}$${DISPLAY:-}" ]; then \
+		$(VALIDATE_AGENT_BIN) run $(VALIDATE_SCENARIO) --present --out $(VALIDATE_OUT)/present; \
+	else \
+		printf '%s\n' 'make validate: no display, skipping the present run'; \
+	fi
+
+validate-demo: check-validation-layer $(BOX3D_LIB) shaders
 	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ENABLE_VALIDATION_LAYERS=true
 
 clean:
