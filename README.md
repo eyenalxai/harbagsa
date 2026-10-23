@@ -10,6 +10,7 @@ shadows from the walls and crates.
 - [Odin](https://odin-lang.org/) tested with `dev-2026-10`
 - SDL3 and a Vulkan 1.3 driver with the Vulkan loader
 - `glslc` from shaderc to compile the GLSL shaders
+- `spirv-val` from SPIRV-Tools to validate the compiled shaders (optional)
 - A C compiler for the vendored Box3D library
 - `make` (optional)
 
@@ -72,12 +73,15 @@ odin run . -collection:src=src -collection:libs=vendor
 
 ```sh
 make check
+make check-spirv
 make test
 ```
 
-`make check` runs the strict compiler checks on the main program and every
-library package. `make test` runs the physics, simulation, and renderer math
-tests headless.
+`make check` validates every compiled shader with `spirv-val` and runs the
+strict compiler checks on the main program and every library package. If
+`spirv-val` is not installed, the shader check prints a skip message and does
+not fail the build. `make check-spirv` runs only the shader check. `make test`
+runs the physics, simulation, and renderer math tests headless.
 
 If more than one agent or terminal can build in this checkout, use the
 wrapper. It serializes Make with `flock` and needs `flock` from util-linux.
@@ -95,7 +99,18 @@ Do not pass `-no-bounds-check`. Bounds checks stay enabled in every build.
 ## Validation layers
 
 Validation layers are off by default, so the demo runs on machines without
-them. To enable them when `VK_LAYER_KHRONOS_validation` is installed:
+them. To enable them, run:
+
+```sh
+make validate
+```
+
+`make validate` checks for `VK_LAYER_KHRONOS_validation` first. If the layer is
+missing, it prints the install command and exits without running the demo. It
+never installs anything. The target is manual: `make check` and `make test`
+never enable validation.
+
+To run Odin directly instead:
 
 ```sh
 odin run . -collection:src=src -collection:libs=vendor -define:ENABLE_VALIDATION_LAYERS=true
