@@ -105,7 +105,9 @@ debug_mode_end_drag :: proc(dm: ^Debug_Mode) {
 }
 
 debug_selected_crate :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> (index: int, ok: bool) {
-	if dm.selection != .Crate || dm.selected_crate < 0 || dm.selected_crate >= simulation_crate_count(sim) {
+	if dm.selection != .Crate ||
+	   dm.selected_crate < 0 ||
+	   dm.selected_crate >= simulation_crate_count(sim) {
 		return -1, false
 	}
 	return dm.selected_crate, true
@@ -121,30 +123,24 @@ debug_camera_forward :: proc(camera: Debug_Camera) -> b3.Vec3 {
 }
 
 debug_camera_forward_horizontal :: proc(camera: Debug_Camera) -> b3.Vec3 {
-	return {-math.sin(camera.yaw), 0.0, -math.cos(camera.yaw)}
+	return yaw_forward_horizontal(camera.yaw)
 }
 
 debug_camera_right :: proc(camera: Debug_Camera) -> b3.Vec3 {
-	return {math.cos(camera.yaw), 0.0, -math.sin(camera.yaw)}
+	return yaw_right(camera.yaw)
 }
 
 debug_mode_reset_player :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	simulation_reset(sim)
-	dm.saved_player = saved_player(sim)
 	debug_mode_end_drag(dm)
-	if dm.active {
-		dm.camera = camera_from_player(sim)
-	}
+	save_player_and_sync_camera(dm, sim)
 }
 
 debug_mode_reset_scene :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	simulation_reset_scene(sim)
 	dm.sun_direction = DEFAULT_SUN_DIRECTION
 	debug_mode_clear_selection(dm)
-	dm.saved_player = saved_player(sim)
-	if dm.active {
-		dm.camera = camera_from_player(sim)
-	}
+	save_player_and_sync_camera(dm, sim)
 }
 
 debug_mode_update :: proc(dm: ^Debug_Mode, sim: ^Simulation, input: Debug_Input, delta: f32) {
@@ -173,8 +169,7 @@ debug_mode_update :: proc(dm: ^Debug_Mode, sim: ^Simulation, input: Debug_Input,
 debug_mode_enter :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	dm.active = true
 	debug_mode_clear_selection(dm)
-	dm.saved_player = saved_player(sim)
-	dm.camera = camera_from_player(sim)
+	save_player_and_sync_camera(dm, sim)
 }
 
 @(private)
@@ -191,6 +186,14 @@ saved_player :: proc(sim: ^Simulation) -> Saved_Player {
 		position = sim.player.position,
 		yaw = sim.player.yaw,
 		pitch = sim.player.pitch,
+	}
+}
+
+@(private)
+save_player_and_sync_camera :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
+	dm.saved_player = saved_player(sim)
+	if dm.active {
+		dm.camera = camera_from_player(sim)
 	}
 }
 
