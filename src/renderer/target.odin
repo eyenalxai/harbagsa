@@ -31,9 +31,11 @@ Target :: struct {
 	dirty:     bool,
 	images:    []vk.Image,
 	views:     []vk.ImageView,
-	depth:     []Image,
-	color:     Image,
-	readback:  Readback,
+	// The present wait may still be pending when a frame slot submits again, so
+	// each swapchain image owns its signal semaphore.
+	render_finished: []vk.Semaphore,
+	color:           Image,
+	readback:        Readback,
 }
 
 create_target :: proc(r: ^Renderer, width, height: u32) -> Error {
@@ -49,23 +51,16 @@ create_target :: proc(r: ^Renderer, width, height: u32) -> Error {
 destroy_target :: proc(r: ^Renderer) {
 	switch r.target.kind {
 	case .Swapchain:
-		destroy_swapchain_images(r)
-		if r.device != nil && r.target.swapchain != 0 {
-			vk.DestroySwapchainKHR(r.device, r.target.swapchain, nil)
-			r.target.swapchain = 0
-		}
+		destroy_swapchain(r)
 		if r.instance != nil && r.target.surface != 0 {
 			r.platform.destroy_surface(r.platform.user, r.instance, r.target.surface)
 			r.target.surface = 0
 		}
 	case .Offscreen:
 		destroy_image(r, &r.target.color)
-		for &image in r.target.depth {
-			destroy_image(r, &image)
-		}
+		delete_target_slices(r)
 	}
 	destroy_readback(r)
-	delete_target_slices(r)
 	r.target.config = {}
 }
 
@@ -112,8 +107,8 @@ delete_target_slices :: proc(r: ^Renderer) {
 		delete(r.target.images, r.allocator)
 		r.target.images = nil
 	}
-	if r.target.depth != nil {
-		delete(r.target.depth, r.allocator)
-		r.target.depth = nil
+	if r.target.render_finished != nil {
+		delete(r.target.render_finished, r.allocator)
+		r.target.render_finished = nil
 	}
 }

@@ -200,7 +200,7 @@ save_player_and_sync_camera :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 @(private)
 camera_from_player :: proc(sim: ^Simulation) -> Debug_Camera {
 	return {
-		position = sim.player.position + b3.Vec3{0.0, PLAYER_EYE_HEIGHT, 0.0},
+		position = sim.player.position + b3.Vec3{0.0, sim.player.eye_height, 0.0},
 		yaw = sim.player.yaw,
 		pitch = sim.player.pitch,
 	}

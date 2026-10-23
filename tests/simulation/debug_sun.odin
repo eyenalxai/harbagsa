@@ -137,7 +137,7 @@ sun_crate_hit_takes_selection :: proc(t: ^testing.T) {
 
 	dm := game.debug_mode_create()
 	dm.active = true
-	eye := game.SPAWN_POSITION + b3.Vec3{0.0, game.PLAYER_EYE_HEIGHT, 0.0}
+	eye := game.SPAWN_POSITION + b3.Vec3{0.0, game.PLAYER_STANDING_EYE, 0.0}
 	crate := game.simulation_crate_box(&sim, 0).center
 	dm.camera.position = eye
 	dm.camera.yaw = 0.0

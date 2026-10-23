@@ -22,7 +22,7 @@ gravity_returns_player_to_floor_after_jump :: proc(t: ^testing.T) {
 		max_y = max(max_y, sim.player.position.y)
 	}
 
-	testing.expectf(t, max_y > 0.5, "jump height is too low: max y=%v", max_y)
+	testing.expectf(t, max_y > 0.9, "jump height is too low: max y=%v", max_y)
 	testing.expectf(
 		t,
 		sim.player.position.y < 0.1,
@@ -66,12 +66,12 @@ air_control_steers_without_speed_gain :: proc(t: ^testing.T) {
 	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 5)
 	testing.expect(t, !sim.player.grounded, "player is not airborne")
 
-	start_speed := horizontal_speed(sim.player.velocity)
+	start_speed := game.horizontal_speed(sim.player.velocity)
 	testing.expectf(t, start_speed > 4.5, "player is too slow before steering: %v", start_speed)
 
 	for _ in 0 ..< 20 {
 		game.simulation_step(&sim, game.Input_Snapshot{move_right = 1.0}, DT)
-		speed := horizontal_speed(sim.player.velocity)
+		speed := game.horizontal_speed(sim.player.velocity)
 		testing.expectf(
 			t,
 			speed <= game.PLAYER_WALK_SPEED + 0.01,
@@ -87,4 +87,22 @@ air_control_steers_without_speed_gain :: proc(t: ^testing.T) {
 		sim.player.velocity.x,
 	)
 	testing.expect(t, !sim.player.grounded, "player landed during air control")
+}
+
+@(test)
+standing_jump_can_steer_to_the_air_cap :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+
+	step(&sim, {}, 10)
+	step(&sim, game.Input_Snapshot{jump_pressed = true}, 1)
+	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 30)
+
+	speed := game.horizontal_speed(sim.player.velocity)
+	testing.expectf(
+		t,
+		speed > 4.0 && speed <= game.PLAYER_WALK_SPEED + 0.01,
+		"standing jump air control did not reach the cap: speed=%v",
+		speed,
+	)
 }

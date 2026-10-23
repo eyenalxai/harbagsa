@@ -18,7 +18,7 @@ crate_editor_setup :: proc(t: ^testing.T) -> (game.Simulation, game.Debug_Mode) 
 	dm := game.debug_mode_create()
 	dm.active = true
 	dm.camera = {
-		position = sim.player.position + b3.Vec3{0.0, game.PLAYER_EYE_HEIGHT, 0.0},
+		position = sim.player.position + b3.Vec3{0.0, game.PLAYER_STANDING_EYE, 0.0},
 		yaw      = 0.0,
 		pitch    = CRATE_EDITOR_SELECT_PITCH,
 	}

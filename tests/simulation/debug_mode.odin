@@ -20,7 +20,7 @@ debug_mode_toggle_saves_and_restores_player :: proc(t: ^testing.T) {
 	testing.expect(t, dm.active, "debug mode did not open")
 
 	camera := dm.camera
-	expected_eye := before.position + b3.Vec3{0.0, game.PLAYER_EYE_HEIGHT, 0.0}
+	expected_eye := before.position + b3.Vec3{0.0, game.PLAYER_STANDING_EYE, 0.0}
 	testing.expect_value(t, camera.position, expected_eye)
 	testing.expect_value(t, camera.yaw, before.yaw)
 	testing.expect_value(t, camera.pitch, before.pitch)
@@ -112,7 +112,7 @@ reset_player_moves_the_debug_camera_to_spawn :: proc(t: ^testing.T) {
 
 	game.debug_mode_reset_player(&dm, &sim)
 
-	expected := game.SPAWN_POSITION + b3.Vec3{0.0, game.PLAYER_EYE_HEIGHT, 0.0}
+	expected := game.SPAWN_POSITION + b3.Vec3{0.0, game.PLAYER_STANDING_EYE, 0.0}
 	testing.expect_value(t, dm.camera.position, expected)
 	testing.expect_value(t, sim.player.position, game.SPAWN_POSITION)
 }
@@ -141,6 +141,6 @@ reset_scene_restores_crates_sun_and_player :: proc(t: ^testing.T) {
 	testing.expect_value(t, dm.selected_crate, -1)
 	testing.expect_value(t, dm.dragging, game.Debug_Drag.None)
 	testing.expect_value(t, sim.player.position, game.SPAWN_POSITION)
-	expected_eye := game.SPAWN_POSITION + b3.Vec3{0.0, game.PLAYER_EYE_HEIGHT, 0.0}
+	expected_eye := game.SPAWN_POSITION + b3.Vec3{0.0, game.PLAYER_STANDING_EYE, 0.0}
 	testing.expect_value(t, dm.camera.position, expected_eye)
 }

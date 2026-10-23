@@ -37,19 +37,6 @@ init_offscreen_target :: proc(r: ^Renderer, width, height: u32) -> Error {
 	}
 	r.target.color = color
 
-	depth, depth_ok := create_image(
-		r,
-		width,
-		height,
-		DEPTH_FORMAT,
-		{.DEPTH_STENCIL_ATTACHMENT},
-		{.DEPTH},
-	)
-	if !depth_ok {
-		destroy_image(r, &r.target.color)
-		return .Create_Target
-	}
-
 	r.target.config = {
 		width   = width,
 		height  = height,
@@ -60,8 +47,6 @@ init_offscreen_target :: proc(r: ^Renderer, width, height: u32) -> Error {
 	r.target.images[0] = color.image
 	r.target.views = make([]vk.ImageView, 1, r.allocator)
 	r.target.views[0] = color.view
-	r.target.depth = make([]Image, 1, r.allocator)
-	r.target.depth[0] = depth
 
 	if !create_readback(r, width, height) {
 		log.error("renderer: could not create the offscreen readback buffer")
