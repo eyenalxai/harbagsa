@@ -238,7 +238,7 @@ apply_crate_impulses :: proc(sim: ^Simulation, contacts: ^Solver_Context) {
 		center := b3.Body_GetWorldCenter(body_id)
 		arm := point - b3.ToVec3(center)
 		angular_arm := b3.Cross(arm, normal)
-		angular_term := b3.Dot(angular_arm, mul_matrix3_vector(inverse_inertia, angular_arm))
+		angular_term := b3.Dot(angular_arm, inverse_inertia * angular_arm)
 		normal_mass: f32 = 0.0
 		if inverse_mass + angular_term > 0.0 {
 			normal_mass = 1.0 / (inverse_mass + angular_term)
@@ -254,14 +254,5 @@ apply_crate_impulses :: proc(sim: ^Simulation, contacts: ^Solver_Context) {
 		}
 
 		b3.Body_ApplyLinearImpulse(body_id, impulse * normal, point, true)
-	}
-}
-
-@(private)
-mul_matrix3_vector :: proc(m: b3.Matrix3, vector: b3.Vec3) -> b3.Vec3 {
-	return {
-		m[0, 0] * vector.x + m[0, 1] * vector.y + m[0, 2] * vector.z,
-		m[1, 0] * vector.x + m[1, 1] * vector.y + m[1, 2] * vector.z,
-		m[2, 0] * vector.x + m[2, 1] * vector.y + m[2, 2] * vector.z,
 	}
 }

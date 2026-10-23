@@ -41,11 +41,11 @@ A dynamic box that the player can push.
 _Avoid_: Prop, box
 
 **Spawn**:
-The player's reset point: feet at (0, 0.05, 14), facing −Z.
+The point where the player starts and returns after a reset.
 _Avoid_: Start, origin
 
 **Simulation**:
-The headless fixed-step update that owns the Box3D world and the player state.
+The headless fixed-step update that owns the world and the player state.
 _Avoid_: Game loop, engine
 
 **Input snapshot**:

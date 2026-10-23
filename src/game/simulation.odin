@@ -50,8 +50,9 @@ MAX_COLLISION_PLANES :: 16
 MOVE_ITERATIONS :: 5
 MOVE_TOLERANCE :: 0.01
 
-// One frame of player intent. The platform layer fills this once per frame and
-// the simulation consumes it on every fixed step.
+// One frame of player intent. The platform layer fills this once per frame.
+// look_delta and jump_pressed are frame edges: apply them on one fixed step
+// only and pass zero or false for the other steps in the same frame.
 Input_Snapshot :: struct {
 	move_forward:  f32,
 	move_right:    f32,

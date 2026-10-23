@@ -25,14 +25,15 @@ step :: proc(sim: ^game.Simulation, input: game.Input_Snapshot, count: int) {
 
 @(private)
 horizontal_speed :: proc(velocity: b3.Vec3) -> f32 {
-	return math.sqrt(velocity.x * velocity.x + velocity.z * velocity.z)
+	horizontal := b3.Vec3{velocity.x, 0.0, velocity.z}
+	return b3.Length(horizontal)
 }
 
 @(private)
 horizontal_distance :: proc(from, to: b3.Vec3) -> f32 {
-	dx := to.x - from.x
-	dz := to.z - from.z
-	return math.sqrt(dx * dx + dz * dz)
+	delta := to - from
+	horizontal := b3.Vec3{delta.x, 0.0, delta.z}
+	return b3.Length(horizontal)
 }
 
 @(private)
