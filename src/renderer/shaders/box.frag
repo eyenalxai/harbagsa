@@ -13,6 +13,8 @@ layout(set = 0, binding = 0) uniform Camera {
     vec4 gamma;
 } camera;
 
+#include "gamma.glsl"
+
 void main() {
     vec3 normal = normalize(v_normal);
     vec3 to_light = normalize(-camera.light_direction.xyz);
@@ -20,11 +22,5 @@ void main() {
 
     vec3 color = v_color * (camera.ambient.rgb + diffuse * vec3(1.0, 0.98, 0.94));
 
-    // sRGB swapchains encode the fragment output in hardware. Other formats
-    // need an explicit gamma step so colors match the sRGB path.
-    if (camera.gamma.x > 0.5) {
-        color = pow(color, vec3(1.0 / 2.2));
-    }
-
-    out_color = vec4(color, 1.0);
+    out_color = vec4(apply_gamma(color, camera.gamma.x), 1.0);
 }
