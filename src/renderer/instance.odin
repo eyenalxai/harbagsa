@@ -51,7 +51,8 @@ init_instance :: proc(r: ^Renderer) -> Error {
 			validation_enabled = true
 			log.info("renderer: validation layers enabled")
 		} else {
-			log.warn("renderer: validation layers or VK_EXT_debug_utils are unavailable; continuing without validation")
+			log.error("renderer: validation was requested, but the layer or VK_EXT_debug_utils is unavailable")
+			return .Validation_Unavailable
 		}
 	}
 
