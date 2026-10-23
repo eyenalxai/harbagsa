@@ -100,6 +100,16 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 		}
 	}
 
+	r.render_finished = make([]vk.Semaphore, image_count_actual, r.allocator)
+	semaphore_info := vk.SemaphoreCreateInfo {
+		sType = .SEMAPHORE_CREATE_INFO,
+	}
+	for i in 0 ..< image_count_actual {
+		if !check(vk.CreateSemaphore(r.device, &semaphore_info, nil, &r.render_finished[i]), "vkCreateSemaphore") {
+			return .Fatal
+		}
+	}
+
 	log.infof(
 		"renderer: swapchain %vx%v with %d images, format %v",
 		extent.width,
@@ -112,6 +122,11 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 
 destroy_swapchain :: proc(r: ^Renderer) {
 	if r.device != nil {
+		for semaphore in r.render_finished {
+			if semaphore != 0 {
+				vk.DestroySemaphore(r.device, semaphore, nil)
+			}
+		}
 		for view in r.swapchain_views {
 			if view != 0 {
 				vk.DestroyImageView(r.device, view, nil)
@@ -123,6 +138,10 @@ destroy_swapchain :: proc(r: ^Renderer) {
 		}
 	}
 
+	if r.render_finished != nil {
+		delete(r.render_finished, r.allocator)
+		r.render_finished = nil
+	}
 	if r.swapchain_views != nil {
 		delete(r.swapchain_views, r.allocator)
 		r.swapchain_views = nil
