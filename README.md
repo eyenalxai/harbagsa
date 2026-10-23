@@ -1,8 +1,9 @@
 # harbagsa
 
-A first-person walking demo. The player walks, looks, and jumps in a fixed
-arena with pushable crates. SDL3 provides the window and input, raw Vulkan 1.3
-draws the scene, and Box3D runs the physics.
+A first-person movement demo. The player walks, sprints, crouches, crawls,
+jumps, dives, slides, and mantles in a fixed arena with stairs, ramps, tunnels,
+mantle walls, a dive platform, and pushable crates. SDL3 provides the window and
+input, raw Vulkan 1.3 draws the scene, and Box3D runs the physics.
 
 ## Requirements
 
@@ -24,15 +25,18 @@ into the binary.
 
 ## Controls
 
-- `WASD`: walk relative to the view.
+- `WASD`: move relative to the view. Every stance moves in any direction.
 - Mouse: look. Left click captures the cursor.
-- `Space`: jump. The player must be grounded.
+- Left `Shift`: sprint. Hold by default; the mode is a code constant.
+- `Space`: jump. In the air, try to mantle a ledge. Jump input buffers before landing.
+- `C`: crouch. Toggle by default. While sprinting, it starts a crouch slide.
+- `Z`: prone. Toggle by default. Crawl while prone. Dive in the air or from a sprint.
 - `R`: return the player to spawn.
 - `F1`: toggle the debug draw.
 - `Esc`: release the cursor capture.
 
-The HUD shows the player speed, grounded state, position, and this control list.
-The window is resizable.
+The HUD shows the stance, gait, horizontal speed, grounded state, movement
+state, position, and this control list. The window is resizable.
 
 ## Build
 
