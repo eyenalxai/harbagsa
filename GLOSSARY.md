@@ -229,12 +229,16 @@ The offscreen image that stores each pixel's previous-to-current screen motion a
 _Avoid_: Motion buffer, motion vectors
 
 **Resolve**:
-The fullscreen pass that clamps, reprojects, and blends the history into the current frame.
+The fullscreen pass that reprojects, tests the depth range, clamps, and blends the history into the current frame.
 _Avoid_: Composite, merge
 
 **Disocclusion**:
 A pixel that was hidden by a surface and becomes visible after the camera or a surface moves.
 _Avoid_: Reveal
+
+**Depth range**:
+The smallest and largest current view depth in a pixel's 3x3 neighborhood. The resolve accepts a history depth inside the range; a disocclusion falls outside it.
+_Avoid_: Depth bounds, depth span
 
 **History reset**:
 The state where TAA ignores the previous history and starts a new accumulation.
