@@ -61,7 +61,7 @@ The state where the mouse controls the camera and the pointer is hidden.
 _Avoid_: Mouse lock
 
 **Debug draw**:
-The line pass that shows the physics world: shapes, contacts, and bounds.
+The line pass that shows the physics world: shape bounds and contacts.
 _Avoid_: Debug view, wireframe
 
 **HUD**:

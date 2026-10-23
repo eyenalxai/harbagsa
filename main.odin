@@ -262,7 +262,7 @@ debug_draw_segment :: proc "c" (from, to: b3.Pos, color: b3.HexColor, ctx: rawpt
 debug_draw_point :: proc "c" (point: b3.Pos, size: f32, color: b3.HexColor, ctx: rawptr) {
 	collector := cast(^Debug_Lines)ctx
 	center := [3]f32{point.x, point.y, point.z}
-	half := clamp(size * 0.005, 0.04, 0.14)
+	half := clamp(size * 0.008, 0.06, 0.20)
 	line_color := debug_color(color, 1.0)
 
 	append_debug_line(collector, center - {half, 0, 0}, center + {half, 0, 0}, line_color)
