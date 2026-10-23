@@ -93,7 +93,7 @@ try_step :: proc(sim: ^Simulation, time_step: f32) -> bool {
 // descending walkable surface. It never climbs a ledge.
 snap_to_ground :: proc(sim: ^Simulation, was_grounded: bool) {
 	player := &sim.player
-	if player.velocity.y > 1.0 {
+	if player.velocity.y > 0.0 && !player.grounded {
 		return
 	}
 	if player.movement_state == .Diving || player.movement_state == .Mantling {

@@ -87,10 +87,7 @@ update_dive :: proc(sim: ^Simulation, time_step: f32) {
 			player.movement_state = .Diving
 			return
 		}
-		player.slide_speed = max(
-			PLAYER_CRAWL_SPEED,
-			player.slide_speed - PLAYER_SLIDE_DECELERATION * time_step,
-		)
+		player.slide_speed = decay_slide_speed(player.slide_speed, PLAYER_CRAWL_SPEED, time_step)
 		player.velocity.x = player.slide_direction.x * player.slide_speed
 		player.velocity.z = player.slide_direction.z * player.slide_speed
 		if player.slide_speed <= PLAYER_CRAWL_SPEED + PLAYER_SLIDE_END_EPSILON {

@@ -79,8 +79,8 @@ simulation_reset :: proc(sim: ^Simulation) {
 	sim.player.movement_state = .None
 	sim.player.crouch_engaged = false
 	sim.player.prone_engaged = false
-	sim.player.sprint_engaged = false
-	sim.player.sprint_requested = false
+	sim.player.sprint_toggled = false
+	sim.player.sprint_wanted = false
 	sim.player.eye_height = PLAYER_STANDING_EYE
 	sim.player.previous_eye_height = PLAYER_STANDING_EYE
 	sim.player.on_steep_slope = false

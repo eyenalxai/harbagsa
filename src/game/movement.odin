@@ -17,6 +17,20 @@ update_jump_timers :: proc(sim: ^Simulation, input: Input_Snapshot, time_step: f
 }
 
 @(private)
+launch_jump :: proc(player: ^Player) {
+	player.air_cap = max(PLAYER_WALK_SPEED, horizontal_speed(player.velocity))
+	player.velocity.y = PLAYER_JUMP_SPEED
+	player.grounded = false
+	player.coyote = 0.0
+	player.jump_buffer = 0.0
+}
+
+@(private)
+decay_slide_speed :: proc(speed, minimum, time_step: f32) -> f32 {
+	return max(minimum, speed - PLAYER_SLIDE_DECELERATION * time_step)
+}
+
+@(private)
 try_jump :: proc(sim: ^Simulation) {
 	player := &sim.player
 	if player.movement_state != .None {
@@ -39,9 +53,5 @@ try_jump :: proc(sim: ^Simulation) {
 		player.prone_engaged = false
 	}
 
-	player.air_cap = max(PLAYER_WALK_SPEED, horizontal_speed(player.velocity))
-	player.velocity.y = PLAYER_JUMP_SPEED
-	player.grounded = false
-	player.coyote = 0.0
-	player.jump_buffer = 0.0
+	launch_jump(player)
 }

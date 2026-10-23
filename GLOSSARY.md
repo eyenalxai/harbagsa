@@ -58,7 +58,7 @@ The 8.0 m/s gait in any horizontal direction.
 _Avoid_: Run
 
 **Headroom**:
-The clear space above the feet that a taller stance needs. The controller tests it before the capsule grows.
+The clear space above the feet that a taller stance needs. The controller tests it before the capsule grows. A floor-level side obstacle does not reduce headroom; an overhead shape does.
 _Avoid_: Ceiling check
 
 **Dive**:
@@ -82,7 +82,7 @@ The automatic climb onto an obstacle up to 0.35 m high while grounded.
 _Avoid_: Autostep
 
 **Ground snap**:
-The downward correction that keeps a grounded player on a walkable surface within 0.30 m.
+The downward correction that keeps a grounded player on a walkable surface within 0.30 m. A walkable slope can give a small positive vertical velocity; the surface clearance decides, not the sign of the velocity.
 _Avoid_: Stick to ground
 
 **Coyote time**:
@@ -94,7 +94,7 @@ The 0.12 s before landing during which a jump press is remembered.
 _Avoid_: Input buffer
 
 **Movement state**:
-The exclusive action state: None, Diving, Sliding, or Mantling.
+The exclusive action state: None, Diving, Sliding, or Mantling. Stance and gait are separate.
 _Avoid_: Action state
 
 **Arena**:
@@ -126,7 +126,7 @@ The headless fixed-step update that owns the world and the player state.
 _Avoid_: Game loop, engine
 
 **Input snapshot**:
-One frame of player intent: movement axes, jump, and reset. Look is a separate frame call.
+One frame of player intent: movement axes, sprint, crouch, prone, jump, and reset. Look is a separate frame call.
 _Avoid_: Input state, controls
 
 **Render snapshot**:
