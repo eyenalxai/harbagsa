@@ -15,6 +15,15 @@ Player :: struct {
 	grounded:          bool,
 }
 
+player_place :: proc(player: ^Player, position: b3.Vec3, yaw, pitch: f32) {
+	player.position = position
+	player.previous_position = position
+	player.velocity = b3.Vec3_zero
+	player.yaw = yaw
+	player.pitch = pitch
+	player.grounded = false
+}
+
 // One call to World_CollideMover can report several planes for the same shape.
 // Keep the shape id and the origin-relative contact point with each plane so
 // the controller can push dynamic bodies after the slide is resolved.

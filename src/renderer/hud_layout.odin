@@ -15,25 +15,8 @@ build_hints :: proc(o: ^Overlay, height: f32, hud: HUD_State, scale, margin, pad
 		"F1 debug view    F2 debug mode",
 		"Esc release mouse",
 	}
-	hint_width := 0
-	for line in hint_lines {
-		hint_width = max(hint_width, stb_easy_font.width(line))
-	}
-	hint_panel_width := f32(hint_width) * scale + padding * 2
-	hint_height := 4 * HUD_LINE_HEIGHT * scale
-	hint_x := margin
-	hint_y := height - margin - hint_height - padding * 2
-	hud_emit_rect(o, hint_x, hint_y, hint_panel_width, hint_height + padding * 2, HUD_PANEL_COLOR)
-	for line, index in hint_lines {
-		hud_emit_text(
-			o,
-			hint_x + padding,
-			hint_y + padding + f32(index) * HUD_LINE_HEIGHT * scale,
-			line,
-			HUD_TEXT_COLOR,
-			scale,
-		)
-	}
+	hint_y := height - margin - hud_panel_height(len(hint_lines), scale, padding)
+	hud_emit_panel(o, margin, hint_y, hint_lines[:], scale, padding)
 }
 
 build_capture_overlay :: proc(o: ^Overlay, width, height: f32, hud: HUD_State, scale, padding: f32) {

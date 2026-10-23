@@ -35,7 +35,7 @@ Events :: struct {
 	debug_mode_pressed:  bool,
 	add_pressed:         bool,
 	delete_pressed:      bool,
-	light_pressed:       bool,
+	sun_pressed:       bool,
 	primary_pressed:     bool,
 	primary_released:    bool,
 	fly_up:              bool,
@@ -219,7 +219,7 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 		case .DELETE, .X:
 			events.delete_pressed = true
 		case .L:
-			events.light_pressed = true
+			events.sun_pressed = true
 		}
 	case .MOUSE_MOTION:
 		if events.captured {
