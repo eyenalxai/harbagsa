@@ -49,7 +49,7 @@ The headless fixed-step update that owns the world and the player state.
 _Avoid_: Game loop, engine
 
 **Input snapshot**:
-One frame of player intent: movement axes, jump, and reset.
+One frame of player intent: movement axes, jump, and reset. Look is a separate frame call.
 _Avoid_: Input state, controls
 
 **Render snapshot**:

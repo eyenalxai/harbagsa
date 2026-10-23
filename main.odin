@@ -7,6 +7,7 @@ import "core:os"
 import "core:time"
 
 import "src:game"
+import "src:geometry"
 import "src:platform"
 import "src:renderer"
 
@@ -52,6 +53,7 @@ run :: proc() -> bool {
 
 	accumulator: f32 = 0
 	jump_latched := false
+	reset_latched := false
 	last_time := time.now()
 
 	for {
@@ -86,16 +88,19 @@ run :: proc() -> bool {
 		delta = clamp(delta, 0, MAX_FRAME_DELTA)
 
 		// Look and jump are frame edges. Look applies even when this frame
-		// runs no fixed step; jump is consumed by the first step.
+		// runs no fixed step; jump is consumed by the first step. Both are
+		// player input, so both are ignored while the cursor is free.
 		if events.captured {
 			game.simulation_look(&sim, events.look_delta)
+		} else {
+			jump_latched = false
 		}
-		if events.jump_pressed {
+		if events.captured && events.jump_pressed {
 			jump_latched = true
 		}
 		if events.reset_pressed {
-			game.simulation_reset(&sim)
 			jump_latched = false
+			reset_latched = true
 		}
 
 		accumulator += delta
@@ -107,10 +112,12 @@ run :: proc() -> bool {
 					move_forward = events.move_forward,
 					move_right = events.move_right,
 					jump_pressed = jump_latched,
+					reset_pressed = reset_latched,
 				},
 				game.SIMULATION_STEP,
 			)
 			jump_latched = false
+			reset_latched = false
 			accumulator -= game.SIMULATION_STEP
 			steps += 1
 		}
@@ -130,20 +137,16 @@ run :: proc() -> bool {
 			fov_x    = PLAYER_FOV_X,
 		}
 
-		boxes: [game.ARENA_BOX_COUNT]renderer.Draw_Box
+		boxes: [game.ARENA_BOX_COUNT]geometry.Box
 		for box, index in game.arena_static_boxes() {
-			boxes[index] = {
-				center       = box.center,
-				half_extents = box.half_extents,
-				color        = box.color,
-			}
+			boxes[index] = box
 		}
 		for box, index in game.arena_crates() {
-			boxes[game.ARENA_STATIC_BOX_COUNT + index] = {
-				center       = game.simulation_crate_position(&sim, index),
-				half_extents = box.half_extents,
-				color        = box.color,
-			}
+			draw_index := game.ARENA_STATIC_BOX_COUNT + index
+			boxes[draw_index] = box
+			boxes[draw_index].center = game.simulation_crate_position(&sim, index)
+			rotation := game.simulation_crate_rotation(&sim, index)
+			boxes[draw_index].rotation = {rotation.x, rotation.y, rotation.z, rotation.w}
 		}
 
 		frame, begin_status := renderer.begin_frame(&state, camera, boxes[:])
