@@ -121,6 +121,8 @@ scenario.
   present. The compositor controls the window size.
 - TAA history affects exact pixels. The first frame matches exactly. Later frames
   match when both runs share the same history. See the README note.
+- `scenarios/taa-static.json` captures consecutive static frames for TAA edge
+  stability. The first frames converge; compare later frames.
 - `--no-render` and capture-free scenarios never create a Vulkan device.
 
 Use `capture` or `--present`. Do not use `grim` for automated screenshots.
