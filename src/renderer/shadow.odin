@@ -21,9 +21,9 @@ Shadow :: struct {
 	light_view_projection: Mat4,
 }
 
-// The sun never moves, so one fixed orthographic box covers the arena.
-shadow_light_matrix :: proc() -> Mat4 {
-	to_light := -linalg.vector_normalize0(LIGHT_DIRECTION)
+// The light volume is fixed; only the direction follows the runtime sun.
+shadow_light_matrix :: proc(light_direction: [3]f32) -> Mat4 {
+	to_light := -linalg.vector_normalize0(light_direction)
 	eye := LIGHT_VOLUME_CENTER + to_light * (LIGHT_VOLUME_DEPTH * 0.5)
 	view := mat4_look_at(eye, LIGHT_VOLUME_CENTER, CAMERA_UP)
 	projection := mat4_orthographic(
@@ -70,7 +70,8 @@ create_shadow_resources :: proc(r: ^Renderer) -> bool {
 		return false
 	}
 
-	r.shadow.light_view_projection = shadow_light_matrix()
+	// Filled from the runtime sun before the first shadow pass.
+	r.shadow.light_view_projection = MAT4_IDENTITY
 	write_shadow_descriptors(r)
 	return create_shadow_pipeline(r)
 }
