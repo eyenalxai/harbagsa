@@ -19,17 +19,24 @@ Window :: struct {
 	handle: ^sdl3.Window,
 }
 
-// jump, reset, and debug are key-down edges so a held key does not repeat.
+// jump, reset, the stance edges, and debug are key-down edges so a held key
+// does not repeat.
 Events :: struct {
-	quit:          bool,
-	resized:       bool,
-	move_forward:  f32,
-	move_right:    f32,
-	look_delta:    [2]f32,
-	jump_pressed:  bool,
-	reset_pressed: bool,
-	debug_pressed: bool,
-	captured:      bool,
+	quit:            bool,
+	resized:         bool,
+	move_forward:    f32,
+	move_right:      f32,
+	sprint_held:     bool,
+	sprint_pressed:  bool,
+	crouch_held:     bool,
+	crouch_pressed:  bool,
+	prone_held:      bool,
+	prone_pressed:   bool,
+	look_delta:      [2]f32,
+	jump_pressed:    bool,
+	reset_pressed:   bool,
+	debug_pressed:   bool,
+	captured:        bool,
 }
 
 init :: proc(title: cstring, width, height: i32) -> (window: Window, err: Error) {
@@ -135,6 +142,9 @@ read_movement :: proc(events: ^Events) {
 	if keys[int(sdl3.Scancode.A)] {
 		events.move_right -= 1.0
 	}
+	events.sprint_held = keys[int(sdl3.Scancode.LSHIFT)]
+	events.crouch_held = keys[int(sdl3.Scancode.C)]
+	events.prone_held = keys[int(sdl3.Scancode.Z)]
 }
 
 is_minimized :: proc(window: ^Window) -> bool {
@@ -175,6 +185,12 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 			}
 		case .SPACE:
 			events.jump_pressed = true
+		case .LSHIFT:
+			events.sprint_pressed = true
+		case .C:
+			events.crouch_pressed = true
+		case .Z:
+			events.prone_pressed = true
 		case .R:
 			events.reset_pressed = true
 		case .F1:
