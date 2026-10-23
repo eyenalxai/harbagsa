@@ -578,9 +578,16 @@ record_scene :: proc(
 	image_index: u32,
 	camera: Camera,
 	boxes: []geometry.Box,
+	debug_lines: []geometry.Line,
+	hud: HUD_State,
 ) -> bool {
 	if int(image_index) >= len(r.swapchain_views) || int(image_index) >= len(r.scene.depth_views) {
 		log.errorf("renderer: swapchain image index %d is out of range", image_index)
+		return false
+	}
+
+	if !prepare_overlay(r, debug_lines, hud) {
+		log.error("renderer: overlay vertex upload failed")
 		return false
 	}
 
@@ -722,6 +729,8 @@ record_scene :: proc(
 		)
 		vk.CmdDrawIndexed(command_buffer, r.scene.index_count, 1, 0, 0, 0)
 	}
+
+	record_overlay(r, command_buffer)
 
 	vk.CmdEndRendering(command_buffer)
 

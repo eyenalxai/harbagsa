@@ -10,7 +10,9 @@ BIN := bin/harbagsa
 GLSLC ?= glslc
 SHADER_SRC := src/renderer/shaders
 SHADER_OUT := build/shaders
-SHADERS := $(SHADER_OUT)/box.vert.spv $(SHADER_OUT)/box.frag.spv
+SHADERS := $(SHADER_OUT)/box.vert.spv $(SHADER_OUT)/box.frag.spv \
+	$(SHADER_OUT)/debug.vert.spv $(SHADER_OUT)/debug.frag.spv \
+	$(SHADER_OUT)/hud.vert.spv $(SHADER_OUT)/hud.frag.spv
 
 CC ?= cc
 BOX3D_DIR := vendor/box3d
