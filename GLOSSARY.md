@@ -29,7 +29,7 @@ The state where the character controller finds a floor under the player.
 _Avoid_: On floor
 
 **Air control**:
-Steering while airborne. It changes direction without gaining horizontal speed.
+Steering while airborne. It changes direction up to the air cap; it never exceeds the cap.
 _Avoid_: Air strafe
 
 **Stance**:
@@ -98,7 +98,7 @@ The exclusive action state: None, Diving, Sliding, or Mantling. Stance and gait 
 _Avoid_: Action state
 
 **Arena**:
-The fixed test level: a floor, walls, and a few crates.
+The fixed test level: a floor, walls, stairs, ramps, tunnels, mantle walls, a dive platform, a slide lane, and a few crates.
 _Avoid_: Map, level
 
 **Crate**:

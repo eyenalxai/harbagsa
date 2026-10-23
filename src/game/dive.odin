@@ -38,11 +38,8 @@ try_dive :: proc(sim: ^Simulation, input: Input_Snapshot) -> bool {
 	direction := intent_direction(player, input)
 	player.movement_state = .Diving
 	player.slide_direction = direction
-	player.prone_engaged = true
-	player.crouch_engaged = false
-	player.stance = .Prone
-	player.velocity.x = direction.x * PLAYER_DIVE_SPEED
-	player.velocity.z = direction.z * PLAYER_DIVE_SPEED
+	commit_stance(player, .Prone)
+	set_slide_velocity(player, direction, PLAYER_DIVE_SPEED)
 	player.jump_buffer = 0.0
 	player.slide_speed = 0.0
 	player.slide_elapsed = 0.0
@@ -67,11 +64,9 @@ start_dive_slide :: proc(player: ^Player) {
 		PLAYER_CRAWL_SPEED,
 		PLAYER_DIVE_SPEED * PLAYER_DIVE_SLIDE_FRACTION,
 	)
-	player.velocity.x = direction.x * player.slide_speed
-	player.velocity.z = direction.z * player.slide_speed
+	set_slide_velocity(player, direction, player.slide_speed)
 	player.movement_state = .Sliding_Dive
-	player.prone_engaged = true
-	player.stance = .Prone
+	commit_stance(player, .Prone)
 }
 
 @(private)
@@ -87,9 +82,12 @@ update_dive :: proc(sim: ^Simulation, time_step: f32) {
 			player.movement_state = .Diving
 			return
 		}
-		player.slide_speed = decay_slide_speed(player.slide_speed, PLAYER_CRAWL_SPEED, time_step)
-		player.velocity.x = player.slide_direction.x * player.slide_speed
-		player.velocity.z = player.slide_direction.z * player.slide_speed
+		player.slide_speed = advance_slide(
+			player,
+			player.slide_direction,
+			PLAYER_CRAWL_SPEED,
+			time_step,
+		)
 		if player.slide_speed <= PLAYER_CRAWL_SPEED + PLAYER_SLIDE_END_EPSILON {
 			player.movement_state = .None
 		}
