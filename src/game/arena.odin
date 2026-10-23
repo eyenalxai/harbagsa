@@ -7,6 +7,7 @@ ARENA_SIZE :: 40.0
 ARENA_HALF_SIZE :: ARENA_SIZE * 0.5
 ARENA_WALL_HEIGHT :: 4.0
 ARENA_WALL_THICKNESS :: 0.5
+ARENA_FLOOR_THICKNESS :: 1.0
 ARENA_CRATE_SIZE :: 1.0
 ARENA_CRATE_HALF_SIZE :: ARENA_CRATE_SIZE * 0.5
 
@@ -32,8 +33,8 @@ CRATE_COLORS :: [ARENA_CRATE_COUNT][4]f32 {
 arena_boxes :: proc() -> []geometry.Box {
 	@(static) boxes := [ARENA_BOX_COUNT]geometry.Box {
 		{
-			center = {0, -0.5, 0},
-			half_extents = {ARENA_HALF_SIZE, 0.5, ARENA_HALF_SIZE},
+			center = {0, -ARENA_FLOOR_THICKNESS * 0.5, 0},
+			half_extents = {ARENA_HALF_SIZE, ARENA_FLOOR_THICKNESS * 0.5, ARENA_HALF_SIZE},
 			color = FLOOR_COLOR,
 			rotation = geometry.IDENTITY_ROTATION,
 		},

@@ -5,6 +5,7 @@ layout(location = 1) in vec3 in_normal;
 
 layout(location = 0) out vec3 v_normal;
 layout(location = 1) out vec3 v_color;
+layout(location = 2) out vec3 v_world_position;
 
 layout(push_constant) uniform PushConstants {
     mat4 model;
@@ -17,6 +18,7 @@ layout(set = 0, binding = 0) uniform Camera {
     vec4 light_direction;
     vec4 ambient;
     vec4 gamma;
+    mat4 light_view_projection;
 } camera;
 
 void main() {
@@ -24,4 +26,5 @@ void main() {
     gl_Position = camera.projection * camera.view * world_position;
     v_normal = mat3(object.model) * in_normal;
     v_color = object.color.rgb;
+    v_world_position = world_position.xyz;
 }
