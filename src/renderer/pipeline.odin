@@ -17,7 +17,7 @@ create_pipeline :: proc(r: ^Renderer) -> bool {
 			offset = u32(offset_of(Vertex, normal)),
 		},
 	}
-	color_formats := [1]vk.Format{r.swapchain_format}
+	color_formats := [1]vk.Format{r.target.config.format}
 
 	ok := create_graphics_pipeline(
 		r,
@@ -49,7 +49,7 @@ create_pipeline :: proc(r: ^Renderer) -> bool {
 		&r.scene.pipeline_layout,
 	)
 	if ok {
-		r.scene.pipeline_format = r.swapchain_format
+		r.scene.pipeline_format = r.target.config.format
 	}
 	return ok
 }
