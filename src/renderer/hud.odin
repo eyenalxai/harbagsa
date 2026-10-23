@@ -3,7 +3,7 @@ package renderer
 
 import stb_easy_font "vendor:stb/easy_font"
 
-HUD_State :: struct {
+HUD_Frame :: struct {
 	status_lines:  []string,
 	control_lines: []string,
 	capture_hint:  string,
@@ -47,60 +47,38 @@ hud_emit_text :: proc(o: ^Overlay, x, y: f32, text: string, color: [4]f32, scale
 	}
 }
 
-build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_State) {
+hud_panel_height :: proc(lines: []string, scale: f32) -> f32 {
+	return f32(len(lines)) * HUD_LINE_HEIGHT * scale
+}
+
+hud_emit_panel :: proc(o: ^Overlay, lines: []string, x, y, scale, padding: f32) {
+	width: f32
+	for line in lines {
+		width = max(width, f32(stb_easy_font.width(line)) * scale)
+	}
+	height := hud_panel_height(lines, scale)
+	hud_emit_rect(o, x, y, width + padding * 2, height + padding * 2, HUD_PANEL_COLOR)
+	for line, index in lines {
+		hud_emit_text(
+			o,
+			x + padding,
+			y + padding + f32(index) * HUD_LINE_HEIGHT * scale,
+			line,
+			HUD_TEXT_COLOR,
+			scale,
+		)
+	}
+}
+
+build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
 	scale := 2.0 * clamp(height / 720.0, 1.0, 2.0)
 	margin := 8.0 * scale
 	padding := 5.0 * scale
 
-	status_width: f32
-	for line in hud.status_lines {
-		status_width = max(status_width, f32(stb_easy_font.width(line)) * scale)
-	}
-	status_height := f32(len(hud.status_lines)) * HUD_LINE_HEIGHT * scale
-	hud_emit_rect(
-		o,
-		margin,
-		margin,
-		status_width + padding * 2,
-		status_height + padding * 2,
-		HUD_PANEL_COLOR,
-	)
-	for line, index in hud.status_lines {
-		hud_emit_text(
-			o,
-			margin + padding,
-			margin + padding + f32(index) * HUD_LINE_HEIGHT * scale,
-			line,
-			HUD_TEXT_COLOR,
-			scale,
-		)
-	}
+	hud_emit_panel(o, hud.status_lines, margin, margin, scale, padding)
 
-	control_width: f32
-	for line in hud.control_lines {
-		control_width = max(control_width, f32(stb_easy_font.width(line)) * scale)
-	}
-	control_height := f32(len(hud.control_lines)) * HUD_LINE_HEIGHT * scale
-	control_x := margin
-	control_y := height - margin - control_height - padding * 2
-	hud_emit_rect(
-		o,
-		control_x,
-		control_y,
-		control_width + padding * 2,
-		control_height + padding * 2,
-		HUD_PANEL_COLOR,
-	)
-	for line, index in hud.control_lines {
-		hud_emit_text(
-			o,
-			control_x + padding,
-			control_y + padding + f32(index) * HUD_LINE_HEIGHT * scale,
-			line,
-			HUD_TEXT_COLOR,
-			scale,
-		)
-	}
+	control_y := height - margin - hud_panel_height(hud.control_lines, scale) - padding * 2
+	hud_emit_panel(o, hud.control_lines, margin, control_y, scale, padding)
 
 	center_x := width * 0.5
 	center_y := height * 0.5

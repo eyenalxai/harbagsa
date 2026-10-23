@@ -6,10 +6,11 @@ import "core:fmt"
 import "core:math"
 
 HUD_STATUS_LINE_COUNT :: 3
+#assert(HUD_STATUS_LINE_COUNT == 3)
 HUD_CONTROL_LINE_COUNT :: 3
 HUD_LINE_BYTES :: 96
 
-HUD_CONTROL_LINES := [HUD_CONTROL_LINE_COUNT]string {
+HUD_CONTROL_LINES :: [HUD_CONTROL_LINE_COUNT]string {
 	"WASD move    Mouse look",
 	"Space jump    R reset",
 	"F1 debug view    Esc release mouse",
