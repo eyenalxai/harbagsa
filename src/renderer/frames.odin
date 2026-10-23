@@ -14,6 +14,13 @@ Frame_View :: struct {
 	hud:             HUD_Frame,
 }
 
+create_semaphore :: proc(r: ^Renderer, semaphore: ^vk.Semaphore) -> bool {
+	info := vk.SemaphoreCreateInfo {
+		sType = .SEMAPHORE_CREATE_INFO,
+	}
+	return check(vk.CreateSemaphore(r.device, &info, nil, semaphore), "vkCreateSemaphore")
+}
+
 init_frames :: proc(r: ^Renderer) -> Error {
 	pool_info := vk.CommandPoolCreateInfo{
 		sType            = .COMMAND_POOL_CREATE_INFO,
@@ -34,24 +41,12 @@ init_frames :: proc(r: ^Renderer) -> Error {
 		return .Create_Frames
 	}
 
-	semaphore_info := vk.SemaphoreCreateInfo {
-		sType = .SEMAPHORE_CREATE_INFO,
-	}
 	fence_info := vk.FenceCreateInfo {
 		sType = .FENCE_CREATE_INFO,
 		flags = {.SIGNALED},
 	}
 	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		if !check(
-			vk.CreateSemaphore(r.device, &semaphore_info, nil, &r.image_available[i]),
-			"vkCreateSemaphore",
-		) {
-			return .Create_Frames
-		}
-		if !check(
-			vk.CreateSemaphore(r.device, &semaphore_info, nil, &r.render_finished[i]),
-			"vkCreateSemaphore",
-		) {
+		if !create_semaphore(r, &r.image_available[i]) {
 			return .Create_Frames
 		}
 		if !check(vk.CreateFence(r.device, &fence_info, nil, &r.in_flight[i]), "vkCreateFence") {
@@ -70,6 +65,10 @@ begin_frame :: proc(
 	frame: Frame,
 	status: Frame_Status,
 ) {
+	if validation_failed() {
+		return {}, .Fatal
+	}
+
 	if r.target.config.width == 0 || r.target.config.height == 0 {
 		return {}, .Skipped
 	}
@@ -78,6 +77,9 @@ begin_frame :: proc(
 		status = recreate_swapchain(r)
 		if status != .Ok {
 			return {}, status
+		}
+		if validation_failed() {
+			return {}, .Fatal
 		}
 	}
 
@@ -119,6 +121,9 @@ begin_frame :: proc(
 	if !record_scene(r, command_buffer, image_index, view, capture) {
 		return {}, .Fatal
 	}
+	if validation_failed() {
+		return {}, .Fatal
+	}
 
 	return Frame{image_index = image_index, command_buffer = command_buffer, capture = capture}, .Ok
 }
@@ -129,7 +134,7 @@ end_frame :: proc(r: ^Renderer, frame: Frame) -> Frame_Status {
 
 	if r.target.kind == .Swapchain {
 		image_available := r.image_available[r.frame_index]
-		render_finished := r.render_finished[r.frame_index]
+		render_finished := r.target.render_finished[image_index]
 		wait_stage := vk.PipelineStageFlags{.COLOR_ATTACHMENT_OUTPUT}
 		submit := vk.SubmitInfo{
 			sType                = .SUBMIT_INFO,
@@ -154,6 +159,9 @@ end_frame :: proc(r: ^Renderer, frame: Frame) -> Frame_Status {
 			return .Fatal
 		}
 	}
+	if validation_failed() {
+		return .Fatal
+	}
 
 	if frame.capture &&
 	   !check(
@@ -165,14 +173,14 @@ end_frame :: proc(r: ^Renderer, frame: Frame) -> Frame_Status {
 
 	status: Frame_Status = .Ok
 	if r.target.kind == .Swapchain {
-		render_finished := r.render_finished[r.frame_index]
+		render_finished := r.target.render_finished[image_index]
 		present := vk.PresentInfoKHR{
 			sType              = .PRESENT_INFO_KHR,
 			waitSemaphoreCount = 1,
 			pWaitSemaphores    = &render_finished,
 			swapchainCount     = 1,
 			pSwapchains        = &r.target.swapchain,
-			pImageIndices       = &image_index,
+			pImageIndices      = &image_index,
 		}
 		present_result := vk.QueuePresentKHR(r.present_queue, &present)
 		#partial switch present_result {
@@ -186,6 +194,9 @@ end_frame :: proc(r: ^Renderer, frame: Frame) -> Frame_Status {
 			log.errorf("renderer: vkQueuePresentKHR failed: %v", present_result)
 			status = .Fatal
 		}
+	}
+	if validation_failed() {
+		return .Fatal
 	}
 
 	r.frame_index = (r.frame_index + 1) % MAX_FRAMES_IN_FLIGHT

@@ -1,15 +1,17 @@
 # harbagsa
 
-A first-person walking demo. The player walks, looks, and jumps in a fixed
-arena with pushable crates. SDL3 provides the window and input, raw Vulkan 1.3
-draws the scene, and Box3D runs the physics. A fixed directional sun casts soft
-shadows from the walls and crates.
+A first-person movement demo. The player walks, sprints, crouches, crawls,
+jumps, dives, slides, and mantles in a fixed arena with stairs, ramps, tunnels,
+mantle walls, a dive platform, and pushable crates. SDL3 provides the window and
+input, raw Vulkan 1.3 draws the scene, and Box3D runs the physics. A fixed
+directional sun casts soft shadows from the walls and crates.
 
 ## Requirements
 
 - [Odin](https://odin-lang.org/) tested with `dev-2026-10`
 - SDL3 and a Vulkan 1.3 driver with the Vulkan loader
 - `glslc` from shaderc to compile the GLSL shaders
+- `spirv-val` from SPIRV-Tools to validate the compiled shaders (optional)
 - A C compiler for the vendored Box3D library
 - `make` (optional)
 
@@ -25,13 +27,17 @@ into the binary.
 
 ## Controls
 
-- `WASD`: walk relative to the view.
+- `WASD`: move relative to the view. Every stance moves in any direction.
 - Mouse: look. Left click captures the cursor.
-- `Space`: jump. The player must be grounded.
+- Left `Shift`: sprint. Hold by default; the mode is a code constant.
+- `Space`: jump. In the air, try to mantle a ledge. Jump input buffers before landing.
+- `C`: crouch. Toggle by default. While sprinting, it starts a crouch slide.
+- `Z`: prone. Toggle by default. Crawl while prone. Dive in the air or from a sprint.
 - `R`: return the player to spawn.
 - `Shift+R`: reset the crates, the sun, and the player.
 - `F1`: toggle the debug draw.
 - `F2`: toggle debug mode.
+- `F3`: toggle temporal anti-aliasing (TAA). TAA is on by default.
 - `Esc`: release the cursor capture.
 
 ### Debug mode
@@ -50,9 +56,9 @@ into the binary.
 - `Shift+R`: reset the crates, the sun, and the player.
 - `F2`: leave debug mode. The player returns to the saved position and view.
 
-The HUD shows the player speed, grounded state, and position, or the debug
-mode selection, crate count, and sun angles. It also shows the control list.
-The window is resizable.
+The HUD shows the stance, gait, horizontal speed, grounded state, movement
+state, and position, or the debug mode selection, crate count, and sun angles.
+It also shows the control list. The window is resizable.
 
 ## Agent harness
 
@@ -232,13 +238,16 @@ odin run . -collection:src=src -collection:libs=vendor
 
 ```sh
 make check
+make check-spirv
 make test
 ```
 
-`make check` runs the strict compiler checks on the game, the agent, and every
-library package. `make test` runs the physics, simulation, frame, harness, and
-renderer tests headless. The offscreen render test logs a skip when no Vulkan
-device is available.
+`make check` validates every compiled shader with `spirv-val` and runs the
+strict compiler checks on the game, the agent, and every library package. If
+`spirv-val` is not installed, the shader check prints a skip message and does
+not fail the build. `make check-spirv` runs only the shader check. `make test`
+runs the physics, simulation, frame, harness, and renderer tests headless. The
+offscreen render test logs a skip when no Vulkan device is available.
 
 If more than one agent or terminal can build in this checkout, use the
 wrapper. It serializes Make with `flock` and needs `flock` from util-linux.
@@ -256,7 +265,18 @@ Do not pass `-no-bounds-check`. Bounds checks stay enabled in every build.
 ## Validation layers
 
 Validation layers are off by default, so the demo runs on machines without
-them. To enable them when `VK_LAYER_KHRONOS_validation` is installed:
+them. To enable them, run:
+
+```sh
+make validate
+```
+
+`make validate` checks for `VK_LAYER_KHRONOS_validation` first. If the layer is
+missing, it prints the install command and exits without running the demo. It
+never installs anything. The target is manual: `make check` and `make test`
+never enable validation.
+
+To run Odin directly instead:
 
 ```sh
 odin run . -collection:src=src -collection:libs=vendor -define:ENABLE_VALIDATION_LAYERS=true

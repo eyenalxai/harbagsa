@@ -29,8 +29,11 @@ Error :: enum {
 	Create_Frames,
 	Create_Scene,
 	Create_Shadow,
+	Create_TAA,
 	Create_Overlay,
 	Create_Pipeline,
+	Validation,
+	Validation_Unavailable,
 }
 
 Frame_Status :: enum {
@@ -68,7 +71,6 @@ Renderer :: struct {
 	command_pool:    vk.CommandPool,
 	command_buffers: [MAX_FRAMES_IN_FLIGHT]vk.CommandBuffer,
 	image_available: [MAX_FRAMES_IN_FLIGHT]vk.Semaphore,
-	render_finished: [MAX_FRAMES_IN_FLIGHT]vk.Semaphore,
 	in_flight:       [MAX_FRAMES_IN_FLIGHT]vk.Fence,
 	frame_index:     int,
 	clear_color:     [4]f32,
@@ -76,6 +78,7 @@ Renderer :: struct {
 	target:  Target,
 	scene:   Scene,
 	shadow:  Shadow,
+	taa:     TAA,
 	overlay: Overlay,
 }
 
@@ -83,7 +86,16 @@ Renderer :: struct {
 // logger context captured at init time.
 g_context: runtime.Context
 
+// A validation error means the frame already broke the spec, so the app stops
+// and lets a validation build fail instead of rendering on undefined behavior.
+g_validation_failed: bool
+
+validation_failed :: proc() -> bool {
+	return g_validation_failed
+}
+
 init :: proc(config: Config, allocator: mem.Allocator) -> (r: Renderer, err: Error) {
+	g_validation_failed = false
 	r.platform = config.platform
 	r.allocator = allocator
 	r.clear_color = DEFAULT_CLEAR_COLOR
@@ -115,9 +127,18 @@ init :: proc(config: Config, allocator: mem.Allocator) -> (r: Renderer, err: Err
 		deinit(&r)
 		return
 	}
+	if err = init_taa(&r); err != .None {
+		deinit(&r)
+		return
+	}
 	if err = init_overlay(&r); err != .None {
 		deinit(&r)
 		return
+	}
+
+	if validation_failed() {
+		deinit(&r)
+		return r, .Validation
 	}
 
 	return r, .None
@@ -129,6 +150,7 @@ deinit :: proc(r: ^Renderer) {
 	}
 
 	destroy_overlay(r)
+	destroy_taa(r)
 	destroy_scene(r)
 	destroy_target(r)
 
@@ -137,10 +159,6 @@ deinit :: proc(r: ^Renderer) {
 			if r.image_available[i] != 0 {
 				vk.DestroySemaphore(r.device, r.image_available[i], nil)
 				r.image_available[i] = 0
-			}
-			if r.render_finished[i] != 0 {
-				vk.DestroySemaphore(r.device, r.render_finished[i], nil)
-				r.render_finished[i] = 0
 			}
 			if r.in_flight[i] != 0 {
 				vk.DestroyFence(r.device, r.in_flight[i], nil)
