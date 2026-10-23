@@ -38,6 +38,15 @@ create_graphics_pipeline :: proc(
 		log.errorf("renderer: %s pipeline needs one or two color formats", desc.name)
 		return false
 	}
+	if !desc.dynamic_viewport && (desc.viewport.width <= 0 || desc.viewport.height <= 0) {
+		log.errorf("renderer: %s pipeline needs a viewport or dynamic viewport", desc.name)
+		return false
+	}
+	if !desc.dynamic_scissor &&
+	   (desc.scissor.extent.width == 0 || desc.scissor.extent.height == 0) {
+		log.errorf("renderer: %s pipeline needs a scissor or dynamic scissor", desc.name)
+		return false
+	}
 
 	vertex_module, vertex_ok := create_shader_module(r, desc.vertex_spirv, desc.name)
 	if !vertex_ok {
