@@ -42,11 +42,14 @@ shadow_light_matrix :: proc(light_direction: [3]f32) -> Mat4 {
 	return mat4_multiply(projection, view)
 }
 
-// UV radius per unit of normalized depth difference. The sun is at infinity,
-// so the penumbra grows with the receiver-to-blocker distance and does not
-// divide by the blocker depth.
+// The sun is at infinity, so the penumbra grows with the receiver-to-blocker
+// distance and does not divide by the blocker depth.
+shadow_penumbra_scale_for :: proc(depth, radius, angular_diameter: f32) -> f32 {
+	return depth * math.tan(angular_diameter * 0.5) / (2 * radius)
+}
+
 shadow_penumbra_scale :: proc() -> f32 {
-	return LIGHT_VOLUME_DEPTH * math.tan(f32(SUN_ANGULAR_DIAMETER * 0.5)) / (2 * LIGHT_VOLUME_RADIUS)
+	return shadow_penumbra_scale_for(LIGHT_VOLUME_DEPTH, LIGHT_VOLUME_RADIUS, f32(SUN_ANGULAR_DIAMETER))
 }
 
 create_shadow_resources :: proc(r: ^Renderer) -> bool {
@@ -72,34 +75,27 @@ create_shadow_resources :: proc(r: ^Renderer) -> bool {
 		compare_filter = .NEAREST
 	}
 
-	compare_info := vk.SamplerCreateInfo {
+	sampler_info := vk.SamplerCreateInfo {
 		sType = .SAMPLER_CREATE_INFO,
-		magFilter = compare_filter,
-		minFilter = compare_filter,
 		mipmapMode = .NEAREST,
 		addressModeU = .CLAMP_TO_BORDER,
 		addressModeV = .CLAMP_TO_BORDER,
 		addressModeW = .CLAMP_TO_BORDER,
-		compareEnable = true,
-		compareOp = .LESS_OR_EQUAL,
 		maxLod = 0,
 		borderColor = .FLOAT_OPAQUE_WHITE,
 	}
+	compare_info := sampler_info
+	compare_info.magFilter = compare_filter
+	compare_info.minFilter = compare_filter
+	compare_info.compareEnable = true
+	compare_info.compareOp = .LESS_OR_EQUAL
 	if !check(vk.CreateSampler(r.device, &compare_info, nil, &r.shadow.compare_sampler), "vkCreateSampler") {
 		return false
 	}
 
-	depth_info := vk.SamplerCreateInfo {
-		sType = .SAMPLER_CREATE_INFO,
-		magFilter = .NEAREST,
-		minFilter = .NEAREST,
-		mipmapMode = .NEAREST,
-		addressModeU = .CLAMP_TO_BORDER,
-		addressModeV = .CLAMP_TO_BORDER,
-		addressModeW = .CLAMP_TO_BORDER,
-		maxLod = 0,
-		borderColor = .FLOAT_OPAQUE_WHITE,
-	}
+	depth_info := sampler_info
+	depth_info.magFilter = .NEAREST
+	depth_info.minFilter = .NEAREST
 	if !check(vk.CreateSampler(r.device, &depth_info, nil, &r.shadow.depth_sampler), "vkCreateSampler") {
 		return false
 	}
@@ -112,35 +108,29 @@ create_shadow_resources :: proc(r: ^Renderer) -> bool {
 
 write_shadow_descriptors :: proc(r: ^Renderer) {
 	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		image_infos := [2]vk.DescriptorImageInfo {
-			{
-				sampler = r.shadow.compare_sampler,
-				imageView = r.shadow.images[i].view,
-				imageLayout = .SHADER_READ_ONLY_OPTIMAL,
-			},
-			{
-				sampler = r.shadow.depth_sampler,
-				imageView = r.shadow.images[i].view,
-				imageLayout = .SHADER_READ_ONLY_OPTIMAL,
-			},
+		entries := [2]struct {
+			sampler: vk.Sampler,
+			binding: u32,
+		} {
+			{r.shadow.compare_sampler, SHADOW_MAP_BINDING},
+			{r.shadow.depth_sampler, SHADOW_DEPTH_BINDING},
 		}
-		writes := [2]vk.WriteDescriptorSet {
-			{
+		image_infos: [2]vk.DescriptorImageInfo
+		writes: [2]vk.WriteDescriptorSet
+		for entry, index in entries {
+			image_infos[index] = {
+				sampler = entry.sampler,
+				imageView = r.shadow.images[i].view,
+				imageLayout = .SHADER_READ_ONLY_OPTIMAL,
+			}
+			writes[index] = {
 				sType = .WRITE_DESCRIPTOR_SET,
 				dstSet = r.scene.descriptor_sets[i],
-				dstBinding = SHADOW_MAP_BINDING,
+				dstBinding = entry.binding,
 				descriptorCount = 1,
 				descriptorType = .COMBINED_IMAGE_SAMPLER,
-				pImageInfo = &image_infos[0],
-			},
-			{
-				sType = .WRITE_DESCRIPTOR_SET,
-				dstSet = r.scene.descriptor_sets[i],
-				dstBinding = SHADOW_DEPTH_BINDING,
-				descriptorCount = 1,
-				descriptorType = .COMBINED_IMAGE_SAMPLER,
-				pImageInfo = &image_infos[1],
-			},
+				pImageInfo = &image_infos[index],
+			}
 		}
 		vk.UpdateDescriptorSets(r.device, u32(len(writes)), &writes[0], 0, nil)
 	}

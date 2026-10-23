@@ -73,13 +73,14 @@ light_volume_contains_the_arena :: proc(t: ^testing.T) {
 }
 
 @(test)
-penumbra_radius_grows_with_blocker_distance :: proc(t: ^testing.T) {
-	scale := renderer.shadow_penumbra_scale()
-	one_meter := f32(1.0) / renderer.LIGHT_VOLUME_DEPTH
-	expected := f32(math.tan(renderer.SUN_ANGULAR_DIAMETER * 0.5)) / (2 * renderer.LIGHT_VOLUME_RADIUS)
+penumbra_scale_uses_the_orthographic_sun_angle :: proc(t: ^testing.T) {
+	// A 90 degree sun has tan(45) = 1, so a 60 m depth range and a 30 m radius
+	// map one normalized depth unit to one UV unit.
+	scale := renderer.shadow_penumbra_scale_for(60, 30, f32(math.PI * 0.5))
+	expect_near(t, scale, 1.0, "90 degree sun")
 
-	expect_near(t, one_meter * scale, expected, "one meter of blocker distance")
-	expect_near(t, 2 * one_meter * scale, 2 * expected, "two meters of blocker distance")
+	// A 1 m blocker distance in the 60 m light volume.
+	expect_near(t, scale * (1.0 / 60.0), 1.0 / 60.0, "1 m at 90 degrees")
 }
 
 @(test)
