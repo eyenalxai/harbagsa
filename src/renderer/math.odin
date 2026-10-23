@@ -109,7 +109,3 @@ mat4_look_at :: proc(eye, target, up: [3]f32) -> (m: Mat4) {
 	m[15] = 1
 	return
 }
-
-srgb_encode :: proc(c: f32) -> f32 {
-	return math.pow_f32(c, 1.0 / 2.2)
-}
