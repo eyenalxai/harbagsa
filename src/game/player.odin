@@ -58,8 +58,6 @@ simulation_look :: proc(sim: ^Simulation, look_delta: b3.Vec2) {
 	update_look(&sim.player, look_delta)
 }
 
-
-
 @(private)
 update_horizontal_velocity :: proc(player: ^Player, input: Input_Snapshot, time_step: f32) {
 	move_forward := input.move_forward

@@ -84,3 +84,50 @@ string_in :: proc(value: string, values: []string) -> bool {
 	}
 	return false
 }
+
+@(private)
+number_field :: proc(object: json.Object, key: string) -> (value: f64, ok: bool) {
+	value_json, has := json_get(object, key)
+	if !has {
+		return 0, false
+	}
+	return json_number(value_json)
+}
+
+@(private)
+integer_field :: proc(object: json.Object, key: string) -> (value: int, ok: bool) {
+	value_json, has := json_get(object, key)
+	if !has {
+		return 0, false
+	}
+	return json_integer(value_json)
+}
+
+@(private)
+string_field :: proc(object: json.Object, key: string) -> (value: string, ok: bool) {
+	value_json, has := json_get(object, key)
+	if !has {
+		return "", false
+	}
+	return json_string(value_json)
+}
+
+@(private)
+vec3_field :: proc(object: json.Object, key: string) -> (value: [3]f32, ok: bool) {
+	value_json, has := json_get(object, key)
+	if !has {
+		return {}, false
+	}
+	array, array_ok := json_array(value_json)
+	if !array_ok || len(array) != 3 {
+		return {}, false
+	}
+	for index in 0 ..< 3 {
+		number, number_ok := json_number(array[index])
+		if !number_ok {
+			return {}, false
+		}
+		value[index] = f32(number)
+	}
+	return value, true
+}
