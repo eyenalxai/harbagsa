@@ -239,6 +239,17 @@ player_pushes_crate :: proc(t: ^testing.T) {
 }
 
 @(test)
+crate_rotation_is_exposed_for_the_renderer :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+
+	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 120)
+	q := game.simulation_crate_rotation(&sim, 0)
+	length_sq := q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w
+	testing.expectf(t, abs(length_sq - 1.0) < 0.01, "crate rotation is not normalized: %v", length_sq)
+}
+
+@(test)
 gravity_returns_player_to_floor_after_jump :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)

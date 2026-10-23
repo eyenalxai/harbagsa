@@ -1,14 +1,23 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // package API is consumed by the game loop and tests
 package game
 
 import "core:c"
 import "core:math"
 import b3 "libs:box3d"
 
+// Plain player state. Position is the feet, not the capsule center.
+Player :: struct {
+	position:          b3.Vec3,
+	previous_position: b3.Vec3,
+	velocity:          b3.Vec3,
+	yaw:               f32,
+	pitch:             f32,
+	grounded:          bool,
+}
+
 // One call to World_CollideMover can report several planes for the same shape.
-// Keep the shape id and the world point with each plane so the controller can
-// push dynamic bodies after the slide is resolved.
+// Keep the shape id and the origin-relative contact point with each plane so
+// the controller can push dynamic bodies after the slide is resolved.
 @(private)
 Solver_Context :: struct {
 	planes:    [MAX_COLLISION_PLANES]b3.CollisionPlane,

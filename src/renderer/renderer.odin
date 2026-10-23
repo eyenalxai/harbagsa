@@ -6,6 +6,7 @@ import "core:log"
 import "core:mem"
 import "core:strings"
 
+import "src:geometry"
 import "src:platform"
 import vk "vendor:vulkan"
 
@@ -179,7 +180,7 @@ notify_resize :: proc(r: ^Renderer) {
 	r.swapchain_dirty = true
 }
 
-begin_frame :: proc(r: ^Renderer, camera: Camera, boxes: []Draw_Box) -> (frame: Frame, status: Frame_Status) {
+begin_frame :: proc(r: ^Renderer, camera: Camera, boxes: []geometry.Box) -> (frame: Frame, status: Frame_Status) {
 	width, height := platform.pixel_size(r.window)
 	if width == 0 || height == 0 {
 		return {}, .Skipped

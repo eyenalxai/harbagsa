@@ -1,5 +1,4 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // package API is consumed by the game loop and tests
 package game
 
 import b3 "libs:box3d"
@@ -38,7 +37,7 @@ MAX_COLLISION_PLANES :: 16
 MOVE_ITERATIONS :: 5
 MOVE_TOLERANCE :: 0.01
 
-// One frame of player intent. The platform layer fills this once per frame.
+// One frame of player intent. The main loop fills this once per frame.
 // jump_pressed and reset_pressed are frame edges: apply them on one fixed step
 // only and pass false for the other steps in the same frame. Look is separate,
 // so a mouse move works even when no fixed step runs.
@@ -47,16 +46,6 @@ Input_Snapshot :: struct {
 	move_right:    f32,
 	jump_pressed:  bool,
 	reset_pressed: bool,
-}
-
-// Plain player state. Position is the feet, not the capsule center.
-Player :: struct {
-	position:          b3.Vec3,
-	previous_position: b3.Vec3,
-	velocity:          b3.Vec3,
-	yaw:               f32,
-	pitch:             f32,
-	grounded:          bool,
 }
 
 // The main loop reads this after the last fixed step and interpolates between
@@ -133,12 +122,15 @@ simulation_step :: proc(sim: ^Simulation, input: Input_Snapshot, time_step: f32)
 
 	probe := probe_ground(sim)
 	sim.player.grounded = is_grounded(sim, probe)
+
+	// Use ground acceleration on the jump frame too. The jump only changes the
+	// vertical velocity; the horizontal controller still has the floor.
+	update_horizontal_velocity(&sim.player, input, time_step)
 	if input.jump_pressed && sim.player.grounded {
 		sim.player.velocity.y = PLAYER_JUMP_SPEED
 		sim.player.grounded = false
 	}
 
-	update_horizontal_velocity(&sim.player, input, time_step)
 	sim.player.velocity.y -= PLAYER_GRAVITY * time_step
 
 	move_player(sim, time_step)
@@ -165,13 +157,20 @@ simulation_snapshot :: proc(sim: ^Simulation) -> Render_Snapshot {
 	}
 }
 
-// Crate positions are exposed for the main loop's draw list and for headless
-// assertions.
+// Crate positions and rotations are exposed for the main loop's draw list and
+// for headless assertions.
 simulation_crate_position :: proc(sim: ^Simulation, index: int) -> b3.Vec3 {
 	if index < 0 || index >= ARENA_CRATE_COUNT {
 		return b3.Vec3_zero
 	}
 	return b3.ToVec3(b3.Body_GetPosition(sim.crates[index]))
+}
+
+simulation_crate_rotation :: proc(sim: ^Simulation, index: int) -> b3.Quat {
+	if index < 0 || index >= ARENA_CRATE_COUNT {
+		return b3.Quat_identity
+	}
+	return b3.Body_GetRotation(sim.crates[index])
 }
 
 @(private)

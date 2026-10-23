@@ -5,6 +5,7 @@ import "core:log"
 import "core:math"
 import "core:mem"
 
+import "src:geometry"
 import vk "vendor:vulkan"
 
 CAMERA_UP :: [3]f32{0, 1, 0}
@@ -19,14 +20,6 @@ Camera :: struct {
 	yaw:      f32,
 	pitch:    f32,
 	fov_x:    f32,
-}
-
-// Draw_Box is one axis-aligned box the renderer draws. The game builds the
-// list; the renderer never imports the game package.
-Draw_Box :: struct {
-	center:       [3]f32,
-	half_extents: [3]f32,
-	color:        [4]f32,
 }
 
 LIGHT_DIRECTION :: [3]f32{-0.45, -1.0, -0.35}
@@ -584,7 +577,7 @@ record_scene :: proc(
 	command_buffer: vk.CommandBuffer,
 	image_index: u32,
 	camera: Camera,
-	boxes: []Draw_Box,
+	boxes: []geometry.Box,
 ) -> bool {
 	if int(image_index) >= len(r.swapchain_views) || int(image_index) >= len(r.scene.depth_views) {
 		log.errorf("renderer: swapchain image index %d is out of range", image_index)
@@ -713,7 +706,10 @@ record_scene :: proc(
 			box.half_extents.z * 2,
 		}
 		push := Push_Constants {
-			model = mat4_multiply(mat4_translation(box.center), mat4_scale(scale)),
+			model = mat4_multiply(
+				mat4_translation(box.center),
+				mat4_multiply(mat4_rotation(box.rotation), mat4_scale(scale)),
+			),
 			color = box.color,
 		}
 		vk.CmdPushConstants(

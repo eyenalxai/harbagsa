@@ -172,7 +172,7 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 	case .WINDOW_RESIZED, .WINDOW_PIXEL_SIZE_CHANGED:
 		events.resized = true
 	case .MOUSE_BUTTON_DOWN:
-		if event.button.button == 1 {
+		if event.button.button == sdl3.BUTTON_LEFT {
 			events.captured = set_capture(window, true)
 		}
 	case .KEY_DOWN:

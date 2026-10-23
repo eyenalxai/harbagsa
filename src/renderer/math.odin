@@ -45,6 +45,21 @@ mat4_scale :: proc(scale: [3]f32) -> Mat4 {
 	return m
 }
 
+// mat4_rotation builds a rotation matrix from a normalized quaternion in
+// x, y, z, w order.
+mat4_rotation :: proc(q: [4]f32) -> Mat4 {
+	x, y, z, w := q.x, q.y, q.z, q.w
+	xx, yy, zz := x * x, y * y, z * z
+	xy, xz, yz := x * y, x * z, y * z
+	wx, wy, wz := w * x, w * y, w * z
+	return Mat4 {
+		1 - 2 * (yy + zz), 2 * (xy + wz), 2 * (xz - wy), 0,
+		2 * (xy - wz), 1 - 2 * (xx + zz), 2 * (yz + wx), 0,
+		2 * (xz + wy), 2 * (yz - wx), 1 - 2 * (xx + yy), 0,
+		0, 0, 0, 1,
+	}
+}
+
 // mat4_perspective builds a right-handed projection with a Vulkan clip space:
 // depth in 0..1 and the Y axis pointing down. The Y flip makes world +Y render
 // at the top of a viewport with positive height.
