@@ -3,6 +3,7 @@ package platform
 
 import "core:c"
 import "core:log"
+import "core:strings"
 import "vendor:sdl3"
 import vk "vendor:vulkan"
 
@@ -47,7 +48,11 @@ init :: proc(title: cstring, width, height: i32) -> (window: Window, err: Error)
 
 	window.handle = sdl3.CreateWindow(title, width, height, {.VULKAN, .RESIZABLE})
 	if window.handle == nil {
-		log.errorf("platform: SDL_CreateWindow failed: %v", sdl3.GetError())
+		message := string(sdl3.GetError())
+		log.errorf("platform: SDL_CreateWindow failed: %s", message)
+		if strings.contains(message, "VK_KHR_surface") {
+			log.error("platform: no working Vulkan driver; check the installed ICD and VK_ICD_FILENAMES")
+		}
 		sdl3.Quit()
 		return {}, .Create_Window
 	}

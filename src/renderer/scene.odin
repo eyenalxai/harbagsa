@@ -141,23 +141,12 @@ init_scene :: proc(r: ^Renderer) -> Error {
 	return .None
 }
 
-destroy_pipeline :: proc(r: ^Renderer) {
-	if r.scene.pipeline != 0 {
-		vk.DestroyPipeline(r.device, r.scene.pipeline, nil)
-		r.scene.pipeline = 0
-	}
-	if r.scene.pipeline_layout != 0 {
-		vk.DestroyPipelineLayout(r.device, r.scene.pipeline_layout, nil)
-		r.scene.pipeline_layout = 0
-	}
-}
-
 destroy_scene :: proc(r: ^Renderer) {
 	if r.device == nil {
 		return
 	}
 
-	destroy_pipeline(r)
+	destroy_pipeline_pair(r, &r.scene.pipeline, &r.scene.pipeline_layout)
 	if r.scene.descriptor_pool != 0 {
 		vk.DestroyDescriptorPool(r.device, r.scene.descriptor_pool, nil)
 		r.scene.descriptor_pool = 0
@@ -231,26 +220,13 @@ create_camera_resources :: proc(r: ^Renderer) -> bool {
 	}
 
 	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		if !create_buffer(
+		if !create_mapped_buffer(
 			r,
 			vk.DeviceSize(size_of(Camera_Uniform)),
 			{.UNIFORM_BUFFER},
-			{.HOST_VISIBLE, .HOST_COHERENT},
 			&r.scene.camera_buffers[i],
 			&r.scene.camera_memory[i],
-		) {
-			return false
-		}
-		if !check(
-			vk.MapMemory(
-				r.device,
-				r.scene.camera_memory[i],
-				0,
-				vk.DeviceSize(size_of(Camera_Uniform)),
-				{},
-				&r.scene.camera_mapped[i],
-			),
-			"vkMapMemory",
+			&r.scene.camera_mapped[i],
 		) {
 			return false
 		}
@@ -844,6 +820,27 @@ create_buffer :: proc(
 		return false
 	}
 	if !check(vk.BindBufferMemory(r.device, buffer^, memory^, 0), "vkBindBufferMemory") {
+		destroy_buffer(r, buffer, memory)
+		return false
+	}
+	return true
+}
+
+// create_mapped_buffer makes a host-visible buffer and keeps it mapped for the
+// lifetime of the buffer. The caller writes through the mapped pointer and
+// must unmap it before destroy_buffer.
+create_mapped_buffer :: proc(
+	r: ^Renderer,
+	size: vk.DeviceSize,
+	usage: vk.BufferUsageFlags,
+	buffer: ^vk.Buffer,
+	memory: ^vk.DeviceMemory,
+	mapped: ^rawptr,
+) -> bool {
+	if !create_buffer(r, size, usage, {.HOST_VISIBLE, .HOST_COHERENT}, buffer, memory) {
+		return false
+	}
+	if !check(vk.MapMemory(r.device, memory^, 0, size, {}, mapped), "vkMapMemory") {
 		destroy_buffer(r, buffer, memory)
 		return false
 	}

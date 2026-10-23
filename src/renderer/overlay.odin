@@ -13,7 +13,8 @@ import vk "vendor:vulkan"
 // buffers that are refilled once per frame, and neither reads the scene mesh.
 MAX_DEBUG_VERTICES :: 32768
 MAX_HUD_VERTICES :: 24576
-MAX_HUD_QUADS :: 8192
+// Each text quad is two triangles, so it uses six vertices.
+MAX_HUD_QUADS :: MAX_HUD_VERTICES / 6
 
 // HUD_State is the small, state-driven part of the HUD. The main loop fills it
 // from the render snapshot and the cursor capture flag.
@@ -79,6 +80,7 @@ init_overlay :: proc(r: ^Renderer) -> Error {
 		if !create_mapped_buffer(
 			r,
 			vk.DeviceSize(MAX_DEBUG_VERTICES * size_of(Debug_Vertex)),
+			{.VERTEX_BUFFER},
 			&o.debug_buffers[i],
 			&o.debug_memory[i],
 			&o.debug_mapped[i],
@@ -88,6 +90,7 @@ init_overlay :: proc(r: ^Renderer) -> Error {
 		if !create_mapped_buffer(
 			r,
 			vk.DeviceSize(MAX_HUD_VERTICES * size_of(HUD_Vertex)),
+			{.VERTEX_BUFFER},
 			&o.hud_buffers[i],
 			&o.hud_memory[i],
 			&o.hud_mapped[i],
@@ -136,25 +139,8 @@ destroy_overlay :: proc(r: ^Renderer) {
 }
 
 destroy_overlay_pipelines :: proc(r: ^Renderer) {
-	if r.device == nil {
-		return
-	}
-	if r.overlay.debug_pipeline != 0 {
-		vk.DestroyPipeline(r.device, r.overlay.debug_pipeline, nil)
-		r.overlay.debug_pipeline = 0
-	}
-	if r.overlay.debug_layout != 0 {
-		vk.DestroyPipelineLayout(r.device, r.overlay.debug_layout, nil)
-		r.overlay.debug_layout = 0
-	}
-	if r.overlay.hud_pipeline != 0 {
-		vk.DestroyPipeline(r.device, r.overlay.hud_pipeline, nil)
-		r.overlay.hud_pipeline = 0
-	}
-	if r.overlay.hud_layout != 0 {
-		vk.DestroyPipelineLayout(r.device, r.overlay.hud_layout, nil)
-		r.overlay.hud_layout = 0
-	}
+	destroy_pipeline_pair(r, &r.overlay.debug_pipeline, &r.overlay.debug_layout)
+	destroy_pipeline_pair(r, &r.overlay.hud_pipeline, &r.overlay.hud_layout)
 }
 
 create_overlay_pipelines :: proc(r: ^Renderer) -> bool {
@@ -382,23 +368,6 @@ create_overlay_pipeline :: proc(r: ^Renderer, desc: Overlay_Pipeline_Desc, pipel
 	return true
 }
 
-create_mapped_buffer :: proc(
-	r: ^Renderer,
-	size: vk.DeviceSize,
-	buffer: ^vk.Buffer,
-	memory: ^vk.DeviceMemory,
-	mapped: ^rawptr,
-) -> bool {
-	if !create_buffer(r, size, {.VERTEX_BUFFER}, {.HOST_VISIBLE, .HOST_COHERENT}, buffer, memory) {
-		return false
-	}
-	if !check(vk.MapMemory(r.device, memory^, 0, size, {}, mapped), "vkMapMemory") {
-		destroy_buffer(r, buffer, memory)
-		return false
-	}
-	return true
-}
-
 // prepare_overlay refills the CPU-side vertices and uploads them into the
 // mapped buffer that belongs to the frame in flight.
 prepare_overlay :: proc(r: ^Renderer, debug_lines: []geometry.Line, hud: HUD_State) -> bool {
@@ -523,8 +492,8 @@ hud_emit_text :: proc(o: ^Overlay, x, y: f32, text: string, color: [4]f32, scale
 	}
 }
 
-// display_coordinate keeps tiny negative values from printing as "-0.0".
-display_coordinate :: proc(value: f32) -> f32 {
+// snap_near_zero keeps tiny negative values from printing as "-0.0".
+snap_near_zero :: proc(value: f32) -> f32 {
 	if value > -0.05 && value < 0.05 {
 		return 0
 	}
@@ -549,9 +518,9 @@ build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_State) {
 	position_text := fmt.bprintf(
 		position_buffer[:],
 		"Position %.1f  %.1f  %.1f",
-		display_coordinate(hud.position.x),
-		display_coordinate(hud.position.y),
-		display_coordinate(hud.position.z),
+		snap_near_zero(hud.position.x),
+		snap_near_zero(hud.position.y),
+		snap_near_zero(hud.position.z),
 	)
 
 	state_width := f32(
