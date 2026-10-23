@@ -5,12 +5,7 @@ package physics
 import "core:testing"
 import b3 "libs:box3d"
 
-// The Box3D hello world scene. A cube falls onto a static slab and comes to
-// rest at y = 1.
-//
-// This test guards the pair of bindings and library. If the struct layouts
-// drift, the cube falls through the slab, rests at the wrong height, or the
-// calls crash.
+// Guards the Box3D binding/library pair. A struct layout drift breaks the settle.
 @(test)
 box3d_hello_world_settles_on_ground :: proc(t: ^testing.T) {
 	world_def := b3.DefaultWorldDef()
@@ -19,7 +14,6 @@ box3d_hello_world_settles_on_ground :: proc(t: ^testing.T) {
 	defer b3.DestroyWorld(world_id)
 	testing.expect(t, b3.World_IsValid(world_id), "world is invalid")
 
-	// Static slab. Its top face is at y = 0.
 	ground_def := b3.DefaultBodyDef()
 	ground_def.position = {0, -10, 0}
 	ground_id := b3.CreateBody(world_id, ground_def)
@@ -31,7 +25,6 @@ box3d_hello_world_settles_on_ground :: proc(t: ^testing.T) {
 	testing.expect(t, b3.Shape_IsValid(ground_shape), "ground shape is invalid")
 	testing.expect_value(t, b3.Body_GetShapeCount(ground_id), 1)
 
-	// Dynamic cube, one metre above the slab.
 	body_def := b3.DefaultBodyDef()
 	body_def.type = .dynamicBody
 	body_def.position = {0, 4, 0}

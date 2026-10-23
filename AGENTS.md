@@ -6,7 +6,13 @@ An Odin project. Build, check, and test commands live in `README.md`.
 
 Backwards compatibility does not matter. Rip and tear if needed. Refactor anything you need; you have free rein over the code. Focus on long-term maintenance. Do not write duplicated code. Re-use existing code when possible.
 
+Keep each first-party `.odin` file under 300 lines. `make check` enforces it. Vendored bindings are exempt.
+
 All new commits must be written in conventional commit style.
+
+## Comments
+
+Write a comment only when it answers a hard "Why this way?" question. Do not narrate what the code does, restate a name, or explain how it works. If the signature and the names already say it, delete the comment.
 
 ## Agent skills
 

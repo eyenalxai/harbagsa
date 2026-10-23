@@ -3,3 +3,7 @@ build/
 vendor/box3d/lib/
 *.exe
 *.pdb
+*.spv
+
+# T3 worktree artifacts
+/t3-*
