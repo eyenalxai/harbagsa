@@ -172,6 +172,13 @@ deinit :: proc(r: ^Renderer) {
 	}
 }
 
+// notify_resize marks the swapchain for recreation on the next frame. The
+// platform sends this on window resize and pixel-size changes, so the
+// renderer does not compare the window size every frame.
+notify_resize :: proc(r: ^Renderer) {
+	r.swapchain_dirty = true
+}
+
 begin_frame :: proc(r: ^Renderer, camera: Camera, boxes: []Draw_Box) -> (frame: Frame, status: Frame_Status) {
 	width, height := platform.pixel_size(r.window)
 	if width == 0 || height == 0 {

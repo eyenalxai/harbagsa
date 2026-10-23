@@ -59,6 +59,9 @@ run :: proc() -> bool {
 		if events.quit {
 			return true
 		}
+		if events.resized {
+			renderer.notify_resize(&state)
+		}
 
 		width, height := platform.pixel_size(&window)
 		if platform.is_minimized(&window) || width == 0 || height == 0 {
@@ -67,6 +70,9 @@ run :: proc() -> bool {
 			waited := platform.wait_events(&window, 100)
 			if waited.quit {
 				return true
+			}
+			if waited.resized {
+				renderer.notify_resize(&state)
 			}
 			// Drop the time spent waiting so the first restored frame does
 			// not step the simulation for the whole pause.
