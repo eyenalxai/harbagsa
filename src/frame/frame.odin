@@ -76,6 +76,7 @@ build :: proc(
 	if options.hud {
 		game.hud_state_update(hud, sim, debug, snapshot, options.captured)
 		scene.hud = renderer.HUD_Frame {
+			enabled       = true,
 			status_lines  = hud.status_lines,
 			control_lines = hud.control_lines,
 			capture_hint  = hud.capture_hint,
@@ -89,6 +90,7 @@ build :: proc(
 draw :: proc(
 	state: ^renderer.Renderer,
 	scene: Scene,
+	capture := false,
 ) -> renderer.Frame_Status {
 	frame, begin_status := renderer.begin_frame(
 		state,
@@ -97,6 +99,7 @@ draw :: proc(
 		scene.boxes,
 		scene.debug_lines,
 		scene.hud,
+		capture,
 	)
 	if begin_status != .Ok {
 		return begin_status
