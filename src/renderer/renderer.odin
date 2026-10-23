@@ -716,6 +716,12 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	if status := create_swapchain(r); status != .Ok {
 		return status
 	}
+	if r.scene.pipeline != 0 && r.scene.pipeline_format != r.swapchain_format {
+		destroy_pipeline(r)
+		if !create_pipeline(r) {
+			return .Fatal
+		}
+	}
 	r.swapchain_dirty = false
 
 	return .Ok

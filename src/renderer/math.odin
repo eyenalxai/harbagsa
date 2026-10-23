@@ -2,6 +2,7 @@
 package renderer
 
 import "core:math"
+import "core:math/linalg"
 
 // Column-major 4x4 matrix. The memory layout matches GLSL `mat4`, so a Mat4
 // can be uploaded directly to a uniform buffer or push constant block.
@@ -59,24 +60,24 @@ mat4_perspective :: proc(fov_y, aspect, near, far: f32) -> (m: Mat4) {
 
 // mat4_look_at builds a right-handed view matrix.
 mat4_look_at :: proc(eye, target, up: [3]f32) -> (m: Mat4) {
-	forward := vec3_normalize(target - eye)
-	side := vec3_normalize(vec3_cross(forward, up))
-	upward := vec3_cross(side, forward)
+	forward := linalg.vector_normalize0(target - eye)
+	side := linalg.vector_normalize0(linalg.vector_cross3(forward, up))
+	upward := linalg.vector_cross3(side, forward)
 
 	m[0] = side.x
 	m[4] = side.y
 	m[8] = side.z
-	m[12] = -vec3_dot(side, eye)
+	m[12] = -linalg.vector_dot(side, eye)
 
 	m[1] = upward.x
 	m[5] = upward.y
 	m[9] = upward.z
-	m[13] = -vec3_dot(upward, eye)
+	m[13] = -linalg.vector_dot(upward, eye)
 
 	m[2] = -forward.x
 	m[6] = -forward.y
 	m[10] = -forward.z
-	m[14] = vec3_dot(forward, eye)
+	m[14] = linalg.vector_dot(forward, eye)
 
 	m[3] = 0
 	m[7] = 0
@@ -85,22 +86,8 @@ mat4_look_at :: proc(eye, target, up: [3]f32) -> (m: Mat4) {
 	return
 }
 
-vec3_dot :: proc(a, b: [3]f32) -> f32 {
-	return a.x * b.x + a.y * b.y + a.z * b.z
-}
-
-vec3_cross :: proc(a, b: [3]f32) -> [3]f32 {
-	return {
-		a.y * b.z - a.z * b.y,
-		a.z * b.x - a.x * b.z,
-		a.x * b.y - a.y * b.x,
-	}
-}
-
-vec3_normalize :: proc(v: [3]f32) -> [3]f32 {
-	length := math.sqrt(vec3_dot(v, v))
-	if length == 0 {
-		return {}
-	}
-	return v / length
+// srgb_encode converts one linear color channel for a non-sRGB swapchain. It
+// matches the gamma step in the fragment shader.
+srgb_encode :: proc(c: f32) -> f32 {
+	return math.pow_f32(c, 1.0 / 2.2)
 }

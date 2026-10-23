@@ -10,6 +10,7 @@ layout(set = 0, binding = 0) uniform Camera {
     mat4 projection;
     vec4 light_direction;
     vec4 ambient;
+    vec4 gamma;
 } camera;
 
 void main() {
@@ -21,7 +22,7 @@ void main() {
 
     // sRGB swapchains encode the fragment output in hardware. Other formats
     // need an explicit gamma step so colors match the sRGB path.
-    if (camera.ambient.w > 0.5) {
+    if (camera.gamma.x > 0.5) {
         color = pow(color, vec3(1.0 / 2.2));
     }
 
