@@ -7,7 +7,8 @@ MAX_SCENE_BOXES :: 256
 
 // The uniform block mirrors camera.glsl. Mat4 is column-major, so the
 // matrices upload directly. screen carries the gamma flag in .x and the
-// render extent in .y and .z.
+// render extent in .y and .z. shadow_params.x is the penumbra UV radius per
+// unit of normalized shadow-map depth difference.
 Camera_Uniform :: struct {
 	view:                  Mat4,
 	projection:            Mat4,
@@ -17,6 +18,7 @@ Camera_Uniform :: struct {
 	screen:                [4]f32,
 	light_view_projection: Mat4,
 	jitter:                [4]f32,
+	shadow_params:         [4]f32,
 }
 
 // The shadow pipeline uses the model and color push constants. The TAA scene
@@ -41,7 +43,7 @@ TAA_Params :: struct {
 	weight: f32,
 }
 
-#assert(size_of(Camera_Uniform) == 320)
+#assert(size_of(Camera_Uniform) == 336)
 #assert(size_of(Push_Constants) == 80)
 #assert(size_of(Object_Data) == 144)
 #assert(size_of(Object_Index) == 4)
@@ -50,9 +52,10 @@ TAA_Params :: struct {
 CAMERA_BINDING :: 0
 SHADOW_MAP_BINDING :: 1
 OBJECT_BINDING :: 2
+SHADOW_DEPTH_BINDING :: 3
 
 create_scene_resources :: proc(r: ^Renderer) -> bool {
-	bindings := [3]vk.DescriptorSetLayoutBinding {
+	bindings := [4]vk.DescriptorSetLayoutBinding {
 		{
 			binding = CAMERA_BINDING,
 			descriptorType = .UNIFORM_BUFFER,
@@ -71,6 +74,12 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 			descriptorCount = 1,
 			stageFlags = {.VERTEX, .FRAGMENT},
 		},
+		{
+			binding = SHADOW_DEPTH_BINDING,
+			descriptorType = .COMBINED_IMAGE_SAMPLER,
+			descriptorCount = 1,
+			stageFlags = {.FRAGMENT},
+		},
 	}
 	layout_info := vk.DescriptorSetLayoutCreateInfo {
 		sType = .DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -86,7 +95,8 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 
 	pool_sizes := [3]vk.DescriptorPoolSize {
 		{type = .UNIFORM_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT},
-		{type = .COMBINED_IMAGE_SAMPLER, descriptorCount = MAX_FRAMES_IN_FLIGHT},
+		// Two shadow bindings per set: the compare sampler and the raw-depth sampler.
+		{type = .COMBINED_IMAGE_SAMPLER, descriptorCount = 2 * MAX_FRAMES_IN_FLIGHT},
 		{type = .STORAGE_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT},
 	}
 	pool_info := vk.DescriptorPoolCreateInfo {

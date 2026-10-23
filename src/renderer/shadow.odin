@@ -1,21 +1,26 @@
 #+vet explicit-allocators
 package renderer
 
+import "core:math"
 import "core:math/linalg"
 
 import "src:geometry"
 import vk "vendor:vulkan"
 
-SHADOW_MAP_SIZE :: 2048
+SHADOW_MAP_SIZE :: 4096
 LIGHT_VOLUME_RADIUS :: 30.0
 LIGHT_VOLUME_DEPTH :: 60.0
 LIGHT_VOLUME_CENTER :: [3]f32{0, 1.5, 0}
+// The real sun is about 0.53 degrees. The demo uses a wider disk so the
+// contact-hardening cue is visible over the arena's short shadows.
+SUN_ANGULAR_DIAMETER :: 3.0 * math.PI / 180.0
 
 SHADOW_VERTEX_SPIRV :: #load("../../build/shaders/shadow.vert.spv")
 
 Shadow :: struct {
 	images:                [MAX_FRAMES_IN_FLIGHT]Image,
-	sampler:               vk.Sampler,
+	compare_sampler:       vk.Sampler,
+	depth_sampler:         vk.Sampler,
 	pipeline:              vk.Pipeline,
 	pipeline_layout:       vk.PipelineLayout,
 	light_view_projection: Mat4,
@@ -37,6 +42,13 @@ shadow_light_matrix :: proc(light_direction: [3]f32) -> Mat4 {
 	return mat4_multiply(projection, view)
 }
 
+// UV radius per unit of normalized depth difference. The sun is at infinity,
+// so the penumbra grows with the receiver-to-blocker distance and does not
+// divide by the blocker depth.
+shadow_penumbra_scale :: proc() -> f32 {
+	return LIGHT_VOLUME_DEPTH * math.tan(f32(SUN_ANGULAR_DIAMETER * 0.5)) / (2 * LIGHT_VOLUME_RADIUS)
+}
+
 create_shadow_resources :: proc(r: ^Renderer) -> bool {
 	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
 		image, ok := create_image(
@@ -53,10 +65,17 @@ create_shadow_resources :: proc(r: ^Renderer) -> bool {
 		r.shadow.images[i] = image
 	}
 
-	sampler_info := vk.SamplerCreateInfo {
+	properties: vk.FormatProperties
+	vk.GetPhysicalDeviceFormatProperties(r.physical_device, DEPTH_FORMAT, &properties)
+	compare_filter := vk.Filter.LINEAR
+	if (properties.optimalTilingFeatures & {.SAMPLED_IMAGE_FILTER_LINEAR}) == {} {
+		compare_filter = .NEAREST
+	}
+
+	compare_info := vk.SamplerCreateInfo {
 		sType = .SAMPLER_CREATE_INFO,
-		magFilter = .NEAREST,
-		minFilter = .NEAREST,
+		magFilter = compare_filter,
+		minFilter = compare_filter,
 		mipmapMode = .NEAREST,
 		addressModeU = .CLAMP_TO_BORDER,
 		addressModeV = .CLAMP_TO_BORDER,
@@ -66,7 +85,22 @@ create_shadow_resources :: proc(r: ^Renderer) -> bool {
 		maxLod = 0,
 		borderColor = .FLOAT_OPAQUE_WHITE,
 	}
-	if !check(vk.CreateSampler(r.device, &sampler_info, nil, &r.shadow.sampler), "vkCreateSampler") {
+	if !check(vk.CreateSampler(r.device, &compare_info, nil, &r.shadow.compare_sampler), "vkCreateSampler") {
+		return false
+	}
+
+	depth_info := vk.SamplerCreateInfo {
+		sType = .SAMPLER_CREATE_INFO,
+		magFilter = .NEAREST,
+		minFilter = .NEAREST,
+		mipmapMode = .NEAREST,
+		addressModeU = .CLAMP_TO_BORDER,
+		addressModeV = .CLAMP_TO_BORDER,
+		addressModeW = .CLAMP_TO_BORDER,
+		maxLod = 0,
+		borderColor = .FLOAT_OPAQUE_WHITE,
+	}
+	if !check(vk.CreateSampler(r.device, &depth_info, nil, &r.shadow.depth_sampler), "vkCreateSampler") {
 		return false
 	}
 
@@ -78,20 +112,37 @@ create_shadow_resources :: proc(r: ^Renderer) -> bool {
 
 write_shadow_descriptors :: proc(r: ^Renderer) {
 	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		image_info := vk.DescriptorImageInfo {
-			sampler = r.shadow.sampler,
-			imageView = r.shadow.images[i].view,
-			imageLayout = .SHADER_READ_ONLY_OPTIMAL,
+		image_infos := [2]vk.DescriptorImageInfo {
+			{
+				sampler = r.shadow.compare_sampler,
+				imageView = r.shadow.images[i].view,
+				imageLayout = .SHADER_READ_ONLY_OPTIMAL,
+			},
+			{
+				sampler = r.shadow.depth_sampler,
+				imageView = r.shadow.images[i].view,
+				imageLayout = .SHADER_READ_ONLY_OPTIMAL,
+			},
 		}
-		write := vk.WriteDescriptorSet {
-			sType = .WRITE_DESCRIPTOR_SET,
-			dstSet = r.scene.descriptor_sets[i],
-			dstBinding = SHADOW_MAP_BINDING,
-			descriptorCount = 1,
-			descriptorType = .COMBINED_IMAGE_SAMPLER,
-			pImageInfo = &image_info,
+		writes := [2]vk.WriteDescriptorSet {
+			{
+				sType = .WRITE_DESCRIPTOR_SET,
+				dstSet = r.scene.descriptor_sets[i],
+				dstBinding = SHADOW_MAP_BINDING,
+				descriptorCount = 1,
+				descriptorType = .COMBINED_IMAGE_SAMPLER,
+				pImageInfo = &image_infos[0],
+			},
+			{
+				sType = .WRITE_DESCRIPTOR_SET,
+				dstSet = r.scene.descriptor_sets[i],
+				dstBinding = SHADOW_DEPTH_BINDING,
+				descriptorCount = 1,
+				descriptorType = .COMBINED_IMAGE_SAMPLER,
+				pImageInfo = &image_infos[1],
+			},
 		}
-		vk.UpdateDescriptorSets(r.device, 1, &write, 0, nil)
+		vk.UpdateDescriptorSets(r.device, u32(len(writes)), &writes[0], 0, nil)
 	}
 }
 
@@ -137,9 +188,13 @@ destroy_shadow :: proc(r: ^Renderer) {
 	for &image in r.shadow.images {
 		destroy_image(r, &image)
 	}
-	if r.shadow.sampler != 0 {
-		vk.DestroySampler(r.device, r.shadow.sampler, nil)
-		r.shadow.sampler = 0
+	if r.shadow.compare_sampler != 0 {
+		vk.DestroySampler(r.device, r.shadow.compare_sampler, nil)
+		r.shadow.compare_sampler = 0
+	}
+	if r.shadow.depth_sampler != 0 {
+		vk.DestroySampler(r.device, r.shadow.depth_sampler, nil)
+		r.shadow.depth_sampler = 0
 	}
 }
 
