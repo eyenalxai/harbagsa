@@ -64,6 +64,10 @@ _Avoid_: Mouse lock
 The line pass that shows the physics world: shape bounds and contacts.
 _Avoid_: Debug view, wireframe
 
+**Overlay**:
+The screen-space pass that draws the debug draw and the HUD over the scene. It does not write depth.
+_Avoid_: UI layer
+
 **HUD**:
-The 2D overlay: crosshair, controls hint, and player state.
-_Avoid_: UI, overlay
+The 2D part of the overlay: crosshair, controls hint, and player state.
+_Avoid_: UI
