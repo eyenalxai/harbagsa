@@ -17,9 +17,9 @@ create_pipeline :: proc(r: ^Renderer) -> bool {
 			offset = u32(offset_of(Vertex, normal)),
 		},
 	}
-	color_formats := [1]vk.Format{r.swapchain_format}
+	color_formats := [2]vk.Format{SCENE_COLOR_FORMAT, VELOCITY_FORMAT}
 
-	ok := create_graphics_pipeline(
+	return create_graphics_pipeline(
 		r,
 		{
 			vertex_spirv = BOX_VERTEX_SPIRV,
@@ -27,9 +27,9 @@ create_pipeline :: proc(r: ^Renderer) -> bool {
 			name = "box",
 			set_layouts = set_layouts[:],
 			push_constant = vk.PushConstantRange {
-				stageFlags = {.VERTEX},
+				stageFlags = {.VERTEX, .FRAGMENT},
 				offset = 0,
-				size = u32(size_of(Push_Constants)),
+				size = u32(size_of(Object_Index)),
 			},
 			vertex_binding = vk.VertexInputBindingDescription {
 				binding = 0,
@@ -48,8 +48,4 @@ create_pipeline :: proc(r: ^Renderer) -> bool {
 		&r.scene.pipeline,
 		&r.scene.pipeline_layout,
 	)
-	if ok {
-		r.scene.pipeline_format = r.swapchain_format
-	}
-	return ok
 }
