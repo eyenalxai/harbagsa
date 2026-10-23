@@ -102,3 +102,28 @@ draw_boxes :: proc(
 		vk.CmdDrawIndexed(command_buffer, r.scene.index_count, 1, 0, 0, 0)
 	}
 }
+
+draw_boxes_indexed :: proc(
+	r: ^Renderer,
+	command_buffer: vk.CommandBuffer,
+	layout: vk.PipelineLayout,
+	box_count: int,
+) {
+	vertex_buffer := r.scene.vertex_buffer
+	vertex_offset: vk.DeviceSize = 0
+	vk.CmdBindVertexBuffers(command_buffer, 0, 1, &vertex_buffer, &vertex_offset)
+	vk.CmdBindIndexBuffer(command_buffer, r.scene.index_buffer, 0, .UINT16)
+
+	for index in 0 ..< box_count {
+		push := Object_Index{index = u32(index)}
+		vk.CmdPushConstants(
+			command_buffer,
+			layout,
+			{.VERTEX, .FRAGMENT},
+			0,
+			u32(size_of(Object_Index)),
+			&push,
+		)
+		vk.CmdDrawIndexed(command_buffer, r.scene.index_count, 1, 0, 0, 0)
+	}
+}
