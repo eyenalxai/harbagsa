@@ -6,11 +6,12 @@ import vk "vendor:vulkan"
 // The uniform block mirrors the GLSL Camera block in both shader stages.
 // Mat4 is column-major, so the view and projection matrices upload directly.
 Camera_Uniform :: struct {
-	view:            Mat4,
-	projection:      Mat4,
-	light_direction: [4]f32,
-	ambient:         [4]f32,
-	gamma:           [4]f32,
+	view:                  Mat4,
+	projection:            Mat4,
+	light_direction:       [4]f32,
+	ambient:               [4]f32,
+	gamma:                 [4]f32,
+	light_view_projection: Mat4,
 }
 
 // The push constant block mirrors the GLSL PushConstants block in the vertex
@@ -20,20 +21,28 @@ Push_Constants :: struct {
 	color: [4]f32,
 }
 
-#assert(size_of(Camera_Uniform) == 176)
+#assert(size_of(Camera_Uniform) == 240)
 #assert(size_of(Push_Constants) == 80)
 
 create_camera_resources :: proc(r: ^Renderer) -> bool {
-	binding := vk.DescriptorSetLayoutBinding {
-		binding = 0,
-		descriptorType = .UNIFORM_BUFFER,
-		descriptorCount = 1,
-		stageFlags = {.VERTEX, .FRAGMENT},
+	bindings := [2]vk.DescriptorSetLayoutBinding {
+		{
+			binding = 0,
+			descriptorType = .UNIFORM_BUFFER,
+			descriptorCount = 1,
+			stageFlags = {.VERTEX, .FRAGMENT},
+		},
+		{
+			binding = 1,
+			descriptorType = .COMBINED_IMAGE_SAMPLER,
+			descriptorCount = 1,
+			stageFlags = {.FRAGMENT},
+		},
 	}
 	layout_info := vk.DescriptorSetLayoutCreateInfo {
 		sType = .DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-		bindingCount = 1,
-		pBindings = &binding,
+		bindingCount = u32(len(bindings)),
+		pBindings = &bindings[0],
 	}
 	if !check(
 		vk.CreateDescriptorSetLayout(r.device, &layout_info, nil, &r.scene.descriptor_set_layout),
@@ -42,15 +51,15 @@ create_camera_resources :: proc(r: ^Renderer) -> bool {
 		return false
 	}
 
-	pool_size := vk.DescriptorPoolSize {
-		type = .UNIFORM_BUFFER,
-		descriptorCount = MAX_FRAMES_IN_FLIGHT,
+	pool_sizes := [2]vk.DescriptorPoolSize {
+		{type = .UNIFORM_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT},
+		{type = .COMBINED_IMAGE_SAMPLER, descriptorCount = MAX_FRAMES_IN_FLIGHT},
 	}
 	pool_info := vk.DescriptorPoolCreateInfo {
 		sType = .DESCRIPTOR_POOL_CREATE_INFO,
 		maxSets = MAX_FRAMES_IN_FLIGHT,
-		poolSizeCount = 1,
-		pPoolSizes = &pool_size,
+		poolSizeCount = u32(len(pool_sizes)),
+		pPoolSizes = &pool_sizes[0],
 	}
 	if !check(vk.CreateDescriptorPool(r.device, &pool_info, nil, &r.scene.descriptor_pool), "vkCreateDescriptorPool") {
 		return false
