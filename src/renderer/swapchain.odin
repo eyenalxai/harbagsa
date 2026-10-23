@@ -68,6 +68,7 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 		image_count = support.capabilities.maxImageCount
 	}
 
+	queue_family_indices := [2]u32{r.graphics_family, r.present_family}
 	create_info := vk.SwapchainCreateInfoKHR{
 		sType            = .SWAPCHAIN_CREATE_INFO_KHR,
 		surface          = r.target.surface,
@@ -85,7 +86,7 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	if r.graphics_family != r.present_family {
 		create_info.imageSharingMode = .CONCURRENT
 		create_info.queueFamilyIndexCount = 2
-		create_info.pQueueFamilyIndices = raw_data([]u32{r.graphics_family, r.present_family})
+		create_info.pQueueFamilyIndices = &queue_family_indices[0]
 	} else {
 		create_info.imageSharingMode = .EXCLUSIVE
 	}
@@ -123,10 +124,13 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 		}
 	}
 
-	if !create_depth_resources(r) {
-		log.error("renderer: could not create depth resources")
-		return .Fatal
+	r.target.render_finished = make([]vk.Semaphore, image_count_actual, r.allocator)
+	for i in 0 ..< image_count_actual {
+		if !create_semaphore(r, &r.target.render_finished[i]) {
+			return .Fatal
+		}
 	}
+
 	if !create_readback(r, extent.width, extent.height) {
 		log.error("renderer: could not create the capture readback buffer")
 		return .Fatal
@@ -142,10 +146,13 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	return .Ok
 }
 
-destroy_swapchain_images :: proc(r: ^Renderer) {
-	destroy_depth_resources(r)
-
+destroy_swapchain :: proc(r: ^Renderer) {
 	if r.device != nil {
+		for semaphore in r.target.render_finished {
+			if semaphore != 0 {
+				vk.DestroySemaphore(r.device, semaphore, nil)
+			}
+		}
 		for view in r.target.views {
 			if view != 0 {
 				vk.DestroyImageView(r.device, view, nil)
@@ -156,6 +163,11 @@ destroy_swapchain_images :: proc(r: ^Renderer) {
 			r.target.swapchain = 0
 		}
 	}
+	delete_target_slices(r)
+}
+
+srgb_gamma :: proc(r: ^Renderer) -> f32 {
+	return r.target.config.is_srgb ? 0 : 1
 }
 
 recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
@@ -165,18 +177,34 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 		return .Skipped
 	}
 
+	old_extent := vk.Extent2D{r.target.config.width, r.target.config.height}
+	old_format := r.target.config.format
+
 	if !check(vk.DeviceWaitIdle(r.device), "vkDeviceWaitIdle") {
 		return .Fatal
 	}
-	destroy_swapchain_images(r)
+	destroy_swapchain(r)
 	destroy_readback(r)
-	delete_target_slices(r)
 	if status := create_swapchain(r); status != .Ok {
 		return status
 	}
-	if r.scene.pipeline != 0 && r.scene.pipeline_format != r.target.config.format {
-		destroy_pipeline_pair(r, &r.scene.pipeline, &r.scene.pipeline_layout)
-		if !create_pipeline(r) {
+
+	if r.target.config.width != old_extent.width || r.target.config.height != old_extent.height {
+		if !create_taa_targets(r) {
+			log.error("renderer: could not recreate the TAA targets")
+			return .Fatal
+		}
+		if !write_taa_descriptors(r) {
+			log.error("renderer: could not rebind the TAA targets")
+			return .Fatal
+		}
+	} else if r.target.config.format != old_format {
+		reset_history(r)
+	}
+
+	if r.taa.pipeline_format != r.target.config.format {
+		destroy_pipeline_pair(r, &r.taa.pipeline, &r.taa.pipeline_layout)
+		if !create_taa_pipeline(r) {
 			return .Fatal
 		}
 	}
@@ -191,41 +219,38 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	return .Ok
 }
 
-create_depth_resources :: proc(r: ^Renderer) -> bool {
-	destroy_depth_resources(r)
-
-	image_count := len(r.target.images)
-	if image_count == 0 {
-		log.error("renderer: cannot create depth resources without swapchain images")
-		return false
+record_present_barrier :: proc(
+	r: ^Renderer,
+	command_buffer: vk.CommandBuffer,
+	image_index: u32,
+	capture: bool,
+) {
+	src_access: vk.AccessFlags = {.COLOR_ATTACHMENT_WRITE}
+	old_layout: vk.ImageLayout = .COLOR_ATTACHMENT_OPTIMAL
+	if capture {
+		src_access = {.TRANSFER_READ}
+		old_layout = .TRANSFER_SRC_OPTIMAL
 	}
-
-	r.target.depth = make([]Image, image_count, r.allocator)
-
-	for i in 0 ..< image_count {
-		image, ok := create_image(
-			r,
-			r.target.config.width,
-			r.target.config.height,
-			DEPTH_FORMAT,
-			{.DEPTH_STENCIL_ATTACHMENT},
-			{.DEPTH},
-		)
-		if !ok {
-			return false
-		}
-		r.target.depth[i] = image
+	to_present := vk.ImageMemoryBarrier {
+		sType = .IMAGE_MEMORY_BARRIER,
+		srcAccessMask = src_access,
+		oldLayout = old_layout,
+		newLayout = .PRESENT_SRC_KHR,
+		srcQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
+		dstQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
+		image = r.target.images[image_index],
+		subresourceRange = COLOR_SUBRESOURCE,
 	}
-
-	return true
-}
-
-destroy_depth_resources :: proc(r: ^Renderer) {
-	for &image in r.target.depth {
-		destroy_image(r, &image)
-	}
-	if r.target.depth != nil {
-		delete(r.target.depth, r.allocator)
-		r.target.depth = nil
-	}
+	vk.CmdPipelineBarrier(
+		command_buffer,
+		{.COLOR_ATTACHMENT_OUTPUT, .TRANSFER},
+		{.BOTTOM_OF_PIPE},
+		{},
+		0,
+		nil,
+		0,
+		nil,
+		1,
+		&to_present,
+	)
 }

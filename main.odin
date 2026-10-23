@@ -16,13 +16,24 @@ WINDOW_HEIGHT :: 720
 MAX_FRAME_DELTA :: f32(0.1)
 MAX_STEPS_PER_FRAME :: 8
 
+Input_Latches :: struct {
+	jump:   bool,
+	sprint: bool,
+	crouch: bool,
+	prone:  bool,
+}
+
+clear_latches :: proc(latches: ^Input_Latches) {
+	latches^ = {}
+}
+
 main :: proc() {
 	logger := log.create_console_logger(lowest = .Info, allocator = context.allocator)
 	context.logger = logger
 
 	ok := run()
 	log.destroy_console_logger(logger, allocator = context.allocator)
-	if !ok {
+	if !ok || renderer.validation_failed() {
 		os.exit(1)
 	}
 }
@@ -58,7 +69,7 @@ run :: proc() -> bool {
 	defer game.simulation_destroy(&sim)
 
 	accumulator: f32 = 0
-	jump_latched := false
+	latches: Input_Latches
 	debug_view := false
 	debug := game.debug_mode_create()
 	scratch: frame.Scratch
@@ -78,14 +89,19 @@ run :: proc() -> bool {
 		}
 		if events.debug_mode_pressed {
 			game.debug_mode_toggle(&debug, &sim)
-			jump_latched = false
+			clear_latches(&latches)
+		}
+		if events.taa_pressed {
+			renderer.toggle_taa(&state)
 		}
 		if events.reset_scene_pressed {
 			game.debug_mode_reset_scene(&debug, &sim)
-			jump_latched = false
+			renderer.reset_history(&state)
+			clear_latches(&latches)
 		} else if events.reset_pressed {
 			game.debug_mode_reset_player(&debug, &sim)
-			jump_latched = false
+			renderer.reset_history(&state)
+			clear_latches(&latches)
 		}
 
 		width, height := platform.pixel_size(&window)
@@ -108,15 +124,25 @@ run :: proc() -> bool {
 		last_time = now
 		delta = clamp(delta, 0, MAX_FRAME_DELTA)
 
-		// Look is per frame; jump is latched so a press survives a frame with no step.
+		// Look is per frame. Action edges are latched so a press survives a
+		// frame with no step. Movement input is ignored in debug mode and while
+		// the cursor is free.
 		if events.captured && !debug.active {
 			game.simulation_look(&sim, events.look_delta)
-		}
-		if !events.captured {
-			jump_latched = false
-		}
-		if events.captured && events.jump_pressed && !debug.active {
-			jump_latched = true
+			if events.jump_pressed {
+				latches.jump = true
+			}
+			if events.sprint_pressed {
+				latches.sprint = true
+			}
+			if events.crouch_pressed {
+				latches.crouch = true
+			}
+			if events.prone_pressed {
+				latches.prone = true
+			}
+		} else {
+			clear_latches(&latches)
 		}
 
 		accumulator += delta
@@ -130,11 +156,17 @@ run :: proc() -> bool {
 					game.Input_Snapshot {
 						move_forward = events.move_forward,
 						move_right = events.move_right,
-						jump_pressed = jump_latched,
+						sprint_held = events.sprint_held,
+						sprint_pressed = latches.sprint,
+						crouch_held = events.crouch_held,
+						crouch_pressed = latches.crouch,
+						prone_held = events.prone_held,
+						prone_pressed = latches.prone,
+						jump_pressed = latches.jump,
 					},
 					game.SIMULATION_STEP,
 				)
-				jump_latched = false
+				clear_latches(&latches)
 			}
 			accumulator -= game.SIMULATION_STEP
 			steps += 1
