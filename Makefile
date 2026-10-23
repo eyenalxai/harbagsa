@@ -31,6 +31,9 @@ check: $(BOX3D_LIB)
 
 test: $(BOX3D_LIB)
 	$(ODIN) test tests/physics $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
+	# Box3D's world registry is not safe for concurrent world creation, so the
+	# simulation tests share one runner thread.
+	$(ODIN) test tests/simulation $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
 
 run: $(BOX3D_LIB)
 	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
