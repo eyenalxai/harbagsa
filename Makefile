@@ -20,7 +20,7 @@ BOX3D_SRC := $(wildcard $(BOX3D_DIR)/src/src/*.c)
 BOX3D_OBJ := $(patsubst $(BOX3D_DIR)/src/src/%.c,build/box3d/%.o,$(BOX3D_SRC))
 BOX3D_LIB := $(BOX3D_DIR)/lib/linux-amd64/libbox3d.a
 
-.PHONY: all build check test run shaders clean
+.PHONY: all build check check-lines test run shaders clean
 
 all: build
 
@@ -47,12 +47,23 @@ build: $(BOX3D_LIB) shaders
 	mkdir -p bin
 	$(ODIN) build . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -out:$(BIN)
 
-check: $(BOX3D_LIB) shaders
+check: check-lines $(BOX3D_LIB) shaders
 	$(ODIN) check . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
 	$(ODIN) check src/platform $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/renderer $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/game $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/geometry $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
+
+check-lines:
+	@status=0; \
+	for file in $$(find . -name '*.odin' -not -path './vendor/*'); do \
+		lines=$$(wc -l < "$$file"); \
+		if [ "$$lines" -ge 500 ]; then \
+			printf '%s: %d lines\n' "$$file" "$$lines" >&2; \
+			status=1; \
+		fi; \
+	done; \
+	exit $$status
 
 # Box3D's world registry is not safe for concurrent world creation, so both
 # test programs share one runner thread.
