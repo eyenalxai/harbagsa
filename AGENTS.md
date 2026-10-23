@@ -38,3 +38,6 @@ Use `bin/harbagsa-agent` to drive the simulation, run checks, and take
 screenshots. It is separate from the game and needs no window or compositor.
 See `docs/agents/harness.md` for the scenario format, commands, run layout, and
 determinism rules.
+
+When you add or change a feature, update the harness and its docs in the same
+change. The harness is part of the feature, not an afterthought.
