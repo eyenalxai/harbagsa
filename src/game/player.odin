@@ -11,6 +11,8 @@ Player :: struct {
 	yaw:                f32,
 	pitch:              f32,
 	grounded:           bool,
+	grounded_last_step: bool,
+	ground_normal:      b3.Vec3,
 	stance:             Stance,
 	gait:               Gait,
 	movement_state:     Movement_State,
@@ -20,6 +22,9 @@ Player :: struct {
 	sprint_wanted:      bool,
 	eye_height:         f32,
 	previous_eye_height: f32,
+	step_smoothing:     f32,
+	previous_step_smoothing: f32,
+	step_grace:         f32,
 	on_steep_slope:     bool,
 	steep_normal:       b3.Vec3,
 	jump_buffer:        f32,
@@ -39,6 +44,11 @@ player_place :: proc(player: ^Player, position: b3.Vec3, yaw, pitch: f32) {
 	player.yaw = yaw
 	player.pitch = pitch
 	player.grounded = false
+	player.grounded_last_step = false
+	player.ground_normal = {0.0, 1.0, 0.0}
+	player.step_smoothing = 0.0
+	player.previous_step_smoothing = 0.0
+	player.step_grace = 0.0
 	player.movement_state = .None
 	player.jump_buffer = 0.0
 	player.coyote = 0.0
@@ -79,6 +89,20 @@ movement_direction :: proc(player: ^Player, input: Input_Snapshot) -> b3.Vec3 {
 	return direction
 }
 
+// The wish velocity lies in the ground plane. Its length is the stance speed,
+// so a straight climb trades horizontal speed for height instead of speeding up.
+ground_velocity :: proc(direction, normal: b3.Vec3, speed: f32) -> b3.Vec3 {
+	if speed <= 0.0 {
+		return b3.Vec3_zero
+	}
+	projected := direction - normal * b3.Dot(direction, normal)
+	length := b3.Length(projected)
+	if length <= 0.0001 {
+		return b3.Vec3_zero
+	}
+	return projected * (speed / length)
+}
+
 @(private)
 update_horizontal_velocity :: proc(player: ^Player, input: Input_Snapshot, time_step: f32) {
 	if player.movement_state != .None {
@@ -90,11 +114,15 @@ update_horizontal_velocity :: proc(player: ^Player, input: Input_Snapshot, time_
 		desired_direction = b3.Vec3_zero
 		input_length = 0.0
 	}
-	current := b3.Vec3{player.velocity.x, 0.0, player.velocity.z}
 
 	if player.grounded {
+		current := player.velocity
 		if input_length > 0.0 {
-			desired_velocity := desired_direction * stance_speed(player.stance, player.gait)
+			desired_velocity := ground_velocity(
+				desired_direction,
+				player.ground_normal,
+				stance_speed(player.stance, player.gait),
+			)
 			change := desired_velocity - current
 			change_length := b3.Length(change)
 			max_change := PLAYER_GROUND_ACCELERATION * time_step
@@ -112,7 +140,12 @@ update_horizontal_velocity :: proc(player: ^Player, input: Input_Snapshot, time_
 				current *= (speed - max_change) / speed
 			}
 		}
-	} else if input_length > 0.0 {
+		player.velocity = current
+		return
+	}
+
+	current := b3.Vec3{player.velocity.x, 0.0, player.velocity.z}
+	if input_length > 0.0 {
 		direction_length := b3.Length(desired_direction)
 		if direction_length > 0.0 {
 			current += desired_direction * (PLAYER_AIR_CONTROL * time_step / direction_length)
