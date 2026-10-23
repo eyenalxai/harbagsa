@@ -46,7 +46,7 @@ The middle stance. The capsule is 1.20 m high and the eye is 1.05 m above the fe
 The lowest stance. The capsule is 0.70 m high and the eye is 0.30 m above the feet. A prone player can crawl.
 
 **Crawl**:
-Movement while Prone. The crawl speed is 1.2 m/s in any horizontal direction.
+Movement while Prone. The crawl speed is 1.2 m/s along the walkable ground plane.
 _Avoid_: Prone walk
 
 **Gait**:
@@ -54,8 +54,12 @@ The ground movement mode: Walk or Sprint. Sprint applies only while Standing.
 _Avoid_: Run mode
 
 **Sprint**:
-The 8.0 m/s gait in any horizontal direction.
+The 8.0 m/s ground speed. The horizontal component is lower on a climb.
 _Avoid_: Run
+
+**Ground speed**:
+The speed along the walkable ground plane. On a straight climb the horizontal speed is `ground speed * cos(slope)`.
+_Avoid_: Surface speed
 
 **Headroom**:
 The clear space above the feet that a taller stance needs. The controller tests it before the capsule grows. A floor-level side obstacle does not reduce headroom; an overhead shape does.
@@ -74,16 +78,20 @@ A 10.0 m/s slide that starts from Sprint. It ends Crouching.
 _Avoid_: Power slide
 
 **Mantle**:
-A 0.25 s climb onto a ledge up to 1.5 m above the feet.
+A 0.25 s climb onto a ledge up to 1.5 m above the feet. A fresh jump press or a held jump with movement input starts it.
 _Avoid_: Climb, vault
 
 **Step-up**:
-The automatic climb onto an obstacle up to 0.35 m high while grounded.
+The automatic climb onto a near-vertical obstacle up to 0.35 m high while grounded. The top must be near flat; a walkable ramp is not a step-up.
 _Avoid_: Autostep
 
 **Ground snap**:
 The downward correction that keeps a grounded player on a walkable surface within 0.30 m. A walkable slope can give a small positive vertical velocity; the surface clearance decides, not the sign of the velocity.
 _Avoid_: Stick to ground
+
+**Step smoothing**:
+The short vertical camera lag after a step-up or step-down. It decays after the capsule settles and does not move the player.
+_Avoid_: Camera lag
 
 **Coyote time**:
 The 0.10 s after leaving a walkable surface during which a jump still works.
