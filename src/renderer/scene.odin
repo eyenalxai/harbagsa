@@ -151,6 +151,7 @@ update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> 
 		screen = {srgb_gamma(r), f32(extent.width), height, 0},
 		light_view_projection = r.shadow.light_view_projection,
 		jitter = {jitter.x, jitter.y, 0, 0},
+		shadow_params = {shadow_penumbra_scale(), 0, 0, 0},
 	}
 	return true
 }
