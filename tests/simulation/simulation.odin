@@ -25,8 +25,7 @@ step :: proc(sim: ^game.Simulation, input: game.Input_Snapshot, count: int) {
 
 @(private)
 horizontal_speed :: proc(velocity: b3.Vec3) -> f32 {
-	horizontal := b3.Vec3{velocity.x, 0.0, velocity.z}
-	return b3.Length(horizontal)
+	return game.horizontal_speed(velocity)
 }
 
 @(private)

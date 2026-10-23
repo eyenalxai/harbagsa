@@ -13,6 +13,12 @@ reset_returns_player_to_spawn :: proc(t: ^testing.T) {
 
 	game.simulation_look(&sim, {10.0, 5.0})
 	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 30)
+	sim.player.stance = .Prone
+	sim.player.movement_state = .Diving
+	sim.player.crouch_engaged = true
+	sim.player.prone_engaged = true
+	sim.player.jump_buffer = 0.1
+	sim.player.slide_speed = 5.0
 	step(&sim, game.Input_Snapshot{reset_pressed = true}, 1)
 
 	testing.expect(t, sim.player.position == game.SPAWN_POSITION, "position is not spawn")
@@ -21,6 +27,15 @@ reset_returns_player_to_spawn :: proc(t: ^testing.T) {
 	testing.expect(t, sim.player.yaw == 0.0, "yaw is not zero")
 	testing.expect(t, sim.player.pitch == 0.0, "pitch is not zero")
 	testing.expect(t, !sim.player.grounded, "grounded state was not cleared")
+	testing.expect_value(t, sim.player.stance, game.Stance.Standing)
+	testing.expect_value(t, sim.player.gait, game.Gait.Walk)
+	testing.expect_value(t, sim.player.movement_state, game.Movement_State.None)
+	testing.expect(t, !sim.player.crouch_engaged, "crouch selection was not cleared")
+	testing.expect(t, !sim.player.prone_engaged, "prone selection was not cleared")
+	testing.expect(t, !sim.player.sprint_engaged, "sprint selection was not cleared")
+	testing.expect_value(t, sim.player.jump_buffer, f32(0.0))
+	testing.expect_value(t, sim.player.eye_height, game.PLAYER_STANDING_EYE)
+	testing.expect_value(t, sim.player.slide_speed, f32(0.0))
 }
 
 @(test)
@@ -52,7 +67,7 @@ snapshot_exposes_interpolation_state :: proc(t: ^testing.T) {
 	expect_near(
 		t,
 		snapshot.eye_position.y,
-		snapshot.position.y + game.PLAYER_EYE_HEIGHT,
+		snapshot.position.y + game.PLAYER_STANDING_EYE,
 		0.0001,
 		"eye height",
 	)

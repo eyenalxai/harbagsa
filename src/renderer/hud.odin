@@ -10,6 +10,9 @@ HUD_State :: struct {
 	grounded: bool,
 	position: [3]f32,
 	captured: bool,
+	stance:   string,
+	gait:     string,
+	state:    string,
 }
 
 HUD_TEXT_COLOR :: [4]f32{1.0, 1.0, 1.0, 1.0}
@@ -66,10 +69,16 @@ build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_State) {
 		grounded = "yes"
 	}
 
+	stance_buffer: [32]u8
+	stance_text := fmt.bprintf(stance_buffer[:], "Stance %s", hud.stance)
+	gait_buffer: [32]u8
+	gait_text := fmt.bprintf(gait_buffer[:], "Gait %s", hud.gait)
 	speed_buffer: [64]u8
 	speed_text := fmt.bprintf(speed_buffer[:], "Speed %.1f m/s", hud.speed)
 	grounded_buffer: [32]u8
 	grounded_text := fmt.bprintf(grounded_buffer[:], "Grounded %s", grounded)
+	state_buffer: [32]u8
+	state_text := fmt.bprintf(state_buffer[:], "State %s", hud.state)
 	position_buffer: [96]u8
 	position_text := fmt.bprintf(
 		position_buffer[:],
@@ -79,50 +88,51 @@ build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_State) {
 		snap_near_zero(hud.position.z),
 	)
 
-	state_width := f32(
-		max(
-			stb_easy_font.width(speed_text),
-			max(stb_easy_font.width(grounded_text), stb_easy_font.width(position_text)),
-		),
-	) * scale
-	state_height := 3 * HUD_LINE_HEIGHT * scale
+	state_lines := [6]string {
+		stance_text,
+		gait_text,
+		speed_text,
+		grounded_text,
+		state_text,
+		position_text,
+	}
+	state_width := 0
+	for line in state_lines {
+		state_width = max(state_width, stb_easy_font.width(line))
+	}
+	state_panel_width := f32(state_width) * scale + padding * 2
+	state_height := f32(len(state_lines)) * HUD_LINE_HEIGHT * scale
 	hud_emit_rect(
 		o,
 		margin,
 		margin,
-		state_width + padding * 2,
+		state_panel_width,
 		state_height + padding * 2,
 		HUD_PANEL_COLOR,
 	)
-	hud_emit_text(o, margin + padding, margin + padding, speed_text, HUD_TEXT_COLOR, scale)
-	hud_emit_text(
-		o,
-		margin + padding,
-		margin + padding + HUD_LINE_HEIGHT * scale,
-		grounded_text,
-		HUD_TEXT_COLOR,
-		scale,
-	)
-	hud_emit_text(
-		o,
-		margin + padding,
-		margin + padding + 2 * HUD_LINE_HEIGHT * scale,
-		position_text,
-		HUD_TEXT_COLOR,
-		scale,
-	)
+	for line, index in state_lines {
+		hud_emit_text(
+			o,
+			margin + padding,
+			margin + padding + f32(index) * HUD_LINE_HEIGHT * scale,
+			line,
+			HUD_TEXT_COLOR,
+			scale,
+		)
+	}
 
-	hint_lines := [3]string {
+	hint_lines := [4]string {
 		"WASD move    Mouse look",
-		"Space jump    R reset",
-		"F1 debug view    Esc release mouse",
+		"Shift sprint    Space jump or mantle",
+		"C crouch or slide    Z prone, crawl, or dive",
+		"R reset    F1 debug    Esc release mouse",
 	}
 	hint_width := 0
 	for line in hint_lines {
 		hint_width = max(hint_width, stb_easy_font.width(line))
 	}
 	hint_panel_width := f32(hint_width) * scale + padding * 2
-	hint_height := 3 * HUD_LINE_HEIGHT * scale
+	hint_height := f32(len(hint_lines)) * HUD_LINE_HEIGHT * scale
 	hint_x := margin
 	hint_y := height - margin - hint_height - padding * 2
 	hud_emit_rect(o, hint_x, hint_y, hint_panel_width, hint_height + padding * 2, HUD_PANEL_COLOR)
