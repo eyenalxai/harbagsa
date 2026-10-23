@@ -14,8 +14,7 @@ layout(set = 0, binding = 2) uniform sampler2D history;
 
 #include "gamma.glsl"
 
-const float DEPTH_TRUST_MIN = 0.01;
-const float DEPTH_TRUST_MAX = 0.02;
+const float DEPTH_TOLERANCE = 0.02;
 const float CLIP_SIGMA = 1.0;
 const float CLIP_EPSILON = 1e-5;
 
@@ -61,6 +60,8 @@ void main() {
         vec3 m2 = vec3(0.0);
         vec3 mn = vec3(1e30);
         vec3 mx = vec3(-1e30);
+        float depth_min = curr_depth;
+        float depth_max = curr_depth;
         for (int y = -1; y <= 1; ++y) {
             for (int x = -1; x <= 1; ++x) {
                 ivec2 sample_pixel = clamp(pixel + ivec2(x, y), ivec2(0), extent - 1);
@@ -69,6 +70,9 @@ void main() {
                 m2 += c * c;
                 mn = min(mn, c);
                 mx = max(mx, c);
+                float sample_depth = texelFetch(velocity, sample_pixel, 0).z;
+                depth_min = min(depth_min, sample_depth);
+                depth_max = max(depth_max, sample_depth);
             }
         }
         vec3 mu = m1 / 9.0;
@@ -82,8 +86,15 @@ void main() {
         vec3 hist = rgb_to_ycocg(max(history_sample.rgb, vec3(0.0)));
         hist = clip_aabb(lo, hi, hist);
 
-        float rel = abs(curr_depth - history_sample.a) / max(curr_depth, 1.0);
-        float trust = 1.0 - smoothstep(DEPTH_TRUST_MIN, DEPTH_TRUST_MAX, rel);
+        // Jitter moves a geometry edge across a pixel, so the history depth and
+        // the current depth differ on exactly the pixels that need smoothing.
+        // Accept any history depth inside the current 3x3 range; a real
+        // disocclusion falls outside the range and still drops the history.
+        float depth_tolerance = max(DEPTH_TOLERANCE * curr_depth, 1e-4);
+        float depth_lo = depth_min - depth_tolerance;
+        float depth_hi = depth_max + depth_tolerance;
+        float depth_outside = max(depth_lo - history_sample.a, history_sample.a - depth_hi);
+        float trust = 1.0 - smoothstep(0.0, depth_tolerance, depth_outside);
         float w = resolve.weight * trust;
         resolved = mix(current.rgb, ycocg_to_rgb(hist), w);
     }
