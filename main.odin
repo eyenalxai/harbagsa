@@ -2,19 +2,17 @@
 package main
 
 import "core:log"
-import "core:math"
 import "core:os"
 import "core:time"
 
+import "src:frame"
 import "src:game"
-import "src:geometry"
 import "src:platform"
 import "src:renderer"
 
 WINDOW_WIDTH :: 1280
 WINDOW_HEIGHT :: 720
 
-PLAYER_FOV_X :: f32(90.0 * math.PI / 180.0)
 MAX_FRAME_DELTA :: f32(0.1)
 MAX_STEPS_PER_FRAME :: 8
 
@@ -48,7 +46,15 @@ run :: proc() -> bool {
 	}
 	defer platform.deinit(&window)
 
-	state, renderer_error := renderer.init(&window, context.allocator)
+	state, renderer_error := renderer.init(
+		renderer.Config {
+			platform = platform.renderer_platform(&window),
+			target = .Swapchain,
+			width = WINDOW_WIDTH,
+			height = WINDOW_HEIGHT,
+		},
+		context.allocator,
+	)
 	if renderer_error != .None {
 		log.errorf("harbagsa: renderer init failed: %v", renderer_error)
 		return false
@@ -66,7 +72,7 @@ run :: proc() -> bool {
 	latches: Input_Latches
 	debug_view := false
 	debug := game.debug_mode_create()
-	debug_lines: game.Debug_Lines
+	scratch: frame.Scratch
 	hud: game.HUD_State
 	last_time := time.now()
 
@@ -200,73 +206,24 @@ run :: proc() -> bool {
 			)
 		}
 
-		snapshot := game.simulation_snapshot(&sim)
-		camera: renderer.Camera
-		if debug.active {
-			debug_camera := debug.camera
-			camera = renderer.Camera {
-				position = debug_camera.position,
-				yaw      = debug_camera.yaw,
-				pitch    = debug_camera.pitch,
-				fov_x    = PLAYER_FOV_X,
-			}
-		} else {
-			alpha := clamp(accumulator / game.SIMULATION_STEP, 0, 1)
-			eye := snapshot.previous_eye_position +
-			       (snapshot.eye_position - snapshot.previous_eye_position) * alpha
-			camera = renderer.Camera {
-				position = eye,
-				yaw      = snapshot.yaw,
-				pitch    = snapshot.pitch,
-				fov_x    = PLAYER_FOV_X,
-			}
-		}
-
-		boxes: [game.MAX_SCENE_BOXES]geometry.Box
-		box_count := 0
-		for box in game.arena_static_boxes() {
-			boxes[box_count] = box
-			box_count += 1
-		}
-		for index in 0 ..< game.simulation_crate_count(&sim) {
-			boxes[box_count] = game.simulation_crate_box(&sim, index)
-			box_count += 1
-		}
-
-		debug_lines.count = 0
-		if debug_view {
-			game.collect_world_lines(&sim, &debug_lines)
-		}
-		if debug.active {
-			game.collect_editor_lines(&debug, &sim, &debug_lines)
-		}
-
-		game.hud_state_update(&hud, &sim, &debug, snapshot, events.captured)
-
-		frame, begin_status := renderer.begin_frame(
-			&state,
-			camera,
-			game.debug_mode_sun_direction(&debug),
-			boxes[:box_count],
-			debug_lines.lines[:debug_lines.count],
-			renderer.HUD_Frame {
-				status_lines = hud.status_lines,
-				control_lines = hud.control_lines,
-				capture_hint = hud.capture_hint,
-				captured = hud.captured,
+		scene := frame.build(
+			&sim,
+			&debug,
+			frame.Options {
+				alpha = clamp(accumulator / game.SIMULATION_STEP, 0, 1),
+				debug_view = debug_view,
+				captured = events.captured,
+				hud = true,
 			},
+			nil,
+			&hud,
+			&scratch,
 		)
-		switch begin_status {
+
+		switch frame.draw(&state, scene) {
 		case .Ok:
 		case .Skipped:
 			continue
-		case .Fatal:
-			return false
-		}
-
-		switch renderer.end_frame(&state, frame) {
-		case .Ok:
-		case .Skipped:
 		case .Fatal:
 			return false
 		}

@@ -6,38 +6,36 @@ import "core:log"
 import "src:geometry"
 import vk "vendor:vulkan"
 
-record_frame :: proc(
+record_scene :: proc(
 	r: ^Renderer,
 	command_buffer: vk.CommandBuffer,
 	image_index: u32,
-	camera: Camera,
-	light_direction: [3]f32,
-	boxes: []geometry.Box,
-	debug_lines: []geometry.Line,
-	hud: HUD_Frame,
+	view: Frame_View,
+	capture: bool,
 ) -> bool {
-	if int(image_index) >= len(r.swapchain_views) {
-		log.errorf("renderer: swapchain image index %d is out of range", image_index)
+	if int(image_index) >= len(r.target.views) {
+		log.errorf("renderer: target image index %d is out of range", image_index)
 		return false
 	}
-	box_count := len(boxes)
+	box_count := len(view.boxes)
 	if box_count > MAX_SCENE_BOXES {
 		log.errorf("renderer: scene has %d boxes, the limit is %d", box_count, MAX_SCENE_BOXES)
 		return false
 	}
 
-	if !prepare_overlay(r, debug_lines, hud) {
+	if !prepare_overlay(r, view.debug_lines, view.hud) {
 		log.error("renderer: overlay vertex upload failed")
 		return false
 	}
 	if box_count != r.taa.prev_model_count {
 		reset_history(r)
 	}
-	r.shadow.light_view_projection = shadow_light_matrix(light_direction)
-	if !update_camera(r, camera, light_direction) {
+	// The shadow matrix feeds the camera uniform, so rebuild it first.
+	r.shadow.light_view_projection = shadow_light_matrix(view.light_direction)
+	if !update_camera(r, view.camera, view.light_direction) {
 		return false
 	}
-	if !write_object_data(r, boxes) {
+	if !write_object_data(r, view.boxes) {
 		return false
 	}
 
@@ -49,15 +47,21 @@ record_frame :: proc(
 		return false
 	}
 
-	record_shadow_pass(r, command_buffer, boxes)
+	record_shadow_pass(r, command_buffer, view.boxes)
 	record_scene_pass(r, command_buffer, box_count)
 	record_taa_resolve(r, command_buffer, image_index)
 	record_overlay_pass(r, command_buffer, image_index)
-	record_present_barrier(r, command_buffer, image_index)
+	if capture && !record_capture_copy(r, command_buffer, image_index) {
+		return false
+	}
+	if r.target.kind == .Swapchain {
+		record_present_barrier(r, command_buffer, image_index, capture)
+	}
 
 	if !check(vk.EndCommandBuffer(command_buffer), "vkEndCommandBuffer") {
 		return false
 	}
+
 	r.taa.history_read = (r.taa.history_read + 1) % TAA_HISTORY_IMAGES
 	if r.taa.history_valid && r.taa.converge_frames < len(TAA_CONVERGE_WEIGHTS) - 1 {
 		r.taa.converge_frames += 1
@@ -100,7 +104,7 @@ record_scene_pass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_co
 	color := taa.scene_color[frame]
 	velocity := taa.velocity[frame]
 	depth := taa.depth[frame]
-	extent := taa.targets_extent
+	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
 
 	image_barrier(
 		command_buffer,
