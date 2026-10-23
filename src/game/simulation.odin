@@ -57,10 +57,10 @@ Render_Snapshot :: struct {
 }
 
 Simulation :: struct {
-	world_id:         b3.WorldId,
-	player:           Player,
-	crates:           [MAX_CRATES]Crate,
-	crate_count:      int,
+	world_id:               b3.WorldId,
+	player:                 Player,
+	crates:                 [MAX_CRATES]Crate,
+	crate_count:            int,
 	next_crate_color_index: int,
 }
 

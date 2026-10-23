@@ -44,34 +44,37 @@ free_fly_moves_horizontally_and_vertically :: proc(t: ^testing.T) {
 
 	dm := game.debug_mode_create()
 	game.debug_mode_toggle(&dm, &sim)
-	start := dm.camera.position
 	player_before := sim.player
+	step_distance: f32 = game.DEBUG_FLY_SPEED * 0.1
 
+	start := dm.camera.position
+	game.debug_mode_update(&dm, &sim, game.Debug_Input{captured = true, move_forward = 1.0}, 0.1)
+	expect_near(t, dm.camera.position.z, start.z - step_distance, 0.001, "forward speed")
+	expect_near(t, dm.camera.position.x, start.x, 0.001, "forward drift x")
+	expect_near(t, dm.camera.position.y, start.y, 0.001, "forward drift y")
+
+	start = dm.camera.position
+	game.debug_mode_update(&dm, &sim, game.Debug_Input{captured = true, move_right = 1.0}, 0.1)
+	expect_near(t, dm.camera.position.x, start.x + step_distance, 0.001, "strafe speed")
+	expect_near(t, dm.camera.position.y, start.y, 0.001, "strafe drift y")
+
+	start = dm.camera.position
+	game.debug_mode_update(&dm, &sim, game.Debug_Input{captured = true, move_up = 1.0}, 0.1)
+	expect_near(t, dm.camera.position.y, start.y + step_distance, 0.001, "fly up speed")
+
+	start = dm.camera.position
+	game.debug_mode_update(&dm, &sim, game.Debug_Input{captured = true, move_up = -1.0}, 0.1)
+	expect_near(t, dm.camera.position.y, start.y - step_distance, 0.001, "fly down speed")
+
+	start = dm.camera.position
 	game.debug_mode_update(
 		&dm,
 		&sim,
 		game.Debug_Input{captured = true, move_forward = 1.0, move_up = 1.0},
 		0.1,
 	)
+	expect_near(t, b3.Length(dm.camera.position - start), step_distance, 0.001, "diagonal speed")
 
-	travel := dm.camera.position - start
-	expect_near(t, b3.Length(travel), game.DEBUG_FLY_SPEED * 0.1, 0.001, "fly speed")
-	testing.expectf(t, travel.z < -0.5, "fly did not move forward: %v", travel)
-	testing.expectf(t, travel.y > 0.5, "fly did not move up: %v", travel)
-
-	down_start := dm.camera.position
-	game.debug_mode_update(
-		&dm,
-		&sim,
-		game.Debug_Input{captured = true, move_up = -1.0},
-		0.1,
-	)
-	testing.expectf(
-		t,
-		dm.camera.position.y < down_start.y - 0.5,
-		"fly did not move down: %v",
-		dm.camera.position,
-	)
 	testing.expect_value(t, sim.player.position, player_before.position)
 	testing.expect_value(t, sim.player.velocity, player_before.velocity)
 }

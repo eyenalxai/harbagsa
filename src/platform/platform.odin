@@ -35,7 +35,7 @@ Events :: struct {
 	debug_mode_pressed:  bool,
 	add_pressed:         bool,
 	delete_pressed:      bool,
-	sun_pressed:       bool,
+	sun_pressed:         bool,
 	primary_pressed:     bool,
 	primary_released:    bool,
 	fly_up:              bool,
