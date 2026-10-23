@@ -8,16 +8,11 @@ import "src:geometry"
 import stb_easy_font "vendor:stb/easy_font"
 import vk "vendor:vulkan"
 
-// The overlay owns the two screen-facing draw paths: the world-space debug
-// line list and the screen-space HUD quads. Both use host-visible vertex
-// buffers that are refilled once per frame, and neither reads the scene mesh.
 MAX_DEBUG_VERTICES :: 32768
 MAX_HUD_VERTICES :: 24576
 // Each text quad is two triangles, so it uses six vertices.
 MAX_HUD_QUADS :: MAX_HUD_VERTICES / 6
 
-// HUD_State is the small, state-driven part of the HUD. The main loop fills it
-// from the render snapshot and the cursor capture flag.
 HUD_State :: struct {
 	speed:    f32,
 	grounded: bool,
@@ -249,8 +244,6 @@ Overlay_Pipeline_Desc :: struct {
 	layout:         vk.PipelineLayout,
 }
 
-// create_overlay_pipeline builds the shared shape of both overlay pipelines:
-// dynamic viewport and scissor, depth off, and straight alpha blending.
 create_overlay_pipeline :: proc(r: ^Renderer, desc: Overlay_Pipeline_Desc, pipeline: ^vk.Pipeline) -> bool {
 	binding := desc.binding
 	vertex_module, vertex_ok := create_shader_module(r, desc.vertex_spirv, desc.name)
@@ -368,8 +361,6 @@ create_overlay_pipeline :: proc(r: ^Renderer, desc: Overlay_Pipeline_Desc, pipel
 	return true
 }
 
-// prepare_overlay refills the CPU-side vertices and uploads them into the
-// mapped buffer that belongs to the frame in flight.
 prepare_overlay :: proc(r: ^Renderer, debug_lines: []geometry.Line, hud: HUD_State) -> bool {
 	o := &r.overlay
 	o.debug_count = 0
@@ -492,7 +483,6 @@ hud_emit_text :: proc(o: ^Overlay, x, y: f32, text: string, color: [4]f32, scale
 	}
 }
 
-// snap_near_zero keeps tiny negative values from printing as "-0.0".
 snap_near_zero :: proc(value: f32) -> f32 {
 	if value > -0.05 && value < 0.05 {
 		return 0

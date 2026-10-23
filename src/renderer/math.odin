@@ -15,7 +15,6 @@ MAT4_IDENTITY :: Mat4 {
 	0, 0, 0, 1,
 }
 
-// mat4_multiply returns a * b for column vectors.
 mat4_multiply :: proc(a, b: Mat4) -> (m: Mat4) {
 	for column in 0 ..< 4 {
 		for row in 0 ..< 4 {
@@ -45,8 +44,6 @@ mat4_scale :: proc(scale: [3]f32) -> Mat4 {
 	return m
 }
 
-// mat4_rotation builds a rotation matrix from a normalized quaternion in
-// x, y, z, w order.
 mat4_rotation :: proc(q: [4]f32) -> Mat4 {
 	x, y, z, w := q.x, q.y, q.z, q.w
 	xx, yy, zz := x * x, y * y, z * z
@@ -73,7 +70,6 @@ mat4_perspective :: proc(fov_y, aspect, near, far: f32) -> (m: Mat4) {
 	return
 }
 
-// mat4_look_at builds a right-handed view matrix.
 mat4_look_at :: proc(eye, target, up: [3]f32) -> (m: Mat4) {
 	forward := linalg.vector_normalize0(target - eye)
 	side := linalg.vector_normalize0(linalg.vector_cross3(forward, up))
@@ -101,8 +97,6 @@ mat4_look_at :: proc(eye, target, up: [3]f32) -> (m: Mat4) {
 	return
 }
 
-// srgb_encode converts one linear color channel for a non-sRGB swapchain. It
-// matches the gamma step in the fragment shader.
 srgb_encode :: proc(c: f32) -> f32 {
 	return math.pow_f32(c, 1.0 / 2.2)
 }
