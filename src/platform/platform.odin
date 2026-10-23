@@ -24,8 +24,9 @@ Window :: struct {
 
 // One frame of window and player input. Movement axes come from the keyboard
 // state while the cursor is captured. look_delta is the relative mouse motion
-// accumulated since the previous poll. jump_pressed and reset_pressed are true
-// only on the key-down edge, so a held key does not repeat them.
+// accumulated since the previous poll. jump_pressed, reset_pressed, and
+// debug_pressed are true only on the key-down edge, so a held key does not
+// repeat them.
 Events :: struct {
 	quit:          bool,
 	resized:       bool,
@@ -34,6 +35,7 @@ Events :: struct {
 	look_delta:    [2]f32,
 	jump_pressed:  bool,
 	reset_pressed: bool,
+	debug_pressed: bool,
 	captured:      bool,
 }
 
@@ -189,6 +191,8 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 			events.jump_pressed = true
 		case .R:
 			events.reset_pressed = true
+		case .F1:
+			events.debug_pressed = true
 		}
 	case .MOUSE_MOTION:
 		if events.captured {

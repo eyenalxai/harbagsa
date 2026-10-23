@@ -39,6 +39,7 @@ Error :: enum {
 	Create_Swapchain,
 	Create_Frames,
 	Create_Scene,
+	Create_Overlay,
 	Create_Pipeline,
 }
 
@@ -97,6 +98,7 @@ Renderer :: struct {
 	clear_color:     [4]f32,
 
 	scene: Scene,
+	overlay: Overlay,
 }
 
 // The validation callback runs outside the normal call stack, so it needs the
@@ -124,6 +126,10 @@ init :: proc(window: ^platform.Window, allocator: mem.Allocator) -> (r: Renderer
 		deinit(&r)
 		return
 	}
+	if err = init_overlay(&r); err != .None {
+		deinit(&r)
+		return
+	}
 
 	return r, .None
 }
@@ -133,6 +139,7 @@ deinit :: proc(r: ^Renderer) {
 		_ = vk.DeviceWaitIdle(r.device)
 	}
 
+	destroy_overlay(r)
 	destroy_scene(r)
 	destroy_swapchain(r)
 
@@ -180,7 +187,16 @@ notify_resize :: proc(r: ^Renderer) {
 	r.swapchain_dirty = true
 }
 
-begin_frame :: proc(r: ^Renderer, camera: Camera, boxes: []geometry.Box) -> (frame: Frame, status: Frame_Status) {
+begin_frame :: proc(
+	r: ^Renderer,
+	camera: Camera,
+	boxes: []geometry.Box,
+	debug_lines: []geometry.Line,
+	hud: HUD_State,
+) -> (
+	frame: Frame,
+	status: Frame_Status,
+) {
 	width, height := platform.pixel_size(r.window)
 	if width == 0 || height == 0 {
 		return {}, .Skipped
@@ -227,7 +243,7 @@ begin_frame :: proc(r: ^Renderer, camera: Camera, boxes: []geometry.Box) -> (fra
 	if !check(vk.ResetCommandBuffer(command_buffer, {}), "vkResetCommandBuffer") {
 		return {}, .Fatal
 	}
-	if !record_scene(r, command_buffer, image_index, camera, boxes) {
+	if !record_scene(r, command_buffer, image_index, camera, boxes, debug_lines, hud) {
 		return {}, .Fatal
 	}
 
@@ -727,6 +743,12 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	if r.scene.pipeline != 0 && r.scene.pipeline_format != r.swapchain_format {
 		destroy_pipeline(r)
 		if !create_pipeline(r) {
+			return .Fatal
+		}
+	}
+	if r.overlay.pipeline_format != .UNDEFINED && r.overlay.pipeline_format != r.swapchain_format {
+		destroy_overlay_pipelines(r)
+		if !create_overlay_pipelines(r) {
 			return .Fatal
 		}
 	}
