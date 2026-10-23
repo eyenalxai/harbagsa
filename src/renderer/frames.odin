@@ -6,6 +6,14 @@ import "core:log"
 import "src:geometry"
 import vk "vendor:vulkan"
 
+Frame_View :: struct {
+	camera:          Camera,
+	light_direction: [3]f32,
+	boxes:           []geometry.Box,
+	debug_lines:     []geometry.Line,
+	hud:             HUD_Frame,
+}
+
 init_frames :: proc(r: ^Renderer) -> Error {
 	pool_info := vk.CommandPoolCreateInfo{
 		sType            = .COMMAND_POOL_CREATE_INFO,
@@ -56,11 +64,7 @@ init_frames :: proc(r: ^Renderer) -> Error {
 
 begin_frame :: proc(
 	r: ^Renderer,
-	camera: Camera,
-	light_direction: [3]f32,
-	boxes: []geometry.Box,
-	debug_lines: []geometry.Line,
-	hud: HUD_Frame,
+	view: Frame_View,
 	capture := false,
 ) -> (
 	frame: Frame,
@@ -112,17 +116,7 @@ begin_frame :: proc(
 	if !check(vk.ResetCommandBuffer(command_buffer, {}), "vkResetCommandBuffer") {
 		return {}, .Fatal
 	}
-	if !record_scene(
-		r,
-		command_buffer,
-		image_index,
-		camera,
-		light_direction,
-		boxes,
-		debug_lines,
-		hud,
-		capture,
-	) {
+	if !record_scene(r, command_buffer, image_index, view, capture) {
 		return {}, .Fatal
 	}
 

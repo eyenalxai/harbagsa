@@ -94,11 +94,13 @@ draw :: proc(
 ) -> renderer.Frame_Status {
 	frame, begin_status := renderer.begin_frame(
 		state,
-		scene.camera,
-		scene.sun_direction,
-		scene.boxes,
-		scene.debug_lines,
-		scene.hud,
+		renderer.Frame_View {
+			camera          = scene.camera,
+			light_direction = scene.sun_direction,
+			boxes           = scene.boxes,
+			debug_lines     = scene.debug_lines,
+			hud             = scene.hud,
+		},
 		capture,
 	)
 	if begin_status != .Ok {
