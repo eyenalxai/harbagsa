@@ -41,6 +41,57 @@ mantle_climbs_the_walls :: proc(t: ^testing.T) {
 }
 
 @(test)
+holding_jump_mantles_without_a_second_press :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+
+	sim.player.position = game.ARENA_MANTLE_12_APPROACH
+	sim.player.velocity = {}
+	sim.player.yaw = 0
+	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 10)
+	step(
+		&sim,
+		game.Input_Snapshot{move_forward = 1.0, jump_pressed = true, jump_held = true},
+		1,
+	)
+	step(&sim, game.Input_Snapshot{move_forward = 1.0, jump_held = true}, 4)
+
+	testing.expect_value(t, sim.player.movement_state, game.Movement_State.Mantling)
+}
+
+@(test)
+holding_jump_without_movement_does_not_mantle :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+
+	sim.player.position = game.ARENA_MANTLE_12_APPROACH
+	sim.player.velocity = {}
+	sim.player.yaw = 0
+	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 10)
+	step(
+		&sim,
+		game.Input_Snapshot{move_forward = 1.0, jump_pressed = true, jump_held = true},
+		1,
+	)
+	step(&sim, game.Input_Snapshot{jump_held = true}, 4)
+
+	testing.expect_value(t, sim.player.movement_state, game.Movement_State.None)
+}
+
+@(test)
+holding_jump_on_flat_ground_does_not_repeat :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+
+	step(&sim, {}, 10)
+	step(&sim, game.Input_Snapshot{jump_pressed = true, jump_held = true}, 1)
+	step(&sim, game.Input_Snapshot{jump_held = true}, 120)
+
+	testing.expect(t, sim.player.grounded, "held jump did not settle")
+	expect_near(t, sim.player.velocity.y, 0.0, 0.01, "held jump kept rising")
+}
+
+@(test)
 mantle_onto_a_crate_tracks_the_body :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
