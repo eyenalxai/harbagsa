@@ -3,7 +3,8 @@
 A first-person movement demo. The player walks, sprints, crouches, crawls,
 jumps, dives, slides, and mantles in a fixed arena with stairs, ramps, tunnels,
 mantle walls, a dive platform, and pushable crates. SDL3 provides the window and
-input, raw Vulkan 1.3 draws the scene, and Box3D runs the physics.
+input, raw Vulkan 1.3 draws the scene, and Box3D runs the physics. A fixed
+directional sun casts soft shadows from the walls and crates.
 
 ## Requirements
 
@@ -32,11 +33,30 @@ into the binary.
 - `C`: crouch. Toggle by default. While sprinting, it starts a crouch slide.
 - `Z`: prone. Toggle by default. Crawl while prone. Dive in the air or from a sprint.
 - `R`: return the player to spawn.
+- `Shift+R`: reset the crates, the sun, and the player.
 - `F1`: toggle the debug draw.
+- `F2`: toggle debug mode.
 - `Esc`: release the cursor capture.
 
+### Debug mode
+
+`F2` replaces the player with a free-fly camera and enables scene editing.
+
+- `WASD`: fly horizontally.
+- Mouse: look while not dragging; drag the selection while the left button is held.
+- `Space` / `Ctrl`: fly up / down.
+- Left click: select a crate. Drag it on a horizontal plane.
+- Wheel: raise or lower the selected crate.
+- `E`: add a crate on the surface under the crosshair.
+- `Delete` or `X`: remove the selected crate.
+- `L`: select the sun. Drag to rotate it.
+- `R`: reset the player and return the camera to spawn.
+- `Shift+R`: reset the crates, the sun, and the player.
+- `F2`: leave debug mode. The player returns to the saved position and view.
+
 The HUD shows the stance, gait, horizontal speed, grounded state, movement
-state, position, and this control list. The window is resizable.
+state, and position, or the debug mode selection, crate count, and sun angles.
+It also shows the control list. The window is resizable.
 
 ## Build
 
@@ -60,7 +80,8 @@ make test
 ```
 
 `make check` runs the strict compiler checks on the main program and every
-library package. `make test` runs the physics and simulation tests headless.
+library package. `make test` runs the physics, simulation, and renderer math
+tests headless.
 
 New source files start with `#+vet explicit-allocators`, which rejects calls
 that silently use `context.allocator` or `context.temp_allocator`.

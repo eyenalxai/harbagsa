@@ -101,6 +101,22 @@ _Avoid_: Action state
 The fixed test level: a floor, walls, stairs, ramps, tunnels, mantle walls, a dive platform, a slide lane, and a few crates.
 _Avoid_: Map, level
 
+**Light volume**:
+The fixed orthographic box around the arena that the shadow map covers.
+_Avoid_: Shadow frustum
+
+**Sun**:
+The fixed directional light that lights the arena and casts the shadow map.
+_Avoid_: Lamp, light source
+
+**Shadow map**:
+The depth image rendered from the sun's point of view. The lit pass compares each surface point against it to decide whether the sun reaches the point.
+_Avoid_: Depth map
+
+**Shadow pass**:
+The depth-only pass that fills the shadow map before the lit pass.
+_Avoid_: Light pass
+
 **Crate**:
 A dynamic box that the player can push.
 _Avoid_: Prop, box
@@ -148,3 +164,23 @@ _Avoid_: UI layer
 **HUD**:
 The 2D part of the overlay: crosshair, controls hint, and player state.
 _Avoid_: UI
+
+**Debug mode**:
+The `F2` mode where the player becomes a free-fly camera and can edit crates and the sun.
+_Avoid_: Edit mode, sandbox
+
+**Free-fly camera**:
+The debug mode camera that ignores gravity and collision.
+_Avoid_: Noclip, spectator
+
+**Selection**:
+The crate or the sun that debug mode acts on.
+_Avoid_: Focus, target
+
+**Sun**:
+The directional light. Debug mode changes its direction.
+_Avoid_: Lamp, light source
+
+**Scene reset**:
+The `Shift+R` action that restores the starting crates, the sun, and the player.
+_Avoid_: Reload, wipe
