@@ -87,3 +87,33 @@ mantle_rejects_a_wall_above_the_limit :: proc(t: ^testing.T) {
 
 	testing.expect_value(t, sim.player.movement_state, game.Movement_State.None)
 }
+
+@(test)
+mantle_rejects_a_distant_ledge :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+
+	sim.player.position = {game.ARENA_MANTLE_12_X, game.GROUND_OFFSET, 11.0}
+	sim.player.velocity = {}
+	sim.player.yaw = 0
+	step(&sim, game.Input_Snapshot{jump_pressed = true}, 1)
+	step(&sim, {}, 4)
+	step(&sim, game.Input_Snapshot{jump_pressed = true}, 1)
+
+	testing.expect_value(t, sim.player.movement_state, game.Movement_State.None)
+}
+
+@(test)
+mantle_rejects_a_steep_ramp :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+
+	sim.player.position = {game.ARENA_RAMP_50_X, game.GROUND_OFFSET, 0.5}
+	sim.player.velocity = {}
+	sim.player.yaw = 0
+	step(&sim, game.Input_Snapshot{jump_pressed = true}, 1)
+	step(&sim, {}, 4)
+	step(&sim, game.Input_Snapshot{jump_pressed = true}, 1)
+
+	testing.expect_value(t, sim.player.movement_state, game.Movement_State.None)
+}

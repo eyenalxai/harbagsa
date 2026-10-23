@@ -118,3 +118,41 @@ ground_snap_descends_the_staircase :: proc(t: ^testing.T) {
 	testing.expect(t, sim.player.grounded, "player left the staircase")
 	testing.expectf(t, sim.player.position.y < 0.2, "player did not descend: y=%v", sim.player.position.y)
 }
+
+@(test)
+jump_works_in_eight_directions :: proc(t: ^testing.T) {
+	for direction in DIRECTIONS {
+		sim := create(t)
+		step(
+			&sim,
+			game.Input_Snapshot{move_forward = direction.x, move_right = direction.y},
+			30,
+		)
+		step(
+			&sim,
+			game.Input_Snapshot {
+				move_forward = direction.x,
+				move_right = direction.y,
+				jump_pressed = true,
+			},
+			1,
+		)
+		testing.expect(t, !sim.player.grounded, "jump did not leave the ground")
+		expect_near(t, game.horizontal_speed(sim.player.velocity), game.PLAYER_WALK_SPEED, 0.05, "jump speed")
+		game.simulation_destroy(&sim)
+	}
+}
+
+@(test)
+jump_from_prone_stands_first :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+
+	step(&sim, {}, 10)
+	step(&sim, game.Input_Snapshot{prone_pressed = true}, 1)
+	testing.expect_value(t, sim.player.stance, game.Stance.Prone)
+
+	step(&sim, game.Input_Snapshot{jump_pressed = true}, 1)
+	testing.expect_value(t, sim.player.stance, game.Stance.Standing)
+	testing.expectf(t, sim.player.velocity.y > 0.0, "prone jump did not fire: vy=%v", sim.player.velocity.y)
+}

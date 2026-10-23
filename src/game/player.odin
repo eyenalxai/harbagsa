@@ -99,7 +99,7 @@ update_horizontal_velocity :: proc(player: ^Player, input: Input_Snapshot, time_
 			current += desired_direction * (PLAYER_AIR_CONTROL * time_step / direction_length)
 		}
 
-		// Steering may turn the velocity, but it must not add speed.
+		// Steering may turn the velocity, but it must not exceed the air cap.
 		speed := b3.Length(current)
 		if speed > player.air_cap {
 			current *= player.air_cap / speed

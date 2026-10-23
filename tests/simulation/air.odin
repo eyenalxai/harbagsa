@@ -88,3 +88,21 @@ air_control_steers_without_speed_gain :: proc(t: ^testing.T) {
 	)
 	testing.expect(t, !sim.player.grounded, "player landed during air control")
 }
+
+@(test)
+standing_jump_can_steer_to_the_air_cap :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+
+	step(&sim, {}, 10)
+	step(&sim, game.Input_Snapshot{jump_pressed = true}, 1)
+	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 30)
+
+	speed := game.horizontal_speed(sim.player.velocity)
+	testing.expectf(
+		t,
+		speed > 4.0 && speed <= game.PLAYER_WALK_SPEED + 0.01,
+		"standing jump air control did not reach the cap: speed=%v",
+		speed,
+	)
+}

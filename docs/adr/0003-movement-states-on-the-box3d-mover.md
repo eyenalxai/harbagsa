@@ -7,7 +7,7 @@ The alternative is a dynamic rigid body. It would fight the direct control that 
 ## Consequences
 
 - The movement rules are ours to test. The headless simulation seam covers them.
-- Headroom ignores floor-level side obstacles and treats a shape whose lower bound is above the feet as a ceiling. This keeps a step or crate beside the lower body from blocking a taller stance.
+- Headroom ignores floor-level side obstacles and treats a shape whose lower bound is above the floor margin as a ceiling. This keeps a step or crate beside the lower body from blocking a taller stance.
 - The prone capsule is vertical because the mover has no rotation handling. Crawl is movement while prone, not a horizontal body.
 - Step-up and slope handling use capsule casts and a ground probe rather than a controller library. A Box3D upgrade can change the mover behavior; the tests gate that.
 - The player stays first person with no visible body. A visible body or a horizontal prone collider would need a different solution.

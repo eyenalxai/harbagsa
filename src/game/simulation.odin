@@ -74,11 +74,9 @@ simulation_reset :: proc(sim: ^Simulation) {
 	sim.player.yaw = 0.0
 	sim.player.pitch = 0.0
 	sim.player.grounded = false
-	sim.player.stance = .Standing
+	commit_stance(&sim.player, .Standing)
 	sim.player.gait = .Walk
 	sim.player.movement_state = .None
-	sim.player.crouch_engaged = false
-	sim.player.prone_engaged = false
 	sim.player.sprint_toggled = false
 	sim.player.sprint_wanted = false
 	sim.player.eye_height = PLAYER_STANDING_EYE

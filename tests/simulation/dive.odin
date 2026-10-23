@@ -115,3 +115,67 @@ dive_works_in_eight_directions :: proc(t: ^testing.T) {
 		game.simulation_destroy(&sim)
 	}
 }
+
+@(test)
+dive_uses_velocity_without_input :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+
+	step(&sim, game.Input_Snapshot{move_forward = 1.0, sprint_held = true}, 30)
+	step(
+		&sim,
+		game.Input_Snapshot{move_forward = 1.0, sprint_held = true, jump_pressed = true},
+		1,
+	)
+	step(&sim, game.Input_Snapshot{move_forward = 1.0, sprint_held = true}, 2)
+	step(&sim, game.Input_Snapshot{prone_pressed = true}, 1)
+
+	testing.expect_value(t, sim.player.movement_state, game.Movement_State.Diving)
+	testing.expectf(t, abs(sim.player.velocity.x) < 0.01, "dive did not use velocity: vx=%v", sim.player.velocity.x)
+	expect_near(t, sim.player.velocity.z, -11.0, 0.01, "velocity dive direction")
+}
+
+@(test)
+dive_uses_camera_forward_at_rest :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+
+	step(&sim, {}, 10)
+	step(&sim, game.Input_Snapshot{jump_pressed = true}, 1)
+	step(&sim, game.Input_Snapshot{prone_pressed = true}, 1)
+
+	testing.expect_value(t, sim.player.movement_state, game.Movement_State.Diving)
+	testing.expectf(t, abs(sim.player.velocity.x) < 0.01, "dive did not use camera forward: vx=%v", sim.player.velocity.x)
+	expect_near(t, sim.player.velocity.z, -11.0, 0.01, "camera dive direction")
+}
+
+@(test)
+sprint_dive_works_in_eight_directions :: proc(t: ^testing.T) {
+	for direction in DIRECTIONS {
+		sim := create(t)
+		step(
+			&sim,
+			game.Input_Snapshot {
+				move_forward = direction.x,
+				move_right = direction.y,
+				sprint_held = true,
+			},
+			30,
+		)
+		step(
+			&sim,
+			game.Input_Snapshot {
+				move_forward = direction.x,
+				move_right = direction.y,
+				sprint_held = true,
+				prone_pressed = true,
+			},
+			1,
+		)
+		testing.expect_value(t, sim.player.movement_state, game.Movement_State.Diving)
+		testing.expect_value(t, sim.player.stance, game.Stance.Prone)
+		expect_near(t, game.horizontal_speed(sim.player.velocity), 11.0, 0.01, "sprint dive speed")
+		testing.expectf(t, sim.player.velocity.y > 0.0, "sprint dive did not hop: vy=%v", sim.player.velocity.y)
+		game.simulation_destroy(&sim)
+	}
+}

@@ -51,6 +51,7 @@ stances_move_in_every_direction :: proc(t: ^testing.T) {
 			sim.player.position = game.SPAWN_POSITION
 			sim.player.velocity = {}
 			sim.player.yaw = 0
+			start := sim.player.position
 			step(
 				&sim,
 				game.Input_Snapshot {
@@ -62,9 +63,25 @@ stances_move_in_every_direction :: proc(t: ^testing.T) {
 			)
 			testing.expect_value(t, sim.player.stance, c.stance)
 			expect_near(t, game.horizontal_speed(sim.player.velocity), c.speed, 0.01, "stance speed")
+			testing.expectf(
+				t,
+				horizontal_distance(start, sim.player.position) > 0.5,
+				"stance did not move: %v",
+				horizontal_distance(start, sim.player.position),
+			)
 		}
 		game.simulation_destroy(&sim)
 	}
+}
+
+@(test)
+stance_dimensions_match_the_spec :: proc(t: ^testing.T) {
+	expect_near(t, game.stance_height(.Standing), 1.80, 0.0001, "standing height")
+	expect_near(t, game.stance_height(.Crouching), 1.20, 0.0001, "crouch height")
+	expect_near(t, game.stance_height(.Prone), 0.70, 0.0001, "prone height")
+	expect_near(t, game.stance_eye_height(.Standing), 1.65, 0.0001, "standing eye")
+	expect_near(t, game.stance_eye_height(.Crouching), 1.05, 0.0001, "crouch eye")
+	expect_near(t, game.stance_eye_height(.Prone), 0.30, 0.0001, "prone eye")
 }
 
 @(test)

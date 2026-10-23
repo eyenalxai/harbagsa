@@ -1,6 +1,8 @@
 #+vet explicit-allocators
 package game
 
+import b3 "libs:box3d"
+
 @(private)
 update_jump_timers :: proc(sim: ^Simulation, input: Input_Snapshot, time_step: f32) {
 	player := &sim.player
@@ -31,6 +33,19 @@ decay_slide_speed :: proc(speed, minimum, time_step: f32) -> f32 {
 }
 
 @(private)
+set_slide_velocity :: proc(player: ^Player, direction: b3.Vec3, speed: f32) {
+	player.velocity.x = direction.x * speed
+	player.velocity.z = direction.z * speed
+}
+
+@(private)
+advance_slide :: proc(player: ^Player, direction: b3.Vec3, minimum, time_step: f32) -> f32 {
+	speed := decay_slide_speed(player.slide_speed, minimum, time_step)
+	set_slide_velocity(player, direction, speed)
+	return speed
+}
+
+@(private)
 try_jump :: proc(sim: ^Simulation) {
 	player := &sim.player
 	if player.movement_state != .None {
@@ -48,9 +63,7 @@ try_jump :: proc(sim: ^Simulation) {
 			player.jump_buffer = 0.0
 			return
 		}
-		player.stance = .Standing
-		player.crouch_engaged = false
-		player.prone_engaged = false
+		commit_stance(player, .Standing)
 	}
 
 	launch_jump(player)
