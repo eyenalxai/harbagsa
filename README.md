@@ -272,16 +272,19 @@ Do not pass `-no-bounds-check`. Bounds checks stay enabled in every build.
 ## Validation layers
 
 Validation layers are off by default, so the demo runs on machines without
-them. To enable them, run:
+them.
 
-```sh
-make validate
-```
+`make validate` runs the agent harness with validation enabled. It runs
+`scenarios/smoke.json` offscreen, then again with `--present` when a display is
+available. Both runs exit on their own, and a validation error fails the target.
 
-`make validate` checks for `VK_LAYER_KHRONOS_validation` first. If the layer is
-missing, it prints the install command and exits without running the demo. It
-never installs anything. The target is manual: `make check` and `make test`
-never enable validation.
+`make validate-demo` runs the demo with validation enabled for a manual
+session. It returns when you close the window.
+
+Both targets check for `VK_LAYER_KHRONOS_validation` first. If the layer is
+missing, they print the install command and exit without starting anything.
+They never install anything. `make check` and `make test` never enable
+validation.
 
 To run Odin directly instead:
 
