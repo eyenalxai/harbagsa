@@ -72,6 +72,28 @@ _Avoid_: Input state, controls
 The interpolatable view of the player after a simulation step.
 _Avoid_: Frame state, view state
 
+**Harness**:
+The `harbagsa-agent` program that drives the simulation, runs checks, and writes
+screenshots without the game loop.
+_Avoid_: Bot, driver
+
+**Scenario**:
+A JSON document that compiles to one command list for the harness.
+_Avoid_: Script, test case
+
+**Capture**:
+One rendered frame written as a PNG by the harness.
+_Avoid_: Screenshot, shot
+
+**Offscreen target**:
+The render target with a color image, a depth image, and a readback buffer, but
+no surface or swapchain.
+_Avoid_: Headless framebuffer
+
+**Swapchain target**:
+The render target that acquires and presents swapchain images for the window.
+_Avoid_: Window target
+
 **Cursor capture**:
 The state where the mouse controls the camera and the pointer is hidden.
 _Avoid_: Mouse lock
