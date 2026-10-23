@@ -71,6 +71,10 @@ begin_frame :: proc(
 	frame: Frame,
 	status: Frame_Status,
 ) {
+	if validation_failed() {
+		return {}, .Fatal
+	}
+
 	width, height := platform.pixel_size(r.window)
 	if width == 0 || height == 0 {
 		return {}, .Skipped
@@ -174,6 +178,10 @@ end_frame :: proc(r: ^Renderer, frame: Frame) -> Frame_Status {
 	case:
 		log.errorf("renderer: vkQueuePresentKHR failed: %v", present_result)
 		status = .Fatal
+	}
+
+	if validation_failed() {
+		return .Fatal
 	}
 
 	r.frame_index = (r.frame_index + 1) % MAX_FRAMES_IN_FLIGHT

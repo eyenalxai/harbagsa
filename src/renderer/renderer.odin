@@ -32,6 +32,7 @@ Error :: enum {
 	Create_TAA,
 	Create_Overlay,
 	Create_Pipeline,
+	Validation,
 }
 
 Renderer :: struct {
@@ -74,6 +75,14 @@ Renderer :: struct {
 // logger context captured at init time.
 g_context: runtime.Context
 
+// A validation error means the frame already broke the spec, so the app stops
+// and lets a validation build fail instead of rendering on undefined behavior.
+g_validation_failed: bool
+
+validation_failed :: proc() -> bool {
+	return g_validation_failed
+}
+
 init :: proc(window: ^platform.Window, allocator: mem.Allocator) -> (r: Renderer, err: Error) {
 	r.window = window
 	r.allocator = allocator
@@ -102,6 +111,11 @@ init :: proc(window: ^platform.Window, allocator: mem.Allocator) -> (r: Renderer
 	if err = init_overlay(&r); err != .None {
 		deinit(&r)
 		return
+	}
+
+	if validation_failed() {
+		deinit(&r)
+		return r, .Validation
 	}
 
 	return r, .None
