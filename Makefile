@@ -58,7 +58,7 @@ check-lines:
 	@status=0; \
 	for file in $$(find . -name '*.odin' -not -path './vendor/*'); do \
 		lines=$$(wc -l < "$$file"); \
-		if [ "$$lines" -ge 500 ]; then \
+		if [ "$$lines" -ge 300 ]; then \
 			printf '%s: %d lines\n' "$$file" "$$lines" >&2; \
 			status=1; \
 		fi; \
