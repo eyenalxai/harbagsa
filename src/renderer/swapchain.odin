@@ -145,6 +145,7 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	}
 
 	old_extent := r.swapchain_extent
+	old_format := r.swapchain_format
 
 	if !check(vk.DeviceWaitIdle(r.device), "vkDeviceWaitIdle") {
 		return .Fatal
@@ -163,6 +164,8 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 			log.error("renderer: could not rebind the TAA targets")
 			return .Fatal
 		}
+	} else if r.swapchain_format != old_format {
+		reset_history(r)
 	}
 
 	if r.taa.pipeline_format != r.swapchain_format {

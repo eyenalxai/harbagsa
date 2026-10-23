@@ -30,6 +30,9 @@ record_frame :: proc(
 		log.error("renderer: overlay vertex upload failed")
 		return false
 	}
+	if box_count != r.taa.prev_model_count {
+		reset_history(r)
+	}
 	r.shadow.light_view_projection = shadow_light_matrix(light_direction)
 	if !update_camera(r, camera, light_direction) {
 		return false
@@ -56,6 +59,9 @@ record_frame :: proc(
 		return false
 	}
 	r.taa.history_read = (r.taa.history_read + 1) % TAA_HISTORY_IMAGES
+	if r.taa.history_valid && r.taa.converge_frames < len(TAA_CONVERGE_WEIGHTS) - 1 {
+		r.taa.converge_frames += 1
+	}
 	r.taa.history_valid = true
 	return true
 }

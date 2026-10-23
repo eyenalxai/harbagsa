@@ -127,12 +127,20 @@ update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> 
 	)
 	view_projection := mat4_multiply(projection, view)
 
+	taa_note_camera(r, camera)
+
 	previous := view_projection
 	if r.taa.has_prev_view_projection {
 		previous = r.taa.prev_view_projection
 	}
 	r.taa.prev_view_projection = view_projection
 	r.taa.has_prev_view_projection = true
+
+	jitter: [2]f32
+	if r.taa.enabled {
+		jitter = taa_jitter(r.taa.jitter_index, extent)
+		r.taa.jitter_index = (r.taa.jitter_index + 1) % TAA_JITTER_SAMPLES
+	}
 
 	buffer^ = Camera_Uniform {
 		view = view,
@@ -142,6 +150,7 @@ update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> 
 		ambient = {AMBIENT_COLOR.x, AMBIENT_COLOR.y, AMBIENT_COLOR.z, 0},
 		screen = {srgb_gamma(r), f32(extent.width), height, 0},
 		light_view_projection = r.shadow.light_view_projection,
+		jitter = {jitter.x, jitter.y, 0, 0},
 	}
 	return true
 }

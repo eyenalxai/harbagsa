@@ -40,6 +40,7 @@ Events :: struct {
 	reset_scene_pressed: bool,
 	debug_view_pressed:  bool,
 	debug_mode_pressed:  bool,
+	taa_pressed:         bool,
 	add_pressed:         bool,
 	delete_pressed:      bool,
 	sun_pressed:         bool,
@@ -230,6 +231,8 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 			events.debug_view_pressed = true
 		case .F2:
 			events.debug_mode_pressed = true
+		case .F3:
+			events.taa_pressed = true
 		case .E:
 			events.add_pressed = true
 		case .DELETE, .X:
