@@ -34,6 +34,8 @@ record_scene :: proc(
 		return false
 	}
 
+	// The shadow matrix feeds the camera uniform, so rebuild it first.
+	r.shadow.light_view_projection = shadow_light_matrix(light_direction)
 	if !update_camera(r, camera, light_direction) {
 		return false
 	}
