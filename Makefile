@@ -1,7 +1,7 @@
 ODIN ?= odin
 ODIN_FLAGS ?= -vet -vet-style -vet-semicolon -vet-tabs -vet-using-param -vet-unused-procedures -vet-packages:main -strict-style -warnings-as-errors -disallow-do
 ODIN_COLLECTIONS := -collection:libs=vendor
-BIN := bin/game
+BIN := bin/harbagsa
 
 CC ?= cc
 BOX3D_DIR := vendor/box3d
