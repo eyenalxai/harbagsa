@@ -28,6 +28,7 @@ Window :: struct {
 // only on the key-down edge, so a held key does not repeat them.
 Events :: struct {
 	quit:          bool,
+	resized:       bool,
 	move_forward:  f32,
 	move_right:    f32,
 	look_delta:    [2]f32,
@@ -168,6 +169,8 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 	#partial switch event.type {
 	case .QUIT, .WINDOW_CLOSE_REQUESTED:
 		events.quit = true
+	case .WINDOW_RESIZED, .WINDOW_PIXEL_SIZE_CHANGED:
+		events.resized = true
 	case .MOUSE_BUTTON_DOWN:
 		if event.button.button == 1 {
 			events.captured = set_capture(window, true)
