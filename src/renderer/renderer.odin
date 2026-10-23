@@ -20,6 +20,12 @@ VALIDATION_LAYER_NAME :: "VK_LAYER_KHRONOS_validation"
 
 DEFAULT_CLEAR_COLOR :: [4]f32{0.10, 0.45, 0.75, 1.0}
 
+COLOR_SUBRESOURCE :: vk.ImageSubresourceRange{
+	aspectMask = {.COLOR},
+	levelCount = 1,
+	layerCount = 1,
+}
+
 Error :: enum {
 	None,
 	Vulkan_Loader,
@@ -73,6 +79,7 @@ Renderer :: struct {
 	swapchain:        vk.SwapchainKHR,
 	swapchain_format: vk.Format,
 	swapchain_extent: vk.Extent2D,
+	swapchain_is_srgb: bool,
 	swapchain_images: []vk.Image,
 	swapchain_views:  []vk.ImageView,
 	swapchain_dirty:  bool,
@@ -161,7 +168,7 @@ begin_frame :: proc(r: ^Renderer) -> (frame: Frame, status: Frame_Status) {
 		return {}, .Skipped
 	}
 
-	if r.swapchain_dirty || width != r.swapchain_extent.width || height != r.swapchain_extent.height {
+	if r.swapchain_dirty {
 		status = recreate_swapchain(r)
 		if status != .Ok {
 			return {}, status
@@ -295,12 +302,12 @@ init_instance :: proc(r: ^Renderer) -> Error {
 
 	validation_enabled := false
 	if ENABLE_VALIDATION_LAYERS {
-		if validation_layer_available(r.allocator) {
+		if validation_layer_available(r.allocator) && instance_extension_available(vk.EXT_DEBUG_UTILS_EXTENSION_NAME, r.allocator) {
 			append(&instance_extensions, vk.EXT_DEBUG_UTILS_EXTENSION_NAME)
 			validation_enabled = true
 			log.info("renderer: validation layers enabled")
 		} else {
-			log.warnf("renderer: %s is not available; continuing without validation", VALIDATION_LAYER_NAME)
+			log.warn("renderer: validation layers or VK_EXT_debug_utils are unavailable; continuing without validation")
 		}
 	}
 
@@ -361,7 +368,7 @@ init_device :: proc(r: ^Renderer) -> Error {
 	if err := create_logical_device(r); err != .None {
 		return err
 	}
-	if !create_swapchain(r) {
+	if status := create_swapchain(r); status != .Ok {
 		return .Create_Swapchain
 	}
 
@@ -565,23 +572,24 @@ create_logical_device :: proc(r: ^Renderer) -> Error {
 	return .None
 }
 
-create_swapchain :: proc(r: ^Renderer) -> bool {
+create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	support, support_ok := query_swapchain_support(r.physical_device, r.surface, r.allocator)
 	if !support_ok {
 		log.error("renderer: could not query swapchain support")
-		return false
+		return .Fatal
 	}
 	defer delete(support.formats, r.allocator)
 
 	format := choose_surface_format(support.formats)
 	extent := choose_swapchain_extent(support.capabilities, r.window)
 	if extent.width == 0 || extent.height == 0 {
-		log.errorf("renderer: swapchain extent is zero (%vx%v)", extent.width, extent.height)
-		return false
+		log.warnf("renderer: swapchain extent is zero (%vx%v)", extent.width, extent.height)
+		return .Skipped
 	}
 
 	r.swapchain_format = format.format
 	r.swapchain_extent = extent
+	r.swapchain_is_srgb = format.format == .B8G8R8A8_SRGB || format.format == .R8G8B8A8_SRGB
 
 	image_count := support.capabilities.minImageCount + 1
 	if support.capabilities.maxImageCount > 0 && image_count > support.capabilities.maxImageCount {
@@ -611,7 +619,7 @@ create_swapchain :: proc(r: ^Renderer) -> bool {
 	}
 
 	if !check(vk.CreateSwapchainKHR(r.device, &create_info, nil, &r.swapchain), "vkCreateSwapchainKHR") {
-		return false
+		return .Fatal
 	}
 
 	image_count_actual: u32
@@ -619,14 +627,14 @@ create_swapchain :: proc(r: ^Renderer) -> bool {
 		vk.GetSwapchainImagesKHR(r.device, r.swapchain, &image_count_actual, nil),
 		"vkGetSwapchainImagesKHR",
 	) {
-		return false
+		return .Fatal
 	}
 	r.swapchain_images = make([]vk.Image, image_count_actual, r.allocator)
 	if !check(
 		vk.GetSwapchainImagesKHR(r.device, r.swapchain, &image_count_actual, raw_data(r.swapchain_images)),
 		"vkGetSwapchainImagesKHR",
 	) {
-		return false
+		return .Fatal
 	}
 
 	r.swapchain_views = make([]vk.ImageView, image_count_actual, r.allocator)
@@ -636,10 +644,10 @@ create_swapchain :: proc(r: ^Renderer) -> bool {
 			image            = image,
 			viewType         = .D2,
 			format           = format.format,
-			subresourceRange = {aspectMask = {.COLOR}, levelCount = 1, layerCount = 1},
+			subresourceRange = COLOR_SUBRESOURCE,
 		}
 		if !check(vk.CreateImageView(r.device, &view_info, nil, &r.swapchain_views[i]), "vkCreateImageView") {
-			return false
+			return .Fatal
 		}
 	}
 
@@ -650,7 +658,7 @@ create_swapchain :: proc(r: ^Renderer) -> bool {
 		image_count_actual,
 		format.format,
 	)
-	return true
+	return .Ok
 }
 
 destroy_swapchain :: proc(r: ^Renderer) {
@@ -687,8 +695,8 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 		return .Fatal
 	}
 	destroy_swapchain(r)
-	if !create_swapchain(r) {
-		return .Fatal
+	if status := create_swapchain(r); status != .Ok {
+		return status
 	}
 	r.swapchain_dirty = false
 
@@ -712,7 +720,7 @@ record_clear :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image_index
 		srcQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
 		dstQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
 		image               = r.swapchain_images[image_index],
-		subresourceRange    = {aspectMask = {.COLOR}, levelCount = 1, layerCount = 1},
+		subresourceRange    = COLOR_SUBRESOURCE,
 	}
 	vk.CmdPipelineBarrier(
 		command_buffer,
@@ -755,7 +763,7 @@ record_clear :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image_index
 		srcQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
 		dstQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
 		image               = r.swapchain_images[image_index],
-		subresourceRange    = {aspectMask = {.COLOR}, levelCount = 1, layerCount = 1},
+		subresourceRange    = COLOR_SUBRESOURCE,
 	}
 	vk.CmdPipelineBarrier(
 		command_buffer,
@@ -868,6 +876,24 @@ validation_layer_available :: proc(allocator: mem.Allocator) -> bool {
 	}
 	for &property in properties {
 		if name_from_bytes(property.layerName[:]) == VALIDATION_LAYER_NAME {
+			return true
+		}
+	}
+	return false
+}
+
+instance_extension_available :: proc(name: cstring, allocator: mem.Allocator) -> bool {
+	count: u32
+	if vk.EnumerateInstanceExtensionProperties(nil, &count, nil) != .SUCCESS || count == 0 {
+		return false
+	}
+	properties := make([]vk.ExtensionProperties, count, allocator)
+	defer delete(properties, allocator)
+	if vk.EnumerateInstanceExtensionProperties(nil, &count, raw_data(properties)) != .SUCCESS {
+		return false
+	}
+	for &property in properties {
+		if name_from_bytes(property.extensionName[:]) == string(name) {
 			return true
 		}
 	}
