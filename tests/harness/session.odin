@@ -1,0 +1,210 @@
+#+vet explicit-allocators
+#+vet !unused-procedures // @(test) procs are called by the test runner, not by name
+package harness_test
+
+import "core:math"
+import "core:os"
+import "core:strings"
+import "core:testing"
+
+import "src:game"
+import "src:harness"
+
+RECORD_PATH :: "/tmp/opencode/harbagsa-record-test.json"
+RECORD_LINE :: `{"cmd": "record", "path": "/tmp/opencode/harbagsa-record-test.json"}`
+REPLAY_LINE :: `{"cmd": "replay", "path": "/tmp/opencode/harbagsa-record-test.json"}`
+
+execute :: proc(t: ^testing.T, session: ^harness.Session, line: string) -> harness.Reply {
+	command, error := harness.command_parse_string(line, context.allocator)
+	testing.expectf(t, error == "", "command parse failed for %s: %s", line, error)
+	if error != "" {
+		return {}
+	}
+	reply := harness.session_execute(session, command, line)
+	harness.command_destroy(&command, context.allocator)
+	return reply
+}
+
+fake_render :: proc(
+	ctx: rawptr,
+	session: ^harness.Session,
+	capture: bool,
+	name: string,
+	alpha: f32,
+) -> (
+	harness.Capture_Result,
+	string,
+) {
+	counter := cast(^int)ctx
+	counter^ += 1
+	if !capture {
+		return {}, ""
+	}
+	return {
+		name = strings.clone(name, context.allocator),
+		path = strings.clone("/tmp/opencode/fake-capture.png", context.allocator),
+		frame = session.frame,
+		width = 1,
+		height = 1,
+		hash = strings.clone("fake", context.allocator),
+	}, ""
+}
+
+@(test)
+session_steps_and_reports_state :: proc(t: ^testing.T) {
+	session, error := harness.session_create(context.allocator)
+	testing.expectf(t, error == "", "session create failed: %s", error)
+	defer harness.session_destroy(&session)
+	if error != "" {
+		return
+	}
+
+	reply := execute(t, &session, `{"cmd": "step", "frames": 60}`)
+	harness.reply_destroy(&reply, context.allocator)
+	testing.expect_value(t, session.frame, 60)
+
+	state_reply := execute(t, &session, `{"cmd": "state"}`)
+	defer harness.reply_destroy(&state_reply, context.allocator)
+	testing.expect(t, state_reply.ok, "state command failed")
+	testing.expect(t, state_reply.state != nil, "state reply has no state")
+	if state_reply.state != nil {
+		testing.expect_value(t, state_reply.state.frame, 60)
+		testing.expect_value(t, len(state_reply.state.crates), game.INITIAL_CRATE_COUNT)
+		testing.expect(t, state_reply.state.digest != "", "state digest is empty")
+	}
+}
+
+@(test)
+look_uses_the_real_sensitivity :: proc(t: ^testing.T) {
+	session, _ := harness.session_create(context.allocator)
+	defer harness.session_destroy(&session)
+	reply := execute(t, &session, `{"cmd": "look", "dx": 100, "dy": 10}`)
+	defer harness.reply_destroy(&reply, context.allocator)
+	expected_yaw := -f32(100.0) * game.YAW_SENSITIVITY
+	expected_pitch := -f32(10.0) * game.PITCH_SENSITIVITY
+	testing.expectf(t, abs(session.sim.player.yaw - expected_yaw) < 0.0001, "yaw %v", session.sim.player.yaw)
+	testing.expectf(
+		t,
+		abs(session.sim.player.pitch - expected_pitch) < 0.0001,
+		"pitch %v",
+		session.sim.player.pitch,
+	)
+}
+
+@(test)
+face_sets_the_view_directly :: proc(t: ^testing.T) {
+	session, _ := harness.session_create(context.allocator)
+	defer harness.session_destroy(&session)
+	reply := execute(t, &session, `{"cmd": "face", "yaw": 1.25, "pitch": -0.5}`)
+	defer harness.reply_destroy(&reply, context.allocator)
+	testing.expect(t, abs(session.sim.player.yaw - 1.25) < 0.0001, "yaw not set")
+	testing.expect(t, abs(session.sim.player.pitch + 0.5) < 0.0001, "pitch not set")
+}
+
+@(test)
+reset_returns_crates_to_spawn :: proc(t: ^testing.T) {
+	session, _ := harness.session_create(context.allocator)
+	defer harness.session_destroy(&session)
+	execute(t, &session, `{"cmd": "input", "forward": 1}`)
+	step_reply := execute(t, &session, `{"cmd": "step", "frames": 60}`)
+	harness.reply_destroy(&step_reply, context.allocator)
+	reset_reply := execute(t, &session, `{"cmd": "reset"}`)
+	harness.reply_destroy(&reset_reply, context.allocator)
+	testing.expect(t, session.sim.player.position == game.SPAWN_POSITION, "player did not reset")
+	box := game.simulation_crate_box(&session.sim, 0)
+	testing.expect(t, box.center == game.INITIAL_CRATE_POSITIONS[0], "crate did not reset")
+}
+
+@(test)
+failed_check_is_recorded_and_reported :: proc(t: ^testing.T) {
+	session, _ := harness.session_create(context.allocator)
+	defer harness.session_destroy(&session)
+	reply := execute(t, &session, `{"cmd": "check", "field": "player.position.z", "op": "gt", "value": 100}`)
+	defer harness.reply_destroy(&reply, context.allocator)
+	testing.expect(t, !reply.ok, "failing check reported success")
+	testing.expect_value(t, len(session.checks), 1)
+	testing.expect_value(t, len(session.failures), 1)
+}
+
+@(test)
+future_capture_queues_until_its_frame :: proc(t: ^testing.T) {
+	session, _ := harness.session_create(context.allocator)
+	defer harness.session_destroy(&session)
+	calls: int
+	backend := harness.Backend {
+		ready  = true,
+		ctx    = &calls,
+		render = fake_render,
+	}
+	harness.session_set_backend(&session, &backend, false)
+
+	first := execute(t, &session, `{"cmd": "capture", "name": "later", "frame": 10}`)
+	harness.reply_destroy(&first, context.allocator)
+	testing.expect_value(t, len(session.captures), 0)
+	testing.expect_value(t, len(session.pending), 1)
+
+	step_reply := execute(t, &session, `{"cmd": "step", "frames": 10}`)
+	harness.reply_destroy(&step_reply, context.allocator)
+	testing.expect_value(t, calls, 1)
+	testing.expect_value(t, len(session.captures), 1)
+	testing.expect_value(t, session.captures[0].frame, 10)
+}
+
+@(test)
+past_capture_is_rejected :: proc(t: ^testing.T) {
+	session, _ := harness.session_create(context.allocator)
+	defer harness.session_destroy(&session)
+	step_reply := execute(t, &session, `{"cmd": "step", "frames": 5}`)
+	harness.reply_destroy(&step_reply, context.allocator)
+	reply := execute(t, &session, `{"cmd": "capture", "frame": 0}`)
+	defer harness.reply_destroy(&reply, context.allocator)
+	testing.expect(t, !reply.ok, "past capture was accepted")
+}
+
+@(test)
+record_then_replay_round_trips :: proc(t: ^testing.T) {
+	_ = os.remove(RECORD_PATH)
+	session, _ := harness.session_create(context.allocator)
+	defer harness.session_destroy(&session)
+
+	view_reply := execute(t, &session, `{"cmd": "view", "hud": false}`)
+	harness.reply_destroy(&view_reply, context.allocator)
+	record_reply := execute(t, &session, RECORD_LINE)
+	harness.reply_destroy(&record_reply, context.allocator)
+	input_reply := execute(t, &session, `{"cmd": "input", "forward": 1}`)
+	harness.reply_destroy(&input_reply, context.allocator)
+	step_reply := execute(t, &session, `{"cmd": "step", "frames": 30}`)
+	harness.reply_destroy(&step_reply, context.allocator)
+	before := harness.session_state(&session)
+	defer harness.state_destroy(&before, context.allocator)
+	stop_reply := execute(t, &session, `{"cmd": "record"}`)
+	harness.reply_destroy(&stop_reply, context.allocator)
+
+	replay_reply := execute(t, &session, REPLAY_LINE)
+	defer harness.reply_destroy(&replay_reply, context.allocator)
+	testing.expectf(t, replay_reply.ok, "replay failed: %s", replay_reply.error)
+	after := harness.session_state(&session)
+	defer harness.state_destroy(&after, context.allocator)
+	testing.expect_value(t, after.digest, before.digest)
+}
+
+@(test)
+digest_is_deterministic :: proc(t: ^testing.T) {
+	first, _ := harness.session_create(context.allocator)
+	defer harness.session_destroy(&first)
+	second, _ := harness.session_create(context.allocator)
+	defer harness.session_destroy(&second)
+	sessions := [2]^harness.Session{&first, &second}
+	for session in sessions {
+		input := execute(t, session, `{"cmd": "input", "forward": 1}`)
+		harness.reply_destroy(&input, context.allocator)
+		step := execute(t, session, `{"cmd": "step", "frames": 45}`)
+		harness.reply_destroy(&step, context.allocator)
+	}
+	first_state := harness.session_state(&first)
+	defer harness.state_destroy(&first_state, context.allocator)
+	second_state := harness.session_state(&second)
+	defer harness.state_destroy(&second_state, context.allocator)
+	testing.expect_value(t, first_state.digest, second_state.digest)
+	testing.expect(t, math.abs(first_state.player.position.z - second_state.player.position.z) == 0, "state diverged")
+}
