@@ -83,6 +83,14 @@ make test
 library package. `make test` runs the physics, simulation, and renderer math
 tests headless.
 
+If more than one agent or terminal can build in this checkout, use the
+wrapper. It serializes Make with `flock` and needs `flock` from util-linux.
+
+```sh
+tools/make.sh check
+tools/make.sh test
+```
+
 New source files start with `#+vet explicit-allocators`, which rejects calls
 that silently use `context.allocator` or `context.temp_allocator`.
 
