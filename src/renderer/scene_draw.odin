@@ -3,6 +3,7 @@ package renderer
 
 import "core:log"
 
+import "src:geometry"
 import vk "vendor:vulkan"
 
 record_scene :: proc(
@@ -12,13 +13,29 @@ record_scene :: proc(
 	view: Frame_View,
 	capture: bool,
 ) -> bool {
-	if int(image_index) >= len(r.target.views) || int(image_index) >= len(r.target.depth) {
+	if int(image_index) >= len(r.target.views) {
 		log.errorf("renderer: target image index %d is out of range", image_index)
+		return false
+	}
+	box_count := len(view.boxes)
+	if box_count > MAX_SCENE_BOXES {
+		log.errorf("renderer: scene has %d boxes, the limit is %d", box_count, MAX_SCENE_BOXES)
 		return false
 	}
 
 	if !prepare_overlay(r, view.debug_lines, view.hud) {
 		log.error("renderer: overlay vertex upload failed")
+		return false
+	}
+	if box_count != r.taa.prev_model_count {
+		reset_history(r)
+	}
+	// The shadow matrix feeds the camera uniform, so rebuild it first.
+	r.shadow.light_view_projection = shadow_light_matrix(view.light_direction)
+	if !update_camera(r, view.camera, view.light_direction) {
+		return false
+	}
+	if !write_object_data(r, view.boxes) {
 		return false
 	}
 
@@ -30,114 +47,150 @@ record_scene :: proc(
 		return false
 	}
 
-	// The shadow matrix feeds the camera uniform, so rebuild it first.
-	r.shadow.light_view_projection = shadow_light_matrix(view.light_direction)
-	if !update_camera(r, view.camera, view.light_direction) {
+	record_shadow_pass(r, command_buffer, view.boxes)
+	record_scene_pass(r, command_buffer, box_count)
+	record_taa_resolve(r, command_buffer, image_index)
+	record_overlay_pass(r, command_buffer, image_index)
+	if capture && !record_capture_copy(r, command_buffer, image_index) {
+		return false
+	}
+	if r.target.kind == .Swapchain {
+		record_present_barrier(r, command_buffer, image_index, capture)
+	}
+
+	if !check(vk.EndCommandBuffer(command_buffer), "vkEndCommandBuffer") {
 		return false
 	}
 
-	record_shadow_pass(r, command_buffer, view.boxes)
-
-	to_color := vk.ImageMemoryBarrier {
-		sType = .IMAGE_MEMORY_BARRIER,
-		dstAccessMask = {.COLOR_ATTACHMENT_WRITE},
-		oldLayout = .UNDEFINED,
-		newLayout = .COLOR_ATTACHMENT_OPTIMAL,
-		srcQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
-		dstQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
-		image = r.target.images[image_index],
-		subresourceRange = COLOR_SUBRESOURCE,
+	r.taa.history_read = (r.taa.history_read + 1) % TAA_HISTORY_IMAGES
+	if r.taa.history_valid && r.taa.converge_frames < len(TAA_CONVERGE_WEIGHTS) - 1 {
+		r.taa.converge_frames += 1
 	}
-	vk.CmdPipelineBarrier(
+	r.taa.history_valid = true
+	return true
+}
+
+write_object_data :: proc(r: ^Renderer, boxes: []geometry.Box) -> bool {
+	taa := &r.taa
+	data := cast([^]Object_Data)r.scene.object_mapped[r.frame_index]
+	if data == nil {
+		log.error("renderer: object storage buffer is not mapped")
+		return false
+	}
+
+	models: [MAX_SCENE_BOXES]Mat4
+	for box, index in boxes {
+		models[index] = box_model_matrix(box)
+		previous := models[index]
+		if index < taa.prev_model_count {
+			previous = taa.prev_models[index]
+		}
+		data[index] = Object_Data {
+			model = models[index],
+			prev_model = previous,
+			color = box.color,
+		}
+	}
+	for index in 0 ..< len(boxes) {
+		taa.prev_models[index] = models[index]
+	}
+	taa.prev_model_count = len(boxes)
+	return true
+}
+
+record_scene_pass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_count: int) {
+	taa := &r.taa
+	frame := r.frame_index
+	color := taa.scene_color[frame]
+	velocity := taa.velocity[frame]
+	depth := taa.depth[frame]
+	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
+
+	image_barrier(
 		command_buffer,
+		color.image,
+		COLOR_SUBRESOURCE,
+		.UNDEFINED,
+		.COLOR_ATTACHMENT_OPTIMAL,
 		{.TOP_OF_PIPE},
-		{.COLOR_ATTACHMENT_OUTPUT, .EARLY_FRAGMENT_TESTS, .LATE_FRAGMENT_TESTS},
+		{.COLOR_ATTACHMENT_OUTPUT},
 		{},
-		0,
-		nil,
-		0,
-		nil,
-		1,
-		&to_color,
+		{.COLOR_ATTACHMENT_WRITE},
 	)
-	record_depth_write_barrier(command_buffer, r.target.depth[image_index].image)
-
-	clear := r.clear_color
-	if !r.target.config.is_srgb {
-		clear = {srgb_encode(clear.r), srgb_encode(clear.g), srgb_encode(clear.b), clear.a}
-	}
-	clear_color := vk.ClearValue{}
-	clear_color.color.float32 = clear
-	color_attachment := vk.RenderingAttachmentInfo {
-		sType = .RENDERING_ATTACHMENT_INFO,
-		imageView = r.target.views[image_index],
-		imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
-		loadOp = .CLEAR,
-		storeOp = .STORE,
-		clearValue = clear_color,
-	}
-
-	depth_attachment := make_depth_attachment(
-		r.target.depth[image_index].view,
-		.DEPTH_ATTACHMENT_OPTIMAL,
+	image_barrier(
+		command_buffer,
+		velocity.image,
+		COLOR_SUBRESOURCE,
+		.UNDEFINED,
+		.COLOR_ATTACHMENT_OPTIMAL,
+		{.TOP_OF_PIPE},
+		{.COLOR_ATTACHMENT_OUTPUT},
+		{},
+		{.COLOR_ATTACHMENT_WRITE},
 	)
+	record_depth_write_barrier(command_buffer, depth.image)
 
+	color_clear := vk.ClearValue{}
+	color_clear.color.float32 = r.clear_color
+	velocity_clear := vk.ClearValue{}
+	velocity_clear.color.float32 = {0, 0, CAMERA_FAR, 0}
+	attachments := [2]vk.RenderingAttachmentInfo {
+		{
+			sType = .RENDERING_ATTACHMENT_INFO,
+			imageView = color.view,
+			imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
+			loadOp = .CLEAR,
+			storeOp = .STORE,
+			clearValue = color_clear,
+		},
+		{
+			sType = .RENDERING_ATTACHMENT_INFO,
+			imageView = velocity.view,
+			imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
+			loadOp = .CLEAR,
+			storeOp = .STORE,
+			clearValue = velocity_clear,
+		},
+	}
+	depth_attachment := make_depth_attachment(depth.view, .DEPTH_ATTACHMENT_OPTIMAL)
 	rendering_info := vk.RenderingInfo {
 		sType = .RENDERING_INFO,
-		renderArea = {extent = {r.target.config.width, r.target.config.height}},
+		renderArea = {extent = extent},
 		layerCount = 1,
-		colorAttachmentCount = 1,
-		pColorAttachments = &color_attachment,
+		colorAttachmentCount = u32(len(attachments)),
+		pColorAttachments = &attachments[0],
 		pDepthAttachment = &depth_attachment,
 	}
 	vk.CmdBeginRendering(command_buffer, &rendering_info)
 
-	set_viewport(command_buffer, r.target.config.width, r.target.config.height)
+	set_viewport(command_buffer, extent.width, extent.height)
 
 	vk.CmdBindPipeline(command_buffer, .GRAPHICS, r.scene.pipeline)
-
-	bind_camera(command_buffer, r.scene.pipeline_layout, r.scene.descriptor_sets[r.frame_index])
-
-	draw_boxes(r, command_buffer, r.scene.pipeline_layout, view.boxes)
-
-	record_overlay(r, command_buffer)
+	bind_camera(command_buffer, r.scene.pipeline_layout, r.scene.descriptor_sets[frame])
+	draw_boxes_indexed(r, command_buffer, r.scene.pipeline_layout, box_count)
 
 	vk.CmdEndRendering(command_buffer)
 
-	if capture && !record_capture_copy(r, command_buffer, image_index) {
-		return false
-	}
-
-	if r.target.kind == .Swapchain {
-		src_access: vk.AccessFlags = {.COLOR_ATTACHMENT_WRITE}
-		old_layout: vk.ImageLayout = .COLOR_ATTACHMENT_OPTIMAL
-		if capture {
-			src_access = {.TRANSFER_READ}
-			old_layout = .TRANSFER_SRC_OPTIMAL
-		}
-		to_present := vk.ImageMemoryBarrier {
-			sType = .IMAGE_MEMORY_BARRIER,
-			srcAccessMask = src_access,
-			oldLayout = old_layout,
-			newLayout = .PRESENT_SRC_KHR,
-			srcQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
-			dstQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
-			image = r.target.images[image_index],
-			subresourceRange = COLOR_SUBRESOURCE,
-		}
-		vk.CmdPipelineBarrier(
-			command_buffer,
-			{.COLOR_ATTACHMENT_OUTPUT, .TRANSFER},
-			{.BOTTOM_OF_PIPE},
-			{},
-			0,
-			nil,
-			0,
-			nil,
-			1,
-			&to_present,
-		)
-	}
-
-	return check(vk.EndCommandBuffer(command_buffer), "vkEndCommandBuffer")
+	image_barrier(
+		command_buffer,
+		color.image,
+		COLOR_SUBRESOURCE,
+		.COLOR_ATTACHMENT_OPTIMAL,
+		.SHADER_READ_ONLY_OPTIMAL,
+		{.COLOR_ATTACHMENT_OUTPUT},
+		{.FRAGMENT_SHADER},
+		{.COLOR_ATTACHMENT_WRITE},
+		{.SHADER_READ},
+	)
+	image_barrier(
+		command_buffer,
+		velocity.image,
+		COLOR_SUBRESOURCE,
+		.COLOR_ATTACHMENT_OPTIMAL,
+		.SHADER_READ_ONLY_OPTIMAL,
+		{.COLOR_ATTACHMENT_OUTPUT},
+		{.FRAGMENT_SHADER},
+		{.COLOR_ATTACHMENT_WRITE},
+		{.SHADER_READ},
+	)
 }

@@ -91,3 +91,25 @@ destroy_image :: proc(r: ^Renderer, image: ^Image) {
 		image.memory = 0
 	}
 }
+
+image_barrier :: proc(
+	command_buffer: vk.CommandBuffer,
+	image: vk.Image,
+	subresource: vk.ImageSubresourceRange,
+	old_layout, new_layout: vk.ImageLayout,
+	src_stage, dst_stage: vk.PipelineStageFlags,
+	src_access, dst_access: vk.AccessFlags,
+) {
+	barrier := vk.ImageMemoryBarrier {
+		sType = .IMAGE_MEMORY_BARRIER,
+		srcAccessMask = src_access,
+		dstAccessMask = dst_access,
+		oldLayout = old_layout,
+		newLayout = new_layout,
+		srcQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
+		dstQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
+		image = image,
+		subresourceRange = subresource,
+	}
+	vk.CmdPipelineBarrier(command_buffer, src_stage, dst_stage, {}, 0, nil, 0, nil, 1, &barrier)
+}
