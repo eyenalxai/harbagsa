@@ -150,7 +150,7 @@ prepare_overlay :: proc(r: ^Renderer, debug_lines: []geometry.Line, hud: HUD_Fra
 record_overlay :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer) {
 	o := &r.overlay
 	frame := r.frame_index
-	gamma: f32 = r.target.config.is_srgb ? 0.0 : 1.0
+	gamma := srgb_gamma(r)
 
 	if o.debug_count > 0 {
 		vk.CmdBindPipeline(command_buffer, .GRAPHICS, o.debug_pipeline)
