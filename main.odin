@@ -164,7 +164,7 @@ run :: proc() -> bool {
 			camera,
 			boxes[:],
 			debug_lines.lines[:debug_lines.count],
-			renderer.HUD_State {
+			renderer.HUD_Frame {
 				status_lines = hud.status_lines[:],
 				control_lines = hud.control_lines[:],
 				capture_hint = hud.capture_hint,

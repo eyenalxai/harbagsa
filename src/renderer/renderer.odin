@@ -182,7 +182,7 @@ begin_frame :: proc(
 	camera: Camera,
 	boxes: []geometry.Box,
 	debug_lines: []geometry.Line,
-	hud: HUD_State,
+	hud: HUD_Frame,
 ) -> (
 	frame: Frame,
 	status: Frame_Status,
