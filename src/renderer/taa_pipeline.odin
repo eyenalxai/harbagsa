@@ -8,7 +8,7 @@ TAA_FRAGMENT_SPIRV :: #load("../../build/shaders/taa.frag.spv")
 
 create_taa_pipeline :: proc(r: ^Renderer) -> bool {
 	set_layouts := [1]vk.DescriptorSetLayout{r.taa.descriptor_set_layout}
-	color_formats := [2]vk.Format{r.swapchain_format, HISTORY_FORMAT}
+	color_formats := [2]vk.Format{r.target.config.format, HISTORY_FORMAT}
 	ok := create_graphics_pipeline(
 		r,
 		{
@@ -31,7 +31,7 @@ create_taa_pipeline :: proc(r: ^Renderer) -> bool {
 		&r.taa.pipeline_layout,
 	)
 	if ok {
-		r.taa.pipeline_format = r.swapchain_format
+		r.taa.pipeline_format = r.target.config.format
 	}
 	return ok
 }

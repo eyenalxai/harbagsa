@@ -22,8 +22,6 @@ TAA :: struct {
 	converge_frames: int,
 	jitter_index:    int,
 
-	targets_extent: vk.Extent2D,
-
 	prev_models:              [MAX_SCENE_BOXES]Mat4,
 	prev_model_count:         int,
 	prev_view_projection:     Mat4,
@@ -107,9 +105,9 @@ check_taa_formats :: proc(r: ^Renderer) -> bool {
 create_taa_targets :: proc(r: ^Renderer) -> bool {
 	destroy_taa_targets(r)
 
-	extent := r.swapchain_extent
+	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
 	if extent.width == 0 || extent.height == 0 {
-		log.error("renderer: cannot create TAA targets without a swapchain extent")
+		log.error("renderer: cannot create TAA targets without a target extent")
 		return false
 	}
 
@@ -173,7 +171,6 @@ create_taa_targets :: proc(r: ^Renderer) -> bool {
 		r.taa.history[i] = history
 	}
 
-	r.taa.targets_extent = extent
 	reset_history(r)
 	r.taa.history_read = 0
 	r.taa.history_layouts = {.UNDEFINED, .UNDEFINED}
@@ -230,7 +227,6 @@ destroy_taa_targets :: proc(r: ^Renderer) {
 	for i in 0 ..< TAA_HISTORY_IMAGES {
 		destroy_image(r, &r.taa.history[i])
 	}
-	r.taa.targets_extent = {}
 	r.taa.history_valid = false
 	r.taa.history_layouts = {.UNDEFINED, .UNDEFINED}
 }

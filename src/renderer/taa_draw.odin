@@ -9,8 +9,8 @@ record_taa_resolve :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image
 	write_index := (read_index + 1) % TAA_HISTORY_IMAGES
 	read := taa.history[read_index]
 	write := taa.history[write_index]
-	extent := taa.targets_extent
-	swapchain_image := r.swapchain_images[image_index]
+	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
+	target_image := r.target.images[image_index]
 
 	// After the first use the read target rests in SHADER_READ_ONLY_OPTIMAL.
 	if taa.history_layouts[read_index] == .UNDEFINED {
@@ -68,7 +68,7 @@ record_taa_resolve :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image
 
 	image_barrier(
 		command_buffer,
-		swapchain_image,
+		target_image,
 		COLOR_SUBRESOURCE,
 		.UNDEFINED,
 		.COLOR_ATTACHMENT_OPTIMAL,
@@ -78,16 +78,16 @@ record_taa_resolve :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image
 		{.COLOR_ATTACHMENT_WRITE},
 	)
 
-	swapchain_clear := vk.ClearValue{}
-	swapchain_clear.color.float32 = r.clear_color
+	target_clear := vk.ClearValue{}
+	target_clear.color.float32 = r.clear_color
 	attachments := [2]vk.RenderingAttachmentInfo {
 		{
 			sType = .RENDERING_ATTACHMENT_INFO,
-			imageView = r.swapchain_views[image_index],
+			imageView = r.target.views[image_index],
 			imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
 			loadOp = .CLEAR,
 			storeOp = .STORE,
-			clearValue = swapchain_clear,
+			clearValue = target_clear,
 		},
 		{
 			sType = .RENDERING_ATTACHMENT_INFO,
@@ -161,7 +161,7 @@ record_taa_resolve :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image
 	)
 	image_barrier(
 		command_buffer,
-		swapchain_image,
+		target_image,
 		COLOR_SUBRESOURCE,
 		.COLOR_ATTACHMENT_OPTIMAL,
 		.COLOR_ATTACHMENT_OPTIMAL,
