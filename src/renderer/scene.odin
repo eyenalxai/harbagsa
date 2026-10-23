@@ -28,7 +28,6 @@ Scene :: struct {
 
 	pipeline_layout:       vk.PipelineLayout,
 	pipeline:              vk.Pipeline,
-	pipeline_format:       vk.Format,
 	descriptor_set_layout: vk.DescriptorSetLayout,
 	descriptor_pool:       vk.DescriptorPool,
 	descriptor_sets:       [MAX_FRAMES_IN_FLIGHT]vk.DescriptorSet,
@@ -37,11 +36,13 @@ Scene :: struct {
 	camera_memory:  [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
 	camera_mapped:  [MAX_FRAMES_IN_FLIGHT]rawptr,
 
-	depth: []Image,
+	object_buffers: [MAX_FRAMES_IN_FLIGHT]vk.Buffer,
+	object_memory:  [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
+	object_mapped:  [MAX_FRAMES_IN_FLIGHT]rawptr,
 }
 
 init_scene :: proc(r: ^Renderer) -> Error {
-	if !create_camera_resources(r) {
+	if !create_scene_resources(r) {
 		return .Create_Scene
 	}
 	if !create_mesh(r) {
@@ -78,6 +79,12 @@ destroy_scene :: proc(r: ^Renderer) {
 			r.scene.camera_mapped[i] = nil
 		}
 		destroy_buffer(r, &r.scene.camera_buffers[i], &r.scene.camera_memory[i])
+
+		if r.scene.object_mapped[i] != nil {
+			vk.UnmapMemory(r.device, r.scene.object_memory[i])
+			r.scene.object_mapped[i] = nil
+		}
+		destroy_buffer(r, &r.scene.object_buffers[i], &r.scene.object_memory[i])
 	}
 
 	destroy_buffer(r, &r.scene.vertex_buffer, &r.scene.vertex_memory)
@@ -86,12 +93,13 @@ destroy_scene :: proc(r: ^Renderer) {
 }
 
 update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> bool {
-	height := f32(r.swapchain_extent.height)
+	extent := r.taa.targets_extent
+	height := f32(extent.height)
 	if height <= 0 {
-		log.error("renderer: cannot build a projection for a zero-height swapchain")
+		log.error("renderer: cannot build a projection for a zero-height target")
 		return false
 	}
-	aspect := f32(r.swapchain_extent.width) / height
+	aspect := f32(extent.width) / height
 
 	buffer := cast(^Camera_Uniform)r.scene.camera_mapped[r.frame_index]
 	if buffer == nil {
@@ -111,19 +119,28 @@ update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> 
 		camera.position.z + forward.z,
 	}
 	view := mat4_look_at(camera.position, target, CAMERA_UP)
+	projection := mat4_perspective(
+		2 * math.atan(math.tan(camera.fov_x * 0.5) / aspect),
+		aspect,
+		CAMERA_NEAR,
+		CAMERA_FAR,
+	)
+	view_projection := mat4_multiply(projection, view)
 
-	gamma: f32
-	if !r.swapchain_is_srgb {
-		gamma = 1
+	previous := view_projection
+	if r.taa.has_prev_view_projection {
+		previous = r.taa.prev_view_projection
 	}
-	fov_y := 2 * math.atan(math.tan(camera.fov_x * 0.5) / aspect)
+	r.taa.prev_view_projection = view_projection
+	r.taa.has_prev_view_projection = true
+
 	buffer^ = Camera_Uniform {
 		view = view,
-		projection = mat4_perspective(fov_y, aspect, CAMERA_NEAR, CAMERA_FAR),
-		// The fragment shader normalizes the direction.
+		projection = projection,
+		prev_view_projection = previous,
 		light_direction = {light_direction.x, light_direction.y, light_direction.z, 0},
 		ambient = {AMBIENT_COLOR.x, AMBIENT_COLOR.y, AMBIENT_COLOR.z, 0},
-		gamma = {gamma, 0, 0, 0},
+		screen = {srgb_gamma(r), f32(extent.width), height, 0},
 		light_view_projection = r.shadow.light_view_projection,
 	}
 	return true
