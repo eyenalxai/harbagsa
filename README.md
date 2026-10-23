@@ -11,7 +11,7 @@ An Odin project.
 ## Run
 
 ```sh
-odin run .
+odin run . -collection:src=src -collection:libs=vendor
 ```
 
 Or:
@@ -47,7 +47,7 @@ Validation layers are off by default, so the demo runs on machines without
 them. To enable them when `VK_LAYER_KHRONOS_validation` is installed:
 
 ```sh
-odin run . -define:ENABLE_VALIDATION_LAYERS=true
+odin run . -collection:src=src -collection:libs=vendor -define:ENABLE_VALIDATION_LAYERS=true
 ```
 
 ## Clean

@@ -96,12 +96,13 @@ poll_events :: proc() -> (events: Events) {
 // process does not spin.
 wait_events :: proc(timeout_ms: i32) -> (events: Events) {
 	event: sdl3.Event
-	if sdl3.WaitEventTimeout(&event, timeout_ms) {
-		apply_event(&events, &event)
-		for sdl3.PollEvent(&event) {
-			apply_event(&events, &event)
-		}
+	if !sdl3.WaitEventTimeout(&event, timeout_ms) {
+		return
 	}
+	apply_event(&events, &event)
+
+	rest := poll_events()
+	events.quit = events.quit || rest.quit
 	return
 }
 
@@ -114,6 +115,7 @@ is_minimized :: proc(window: ^Window) -> bool {
 pixel_size :: proc(window: ^Window) -> (width, height: u32) {
 	w, h: c.int
 	if !sdl3.GetWindowSizeInPixels(window.handle, &w, &h) {
+		log.errorf("platform: SDL_GetWindowSizeInPixels failed: %v", sdl3.GetError())
 		return 0, 0
 	}
 	if w <= 0 || h <= 0 {

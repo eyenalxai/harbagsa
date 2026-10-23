@@ -11,10 +11,12 @@ WINDOW_WIDTH :: 1280
 WINDOW_HEIGHT :: 720
 
 main :: proc() {
-	context.logger = log.create_console_logger(lowest = .Info, allocator = context.allocator)
-	defer log.destroy_console_logger(context.logger, allocator = context.allocator)
+	logger := log.create_console_logger(lowest = .Info, allocator = context.allocator)
+	context.logger = logger
 
-	if !run() {
+	ok := run()
+	log.destroy_console_logger(logger, allocator = context.allocator)
+	if !ok {
 		os.exit(1)
 	}
 }
