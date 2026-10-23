@@ -620,7 +620,7 @@ build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_State) {
 		text_width := f32(stb_easy_font.width(overlay_text)) * overlay_scale
 		text_height := f32(stb_easy_font.height(overlay_text)) * overlay_scale
 		text_x := (width - text_width) * 0.5
-		text_y := center_y + margin * 3 + text_height * 0.5
+		text_y := center_y - text_height * 0.5
 		panel_padding := padding * 1.5
 		hud_emit_rect(
 			o,
@@ -637,6 +637,16 @@ build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_State) {
 	arm := 10.0 * (scale * 0.5)
 	gap := 4.0 * (scale * 0.5)
 	thickness := max(1.0, scale * 0.5)
+	outline := max(1.0, scale * 0.5)
+	crosshair_outline := [4]f32{0, 0, 0, 0.55}
+	hud_emit_rect(
+		o,
+		center_x - gap - arm - outline,
+		center_y - thickness * 0.5 - outline,
+		arm + 2 * outline,
+		thickness + 2 * outline,
+		crosshair_outline,
+	)
 	hud_emit_rect(
 		o,
 		center_x - gap - arm,
@@ -644,6 +654,14 @@ build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_State) {
 		arm,
 		thickness,
 		HUD_CROSSHAIR_COLOR,
+	)
+	hud_emit_rect(
+		o,
+		center_x + gap - outline,
+		center_y - thickness * 0.5 - outline,
+		arm + 2 * outline,
+		thickness + 2 * outline,
+		crosshair_outline,
 	)
 	hud_emit_rect(
 		o,
@@ -655,11 +673,27 @@ build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_State) {
 	)
 	hud_emit_rect(
 		o,
+		center_x - thickness * 0.5 - outline,
+		center_y - gap - arm - outline,
+		thickness + 2 * outline,
+		arm + 2 * outline,
+		crosshair_outline,
+	)
+	hud_emit_rect(
+		o,
 		center_x - thickness * 0.5,
 		center_y - gap - arm,
 		thickness,
 		arm,
 		HUD_CROSSHAIR_COLOR,
+	)
+	hud_emit_rect(
+		o,
+		center_x - thickness * 0.5 - outline,
+		center_y + gap - outline,
+		thickness + 2 * outline,
+		arm + 2 * outline,
+		crosshair_outline,
 	)
 	hud_emit_rect(
 		o,
