@@ -125,7 +125,7 @@ prepare_overlay :: proc(r: ^Renderer, debug_lines: []geometry.Line, hud: HUD_Fra
 		append_debug_vertex(o, line.to, line.color)
 	}
 
-	build_hud(o, f32(r.swapchain_extent.width), f32(r.swapchain_extent.height), hud)
+	build_hud(o, f32(r.target.config.width), f32(r.target.config.height), hud)
 
 	frame := r.frame_index
 	if o.debug_count > 0 {
@@ -173,7 +173,7 @@ record_overlay :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer) {
 
 	if o.hud_count > 0 {
 		vk.CmdBindPipeline(command_buffer, .GRAPHICS, o.hud_pipeline)
-		push := [4]f32{f32(r.swapchain_extent.width), f32(r.swapchain_extent.height), gamma, 0}
+		push := [4]f32{f32(r.target.config.width), f32(r.target.config.height), gamma, 0}
 		vk.CmdPushConstants(
 			command_buffer,
 			o.hud_layout,
