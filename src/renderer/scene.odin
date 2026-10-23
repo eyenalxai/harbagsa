@@ -37,9 +37,7 @@ Scene :: struct {
 	camera_memory:  [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
 	camera_mapped:  [MAX_FRAMES_IN_FLIGHT]rawptr,
 
-	depth_images: []vk.Image,
-	depth_memory: []vk.DeviceMemory,
-	depth_views:  []vk.ImageView,
+	depth: []Image,
 }
 
 init_scene :: proc(r: ^Renderer) -> Error {
@@ -52,6 +50,9 @@ init_scene :: proc(r: ^Renderer) -> Error {
 	if !create_pipeline(r) {
 		return .Create_Pipeline
 	}
+	if !create_shadow_resources(r) {
+		return .Create_Shadow
+	}
 	return .None
 }
 
@@ -60,6 +61,7 @@ destroy_scene :: proc(r: ^Renderer) {
 		return
 	}
 
+	destroy_shadow(r)
 	destroy_pipeline_pair(r, &r.scene.pipeline, &r.scene.pipeline_layout)
 	if r.scene.descriptor_pool != 0 {
 		vk.DestroyDescriptorPool(r.device, r.scene.descriptor_pool, nil)
@@ -122,6 +124,7 @@ update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> 
 		light_direction = {light_direction.x, light_direction.y, light_direction.z, 0},
 		ambient = {AMBIENT_COLOR.x, AMBIENT_COLOR.y, AMBIENT_COLOR.z, 0},
 		gamma = {gamma, 0, 0, 0},
+		light_view_projection = r.shadow.light_view_projection,
 	}
 	return true
 }
