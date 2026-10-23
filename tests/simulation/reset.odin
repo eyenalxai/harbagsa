@@ -68,7 +68,7 @@ crate_rotation_is_exposed_for_the_renderer :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 
 	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 120)
-	q := game.simulation_crate_rotation(&sim, 0)
+	q := game.simulation_crate_box(&sim, 0).rotation
 	length_sq := q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w
 	testing.expectf(t, abs(length_sq - 1.0) < 0.01, "crate rotation is not normalized: %v", length_sq)
 }

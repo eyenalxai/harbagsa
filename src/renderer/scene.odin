@@ -17,7 +17,6 @@ Camera :: struct {
 	fov_x:    f32,
 }
 
-LIGHT_DIRECTION :: [3]f32{-0.45, -1.0, -0.35}
 AMBIENT_COLOR :: [3]f32{0.24, 0.25, 0.28}
 
 Scene :: struct {
@@ -84,7 +83,7 @@ destroy_scene :: proc(r: ^Renderer) {
 	r.scene.index_count = 0
 }
 
-update_camera :: proc(r: ^Renderer, camera: Camera) -> bool {
+update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> bool {
 	height := f32(r.swapchain_extent.height)
 	if height <= 0 {
 		log.error("renderer: cannot build a projection for a zero-height swapchain")
@@ -96,6 +95,12 @@ update_camera :: proc(r: ^Renderer, camera: Camera) -> bool {
 	if buffer == nil {
 		log.error("renderer: camera uniform buffer is not mapped")
 		return false
+	}
+
+	light := light_direction
+	light_length := math.sqrt(light.x * light.x + light.y * light.y + light.z * light.z)
+	if light_length > 0.0 {
+		light = light * (1.0 / light_length)
 	}
 
 	cos_pitch := math.cos(camera.pitch)
@@ -119,7 +124,7 @@ update_camera :: proc(r: ^Renderer, camera: Camera) -> bool {
 	buffer^ = Camera_Uniform {
 		view = view,
 		projection = mat4_perspective(fov_y, aspect, CAMERA_NEAR, CAMERA_FAR),
-		light_direction = {LIGHT_DIRECTION.x, LIGHT_DIRECTION.y, LIGHT_DIRECTION.z, 0},
+		light_direction = {light.x, light.y, light.z, 0},
 		ambient = {AMBIENT_COLOR.x, AMBIENT_COLOR.y, AMBIENT_COLOR.z, 0},
 		gamma = {gamma, 0, 0, 0},
 	}

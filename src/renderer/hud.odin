@@ -5,11 +5,27 @@ import "core:fmt"
 
 import stb_easy_font "vendor:stb/easy_font"
 
+HUD_Selection :: enum {
+	None,
+	Crate,
+	Light,
+}
+
+HUD_Debug_State :: struct {
+	selection:       HUD_Selection,
+	crate_index:     int,
+	crate_count:     int,
+	light_azimuth:   f32,
+	light_elevation: f32,
+}
+
 HUD_State :: struct {
-	speed:    f32,
-	grounded: bool,
-	position: [3]f32,
-	captured: bool,
+	speed:        f32,
+	grounded:     bool,
+	position:     [3]f32,
+	captured:     bool,
+	debug_active: bool,
+	debug:        HUD_Debug_State,
 }
 
 HUD_TEXT_COLOR :: [4]f32{1.0, 1.0, 1.0, 1.0}
@@ -61,6 +77,19 @@ build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_State) {
 	margin := 8.0 * scale
 	padding := 5.0 * scale
 
+	build_state_panel(o, hud, scale, margin, padding)
+	build_hints(o, height, hud, scale, margin, padding)
+	build_capture_overlay(o, width, height, hud, scale, padding)
+	build_crosshair(o, width, height, scale)
+}
+
+@(private)
+build_state_panel :: proc(o: ^Overlay, hud: HUD_State, scale, margin, padding: f32) {
+	if hud.debug_active {
+		build_debug_panel(o, hud, scale, margin, padding)
+		return
+	}
+
 	grounded := "no"
 	if hud.grounded {
 		grounded = "yes"
@@ -110,122 +139,5 @@ build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_State) {
 		position_text,
 		HUD_TEXT_COLOR,
 		scale,
-	)
-
-	hint_lines := [3]string {
-		"WASD move    Mouse look",
-		"Space jump    R reset",
-		"F1 debug view    Esc release mouse",
-	}
-	hint_width := 0
-	for line in hint_lines {
-		hint_width = max(hint_width, stb_easy_font.width(line))
-	}
-	hint_panel_width := f32(hint_width) * scale + padding * 2
-	hint_height := 3 * HUD_LINE_HEIGHT * scale
-	hint_x := margin
-	hint_y := height - margin - hint_height - padding * 2
-	hud_emit_rect(o, hint_x, hint_y, hint_panel_width, hint_height + padding * 2, HUD_PANEL_COLOR)
-	for line, index in hint_lines {
-		hud_emit_text(
-			o,
-			hint_x + padding,
-			hint_y + padding + f32(index) * HUD_LINE_HEIGHT * scale,
-			line,
-			HUD_TEXT_COLOR,
-			scale,
-		)
-	}
-
-	center_x := width * 0.5
-	center_y := height * 0.5
-	if !hud.captured {
-		overlay_text := "Click to capture mouse"
-		overlay_scale := scale * 1.1
-		text_width := f32(stb_easy_font.width(overlay_text)) * overlay_scale
-		text_height := f32(stb_easy_font.height(overlay_text)) * overlay_scale
-		text_x := (width - text_width) * 0.5
-		text_y := center_y - text_height * 0.5
-		panel_padding := padding * 1.5
-		hud_emit_rect(
-			o,
-			text_x - panel_padding,
-			text_y - panel_padding,
-			text_width + panel_padding * 2,
-			text_height + panel_padding * 2,
-			HUD_PANEL_COLOR,
-		)
-		hud_emit_text(o, text_x, text_y, overlay_text, HUD_TEXT_COLOR, overlay_scale)
-	}
-
-	// The crosshair is emitted last so it stays on top of the panels.
-	arm := 10.0 * (scale * 0.5)
-	gap := 4.0 * (scale * 0.5)
-	thickness := max(1.0, scale * 0.5)
-	outline := max(1.0, scale * 0.5)
-	crosshair_outline := [4]f32{0, 0, 0, 0.55}
-	hud_emit_rect(
-		o,
-		center_x - gap - arm - outline,
-		center_y - thickness * 0.5 - outline,
-		arm + 2 * outline,
-		thickness + 2 * outline,
-		crosshair_outline,
-	)
-	hud_emit_rect(
-		o,
-		center_x - gap - arm,
-		center_y - thickness * 0.5,
-		arm,
-		thickness,
-		HUD_CROSSHAIR_COLOR,
-	)
-	hud_emit_rect(
-		o,
-		center_x + gap - outline,
-		center_y - thickness * 0.5 - outline,
-		arm + 2 * outline,
-		thickness + 2 * outline,
-		crosshair_outline,
-	)
-	hud_emit_rect(
-		o,
-		center_x + gap,
-		center_y - thickness * 0.5,
-		arm,
-		thickness,
-		HUD_CROSSHAIR_COLOR,
-	)
-	hud_emit_rect(
-		o,
-		center_x - thickness * 0.5 - outline,
-		center_y - gap - arm - outline,
-		thickness + 2 * outline,
-		arm + 2 * outline,
-		crosshair_outline,
-	)
-	hud_emit_rect(
-		o,
-		center_x - thickness * 0.5,
-		center_y - gap - arm,
-		thickness,
-		arm,
-		HUD_CROSSHAIR_COLOR,
-	)
-	hud_emit_rect(
-		o,
-		center_x - thickness * 0.5 - outline,
-		center_y + gap - outline,
-		thickness + 2 * outline,
-		arm + 2 * outline,
-		crosshair_outline,
-	)
-	hud_emit_rect(
-		o,
-		center_x - thickness * 0.5,
-		center_y + gap,
-		thickness,
-		arm,
-		HUD_CROSSHAIR_COLOR,
 	)
 }
