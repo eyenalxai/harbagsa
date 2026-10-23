@@ -2,6 +2,10 @@
 
 Issues and specs for this repo live as GitHub issues in `eyenalxai/harbagsa`. Use the `gh` CLI for all operations. Run `gh` from inside the clone so it infers the repo.
 
+## Vocabulary
+
+Use the `GLOSSARY.md` term in the spec, tickets, and code. If a ticket uses a synonym, fix the ticket before implementation.
+
 ## Conventions
 
 - **Create an issue**: `gh issue create --title "..." --body "..."`. Use a heredoc for multi-line bodies.
