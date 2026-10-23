@@ -170,6 +170,27 @@ tools/make.sh build
 `scenarios/smoke.json` offscreen, then with `--present` when a display is
 available. `make validate-demo` runs the game with validation enabled.
 
+## Keep the harness current
+
+The harness is part of the product. When you add or change a feature, update the
+harness in the same change. Do not leave the automation behind the game.
+
+- New simulation input: add it to `game.Input_Snapshot`, the `input` command,
+  the scenario step fields, and `tests/harness`.
+- New state field: add it to `State`, `state_build`, `state_digest`,
+  `state_field`, the report schema, and the docs.
+- New view toggle: add it to the `view` command, `frame.Options`, the README, and
+  this page.
+- New command: follow **Adding a command**, add a JSONL test, and add a scenario
+  example when it changes a normal workflow.
+- New renderer pass or target: keep it behind `Target` or `Frame_View`. Add an
+  offscreen test when the pass must match the game.
+- New screenshot or evidence path: update the README and this page.
+- New domain word: add it to `GLOSSARY.md` before you use it.
+
+If you cannot update the harness in the same change, open a ticket and state the
+gap. Do not silently ship a game feature that the harness cannot see.
+
 ## Pitfalls
 
 - Do not add a control socket to the game. The agent is a separate binary.
@@ -178,3 +199,5 @@ available. `make validate-demo` runs the game with validation enabled.
   device.
 - Keep `renderer.Target` and `renderer.Platform` as the seams. The renderer core
   must not import `src:platform`.
+- Keep the harness tests in the normal `make test` run. Do not hide them behind a
+  manual target.
