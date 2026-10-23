@@ -17,6 +17,7 @@ Input_Snapshot :: struct {
 	prone_held:     bool,
 	prone_pressed:  bool,
 	jump_pressed:   bool,
+	jump_held:      bool,
 	reset_pressed:  bool,
 }
 
@@ -32,6 +33,7 @@ Render_Snapshot :: struct {
 	stance:                Stance,
 	gait:                  Gait,
 	movement_state:        Movement_State,
+	step_smoothing:        f32,
 }
 
 Simulation :: struct {
@@ -91,9 +93,31 @@ simulation_step :: proc(sim: ^Simulation, input: Input_Snapshot, time_step: f32)
 
 	sim.player.previous_position = sim.player.position
 	sim.player.previous_eye_height = sim.player.eye_height
+	sim.player.previous_step_smoothing = sim.player.step_smoothing
+	sim.player.step_grace = max(sim.player.step_grace - time_step, 0.0)
 
 	probe := probe_ground(sim)
 	sim.player.grounded = is_grounded(sim, probe)
+	// A step leaves the capsule over the edge until its center crosses the
+	// tread. Keep it grounded for a short grace instead of letting gravity undo
+	// the step.
+	if sim.player.grounded {
+		sim.player.ground_normal = probe.normal
+		if sim.player.step_grace > 0.0 {
+			sim.player.ground_normal = {0.0, 1.0, 0.0}
+			sim.player.velocity.y = 0.0
+		}
+		if horizontal_speed(sim.player.velocity) < STEP_GRACE_SPEED {
+			sim.player.step_grace = 0.0
+		}
+	} else if sim.player.step_grace > 0.0 &&
+	   horizontal_speed(sim.player.velocity) >= STEP_GRACE_SPEED {
+		sim.player.grounded = true
+		sim.player.ground_normal = {0.0, 1.0, 0.0}
+		sim.player.velocity.y = 0.0
+	} else {
+		sim.player.step_grace = 0.0
+	}
 	was_grounded := sim.player.grounded
 
 	_ = try_mantle(sim, input)
@@ -115,15 +139,19 @@ simulation_step :: proc(sim: ^Simulation, input: Input_Snapshot, time_step: f32)
 	if sim.player.movement_state == .Mantling {
 		update_mantle(sim, time_step)
 	} else {
-		sim.player.velocity.y -= PLAYER_GRAVITY * time_step
-
-		stepped := was_grounded &&
-			sim.player.movement_state == .None &&
-			!sim.player.on_steep_slope &&
-			try_step(sim, time_step)
-		if !stepped {
-			move_player(sim, time_step)
+		if !sim.player.grounded {
+			sim.player.velocity.y -= PLAYER_GRAVITY * time_step
 		}
+
+		lift := try_step(sim, time_step)
+		if lift > 0.0 {
+			sim.player.step_smoothing = clamp(
+				sim.player.step_smoothing + lift,
+				-STEP_SMOOTH_MAX,
+				STEP_SMOOTH_MAX,
+			)
+		}
+		move_player(sim, time_step)
 	}
 	b3.World_Step(sim.world_id, time_step, SIMULATION_SUB_STEPS)
 
@@ -132,8 +160,12 @@ simulation_step :: proc(sim: ^Simulation, input: Input_Snapshot, time_step: f32)
 	snap_to_ground(sim, was_grounded)
 	probe = probe_ground(sim)
 	sim.player.grounded = is_grounded(sim, probe)
-	if sim.player.grounded && sim.player.velocity.y < 0.0 {
-		sim.player.velocity.y = 0.0
+	if sim.player.grounded {
+		sim.player.ground_normal = probe.normal
+	}
+	if sim.player.step_grace > 0.0 &&
+	   horizontal_speed(sim.player.velocity) >= STEP_GRACE_SPEED {
+		sim.player.grounded = true
 	}
 	if was_grounded &&
 	   !sim.player.grounded &&
@@ -144,11 +176,17 @@ simulation_step :: proc(sim: ^Simulation, input: Input_Snapshot, time_step: f32)
 
 	update_dive(sim, time_step)
 	update_crouch_slide(sim, time_step)
+	update_step_smoothing(&sim.player, time_step)
+	sim.player.grounded_last_step = sim.player.grounded
 }
 
 simulation_snapshot :: proc(sim: ^Simulation) -> Render_Snapshot {
-	eye_offset := b3.Vec3{0.0, sim.player.eye_height, 0.0}
-	previous_eye_offset := b3.Vec3{0.0, sim.player.previous_eye_height, 0.0}
+	eye_offset := b3.Vec3{0.0, sim.player.eye_height - sim.player.step_smoothing, 0.0}
+	previous_eye_offset := b3.Vec3 {
+		0.0,
+		sim.player.previous_eye_height - sim.player.previous_step_smoothing,
+		0.0,
+	}
 	return {
 		position = sim.player.position,
 		previous_position = sim.player.previous_position,
@@ -161,6 +199,7 @@ simulation_snapshot :: proc(sim: ^Simulation) -> Render_Snapshot {
 		stance = sim.player.stance,
 		gait = sim.player.gait,
 		movement_state = sim.player.movement_state,
+		step_smoothing = sim.player.step_smoothing,
 	}
 }
 
