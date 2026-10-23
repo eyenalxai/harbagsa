@@ -44,6 +44,7 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 		image_count = support.capabilities.maxImageCount
 	}
 
+	queue_family_indices := [2]u32{r.graphics_family, r.present_family}
 	create_info := vk.SwapchainCreateInfoKHR{
 		sType            = .SWAPCHAIN_CREATE_INFO_KHR,
 		surface          = r.surface,
@@ -61,7 +62,7 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	if r.graphics_family != r.present_family {
 		create_info.imageSharingMode = .CONCURRENT
 		create_info.queueFamilyIndexCount = 2
-		create_info.pQueueFamilyIndices = raw_data([]u32{r.graphics_family, r.present_family})
+		create_info.pQueueFamilyIndices = &queue_family_indices[0]
 	} else {
 		create_info.imageSharingMode = .EXCLUSIVE
 	}
@@ -99,11 +100,6 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 		}
 	}
 
-	if !create_depth_resources(r) {
-		log.error("renderer: could not create depth resources")
-		return .Fatal
-	}
-
 	log.infof(
 		"renderer: swapchain %vx%v with %d images, format %v",
 		extent.width,
@@ -115,8 +111,6 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 }
 
 destroy_swapchain :: proc(r: ^Renderer) {
-	destroy_depth_resources(r)
-
 	if r.device != nil {
 		for view in r.swapchain_views {
 			if view != 0 {
@@ -139,12 +133,18 @@ destroy_swapchain :: proc(r: ^Renderer) {
 	}
 }
 
+srgb_gamma :: proc(r: ^Renderer) -> f32 {
+	return r.swapchain_is_srgb ? 0 : 1
+}
+
 recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	width, height := platform.pixel_size(r.window)
 	if width == 0 || height == 0 {
 		r.swapchain_dirty = true
 		return .Skipped
 	}
+
+	old_extent := r.swapchain_extent
 
 	if !check(vk.DeviceWaitIdle(r.device), "vkDeviceWaitIdle") {
 		return .Fatal
@@ -153,9 +153,21 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	if status := create_swapchain(r); status != .Ok {
 		return status
 	}
-	if r.scene.pipeline != 0 && r.scene.pipeline_format != r.swapchain_format {
-		destroy_pipeline_pair(r, &r.scene.pipeline, &r.scene.pipeline_layout)
-		if !create_pipeline(r) {
+
+	if r.swapchain_extent != old_extent {
+		if !create_taa_targets(r) {
+			log.error("renderer: could not recreate the TAA targets")
+			return .Fatal
+		}
+		if !write_taa_descriptors(r) {
+			log.error("renderer: could not rebind the TAA targets")
+			return .Fatal
+		}
+	}
+
+	if r.taa.pipeline_format != r.swapchain_format {
+		destroy_pipeline_pair(r, &r.taa.pipeline, &r.taa.pipeline_layout)
+		if !create_taa_pipeline(r) {
 			return .Fatal
 		}
 	}
@@ -168,43 +180,4 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	r.swapchain_dirty = false
 
 	return .Ok
-}
-
-create_depth_resources :: proc(r: ^Renderer) -> bool {
-	destroy_depth_resources(r)
-
-	image_count := len(r.swapchain_images)
-	if image_count == 0 {
-		log.error("renderer: cannot create depth resources without swapchain images")
-		return false
-	}
-
-	r.scene.depth = make([]Image, image_count, r.allocator)
-
-	for i in 0 ..< image_count {
-		image, ok := create_image(
-			r,
-			r.swapchain_extent.width,
-			r.swapchain_extent.height,
-			DEPTH_FORMAT,
-			{.DEPTH_STENCIL_ATTACHMENT},
-			{.DEPTH},
-		)
-		if !ok {
-			return false
-		}
-		r.scene.depth[i] = image
-	}
-
-	return true
-}
-
-destroy_depth_resources :: proc(r: ^Renderer) {
-	for &image in r.scene.depth {
-		destroy_image(r, &image)
-	}
-	if r.scene.depth != nil {
-		delete(r.scene.depth, r.allocator)
-		r.scene.depth = nil
-	}
 }

@@ -9,5 +9,5 @@ layout(location = 0) out vec4 out_color;
 #include "gamma.glsl"
 
 void main() {
-    out_color = vec4(apply_gamma(v_color.rgb, camera.gamma.x), v_color.a);
+    out_color = vec4(apply_gamma(v_color.rgb, camera.screen.x), v_color.a);
 }

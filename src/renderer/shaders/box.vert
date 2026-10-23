@@ -6,18 +6,30 @@ layout(location = 1) in vec3 in_normal;
 layout(location = 0) out vec3 v_normal;
 layout(location = 1) out vec3 v_color;
 layout(location = 2) out vec3 v_world_position;
+layout(location = 3) out vec3 v_local_position;
+
+struct ObjectData {
+    mat4 model;
+    mat4 prev_model;
+    vec4 color;
+};
 
 layout(push_constant) uniform PushConstants {
-    mat4 model;
-    vec4 color;
-} object;
+    uint object_index;
+} draw;
+
+layout(set = 0, binding = 2) readonly buffer Objects {
+    ObjectData objects[];
+} scene;
 
 #include "camera.glsl"
 
 void main() {
+    ObjectData object = scene.objects[draw.object_index];
     vec4 world_position = object.model * vec4(in_position, 1.0);
     gl_Position = camera.projection * camera.view * world_position;
     v_normal = mat3(object.model) * in_normal;
     v_color = object.color.rgb;
     v_world_position = world_position.xyz;
+    v_local_position = in_position;
 }
