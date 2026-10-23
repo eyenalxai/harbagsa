@@ -1,0 +1,12 @@
+{
+  "view": {"hud": false, "debug": false, "hint": false},
+  "steps": [
+    {"frames": 90, "forward": 1},
+    {"frames": 1, "jump": true},
+    {"frames": 30, "forward": 1}
+  ],
+  "capture": [0, 90, 121],
+  "checks": [
+    {"field": "crates.0.position.z", "op": "lt", "value": 7.5}
+  ]
+}
