@@ -80,8 +80,7 @@ run :: proc() -> bool {
 
 		width, height := platform.pixel_size(&window)
 		if platform.is_minimized(&window) || width == 0 || height == 0 {
-			// Do not spin while minimized or while the window has no drawable
-			// area. Block until an event or a short timeout, then try again.
+			// Block while minimized; do not spin.
 			waited := platform.wait_events(&window, 100)
 			if waited.quit {
 				return true
@@ -89,8 +88,7 @@ run :: proc() -> bool {
 			if waited.resized {
 				renderer.notify_resize(&state)
 			}
-			// Drop the time spent waiting so the first restored frame does
-			// not step the simulation for the whole pause.
+			// Drop the wait time so the first restored frame does not step the whole pause.
 			last_time = time.now()
 			continue
 		}
@@ -100,9 +98,8 @@ run :: proc() -> bool {
 		last_time = now
 		delta = clamp(delta, 0, MAX_FRAME_DELTA)
 
-		// Look and jump are frame edges. Look applies even when this frame
-		// runs no fixed step; jump is consumed by the first step. Both are
-		// player input, so both are ignored while the cursor is free.
+		// Look is per frame; jump is latched so a press survives a frame with
+		// no step. Both are ignored while the cursor is free.
 		if events.captured {
 			game.simulation_look(&sim, events.look_delta)
 		} else {
@@ -135,7 +132,7 @@ run :: proc() -> bool {
 			steps += 1
 		}
 		if steps == MAX_STEPS_PER_FRAME && accumulator >= game.SIMULATION_STEP {
-			// A long stall must not build a backlog that never drains.
+			// Drop a backlog that cannot drain.
 			accumulator = 0
 		}
 
@@ -195,17 +192,13 @@ run :: proc() -> bool {
 		switch renderer.end_frame(&state, frame) {
 		case .Ok:
 		case .Skipped:
-			// The swapchain is out of date. The next frame recreates it.
 		case .Fatal:
 			return false
 		}
 	}
 }
 
-// collect_debug_lines asks Box3D to report the physics world as line segments.
-// The pass draws each shape's fat AABB and each contact point; it does not draw
-// the full shape outline, so the capsule and hull silhouettes are approximated
-// by their bounds.
+// Draws bounds and contacts, not exact shape outlines.
 collect_debug_lines :: proc(sim: ^game.Simulation, collector: ^Debug_Lines) {
 	collector.count = 0
 	if !game.simulation_is_valid(sim) {
