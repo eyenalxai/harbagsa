@@ -37,6 +37,8 @@ Error :: enum {
 	Create_Device,
 	Create_Swapchain,
 	Create_Frames,
+	Create_Scene,
+	Create_Pipeline,
 }
 
 // Frame_Status tells the main loop what to do with the frame it just started.
@@ -70,6 +72,7 @@ Renderer :: struct {
 	debug_messenger: vk.DebugUtilsMessengerEXT,
 	surface:         vk.SurfaceKHR,
 	physical_device: vk.PhysicalDevice,
+	memory_properties: vk.PhysicalDeviceMemoryProperties,
 	device:          vk.Device,
 	graphics_queue:  vk.Queue,
 	present_queue:   vk.Queue,
@@ -91,6 +94,8 @@ Renderer :: struct {
 	in_flight:       [MAX_FRAMES_IN_FLIGHT]vk.Fence,
 	frame_index:     int,
 	clear_color:     [4]f32,
+
+	scene: Scene,
 }
 
 // The validation callback runs outside the normal call stack, so it needs the
@@ -114,6 +119,10 @@ init :: proc(window: ^platform.Window, allocator: mem.Allocator) -> (r: Renderer
 		deinit(&r)
 		return
 	}
+	if err = init_scene(&r); err != .None {
+		deinit(&r)
+		return
+	}
 
 	return r, .None
 }
@@ -123,6 +132,7 @@ deinit :: proc(r: ^Renderer) {
 		_ = vk.DeviceWaitIdle(r.device)
 	}
 
+	destroy_scene(r)
 	destroy_swapchain(r)
 
 	if r.device != nil {
@@ -209,7 +219,7 @@ begin_frame :: proc(r: ^Renderer) -> (frame: Frame, status: Frame_Status) {
 	if !check(vk.ResetCommandBuffer(command_buffer, {}), "vkResetCommandBuffer") {
 		return {}, .Fatal
 	}
-	if !record_clear(r, command_buffer, image_index) {
+	if !record_scene(r, command_buffer, image_index) {
 		return {}, .Fatal
 	}
 
@@ -457,6 +467,7 @@ select_physical_device :: proc(r: ^Renderer) -> Error {
 		log.error("renderer: no device supports graphics, present, swapchains, and dynamic rendering")
 		return .No_Suitable_Device
 	}
+	vk.GetPhysicalDeviceMemoryProperties(r.physical_device, &r.memory_properties)
 	return .None
 }
 
@@ -651,6 +662,11 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 		}
 	}
 
+	if !create_depth_resources(r) {
+		log.error("renderer: could not create depth resources")
+		return .Fatal
+	}
+
 	log.infof(
 		"renderer: swapchain %vx%v with %d images, format %v",
 		extent.width,
@@ -662,6 +678,8 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 }
 
 destroy_swapchain :: proc(r: ^Renderer) {
+	destroy_depth_resources(r)
+
 	if r.device != nil {
 		for view in r.swapchain_views {
 			if view != 0 {
@@ -701,84 +719,6 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	r.swapchain_dirty = false
 
 	return .Ok
-}
-
-record_clear :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image_index: u32) -> bool {
-	begin_info := vk.CommandBufferBeginInfo {
-		sType = .COMMAND_BUFFER_BEGIN_INFO,
-		flags = {.ONE_TIME_SUBMIT},
-	}
-	if !check(vk.BeginCommandBuffer(command_buffer, &begin_info), "vkBeginCommandBuffer") {
-		return false
-	}
-
-	to_color := vk.ImageMemoryBarrier{
-		sType               = .IMAGE_MEMORY_BARRIER,
-		dstAccessMask       = {.COLOR_ATTACHMENT_WRITE},
-		oldLayout           = .UNDEFINED,
-		newLayout           = .COLOR_ATTACHMENT_OPTIMAL,
-		srcQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
-		dstQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
-		image               = r.swapchain_images[image_index],
-		subresourceRange    = COLOR_SUBRESOURCE,
-	}
-	vk.CmdPipelineBarrier(
-		command_buffer,
-		{.TOP_OF_PIPE},
-		{.COLOR_ATTACHMENT_OUTPUT},
-		{},
-		0,
-		nil,
-		0,
-		nil,
-		1,
-		&to_color,
-	)
-
-	clear_value := vk.ClearValue{}
-	clear_value.color.float32 = r.clear_color
-	color_attachment := vk.RenderingAttachmentInfo{
-		sType       = .RENDERING_ATTACHMENT_INFO,
-		imageView   = r.swapchain_views[image_index],
-		imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
-		loadOp      = .CLEAR,
-		storeOp     = .STORE,
-		clearValue  = clear_value,
-	}
-	rendering_info := vk.RenderingInfo{
-		sType                = .RENDERING_INFO,
-		renderArea           = {extent = r.swapchain_extent},
-		layerCount           = 1,
-		colorAttachmentCount = 1,
-		pColorAttachments    = &color_attachment,
-	}
-	vk.CmdBeginRendering(command_buffer, &rendering_info)
-	vk.CmdEndRendering(command_buffer)
-
-	to_present := vk.ImageMemoryBarrier{
-		sType               = .IMAGE_MEMORY_BARRIER,
-		srcAccessMask       = {.COLOR_ATTACHMENT_WRITE},
-		oldLayout           = .COLOR_ATTACHMENT_OPTIMAL,
-		newLayout           = .PRESENT_SRC_KHR,
-		srcQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
-		dstQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
-		image               = r.swapchain_images[image_index],
-		subresourceRange    = COLOR_SUBRESOURCE,
-	}
-	vk.CmdPipelineBarrier(
-		command_buffer,
-		{.COLOR_ATTACHMENT_OUTPUT},
-		{.BOTTOM_OF_PIPE},
-		{},
-		0,
-		nil,
-		0,
-		nil,
-		1,
-		&to_present,
-	)
-
-	return check(vk.EndCommandBuffer(command_buffer), "vkEndCommandBuffer")
 }
 
 find_queue_families :: proc(
