@@ -2,6 +2,12 @@
 
 An Odin project. Build, check, and test commands live in `README.md`.
 
+## Code changes
+
+Backwards compatibility does not matter. Rip and tear if needed. Refactor anything you need; you have free rein over the code. Focus on long-term maintenance. Do not write duplicated code. Re-use existing code when possible.
+
+All new commits must be written in conventional commit style.
+
 ## Agent skills
 
 ### Issue tracker
