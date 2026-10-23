@@ -34,8 +34,16 @@ create_graphics_pipeline :: proc(
 	pipeline: ^vk.Pipeline,
 	layout: ^vk.PipelineLayout,
 ) -> bool {
-	if len(desc.color_formats) == 0 || len(desc.color_formats) > GRAPHICS_PIPELINE_MAX_COLOR_ATTACHMENTS {
-		log.errorf("renderer: %s pipeline needs one or two color formats", desc.name)
+	if len(desc.color_formats) > GRAPHICS_PIPELINE_MAX_COLOR_ATTACHMENTS {
+		log.errorf("renderer: %s pipeline has too many color formats", desc.name)
+		return false
+	}
+	if len(desc.color_formats) == 0 && desc.depth_format == .UNDEFINED {
+		log.errorf("renderer: %s pipeline needs a color or depth attachment", desc.name)
+		return false
+	}
+	if len(desc.fragment_spirv) == 0 && len(desc.color_formats) > 0 {
+		log.errorf("renderer: %s pipeline has color attachments but no fragment shader", desc.name)
 		return false
 	}
 	if !desc.dynamic_viewport && (desc.viewport.width <= 0 || desc.viewport.height <= 0) {
@@ -52,14 +60,20 @@ create_graphics_pipeline :: proc(
 	if !vertex_ok {
 		return false
 	}
-	fragment_module, fragment_ok := create_shader_module(r, desc.fragment_spirv, desc.name)
-	if !fragment_ok {
-		vk.DestroyShaderModule(r.device, vertex_module, nil)
-		return false
+	fragment_module: vk.ShaderModule
+	if len(desc.fragment_spirv) > 0 {
+		fragment_ok: bool
+		fragment_module, fragment_ok = create_shader_module(r, desc.fragment_spirv, desc.name)
+		if !fragment_ok {
+			vk.DestroyShaderModule(r.device, vertex_module, nil)
+			return false
+		}
 	}
 	defer {
 		vk.DestroyShaderModule(r.device, vertex_module, nil)
-		vk.DestroyShaderModule(r.device, fragment_module, nil)
+		if fragment_module != 0 {
+			vk.DestroyShaderModule(r.device, fragment_module, nil)
+		}
 	}
 
 	created := false
@@ -84,19 +98,22 @@ create_graphics_pipeline :: proc(
 		return false
 	}
 
-	stages := [2]vk.PipelineShaderStageCreateInfo {
-		{
-			sType = .PIPELINE_SHADER_STAGE_CREATE_INFO,
-			stage = {.VERTEX},
-			module = vertex_module,
-			pName = "main",
-		},
-		{
+	stages: [2]vk.PipelineShaderStageCreateInfo
+	stages[0] = {
+		sType = .PIPELINE_SHADER_STAGE_CREATE_INFO,
+		stage = {.VERTEX},
+		module = vertex_module,
+		pName = "main",
+	}
+	stage_count: u32 = 1
+	if fragment_module != 0 {
+		stages[1] = {
 			sType = .PIPELINE_SHADER_STAGE_CREATE_INFO,
 			stage = {.FRAGMENT},
 			module = fragment_module,
 			pName = "main",
-		},
+		}
+		stage_count = 2
 	}
 
 	binding: vk.VertexInputBindingDescription
@@ -177,21 +194,25 @@ create_graphics_pipeline :: proc(
 	color_blend := vk.PipelineColorBlendStateCreateInfo {
 		sType           = .PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
 		attachmentCount = u32(len(desc.color_formats)),
-		pAttachments    = &color_attachments[0],
+	}
+	if len(desc.color_formats) > 0 {
+		color_blend.pAttachments = &color_attachments[0]
 	}
 
 	rendering_info := vk.PipelineRenderingCreateInfo {
 		sType                   = .PIPELINE_RENDERING_CREATE_INFO,
 		colorAttachmentCount    = u32(len(desc.color_formats)),
-		pColorAttachmentFormats = raw_data(desc.color_formats),
 		depthAttachmentFormat   = desc.depth_format,
 		stencilAttachmentFormat = .UNDEFINED,
+	}
+	if len(desc.color_formats) > 0 {
+		rendering_info.pColorAttachmentFormats = raw_data(desc.color_formats)
 	}
 
 	pipeline_info := vk.GraphicsPipelineCreateInfo {
 		sType               = .GRAPHICS_PIPELINE_CREATE_INFO,
 		pNext               = &rendering_info,
-		stageCount          = u32(len(stages)),
+		stageCount          = stage_count,
 		pStages             = &stages[0],
 		pVertexInputState   = &vertex_input,
 		pInputAssemblyState = &input_assembly,

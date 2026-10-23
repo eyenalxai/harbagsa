@@ -2,7 +2,8 @@
 
 A first-person walking demo. The player walks, looks, and jumps in a fixed
 arena with pushable crates. SDL3 provides the window and input, raw Vulkan 1.3
-draws the scene, and Box3D runs the physics.
+draws the scene, and Box3D runs the physics. A fixed directional sun casts soft
+shadows from the walls and crates.
 
 ## Requirements
 
@@ -75,7 +76,8 @@ make test
 ```
 
 `make check` runs the strict compiler checks on the main program and every
-library package. `make test` runs the physics and simulation tests headless.
+library package. `make test` runs the physics, simulation, and renderer math
+tests headless.
 
 New source files start with `#+vet explicit-allocators`, which rejects calls
 that silently use `context.allocator` or `context.temp_allocator`.
