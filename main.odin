@@ -163,6 +163,7 @@ run :: proc() -> bool {
 						prone_held = events.prone_held,
 						prone_pressed = latches.prone,
 						jump_pressed = latches.jump,
+						jump_held = events.jump_held,
 					},
 					game.SIMULATION_STEP,
 				)

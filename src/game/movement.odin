@@ -25,6 +25,7 @@ launch_jump :: proc(player: ^Player) {
 	player.grounded = false
 	player.coyote = 0.0
 	player.jump_buffer = 0.0
+	player.step_grace = 0.0
 }
 
 @(private)
