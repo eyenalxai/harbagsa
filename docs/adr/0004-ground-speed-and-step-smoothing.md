@@ -34,5 +34,8 @@ smooth. The offset never changes the player position.
 - Step-up ignores walkable ramps; they are climbed by the slope controller.
 - Step smoothing is visual only. A large fall is not smoothed, so a jump and a
   fall keep their direct vertical motion.
+- A step-down can free-fall for a few frames before the ground probe finds the
+  next tread. The camera offset hides the drop, but the capsule is not glued to
+  the stair. A dedicated step-down snap is future work.
 - The step probe uses capsule casts and a downward ray. A Box3D upgrade can
   change the mover behavior; the simulation tests gate it.
