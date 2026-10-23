@@ -40,6 +40,22 @@ _Avoid_: Map, level
 A dynamic box that the player can push.
 _Avoid_: Prop, box
 
+**Spawn**:
+The point where the player starts and returns after a reset.
+_Avoid_: Start, origin
+
+**Simulation**:
+The headless fixed-step update that owns the world and the player state.
+_Avoid_: Game loop, engine
+
+**Input snapshot**:
+One frame of player intent: movement axes, look delta, jump, and reset.
+_Avoid_: Input state, controls
+
+**Render snapshot**:
+The interpolatable view of the player after a simulation step.
+_Avoid_: Frame state, view state
+
 **Cursor capture**:
 The state where the mouse controls the camera and the pointer is hidden.
 _Avoid_: Mouse lock
