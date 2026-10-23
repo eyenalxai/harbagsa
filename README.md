@@ -3,8 +3,9 @@
 A first-person movement demo. The player walks, sprints, crouches, crawls,
 jumps, dives, slides, and mantles in a fixed arena with stairs, ramps, tunnels,
 mantle walls, a dive platform, and pushable crates. SDL3 provides the window and
-input, raw Vulkan 1.3 draws the scene, and Box3D runs the physics. A fixed
-directional sun casts soft shadows from the walls and crates.
+input, raw Vulkan 1.3 draws the scene, and Box3D runs the physics. A
+directional sun casts hard contact shadows and softer distant shadows from the
+walls and crates.
 
 ## Requirements
 

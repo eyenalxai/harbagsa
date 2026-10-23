@@ -25,32 +25,73 @@ layout(set = 0, binding = 2) readonly buffer Objects {
 #include "camera.glsl"
 
 layout(set = 0, binding = 1) uniform sampler2DShadow shadow_map;
+layout(set = 0, binding = 3) uniform sampler2D shadow_depth;
 
 const vec3 SUN_COLOR = vec3(1.0, 0.98, 0.94);
-const float SHADOW_NORMAL_OFFSET = 0.04;
-const float SHADOW_DEPTH_BIAS = 0.0006;
+const float SHADOW_NORMAL_OFFSET = 0.02;
+const float SHADOW_DEPTH_BIAS = 0.0003;
+const float SHADOW_SLOPE_BIAS = 0.0015;
+const int BLOCKER_SAMPLES = 24;
+const int PCF_SAMPLES = 32;
+const float BLOCKER_SEARCH_TEXELS = 16.0;
+const float MIN_PENUMBRA_TEXELS = 0.75;
+const float MAX_PENUMBRA_TEXELS = 16.0;
+const float GOLDEN_ANGLE = 2.39996323;
+
+vec2 vogel_disk(int index, int count, float phase) {
+    float radius = sqrt((float(index) + 0.5) / float(count));
+    float angle = float(index) * GOLDEN_ANGLE + phase;
+    return radius * vec2(cos(angle), sin(angle));
+}
+
+float interleaved_gradient_noise(vec2 pixel) {
+    return fract(52.9829189 * fract(dot(pixel, vec2(0.06711056, 0.00583715))));
+}
 
 float sun_visibility(vec3 world_position, vec3 normal, vec3 to_light) {
     vec4 light_position = camera.light_view_projection *
         vec4(world_position + normal * SHADOW_NORMAL_OFFSET, 1.0);
     vec3 projected = light_position.xyz / light_position.w;
-    vec3 uv = projected * 0.5 + 0.5;
-    if (any(lessThan(uv, vec3(0.0))) || any(greaterThan(uv, vec3(1.0)))) {
+    vec2 uv = projected.xy * 0.5 + 0.5;
+    if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) {
         return 1.0;
     }
 
-    float bias = max(SHADOW_DEPTH_BIAS, 0.003 * (1.0 - dot(normal, to_light)));
-    vec2 texel = 1.0 / vec2(textureSize(shadow_map, 0));
-    float visibility = 0.0;
-    for (int x = -1; x <= 1; x++) {
-        for (int y = -1; y <= 1; y++) {
-            visibility += texture(
-                shadow_map,
-                vec3(uv.xy + vec2(x, y) * texel, projected.z - bias)
-            );
+    float bias = max(SHADOW_DEPTH_BIAS, SHADOW_SLOPE_BIAS * (1.0 - dot(normal, to_light)));
+    float receiver_depth = projected.z - bias;
+    vec2 texel = 1.0 / vec2(textureSize(shadow_depth, 0));
+    float phase = interleaved_gradient_noise(gl_FragCoord.xy) * 6.2831853;
+
+    float search_radius = BLOCKER_SEARCH_TEXELS * texel.x;
+    float blocker_depth = 0.0;
+    int blocker_count = 0;
+    for (int i = 0; i < BLOCKER_SAMPLES; ++i) {
+        vec2 offset = vogel_disk(i, BLOCKER_SAMPLES, phase) * search_radius;
+        float depth = texture(shadow_depth, uv + offset).r;
+        if (depth < receiver_depth) {
+            blocker_depth += depth;
+            blocker_count += 1;
         }
     }
-    return visibility / 9.0;
+    if (blocker_count == 0) {
+        return 1.0;
+    }
+    blocker_depth /= float(blocker_count);
+
+    float penumbra_uv = max(projected.z - blocker_depth, 0.0) * camera.shadow_params.x;
+    float penumbra_texels = clamp(
+        penumbra_uv * float(textureSize(shadow_depth, 0).x),
+        MIN_PENUMBRA_TEXELS,
+        MAX_PENUMBRA_TEXELS
+    );
+    float radius = penumbra_texels * texel.x;
+
+    float visibility = 0.0;
+    for (int i = 0; i < PCF_SAMPLES; ++i) {
+        vec2 offset = vogel_disk(i, PCF_SAMPLES, phase + 1.7) * radius;
+        visibility += texture(shadow_map, vec3(uv + offset, receiver_depth));
+    }
+    return visibility / float(PCF_SAMPLES);
 }
 
 void main() {
