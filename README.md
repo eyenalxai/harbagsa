@@ -37,6 +37,7 @@ into the binary.
 - `Shift+R`: reset the crates, the sun, and the player.
 - `F1`: toggle the debug draw.
 - `F2`: toggle debug mode.
+- `F3`: toggle temporal anti-aliasing (TAA). TAA is on by default.
 - `Esc`: release the cursor capture.
 
 ### Debug mode
