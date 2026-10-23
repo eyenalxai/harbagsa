@@ -22,6 +22,6 @@ layout(set = 0, binding = 0) uniform Camera {
 void main() {
     vec4 world_position = object.model * vec4(in_position, 1.0);
     gl_Position = camera.projection * camera.view * world_position;
-    v_normal = in_normal;
+    v_normal = mat3(object.model) * in_normal;
     v_color = object.color.rgb;
 }
