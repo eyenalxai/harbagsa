@@ -16,6 +16,7 @@ Camera_Uniform :: struct {
 	ambient:               [4]f32,
 	screen:                [4]f32,
 	light_view_projection: Mat4,
+	jitter:                [4]f32,
 }
 
 // The shadow pipeline uses the model and color push constants. The TAA scene
@@ -35,10 +36,16 @@ Object_Index :: struct {
 	index: u32,
 }
 
-#assert(size_of(Camera_Uniform) == 304)
+TAA_Params :: struct {
+	gamma:  f32,
+	weight: f32,
+}
+
+#assert(size_of(Camera_Uniform) == 320)
 #assert(size_of(Push_Constants) == 80)
 #assert(size_of(Object_Data) == 144)
 #assert(size_of(Object_Index) == 4)
+#assert(size_of(TAA_Params) == 8)
 
 CAMERA_BINDING :: 0
 SHADOW_MAP_BINDING :: 1
