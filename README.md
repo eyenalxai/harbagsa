@@ -69,7 +69,8 @@ It also shows the control list. The window is resizable.
 ## Agent harness
 
 `bin/harbagsa-agent` drives the simulation and writes screenshots without a
-window or compositor. `make build` builds it next to the game.
+window or compositor. `make build` builds it next to the game. Agent-specific
+operational notes are in `docs/agents/harness.md`.
 
 ### Run a scenario
 

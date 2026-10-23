@@ -31,3 +31,10 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 ### References
 
 External API and language references: see `docs/agents/references.md`.
+
+### Automation
+
+Use `bin/harbagsa-agent` to drive the simulation, run checks, and take
+screenshots. It is separate from the game and needs no window or compositor.
+See `docs/agents/harness.md` for the scenario format, commands, run layout, and
+determinism rules.
