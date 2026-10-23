@@ -19,13 +19,20 @@ Window :: struct {
 	handle: ^sdl3.Window,
 }
 
-// jump, reset, debug, and the editor actions are key-down edges so a held key
-// does not repeat. The fly axes and the wheel are polled while captured.
+// jump, reset, debug, the stance edges, and the editor actions are key-down
+// edges so a held key does not repeat. The fly axes, movement keys, and the
+// wheel are polled while captured.
 Events :: struct {
 	quit:                bool,
 	resized:             bool,
 	move_forward:        f32,
 	move_right:          f32,
+	sprint_held:         bool,
+	sprint_pressed:      bool,
+	crouch_held:         bool,
+	crouch_pressed:      bool,
+	prone_held:          bool,
+	prone_pressed:       bool,
 	look_delta:          [2]f32,
 	wheel_delta:         f32,
 	jump_pressed:        bool,
@@ -146,6 +153,9 @@ read_movement :: proc(events: ^Events) {
 	if keys[int(sdl3.Scancode.A)] {
 		events.move_right -= 1.0
 	}
+	events.sprint_held = keys[int(sdl3.Scancode.LSHIFT)]
+	events.crouch_held = keys[int(sdl3.Scancode.C)]
+	events.prone_held = keys[int(sdl3.Scancode.Z)]
 	if keys[int(sdl3.Scancode.SPACE)] {
 		events.fly_up = true
 	}
@@ -204,6 +214,12 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 			}
 		case .SPACE:
 			events.jump_pressed = true
+		case .LSHIFT:
+			events.sprint_pressed = true
+		case .C:
+			events.crouch_pressed = true
+		case .Z:
+			events.prone_pressed = true
 		case .R:
 			if .LSHIFT in event.key.mod || .RSHIFT in event.key.mod {
 				events.reset_scene_pressed = true
