@@ -3,3 +3,4 @@ build/
 vendor/box3d/lib/
 *.exe
 *.pdb
+*.spv
