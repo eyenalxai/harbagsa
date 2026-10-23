@@ -23,77 +23,31 @@ try_mantle :: proc(sim: ^Simulation, input: Input_Snapshot) -> bool {
 
 	direction := intent_direction(player, input)
 	start := player.position
-	capsule := player_capsule(player.stance)
-	forward_distance: f32 = PLAYER_RADIUS + MANTLE_REACH
+	path := Ledge_Path {
+		forward_distance = PLAYER_RADIUS + MANTLE_REACH,
+		up_distance = MANTLE_MAX_HEIGHT + 0.1,
+		across_scale = 1.0,
+		min_across = MANTLE_ACROSS_DISTANCE,
+		down_distance = MANTLE_MAX_HEIGHT + MANTLE_DOWN_EXTRA,
+	}
 
-	forward_fraction := b3.World_CastMover(
+	ray := b3.World_CastRayClosest(
 		sim.world_id,
-		start,
-		capsule,
-		direction * forward_distance,
+		start + b3.Vec3{0.0, 0.1, 0.0},
+		direction * path.forward_distance,
 		b3.DefaultQueryFilter(),
-		nil,
-		nil,
 	)
-	if forward_fraction >= 1.0 {
+	if !ray.hit || b3.Dot(ray.normal, direction) > -0.1 {
 		return false
 	}
 
-	up_distance: f32 = MANTLE_MAX_HEIGHT + 0.1
-	up_fraction := b3.World_CastMover(
-		sim.world_id,
-		start,
-		capsule,
-		b3.Vec3{0.0, up_distance, 0.0},
-		b3.DefaultQueryFilter(),
-		nil,
-		nil,
-	)
-	if up_fraction < 0.99 {
+	ledge, ok := probe_ledge(sim, start, direction, path)
+	if !ok {
 		return false
 	}
 
-	lifted := start + b3.Vec3{0.0, up_distance * up_fraction, 0.0}
-	across_distance: f32 = max(
-		f32(MANTLE_ACROSS_DISTANCE),
-		forward_distance * (1.0 - forward_fraction) + PLAYER_RADIUS,
-	)
-	across_fraction := b3.World_CastMover(
-		sim.world_id,
-		lifted,
-		capsule,
-		direction * across_distance,
-		b3.DefaultQueryFilter(),
-		nil,
-		nil,
-	)
-	if across_fraction < 0.01 {
-		return false
-	}
-
-	across := lifted + direction * (across_distance * across_fraction)
-	down_distance: f32 = MANTLE_MAX_HEIGHT + MANTLE_DOWN_EXTRA
-	down_fraction := b3.World_CastMover(
-		sim.world_id,
-		across,
-		capsule,
-		b3.Vec3{0.0, -down_distance, 0.0},
-		b3.DefaultQueryFilter(),
-		nil,
-		nil,
-	)
-	if down_fraction >= 1.0 {
-		return false
-	}
-
-	candidate := across + b3.Vec3{0.0, -down_distance * down_fraction, 0.0}
-	probe := probe_ground_at(sim, candidate, down_distance)
-	if !probe.hit || probe.normal.y < GROUND_NORMAL_THRESHOLD {
-		return false
-	}
-
-	clearance := slope_clearance(probe.normal)
-	target := candidate + b3.Vec3{0.0, clearance + GROUND_OFFSET, 0.0}
+	clearance := slope_clearance(ledge.ground.normal)
+	target := ledge.candidate + b3.Vec3{0.0, clearance + GROUND_OFFSET, 0.0}
 	height := target.y - start.y
 	if height < MANTLE_MIN_HEIGHT || height > MANTLE_MAX_HEIGHT {
 		return false
@@ -109,7 +63,7 @@ try_mantle :: proc(sim: ^Simulation, input: Input_Snapshot) -> bool {
 		return false
 	}
 
-	body_id := b3.Shape_GetBody(probe.shape_id)
+	body_id := b3.Shape_GetBody(ledge.ground.shape_id)
 	is_dynamic := b3.Body_IsValid(body_id) && b3.Body_GetType(body_id) == .dynamicBody
 
 	player.mantle.start = start
@@ -119,14 +73,14 @@ try_mantle :: proc(sim: ^Simulation, input: Input_Snapshot) -> bool {
 	player.mantle.has_body = is_dynamic
 	player.mantle.body = body_id
 	if is_dynamic {
-		player.mantle.local_target = b3.Body_GetLocalPoint(body_id, candidate)
+		player.mantle.local_target = b3.Body_GetLocalPoint(body_id, ledge.candidate)
 	}
 
 	player.movement_state = .Mantling
-	player.stance = target_stance
 	if target_stance == .Standing {
-		player.crouch_engaged = false
-		player.prone_engaged = false
+		commit_stance(player, .Standing)
+	} else {
+		player.stance = .Crouching
 	}
 	player.velocity = {}
 	player.grounded = false

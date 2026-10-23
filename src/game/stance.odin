@@ -23,7 +23,7 @@ headroom_overlap :: proc "c" (shape_id: b3.ShapeId, ctx: rawptr) -> bool {
 
 // Headroom is a ceiling check, not a full-capsule overlap. A step or a crate
 // beside the feet touches the capsule but does not block a taller stance. A
-// shape whose lower bound starts above the step height is a ceiling.
+// shape whose lower bound starts above the floor margin is a ceiling.
 has_headroom :: proc(sim: ^Simulation, feet: b3.Vec3, stance: Stance) -> bool {
 	height := stance_height(stance)
 	points: [2]b3.Vec3
@@ -66,6 +66,13 @@ choose_stance :: proc(requested: Stance, standing_fits, crouching_fits: bool) ->
 		return .Prone
 	}
 	return .Standing
+}
+
+@(private)
+commit_stance :: proc(player: ^Player, stance: Stance) {
+	player.stance = stance
+	player.crouch_engaged = stance == .Crouching
+	player.prone_engaged = stance == .Prone
 }
 
 stance_request :: proc(player: ^Player) -> Stance {

@@ -18,12 +18,9 @@ try_crouch_slide :: proc(sim: ^Simulation, input: Input_Snapshot) -> bool {
 	player.slide_direction = direction
 	player.slide_speed = PLAYER_CROUCH_SLIDE_SPEED
 	player.slide_elapsed = 0.0
-	player.velocity.x = direction.x * PLAYER_CROUCH_SLIDE_SPEED
-	player.velocity.z = direction.z * PLAYER_CROUCH_SLIDE_SPEED
+	set_slide_velocity(player, direction, PLAYER_CROUCH_SLIDE_SPEED)
 	player.velocity.y = 0.0
-	player.crouch_engaged = true
-	player.prone_engaged = false
-	player.stance = .Crouching
+	commit_stance(player, .Crouching)
 	player.jump_buffer = 0.0
 	return true
 }
@@ -44,9 +41,7 @@ try_crouch_slide_jump :: proc(sim: ^Simulation, input: Input_Snapshot) {
 		return
 	}
 
-	player.stance = .Standing
-	player.crouch_engaged = false
-	player.prone_engaged = false
+	commit_stance(player, .Standing)
 	player.movement_state = .None
 	launch_jump(player)
 }
@@ -62,12 +57,14 @@ update_crouch_slide :: proc(sim: ^Simulation, time_step: f32) {
 		return
 	}
 
-	player.slide_speed = decay_slide_speed(player.slide_speed, PLAYER_CROUCH_SPEED, time_step)
-	player.velocity.x = player.slide_direction.x * player.slide_speed
-	player.velocity.z = player.slide_direction.z * player.slide_speed
+	player.slide_speed = advance_slide(
+		player,
+		player.slide_direction,
+		PLAYER_CROUCH_SPEED,
+		time_step,
+	)
 	if player.slide_speed <= PLAYER_CROUCH_SPEED + PLAYER_SLIDE_END_EPSILON {
 		player.movement_state = .None
-		player.velocity.x = player.slide_direction.x * PLAYER_CROUCH_SPEED
-		player.velocity.z = player.slide_direction.z * PLAYER_CROUCH_SPEED
+		set_slide_velocity(player, player.slide_direction, PLAYER_CROUCH_SPEED)
 	}
 }
