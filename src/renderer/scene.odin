@@ -93,7 +93,7 @@ destroy_scene :: proc(r: ^Renderer) {
 }
 
 update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> bool {
-	extent := r.taa.targets_extent
+	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
 	height := f32(extent.height)
 	if height <= 0 {
 		log.error("renderer: cannot build a projection for a zero-height target")

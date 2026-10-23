@@ -2,6 +2,7 @@ bin/
 build/
 vendor/box3d/lib/
 .make/
+runs/
 *.exe
 *.pdb
 *.spv
