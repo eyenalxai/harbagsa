@@ -3,14 +3,28 @@
 layout(location = 0) in vec3 v_normal;
 layout(location = 1) in vec3 v_color;
 layout(location = 2) in vec3 v_world_position;
+layout(location = 3) in vec3 v_local_position;
 
 layout(location = 0) out vec4 out_color;
+layout(location = 1) out vec4 out_velocity;
+
+struct ObjectData {
+    mat4 model;
+    mat4 prev_model;
+    vec4 color;
+};
+
+layout(push_constant) uniform PushConstants {
+    uint object_index;
+} draw;
+
+layout(set = 0, binding = 2) readonly buffer Objects {
+    ObjectData objects[];
+} scene;
 
 #include "camera.glsl"
 
 layout(set = 0, binding = 1) uniform sampler2DShadow shadow_map;
-
-#include "gamma.glsl"
 
 const vec3 SUN_COLOR = vec3(1.0, 0.98, 0.94);
 const float SHADOW_NORMAL_OFFSET = 0.04;
@@ -40,12 +54,24 @@ float sun_visibility(vec3 world_position, vec3 normal, vec3 to_light) {
 }
 
 void main() {
+    ObjectData object = scene.objects[draw.object_index];
+
     vec3 normal = normalize(v_normal);
     vec3 to_light = normalize(-camera.light_direction.xyz);
     float diffuse = max(dot(normal, to_light), 0.0);
     float visibility = sun_visibility(v_world_position, normal, to_light);
-
     vec3 color = v_color * (camera.ambient.rgb + diffuse * SUN_COLOR * visibility);
 
-    out_color = vec4(apply_gamma(color, camera.gamma.x), 1.0);
+    vec4 world_position = vec4(v_world_position, 1.0);
+    vec4 previous_world = object.prev_model * vec4(v_local_position, 1.0);
+    vec4 previous_clip = camera.prev_view_projection * previous_world;
+    vec2 previous_uv = vec2(2.0);
+    if (previous_clip.w > 0.0) {
+        previous_uv = (previous_clip.xy / previous_clip.w) * 0.5 + 0.5;
+    }
+    vec2 pixel_uv = gl_FragCoord.xy / camera.screen.yz;
+    float view_depth = -(camera.view * world_position).z;
+
+    out_color = vec4(color, 1.0);
+    out_velocity = vec4(previous_uv - pixel_uv, view_depth, 0.0);
 }

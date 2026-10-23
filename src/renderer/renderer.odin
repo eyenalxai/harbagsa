@@ -5,7 +5,6 @@ import "base:runtime"
 import "core:log"
 import "core:mem"
 
-import "src:geometry"
 import "src:platform"
 import vk "vendor:vulkan"
 
@@ -30,19 +29,9 @@ Error :: enum {
 	Create_Frames,
 	Create_Scene,
 	Create_Shadow,
+	Create_TAA,
 	Create_Overlay,
 	Create_Pipeline,
-}
-
-Frame_Status :: enum {
-	Ok,
-	Skipped,
-	Fatal,
-}
-
-Frame :: struct {
-	image_index:    u32,
-	command_buffer: vk.CommandBuffer,
 }
 
 Renderer :: struct {
@@ -75,8 +64,9 @@ Renderer :: struct {
 	frame_index:     int,
 	clear_color:     [4]f32,
 
-	scene: Scene,
-	shadow: Shadow,
+	scene:   Scene,
+	shadow:  Shadow,
+	taa:     TAA,
 	overlay: Overlay,
 }
 
@@ -105,6 +95,10 @@ init :: proc(window: ^platform.Window, allocator: mem.Allocator) -> (r: Renderer
 		deinit(&r)
 		return
 	}
+	if err = init_taa(&r); err != .None {
+		deinit(&r)
+		return
+	}
 	if err = init_overlay(&r); err != .None {
 		deinit(&r)
 		return
@@ -119,6 +113,7 @@ deinit :: proc(r: ^Renderer) {
 	}
 
 	destroy_overlay(r)
+	destroy_taa(r)
 	destroy_scene(r)
 	destroy_swapchain(r)
 
@@ -177,117 +172,6 @@ destroy_pipeline_pair :: proc(r: ^Renderer, pipeline: ^vk.Pipeline, layout: ^vk.
 // The platform sends this on resize, so the renderer does not compare sizes every frame.
 notify_resize :: proc(r: ^Renderer) {
 	r.swapchain_dirty = true
-}
-
-begin_frame :: proc(
-	r: ^Renderer,
-	camera: Camera,
-	light_direction: [3]f32,
-	boxes: []geometry.Box,
-	debug_lines: []geometry.Line,
-	hud: HUD_Frame,
-) -> (
-	frame: Frame,
-	status: Frame_Status,
-) {
-	width, height := platform.pixel_size(r.window)
-	if width == 0 || height == 0 {
-		return {}, .Skipped
-	}
-
-	if r.swapchain_dirty {
-		status = recreate_swapchain(r)
-		if status != .Ok {
-			return {}, status
-		}
-	}
-
-	if !check(vk.WaitForFences(r.device, 1, &r.in_flight[r.frame_index], true, max(u64)), "vkWaitForFences") {
-		return {}, .Fatal
-	}
-
-	image_index: u32
-	acquire := vk.AcquireNextImageKHR(
-		r.device,
-		r.swapchain,
-		max(u64),
-		r.image_available[r.frame_index],
-		0,
-		&image_index,
-	)
-	#partial switch acquire {
-	case .SUCCESS:
-	case .SUBOPTIMAL_KHR:
-		r.swapchain_dirty = true
-	case .ERROR_OUT_OF_DATE_KHR:
-		r.swapchain_dirty = true
-		return {}, .Skipped
-	case:
-		log.errorf("renderer: vkAcquireNextImageKHR failed: %v", acquire)
-		return {}, .Fatal
-	}
-
-	if !check(vk.ResetFences(r.device, 1, &r.in_flight[r.frame_index]), "vkResetFences") {
-		return {}, .Fatal
-	}
-
-	command_buffer := r.command_buffers[r.frame_index]
-	if !check(vk.ResetCommandBuffer(command_buffer, {}), "vkResetCommandBuffer") {
-		return {}, .Fatal
-	}
-	if !record_scene(r, command_buffer, image_index, camera, light_direction, boxes, debug_lines, hud) {
-		return {}, .Fatal
-	}
-
-	return Frame{image_index = image_index, command_buffer = command_buffer}, .Ok
-}
-
-end_frame :: proc(r: ^Renderer, frame: Frame) -> Frame_Status {
-	image_available := r.image_available[r.frame_index]
-	render_finished := r.render_finished[r.frame_index]
-	wait_stage := vk.PipelineStageFlags{.COLOR_ATTACHMENT_OUTPUT}
-	command_buffer := frame.command_buffer
-	image_index := frame.image_index
-
-	submit := vk.SubmitInfo{
-		sType                = .SUBMIT_INFO,
-		waitSemaphoreCount   = 1,
-		pWaitSemaphores      = &image_available,
-		pWaitDstStageMask    = &wait_stage,
-		commandBufferCount   = 1,
-		pCommandBuffers      = &command_buffer,
-		signalSemaphoreCount = 1,
-		pSignalSemaphores    = &render_finished,
-	}
-	if !check(vk.QueueSubmit(r.graphics_queue, 1, &submit, r.in_flight[r.frame_index]), "vkQueueSubmit") {
-		return .Fatal
-	}
-
-	present := vk.PresentInfoKHR{
-		sType              = .PRESENT_INFO_KHR,
-		waitSemaphoreCount = 1,
-		pWaitSemaphores    = &render_finished,
-		swapchainCount     = 1,
-		pSwapchains        = &r.swapchain,
-		pImageIndices      = &image_index,
-	}
-	present_result := vk.QueuePresentKHR(r.present_queue, &present)
-
-	status: Frame_Status = .Ok
-	#partial switch present_result {
-	case .SUCCESS:
-	case .SUBOPTIMAL_KHR:
-		r.swapchain_dirty = true
-	case .ERROR_OUT_OF_DATE_KHR:
-		r.swapchain_dirty = true
-		status = .Skipped
-	case:
-		log.errorf("renderer: vkQueuePresentKHR failed: %v", present_result)
-		status = .Fatal
-	}
-
-	r.frame_index = (r.frame_index + 1) % MAX_FRAMES_IN_FLIGHT
-	return status
 }
 
 check :: proc(result: vk.Result, what: string, loc := #caller_location) -> bool {

@@ -10,7 +10,7 @@ HUD_DEBUG_STATUS_LINE_COUNT :: 5
 HUD_MAX_STATUS_LINES :: 6
 HUD_LINE_BYTES :: 96
 
-HUD_CONTROL_LINES := []string {
+HUD_CONTROL_LINES := [5]string {
 	"WASD move    Mouse look    Left click capture",
 	"Shift sprint    Space jump or mantle",
 	"C crouch or slide    Z prone, crawl, or dive",
@@ -18,7 +18,7 @@ HUD_CONTROL_LINES := []string {
 	"F2 debug mode    Esc release mouse",
 }
 
-HUD_DEBUG_CONTROL_LINES := []string {
+HUD_DEBUG_CONTROL_LINES := [5]string {
 	"WASD fly    Space up    Ctrl down",
 	"Click select    Drag move    Wheel height",
 	"E add    Delete or X remove    L sun",
@@ -51,7 +51,7 @@ hud_state_update :: proc(
 		return
 	}
 
-	hud.control_lines = HUD_CONTROL_LINES
+	hud.control_lines = HUD_CONTROL_LINES[:]
 
 	grounded := "no"
 	if snapshot.grounded {
@@ -91,7 +91,7 @@ hud_state_update :: proc(
 
 @(private)
 hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_Mode) {
-	hud.control_lines = HUD_DEBUG_CONTROL_LINES
+	hud.control_lines = HUD_DEBUG_CONTROL_LINES[:]
 
 	selection: [32]u8
 	selected := "Selected None"
