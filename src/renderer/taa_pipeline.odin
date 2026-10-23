@@ -19,7 +19,7 @@ create_taa_pipeline :: proc(r: ^Renderer) -> bool {
 			push_constant = vk.PushConstantRange {
 				stageFlags = {.FRAGMENT},
 				offset = 0,
-				size = u32(size_of(f32)),
+				size = u32(size_of(TAA_Params)),
 			},
 			topology = .TRIANGLE_LIST,
 			color_formats = color_formats[:],

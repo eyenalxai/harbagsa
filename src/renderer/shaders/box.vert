@@ -27,7 +27,9 @@ layout(set = 0, binding = 2) readonly buffer Objects {
 void main() {
     ObjectData object = scene.objects[draw.object_index];
     vec4 world_position = object.model * vec4(in_position, 1.0);
-    gl_Position = camera.projection * camera.view * world_position;
+    vec4 clip_position = camera.projection * camera.view * world_position;
+    clip_position.xy += camera.jitter.xy * clip_position.w;
+    gl_Position = clip_position;
     v_normal = mat3(object.model) * in_normal;
     v_color = object.color.rgb;
     v_world_position = world_position.xyz;

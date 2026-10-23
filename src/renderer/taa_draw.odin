@@ -129,14 +129,21 @@ record_taa_resolve :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image
 		nil,
 	)
 
-	gamma := srgb_gamma(r)
+	weight: f32
+	if taa.enabled && taa.history_valid {
+		weight = taa_history_weight(taa.converge_frames)
+	}
+	params := TAA_Params {
+		gamma = srgb_gamma(r),
+		weight = weight,
+	}
 	vk.CmdPushConstants(
 		command_buffer,
 		taa.pipeline_layout,
 		{.FRAGMENT},
 		0,
-		u32(size_of(f32)),
-		&gamma,
+		u32(size_of(TAA_Params)),
+		&params,
 	)
 	vk.CmdDraw(command_buffer, 3, 1, 0, 0)
 	vk.CmdEndRendering(command_buffer)

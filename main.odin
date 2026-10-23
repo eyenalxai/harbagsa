@@ -85,11 +85,16 @@ run :: proc() -> bool {
 			game.debug_mode_toggle(&debug, &sim)
 			clear_latches(&latches)
 		}
+		if events.taa_pressed {
+			renderer.toggle_taa(&state)
+		}
 		if events.reset_scene_pressed {
 			game.debug_mode_reset_scene(&debug, &sim)
+			renderer.reset_history(&state)
 			clear_latches(&latches)
 		} else if events.reset_pressed {
 			game.debug_mode_reset_player(&debug, &sim)
+			renderer.reset_history(&state)
 			clear_latches(&latches)
 		}
 

@@ -165,6 +165,42 @@ _Avoid_: UI layer
 The 2D part of the overlay: crosshair, controls hint, and player state.
 _Avoid_: UI
 
+**Temporal anti-aliasing (TAA)**:
+The render path that jitters the camera and averages frames through a history buffer to smooth edges.
+_Avoid_: Temporal filtering, accumulation
+
+**Jitter**:
+The subpixel camera offset applied each frame for TAA.
+_Avoid_: Shake, offset
+
+**History**:
+The previous resolved frame, with linear color and depth, that TAA blends into the current frame.
+_Avoid_: Accumulation buffer, cache
+
+**Velocity target**:
+The offscreen image that stores each pixel's previous-to-current screen motion and linear view depth.
+_Avoid_: Motion buffer, motion vectors
+
+**Resolve**:
+The fullscreen pass that clamps, reprojects, and blends the history into the current frame.
+_Avoid_: Composite, merge
+
+**Disocclusion**:
+A pixel that was hidden by a surface and becomes visible after the camera or a surface moves.
+_Avoid_: Reveal
+
+**History reset**:
+The state where TAA ignores the previous history and starts a new accumulation.
+_Avoid_: Clear, flush
+
+**Convergence**:
+The frames after a history reset while the history weight ramps from 0.5 to 0.9.
+_Avoid_: Warmup
+
+**TAA toggle**:
+The `F3` control that enables or disables temporal anti-aliasing.
+_Avoid_: AA switch
+
 **Debug mode**:
 The `F2` mode where the player becomes a free-fly camera and can edit crates and the sun.
 _Avoid_: Edit mode, sandbox
