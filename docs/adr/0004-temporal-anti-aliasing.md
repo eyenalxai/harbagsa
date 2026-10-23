@@ -1,6 +1,6 @@
 # Temporal anti-aliasing
 
-The renderer reserves temporal inputs: a jittered projection, per-object velocity, and a ping-pong RGBA16F history. The scene renders to linear offscreen color, velocity, and depth targets. A fullscreen resolve clamps the history in YCoCg, rejects it by depth, and writes the swapchain and the next history. The HUD and debug lines draw after the resolve, so they stay crisp. `F3` toggles TAA because the debug mode uses `F2`.
+The renderer reserves temporal inputs: a jittered projection, per-object velocity, and a ping-pong RGBA16F history. The scene renders to linear offscreen color, velocity, and depth targets. A fullscreen resolve compares the history depth with the current 3x3 depth range, clamps the history in YCoCg, and writes the swapchain and the next history. The neighborhood range keeps the history valid when jitter moves a geometry edge across a pixel; a real disocclusion still falls outside the range. The HUD and debug lines draw after the resolve, so they stay crisp. `F3` toggles TAA because the debug mode uses `F2`.
 
 This supersedes the sentence in ADR-0002 that says the renderer does not reserve temporal inputs.
 
