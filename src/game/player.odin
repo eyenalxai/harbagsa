@@ -69,8 +69,8 @@ update_horizontal_velocity :: proc(player: ^Player, input: Input_Snapshot, time_
 		input_length = 1.0
 	}
 
-	forward := b3.Vec3{-math.sin(player.yaw), 0.0, -math.cos(player.yaw)}
-	right := b3.Vec3{math.cos(player.yaw), 0.0, -math.sin(player.yaw)}
+	forward := yaw_forward_horizontal(player.yaw)
+	right := yaw_right(player.yaw)
 	desired_direction := forward * move_forward + right * move_right
 	current := b3.Vec3{player.velocity.x, 0.0, player.velocity.z}
 
