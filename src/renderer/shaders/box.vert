@@ -12,14 +12,7 @@ layout(push_constant) uniform PushConstants {
     vec4 color;
 } object;
 
-layout(set = 0, binding = 0) uniform Camera {
-    mat4 view;
-    mat4 projection;
-    vec4 light_direction;
-    vec4 ambient;
-    vec4 gamma;
-    mat4 light_view_projection;
-} camera;
+#include "camera.glsl"
 
 void main() {
     vec4 world_position = object.model * vec4(in_position, 1.0);
