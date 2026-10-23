@@ -114,7 +114,7 @@ The fixed orthographic box around the arena that the shadow map covers.
 _Avoid_: Shadow frustum
 
 **Sun**:
-The fixed directional light that lights the arena and casts the shadow map.
+The directional light that lights the arena and casts the shadow map. Debug mode rotates it.
 _Avoid_: Lamp, light source
 
 **Shadow map**:
@@ -124,6 +124,18 @@ _Avoid_: Depth map
 **Shadow pass**:
 The depth-only pass that fills the shadow map before the lit pass.
 _Avoid_: Light pass
+
+**Sun angular diameter**:
+The angle the sun disk subtends. It sets the penumbra width. The demo uses 3°; the real sun is about 0.53°. The wider disk makes the contact-hardening cue visible over the arena's short shadows.
+_Avoid_: Light size
+
+**Percentage-closer soft shadows (PCSS)**:
+The shadow filter that estimates the penumbra from the average blocker depth and filters the shadow map with that radius. Contact shadows stay hard and distant shadows soften.
+_Avoid_: Soft shadows, blurry shadows
+
+**Blocker search**:
+The PCSS step that samples the shadow map around a receiver and averages the depths closer to the sun.
+_Avoid_: Occluder search
 
 **Crate**:
 A dynamic box that the player can push.
@@ -220,10 +232,6 @@ _Avoid_: Noclip, spectator
 **Selection**:
 The crate or the sun that debug mode acts on.
 _Avoid_: Focus, target
-
-**Sun**:
-The directional light. Debug mode changes its direction.
-_Avoid_: Lamp, light source
 
 **Scene reset**:
 The `Shift+R` action that restores the starting crates, the sun, and the player.
