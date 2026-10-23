@@ -4,6 +4,7 @@ package renderer
 import stb_easy_font "vendor:stb/easy_font"
 
 HUD_Frame :: struct {
+	enabled:       bool,
 	status_lines:  []string,
 	control_lines: []string,
 	capture_hint:  string,
@@ -71,6 +72,9 @@ hud_emit_panel :: proc(o: ^Overlay, lines: []string, x, y, scale, padding: f32) 
 }
 
 build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
+	if !hud.enabled {
+		return
+	}
 	scale := 2.0 * clamp(height / 720.0, 1.0, 2.0)
 	margin := 8.0 * scale
 	padding := 5.0 * scale

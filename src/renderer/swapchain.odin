@@ -3,7 +3,6 @@ package renderer
 
 import "core:log"
 
-import "src:platform"
 import vk "vendor:vulkan"
 
 COLOR_SUBRESOURCE :: vk.ImageSubresourceRange{
@@ -20,10 +19,29 @@ DEPTH_SUBRESOURCE :: vk.ImageSubresourceRange {
 	layerCount = 1,
 }
 
+create_platform_surface :: proc(r: ^Renderer) -> Error {
+	if r.platform.create_surface == nil {
+		log.error("renderer: no platform surface adapter")
+		return .Platform
+	}
+	surface, ok := r.platform.create_surface(r.platform.user, r.instance)
+	if !ok || surface == 0 {
+		log.error("renderer: platform surface creation failed")
+		return .Platform
+	}
+	r.target.surface = surface
+	return .None
+}
+
+init_swapchain_target :: proc(r: ^Renderer) -> Error {
+	if status := create_swapchain(r); status != .Ok {
+		return .Create_Swapchain
+	}
+	return .None
+}
+
 create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
-	// A failure after the swapchain exists is terminal: the caller exits, and
-	// deinit destroys the partial objects.
-	support, support_ok := query_swapchain_support(r.physical_device, r.surface, r.allocator)
+	support, support_ok := query_swapchain_support(r.physical_device, r.target.surface, r.allocator)
 	if !support_ok {
 		log.error("renderer: could not query swapchain support")
 		return .Fatal
@@ -31,15 +49,19 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	defer delete(support.formats, r.allocator)
 
 	format := choose_surface_format(support.formats)
-	extent := choose_swapchain_extent(support.capabilities, r.window)
+	width, height := r.platform.pixel_size(r.platform.user)
+	extent := choose_swapchain_extent(support.capabilities, width, height)
 	if extent.width == 0 || extent.height == 0 {
 		log.warnf("renderer: swapchain extent is zero (%vx%v)", extent.width, extent.height)
 		return .Skipped
 	}
 
-	r.swapchain_format = format.format
-	r.swapchain_extent = extent
-	r.swapchain_is_srgb = format.format == .B8G8R8A8_SRGB || format.format == .R8G8B8A8_SRGB
+	r.target.config = {
+		width   = extent.width,
+		height  = extent.height,
+		format  = format.format,
+		is_srgb = format.format == .B8G8R8A8_SRGB || format.format == .R8G8B8A8_SRGB,
+	}
 
 	image_count := support.capabilities.minImageCount + 1
 	if support.capabilities.maxImageCount > 0 && image_count > support.capabilities.maxImageCount {
@@ -49,13 +71,13 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	queue_family_indices := [2]u32{r.graphics_family, r.present_family}
 	create_info := vk.SwapchainCreateInfoKHR{
 		sType            = .SWAPCHAIN_CREATE_INFO_KHR,
-		surface          = r.surface,
+		surface          = r.target.surface,
 		minImageCount    = image_count,
 		imageFormat      = format.format,
 		imageColorSpace  = format.colorSpace,
 		imageExtent      = extent,
 		imageArrayLayers = 1,
-		imageUsage       = {.COLOR_ATTACHMENT},
+		imageUsage       = {.COLOR_ATTACHMENT, .TRANSFER_SRC},
 		preTransform     = support.capabilities.currentTransform,
 		compositeAlpha   = choose_composite_alpha(support.capabilities.supportedCompositeAlpha),
 		presentMode      = .FIFO,
@@ -69,27 +91,27 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 		create_info.imageSharingMode = .EXCLUSIVE
 	}
 
-	if !check(vk.CreateSwapchainKHR(r.device, &create_info, nil, &r.swapchain), "vkCreateSwapchainKHR") {
+	if !check(vk.CreateSwapchainKHR(r.device, &create_info, nil, &r.target.swapchain), "vkCreateSwapchainKHR") {
 		return .Fatal
 	}
 
 	image_count_actual: u32
 	if !check(
-		vk.GetSwapchainImagesKHR(r.device, r.swapchain, &image_count_actual, nil),
+		vk.GetSwapchainImagesKHR(r.device, r.target.swapchain, &image_count_actual, nil),
 		"vkGetSwapchainImagesKHR",
 	) {
 		return .Fatal
 	}
-	r.swapchain_images = make([]vk.Image, image_count_actual, r.allocator)
+	r.target.images = make([]vk.Image, image_count_actual, r.allocator)
 	if !check(
-		vk.GetSwapchainImagesKHR(r.device, r.swapchain, &image_count_actual, raw_data(r.swapchain_images)),
+		vk.GetSwapchainImagesKHR(r.device, r.target.swapchain, &image_count_actual, raw_data(r.target.images)),
 		"vkGetSwapchainImagesKHR",
 	) {
 		return .Fatal
 	}
 
-	r.swapchain_views = make([]vk.ImageView, image_count_actual, r.allocator)
-	for image, i in r.swapchain_images {
+	r.target.views = make([]vk.ImageView, image_count_actual, r.allocator)
+	for image, i in r.target.images {
 		view_info := vk.ImageViewCreateInfo{
 			sType            = .IMAGE_VIEW_CREATE_INFO,
 			image            = image,
@@ -97,16 +119,21 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 			format           = format.format,
 			subresourceRange = COLOR_SUBRESOURCE,
 		}
-		if !check(vk.CreateImageView(r.device, &view_info, nil, &r.swapchain_views[i]), "vkCreateImageView") {
+		if !check(vk.CreateImageView(r.device, &view_info, nil, &r.target.views[i]), "vkCreateImageView") {
 			return .Fatal
 		}
 	}
 
-	r.render_finished = make([]vk.Semaphore, image_count_actual, r.allocator)
+	r.target.render_finished = make([]vk.Semaphore, image_count_actual, r.allocator)
 	for i in 0 ..< image_count_actual {
-		if !create_semaphore(r, &r.render_finished[i]) {
+		if !create_semaphore(r, &r.target.render_finished[i]) {
 			return .Fatal
 		}
+	}
+
+	if !create_readback(r, extent.width, extent.height) {
+		log.error("renderer: could not create the capture readback buffer")
+		return .Fatal
 	}
 
 	log.infof(
@@ -121,59 +148,48 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 
 destroy_swapchain :: proc(r: ^Renderer) {
 	if r.device != nil {
-		for semaphore in r.render_finished {
+		for semaphore in r.target.render_finished {
 			if semaphore != 0 {
 				vk.DestroySemaphore(r.device, semaphore, nil)
 			}
 		}
-		for view in r.swapchain_views {
+		for view in r.target.views {
 			if view != 0 {
 				vk.DestroyImageView(r.device, view, nil)
 			}
 		}
-		if r.swapchain != 0 {
-			vk.DestroySwapchainKHR(r.device, r.swapchain, nil)
-			r.swapchain = 0
+		if r.target.swapchain != 0 {
+			vk.DestroySwapchainKHR(r.device, r.target.swapchain, nil)
+			r.target.swapchain = 0
 		}
 	}
-
-	if r.render_finished != nil {
-		delete(r.render_finished, r.allocator)
-		r.render_finished = nil
-	}
-	if r.swapchain_views != nil {
-		delete(r.swapchain_views, r.allocator)
-		r.swapchain_views = nil
-	}
-	if r.swapchain_images != nil {
-		delete(r.swapchain_images, r.allocator)
-		r.swapchain_images = nil
-	}
+	delete_target_slices(r)
 }
 
 srgb_gamma :: proc(r: ^Renderer) -> f32 {
-	return r.swapchain_is_srgb ? 0 : 1
+	return r.target.config.is_srgb ? 0 : 1
 }
 
 recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
-	width, height := platform.pixel_size(r.window)
+	width, height := r.platform.pixel_size(r.platform.user)
 	if width == 0 || height == 0 {
-		r.swapchain_dirty = true
+		r.target.dirty = true
 		return .Skipped
 	}
 
-	old_extent := r.swapchain_extent
-	old_format := r.swapchain_format
+	old_extent := vk.Extent2D{r.target.config.width, r.target.config.height}
+	old_format := r.target.config.format
 
 	if !check(vk.DeviceWaitIdle(r.device), "vkDeviceWaitIdle") {
 		return .Fatal
 	}
 	destroy_swapchain(r)
+	destroy_readback(r)
 	if status := create_swapchain(r); status != .Ok {
 		return status
 	}
 
-	if r.swapchain_extent != old_extent {
+	if r.target.config.width != old_extent.width || r.target.config.height != old_extent.height {
 		if !create_taa_targets(r) {
 			log.error("renderer: could not recreate the TAA targets")
 			return .Fatal
@@ -182,23 +198,59 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 			log.error("renderer: could not rebind the TAA targets")
 			return .Fatal
 		}
-	} else if r.swapchain_format != old_format {
+	} else if r.target.config.format != old_format {
 		reset_history(r)
 	}
 
-	if r.taa.pipeline_format != r.swapchain_format {
+	if r.taa.pipeline_format != r.target.config.format {
 		destroy_pipeline_pair(r, &r.taa.pipeline, &r.taa.pipeline_layout)
 		if !create_taa_pipeline(r) {
 			return .Fatal
 		}
 	}
-	if r.overlay.pipeline_format != r.swapchain_format {
+	if r.overlay.pipeline_format != r.target.config.format {
 		destroy_overlay_pipelines(r)
 		if !create_overlay_pipelines(r) {
 			return .Fatal
 		}
 	}
-	r.swapchain_dirty = false
+	r.target.dirty = false
 
 	return .Ok
+}
+
+record_present_barrier :: proc(
+	r: ^Renderer,
+	command_buffer: vk.CommandBuffer,
+	image_index: u32,
+	capture: bool,
+) {
+	src_access: vk.AccessFlags = {.COLOR_ATTACHMENT_WRITE}
+	old_layout: vk.ImageLayout = .COLOR_ATTACHMENT_OPTIMAL
+	if capture {
+		src_access = {.TRANSFER_READ}
+		old_layout = .TRANSFER_SRC_OPTIMAL
+	}
+	to_present := vk.ImageMemoryBarrier {
+		sType = .IMAGE_MEMORY_BARRIER,
+		srcAccessMask = src_access,
+		oldLayout = old_layout,
+		newLayout = .PRESENT_SRC_KHR,
+		srcQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
+		dstQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
+		image = r.target.images[image_index],
+		subresourceRange = COLOR_SUBRESOURCE,
+	}
+	vk.CmdPipelineBarrier(
+		command_buffer,
+		{.COLOR_ATTACHMENT_OUTPUT, .TRANSFER},
+		{.BOTTOM_OF_PIPE},
+		{},
+		0,
+		nil,
+		0,
+		nil,
+		1,
+		&to_present,
+	)
 }

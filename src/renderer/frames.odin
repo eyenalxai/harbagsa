@@ -4,18 +4,14 @@ package renderer
 import "core:log"
 
 import "src:geometry"
-import "src:platform"
 import vk "vendor:vulkan"
 
-Frame_Status :: enum {
-	Ok,
-	Skipped,
-	Fatal,
-}
-
-Frame :: struct {
-	image_index:    u32,
-	command_buffer: vk.CommandBuffer,
+Frame_View :: struct {
+	camera:          Camera,
+	light_direction: [3]f32,
+	boxes:           []geometry.Box,
+	debug_lines:     []geometry.Line,
+	hud:             HUD_Frame,
 }
 
 create_semaphore :: proc(r: ^Renderer, semaphore: ^vk.Semaphore) -> bool {
@@ -63,11 +59,8 @@ init_frames :: proc(r: ^Renderer) -> Error {
 
 begin_frame :: proc(
 	r: ^Renderer,
-	camera: Camera,
-	light_direction: [3]f32,
-	boxes: []geometry.Box,
-	debug_lines: []geometry.Line,
-	hud: HUD_Frame,
+	view: Frame_View,
+	capture := false,
 ) -> (
 	frame: Frame,
 	status: Frame_Status,
@@ -76,12 +69,11 @@ begin_frame :: proc(
 		return {}, .Fatal
 	}
 
-	width, height := platform.pixel_size(r.window)
-	if width == 0 || height == 0 {
+	if r.target.config.width == 0 || r.target.config.height == 0 {
 		return {}, .Skipped
 	}
 
-	if r.swapchain_dirty {
+	if r.target.dirty {
 		status = recreate_swapchain(r)
 		if status != .Ok {
 			return {}, status
@@ -96,24 +88,26 @@ begin_frame :: proc(
 	}
 
 	image_index: u32
-	acquire := vk.AcquireNextImageKHR(
-		r.device,
-		r.swapchain,
-		max(u64),
-		r.image_available[r.frame_index],
-		0,
-		&image_index,
-	)
-	#partial switch acquire {
-	case .SUCCESS:
-	case .SUBOPTIMAL_KHR:
-		r.swapchain_dirty = true
-	case .ERROR_OUT_OF_DATE_KHR:
-		r.swapchain_dirty = true
-		return {}, .Skipped
-	case:
-		log.errorf("renderer: vkAcquireNextImageKHR failed: %v", acquire)
-		return {}, .Fatal
+	if r.target.kind == .Swapchain {
+		acquire := vk.AcquireNextImageKHR(
+			r.device,
+			r.target.swapchain,
+			max(u64),
+			r.image_available[r.frame_index],
+			0,
+			&image_index,
+		)
+		#partial switch acquire {
+		case .SUCCESS:
+		case .SUBOPTIMAL_KHR:
+			r.target.dirty = true
+		case .ERROR_OUT_OF_DATE_KHR:
+			r.target.dirty = true
+			return {}, .Skipped
+		case:
+			log.errorf("renderer: vkAcquireNextImageKHR failed: %v", acquire)
+			return {}, .Fatal
+		}
 	}
 
 	if !check(vk.ResetFences(r.device, 1, &r.in_flight[r.frame_index]), "vkResetFences") {
@@ -124,72 +118,83 @@ begin_frame :: proc(
 	if !check(vk.ResetCommandBuffer(command_buffer, {}), "vkResetCommandBuffer") {
 		return {}, .Fatal
 	}
-	if !record_frame(
-		r,
-		command_buffer,
-		image_index,
-		camera,
-		light_direction,
-		boxes,
-		debug_lines,
-		hud,
-	) {
+	if !record_scene(r, command_buffer, image_index, view, capture) {
 		return {}, .Fatal
 	}
 	if validation_failed() {
 		return {}, .Fatal
 	}
 
-	return Frame{image_index = image_index, command_buffer = command_buffer}, .Ok
+	return Frame{image_index = image_index, command_buffer = command_buffer, capture = capture}, .Ok
 }
 
 end_frame :: proc(r: ^Renderer, frame: Frame) -> Frame_Status {
-	image_available := r.image_available[r.frame_index]
-	render_finished := r.render_finished[frame.image_index]
-	wait_stage := vk.PipelineStageFlags{.COLOR_ATTACHMENT_OUTPUT}
 	command_buffer := frame.command_buffer
 	image_index := frame.image_index
 
-	submit := vk.SubmitInfo{
-		sType                = .SUBMIT_INFO,
-		waitSemaphoreCount   = 1,
-		pWaitSemaphores      = &image_available,
-		pWaitDstStageMask    = &wait_stage,
-		commandBufferCount   = 1,
-		pCommandBuffers      = &command_buffer,
-		signalSemaphoreCount = 1,
-		pSignalSemaphores    = &render_finished,
-	}
-	if !check(vk.QueueSubmit(r.graphics_queue, 1, &submit, r.in_flight[r.frame_index]), "vkQueueSubmit") {
-		return .Fatal
+	if r.target.kind == .Swapchain {
+		image_available := r.image_available[r.frame_index]
+		render_finished := r.target.render_finished[image_index]
+		wait_stage := vk.PipelineStageFlags{.COLOR_ATTACHMENT_OUTPUT}
+		submit := vk.SubmitInfo{
+			sType                = .SUBMIT_INFO,
+			waitSemaphoreCount   = 1,
+			pWaitSemaphores      = &image_available,
+			pWaitDstStageMask    = &wait_stage,
+			commandBufferCount   = 1,
+			pCommandBuffers      = &command_buffer,
+			signalSemaphoreCount = 1,
+			pSignalSemaphores    = &render_finished,
+		}
+		if !check(vk.QueueSubmit(r.graphics_queue, 1, &submit, r.in_flight[r.frame_index]), "vkQueueSubmit") {
+			return .Fatal
+		}
+	} else {
+		submit := vk.SubmitInfo{
+			sType              = .SUBMIT_INFO,
+			commandBufferCount = 1,
+			pCommandBuffers    = &command_buffer,
+		}
+		if !check(vk.QueueSubmit(r.graphics_queue, 1, &submit, r.in_flight[r.frame_index]), "vkQueueSubmit") {
+			return .Fatal
+		}
 	}
 	if validation_failed() {
 		return .Fatal
 	}
 
-	present := vk.PresentInfoKHR{
-		sType              = .PRESENT_INFO_KHR,
-		waitSemaphoreCount = 1,
-		pWaitSemaphores    = &render_finished,
-		swapchainCount     = 1,
-		pSwapchains        = &r.swapchain,
-		pImageIndices      = &image_index,
+	if frame.capture &&
+	   !check(
+		   vk.WaitForFences(r.device, 1, &r.in_flight[r.frame_index], true, max(u64)),
+		   "vkWaitForFences",
+	   ) {
+		return .Fatal
 	}
-	present_result := vk.QueuePresentKHR(r.present_queue, &present)
 
 	status: Frame_Status = .Ok
-	#partial switch present_result {
-	case .SUCCESS:
-	case .SUBOPTIMAL_KHR:
-		r.swapchain_dirty = true
-	case .ERROR_OUT_OF_DATE_KHR:
-		r.swapchain_dirty = true
-		status = .Skipped
-	case:
-		log.errorf("renderer: vkQueuePresentKHR failed: %v", present_result)
-		status = .Fatal
+	if r.target.kind == .Swapchain {
+		render_finished := r.target.render_finished[image_index]
+		present := vk.PresentInfoKHR{
+			sType              = .PRESENT_INFO_KHR,
+			waitSemaphoreCount = 1,
+			pWaitSemaphores    = &render_finished,
+			swapchainCount     = 1,
+			pSwapchains        = &r.target.swapchain,
+			pImageIndices      = &image_index,
+		}
+		present_result := vk.QueuePresentKHR(r.present_queue, &present)
+		#partial switch present_result {
+		case .SUCCESS:
+		case .SUBOPTIMAL_KHR:
+			r.target.dirty = true
+		case .ERROR_OUT_OF_DATE_KHR:
+			r.target.dirty = true
+			status = .Skipped
+		case:
+			log.errorf("renderer: vkQueuePresentKHR failed: %v", present_result)
+			status = .Fatal
+		}
 	}
-
 	if validation_failed() {
 		return .Fatal
 	}
