@@ -15,7 +15,7 @@ HUD_CONTROL_LINES := [5]string {
 	"Shift sprint    Space jump or mantle",
 	"C crouch or slide    Z prone, crawl, or dive",
 	"R reset    Shift+R scene    F1 debug view",
-	"F2 debug mode    Esc release mouse",
+	"F2 debug mode    F3 TAA    Esc release mouse",
 }
 
 HUD_DEBUG_CONTROL_LINES := [5]string {
@@ -23,7 +23,7 @@ HUD_DEBUG_CONTROL_LINES := [5]string {
 	"Click select    Drag move    Wheel height",
 	"E add    Delete or X remove    L sun",
 	"R reset player    F2 exit    Shift+R scene",
-	"F1 debug view    Esc release mouse",
+	"F1 debug view    F3 TAA    Esc release mouse",
 }
 
 HUD_CAPTURE_HINT :: "Click to capture mouse"

@@ -2,6 +2,7 @@
 package renderer
 
 import "core:log"
+import "core:math"
 
 import vk "vendor:vulkan"
 
@@ -9,16 +10,27 @@ SCENE_COLOR_FORMAT :: vk.Format.R16G16B16A16_SFLOAT
 VELOCITY_FORMAT :: vk.Format.R16G16B16A16_SFLOAT
 HISTORY_FORMAT :: vk.Format.R16G16B16A16_SFLOAT
 
+TAA_TELEPORT_DISTANCE :: 2.0
+TAA_TELEPORT_ANGLE :: math.PI / 4
+TAA_CONVERGE_WEIGHTS := [3]f32{0.5, 0.75, 0.9}
+
 TAA_HISTORY_IMAGES :: 2
 TAA_DESCRIPTOR_SETS :: MAX_FRAMES_IN_FLIGHT * TAA_HISTORY_IMAGES
 
 TAA :: struct {
+	enabled:         bool,
+	converge_frames: int,
+	jitter_index:    int,
+
 	targets_extent: vk.Extent2D,
 
 	prev_models:              [MAX_SCENE_BOXES]Mat4,
 	prev_model_count:         int,
 	prev_view_projection:     Mat4,
 	has_prev_view_projection: bool,
+
+	prev_camera:     Camera,
+	has_prev_camera: bool,
 
 	depth:       [MAX_FRAMES_IN_FLIGHT]Image,
 	scene_color: [MAX_FRAMES_IN_FLIGHT]Image,
@@ -40,6 +52,7 @@ TAA :: struct {
 }
 
 init_taa :: proc(r: ^Renderer) -> Error {
+	r.taa.enabled = true
 	if !check_taa_formats(r) {
 		return .Create_TAA
 	}
@@ -161,12 +174,51 @@ create_taa_targets :: proc(r: ^Renderer) -> bool {
 	}
 
 	r.taa.targets_extent = extent
-	r.taa.prev_model_count = 0
-	r.taa.has_prev_view_projection = false
+	reset_history(r)
 	r.taa.history_read = 0
-	r.taa.history_valid = false
 	r.taa.history_layouts = {.UNDEFINED, .UNDEFINED}
 	return true
+}
+
+reset_history :: proc(r: ^Renderer) {
+	r.taa.history_valid = false
+	r.taa.converge_frames = 0
+	r.taa.jitter_index = 0
+	r.taa.has_prev_view_projection = false
+	r.taa.prev_model_count = 0
+}
+
+taa_history_weight :: proc(converge_frames: int) -> f32 {
+	index := clamp(converge_frames, 0, len(TAA_CONVERGE_WEIGHTS) - 1)
+	return TAA_CONVERGE_WEIGHTS[index]
+}
+
+taa_note_camera :: proc(r: ^Renderer, camera: Camera) {
+	if r.taa.has_prev_camera {
+		previous := r.taa.prev_camera
+		dx := camera.position.x - previous.position.x
+		dy := camera.position.y - previous.position.y
+		dz := camera.position.z - previous.position.z
+		moved := math.sqrt(dx * dx + dy * dy + dz * dz)
+
+		yaw_delta := math.abs(camera.yaw - previous.yaw)
+		if yaw_delta > math.PI {
+			yaw_delta = 2 * math.PI - yaw_delta
+		}
+		turned := yaw_delta > TAA_TELEPORT_ANGLE ||
+			math.abs(camera.pitch - previous.pitch) > TAA_TELEPORT_ANGLE
+		if moved > TAA_TELEPORT_DISTANCE || turned {
+			reset_history(r)
+		}
+	}
+	r.taa.prev_camera = camera
+	r.taa.has_prev_camera = true
+}
+
+toggle_taa :: proc(r: ^Renderer) {
+	r.taa.enabled = !r.taa.enabled
+	reset_history(r)
+	log.infof("renderer: TAA %s", r.taa.enabled ? "on" : "off")
 }
 
 destroy_taa_targets :: proc(r: ^Renderer) {
