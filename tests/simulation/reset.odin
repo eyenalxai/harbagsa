@@ -13,7 +13,7 @@ reset_returns_player_to_spawn :: proc(t: ^testing.T) {
 
 	game.simulation_look(&sim, {10.0, 5.0})
 	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 30)
-	step(&sim, game.Input_Snapshot{reset_pressed = true}, 1)
+	game.simulation_reset(&sim)
 
 	testing.expect(t, sim.player.position == game.SPAWN_POSITION, "position is not spawn")
 	testing.expect(t, sim.player.previous_position == game.SPAWN_POSITION, "previous position is not spawn")

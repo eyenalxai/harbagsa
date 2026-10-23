@@ -30,7 +30,7 @@ collect_world_lines :: proc(sim: ^Simulation, collector: ^Debug_Lines) {
 
 collect_editor_lines :: proc(dm: ^Debug_Mode, sim: ^Simulation, collector: ^Debug_Lines) {
 	collect_crate_editor_lines(dm, sim, collector)
-	collect_light_editor_lines(dm, collector)
+	collect_sun_editor_lines(dm, collector)
 }
 
 append_debug_line :: proc "contextless" (collector: ^Debug_Lines, from, to: [3]f32, color: [4]f32) {
@@ -39,6 +39,17 @@ append_debug_line :: proc "contextless" (collector: ^Debug_Lines, from, to: [3]f
 	}
 	collector.lines[collector.count] = {from = from, to = to, color = color}
 	collector.count += 1
+}
+
+append_box_edges :: proc "contextless" (collector: ^Debug_Lines, corners: [8][3]f32, color: [4]f32) {
+	edges := [12][2]int {
+		{0, 1}, {1, 2}, {2, 3}, {3, 0},
+		{4, 5}, {5, 6}, {6, 7}, {7, 4},
+		{0, 4}, {1, 5}, {2, 6}, {3, 7},
+	}
+	for edge in edges {
+		append_debug_line(collector, corners[edge.x], corners[edge.y], color)
+	}
 }
 
 debug_color :: proc "contextless" (color: b3.HexColor, alpha: f32) -> [4]f32 {
@@ -68,14 +79,7 @@ debug_draw_bounds :: proc "c" (aabb: b3.AABB, color: b3.HexColor, ctx: rawptr) {
 		{upper.x, upper.y, upper.z},
 		{lower.x, upper.y, upper.z},
 	}
-	edges := [12][2]int {
-		{0, 1}, {1, 2}, {2, 3}, {3, 0},
-		{4, 5}, {5, 6}, {6, 7}, {7, 4},
-		{0, 4}, {1, 5}, {2, 6}, {3, 7},
-	}
-	for edge in edges {
-		append_debug_line(collector, corners[edge.x], corners[edge.y], line_color)
-	}
+	append_box_edges(collector, corners, line_color)
 }
 
 debug_draw_segment :: proc "c" (from, to: b3.Pos, color: b3.HexColor, ctx: rawptr) {

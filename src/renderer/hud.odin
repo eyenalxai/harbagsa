@@ -8,15 +8,15 @@ import stb_easy_font "vendor:stb/easy_font"
 HUD_Selection :: enum {
 	None,
 	Crate,
-	Light,
+	Sun,
 }
 
 HUD_Debug_State :: struct {
-	selection:       HUD_Selection,
-	crate_index:     int,
-	crate_count:     int,
-	light_azimuth:   f32,
-	light_elevation: f32,
+	selection:     HUD_Selection,
+	crate_index:   int,
+	crate_count:   int,
+	sun_azimuth:   f32,
+	sun_elevation: f32,
 }
 
 HUD_State :: struct {
@@ -65,6 +65,35 @@ hud_emit_text :: proc(o: ^Overlay, x, y: f32, text: string, color: [4]f32, scale
 	}
 }
 
+hud_emit_panel :: proc(o: ^Overlay, x, y: f32, lines: []string, scale, padding: f32) {
+	panel_width := 0
+	for line in lines {
+		panel_width = max(panel_width, stb_easy_font.width(line))
+	}
+	hud_emit_rect(
+		o,
+		x,
+		y,
+		f32(panel_width) * scale + padding * 2,
+		hud_panel_height(len(lines), scale, padding),
+		HUD_PANEL_COLOR,
+	)
+	for line, index in lines {
+		hud_emit_text(
+			o,
+			x + padding,
+			y + padding + f32(index) * HUD_LINE_HEIGHT * scale,
+			line,
+			HUD_TEXT_COLOR,
+			scale,
+		)
+	}
+}
+
+hud_panel_height :: proc(line_count: int, scale, padding: f32) -> f32 {
+	return f32(line_count) * HUD_LINE_HEIGHT * scale + padding * 2
+}
+
 snap_near_zero :: proc(value: f32) -> f32 {
 	if value > -0.05 && value < 0.05 {
 		return 0
@@ -108,36 +137,6 @@ build_state_panel :: proc(o: ^Overlay, hud: HUD_State, scale, margin, padding: f
 		snap_near_zero(hud.position.z),
 	)
 
-	state_width := f32(
-		max(
-			stb_easy_font.width(speed_text),
-			max(stb_easy_font.width(grounded_text), stb_easy_font.width(position_text)),
-		),
-	) * scale
-	state_height := 3 * HUD_LINE_HEIGHT * scale
-	hud_emit_rect(
-		o,
-		margin,
-		margin,
-		state_width + padding * 2,
-		state_height + padding * 2,
-		HUD_PANEL_COLOR,
-	)
-	hud_emit_text(o, margin + padding, margin + padding, speed_text, HUD_TEXT_COLOR, scale)
-	hud_emit_text(
-		o,
-		margin + padding,
-		margin + padding + HUD_LINE_HEIGHT * scale,
-		grounded_text,
-		HUD_TEXT_COLOR,
-		scale,
-	)
-	hud_emit_text(
-		o,
-		margin + padding,
-		margin + padding + 2 * HUD_LINE_HEIGHT * scale,
-		position_text,
-		HUD_TEXT_COLOR,
-		scale,
-	)
+	lines := [3]string{speed_text, grounded_text, position_text}
+	hud_emit_panel(o, margin, margin, lines[:], scale, padding)
 }

@@ -5,19 +5,19 @@ import "core:math"
 
 import b3 "libs:box3d"
 
-DEFAULT_LIGHT_DIRECTION :: [3]f32{-0.45, -1.0, -0.35}
+DEFAULT_SUN_DIRECTION :: [3]f32{-0.45, -1.0, -0.35}
 DEBUG_FLY_SPEED :: 10.0
 
 Debug_Selection :: enum {
 	None,
 	Crate,
-	Light,
+	Sun,
 }
 
 Debug_Drag :: enum {
 	None,
 	Crate,
-	Light,
+	Sun,
 }
 
 Debug_Camera :: struct {
@@ -36,14 +36,15 @@ Debug_Mode :: struct {
 	active:            bool,
 	camera:            Debug_Camera,
 	saved_player:      Saved_Player,
-	light_direction:   [3]f32,
+	sun_direction:     [3]f32,
 	selection:         Debug_Selection,
 	selected_crate:    int,
 	dragging:          Debug_Drag,
 	drag_position:     b3.Vec3,
-	light_azimuth:     f32,
-	light_elevation:   f32,
-	light_drag_motion: f32,
+	sun_azimuth:       f32,
+	sun_elevation:     f32,
+	sun_drag_dx:       f32,
+	sun_drag_dy:       f32,
 }
 
 Debug_Input :: struct {
@@ -56,13 +57,13 @@ Debug_Input :: struct {
 	primary_released: bool,
 	add_pressed:      bool,
 	delete_pressed:   bool,
-	light_pressed:    bool,
+	sun_pressed:      bool,
 	captured:         bool,
 }
 
 debug_mode_create :: proc() -> Debug_Mode {
 	return {
-		light_direction = DEFAULT_LIGHT_DIRECTION,
+		sun_direction = DEFAULT_SUN_DIRECTION,
 		selected_crate = -1,
 	}
 }
@@ -75,30 +76,62 @@ debug_mode_toggle :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	}
 }
 
-debug_mode_camera :: proc(dm: ^Debug_Mode) -> Debug_Camera {
-	return dm.camera
-}
-
-debug_mode_light_direction :: proc(dm: ^Debug_Mode) -> [3]f32 {
+debug_mode_sun_direction :: proc(dm: ^Debug_Mode) -> [3]f32 {
 	length := math.sqrt(
-		dm.light_direction.x * dm.light_direction.x +
-		dm.light_direction.y * dm.light_direction.y +
-		dm.light_direction.z * dm.light_direction.z,
+		dm.sun_direction.x * dm.sun_direction.x +
+		dm.sun_direction.y * dm.sun_direction.y +
+		dm.sun_direction.z * dm.sun_direction.z,
 	)
 	if length <= 0.0 {
-		return DEFAULT_LIGHT_DIRECTION
+		return DEFAULT_SUN_DIRECTION
 	}
-	return dm.light_direction * (1.0 / length)
+	return dm.sun_direction * (1.0 / length)
 }
 
-debug_mode_light_angles :: proc(dm: ^Debug_Mode) -> (azimuth, elevation: f32) {
-	return light_angles_from_direction(dm.light_direction)
+debug_mode_sun_angles :: proc(dm: ^Debug_Mode) -> (azimuth, elevation: f32) {
+	return sun_angles_from_direction(dm.sun_direction)
+}
+
+debug_mode_clear_selection :: proc(dm: ^Debug_Mode) {
+	debug_mode_end_drag(dm)
+	dm.selection = .None
+	dm.selected_crate = -1
+}
+
+debug_mode_end_drag :: proc(dm: ^Debug_Mode) {
+	dm.dragging = .None
+	dm.sun_drag_dx = 0.0
+	dm.sun_drag_dy = 0.0
+}
+
+debug_selected_crate :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> (index: int, ok: bool) {
+	if dm.selection != .Crate || dm.selected_crate < 0 || dm.selected_crate >= simulation_crate_count(sim) {
+		return -1, false
+	}
+	return dm.selected_crate, true
+}
+
+debug_camera_forward :: proc(camera: Debug_Camera) -> b3.Vec3 {
+	cos_pitch := math.cos(camera.pitch)
+	return {
+		-math.sin(camera.yaw) * cos_pitch,
+		math.sin(camera.pitch),
+		-math.cos(camera.yaw) * cos_pitch,
+	}
+}
+
+debug_camera_forward_horizontal :: proc(camera: Debug_Camera) -> b3.Vec3 {
+	return {-math.sin(camera.yaw), 0.0, -math.cos(camera.yaw)}
+}
+
+debug_camera_right :: proc(camera: Debug_Camera) -> b3.Vec3 {
+	return {math.cos(camera.yaw), 0.0, -math.sin(camera.yaw)}
 }
 
 debug_mode_reset_player :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	simulation_reset(sim)
 	dm.saved_player = saved_player(sim)
-	dm.dragging = .None
+	debug_mode_end_drag(dm)
 	if dm.active {
 		dm.camera = camera_from_player(sim)
 	}
@@ -106,11 +139,8 @@ debug_mode_reset_player :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 
 debug_mode_reset_scene :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	simulation_reset_scene(sim)
-	dm.light_direction = DEFAULT_LIGHT_DIRECTION
-	dm.selection = .None
-	dm.selected_crate = -1
-	dm.dragging = .None
-	dm.light_drag_motion = 0.0
+	dm.sun_direction = DEFAULT_SUN_DIRECTION
+	debug_mode_clear_selection(dm)
 	dm.saved_player = saved_player(sim)
 	if dm.active {
 		dm.camera = camera_from_player(sim)
@@ -122,7 +152,7 @@ debug_mode_update :: proc(dm: ^Debug_Mode, sim: ^Simulation, input: Debug_Input,
 		return
 	}
 	if !input.captured {
-		dm.dragging = .None
+		debug_mode_end_drag(dm)
 	}
 
 	if input.captured && dm.dragging == .None && !input.primary_pressed {
@@ -136,16 +166,13 @@ debug_mode_update :: proc(dm: ^Debug_Mode, sim: ^Simulation, input: Debug_Input,
 
 	debug_fly(dm, input, delta)
 	debug_edit_crates(dm, sim, input)
-	debug_edit_light(dm, input)
+	debug_edit_sun(dm, input)
 }
 
 @(private)
 debug_mode_enter :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	dm.active = true
-	dm.selection = .None
-	dm.selected_crate = -1
-	dm.dragging = .None
-	dm.light_drag_motion = 0.0
+	debug_mode_clear_selection(dm)
 	dm.saved_player = saved_player(sim)
 	dm.camera = camera_from_player(sim)
 }
@@ -153,17 +180,9 @@ debug_mode_enter :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 @(private)
 debug_mode_exit :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	dm.active = false
-	dm.selection = .None
-	dm.selected_crate = -1
-	dm.dragging = .None
-	dm.light_drag_motion = 0.0
+	debug_mode_clear_selection(dm)
 
-	sim.player.position = dm.saved_player.position
-	sim.player.previous_position = dm.saved_player.position
-	sim.player.velocity = b3.Vec3_zero
-	sim.player.yaw = dm.saved_player.yaw
-	sim.player.pitch = dm.saved_player.pitch
-	sim.player.grounded = false
+	player_place(&sim.player, dm.saved_player.position, dm.saved_player.yaw, dm.saved_player.pitch)
 }
 
 @(private)
@@ -190,8 +209,8 @@ debug_fly :: proc(dm: ^Debug_Mode, input: Debug_Input, delta: f32) {
 		return
 	}
 
-	forward := b3.Vec3{-math.sin(dm.camera.yaw), 0.0, -math.cos(dm.camera.yaw)}
-	right := b3.Vec3{math.cos(dm.camera.yaw), 0.0, -math.sin(dm.camera.yaw)}
+	forward := debug_camera_forward_horizontal(dm.camera)
+	right := debug_camera_right(dm.camera)
 	move := forward * input.move_forward + right * input.move_right
 	move.y = input.move_up
 

@@ -5,9 +5,8 @@ import b3 "libs:box3d"
 import "src:geometry"
 
 Crate :: struct {
-	body:         b3.BodyId,
-	half_extents: b3.Vec3,
-	color:        [4]f32,
+	body:  b3.BodyId,
+	color: [4]f32,
 }
 
 simulation_crate_count :: proc(sim: ^Simulation) -> int {
@@ -29,22 +28,17 @@ simulation_crate_box :: proc(sim: ^Simulation, index: int) -> geometry.Box {
 	rotation := b3.Body_GetRotation(crate.body)
 	return {
 		center = b3.ToVec3(b3.Body_GetPosition(crate.body)),
-		half_extents = crate.half_extents,
+		half_extents = CRATE_HALF_EXTENTS,
 		color = crate.color,
 		rotation = {rotation.x, rotation.y, rotation.z, rotation.w},
 	}
 }
 
-simulation_add_crate :: proc(
-	sim: ^Simulation,
-	center: b3.Vec3,
-	half_extents: b3.Vec3,
-	color: [4]f32,
-) -> int {
+simulation_add_crate :: proc(sim: ^Simulation, center: b3.Vec3, color: [4]f32) -> int {
 	if sim.crate_count >= MAX_CRATES {
 		return -1
 	}
-	body := create_crate_body(sim, center, half_extents)
+	body := create_crate_body(sim, center)
 	if !b3.Body_IsValid(body) {
 		return -1
 	}
@@ -52,7 +46,6 @@ simulation_add_crate :: proc(
 	index := sim.crate_count
 	sim.crates[index] = {
 		body = body,
-		half_extents = half_extents,
 		color = color,
 	}
 	sim.crate_count += 1
@@ -61,10 +54,10 @@ simulation_add_crate :: proc(
 
 // Added crates cycle through the initial palette so neighbours stay distinct.
 simulation_add_default_crate :: proc(sim: ^Simulation, center: b3.Vec3) -> int {
-	color := initial_crate_colors()[sim.next_crate_color]
-	index := simulation_add_crate(sim, center, CRATE_HALF_EXTENTS, color)
+	color := initial_crate_colors()[sim.next_crate_color_index]
+	index := simulation_add_crate(sim, center, color)
 	if index >= 0 {
-		sim.next_crate_color = (sim.next_crate_color + 1) % INITIAL_CRATE_COUNT
+		sim.next_crate_color_index = (sim.next_crate_color_index + 1) % INITIAL_CRATE_COUNT
 	}
 	return index
 }
@@ -103,10 +96,10 @@ simulation_reset_crates :: proc(sim: ^Simulation) {
 		}
 	}
 	sim.crate_count = 0
-	sim.next_crate_color = 0
+	sim.next_crate_color_index = 0
 
 	for position, index in INITIAL_CRATE_POSITIONS {
-		_ = simulation_add_crate(sim, position, CRATE_HALF_EXTENTS, initial_crate_colors()[index])
+		_ = simulation_add_crate(sim, position, initial_crate_colors()[index])
 	}
 }
 
@@ -116,7 +109,7 @@ simulation_reset_scene :: proc(sim: ^Simulation) {
 }
 
 @(private)
-create_crate_body :: proc(sim: ^Simulation, center: b3.Vec3, half_extents: b3.Vec3) -> b3.BodyId {
+create_crate_body :: proc(sim: ^Simulation, center: b3.Vec3) -> b3.BodyId {
 	body_def := b3.DefaultBodyDef()
 	body_def.type = .dynamicBody
 	body_def.position = center
@@ -125,7 +118,11 @@ create_crate_body :: proc(sim: ^Simulation, center: b3.Vec3, half_extents: b3.Ve
 		return {}
 	}
 
-	hull := b3.MakeBoxHull(half_extents.x, half_extents.y, half_extents.z)
+	hull := b3.MakeBoxHull(
+		CRATE_HALF_EXTENTS.x,
+		CRATE_HALF_EXTENTS.y,
+		CRATE_HALF_EXTENTS.z,
+	)
 	shape_def := b3.DefaultShapeDef()
 	shape_def.density = CRATE_DENSITY
 	shape := b3.CreateHullShape(body_id, shape_def, &hull.base)

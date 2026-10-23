@@ -159,7 +159,7 @@ run :: proc() -> bool {
 					primary_released = events.primary_released,
 					add_pressed = events.add_pressed,
 					delete_pressed = events.delete_pressed,
-					light_pressed = events.light_pressed,
+					sun_pressed = events.sun_pressed,
 					captured = events.captured,
 				},
 				delta,
@@ -170,7 +170,7 @@ run :: proc() -> bool {
 		camera: renderer.Camera
 		hud_position: [3]f32
 		if debug.active {
-			debug_camera := game.debug_mode_camera(&debug)
+			debug_camera := debug.camera
 			camera = renderer.Camera {
 				position = debug_camera.position,
 				yaw      = debug_camera.yaw,
@@ -214,10 +214,10 @@ run :: proc() -> bool {
 		#partial switch debug.selection {
 		case .Crate:
 			debug_selection = .Crate
-		case .Light:
-			debug_selection = .Light
+		case .Sun:
+			debug_selection = .Sun
 		}
-		light_azimuth, light_elevation := game.debug_mode_light_angles(&debug)
+		sun_azimuth, sun_elevation := game.debug_mode_sun_angles(&debug)
 
 		hud := renderer.HUD_State {
 			speed = math.sqrt(
@@ -232,15 +232,15 @@ run :: proc() -> bool {
 				selection = debug_selection,
 				crate_index = debug.selected_crate,
 				crate_count = game.simulation_crate_count(&sim),
-				light_azimuth = light_azimuth,
-				light_elevation = light_elevation,
+				sun_azimuth = sun_azimuth,
+				sun_elevation = sun_elevation,
 			},
 		}
 
 		frame, begin_status := renderer.begin_frame(
 			&state,
 			camera,
-			game.debug_mode_light_direction(&debug),
+			game.debug_mode_sun_direction(&debug),
 			boxes[:box_count],
 			debug_lines.lines[:debug_lines.count],
 			hud,

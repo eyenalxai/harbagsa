@@ -31,7 +31,7 @@ add_crate_creates_body_and_box :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 
 	center := b3.Vec3{1.0, 2.0, 3.0}
-	index := game.simulation_add_crate(&sim, center, game.CRATE_HALF_EXTENTS, {1, 0, 0, 1})
+	index := game.simulation_add_crate(&sim, center, {1, 0, 0, 1})
 	testing.expect_value(t, index, game.INITIAL_CRATE_COUNT)
 	testing.expect_value(t, game.simulation_crate_count(&sim), game.INITIAL_CRATE_COUNT + 1)
 	testing.expect(t, b3.Body_IsValid(game.simulation_crate_body(&sim, index)), "new crate body is invalid")
@@ -44,11 +44,11 @@ add_crate_past_cap_is_ignored :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 
 	for _ in 0 ..< game.MAX_CRATES {
-		_ = game.simulation_add_crate(&sim, {0, 50, 0}, game.CRATE_HALF_EXTENTS, {1, 1, 1, 1})
+		_ = game.simulation_add_crate(&sim, {0, 50, 0}, {1, 1, 1, 1})
 	}
 	testing.expect_value(t, game.simulation_crate_count(&sim), game.MAX_CRATES)
 
-	index := game.simulation_add_crate(&sim, {0, 50, 0}, game.CRATE_HALF_EXTENTS, {1, 1, 1, 1})
+	index := game.simulation_add_crate(&sim, {0, 50, 0}, {1, 1, 1, 1})
 	testing.expect_value(t, index, -1)
 	testing.expect_value(t, game.simulation_crate_count(&sim), game.MAX_CRATES)
 }
@@ -92,7 +92,7 @@ reset_scene_restores_starting_crates_and_player :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 
 	_ = game.simulation_remove_crate(&sim, 0)
-	_ = game.simulation_add_crate(&sim, {5, 5, 5}, game.CRATE_HALF_EXTENTS, {1, 1, 1, 1})
+	_ = game.simulation_add_crate(&sim, {5, 5, 5}, {1, 1, 1, 1})
 	sim.player.position = {1, 2, 3}
 
 	game.simulation_reset_scene(&sim)
@@ -120,7 +120,7 @@ step_world_leaves_player_alone_and_settles_crates :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 
-	index := game.simulation_add_crate(&sim, {0, 4, 0}, game.CRATE_HALF_EXTENTS, {1, 1, 1, 1})
+	index := game.simulation_add_crate(&sim, {0, 4, 0}, {1, 1, 1, 1})
 	before := sim.player
 
 	for _ in 0 ..< 120 {

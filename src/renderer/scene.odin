@@ -97,12 +97,6 @@ update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> 
 		return false
 	}
 
-	light := light_direction
-	light_length := math.sqrt(light.x * light.x + light.y * light.y + light.z * light.z)
-	if light_length > 0.0 {
-		light = light * (1.0 / light_length)
-	}
-
 	cos_pitch := math.cos(camera.pitch)
 	forward := [3]f32{
 		-math.sin(camera.yaw) * cos_pitch,
@@ -124,7 +118,8 @@ update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> 
 	buffer^ = Camera_Uniform {
 		view = view,
 		projection = mat4_perspective(fov_y, aspect, CAMERA_NEAR, CAMERA_FAR),
-		light_direction = {light.x, light.y, light.z, 0},
+		// The fragment shader normalizes the direction.
+		light_direction = {light_direction.x, light_direction.y, light_direction.z, 0},
 		ambient = {AMBIENT_COLOR.x, AMBIENT_COLOR.y, AMBIENT_COLOR.z, 0},
 		gamma = {gamma, 0, 0, 0},
 	}
