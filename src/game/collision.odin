@@ -4,6 +4,9 @@ package game
 import "core:c"
 import b3 "libs:box3d"
 
+// One call to World_CollideMover can report several planes for the same shape.
+// Keep the shape id and the origin-relative contact point with each plane so
+// the controller can push dynamic bodies after the slide is resolved.
 @(private)
 Solver_Context :: struct {
 	planes:    [MAX_COLLISION_PLANES]b3.CollisionPlane,
@@ -20,6 +23,9 @@ Ground_Probe :: struct {
 	shape_id: b3.ShapeId,
 }
 
+// A short downward capsule cast finds the surface under the feet. The cast end
+// is collided to recover the surface normal. A capsule bottom rests above a
+// slope by its radius, so callers compare the gap to the slope clearance.
 @(private)
 probe_ground_at :: proc(sim: ^Simulation, feet: b3.Vec3, length: f32) -> Ground_Probe {
 	capsule := player_capsule(sim.player.stance)

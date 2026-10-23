@@ -121,11 +121,12 @@ build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_State) {
 		)
 	}
 
-	hint_lines := [4]string {
+	hint_lines := [5]string {
 		"WASD move    Mouse look",
 		"Shift sprint    Space jump or mantle",
 		"C crouch or slide    Z prone, crawl, or dive",
-		"R reset    F1 debug    Esc release mouse",
+		"Left click capture    Esc release mouse",
+		"R reset    F1 debug",
 	}
 	hint_width := 0
 	for line in hint_lines {

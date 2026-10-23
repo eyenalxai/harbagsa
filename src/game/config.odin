@@ -80,6 +80,7 @@ MANTLE_DOWN_EXTRA :: 0.20
 MANTLE_DURATION :: 0.25
 MANTLE_UP_FRACTION :: 0.60
 HEADROOM_PROBE_LIFT :: 0.002
+HEADROOM_CEILING_MARGIN :: 0.05
 
 EYE_HEIGHT_SMOOTH_RATE :: 25.0
 
@@ -99,52 +100,61 @@ MAX_COLLISION_PLANES :: 16
 MOVE_ITERATIONS :: 5
 MOVE_TOLERANCE :: 0.01
 
+Stance_Info :: struct {
+	height:       f32,
+	eye:          f32,
+	walk_speed:   f32,
+	sprint_speed: f32,
+	name:         string,
+}
+
+STANCE_INFO := [Stance]Stance_Info {
+	.Standing = {
+		PLAYER_STANDING_HEIGHT,
+		PLAYER_STANDING_EYE,
+		PLAYER_WALK_SPEED,
+		PLAYER_SPRINT_SPEED,
+		"Standing",
+	},
+	.Crouching = {
+		PLAYER_CROUCH_HEIGHT,
+		PLAYER_CROUCH_EYE,
+		PLAYER_CROUCH_SPEED,
+		PLAYER_CROUCH_SPEED,
+		"Crouching",
+	},
+	.Prone = {
+		PLAYER_PRONE_HEIGHT,
+		PLAYER_PRONE_EYE,
+		PLAYER_CRAWL_SPEED,
+		PLAYER_CRAWL_SPEED,
+		"Prone",
+	},
+}
+
+MOVEMENT_STATE_NAMES := [Movement_State]string {
+	.None = "None",
+	.Diving = "Diving",
+	.Sliding_Dive = "Sliding",
+	.Sliding_Crouch = "Sliding",
+	.Mantling = "Mantling",
+}
+
 stance_height :: proc(stance: Stance) -> f32 {
-	switch stance {
-	case .Standing:
-		return PLAYER_STANDING_HEIGHT
-	case .Crouching:
-		return PLAYER_CROUCH_HEIGHT
-	case .Prone:
-		return PLAYER_PRONE_HEIGHT
-	}
-	return PLAYER_STANDING_HEIGHT
+	return STANCE_INFO[stance].height
 }
 
 stance_eye_height :: proc(stance: Stance) -> f32 {
-	switch stance {
-	case .Standing:
-		return PLAYER_STANDING_EYE
-	case .Crouching:
-		return PLAYER_CROUCH_EYE
-	case .Prone:
-		return PLAYER_PRONE_EYE
-	}
-	return PLAYER_STANDING_EYE
+	return STANCE_INFO[stance].eye
 }
 
 stance_speed :: proc(stance: Stance, gait: Gait) -> f32 {
-	switch stance {
-	case .Standing:
-		return gait == .Sprint ? PLAYER_SPRINT_SPEED : PLAYER_WALK_SPEED
-	case .Crouching:
-		return PLAYER_CROUCH_SPEED
-	case .Prone:
-		return PLAYER_CRAWL_SPEED
-	}
-	return PLAYER_WALK_SPEED
+	info := STANCE_INFO[stance]
+	return gait == .Sprint ? info.sprint_speed : info.walk_speed
 }
 
 stance_name :: proc(stance: Stance) -> string {
-	switch stance {
-	case .Standing:
-		return "Standing"
-	case .Crouching:
-		return "Crouching"
-	case .Prone:
-		return "Prone"
-	}
-	return "Standing"
+	return STANCE_INFO[stance].name
 }
 
 gait_name :: proc(gait: Gait) -> string {
@@ -152,17 +162,7 @@ gait_name :: proc(gait: Gait) -> string {
 }
 
 movement_state_name :: proc(state: Movement_State) -> string {
-	switch state {
-	case .None:
-		return "None"
-	case .Diving:
-		return "Diving"
-	case .Sliding_Dive, .Sliding_Crouch:
-		return "Sliding"
-	case .Mantling:
-		return "Mantling"
-	}
-	return "None"
+	return MOVEMENT_STATE_NAMES[state]
 }
 
 horizontal_speed :: proc(velocity: b3.Vec3) -> f32 {
