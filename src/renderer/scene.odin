@@ -5,15 +5,29 @@ import "core:log"
 import "core:math"
 import "core:mem"
 
-import "src:game"
 import vk "vendor:vulkan"
 
-CAMERA_POSITION :: [3]f32{12, 8, 16}
-CAMERA_TARGET :: [3]f32{0, 1, 0}
 CAMERA_UP :: [3]f32{0, 1, 0}
-CAMERA_FOV_X :: f32(90.0 * math.PI / 180.0)
 CAMERA_NEAR :: 0.05
 CAMERA_FAR :: 200.0
+
+// Camera is the per-frame view the main loop builds from the interpolated
+// player state. Yaw is measured around +Y and pitch is the look angle in
+// radians. fov_x is the horizontal field of view in radians.
+Camera :: struct {
+	position: [3]f32,
+	yaw:      f32,
+	pitch:    f32,
+	fov_x:    f32,
+}
+
+// Draw_Box is one axis-aligned box the renderer draws. The game builds the
+// list; the renderer never imports the game package.
+Draw_Box :: struct {
+	center:       [3]f32,
+	half_extents: [3]f32,
+	color:        [4]f32,
+}
 
 LIGHT_DIRECTION :: [3]f32{-0.45, -1.0, -0.35}
 AMBIENT_COLOR :: [3]f32{0.24, 0.25, 0.28}
@@ -119,13 +133,9 @@ Scene :: struct {
 	depth_images: []vk.Image,
 	depth_memory: []vk.DeviceMemory,
 	depth_views:  []vk.ImageView,
-
-	view: Mat4,
 }
 
 init_scene :: proc(r: ^Renderer) -> Error {
-	r.scene.view = mat4_look_at(CAMERA_POSITION, CAMERA_TARGET, CAMERA_UP)
-
 	if !create_camera_resources(r) {
 		return .Create_Scene
 	}
@@ -569,7 +579,13 @@ destroy_depth_resources :: proc(r: ^Renderer) {
 	}
 }
 
-record_scene :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image_index: u32) -> bool {
+record_scene :: proc(
+	r: ^Renderer,
+	command_buffer: vk.CommandBuffer,
+	image_index: u32,
+	camera: Camera,
+	boxes: []Draw_Box,
+) -> bool {
 	if int(image_index) >= len(r.swapchain_views) || int(image_index) >= len(r.scene.depth_views) {
 		log.errorf("renderer: swapchain image index %d is out of range", image_index)
 		return false
@@ -583,7 +599,7 @@ record_scene :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image_index
 		return false
 	}
 
-	if !update_camera(r) {
+	if !update_camera(r, camera) {
 		return false
 	}
 
@@ -690,7 +706,7 @@ record_scene :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image_index
 	vk.CmdBindVertexBuffers(command_buffer, 0, 1, &vertex_buffer, &vertex_offset)
 	vk.CmdBindIndexBuffer(command_buffer, r.scene.index_buffer, 0, .UINT16)
 
-	for box in game.arena_boxes() {
+	for box in boxes {
 		scale := [3]f32 {
 			box.half_extents.x * 2,
 			box.half_extents.y * 2,
@@ -739,7 +755,7 @@ record_scene :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image_index
 	return check(vk.EndCommandBuffer(command_buffer), "vkEndCommandBuffer")
 }
 
-update_camera :: proc(r: ^Renderer) -> bool {
+update_camera :: proc(r: ^Renderer, camera: Camera) -> bool {
 	height := f32(r.swapchain_extent.height)
 	if height <= 0 {
 		log.error("renderer: cannot build a projection for a zero-height swapchain")
@@ -747,19 +763,32 @@ update_camera :: proc(r: ^Renderer) -> bool {
 	}
 	aspect := f32(r.swapchain_extent.width) / height
 
-	camera := cast(^Camera_Uniform)r.scene.camera_mapped[r.frame_index]
-	if camera == nil {
+	buffer := cast(^Camera_Uniform)r.scene.camera_mapped[r.frame_index]
+	if buffer == nil {
 		log.error("renderer: camera uniform buffer is not mapped")
 		return false
 	}
+
+	cos_pitch := math.cos(camera.pitch)
+	forward := [3]f32{
+		-math.sin(camera.yaw) * cos_pitch,
+		math.sin(camera.pitch),
+		-math.cos(camera.yaw) * cos_pitch,
+	}
+	target := [3]f32 {
+		camera.position.x + forward.x,
+		camera.position.y + forward.y,
+		camera.position.z + forward.z,
+	}
+	view := mat4_look_at(camera.position, target, CAMERA_UP)
 
 	gamma: f32
 	if !r.swapchain_is_srgb {
 		gamma = 1
 	}
-	fov_y := 2 * math.atan(math.tan(CAMERA_FOV_X * 0.5) / aspect)
-	camera^ = Camera_Uniform {
-		view = r.scene.view,
+	fov_y := 2 * math.atan(math.tan(camera.fov_x * 0.5) / aspect)
+	buffer^ = Camera_Uniform {
+		view = view,
 		projection = mat4_perspective(fov_y, aspect, CAMERA_NEAR, CAMERA_FAR),
 		light_direction = {LIGHT_DIRECTION.x, LIGHT_DIRECTION.y, LIGHT_DIRECTION.z, 0},
 		ambient = {AMBIENT_COLOR.x, AMBIENT_COLOR.y, AMBIENT_COLOR.z, 0},

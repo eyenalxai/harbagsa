@@ -34,6 +34,12 @@ update_look :: proc(player: ^Player, look_delta: b3.Vec2) {
 	)
 }
 
+// Apply a relative mouse delta to the player's view. The main loop calls this
+// once per frame, outside the fixed step, so look still works when no step runs.
+simulation_look :: proc(sim: ^Simulation, look_delta: b3.Vec2) {
+	update_look(&sim.player, look_delta)
+}
+
 @(private)
 update_horizontal_velocity :: proc(player: ^Player, input: Input_Snapshot, time_step: f32) {
 	move_forward := input.move_forward
