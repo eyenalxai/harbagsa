@@ -55,9 +55,9 @@ sprint_jump_keeps_the_sprint_air_cap :: proc(t: ^testing.T) {
 	step(&sim, game.Input_Snapshot{move_right = 1.0}, 20)
 	testing.expectf(
 		t,
-		horizontal_speed(sim.player.velocity) <= sim.player.air_cap + 0.01,
+		game.horizontal_speed(sim.player.velocity) <= sim.player.air_cap + 0.01,
 		"air control exceeded the cap: speed=%v cap=%v",
-		horizontal_speed(sim.player.velocity),
+		game.horizontal_speed(sim.player.velocity),
 		sim.player.air_cap,
 	)
 }
@@ -103,4 +103,18 @@ ground_snap_descends_the_twenty_degree_ramp :: proc(t: ^testing.T) {
 
 	testing.expect(t, sim.player.grounded, "player left the ramp while descending")
 	testing.expectf(t, sim.player.position.y < 1.5, "player did not descend the ramp: y=%v", sim.player.position.y)
+}
+
+@(test)
+ground_snap_descends_the_staircase :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+
+	sim.player.position = {game.ARENA_STAIR_X, game.ARENA_STAIR_TOP + game.GROUND_OFFSET, -1.0}
+	sim.player.velocity = {}
+	sim.player.yaw = math.PI
+	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 60)
+
+	testing.expect(t, sim.player.grounded, "player left the staircase")
+	testing.expectf(t, sim.player.position.y < 0.2, "player did not descend: y=%v", sim.player.position.y)
 }

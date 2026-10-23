@@ -32,9 +32,9 @@ crouch_slide_starts_at_ten_and_ends_crouched :: proc(t: ^testing.T) {
 	testing.expect_value(t, sim.player.stance, game.Stance.Crouching)
 	testing.expectf(
 		t,
-		horizontal_speed(sim.player.velocity) > 9.5,
+		game.horizontal_speed(sim.player.velocity) > 9.5,
 		"crouch slide did not start fast: speed=%v",
-		horizontal_speed(sim.player.velocity),
+		game.horizontal_speed(sim.player.velocity),
 	)
 
 	for _ in 0 ..< 120 {
@@ -45,7 +45,7 @@ crouch_slide_starts_at_ten_and_ends_crouched :: proc(t: ^testing.T) {
 	}
 	testing.expect_value(t, sim.player.movement_state, game.Movement_State.None)
 	testing.expect_value(t, sim.player.stance, game.Stance.Crouching)
-	expect_near(t, horizontal_speed(sim.player.velocity), 2.4, 0.1, "crouch slide end")
+	expect_near(t, game.horizontal_speed(sim.player.velocity), 2.4, 0.1, "crouch slide end")
 }
 
 @(test)
@@ -93,17 +93,7 @@ crouch_slide_jump_fails_under_a_low_ceiling :: proc(t: ^testing.T) {
 
 @(test)
 crouch_slide_works_in_eight_directions :: proc(t: ^testing.T) {
-	directions := [8][2]f32 {
-		{1.0, 0.0},
-		{1.0, 1.0},
-		{0.0, 1.0},
-		{-1.0, 1.0},
-		{-1.0, 0.0},
-		{-1.0, -1.0},
-		{0.0, -1.0},
-		{1.0, -1.0},
-	}
-	for direction in directions {
+	for direction in DIRECTIONS {
 		sim := create(t)
 		step(
 			&sim,
@@ -127,9 +117,9 @@ crouch_slide_works_in_eight_directions :: proc(t: ^testing.T) {
 		testing.expect_value(t, sim.player.movement_state, game.Movement_State.Sliding_Crouch)
 		testing.expectf(
 			t,
-			horizontal_speed(sim.player.velocity) > 9.5,
+			game.horizontal_speed(sim.player.velocity) > 9.5,
 			"crouch slide did not start fast: %v",
-			horizontal_speed(sim.player.velocity),
+			game.horizontal_speed(sim.player.velocity),
 		)
 		game.simulation_destroy(&sim)
 	}

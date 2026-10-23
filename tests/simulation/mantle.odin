@@ -17,42 +17,27 @@ approach_and_jump :: proc(sim: ^game.Simulation, approach: b3.Vec3) {
 }
 
 @(test)
-mantle_climbs_the_one_point_two_wall :: proc(t: ^testing.T) {
-	sim := create(t)
-	defer game.simulation_destroy(&sim)
+mantle_climbs_the_walls :: proc(t: ^testing.T) {
+	Case :: struct {
+		approach: b3.Vec3,
+		height:   f32,
+	}
+	cases := [2]Case {
+		{game.ARENA_MANTLE_12_APPROACH, game.ARENA_MANTLE_12_HEIGHT},
+		{game.ARENA_MANTLE_15_APPROACH, game.ARENA_MANTLE_15_HEIGHT},
+	}
+	for c in cases {
+		sim := create(t)
+		approach_and_jump(&sim, c.approach)
+		step(&sim, game.Input_Snapshot{jump_pressed = true}, 1)
+		testing.expect_value(t, sim.player.movement_state, game.Movement_State.Mantling)
 
-	approach_and_jump(&sim, game.ARENA_MANTLE_12_APPROACH)
-	step(&sim, game.Input_Snapshot{jump_pressed = true}, 1)
-	testing.expect_value(t, sim.player.movement_state, game.Movement_State.Mantling)
-
-	step(&sim, {}, 20)
-	testing.expect_value(t, sim.player.movement_state, game.Movement_State.None)
-	testing.expectf(
-		t,
-		sim.player.position.y > 1.1 && sim.player.position.y < 1.3,
-		"did not mantle the 1.2 m wall: y=%v",
-		sim.player.position.y,
-	)
-	testing.expect_value(t, sim.player.stance, game.Stance.Standing)
-}
-
-@(test)
-mantle_climbs_the_one_point_five_wall :: proc(t: ^testing.T) {
-	sim := create(t)
-	defer game.simulation_destroy(&sim)
-
-	approach_and_jump(&sim, game.ARENA_MANTLE_15_APPROACH)
-	step(&sim, game.Input_Snapshot{jump_pressed = true}, 1)
-	testing.expect_value(t, sim.player.movement_state, game.Movement_State.Mantling)
-
-	step(&sim, {}, 20)
-	testing.expect_value(t, sim.player.movement_state, game.Movement_State.None)
-	testing.expectf(
-		t,
-		sim.player.position.y > 1.4 && sim.player.position.y < 1.6,
-		"did not mantle the 1.5 m wall: y=%v",
-		sim.player.position.y,
-	)
+		step(&sim, {}, 20)
+		testing.expect_value(t, sim.player.movement_state, game.Movement_State.None)
+		expect_near(t, sim.player.position.y, c.height + game.GROUND_OFFSET, 0.1, "mantle height")
+		testing.expect_value(t, sim.player.stance, game.Stance.Standing)
+		game.simulation_destroy(&sim)
+	}
 }
 
 @(test)

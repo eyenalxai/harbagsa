@@ -18,6 +18,18 @@ PLAYER_FOV_X :: f32(90.0 * math.PI / 180.0)
 MAX_FRAME_DELTA :: f32(0.1)
 MAX_STEPS_PER_FRAME :: 8
 
+Input_Latches :: struct {
+	jump:   bool,
+	sprint: bool,
+	crouch: bool,
+	prone:  bool,
+	reset:  bool,
+}
+
+clear_latches :: proc(latches: ^Input_Latches) {
+	latches^ = {}
+}
+
 main :: proc() {
 	logger := log.create_console_logger(lowest = .Info, allocator = context.allocator)
 	context.logger = logger
@@ -52,11 +64,7 @@ run :: proc() -> bool {
 	defer game.simulation_destroy(&sim)
 
 	accumulator: f32 = 0
-	jump_latched := false
-	sprint_latched := false
-	crouch_latched := false
-	prone_latched := false
-	reset_latched := false
+	latches: Input_Latches
 	debug_view := false
 	debug_lines: Debug_Lines
 	last_time := time.now()
@@ -99,29 +107,23 @@ run :: proc() -> bool {
 		if events.captured {
 			game.simulation_look(&sim, events.look_delta)
 			if events.jump_pressed {
-				jump_latched = true
+				latches.jump = true
 			}
 			if events.sprint_pressed {
-				sprint_latched = true
+				latches.sprint = true
 			}
 			if events.crouch_pressed {
-				crouch_latched = true
+				latches.crouch = true
 			}
 			if events.prone_pressed {
-				prone_latched = true
+				latches.prone = true
 			}
 		} else {
-			jump_latched = false
-			sprint_latched = false
-			crouch_latched = false
-			prone_latched = false
+			clear_latches(&latches)
 		}
 		if events.reset_pressed {
-			jump_latched = false
-			sprint_latched = false
-			crouch_latched = false
-			prone_latched = false
-			reset_latched = true
+			clear_latches(&latches)
+			latches.reset = true
 		}
 
 		accumulator += delta
@@ -133,21 +135,17 @@ run :: proc() -> bool {
 					move_forward = events.move_forward,
 					move_right = events.move_right,
 					sprint_held = events.sprint_held,
-					sprint_pressed = sprint_latched,
+					sprint_pressed = latches.sprint,
 					crouch_held = events.crouch_held,
-					crouch_pressed = crouch_latched,
+					crouch_pressed = latches.crouch,
 					prone_held = events.prone_held,
-					prone_pressed = prone_latched,
-					jump_pressed = jump_latched,
-					reset_pressed = reset_latched,
+					prone_pressed = latches.prone,
+					jump_pressed = latches.jump,
+					reset_pressed = latches.reset,
 				},
 				game.SIMULATION_STEP,
 			)
-			jump_latched = false
-			sprint_latched = false
-			crouch_latched = false
-			prone_latched = false
-			reset_latched = false
+			clear_latches(&latches)
 			accumulator -= game.SIMULATION_STEP
 			steps += 1
 		}

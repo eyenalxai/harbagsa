@@ -32,7 +32,7 @@ reset_returns_player_to_spawn :: proc(t: ^testing.T) {
 	testing.expect_value(t, sim.player.movement_state, game.Movement_State.None)
 	testing.expect(t, !sim.player.crouch_engaged, "crouch selection was not cleared")
 	testing.expect(t, !sim.player.prone_engaged, "prone selection was not cleared")
-	testing.expect(t, !sim.player.sprint_engaged, "sprint selection was not cleared")
+	testing.expect(t, !sim.player.sprint_toggled, "sprint selection was not cleared")
 	testing.expect_value(t, sim.player.jump_buffer, f32(0.0))
 	testing.expect_value(t, sim.player.eye_height, game.PLAYER_STANDING_EYE)
 	testing.expect_value(t, sim.player.slide_speed, f32(0.0))

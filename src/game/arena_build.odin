@@ -201,4 +201,6 @@ build_arena_props :: proc(boxes: []geometry.Box) {
 	)
 	boxes[index].visual_only = true
 	index += 1
+
+	assert(index == len(boxes))
 }

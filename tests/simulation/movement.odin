@@ -23,102 +23,72 @@ stance_speeds_match_the_package :: proc(t: ^testing.T) {
 }
 
 @(test)
-crouch_moves_in_every_direction :: proc(t: ^testing.T) {
-	sim := create(t)
-	defer game.simulation_destroy(&sim)
-
-	step(&sim, {}, 10)
-	step(&sim, game.Input_Snapshot{crouch_pressed = true}, 1)
-	testing.expect_value(t, sim.player.stance, game.Stance.Crouching)
-
-	directions := [8][2]f32 {
-		{1.0, 0.0},
-		{1.0, 1.0},
-		{0.0, 1.0},
-		{-1.0, 1.0},
-		{-1.0, 0.0},
-		{-1.0, -1.0},
-		{0.0, -1.0},
-		{1.0, -1.0},
+stances_move_in_every_direction :: proc(t: ^testing.T) {
+	Case :: struct {
+		stance: game.Stance,
+		speed:  f32,
+		crouch: bool,
+		prone:  bool,
+		sprint: bool,
 	}
-	for direction in directions {
-		sim.player.position = game.SPAWN_POSITION
-		sim.player.velocity = {}
-		sim.player.yaw = 0
-		step(
-			&sim,
-			game.Input_Snapshot{move_forward = direction.x, move_right = direction.y},
-			30,
-		)
-		expect_near(t, horizontal_speed(sim.player.velocity), 2.4, 0.01, "crouch speed")
+	cases := [3]Case {
+		{.Standing, 8.0, false, false, true},
+		{.Crouching, 2.4, true, false, false},
+		{.Prone, 1.2, false, true, false},
 	}
-}
+	for c in cases {
+		sim := create(t)
+		step(&sim, {}, 10)
+		if c.crouch {
+			step(&sim, game.Input_Snapshot{crouch_pressed = true}, 1)
+		}
+		if c.prone {
+			step(&sim, game.Input_Snapshot{prone_pressed = true}, 1)
+		}
+		testing.expect_value(t, sim.player.stance, c.stance)
 
-@(test)
-crawl_moves_in_every_direction :: proc(t: ^testing.T) {
-	sim := create(t)
-	defer game.simulation_destroy(&sim)
-
-	step(&sim, {}, 10)
-	step(&sim, game.Input_Snapshot{prone_pressed = true}, 1)
-	testing.expect_value(t, sim.player.stance, game.Stance.Prone)
-
-	directions := [8][2]f32 {
-		{1.0, 0.0},
-		{1.0, 1.0},
-		{0.0, 1.0},
-		{-1.0, 1.0},
-		{-1.0, 0.0},
-		{-1.0, -1.0},
-		{0.0, -1.0},
-		{1.0, -1.0},
-	}
-	for direction in directions {
-		sim.player.position = game.SPAWN_POSITION
-		sim.player.velocity = {}
-		sim.player.yaw = 0
-		step(
-			&sim,
-			game.Input_Snapshot{move_forward = direction.x, move_right = direction.y},
-			30,
-		)
-		expect_near(t, horizontal_speed(sim.player.velocity), 1.2, 0.01, "crawl speed")
+		for direction in DIRECTIONS {
+			sim.player.position = game.SPAWN_POSITION
+			sim.player.velocity = {}
+			sim.player.yaw = 0
+			step(
+				&sim,
+				game.Input_Snapshot {
+					move_forward = direction.x,
+					move_right = direction.y,
+					sprint_held = c.sprint,
+				},
+				30,
+			)
+			testing.expect_value(t, sim.player.stance, c.stance)
+			expect_near(t, game.horizontal_speed(sim.player.velocity), c.speed, 0.01, "stance speed")
+		}
+		game.simulation_destroy(&sim)
 	}
 }
 
 @(test)
-sprint_moves_in_every_direction :: proc(t: ^testing.T) {
-	sim := create(t)
-	defer game.simulation_destroy(&sim)
+stance_engagement_modes_are_pure :: proc(t: ^testing.T) {
+	crouch := false
+	prone := false
+	crouch, prone = game.engagement_step(.Hold, crouch, prone, true, true)
+	testing.expect(t, crouch && !prone, "hold crouch did not engage")
 
-	directions := [8][2]f32 {
-		{1.0, 0.0},
-		{1.0, 1.0},
-		{0.0, 1.0},
-		{-1.0, 1.0},
-		{-1.0, 0.0},
-		{-1.0, -1.0},
-		{0.0, -1.0},
-		{1.0, -1.0},
-	}
-	for direction in directions {
-		sim.player.position = game.SPAWN_POSITION
-		sim.player.velocity = {}
-		sim.player.yaw = 0
-		sim.player.stance = .Standing
-		sim.player.gait = .Walk
-		step(
-			&sim,
-			game.Input_Snapshot {
-				move_forward = direction.x,
-				move_right = direction.y,
-				sprint_held = true,
-			},
-			30,
-		)
-		testing.expect_value(t, sim.player.gait, game.Gait.Sprint)
-		expect_near(t, horizontal_speed(sim.player.velocity), 8.0, 0.01, "sprint speed")
-	}
+	prone, crouch = game.engagement_step(.Toggle, prone, crouch, true, false)
+	testing.expect(t, prone && !crouch, "toggle prone did not override crouch")
+
+	prone, crouch = game.engagement_step(.Toggle, prone, crouch, true, false)
+	testing.expect(t, !prone, "toggle prone did not release")
+
+	crouch, prone = game.engagement_step(.Hold, crouch, prone, false, true)
+	testing.expect(t, crouch, "held crouch did not return after prone release")
+
+	engaged, requested := game.sprint_request_step(.Toggle, false, false, true)
+	testing.expect(t, engaged && requested, "toggle sprint did not engage")
+	engaged, requested = game.sprint_request_step(.Toggle, engaged, false, true)
+	testing.expect(t, !engaged && !requested, "toggle sprint did not release")
+	engaged, requested = game.sprint_request_step(.Hold, engaged, true, true)
+	testing.expect(t, requested, "hold sprint did not request")
 }
 
 @(test)
@@ -173,7 +143,7 @@ sprint_keeps_crouch_under_a_low_ceiling :: proc(t: ^testing.T) {
 	)
 	testing.expect_value(t, sim.player.gait, game.Gait.Walk)
 	testing.expect_value(t, sim.player.stance, game.Stance.Crouching)
-	expect_near(t, horizontal_speed(sim.player.velocity), 2.4, 0.01, "blocked sprint speed")
+	expect_near(t, game.horizontal_speed(sim.player.velocity), 2.4, 0.01, "blocked sprint speed")
 }
 
 @(test)

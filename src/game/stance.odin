@@ -36,11 +36,12 @@ has_headroom :: proc(sim: ^Simulation, feet: b3.Vec3, stance: Stance) -> bool {
 		radius = PLAYER_RADIUS,
 	}
 	query := Headroom_Query {
-		threshold = feet.y + STEP_HEIGHT,
+		threshold = feet.y + HEADROOM_CEILING_MARGIN,
 	}
+	origin := feet + b3.Vec3{0.0, HEADROOM_PROBE_LIFT, 0.0}
 	_ = b3.World_OverlapShape(
 		sim.world_id,
-		feet,
+		origin,
 		proxy,
 		b3.DefaultQueryFilter(),
 		headroom_overlap,
@@ -77,19 +78,36 @@ stance_request :: proc(player: ^Player) -> Stance {
 	return .Standing
 }
 
-@(private)
-update_engagement :: proc(self, other: ^bool, pressed, held: bool, mode: Input_Mode) {
+engagement_step :: proc(
+	mode: Input_Mode,
+	engaged, other_engaged: bool,
+	pressed, held: bool,
+) -> (bool, bool) {
+	next_engaged := engaged
+	next_other := other_engaged
 	if mode == .Hold {
 		if pressed {
-			other^ = false
+			next_other = false
 		}
-		self^ = held
+		next_engaged = held
 	} else if pressed {
-		self^ = !self^
-		if self^ {
-			other^ = false
+		next_engaged = !next_engaged
+		if next_engaged {
+			next_other = false
 		}
 	}
+	return next_engaged, next_other
+}
+
+@(private)
+update_engagement :: proc(engaged, other_engaged: ^bool, pressed, held: bool, mode: Input_Mode) {
+	engaged^, other_engaged^ = engagement_step(
+		mode,
+		engaged^,
+		other_engaged^,
+		pressed,
+		held,
+	)
 }
 
 @(private)
@@ -113,21 +131,35 @@ update_stance_input :: proc(player: ^Player, input: Input_Snapshot) {
 	)
 }
 
+sprint_request_step :: proc(
+	mode: Input_Mode,
+	engaged, held, pressed: bool,
+) -> (bool, bool) {
+	if mode == .Hold {
+		return engaged, held
+	}
+	next := engaged
+	if pressed {
+		next = !next
+	}
+	return next, next
+}
+
 @(private)
 update_sprint_input :: proc(player: ^Player, input: Input_Snapshot) {
 	if player.movement_state != .None {
-		player.sprint_requested = false
+		player.sprint_wanted = false
 		return
 	}
 
-	if SPRINT_INPUT_MODE == .Hold {
-		player.sprint_requested = input.sprint_held
-	} else {
-		if input.sprint_pressed {
-			player.sprint_engaged = !player.sprint_engaged
-		}
-		player.sprint_requested = player.sprint_engaged
-	}
+	engaged, requested := sprint_request_step(
+		SPRINT_INPUT_MODE,
+		player.sprint_toggled,
+		input.sprint_held,
+		input.sprint_pressed,
+	)
+	player.sprint_toggled = engaged
+	player.sprint_wanted = requested
 }
 
 @(private)
@@ -153,7 +185,7 @@ resolve_stance :: proc(sim: ^Simulation, input: Input_Snapshot) {
 	crouching_fits := has_headroom(sim, player.position, .Crouching)
 	sprint_active := false
 
-	if player.sprint_requested {
+	if player.sprint_wanted {
 		if standing_fits {
 			if requested != .Standing {
 				player.crouch_engaged = false
@@ -163,9 +195,9 @@ resolve_stance :: proc(sim: ^Simulation, input: Input_Snapshot) {
 			sprint_active = true
 		} else if SPRINT_INPUT_MODE == .Toggle &&
 		   input.sprint_pressed &&
-		   player.sprint_engaged {
-			player.sprint_engaged = false
-			player.sprint_requested = false
+		   player.sprint_toggled {
+			player.sprint_toggled = false
+			player.sprint_wanted = false
 		}
 	}
 

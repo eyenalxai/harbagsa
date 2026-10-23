@@ -17,8 +17,8 @@ Player :: struct {
 	movement_state:    Movement_State,
 	crouch_engaged:    bool,
 	prone_engaged:     bool,
-	sprint_engaged:    bool,
-	sprint_requested:  bool,
+	sprint_toggled:    bool,
+	sprint_wanted:  bool,
 	eye_height:        f32,
 	previous_eye_height: f32,
 	on_steep_slope:    bool,
@@ -31,10 +31,6 @@ Player :: struct {
 	slide_elapsed:     f32,
 	mantle:            Mantle_State,
 }
-
-// One call to World_CollideMover can report several planes for the same shape.
-// Keep the shape id and the origin-relative contact point with each plane so
-// the controller can push dynamic bodies after the slide is resolved.
 
 @(private)
 update_look :: proc(player: ^Player, look_delta: b3.Vec2) {
@@ -114,6 +110,3 @@ update_horizontal_velocity :: proc(player: ^Player, input: Input_Snapshot, time_
 	player.velocity.z = current.z
 }
 
-// A short downward ray from just above the capsule bottom. The ray is longer
-// than the contact tolerance so a landing frame still sees the floor, but only
-// a hit close to the feet counts as grounded.
