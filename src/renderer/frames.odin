@@ -52,12 +52,6 @@ init_frames :: proc(r: ^Renderer) -> Error {
 		) {
 			return .Create_Frames
 		}
-		if !check(
-			vk.CreateSemaphore(r.device, &semaphore_info, nil, &r.render_finished[i]),
-			"vkCreateSemaphore",
-		) {
-			return .Create_Frames
-		}
 		if !check(vk.CreateFence(r.device, &fence_info, nil, &r.in_flight[i]), "vkCreateFence") {
 			return .Create_Frames
 		}
@@ -140,7 +134,7 @@ begin_frame :: proc(
 
 end_frame :: proc(r: ^Renderer, frame: Frame) -> Frame_Status {
 	image_available := r.image_available[r.frame_index]
-	render_finished := r.render_finished[r.frame_index]
+	render_finished := r.render_finished[frame.image_index]
 	wait_stage := vk.PipelineStageFlags{.COLOR_ATTACHMENT_OUTPUT}
 	command_buffer := frame.command_buffer
 	image_index := frame.image_index

@@ -59,7 +59,7 @@ Renderer :: struct {
 	command_pool:    vk.CommandPool,
 	command_buffers: [MAX_FRAMES_IN_FLIGHT]vk.CommandBuffer,
 	image_available: [MAX_FRAMES_IN_FLIGHT]vk.Semaphore,
-	render_finished: [MAX_FRAMES_IN_FLIGHT]vk.Semaphore,
+	render_finished: []vk.Semaphore,
 	in_flight:       [MAX_FRAMES_IN_FLIGHT]vk.Fence,
 	frame_index:     int,
 	clear_color:     [4]f32,
@@ -122,10 +122,6 @@ deinit :: proc(r: ^Renderer) {
 			if r.image_available[i] != 0 {
 				vk.DestroySemaphore(r.device, r.image_available[i], nil)
 				r.image_available[i] = 0
-			}
-			if r.render_finished[i] != 0 {
-				vk.DestroySemaphore(r.device, r.render_finished[i], nil)
-				r.render_finished[i] = 0
 			}
 			if r.in_flight[i] != 0 {
 				vk.DestroyFence(r.device, r.in_flight[i], nil)
