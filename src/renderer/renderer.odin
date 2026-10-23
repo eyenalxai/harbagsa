@@ -180,6 +180,23 @@ deinit :: proc(r: ^Renderer) {
 	}
 }
 
+// destroy_pipeline_pair releases a pipeline and the layout it was created
+// with. The two handles always live and die together, so clearing both here
+// keeps every caller from repeating the check.
+destroy_pipeline_pair :: proc(r: ^Renderer, pipeline: ^vk.Pipeline, layout: ^vk.PipelineLayout) {
+	if r.device == nil {
+		return
+	}
+	if pipeline^ != 0 {
+		vk.DestroyPipeline(r.device, pipeline^, nil)
+		pipeline^ = 0
+	}
+	if layout^ != 0 {
+		vk.DestroyPipelineLayout(r.device, layout^, nil)
+		layout^ = 0
+	}
+}
+
 // notify_resize marks the swapchain for recreation on the next frame. The
 // platform sends this on window resize and pixel-size changes, so the
 // renderer does not compare the window size every frame.
@@ -365,7 +382,11 @@ init_instance :: proc(r: ^Renderer) -> Error {
 		create_info.ppEnabledLayerNames = raw_data(validation_layers)
 	}
 
-	if !check(vk.CreateInstance(&create_info, nil, &r.instance), "vkCreateInstance") {
+	if result := vk.CreateInstance(&create_info, nil, &r.instance); result != .SUCCESS {
+		log.errorf("renderer: vkCreateInstance failed: %v", result)
+		if result == .ERROR_INCOMPATIBLE_DRIVER {
+			log.error("renderer: no Vulkan driver was found; check the installed ICD and VK_ICD_FILENAMES")
+		}
 		return .Create_Instance
 	}
 	vk.load_proc_addresses_instance(r.instance)
@@ -463,7 +484,7 @@ select_physical_device :: proc(r: ^Renderer) -> Error {
 		return .No_Suitable_Device
 	}
 	if count == 0 {
-		log.error("renderer: no Vulkan physical devices found")
+		log.error("renderer: no Vulkan physical devices found; check the GPU driver and VK_ICD_FILENAMES")
 		return .No_Suitable_Device
 	}
 
@@ -741,7 +762,7 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 		return status
 	}
 	if r.scene.pipeline != 0 && r.scene.pipeline_format != r.swapchain_format {
-		destroy_pipeline(r)
+		destroy_pipeline_pair(r, &r.scene.pipeline, &r.scene.pipeline_layout)
 		if !create_pipeline(r) {
 			return .Fatal
 		}
