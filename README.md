@@ -1,4 +1,4 @@
-# game
+# harbagsa
 
 An Odin project.
 
@@ -23,7 +23,7 @@ make run
 
 ```sh
 make build
-./bin/game
+./bin/harbagsa
 ```
 
 ## Checks
