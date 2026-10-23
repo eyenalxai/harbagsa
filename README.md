@@ -223,8 +223,9 @@ capture the owner's real window instead:
 ./bin/harbagsa-agent run scenarios/smoke.json --present --out runs/present
 ```
 
-The compositor may resize the window. The PNG has the actual swapchain size and
-matches an offscreen capture at the same size.
+The compositor may resize the window. The PNG has the actual swapchain size. It
+matches an offscreen capture at the same size when both frames share the same
+TAA history; the first frame always matches.
 
 ## Build
 
