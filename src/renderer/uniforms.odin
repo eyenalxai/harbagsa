@@ -95,7 +95,6 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 
 	pool_sizes := [3]vk.DescriptorPoolSize {
 		{type = .UNIFORM_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT},
-		// Two shadow bindings per set: the compare sampler and the raw-depth sampler.
 		{type = .COMBINED_IMAGE_SAMPLER, descriptorCount = 2 * MAX_FRAMES_IN_FLIGHT},
 		{type = .STORAGE_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT},
 	}
