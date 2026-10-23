@@ -149,6 +149,7 @@ debug_callback :: proc "system" (
 
 	level := log.Level.Debug
 	if .ERROR in severity {
+		g_validation_failed = true
 		level = .Error
 	} else if .WARNING in severity {
 		level = .Warning
