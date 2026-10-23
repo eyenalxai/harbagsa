@@ -85,7 +85,7 @@ write_shadow_descriptors :: proc(r: ^Renderer) {
 		write := vk.WriteDescriptorSet {
 			sType = .WRITE_DESCRIPTOR_SET,
 			dstSet = r.scene.descriptor_sets[i],
-			dstBinding = 1,
+			dstBinding = SHADOW_MAP_BINDING,
 			descriptorCount = 1,
 			descriptorType = .COMBINED_IMAGE_SAMPLER,
 			pImageInfo = &image_info,
@@ -142,45 +142,10 @@ destroy_shadow :: proc(r: ^Renderer) {
 	}
 }
 
-record_shadow_pass :: proc(
-	r: ^Renderer,
-	command_buffer: vk.CommandBuffer,
-	frame_index: int,
-	boxes: []geometry.Box,
-) {
-	to_depth := vk.ImageMemoryBarrier {
-		sType = .IMAGE_MEMORY_BARRIER,
-		dstAccessMask = {.DEPTH_STENCIL_ATTACHMENT_WRITE},
-		oldLayout = .UNDEFINED,
-		newLayout = .DEPTH_ATTACHMENT_OPTIMAL,
-		srcQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
-		dstQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
-		image = r.shadow.images[frame_index].image,
-		subresourceRange = DEPTH_SUBRESOURCE,
-	}
-	vk.CmdPipelineBarrier(
-		command_buffer,
-		{.TOP_OF_PIPE},
-		{.EARLY_FRAGMENT_TESTS, .LATE_FRAGMENT_TESTS},
-		{},
-		0,
-		nil,
-		0,
-		nil,
-		1,
-		&to_depth,
-	)
-
-	clear_depth := vk.ClearValue{}
-	clear_depth.depthStencil = {depth = 1.0, stencil = 0}
-	depth_attachment := vk.RenderingAttachmentInfo {
-		sType = .RENDERING_ATTACHMENT_INFO,
-		imageView = r.shadow.images[frame_index].view,
-		imageLayout = .DEPTH_ATTACHMENT_OPTIMAL,
-		loadOp = .CLEAR,
-		storeOp = .STORE,
-		clearValue = clear_depth,
-	}
+record_shadow_pass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, boxes: []geometry.Box) {
+	frame_index := r.frame_index
+	record_depth_write_barrier(command_buffer, r.shadow.images[frame_index].image)
+	depth_attachment := make_depth_attachment(r.shadow.images[frame_index].view, .DEPTH_ATTACHMENT_OPTIMAL)
 	extent := vk.Extent2D{width = SHADOW_MAP_SIZE, height = SHADOW_MAP_SIZE}
 	rendering_info := vk.RenderingInfo {
 		sType = .RENDERING_INFO,
@@ -190,28 +155,10 @@ record_shadow_pass :: proc(
 	}
 	vk.CmdBeginRendering(command_buffer, &rendering_info)
 
-	viewport := vk.Viewport {
-		width = SHADOW_MAP_SIZE,
-		height = SHADOW_MAP_SIZE,
-		minDepth = 0,
-		maxDepth = 1,
-	}
-	scissor := vk.Rect2D{extent = extent}
-	vk.CmdSetViewport(command_buffer, 0, 1, &viewport)
-	vk.CmdSetScissor(command_buffer, 0, 1, &scissor)
+	set_viewport(command_buffer, SHADOW_MAP_SIZE, SHADOW_MAP_SIZE)
 
 	vk.CmdBindPipeline(command_buffer, .GRAPHICS, r.shadow.pipeline)
-	descriptor_set := r.scene.descriptor_sets[frame_index]
-	vk.CmdBindDescriptorSets(
-		command_buffer,
-		.GRAPHICS,
-		r.shadow.pipeline_layout,
-		0,
-		1,
-		&descriptor_set,
-		0,
-		nil,
-	)
+	bind_camera(command_buffer, r.shadow.pipeline_layout, r.scene.descriptor_sets[frame_index])
 
 	draw_boxes(r, command_buffer, r.shadow.pipeline_layout, boxes)
 
