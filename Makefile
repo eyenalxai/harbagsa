@@ -54,10 +54,10 @@ check: $(BOX3D_LIB) shaders
 	$(ODIN) check src/game $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/geometry $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 
-# Box3D's world registry is not safe for concurrent world creation, so the
-# simulation tests share one runner thread.
+# Box3D's world registry is not safe for concurrent world creation, so both
+# test programs share one runner thread.
 test: $(BOX3D_LIB)
-	$(ODIN) test tests/physics $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
+	$(ODIN) test tests/physics $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
 	$(ODIN) test tests/simulation $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
 
 run: $(BOX3D_LIB) shaders
