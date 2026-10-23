@@ -91,10 +91,16 @@ socket_ready :: proc(path: string) {
 	fmt.println(string(data))
 }
 
+Socket_Sink :: struct {
+	client: posix.FD,
+}
+
 @(private)
 serve_client :: proc(runtime: ^Session_Runtime, client: posix.FD) {
 	pending := make([dynamic]u8, 0, 4096, context.allocator)
 	defer delete(pending)
+	socket_sink := Socket_Sink{client = client}
+	sink := Line_Sink{ctx = &socket_sink, write = socket_sink_write}
 	chunk: [SOCKET_RECV_BUFFER]u8
 	for !runtime.session.quit {
 		count := posix.recv(client, raw_data(chunk[:]), len(chunk), {})
@@ -102,40 +108,21 @@ serve_client :: proc(runtime: ^Session_Runtime, client: posix.FD) {
 			break
 		}
 		append(&pending, ..chunk[:int(count)])
-		for {
-			newline := -1
-			for character, index in pending[:] {
-				if character == '\n' {
-					newline = index
-					break
-				}
-			}
-			if newline < 0 {
-				if len(pending) > MAX_SESSION_LINE {
-					clear(&pending)
-				}
-				break
-			}
-			line := string(pending[:newline])
-			if !send_reply(client, runtime_handle_line(runtime, line)) {
-				return
-			}
-			copy(pending[:], pending[newline + 1:])
-			resize(&pending, len(pending) - (newline + 1))
+		if !consume_lines(runtime, &pending, sink) {
+			return
 		}
 	}
+	_ = consume_tail(runtime, &pending, sink)
 }
 
 @(private)
-send_reply :: proc(client: posix.FD, data: []byte) -> bool {
-	if data == nil {
-		return true
-	}
+socket_sink_write :: proc(ctx: rawptr, data: []u8) -> bool {
+	sink := cast(^Socket_Sink)ctx
 	defer delete(data, context.allocator)
-	if !send_all(client, data) {
+	if !send_all(sink.client, data) {
 		return false
 	}
-	return send_all(client, []byte{'\n'})
+	return send_all(sink.client, []byte{'\n'})
 }
 
 @(private)

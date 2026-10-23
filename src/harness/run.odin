@@ -13,12 +13,8 @@ EXIT_SCENARIO :: 2
 EXIT_RENDER :: 3
 
 Run_Options :: struct {
-	scenario:  string,
-	out_dir:   string,
-	width:     u32,
-	height:    u32,
-	present:   bool,
-	no_render: bool,
+	using common: Common_Options,
+	scenario:     string,
 }
 
 Report :: struct {
@@ -133,24 +129,8 @@ run_batch :: proc(options: Run_Options) -> int {
 		backend_destroy(&backend)
 	}
 
-	failure := ""
-	for command in scenario.commands {
-		log.infof("harness: %s at frame %d", command_name(command.kind), session.frame)
-		if command.kind == .Capture && (!render_enabled || !backend.ready) {
-			log.warn("harness: capture skipped because rendering is disabled")
-			continue
-		}
-		reply := session_execute(&session, command, "")
-		ok := reply.ok
-		if !ok && failure == "" {
-			failure = strings.clone(reply.error, context.allocator)
-		}
-		reply_destroy(&reply, context.allocator)
-		if !ok || session.quit {
-			break
-		}
-	}
-
+	log.infof("harness: %d commands", len(scenario.commands))
+	failure := execute_commands(&session, scenario, render_enabled)
 	if failure != "" {
 		session_failure(&session, failure)
 	}
@@ -158,7 +138,9 @@ run_batch :: proc(options: Run_Options) -> int {
 	defer state_destroy(&state, context.allocator)
 	state_path := join_path({staging, "state.json"}, context.allocator)
 	defer delete(state_path, context.allocator)
+	state_write_failed := false
 	if write_error := write_json_file(state_path, state); write_error != "" {
+		state_write_failed = true
 		if failure == "" {
 			failure = write_error
 		}
@@ -182,7 +164,7 @@ run_batch :: proc(options: Run_Options) -> int {
 	if len(session.failures) > 0 || failure != "" {
 		exit_code = EXIT_CHECK
 	}
-	if backend_error != "" {
+	if backend_error != "" || session.render_failed || state_write_failed {
 		exit_code = EXIT_RENDER
 	}
 	report.ok = exit_code == EXIT_OK
@@ -192,6 +174,10 @@ run_batch :: proc(options: Run_Options) -> int {
 	}
 	if write_error := write_json_file(report_path, report); write_error != "" {
 		log.errorf("harness: %s", write_error)
+		exit_code = EXIT_RENDER
+		report.ok = false
+		report.exit_code = exit_code
+		report.error = write_error
 	}
 
 	summary := build_summary(report, absolute_out)
@@ -206,6 +192,32 @@ run_batch :: proc(options: Run_Options) -> int {
 		delete(failure, context.allocator)
 	}
 	return exit_code
+}
+
+@(private)
+execute_commands :: proc(session: ^Session, scenario: Scenario, render_enabled: bool) -> string {
+	for command in scenario.commands {
+		log.infof("harness: %s at frame %d", command_name(command.kind), session.frame)
+		backend_ready := session.backend != nil && session.backend.ready
+		if command.kind == .Capture && (!render_enabled || !backend_ready) {
+			log.warn("harness: capture skipped because rendering is disabled")
+			continue
+		}
+		reply := session_execute(session, command, "")
+		ok := reply.ok
+		error := ""
+		if !ok && command.kind != .Check {
+			error = strings.clone(reply.error, context.allocator)
+		}
+		reply_destroy(&reply, context.allocator)
+		if command.kind == .Check {
+			continue
+		}
+		if !ok || session.quit {
+			return error
+		}
+	}
+	return ""
 }
 
 scenario_has_capture :: proc(scenario: Scenario) -> bool {

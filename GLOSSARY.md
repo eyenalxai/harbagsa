@@ -83,7 +83,12 @@ _Avoid_: Script, test case
 
 **Capture**:
 One rendered frame written as a PNG by the harness.
-_Avoid_: Screenshot, shot
+_Avoid_: Shot
+
+**Session**:
+The live harness process that reads one JSON command per line and writes one
+JSON reply per line.
+_Avoid_: Daemon, server
 
 **Offscreen target**:
 The render target with a color image, a depth image, and a readback buffer, but

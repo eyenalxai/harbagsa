@@ -11,13 +11,17 @@ DEFAULT_WIDTH :: 1280
 DEFAULT_HEIGHT :: 720
 MAX_SIZE :: 16384
 
-Session_Options :: struct {
-	socket:    string,
+Common_Options :: struct {
 	out_dir:   string,
 	width:     u32,
 	height:    u32,
 	present:   bool,
 	no_render: bool,
+}
+
+Session_Options :: struct {
+	using common: Common_Options,
+	socket:       string,
 }
 
 cli_main :: proc() -> int {
@@ -45,44 +49,26 @@ cli_main :: proc() -> int {
 }
 
 cli_run :: proc(args: []string) -> int {
-	options := Run_Options{width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT}
+	options := Run_Options{common = {width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT}}
 	index := 0
 	for index < len(args) {
-		argument := args[index]
-		switch argument {
-		case "--out":
-			if index + 1 >= len(args) {
-				return cli_error("--out needs a directory")
-			}
-			options.out_dir = args[index + 1]
-			index += 2
-		case "--size":
-			if index + 1 >= len(args) {
-				return cli_error("--size needs WIDTHxHEIGHT")
-			}
-			width, height, ok := parse_size(args[index + 1])
-			if !ok {
-				return cli_error("--size must be WIDTHxHEIGHT")
-			}
-			options.width = width
-			options.height = height
-			index += 2
-		case "--present":
-			options.present = true
-			index += 1
-		case "--no-render":
-			options.no_render = true
-			index += 1
-		case:
-			if strings.has_prefix(argument, "--") {
-				return cli_error(fmt.aprintf("unknown option %q", argument, allocator = context.temp_allocator))
-			}
-			if options.scenario != "" {
-				return cli_error("run takes one scenario")
-			}
-			options.scenario = argument
-			index += 1
+		next, handled, option_error := parse_common_option(args, index, &options.common)
+		if option_error != "" {
+			return cli_error(option_error)
 		}
+		if handled {
+			index = next
+			continue
+		}
+		argument := args[index]
+		if strings.has_prefix(argument, "--") {
+			return cli_error(fmt.aprintf("unknown option %q", argument, allocator = context.temp_allocator))
+		}
+		if options.scenario != "" {
+			return cli_error("run takes one scenario")
+		}
+		options.scenario = argument
+		index += 1
 	}
 	if options.scenario == "" {
 		return cli_error("run needs a scenario file")
@@ -91,45 +77,68 @@ cli_run :: proc(args: []string) -> int {
 }
 
 cli_session :: proc(args: []string) -> int {
-	options := Session_Options{width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT}
+	options := Session_Options{common = {width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT}}
 	index := 0
 	for index < len(args) {
 		argument := args[index]
-		switch argument {
-		case "--socket":
+		if argument == "--socket" {
 			if index + 1 >= len(args) {
 				return cli_error("--socket needs a path")
 			}
 			options.socket = args[index + 1]
 			index += 2
-		case "--out":
-			if index + 1 >= len(args) {
-				return cli_error("--out needs a directory")
-			}
-			options.out_dir = args[index + 1]
-			index += 2
-		case "--size":
-			if index + 1 >= len(args) {
-				return cli_error("--size needs WIDTHxHEIGHT")
-			}
-			width, height, ok := parse_size(args[index + 1])
-			if !ok {
-				return cli_error("--size must be WIDTHxHEIGHT")
-			}
-			options.width = width
-			options.height = height
-			index += 2
-		case "--present":
-			options.present = true
-			index += 1
-		case "--no-render":
-			options.no_render = true
-			index += 1
-		case:
-			return cli_error(fmt.aprintf("unknown option %q", argument, allocator = context.temp_allocator))
+			continue
 		}
+		next, handled, option_error := parse_common_option(args, index, &options.common)
+		if option_error != "" {
+			return cli_error(option_error)
+		}
+		if handled {
+			index = next
+			continue
+		}
+		return cli_error(fmt.aprintf("unknown option %q", argument, allocator = context.temp_allocator))
 	}
 	return session_main(options)
+}
+
+@(private)
+parse_common_option :: proc(
+	args: []string,
+	index: int,
+	options: ^Common_Options,
+) -> (
+	next: int,
+	handled: bool,
+	error: string,
+) {
+	argument := args[index]
+	switch argument {
+	case "--out":
+		if index + 1 >= len(args) {
+			return index, true, "--out needs a directory"
+		}
+		options.out_dir = args[index + 1]
+		return index + 2, true, ""
+	case "--size":
+		if index + 1 >= len(args) {
+			return index, true, "--size needs WIDTHxHEIGHT"
+		}
+		width, height, ok := parse_size(args[index + 1])
+		if !ok {
+			return index, true, "--size must be WIDTHxHEIGHT"
+		}
+		options.width = width
+		options.height = height
+		return index + 2, true, ""
+	case "--present":
+		options.present = true
+		return index + 1, true, ""
+	case "--no-render":
+		options.no_render = true
+		return index + 1, true, ""
+	}
+	return index, false, ""
 }
 
 parse_size :: proc(text: string) -> (width, height: u32, ok: bool) {

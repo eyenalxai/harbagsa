@@ -122,21 +122,34 @@ runtime_handle_line :: proc(runtime: ^Session_Runtime, line: string) -> []byte {
 	}
 	defer command_destroy(&command, context.allocator)
 
-	if command.kind == .Capture || command.kind == .Replay {
-		if backend_error := runtime_ensure_backend(runtime, false); backend_error != "" {
-			reply := Reply{ok = false, cmd = command_name(command.kind), frame = runtime.session.frame}
-			reply.error = strings.clone(backend_error, context.allocator)
-			data := encode_reply(reply)
-			reply_destroy(&reply, context.allocator)
-			runtime.had_error = true
-			return data
+	backend_error := ""
+	if command.kind == .Capture {
+		backend_error = runtime_ensure_backend(runtime, false)
+	}
+	if command.kind == .Replay {
+		scenario, load_error := scenario_load(command.replay.path, context.allocator)
+		if load_error == "" {
+			defer scenario_destroy(&scenario, context.allocator)
+			if scenario_has_capture(scenario) {
+				backend_error = runtime_ensure_backend(runtime, false)
+			}
 		}
+	}
+	if backend_error != "" {
+		reply := Reply{ok = false, cmd = command_name(command.kind), frame = runtime.session.frame}
+		reply.error = strings.clone(backend_error, context.allocator)
+		data := encode_reply(reply)
+		reply_destroy(&reply, context.allocator)
+		runtime.had_error = true
+		return data
 	}
 
 	reply := session_execute(&runtime.session, command, trimmed)
 	if !reply.ok {
 		runtime.had_error = true
-		if runtime.exit_code == EXIT_OK {
+		if runtime.session.render_failed {
+			runtime.exit_code = EXIT_RENDER
+		} else if runtime.exit_code == EXIT_OK {
 			runtime.exit_code = EXIT_CHECK
 		}
 	}
@@ -155,33 +168,12 @@ serve_stdin :: proc(runtime: ^Session_Runtime) -> int {
 	return EXIT_OK
 }
 
-serve_stream :: proc(runtime: ^Session_Runtime, input, output: ^os.File) -> string {
-	pending := make([dynamic]u8, 0, 4096, context.allocator)
-	defer delete(pending)
-	chunk: [8192]u8
-	for {
-		count, read_error := os.read(input, chunk[:])
-		if count > 0 {
-			append(&pending, ..chunk[:count])
-			if process_lines(runtime, &pending, output) != "" {
-				return "line processing failed"
-			}
-		}
-		if runtime.session.quit {
-			break
-		}
-		if read_error != nil {
-			break
-		}
-	}
-	if len(pending) > 0 {
-		_ = write_reply(output, runtime_handle_line(runtime, string(pending[:])))
-	}
-	return ""
+Line_Sink :: struct {
+	ctx:   rawptr,
+	write: proc(ctx: rawptr, data: []u8) -> bool,
 }
 
-@(private)
-process_lines :: proc(runtime: ^Session_Runtime, pending: ^[dynamic]u8, output: ^os.File) -> string {
+consume_lines :: proc(runtime: ^Session_Runtime, pending: ^[dynamic]u8, sink: Line_Sink) -> bool {
 	for {
 		newline := -1
 		for character, index in pending[:] {
@@ -193,33 +185,64 @@ process_lines :: proc(runtime: ^Session_Runtime, pending: ^[dynamic]u8, output: 
 		if newline < 0 {
 			if len(pending) > MAX_SESSION_LINE {
 				clear(pending)
-				return "session line is too long"
+				return false
 			}
-			return ""
+			return true
 		}
 		line := string(pending[:newline])
-		if write_error := write_reply(output, runtime_handle_line(runtime, line)); write_error != "" {
-			return write_error
+		data := runtime_handle_line(runtime, line)
+		if data != nil && !sink.write(sink.ctx, data) {
+			return false
 		}
 		copy(pending[:], pending[newline + 1:])
 		resize(pending, len(pending^) - (newline + 1))
 		if runtime.session.quit {
-			return ""
+			return true
 		}
 	}
 }
 
-@(private)
-write_reply :: proc(output: ^os.File, data: []byte) -> string {
-	if data == nil {
-		return ""
+consume_tail :: proc(runtime: ^Session_Runtime, pending: ^[dynamic]u8, sink: Line_Sink) -> bool {
+	if len(pending) == 0 {
+		return true
 	}
+	data := runtime_handle_line(runtime, string(pending[:]))
+	return data == nil || sink.write(sink.ctx, data)
+}
+
+serve_stream :: proc(runtime: ^Session_Runtime, input, output: ^os.File) -> string {
+	pending := make([dynamic]u8, 0, 4096, context.allocator)
+	defer delete(pending)
+	sink := Line_Sink{ctx = output, write = stdout_sink_write}
+	chunk: [8192]u8
+	for {
+		count, read_error := os.read(input, chunk[:])
+		if count > 0 {
+			append(&pending, ..chunk[:count])
+			if !consume_lines(runtime, &pending, sink) {
+				return "line processing failed"
+			}
+		}
+		if runtime.session.quit {
+			break
+		}
+		if read_error != nil {
+			break
+		}
+	}
+	_ = consume_tail(runtime, &pending, sink)
+	return ""
+}
+
+@(private)
+stdout_sink_write :: proc(ctx: rawptr, data: []u8) -> bool {
+	output := cast(^os.File)ctx
 	defer delete(data, context.allocator)
 	if _, write_error := os.write(output, data); write_error != nil {
-		return fmt.aprintf("write failed: %v", write_error, allocator = context.allocator)
+		return false
 	}
 	if _, write_error := os.write(output, []byte{'\n'}); write_error != nil {
-		return fmt.aprintf("write failed: %v", write_error, allocator = context.allocator)
+		return false
 	}
-	return ""
+	return true
 }
