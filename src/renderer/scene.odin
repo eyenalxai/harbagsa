@@ -11,7 +11,7 @@ import vk "vendor:vulkan"
 CAMERA_POSITION :: [3]f32{12, 8, 16}
 CAMERA_TARGET :: [3]f32{0, 1, 0}
 CAMERA_UP :: [3]f32{0, 1, 0}
-CAMERA_FOV_Y :: 60.0 * math.PI / 180.0
+CAMERA_FOV_X :: f32(90.0 * math.PI / 180.0)
 CAMERA_NEAR :: 0.05
 CAMERA_FAR :: 200.0
 
@@ -35,7 +35,8 @@ Camera_Uniform :: struct {
 	view:            Mat4,
 	projection:      Mat4,
 	light_direction: [4]f32,
-	ambient:         [4]f32, // rgb ambient, w is 1 when the shader must apply gamma
+	ambient:         [4]f32,
+	gamma:           [4]f32,
 }
 
 // The push constant block mirrors the GLSL PushConstants block in the vertex
@@ -50,7 +51,7 @@ Vertex :: struct {
 	normal:   [3]f32,
 }
 
-#assert(size_of(Camera_Uniform) == 160)
+#assert(size_of(Camera_Uniform) == 176)
 #assert(size_of(Push_Constants) == 80)
 #assert(size_of(Vertex) == 24)
 
@@ -106,6 +107,7 @@ Scene :: struct {
 
 	pipeline_layout:       vk.PipelineLayout,
 	pipeline:              vk.Pipeline,
+	pipeline_format:       vk.Format,
 	descriptor_set_layout: vk.DescriptorSetLayout,
 	descriptor_pool:       vk.DescriptorPool,
 	descriptor_sets:       [MAX_FRAMES_IN_FLIGHT]vk.DescriptorSet,
@@ -136,11 +138,7 @@ init_scene :: proc(r: ^Renderer) -> Error {
 	return .None
 }
 
-destroy_scene :: proc(r: ^Renderer) {
-	if r.device == nil {
-		return
-	}
-
+destroy_pipeline :: proc(r: ^Renderer) {
 	if r.scene.pipeline != 0 {
 		vk.DestroyPipeline(r.device, r.scene.pipeline, nil)
 		r.scene.pipeline = 0
@@ -149,6 +147,14 @@ destroy_scene :: proc(r: ^Renderer) {
 		vk.DestroyPipelineLayout(r.device, r.scene.pipeline_layout, nil)
 		r.scene.pipeline_layout = 0
 	}
+}
+
+destroy_scene :: proc(r: ^Renderer) {
+	if r.device == nil {
+		return
+	}
+
+	destroy_pipeline(r)
 	if r.scene.descriptor_pool != 0 {
 		vk.DestroyDescriptorPool(r.device, r.scene.descriptor_pool, nil)
 		r.scene.descriptor_pool = 0
@@ -436,6 +442,7 @@ create_pipeline :: proc(r: ^Renderer) -> bool {
 	) {
 		return false
 	}
+	r.scene.pipeline_format = r.swapchain_format
 	return true
 }
 
@@ -625,8 +632,12 @@ record_scene :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image_index
 		&to_depth,
 	)
 
+	clear := r.clear_color
+	if !r.swapchain_is_srgb {
+		clear = {srgb_encode(clear.r), srgb_encode(clear.g), srgb_encode(clear.b), clear.a}
+	}
 	clear_color := vk.ClearValue{}
-	clear_color.color.float32 = r.clear_color
+	clear_color.color.float32 = clear
 	color_attachment := vk.RenderingAttachmentInfo {
 		sType = .RENDERING_ATTACHMENT_INFO,
 		imageView = r.swapchain_views[image_index],
@@ -746,11 +757,13 @@ update_camera :: proc(r: ^Renderer) -> bool {
 	if !r.swapchain_is_srgb {
 		gamma = 1
 	}
+	fov_y := 2 * math.atan(math.tan(CAMERA_FOV_X * 0.5) / aspect)
 	camera^ = Camera_Uniform {
 		view = r.scene.view,
-		projection = mat4_perspective(CAMERA_FOV_Y, aspect, CAMERA_NEAR, CAMERA_FAR),
+		projection = mat4_perspective(fov_y, aspect, CAMERA_NEAR, CAMERA_FAR),
 		light_direction = {LIGHT_DIRECTION.x, LIGHT_DIRECTION.y, LIGHT_DIRECTION.z, 0},
-		ambient = {AMBIENT_COLOR.x, AMBIENT_COLOR.y, AMBIENT_COLOR.z, gamma},
+		ambient = {AMBIENT_COLOR.x, AMBIENT_COLOR.y, AMBIENT_COLOR.z, 0},
+		gamma = {gamma, 0, 0, 0},
 	}
 	return true
 }
@@ -783,6 +796,7 @@ create_buffer :: proc(
 	memory_type, found := find_memory_type(r, requirements.memoryTypeBits, properties)
 	if !found {
 		log.error("renderer: no memory type matches the requested buffer properties")
+		destroy_buffer(r, buffer, memory)
 		return false
 	}
 
@@ -792,9 +806,11 @@ create_buffer :: proc(
 		memoryTypeIndex = memory_type,
 	}
 	if !check(vk.AllocateMemory(r.device, &allocate_info, nil, memory), "vkAllocateMemory") {
+		destroy_buffer(r, buffer, memory)
 		return false
 	}
 	if !check(vk.BindBufferMemory(r.device, buffer^, memory^, 0), "vkBindBufferMemory") {
+		destroy_buffer(r, buffer, memory)
 		return false
 	}
 	return true

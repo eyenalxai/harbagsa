@@ -16,6 +16,7 @@ layout(set = 0, binding = 0) uniform Camera {
     mat4 projection;
     vec4 light_direction;
     vec4 ambient;
+    vec4 gamma;
 } camera;
 
 void main() {
