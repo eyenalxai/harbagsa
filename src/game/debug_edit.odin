@@ -1,8 +1,6 @@
 #+vet explicit-allocators
 package game
 
-import "core:math"
-
 import b3 "libs:box3d"
 
 CRATE_DRAG_SCALE :: 0.02
@@ -21,7 +19,7 @@ debug_edit_crates :: proc(dm: ^Debug_Mode, sim: ^Simulation, input: Debug_Input)
 		press_crate(dm, sim)
 	}
 	if input.primary_released && dm.dragging == .Crate {
-		dm.dragging = .None
+		debug_mode_end_drag(dm)
 	}
 	if dm.dragging == .Crate && input.captured {
 		drag_crate(dm, sim, input.look_delta)
@@ -39,17 +37,9 @@ clear_stale_crate_selection :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	if dm.selection != .Crate {
 		return
 	}
-	if dm.selected_crate >= 0 && dm.selected_crate < simulation_crate_count(sim) {
-		return
+	if _, ok := debug_selected_crate(dm, sim); !ok {
+		debug_mode_clear_selection(dm)
 	}
-	clear_crate_selection(dm)
-}
-
-@(private)
-clear_crate_selection :: proc(dm: ^Debug_Mode) {
-	dm.selection = .None
-	dm.selected_crate = -1
-	dm.dragging = .None
 }
 
 @(private)
@@ -62,51 +52,52 @@ press_crate :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 			dm.selected_crate = index
 			dm.dragging = .Crate
 			dm.drag_position = simulation_crate_box(sim, index).center
-			return
 		}
+		return
 	}
 	if dm.selection == .Crate {
-		clear_crate_selection(dm)
+		debug_mode_clear_selection(dm)
 	}
 }
 
 @(private)
 drag_crate :: proc(dm: ^Debug_Mode, sim: ^Simulation, look_delta: [2]f32) {
-	if dm.selected_crate < 0 || dm.selected_crate >= simulation_crate_count(sim) {
+	index, ok := debug_selected_crate(dm, sim)
+	if !ok {
 		return
 	}
 
-	yaw := dm.camera.yaw
-	forward := b3.Vec3{-math.sin(yaw), 0.0, -math.cos(yaw)}
-	right := b3.Vec3{math.cos(yaw), 0.0, -math.sin(yaw)}
+	forward := debug_camera_forward_horizontal(dm.camera)
+	right := debug_camera_right(dm.camera)
 	dm.drag_position +=
 		right * (look_delta.x * CRATE_DRAG_SCALE) + forward * (-look_delta.y * CRATE_DRAG_SCALE)
-	half := simulation_crate_box(sim, dm.selected_crate).half_extents
+	half := simulation_crate_box(sim, index).half_extents
 	dm.drag_position.y = max(dm.drag_position.y, half.y)
-	simulation_move_crate(sim, dm.selected_crate, dm.drag_position)
+	simulation_move_crate(sim, index, dm.drag_position)
 }
 
 @(private)
 wheel_crate :: proc(dm: ^Debug_Mode, sim: ^Simulation, wheel_delta: f32) {
-	if dm.selected_crate < 0 || dm.selected_crate >= simulation_crate_count(sim) {
+	index, ok := debug_selected_crate(dm, sim)
+	if !ok {
 		return
 	}
 
 	// Outside a drag the stored position can be stale after physics settling.
 	if dm.dragging != .Crate {
-		dm.drag_position = simulation_crate_box(sim, dm.selected_crate).center
+		dm.drag_position = simulation_crate_box(sim, index).center
 	}
-	half := simulation_crate_box(sim, dm.selected_crate).half_extents
+	half := simulation_crate_box(sim, index).half_extents
 	dm.drag_position.y = max(
 		dm.drag_position.y + wheel_delta * CRATE_WHEEL_STEP,
 		half.y,
 	)
-	simulation_move_crate(sim, dm.selected_crate, dm.drag_position)
+	simulation_move_crate(sim, index, dm.drag_position)
 }
 
 @(private)
 add_crate_at_crosshair :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
-	forward := camera_forward(dm.camera)
+	forward := debug_camera_forward(dm.camera)
 	center := dm.camera.position + forward * CRATE_ADD_DISTANCE
 
 	hit := cast_edit_ray(dm, sim)
@@ -128,10 +119,14 @@ add_crate_at_crosshair :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 
 @(private)
 delete_selected_crate :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
-	if !simulation_remove_crate(sim, dm.selected_crate) {
+	index, ok := debug_selected_crate(dm, sim)
+	if !ok {
 		return
 	}
-	clear_crate_selection(dm)
+	if !simulation_remove_crate(sim, index) {
+		return
+	}
+	debug_mode_clear_selection(dm)
 }
 
 @(private)
@@ -139,19 +134,9 @@ cast_edit_ray :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> b3.RayResult {
 	return b3.World_CastRayClosest(
 		sim.world_id,
 		b3.ToPos(dm.camera.position),
-		camera_forward(dm.camera) * CRATE_SELECTION_RAY_LENGTH,
+		debug_camera_forward(dm.camera) * CRATE_SELECTION_RAY_LENGTH,
 		b3.DefaultQueryFilter(),
 	)
-}
-
-@(private)
-camera_forward :: proc(camera: Debug_Camera) -> b3.Vec3 {
-	cos_pitch := math.cos(camera.pitch)
-	return {
-		-math.sin(camera.yaw) * cos_pitch,
-		math.sin(camera.pitch),
-		-math.cos(camera.yaw) * cos_pitch,
-	}
 }
 
 @(private)

@@ -4,8 +4,6 @@ package renderer
 import "core:fmt"
 import "core:math"
 
-import stb_easy_font "vendor:stb/easy_font"
-
 build_debug_panel :: proc(o: ^Overlay, hud: HUD_State, scale, margin, padding: f32) {
 	selection_buffer: [64]u8
 	selection_text: string
@@ -16,7 +14,7 @@ build_debug_panel :: proc(o: ^Overlay, hud: HUD_State, scale, margin, padding: f
 		} else {
 			selection_text = "None"
 		}
-	case .Light:
+	case .Sun:
 		selection_text = "Sun"
 	case .None:
 		selection_text = "None"
@@ -40,61 +38,22 @@ build_debug_panel :: proc(o: ^Overlay, hud: HUD_State, scale, margin, padding: f
 	sun_text := fmt.bprintf(
 		sun_buffer[:],
 		"Sun az %.0f  el %.0f",
-		hud.debug.light_azimuth * 180.0 / math.PI,
-		hud.debug.light_elevation * 180.0 / math.PI,
+		hud.debug.sun_azimuth * 180.0 / math.PI,
+		hud.debug.sun_elevation * 180.0 / math.PI,
 	)
 
 	lines := [5]string{"Debug mode", selected_line, crates_line, position_text, sun_text}
-	panel_width := 0
-	for line in lines {
-		panel_width = max(panel_width, stb_easy_font.width(line))
-	}
-	panel_height := 5 * HUD_LINE_HEIGHT * scale
-	hud_emit_rect(
-		o,
-		margin,
-		margin,
-		f32(panel_width) * scale + padding * 2,
-		panel_height + padding * 2,
-		HUD_PANEL_COLOR,
-	)
-	for line, index in lines {
-		hud_emit_text(
-			o,
-			margin + padding,
-			margin + padding + f32(index) * HUD_LINE_HEIGHT * scale,
-			line,
-			HUD_TEXT_COLOR,
-			scale,
-		)
-	}
+	hud_emit_panel(o, margin, margin, lines[:], scale, padding)
 }
 
 build_debug_hints :: proc(o: ^Overlay, height, scale, margin, padding: f32) {
 	hint_lines := [5]string {
 		"WASD fly    Space up    Ctrl down",
 		"Click select    Drag move    Wheel height",
-		"E add    Delete remove    L light",
-		"F2 exit    Shift+R reset scene",
+		"E add    Delete or X remove    L sun",
+		"R reset player    F2 exit    Shift+R scene",
 		"F1 debug view    Esc release mouse",
 	}
-	hint_width := 0
-	for line in hint_lines {
-		hint_width = max(hint_width, stb_easy_font.width(line))
-	}
-	hint_panel_width := f32(hint_width) * scale + padding * 2
-	hint_height := 5 * HUD_LINE_HEIGHT * scale
-	hint_x := margin
-	hint_y := height - margin - hint_height - padding * 2
-	hud_emit_rect(o, hint_x, hint_y, hint_panel_width, hint_height + padding * 2, HUD_PANEL_COLOR)
-	for line, index in hint_lines {
-		hud_emit_text(
-			o,
-			hint_x + padding,
-			hint_y + padding + f32(index) * HUD_LINE_HEIGHT * scale,
-			line,
-			HUD_TEXT_COLOR,
-			scale,
-		)
-	}
+	hint_y := height - margin - hud_panel_height(len(hint_lines), scale, padding)
+	hud_emit_panel(o, margin, hint_y, hint_lines[:], scale, padding)
 }
