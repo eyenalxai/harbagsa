@@ -12,7 +12,7 @@ HUD_LINE_BYTES :: 96
 
 HUD_CONTROL_LINES := [5]string {
 	"WASD move    Mouse look    Left click capture",
-	"Shift sprint    Space jump or mantle",
+	"Shift sprint    Space jump or hold to mantle",
 	"C crouch or slide    Z prone, crawl, or dive",
 	"R reset    Shift+R scene    F1 debug view",
 	"F2 debug mode    Esc release mouse",

@@ -30,7 +30,8 @@ into the binary.
 - `WASD`: move relative to the view. Every stance moves in any direction.
 - Mouse: look. Left click captures the cursor.
 - Left `Shift`: sprint. Hold by default; the mode is a code constant.
-- `Space`: jump. In the air, try to mantle a ledge. Jump input buffers before landing.
+- `Space`: jump. In the air, hold `Space` while moving toward a ledge to mantle;
+  a fresh press also works. Jump input buffers before landing.
 - `C`: crouch. Toggle by default. While sprinting, it starts a crouch slide.
 - `Z`: prone. Toggle by default. Crawl while prone. Dive in the air or from a sprint.
 - `R`: return the player to spawn.
@@ -38,6 +39,11 @@ into the binary.
 - `F1`: toggle the debug draw.
 - `F2`: toggle debug mode.
 - `Esc`: release the cursor capture.
+
+Movement follows the walkable ground plane. A straight climb keeps the stance
+speed along the slope, so the horizontal speed drops by the slope cosine.
+Step-ups and step-downs use a short camera lag, so the view stays smooth on the
+stairs.
 
 ### Debug mode
 

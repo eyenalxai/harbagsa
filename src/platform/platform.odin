@@ -36,6 +36,7 @@ Events :: struct {
 	look_delta:          [2]f32,
 	wheel_delta:         f32,
 	jump_pressed:        bool,
+	jump_held:           bool,
 	reset_pressed:       bool,
 	reset_scene_pressed: bool,
 	debug_view_pressed:  bool,
@@ -156,6 +157,7 @@ read_movement :: proc(events: ^Events) {
 	events.sprint_held = keys[int(sdl3.Scancode.LSHIFT)]
 	events.crouch_held = keys[int(sdl3.Scancode.C)]
 	events.prone_held = keys[int(sdl3.Scancode.Z)]
+	events.jump_held = keys[int(sdl3.Scancode.SPACE)]
 	if keys[int(sdl3.Scancode.SPACE)] {
 		events.fly_up = true
 	}
