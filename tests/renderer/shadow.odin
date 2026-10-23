@@ -8,6 +8,8 @@ import "core:testing"
 import "src:game"
 import "src:renderer"
 
+TEST_LIGHT_DIRECTION :: [3]f32{-0.45, -1.0, -0.35}
+
 // The arena volume: floor bottom to wall top, plus the wall thickness.
 arena_corners :: proc() -> [8][3]f32 {
 	half: f32 = game.ARENA_HALF_SIZE + game.ARENA_WALL_THICKNESS
@@ -54,7 +56,7 @@ orthographic_flips_the_y_axis :: proc(t: ^testing.T) {
 
 @(test)
 light_volume_contains_the_arena :: proc(t: ^testing.T) {
-	m := renderer.shadow_light_matrix(game.DEFAULT_SUN_DIRECTION)
+	m := renderer.shadow_light_matrix(TEST_LIGHT_DIRECTION)
 	for corner in arena_corners() {
 		clip := transform(m, corner)
 		testing.expectf(t, clip.w > 0, "corner %v is behind the light: w=%v", corner, clip.w)
@@ -71,13 +73,9 @@ light_volume_contains_the_arena :: proc(t: ^testing.T) {
 
 @(test)
 shadow_depth_grows_away_from_the_sun :: proc(t: ^testing.T) {
-	m := renderer.shadow_light_matrix(game.DEFAULT_SUN_DIRECTION)
+	m := renderer.shadow_light_matrix(TEST_LIGHT_DIRECTION)
 	to_light := linalg.vector_normalize(
-		[3]f32{
-			-game.DEFAULT_SUN_DIRECTION.x,
-			-game.DEFAULT_SUN_DIRECTION.y,
-			-game.DEFAULT_SUN_DIRECTION.z,
-		},
+		[3]f32{-TEST_LIGHT_DIRECTION.x, -TEST_LIGHT_DIRECTION.y, -TEST_LIGHT_DIRECTION.z},
 	)
 	center := renderer.LIGHT_VOLUME_CENTER
 
