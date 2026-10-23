@@ -14,7 +14,7 @@ destroy_overlay_pipelines :: proc(r: ^Renderer) {
 }
 
 create_overlay_pipelines :: proc(r: ^Renderer) -> bool {
-	color_formats := [1]vk.Format{r.swapchain_format}
+	color_formats := [1]vk.Format{r.target.config.format}
 
 	debug_set_layouts := [1]vk.DescriptorSetLayout{r.scene.descriptor_set_layout}
 	debug_attributes := [2]vk.VertexInputAttributeDescription {
@@ -91,6 +91,6 @@ create_overlay_pipelines :: proc(r: ^Renderer) -> bool {
 		return false
 	}
 
-	r.overlay.pipeline_format = r.swapchain_format
+	r.overlay.pipeline_format = r.target.config.format
 	return true
 }

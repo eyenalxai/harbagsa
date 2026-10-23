@@ -15,9 +15,10 @@ record_scene :: proc(
 	boxes: []geometry.Box,
 	debug_lines: []geometry.Line,
 	hud: HUD_Frame,
+	capture: bool,
 ) -> bool {
-	if int(image_index) >= len(r.swapchain_views) || int(image_index) >= len(r.scene.depth) {
-		log.errorf("renderer: swapchain image index %d is out of range", image_index)
+	if int(image_index) >= len(r.target.views) || int(image_index) >= len(r.target.depth) {
+		log.errorf("renderer: target image index %d is out of range", image_index)
 		return false
 	}
 
@@ -49,7 +50,7 @@ record_scene :: proc(
 		newLayout = .COLOR_ATTACHMENT_OPTIMAL,
 		srcQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
 		dstQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
-		image = r.swapchain_images[image_index],
+		image = r.target.images[image_index],
 		subresourceRange = COLOR_SUBRESOURCE,
 	}
 	vk.CmdPipelineBarrier(
@@ -64,28 +65,31 @@ record_scene :: proc(
 		1,
 		&to_color,
 	)
-	record_depth_write_barrier(command_buffer, r.scene.depth[image_index].image)
+	record_depth_write_barrier(command_buffer, r.target.depth[image_index].image)
 
 	clear := r.clear_color
-	if !r.swapchain_is_srgb {
+	if !r.target.config.is_srgb {
 		clear = {srgb_encode(clear.r), srgb_encode(clear.g), srgb_encode(clear.b), clear.a}
 	}
 	clear_color := vk.ClearValue{}
 	clear_color.color.float32 = clear
 	color_attachment := vk.RenderingAttachmentInfo {
 		sType = .RENDERING_ATTACHMENT_INFO,
-		imageView = r.swapchain_views[image_index],
+		imageView = r.target.views[image_index],
 		imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
 		loadOp = .CLEAR,
 		storeOp = .STORE,
 		clearValue = clear_color,
 	}
 
-	depth_attachment := make_depth_attachment(r.scene.depth[image_index].view, .DEPTH_ATTACHMENT_OPTIMAL)
+	depth_attachment := make_depth_attachment(
+		r.target.depth[image_index].view,
+		.DEPTH_ATTACHMENT_OPTIMAL,
+	)
 
 	rendering_info := vk.RenderingInfo {
 		sType = .RENDERING_INFO,
-		renderArea = {extent = r.swapchain_extent},
+		renderArea = {extent = {r.target.config.width, r.target.config.height}},
 		layerCount = 1,
 		colorAttachmentCount = 1,
 		pColorAttachments = &color_attachment,
@@ -93,7 +97,7 @@ record_scene :: proc(
 	}
 	vk.CmdBeginRendering(command_buffer, &rendering_info)
 
-	set_viewport(command_buffer, r.swapchain_extent.width, r.swapchain_extent.height)
+	set_viewport(command_buffer, r.target.config.width, r.target.config.height)
 
 	vk.CmdBindPipeline(command_buffer, .GRAPHICS, r.scene.pipeline)
 
@@ -105,29 +109,40 @@ record_scene :: proc(
 
 	vk.CmdEndRendering(command_buffer)
 
-	to_present := vk.ImageMemoryBarrier {
-		sType = .IMAGE_MEMORY_BARRIER,
-		srcAccessMask = {.COLOR_ATTACHMENT_WRITE},
-		oldLayout = .COLOR_ATTACHMENT_OPTIMAL,
-		newLayout = .PRESENT_SRC_KHR,
-		srcQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
-		dstQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
-		image = r.swapchain_images[image_index],
-		subresourceRange = COLOR_SUBRESOURCE,
+	if capture && !record_capture_copy(r, command_buffer, image_index) {
+		return false
 	}
-	vk.CmdPipelineBarrier(
-		command_buffer,
-		{.COLOR_ATTACHMENT_OUTPUT},
-		{.BOTTOM_OF_PIPE},
-		{},
-		0,
-		nil,
-		0,
-		nil,
-		1,
-		&to_present,
-	)
+
+	if r.target.kind == .Swapchain {
+		src_access: vk.AccessFlags = {.COLOR_ATTACHMENT_WRITE}
+		old_layout: vk.ImageLayout = .COLOR_ATTACHMENT_OPTIMAL
+		if capture {
+			src_access = {.TRANSFER_READ}
+			old_layout = .TRANSFER_SRC_OPTIMAL
+		}
+		to_present := vk.ImageMemoryBarrier {
+			sType = .IMAGE_MEMORY_BARRIER,
+			srcAccessMask = src_access,
+			oldLayout = old_layout,
+			newLayout = .PRESENT_SRC_KHR,
+			srcQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
+			dstQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
+			image = r.target.images[image_index],
+			subresourceRange = COLOR_SUBRESOURCE,
+		}
+		vk.CmdPipelineBarrier(
+			command_buffer,
+			{.COLOR_ATTACHMENT_OUTPUT, .TRANSFER},
+			{.BOTTOM_OF_PIPE},
+			{},
+			0,
+			nil,
+			0,
+			nil,
+			1,
+			&to_present,
+		)
+	}
 
 	return check(vk.EndCommandBuffer(command_buffer), "vkEndCommandBuffer")
 }
-

@@ -35,7 +35,15 @@ run :: proc() -> bool {
 	}
 	defer platform.deinit(&window)
 
-	state, renderer_error := renderer.init(&window, context.allocator)
+	state, renderer_error := renderer.init(
+		renderer.Config {
+			platform = platform.renderer_platform(&window),
+			target = .Swapchain,
+			width = WINDOW_WIDTH,
+			height = WINDOW_HEIGHT,
+		},
+		context.allocator,
+	)
 	if renderer_error != .None {
 		log.errorf("harbagsa: renderer init failed: %v", renderer_error)
 		return false

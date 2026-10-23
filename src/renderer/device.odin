@@ -3,26 +3,15 @@ package renderer
 
 import "core:log"
 
-import "src:platform"
 import vk "vendor:vulkan"
 
 init_device :: proc(r: ^Renderer) -> Error {
-	surface, surface_error := platform.create_vulkan_surface(r.window, r.instance)
-	if surface_error != .None {
-		return .Platform
-	}
-	r.surface = surface
-
 	if err := select_physical_device(r); err != .None {
 		return err
 	}
 	if err := create_logical_device(r); err != .None {
 		return err
 	}
-	if status := create_swapchain(r); status != .Ok {
-		return .Create_Swapchain
-	}
-
 	return .None
 }
 
@@ -57,7 +46,7 @@ select_physical_device :: proc(r: ^Renderer) -> Error {
 	}
 
 	if r.physical_device == nil {
-		log.error("renderer: no device supports graphics, present, swapchains, and dynamic rendering")
+		log.error("renderer: no device supports the required Vulkan 1.3 features")
 		return .No_Suitable_Device
 	}
 	vk.GetPhysicalDeviceMemoryProperties(r.physical_device, &r.memory_properties)
@@ -85,10 +74,6 @@ score_physical_device :: proc(
 		)
 		return
 	}
-	if !device_supports_extension(device, vk.KHR_SWAPCHAIN_EXTENSION_NAME, r.allocator) {
-		log.infof("renderer: skipping %q: VK_KHR_swapchain is not supported", name)
-		return
-	}
 
 	features13 := vk.PhysicalDeviceVulkan13Features {
 		sType = .PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
@@ -103,19 +88,37 @@ score_physical_device :: proc(
 		return
 	}
 
-	queue_families, families_ok := find_queue_families(device, r.surface, r.allocator)
+	if r.target.kind == .Swapchain {
+		if !device_supports_extension(device, vk.KHR_SWAPCHAIN_EXTENSION_NAME, r.allocator) {
+			log.infof("renderer: skipping %q: VK_KHR_swapchain is not supported", name)
+			return
+		}
+	}
+
+	queue_families, families_ok := find_queue_families(
+		device,
+		r.target.surface,
+		r.target.kind == .Swapchain,
+		r.allocator,
+	)
 	if !families_ok {
-		log.infof("renderer: skipping %q: no graphics and present queue pair", name)
+		if r.target.kind == .Swapchain {
+			log.infof("renderer: skipping %q: no graphics and present queue pair", name)
+		} else {
+			log.infof("renderer: skipping %q: no graphics queue", name)
+		}
 		return
 	}
 	families = queue_families
 
-	support, support_ok := query_swapchain_support(device, r.surface, r.allocator)
-	if !support_ok {
-		log.infof("renderer: skipping %q: swapchain is not supported", name)
-		return
+	if r.target.kind == .Swapchain {
+		support, support_ok := query_swapchain_support(device, r.target.surface, r.allocator)
+		if !support_ok {
+			log.infof("renderer: skipping %q: swapchain is not supported", name)
+			return
+		}
+		defer delete(support.formats, r.allocator)
 	}
-	defer delete(support.formats, r.allocator)
 
 	#partial switch props.deviceType {
 	case .DISCRETE_GPU:
@@ -153,9 +156,12 @@ create_logical_device :: proc(r: ^Renderer) -> Error {
 		queue_count = 2
 	}
 
-	device_extensions := []cstring{vk.KHR_SWAPCHAIN_EXTENSION_NAME}
+	device_extensions: []cstring
+	if r.target.kind == .Swapchain {
+		device_extensions = []cstring{vk.KHR_SWAPCHAIN_EXTENSION_NAME}
+	}
 	features13 := vk.PhysicalDeviceVulkan13Features {
-		sType = .PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+		sType            = .PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
 		dynamicRendering = true,
 	}
 	create_info := vk.DeviceCreateInfo{
@@ -171,7 +177,11 @@ create_logical_device :: proc(r: ^Renderer) -> Error {
 	}
 	vk.load_proc_addresses_device(r.device)
 	vk.GetDeviceQueue(r.device, r.graphics_family, 0, &r.graphics_queue)
-	vk.GetDeviceQueue(r.device, r.present_family, 0, &r.present_queue)
+	if r.present_family != r.graphics_family {
+		vk.GetDeviceQueue(r.device, r.present_family, 0, &r.present_queue)
+	} else {
+		r.present_queue = r.graphics_queue
+	}
 
 	return .None
 }
