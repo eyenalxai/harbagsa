@@ -5,13 +5,15 @@ import "core:log"
 import "core:mem"
 import "core:strings"
 
-import "src:platform"
 import vk "vendor:vulkan"
 
 init_instance :: proc(r: ^Renderer) -> Error {
-	loader := platform.vulkan_loader_proc()
+	loader: rawptr
+	if r.platform.get_loader != nil {
+		loader = r.platform.get_loader(r.platform.user)
+	}
 	if loader == nil {
-		log.error("renderer: SDL did not provide vkGetInstanceProcAddr")
+		log.error("renderer: the platform did not provide vkGetInstanceProcAddr")
 		return .Vulkan_Loader
 	}
 	vk.load_proc_addresses_global(loader)
@@ -33,9 +35,13 @@ init_instance :: proc(r: ^Renderer) -> Error {
 		return .Vulkan_Version
 	}
 
-	extensions, platform_error := platform.vulkan_extensions()
-	if platform_error != .None {
-		return .Platform
+	extensions: []cstring
+	if r.platform.get_extensions != nil {
+		platform_extensions, ok := r.platform.get_extensions(r.platform.user)
+		if !ok {
+			return .Platform
+		}
+		extensions = platform_extensions
 	}
 
 	instance_extensions := make([dynamic]cstring, 0, len(extensions) + 1, r.allocator)

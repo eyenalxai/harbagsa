@@ -36,8 +36,6 @@ Scene :: struct {
 	camera_buffers: [MAX_FRAMES_IN_FLIGHT]vk.Buffer,
 	camera_memory:  [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
 	camera_mapped:  [MAX_FRAMES_IN_FLIGHT]rawptr,
-
-	depth: []Image,
 }
 
 init_scene :: proc(r: ^Renderer) -> Error {
@@ -86,12 +84,12 @@ destroy_scene :: proc(r: ^Renderer) {
 }
 
 update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> bool {
-	height := f32(r.swapchain_extent.height)
+	height := f32(r.target.config.height)
 	if height <= 0 {
-		log.error("renderer: cannot build a projection for a zero-height swapchain")
+		log.error("renderer: cannot build a projection for a zero-height target")
 		return false
 	}
-	aspect := f32(r.swapchain_extent.width) / height
+	aspect := f32(r.target.config.width) / height
 
 	buffer := cast(^Camera_Uniform)r.scene.camera_mapped[r.frame_index]
 	if buffer == nil {
@@ -113,7 +111,7 @@ update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> 
 	view := mat4_look_at(camera.position, target, CAMERA_UP)
 
 	gamma: f32
-	if !r.swapchain_is_srgb {
+	if !r.target.config.is_srgb {
 		gamma = 1
 	}
 	fov_y := 2 * math.atan(math.tan(camera.fov_x * 0.5) / aspect)

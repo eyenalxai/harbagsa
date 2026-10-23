@@ -4,7 +4,6 @@ package renderer
 import "core:log"
 import "core:mem"
 
-import "src:platform"
 import vk "vendor:vulkan"
 
 Queue_Families :: struct {
@@ -20,6 +19,7 @@ Swapchain_Support :: struct {
 find_queue_families :: proc(
 	device: vk.PhysicalDevice,
 	surface: vk.SurfaceKHR,
+	require_present: bool,
 	allocator: mem.Allocator,
 ) -> (
 	families: Queue_Families,
@@ -36,17 +36,22 @@ find_queue_families :: proc(
 	vk.GetPhysicalDeviceQueueFamilyProperties(device, &count, raw_data(properties))
 
 	graphics_found := false
-	present_found := false
+	present_found := !require_present
 	for property, i in properties {
 		if !graphics_found && .GRAPHICS in property.queueFlags {
 			families.graphics = u32(i)
 			graphics_found = true
-		}
-		supported: b32
-		if vk.GetPhysicalDeviceSurfaceSupportKHR(device, u32(i), surface, &supported) == .SUCCESS && supported {
-			if !present_found {
+			if !require_present {
 				families.present = u32(i)
-				present_found = true
+			}
+		}
+		if require_present {
+			supported: b32
+			if vk.GetPhysicalDeviceSurfaceSupportKHR(device, u32(i), surface, &supported) == .SUCCESS && supported {
+				if !present_found {
+					families.present = u32(i)
+					present_found = true
+				}
 			}
 		}
 		if graphics_found && present_found {
@@ -115,12 +120,14 @@ choose_surface_format :: proc(formats: []vk.SurfaceFormatKHR) -> vk.SurfaceForma
 	return formats[0]
 }
 
-choose_swapchain_extent :: proc(capabilities: vk.SurfaceCapabilitiesKHR, window: ^platform.Window) -> vk.Extent2D {
+choose_swapchain_extent :: proc(
+	capabilities: vk.SurfaceCapabilitiesKHR,
+	width, height: u32,
+) -> vk.Extent2D {
 	if capabilities.currentExtent.width != max(u32) {
 		return capabilities.currentExtent
 	}
 
-	width, height := platform.pixel_size(window)
 	return vk.Extent2D {
 		width = clamp(width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
 		height = clamp(height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height),
