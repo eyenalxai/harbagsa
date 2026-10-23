@@ -71,3 +71,23 @@ _Avoid_: UI layer
 **HUD**:
 The 2D part of the overlay: crosshair, controls hint, and player state.
 _Avoid_: UI
+
+**Debug mode**:
+The `F2` mode where the player becomes a free-fly camera and can edit crates and the sun.
+_Avoid_: Edit mode, sandbox
+
+**Free-fly camera**:
+The debug mode camera that ignores gravity and collision.
+_Avoid_: Noclip, spectator
+
+**Selection**:
+The crate or the sun that debug mode acts on.
+_Avoid_: Focus, target
+
+**Sun**:
+The directional light. Debug mode changes its direction.
+_Avoid_: Lamp, light source
+
+**Scene reset**:
+The `Shift+R` action that restores the starting crates, the sun, and the player.
+_Avoid_: Reload, wipe
