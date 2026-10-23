@@ -2,6 +2,7 @@
 #+vet !unused-procedures // @(test) procs are called by the test runner, not by name
 package renderer_test
 
+import "core:math"
 import "core:math/linalg"
 import "core:testing"
 
@@ -69,6 +70,16 @@ light_volume_contains_the_arena :: proc(t: ^testing.T) {
 			ndc,
 		)
 	}
+}
+
+@(test)
+penumbra_radius_grows_with_blocker_distance :: proc(t: ^testing.T) {
+	scale := renderer.shadow_penumbra_scale()
+	one_meter := f32(1.0) / renderer.LIGHT_VOLUME_DEPTH
+	expected := f32(math.tan(renderer.SUN_ANGULAR_DIAMETER * 0.5)) / (2 * renderer.LIGHT_VOLUME_RADIUS)
+
+	expect_near(t, one_meter * scale, expected, "one meter of blocker distance")
+	expect_near(t, 2 * one_meter * scale, 2 * expected, "two meters of blocker distance")
 }
 
 @(test)
