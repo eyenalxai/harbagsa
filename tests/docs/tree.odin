@@ -104,6 +104,65 @@ doc_line_references_are_in_range :: proc(t: ^testing.T) {
 	}
 }
 
+// Scenario names also appear inside fenced run commands, which the backtick
+// token scan cannot see. Scan the raw line so a rename cannot go stale.
+@(test)
+doc_scenario_paths_resolve :: proc(t: ^testing.T) {
+	paths, paths_ok := doc_paths(t)
+	if !paths_ok {
+		return
+	}
+	defer doc_paths_close(paths)
+	total := 0
+	for doc_path in paths {
+		doc, ok := doc_open(t, doc_path)
+		if !ok {
+			continue
+		}
+		for line, index in doc.lines {
+			cursor := 0
+			for {
+				rest := line[cursor:]
+				at := strings.index(rest, "scenarios/")
+				if at < 0 {
+					break
+				}
+				start := cursor + at
+				end := start + len("scenarios/")
+				for end < len(line) && scenario_path_byte(line[end]) {
+					end += 1
+				}
+				path := line[start:end]
+				if strings.has_suffix(path, ".json") {
+					total += 1
+					testing.expectf(
+						t,
+						os.exists(path),
+						"%s:%d names %s, which does not exist",
+						doc.path,
+						index + 1,
+						path,
+					)
+				}
+				cursor = max(end, start + 1)
+			}
+		}
+		doc_close(&doc)
+	}
+	testing.expectf(t, total > 0, "no scenario references found in %v", DOC_DIRS)
+}
+
+@(private)
+scenario_path_byte :: proc(b: byte) -> bool {
+	return(b >= 'a' && b <= 'z') ||
+		(b >= 'A' && b <= 'Z') ||
+		(b >= '0' && b <= '9') ||
+		b == '.' ||
+		b == '-' ||
+		b == '_' ||
+		b == '/'
+}
+
 @(test)
 doc_links_resolve :: proc(t: ^testing.T) {
 	paths, paths_ok := doc_paths(t)

@@ -2,8 +2,8 @@
 
 Two hues and a neutral ramp. Cool ink for surfaces, one amber accent that means
 "selected". The accent is sRGB `#E6AF3A`. The debug crate outline and the sun
-gizmo are `[1.0, 0.8, 0.2]`, which reads as `#FFCC33`; they are different values
-in different spaces, so the accent is not reused from the debug draw.
+gizmo are a linear `[1.0, 0.8, 0.2]`, a different value from the sRGB `#E6AF3A`;
+they live in different spaces, so the accent is not reused from the debug draw.
 
 Every colour lives in `src/renderer/ui_theme.odin` as an sRGB hex constant. It is
 converted to linear when `ui_theme_init` builds the theme, because the renderer
@@ -16,14 +16,15 @@ persistent cache. A component never sees a hex value and never converts one.
 | Token | sRGB | Alpha | Role |
 | --- | --- | --- | --- |
 | `text_primary` | `#EEF2F6` | 1.0 | a `Setting`, `Action`, `Metric`, or `Slider` value, a panel title, the selected label, the slider knob |
-| `text_secondary` | `#A7B2BF` | 1.0 | a row label, a blocked value, a legend key, the slider fill |
-| `text_tertiary` | `#808C99` | 1.0 | a detail value, a section header, a legend action, the slider ticks |
+| `text_secondary` | `#A7B2BF` | 1.0 | a `Setting`, `Action`, `Slider`, or `Metric` label, a blocked value, a legend key, the slider fill |
+| `text_tertiary` | `#808C99` | 1.0 | a `Detail` label, a `Detail` value, a section header, a legend action, the slider ticks |
 | `accent` | `#E6AF3A` | 1.0 | the selection bar, and nothing else |
 | `surface_hud` | `#10141A` | 0.94 | the status panel, the capture hint |
 | `surface_menu` | `#161B23` | 1.0 | the settings panel |
 | `surface_raised` | `#26313D` | 1.0 | the selected row |
 | `line_hairline` | `#FFFFFF` | 0.09 | the hairline ring around a panel |
 | `line_separator` | `#FFFFFF` | 0.16 | a divider inside a panel |
+| `slider_track` | `#FFFFFF` | 0.20 | the slider track, 3.4:1 on `surface_raised` |
 | `scrim` | `#000000` | 0.62 | the dim behind the settings panel |
 | `crosshair` | `#FFFFFF` | 0.90 | the crosshair arms |
 | `crosshair_edge` | `#000000` | 0.55 | the crosshair outline, so it reads on any background |
@@ -44,9 +45,9 @@ Measured on the authored sRGB values, the WCAG 2 way.
 
 The floor is 4.5:1 for text and 3:1 for a non-text element such as the accent bar.
 `tests/renderer/text.odin` checks `text_primary` and `text_secondary` on the
-composited HUD and menu, `text_primary` on the raised surface, and `accent`
-against the raised surface. It does not check `text_tertiary`, the slider fill,
-the ticks, or the knob.
+composited HUD and menu, `text_primary` on the raised surface, and `accent` and
+the slider track against the raised surface. It does not check `text_tertiary`,
+the slider fill, the ticks, or the knob.
 
 `text_tertiary` passes on the menu but not the text floor on the raised surface.
 That is safe by construction for text: `Setting`, `Action`, and `Slider` labels
@@ -54,7 +55,8 @@ draw in `text_secondary` or `text_primary`. A `Detail` or `Header` row must neve
 become selectable without moving it to `text_secondary`. A Slider is selectable;
 its fill uses `text_secondary` and its knob `text_primary`, both above 3:1 on the
 raised surface. Its ticks stop at 3.9:1 on that surface; 3:1 is the non-text
-floor. The track uses `line_separator`, never the accent.
+floor. The track uses `slider_track` at 3.4:1 on the raised surface, never
+`line_separator` and never the accent.
 
 ## Choosing a text colour
 
@@ -62,16 +64,18 @@ floor. The track uses `line_separator`, never the accent.
 Is it a panel title, or the value of a Setting, Action, Metric, or Slider?
 ├── Yes → text_primary (text_secondary when the row is blocked)
 └── No
-    ├── Is it the row's label, a legend key, or a blocked value?
+    ├── Is it the label of a Setting, Action, Slider, or Metric, a legend key,
+    │   or a blocked value?
     │   └── Yes → text_secondary
-    └── Is it a Detail value, a section header, or a legend action?
+    └── Is it a Detail label, a Detail value, a section header, or a legend
+        action?
         └── Yes → text_tertiary
 ```
 
 Anything that is not text: `accent` for the selection bar, `line_hairline` for a
-panel ring, `line_separator` for a divider and the slider track, `text_primary`
-for a slider knob, `text_secondary` for a slider fill, and `text_tertiary` for a
-slider tick. Nothing else.
+panel ring, `line_separator` for a divider, `slider_track` for the slider track,
+`text_primary` for a slider knob, `text_secondary` for a slider fill, and
+`text_tertiary` for a slider tick. Nothing else.
 
 ## Alpha
 

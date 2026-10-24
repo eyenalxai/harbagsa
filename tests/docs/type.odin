@@ -61,6 +61,7 @@ check_type_row :: proc(
 	expected_size: f32
 	expected_leading: f32
 	expected_tracking: f32
+	expected_weight: f32
 	size_name: string
 	leading_name: string
 	tracking_name: string
@@ -71,30 +72,35 @@ check_type_row :: proc(
 		expected_size = renderer.UI_TEXT_SIZE_TITLE
 		expected_leading = renderer.UI_LEADING_TITLE
 		expected_tracking = renderer.UI_TRACKING_TITLE
+		expected_weight = 500
 		size_name, leading_name, tracking_name = "UI_TEXT_SIZE_TITLE", "UI_LEADING_TITLE", "UI_TRACKING_TITLE"
 		field_name, actual = "type_title", theme.type_title
 	case "type_body":
 		expected_size = renderer.UI_TEXT_SIZE_BODY
 		expected_leading = renderer.UI_LEADING_BODY
 		expected_tracking = 0
+		expected_weight = 400
 		size_name, leading_name, tracking_name = "UI_TEXT_SIZE_BODY", "UI_LEADING_BODY", "0"
 		field_name, actual = "type_body", theme.type_body
 	case "type_body_strong":
 		expected_size = renderer.UI_TEXT_SIZE_BODY
 		expected_leading = renderer.UI_LEADING_BODY
 		expected_tracking = 0
+		expected_weight = 500
 		size_name, leading_name, tracking_name = "UI_TEXT_SIZE_BODY", "UI_LEADING_BODY", "0"
 		field_name, actual = "type_body_strong", theme.type_body_strong
 	case "type_caption":
 		expected_size = renderer.UI_TEXT_SIZE_CAPTION
 		expected_leading = renderer.UI_LEADING_CAPTION
 		expected_tracking = 0
+		expected_weight = 400
 		size_name, leading_name, tracking_name = "UI_TEXT_SIZE_CAPTION", "UI_LEADING_CAPTION", "0"
 		field_name, actual = "type_caption", theme.type_caption
 	case "type_caption_caps":
 		expected_size = renderer.UI_TEXT_SIZE_CAPTION
 		expected_leading = renderer.UI_LEADING_CAPTION
 		expected_tracking = renderer.UI_TRACKING_CAPS
+		expected_weight = 500
 		size_name, leading_name, tracking_name = "UI_TEXT_SIZE_CAPTION", "UI_LEADING_CAPTION", "UI_TRACKING_CAPS"
 		field_name, actual = "type_caption_caps", theme.type_caption_caps
 	case:
@@ -154,6 +160,40 @@ check_type_row :: proc(
 		token,
 		weight,
 	)
+	wording_weight, wording_ok := weight_from_wording(weight, theme.type_body.weight)
+	testing.expectf(
+		t,
+		wording_ok,
+		"%s:%d says %s weight is %q, which is not a weight wording",
+		doc_path,
+		line,
+		token,
+		weight,
+	)
+	testing.expectf(
+		t,
+		approx_equal(actual.weight, wording_weight),
+		"%s:%d says %s weight is %q, which is %v, theme.%s.weight is %v",
+		doc_path,
+		line,
+		token,
+		weight,
+		wording_weight,
+		field_name,
+		actual.weight,
+	)
+	testing.expectf(
+		t,
+		approx_equal(actual.weight, expected_weight),
+		"%s:%d says %s weight is %q, theme.%s.weight is %v, want %v",
+		doc_path,
+		line,
+		token,
+		weight,
+		field_name,
+		actual.weight,
+		expected_weight,
+	)
 
 	// The table has no caps column. The token name states the intent and the
 	// theme struct holds the flag, so the two must agree.
@@ -169,4 +209,16 @@ check_type_row :: proc(
 		field_name,
 		actual.caps,
 	)
+}
+
+weight_from_wording :: proc(wording: string, base: f32) -> (weight: f32, ok: bool) {
+	switch wording {
+	case "base":
+		return base, true
+	case "base + 100":
+		return min(base + 100, renderer.MAX_WEIGHT), true
+	case "min(base, 700)":
+		return min(base, renderer.MONO_MAX_WEIGHT), true
+	}
+	return 0, false
 }

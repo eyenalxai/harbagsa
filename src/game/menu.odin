@@ -112,6 +112,8 @@ menu_change_setting :: proc(
 	if !menu.open || menu.selected == .Resume || direction == 0 {
 		return .Not_A_Setting
 	}
+	// A note belongs to the press that set it.
+	menu.status = ""
 	#partial switch menu.selected {
 	case .Window_Mode:
 		settings.window.mode = toggle_window_mode(settings.window.mode)

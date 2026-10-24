@@ -77,6 +77,27 @@ text_atlas_measures_the_ellipsis :: proc(t: ^testing.T) {
 }
 
 @(test)
+text_atlas_measures_the_mono_ellipsis :: proc(t: ^testing.T) {
+	atlas, ok := build_test_atlas(t)
+	testing.expect(t, ok, "the atlas did not build")
+	defer renderer.text_atlas_destroy(&atlas)
+
+	theme := renderer.ui_theme_init(720)
+	mono := theme.type_body
+	mono.face = .Mono
+	width := renderer.text_measure(&atlas, mono, "…")
+	testing.expectf(t, width > 0, "the mono ellipsis measures %v", width)
+
+	index := glyph_for_rune(.Mono, 400, 0x2026)
+	testing.expectf(t, index > 0, "0x2026 maps to mono glyph %d, not a real glyph", index)
+	layer := &atlas.layers[renderer.text_layer_index(&atlas, mono)]
+	if index <= 0 || index >= len(layer.glyphs) {
+		return
+	}
+	testing.expect(t, layer.glyphs[index].present, "the mono ellipsis has no bitmap")
+}
+
+@(test)
 text_atlas_glyph_rects_stay_inside_and_do_not_overlap :: proc(t: ^testing.T) {
 	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
