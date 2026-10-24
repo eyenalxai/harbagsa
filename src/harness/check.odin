@@ -137,6 +137,9 @@ state_field :: proc(state: State, path: string) -> (Check_Value, string) {
 	if path == "digest" {
 		return {kind = .String, text = state.digest}, ""
 	}
+	if path == "render_digest" {
+		return {kind = .String, text = state.render_digest}, ""
+	}
 
 	head, tail, has_tail := split_field(path)
 	switch head {
@@ -165,6 +168,11 @@ state_field :: proc(state: State, path: string) -> (Check_Value, string) {
 			return {}, "menu needs a field"
 		}
 		return menu_field(state.menu, tail)
+	case "renderer":
+		if !has_tail {
+			return {}, "renderer needs a field"
+		}
+		return renderer_field(state.renderer, tail)
 	}
 	return {}, fmt.aprintf("unknown state field %q", path, allocator = context.allocator)
 }

@@ -23,13 +23,13 @@ serializes Make with `flock`.
 
 `runs/<scenario-stem>/`
 
-- `report.json`: `ok`, `exit_code`, `frame`, `state`, `screenshots`, `checks`,
-  `failures`, `digest`, `error`, `perf` when a perf run happened, and `trace`
-  when the run wrote a perf trace.
+- `report.json`: `ok`, `exit_code`, `frame`, `state`, `setup`, `screenshots`,
+  `checks`, `failures`, `digest`, `error`, `perf` when a perf run happened, and
+  `trace` when the run wrote a perf trace.
 - `trace.jsonl`: one JSON object per measured frame, when the perf command asks
   for a trace.
 - `state.json`: the final state alone. It holds the player, crates, window and
-  input settings, menu, frame, and digest.
+  input settings, menu, frame, renderer, render digest, and simulation digest.
 - `frames/frame_NNNN.png`: zero-padded captures.
 - Each screenshot entry carries `delta_mean`, `delta_max`, and `delta_over_16`
   against the previous capture. The first capture has zeros.
@@ -79,6 +79,8 @@ Rules:
   scales with the capture size. Each capture after the first compares its
   pixels with the previous capture. `warmup` skips that many captures before
   the summary, so a scenario can ignore TAA convergence.
+- A state check can read `renderer.*` fields and `render_digest`. The field set
+  is in **Renderer state**.
 - `settle` advances the simulation and renders every frame without writing a
   screenshot, so a scenario can reach a steady temporal state before it captures.
 - `scenarios/taa-static.json` and `scenarios/taa-motion.json` use capture checks
@@ -212,6 +214,43 @@ scenario.
 
 Use `capture` or `--present`. Do not use `grim` for automated screenshots.
 
+## Renderer state
+
+Every `state` reply and `state.json` carries a `renderer` object and a
+`render_digest`. Both describe the last rendered frame. They are empty when the
+run never created a renderer, and `renderer.active` is `false`.
+
+| Field | Meaning |
+| --- | --- |
+| `active` | a renderer exists |
+| `frame_count` | frames the renderer recorded |
+| `taa_enabled` | temporal anti-aliasing is on |
+| `jitter_index` | the jitter phase the last frame applied |
+| `history_valid` | the history buffer holds a frame |
+| `convergence_frames` | frames accumulated since the last history reset, capped at 512 |
+| `history_read` | the history image the last frame read |
+| `history_weight` | the resolved sample's history weight, `count / (count + 1)` |
+| `reset_count` | history resets since renderer creation |
+| `last_reset` | the last reset reason |
+| `shadow_phase` | the sun sample phase the last frame used |
+
+The reset reasons are `none`, `create`, `extent`, `toggle`, `teleport`,
+`scene_change`, `debug_override`, `player_reset`, and `scene_reset`.
+
+The render digest is FNV-1a over the effective camera, the sun direction, every
+box, the jitter, the shadow phase, and the view flags. It changes when any of
+those change and stays the same when they do not. It is separate from the
+simulation digest: read `render_digest` for the render inputs and `digest` for
+the simulation.
+
+`report.json` carries a `setup` block: the target kind (`offscreen`,
+`swapchain`, or `none`), the extent, the view flags, the device name, the frame
+count in flight, the TAA state, and the jitter, history, and sample caps. Use it
+to compare two runs before you compare their pixels.
+
+`scenarios/renderer-state.json` checks the steady state. `scenarios/renderer-reset.json`
+checks a teleport reset.
+
 ## Performance
 
 The renderer records a perf sample every frame: the frame interval, five CPU
@@ -264,6 +303,9 @@ ranked causes are in `docs/evidence/perf-baseline.md`.
 - `src/harness/`: CLI, scenario compiler, commands, session, runner, socket, PNG.
 - `src/harness/perf_run.odin`: the perf run and the perf report.
 - `src/harness/perf_command.odin`: the perf command parser.
+- `src/harness/session_state.odin`: the session's renderer snapshot.
+- `src/harness/report_setup.odin`: the run's setup block.
+- `src/digest/digest.odin`: FNV-1a for the state and render digests.
 - `src/perf/`: the perf sample, ring, statistics, and text formatting.
 - `src/renderer/timing.odin`: the timestamp pools, the pass boundaries, and the
   read.
@@ -279,7 +321,8 @@ ranked causes are in `docs/evidence/perf-baseline.md`.
   `tests/renderer/target.odin`.
 - `scenarios/smoke.json`, `scenarios/taa-static.json`,
   `scenarios/taa-motion.json`, `scenarios/settings-menu.json`,
-  `scenarios/window-settings.json`.
+  `scenarios/window-settings.json`, `scenarios/renderer-state.json`,
+  `scenarios/renderer-reset.json`.
 
 ## Adding a command
 

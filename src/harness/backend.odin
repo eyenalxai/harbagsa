@@ -4,10 +4,17 @@ package harness
 import "core:mem"
 import "core:strings"
 
+import "src:digest"
 import "src:frame"
 import "src:perf"
 import "src:platform"
 import "src:renderer"
+
+Backend_Snapshot :: struct {
+	report:     renderer.Renderer_Report,
+	digest:     digest.FNV,
+	has_digest: bool,
+}
 
 Backend :: struct {
 	ready:    bool,
@@ -20,6 +27,8 @@ Backend :: struct {
 		alpha: f32,
 	) -> (Capture_Result, string),
 	gpu_times: proc(ctx: rawptr) -> perf.Gpu_Times,
+	snapshot:  proc(ctx: rawptr) -> Backend_Snapshot,
+	setup:     proc(ctx: rawptr) -> renderer.Setup_Report,
 	shutdown:  proc(ctx: rawptr),
 }
 
@@ -99,8 +108,23 @@ backend_create :: proc(
 		ctx = data,
 		render = backend_render,
 		gpu_times = backend_gpu_times,
+		snapshot = backend_snapshot,
+		setup = backend_setup,
 		shutdown = backend_shutdown,
 	}, ""
+}
+
+@(private)
+backend_snapshot :: proc(ctx: rawptr) -> Backend_Snapshot {
+	data := cast(^Backend_Data)ctx
+	value, has := renderer.last_render_digest(&data.renderer)
+	return {report = renderer.renderer_report(&data.renderer), digest = value, has_digest = has}
+}
+
+@(private)
+backend_setup :: proc(ctx: rawptr) -> renderer.Setup_Report {
+	data := cast(^Backend_Data)ctx
+	return renderer.setup_report(&data.renderer)
 }
 
 @(private)
