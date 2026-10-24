@@ -51,9 +51,10 @@ Session :: struct {
 
 	frame: int,
 
-	backend:       ^Backend,
-	present:       bool,
-	render_failed: bool,
+	backend:           ^Backend,
+	present:           bool,
+	render_every_step: bool,
+	render_failed:     bool,
 
 	pending:  [dynamic]Pending_Capture,
 	captures: [dynamic]Capture_Result,
@@ -195,6 +196,14 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 	return ""
 }
 
+// Settle renders every step without writing a screenshot, so a scenario can
+// reach a steady temporal state before it starts capturing.
+session_settle :: proc(session: ^Session, frames: int) -> string {
+	session.render_every_step = true
+	defer session.render_every_step = false
+	return session_step(session, frames)
+}
+
 @(private)
 session_finish_frame :: proc(session: ^Session) -> string {
 	due := make([dynamic]int, 0, 4, context.temp_allocator)
@@ -204,7 +213,7 @@ session_finish_frame :: proc(session: ^Session) -> string {
 			append(&due, index)
 		}
 	}
-	if session.present && len(due) == 0 {
+	if (session.present || session.render_every_step) && len(due) == 0 {
 		return session_draw(session, false, "", session.alpha)
 	}
 	render_error := ""

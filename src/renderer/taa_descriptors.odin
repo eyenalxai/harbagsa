@@ -6,7 +6,7 @@ import "core:log"
 import vk "vendor:vulkan"
 
 create_taa_descriptors :: proc(r: ^Renderer) -> bool {
-	bindings := [3]vk.DescriptorSetLayoutBinding {
+	bindings := [4]vk.DescriptorSetLayoutBinding {
 		{
 			binding = 0,
 			descriptorType = .COMBINED_IMAGE_SAMPLER,
@@ -21,6 +21,12 @@ create_taa_descriptors :: proc(r: ^Renderer) -> bool {
 		},
 		{
 			binding = 2,
+			descriptorType = .COMBINED_IMAGE_SAMPLER,
+			descriptorCount = 1,
+			stageFlags = {.FRAGMENT},
+		},
+		{
+			binding = 3,
 			descriptorType = .COMBINED_IMAGE_SAMPLER,
 			descriptorCount = 1,
 			stageFlags = {.FRAGMENT},
@@ -84,7 +90,7 @@ write_taa_descriptors :: proc(r: ^Renderer) -> bool {
 				return false
 			}
 
-			images := [3]vk.DescriptorImageInfo {
+			images := [4]vk.DescriptorImageInfo {
 				{
 					sampler = taa.sampler,
 					imageView = taa.scene_color[frame].view,
@@ -100,8 +106,13 @@ write_taa_descriptors :: proc(r: ^Renderer) -> bool {
 					imageView = taa.history[read].view,
 					imageLayout = .SHADER_READ_ONLY_OPTIMAL,
 				},
+				{
+					sampler = taa.sampler,
+					imageView = taa.counts[read].view,
+					imageLayout = .SHADER_READ_ONLY_OPTIMAL,
+				},
 			}
-			writes := [3]vk.WriteDescriptorSet {
+			writes := [4]vk.WriteDescriptorSet {
 				{
 					sType = .WRITE_DESCRIPTOR_SET,
 					dstSet = set,
@@ -125,6 +136,14 @@ write_taa_descriptors :: proc(r: ^Renderer) -> bool {
 					descriptorCount = 1,
 					descriptorType = .COMBINED_IMAGE_SAMPLER,
 					pImageInfo = &images[2],
+				},
+				{
+					sType = .WRITE_DESCRIPTOR_SET,
+					dstSet = set,
+					dstBinding = 3,
+					descriptorCount = 1,
+					descriptorType = .COMBINED_IMAGE_SAMPLER,
+					pImageInfo = &images[3],
 				},
 			}
 			vk.UpdateDescriptorSets(r.device, u32(len(writes)), &writes[0], 0, nil)

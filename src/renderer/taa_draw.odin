@@ -9,62 +9,15 @@ record_taa_resolve :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image
 	write_index := (read_index + 1) % TAA_HISTORY_IMAGES
 	read := taa.history[read_index]
 	write := taa.history[write_index]
+	read_count := taa.counts[read_index]
+	write_count := taa.counts[write_index]
 	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
 	target_image := r.target.images[image_index]
 
-	// After the first use the read target rests in SHADER_READ_ONLY_OPTIMAL.
-	if taa.history_layouts[read_index] == .UNDEFINED {
-		image_barrier(
-			command_buffer,
-			read.image,
-			COLOR_SUBRESOURCE,
-			.UNDEFINED,
-			.SHADER_READ_ONLY_OPTIMAL,
-			{.TOP_OF_PIPE},
-			{.FRAGMENT_SHADER},
-			{},
-			{.SHADER_READ},
-		)
-	} else {
-		image_barrier(
-			command_buffer,
-			read.image,
-			COLOR_SUBRESOURCE,
-			.SHADER_READ_ONLY_OPTIMAL,
-			.SHADER_READ_ONLY_OPTIMAL,
-			{.COLOR_ATTACHMENT_OUTPUT},
-			{.FRAGMENT_SHADER},
-			{.COLOR_ATTACHMENT_WRITE},
-			{.SHADER_READ},
-		)
-	}
-
-	old_write_layout := taa.history_layouts[write_index]
-	if old_write_layout == .UNDEFINED {
-		image_barrier(
-			command_buffer,
-			write.image,
-			COLOR_SUBRESOURCE,
-			.UNDEFINED,
-			.COLOR_ATTACHMENT_OPTIMAL,
-			{.TOP_OF_PIPE},
-			{.COLOR_ATTACHMENT_OUTPUT},
-			{},
-			{.COLOR_ATTACHMENT_WRITE},
-		)
-	} else {
-		image_barrier(
-			command_buffer,
-			write.image,
-			COLOR_SUBRESOURCE,
-			old_write_layout,
-			.COLOR_ATTACHMENT_OPTIMAL,
-			{.FRAGMENT_SHADER},
-			{.COLOR_ATTACHMENT_OUTPUT},
-			{.SHADER_READ},
-			{.COLOR_ATTACHMENT_WRITE},
-		)
-	}
+	taa_read_barrier(command_buffer, read.image, &taa.history_layouts[read_index])
+	taa_write_barrier(command_buffer, write.image, &taa.history_layouts[write_index])
+	taa_read_barrier(command_buffer, read_count.image, &taa.count_layouts[read_index])
+	taa_write_barrier(command_buffer, write_count.image, &taa.count_layouts[write_index])
 
 	image_barrier(
 		command_buffer,
@@ -80,7 +33,7 @@ record_taa_resolve :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image
 
 	target_clear := vk.ClearValue{}
 	target_clear.color.float32 = r.clear_color
-	attachments := [2]vk.RenderingAttachmentInfo {
+	attachments := [3]vk.RenderingAttachmentInfo {
 		{
 			sType = .RENDERING_ATTACHMENT_INFO,
 			imageView = r.target.views[image_index],
@@ -92,6 +45,13 @@ record_taa_resolve :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image
 		{
 			sType = .RENDERING_ATTACHMENT_INFO,
 			imageView = write.view,
+			imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
+			loadOp = .DONT_CARE,
+			storeOp = .STORE,
+		},
+		{
+			sType = .RENDERING_ATTACHMENT_INFO,
+			imageView = write_count.view,
 			imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
 			loadOp = .DONT_CARE,
 			storeOp = .STORE,
@@ -129,13 +89,10 @@ record_taa_resolve :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image
 		nil,
 	)
 
-	weight: f32
-	if taa.enabled && taa.history_valid {
-		weight = taa_history_weight(taa.converge_frames)
-	}
 	params := TAA_Params {
-		gamma = srgb_gamma(r),
-		weight = weight,
+		gamma         = srgb_gamma(r),
+		history_valid = taa.enabled && taa.history_valid ? 1 : 0,
+		max_samples   = TAA_MAX_SAMPLES,
 	}
 	vk.CmdPushConstants(
 		command_buffer,
@@ -148,17 +105,8 @@ record_taa_resolve :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image
 	vk.CmdDraw(command_buffer, 3, 1, 0, 0)
 	vk.CmdEndRendering(command_buffer)
 
-	image_barrier(
-		command_buffer,
-		write.image,
-		COLOR_SUBRESOURCE,
-		.COLOR_ATTACHMENT_OPTIMAL,
-		.SHADER_READ_ONLY_OPTIMAL,
-		{.COLOR_ATTACHMENT_OUTPUT},
-		{.FRAGMENT_SHADER},
-		{.COLOR_ATTACHMENT_WRITE},
-		{.SHADER_READ},
-	)
+	taa_finish_write(command_buffer, write.image, &taa.history_layouts[write_index])
+	taa_finish_write(command_buffer, write_count.image, &taa.count_layouts[write_index])
 	image_barrier(
 		command_buffer,
 		target_image,
@@ -170,7 +118,82 @@ record_taa_resolve :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image
 		{.COLOR_ATTACHMENT_WRITE},
 		{.COLOR_ATTACHMENT_READ, .COLOR_ATTACHMENT_WRITE},
 	)
+}
 
-	taa.history_layouts[read_index] = .SHADER_READ_ONLY_OPTIMAL
-	taa.history_layouts[write_index] = .SHADER_READ_ONLY_OPTIMAL
+// The read target was written by the previous resolve and already rests in
+// SHADER_READ_ONLY_OPTIMAL.
+@(private)
+taa_read_barrier :: proc(command_buffer: vk.CommandBuffer, image: vk.Image, layout: ^vk.ImageLayout) {
+	if layout^ == .UNDEFINED {
+		image_barrier(
+			command_buffer,
+			image,
+			COLOR_SUBRESOURCE,
+			.UNDEFINED,
+			.SHADER_READ_ONLY_OPTIMAL,
+			{.TOP_OF_PIPE},
+			{.FRAGMENT_SHADER},
+			{},
+			{.SHADER_READ},
+		)
+	} else {
+		image_barrier(
+			command_buffer,
+			image,
+			COLOR_SUBRESOURCE,
+			.SHADER_READ_ONLY_OPTIMAL,
+			.SHADER_READ_ONLY_OPTIMAL,
+			{.COLOR_ATTACHMENT_OUTPUT},
+			{.FRAGMENT_SHADER},
+			{.COLOR_ATTACHMENT_WRITE},
+			{.SHADER_READ},
+		)
+	}
+	layout^ = .SHADER_READ_ONLY_OPTIMAL
+}
+
+@(private)
+taa_write_barrier :: proc(command_buffer: vk.CommandBuffer, image: vk.Image, layout: ^vk.ImageLayout) {
+	if layout^ == .UNDEFINED {
+		image_barrier(
+			command_buffer,
+			image,
+			COLOR_SUBRESOURCE,
+			.UNDEFINED,
+			.COLOR_ATTACHMENT_OPTIMAL,
+			{.TOP_OF_PIPE},
+			{.COLOR_ATTACHMENT_OUTPUT},
+			{},
+			{.COLOR_ATTACHMENT_WRITE},
+		)
+	} else {
+		image_barrier(
+			command_buffer,
+			image,
+			COLOR_SUBRESOURCE,
+			.SHADER_READ_ONLY_OPTIMAL,
+			.COLOR_ATTACHMENT_OPTIMAL,
+			{.FRAGMENT_SHADER},
+			{.COLOR_ATTACHMENT_OUTPUT},
+			{.SHADER_READ},
+			{.COLOR_ATTACHMENT_WRITE},
+		)
+	}
+	layout^ = .COLOR_ATTACHMENT_OPTIMAL
+}
+
+@(private)
+taa_finish_write :: proc(command_buffer: vk.CommandBuffer, image: vk.Image, layout: ^vk.ImageLayout) {
+	image_barrier(
+		command_buffer,
+		image,
+		COLOR_SUBRESOURCE,
+		.COLOR_ATTACHMENT_OPTIMAL,
+		.SHADER_READ_ONLY_OPTIMAL,
+		{.COLOR_ATTACHMENT_OUTPUT},
+		{.FRAGMENT_SHADER},
+		{.COLOR_ATTACHMENT_WRITE},
+		{.SHADER_READ},
+	)
+	layout^ = .SHADER_READ_ONLY_OPTIMAL
 }

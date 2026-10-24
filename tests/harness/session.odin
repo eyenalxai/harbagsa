@@ -75,6 +75,38 @@ session_steps_and_reports_state :: proc(t: ^testing.T) {
 }
 
 @(test)
+settle_renders_every_step_without_capturing :: proc(t: ^testing.T) {
+	session, _ := harness.session_create(context.allocator)
+	defer harness.session_destroy(&session)
+	calls: int
+	backend := harness.Backend {
+		ready  = true,
+		ctx    = &calls,
+		render = fake_render,
+	}
+	harness.session_set_backend(&session, &backend, false)
+
+	reply := execute(t, &session, `{"cmd": "settle", "frames": 5}`)
+	defer harness.reply_destroy(&reply, context.allocator)
+	testing.expect(t, reply.ok, "settle failed")
+	testing.expect_value(t, session.frame, 5)
+	testing.expect_value(t, calls, 5)
+	testing.expect_value(t, len(session.captures), 0)
+}
+
+@(test)
+settle_steps_without_a_backend :: proc(t: ^testing.T) {
+	session, _ := harness.session_create(context.allocator)
+	defer harness.session_destroy(&session)
+
+	reply := execute(t, &session, `{"cmd": "settle", "frames": 3}`)
+	defer harness.reply_destroy(&reply, context.allocator)
+	testing.expect(t, reply.ok, "settle without a backend failed")
+	testing.expect_value(t, session.frame, 3)
+	testing.expect_value(t, len(session.captures), 0)
+}
+
+@(test)
 look_uses_the_real_sensitivity :: proc(t: ^testing.T) {
 	session, _ := harness.session_create(context.allocator)
 	defer harness.session_destroy(&session)
