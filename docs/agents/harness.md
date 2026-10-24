@@ -37,7 +37,7 @@ serializes Make with `flock`.
 | compare two builds or revisions | **Cross-run diff** |
 | measure frame time | **Performance** |
 | prove a capture-free sequence is deterministic | **Screenshots** and `scenarios/capture-free.json` |
-| understand a design choice | `docs/adr/0008` to `docs/adr/0018` |
+| understand a design choice | `docs/adr/0008` to `docs/adr/0019` |
 
 ## What one run writes
 
