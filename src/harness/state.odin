@@ -74,8 +74,8 @@ Renderer_Debug_State :: struct {
 	depth_trust:         bool   `json:"depth_trust"`,
 	shadow_phase_frozen: bool   `json:"shadow_phase_frozen"`,
 	shadow_phase:        u32    `json:"shadow_phase"`,
-	sky:                 bool   `json:"sky"`,
-	ao:                  bool   `json:"ao"`,
+	light_shadows:       bool   `json:"light_shadows"`,
+	synthetic_lights:    int    `json:"synthetic_lights"`,
 }
 
 Renderer_State :: struct {
@@ -90,9 +90,7 @@ Renderer_State :: struct {
 	reset_count:        int                  `json:"reset_count"`,
 	last_reset:         string               `json:"last_reset"`,
 	shadow_phase:       u32                  `json:"shadow_phase"`,
-	atlas_weight:       f32                  `json:"atlas_weight"`,
-	text_truncated_runs: int                 `json:"text_truncated_runs"`,
-	text_font_drops:     int                 `json:"text_font_drops"`,
+	light_count:        int                  `json:"light_count"`,
 	debug:              Renderer_Debug_State `json:"debug"`,
 }
 

@@ -1,0 +1,13 @@
+{
+  "view": {"hud": false, "debug": false, "hint": false},
+  "renderer_debug": {"synthetic_lights": 8},
+  "commands": [
+    {"cmd": "camera", "position": [0, 2.2, 12], "yaw": 0, "pitch": -0.15},
+    {"cmd": "settle", "frames": 1},
+    {"cmd": "check", "field": "renderer.light_count", "op": "eq", "value": 8},
+    {"cmd": "perf", "frames": 120, "warmup": 60, "trace": "trace-shadows-on.jsonl"},
+    {"cmd": "renderer_debug", "light_shadows": false},
+    {"cmd": "check", "field": "renderer.debug.light_shadows", "op": "eq", "value": false},
+    {"cmd": "perf", "frames": 120, "warmup": 60, "trace": "trace-shadows-off.jsonl"}
+  ]
+}

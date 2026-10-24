@@ -76,8 +76,7 @@ serializes Make with `flock`.
 | read velocity, history, depth, or scene color | **Capture targets** |
 | read numeric image statistics | **Capture targets** (`stats`) |
 | read renderer state or the render digest | **Renderer state** |
-| change a renderer input for a diagnosis | **Renderer debug overrides** |
-| check the sky and the ambient occlusion | **Sky and ambient occlusion** |
+| change a TAA or light input for a diagnosis | **Renderer debug overrides** |
 | measure image stability or the period | **Analysis** |
 | compare two builds or revisions | **Cross-run diff** |
 | script the display list | **Commands** (`displays`) |
@@ -100,7 +99,8 @@ serializes Make with `flock`.
 - `frames/analysis-diff.png` and `frames/analysis-variance.png`: the optional
   analysis maps.
 - `trace.jsonl`: one JSON object per measured frame, when the perf command asks
-  for a trace.
+  for a trace. A scenario with more than one traced perf command writes one file
+  per command; `report.trace` names the last.
 - `state.json`: the final state alone. It holds the player, placed objects,
   window and input settings, menu, debug palette and placement, frame, renderer,
   render digest, and simulation digest. Each object carries `id`, `prefab`,
@@ -239,6 +239,7 @@ Rules:
 - `{"cmd": "check", "field": "capture.1.stats.mean.y", "op": "gt", "other": "capture.0.stats.mean.y"}`
 - `{"cmd": "perf", "frames": 120, "warmup": 60}`
 - `{"cmd": "renderer_debug", "jitter": false, "shadow_phase": 12}`
+- `{"cmd": "renderer_debug", "light_shadows": false, "synthetic_lights": 8}`
 - `{"cmd": "record", "path": "scenarios/walk.json"}`
 - `{"cmd": "record"}`
 - `{"cmd": "replay", "path": "scenarios/walk.json"}`
@@ -670,21 +671,7 @@ run never created a renderer, and `renderer.active` is `false`.
 | `reset_count` | history resets since renderer creation |
 | `last_reset` | the last reset reason |
 | `shadow_phase` | the sun sample phase the last frame used |
-| `atlas_weight` | the type weight the active coverage atlas holds |
-| `text_truncated_runs` | text runs cut at the 128-glyph cap |
-| `text_font_drops` | HarfBuzz fonts dropped at the 8-font cap |
-| `text_truncated_runs` | runs cut at the 128-glyph cap |
-| `text_font_drops` | fonts dropped at the 8-font shaper cap |
-
-The state also carries a `camera` object: `position`, `yaw`, `pitch`, `fov` in
-degrees, and `overridden`. A `camera` command sets it; `clear` restores the
-player view. The `sun` object carries `azimuth`, `elevation`, and
-`angular_diameter`, in degrees. The `settle` object carries the last wait's
-`frames` and `converged`. The `rows` object carries the HUD and menu rows. The
-`menu` object carries `status` and `blocked` beside `open`, `selected`, and
-`item`; the status stays until the next setting change, so a check can read the
-note after the frame that drew it. The angles describe the sun in the sky, so the
-default sun reads about 52 degrees of azimuth and 60 degrees of elevation.
+| `light_count` | the point lights the last frame uploaded, at most 8 |
 
 The reset reasons are `none`, `create`, `extent`, `toggle`, `teleport`,
 `scene_change`, `debug_override`, `player_reset`, and `scene_reset`. A change to
@@ -692,12 +679,15 @@ the sun direction or the sun angular diameter is a `scene_change`. A state
 check reads the override values as `renderer.debug.*`, for example
 `renderer.debug.sky` and `renderer.debug.ao`.
 
-The render digest is FNV-1a over the target extent, the effective camera, the sun
-direction and angular diameter, every box, the jitter, the shadow phase, the
-applied atlas weight, the sky and AO flags, and the view flags. It changes when any of those
-change and stays the same when they do not. It is
-separate from the simulation digest: read `render_digest` for the render inputs
-and `digest` for the simulation.
+The nested `debug` object repeats the active override values: `taa`, `jitter`,
+`history_weight`, `clamp`, `depth_trust`, `shadow_phase_frozen`,
+`shadow_phase`, `light_shadows`, and `synthetic_lights`.
+
+The render digest is FNV-1a over the effective camera, the sun direction, every
+box, the box emissive strengths, the point lights, the jitter, the shadow phase,
+and the view flags. It changes when any of those change and stays the same when
+they do not. It is separate from the simulation digest: read `render_digest` for
+the render inputs and `digest` for the simulation.
 
 `report.json` carries a `setup` block: the target kind (`offscreen`,
 `swapchain`, or `none`), the extent, the build revision and dirty flag, the view
@@ -712,10 +702,10 @@ checks a teleport reset.
 
 ## Renderer debug overrides
 
-`{"cmd": "renderer_debug", ...}` changes renderer inputs without editing source.
-It is diagnostic and gated. A build with `-define:ENABLE_RENDERER_DEBUG=true`,
-or a run with `--debug-renderer`, accepts it. Any other build rejects it with a
-clear error.
+`{"cmd": "renderer_debug", ...}` changes TAA and point-light inputs without
+editing source. It is diagnostic and gated. A build with
+`-define:ENABLE_RENDERER_DEBUG=true`, or a run with `--debug-renderer`, accepts
+it. Any other build rejects it with a clear error.
 
 | Field | Effect |
 | --- | --- |
@@ -726,20 +716,23 @@ clear error.
 | `depth_trust` | force the depth test to trust the history |
 | `freeze_shadow_phase` | freeze the sun sample phase |
 | `shadow_phase` | set a phase in [0, 63] and freeze it |
-| `sky` | draw the sky pass, and use the sky ambient in the lit pass |
-| `ao` | trace the ambient occlusion rays |
-| `clear` | reset every override and turn TAA, the sky, and the AO on |
+| `light_shadows` | enable or disable the point-light shadow rays |
+| `synthetic_lights` | replace the frame's lights with 0 to 8 test lights |
+| `clear` | reset every override and turn TAA on |
 
 An override starts from the current state. A scenario can put the same fields in
 a top-level `renderer_debug` object; it compiles to the command before the commands.
 
 Every change to the override resets the history with reason `debug_override`,
-including a new shadow phase.
+including a new shadow phase and a light change.
 
 `scenarios/renderer-debug.json` sets every override and clears it.
 `scenarios/renderer-debug-converge.json` turns jitter off and freezes the phase,
 so the image converges. `scenarios/renderer-debug-jitter.json` freezes the phase
 and lets jitter cycle, so the analysis can find the period.
+`scenarios/perf-lamps.json` injects eight synthetic lights, measures shadows on,
+then disables the point-light shadows and measures again. It writes one trace per
+side.
 
 ## Sky and ambient occlusion
 
@@ -815,71 +808,13 @@ covers the screen with surfaces that receive no direct sun. Run either at the
 same size on two builds to compare. The before/after is in
 `docs/evidence/perf-scene-pass.md`.
 
-### Benchmark two builds
-
-A single before/after pair is noisy. Alternate the order of each pair so clock
-drift affects both sides equally, and compare medians, not one run. `--prime`
-keeps the cold clock out of the measured window.
-
-```sh
-tools/ab.sh \
-  --ref origin/main \
-  --scenario scenarios/perf.json \
-  --size 2560x1440 \
-  --runs 5 \
-  --prime 2.0 \
-  --out runs/ab
-```
-
-The ref must understand the scenario's commands. `scenarios/perf-crates.json`
-needs a ref with the `crates` command; a base without it exits non-zero, which
-is the intended failure.
-
-The wrapper `./bin/harbagsa-agent ab --base REF ...` translates `--base` to
-`--ref` and passes the rest through. Use it when one command is easier to keep
-in a note.
-
-The tool builds the ref in a detached worktree under `build/ab/base`, builds the
-current tree in place, and copies both agents to a temporary directory. It runs
-each pair in alternating order, parses each `report.json`, and writes
-`summary.json` and `summary.md`. The table gives the median per side and the
-paired ratio for the frame interval, the GPU total, and each pass. The `setup`
-block names the revision and dirty state of each side, so the result does not
-need a hand-written label. A run directory is a complete record: the report, the
-state, the captures, and the trace.
-
-A ref that predates `prime` rejects the field. The tool reruns that base side
-with the original scenario and records `base_prime_supported: false`; the
-optimized side still uses `--prime`. The note stays in `summary.json`.
-
-To measure one build by hand, drive a session and run perf twice. The first run
-warms the path; the second is the comparable one:
-
-```sh
-printf '%s\n' \
-  '{"cmd": "perf", "frames": 120, "warmup": 60, "prime": 2.0, "name": "warm"}' \
-  '{"cmd": "perf", "frames": 120, "warmup": 60, "prime": 0, "name": "measure"}' \
-  '{"cmd": "quit"}' |
-  ./bin/harbagsa-agent session
-```
-
-Offscreen throughput is not present pacing. An offscreen perf run measures how
-fast the renderer can submit frames with nothing waiting for the display; a
-windowed FIFO run measures how often a frame reaches the screen. Compare the
-same mode on both sides, and do not use the offscreen ratio to claim a visible
-frame-rate change.
-
-## Benchmark two builds with the agent
-
-The `ab` subcommand is the short form of the shell recipe below:
-
-```sh
-./bin/harbagsa-agent ab --base origin/main --scenario scenarios/perf.json --out runs/ab
-```
-
-It translates `--base` to `tools/ab.sh --ref` and passes `--scenario`, `--size`,
-`--runs`, `--prime`, and `--out` through. It writes the same `summary.json` and
-`summary.md` and exits non-zero when a side fails or a perf result is missing.
+`scenarios/perf-lamps.json` measures the point-light path. The top-level
+`renderer_debug` block injects eight synthetic lights, the first `perf` command
+measures them with hard shadows, then the command disables point-light shadows
+and the second `perf` measures again. Both traces stay in the run directory:
+`trace-shadows-on.jsonl` and `trace-shadows-off.jsonl`. It needs
+`--debug-renderer` or the build define. The paired result is in
+`docs/evidence/perf-lamps.md`.
 
 ## Determinism
 
@@ -943,6 +878,8 @@ It translates `--base` to `tools/ab.sh --ref` and passes `--scenario`, `--size`,
 - `src/renderer/timing.odin`: the timestamp pools, the pass boundaries, and the
   read.
 - `src/renderer/debug.odin`: the debug gate, overrides, and shadow phase.
+- `src/renderer/lights.odin`: the point-light type, instance masks, synthetic
+  lights, and upload.
 - `src/renderer/state.odin`: the renderer report and setup.
 - `src/renderer/render_digest.odin`: the render digest.
 - `src/renderer/sky_draw.odin`: the sky pass, after the lit pass.
@@ -979,8 +916,8 @@ It translates `--base` to `tools/ab.sh --ref` and passes `--scenario`, `--size`,
   `scenarios/window-settings.json`, `scenarios/renderer-state.json`,
   `scenarios/renderer-reset.json`, `scenarios/capture-targets.json`,
   `scenarios/renderer-debug.json`, `scenarios/renderer-debug-converge.json`,
-  `scenarios/renderer-debug-jitter.json`, `scenarios/capture-free.json`, and
-  `scenarios/editor-ghost.json`.
+  `scenarios/renderer-debug-jitter.json`, `scenarios/capture-free.json`,
+  `scenarios/editor-ghost.json`, and `scenarios/perf-lamps.json`.
 
 ## Adding a command
 
@@ -1069,10 +1006,12 @@ harness in the same change. Do not leave the automation behind the game.
   `Pending_Capture`, the backend, `capture_field`, the docs, and a synthetic
   image test. A block that writes no file must still be readable by a check. A check must read the same value
   the file records.
-- New renderer debug override: add it to `Renderer_Debug`,
-  `set_renderer_debug`, the camera uniform or the resolve push constants and
-  shader, `renderer_debug_fields`, the renderer state, the render digest, the
-  docs, and the gate test. Do not make it reachable without the gate.
+- New renderer debug override: add it to `Renderer_Debug`, `set_renderer_debug`,
+  the resolve push constants and shader, `renderer_debug_fields`, the renderer
+  state, the docs, and the gate test. Do not make it reachable without the
+  gate.
+- New point light input: add it to `Light`, the light buffer upload, the scene
+  shader loop, the render digest, and `tests/renderer/lights.odin`.
 - New scenario key or run option: add it to `scenario_parse` and its allowed
   key set, the CLI parser, the README, this page, and a parser test. A new
   top-level key also joins `scenario_build` and the inheritance merge.

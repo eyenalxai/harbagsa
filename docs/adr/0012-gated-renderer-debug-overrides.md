@@ -1,10 +1,10 @@
 # Gated renderer debug overrides
 
-The harness can change renderer inputs: TAA on or off, jitter, history weight,
-clamp, depth trust, the shadow phase, the sky, and ambient occlusion. The
-command is diagnostic. A build with `ENABLE_RENDERER_DEBUG=true`, or a run with
-`--debug-renderer`, accepts it. Every other build rejects it with an error that
-names both gates.
+The harness can change TAA and point-light inputs: TAA on or off, jitter, history
+weight, clamp, depth trust, the shadow phase, point-light shadows, and a
+synthetic light count. The command is diagnostic. A build with
+`ENABLE_RENDERER_DEBUG=true`, or a run with `--debug-renderer`, accepts it. Every
+other build rejects it with an error that names both gates.
 
 ## Why
 
@@ -26,9 +26,16 @@ without a second build.
   omitted field keeps its value.
 - A change to the override resets the history with reason `debug_override`. The
   shadow phase is included: a new phase changes the sun samples the resolve
-  averages, so the old history no longer describes the same input.
+  averages, so the old history no longer describes the same input. A light
+  change resets for the same reason: the new light contribution differs from
+  the image the history holds.
 - `clear` restores the defaults and turns TAA on. A scenario can therefore end
   in the product configuration regardless of the path it took.
+- `light_shadows` disables the point-light shadow rays without removing the
+  light contribution, so the shadow cost is measurable on its own.
+- `synthetic_lights` replaces the frame's light list with 0 to 8 fixed test
+  lights. The game has no lamps yet, so this is how the perf scenario fills the
+  light budget.
 - The resolve takes the overrides as push constants. A fixed weight replaces
   `count / (count + 1)`; a flag skips the clamp; a flag forces the depth trust.
 - The renderer report carries the override struct, so a scenario asserts the
@@ -52,3 +59,5 @@ without a second build.
   one call per resolve.
 - The clear path resets the history. A scenario that uses the command and then
   measures pixels must account for the reset.
+- `scenarios/perf-lamps.json` uses the synthetic lights and the shadow switch to
+  report the paired point-light shadow cost.

@@ -125,8 +125,8 @@ run_batch :: proc(options: Run_Options) -> int {
 		session_failure(&session, failure)
 	}
 	trace_failed := false
-	if session.has_trace {
-		if trace_error := write_session_trace(&session, staging); trace_error != "" {
+	if len(session.traces) > 0 {
+		if trace_error := write_session_traces(&session, staging); trace_error != "" {
 			trace_failed = true
 			if failure == "" {
 				failure = trace_error

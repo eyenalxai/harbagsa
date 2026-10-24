@@ -14,24 +14,19 @@ View_Flag :: enum {
 
 View_Flags :: bit_set[View_Flag]
 
+Render_Digest_Input :: struct {
+	camera:          Camera,
+	light_direction: [3]f32,
+	boxes:           []geometry.Box,
+	lights:          []Light,
+	jitter:          [2]f32,
+	shadow_phase:    u32,
+	view_flags:      View_Flags,
+}
+
 // The digest names the effective render inputs, not the game state. Two frames
 // with the same digest draw the same scene, so a measurement can assert the
 // inputs before it compares pixels.
-Render_Digest_Input :: struct {
-	width:                u32,
-	height:               u32,
-	camera:               Camera,
-	light_direction:      [3]f32,
-	sun_angular_diameter: f32,
-	boxes:                []geometry.Box,
-	jitter:               [2]f32,
-	shadow_phase:         u32,
-	atlas_weight:         f32,
-	sky:                  bool,
-	ao:                   bool,
-	view_flags:           View_Flags,
-}
-
 render_digest :: proc(input: Render_Digest_Input) -> digest.FNV {
 	hash := digest.fnv()
 	// The aspect changes the projection, so two sizes with one camera do not
@@ -64,7 +59,19 @@ render_digest :: proc(input: Render_Digest_Input) -> digest.FNV {
 		digest.write_f32(&hash, box.color.y)
 		digest.write_f32(&hash, box.color.z)
 		digest.write_f32(&hash, box.color.w)
+		digest.write_f32(&hash, box.emissive)
 		digest.write_bool(&hash, box.visual_only)
+	}
+	digest.write_u64(&hash, u64(len(input.lights)))
+	for light in input.lights {
+		digest.write_f32(&hash, light.position.x)
+		digest.write_f32(&hash, light.position.y)
+		digest.write_f32(&hash, light.position.z)
+		digest.write_f32(&hash, light.intensity)
+		digest.write_f32(&hash, light.color.x)
+		digest.write_f32(&hash, light.color.y)
+		digest.write_f32(&hash, light.color.z)
+		digest.write_f32(&hash, light.range)
 	}
 	digest.write_f32(&hash, input.jitter.x)
 	digest.write_f32(&hash, input.jitter.y)
