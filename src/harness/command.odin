@@ -10,6 +10,7 @@ Command_Kind :: enum {
 	Face,
 	Input,
 	Step,
+	Settle,
 	State,
 	Capture,
 	Camera,
@@ -66,6 +67,10 @@ Step_Command :: struct {
 	frames: int,
 }
 
+Settle_Command :: struct {
+	frames: int,
+}
+
 Capture_Command :: struct {
 	name:      string,
 	frame:     int,
@@ -112,6 +117,7 @@ Command :: struct {
 	face:    Face_Command,
 	input:   Input_Command,
 	step:    Step_Command,
+	settle:  Settle_Command,
 	capture: Capture_Command,
 	camera:  Camera_Command,
 	view:    View_Command,
@@ -133,6 +139,8 @@ command_name :: proc(kind: Command_Kind) -> string {
 		return "input"
 	case .Step:
 		return "step"
+	case .Settle:
+		return "settle"
 	case .State:
 		return "state"
 	case .Capture:
@@ -250,6 +258,8 @@ command_parse :: proc(value: json.Value, allocator := context.allocator) -> (Com
 		return parse_input(object)
 	case "step":
 		return parse_step(object)
+	case "settle":
+		return parse_settle(object)
 	case "state":
 		if key, unknown := json_unknown_key(object, {"cmd"}); unknown {
 			return {}, format_error("unknown key %q", key)

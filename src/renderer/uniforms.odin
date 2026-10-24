@@ -31,14 +31,15 @@ Object_Index :: struct {
 }
 
 TAA_Params :: struct {
-	gamma:  f32,
-	weight: f32,
+	gamma:         f32,
+	history_valid: f32,
+	max_samples:   f32,
 }
 
 #assert(size_of(Camera_Uniform) == 272)
 #assert(size_of(Object_Data) == 144)
 #assert(size_of(Object_Index) == 4)
-#assert(size_of(TAA_Params) == 8)
+#assert(size_of(TAA_Params) == 12)
 
 CAMERA_BINDING :: 0
 OBJECT_BINDING :: 1

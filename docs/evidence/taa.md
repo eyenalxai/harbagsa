@@ -52,8 +52,59 @@ The validation layer found a pre-existing swapchain semaphore reuse error. #24 f
 
 Captured on 2026-10-24 from `fix/taa-unjittered-velocity`. The original capture above predates the ray-query shadows and this fix.
 
-`scenarios/taa-static.json` now settles the camera for 8 frames, captures 25 steady frames, and checks the capture deltas. Before the fix, the static image reached a period-8 limit cycle. On the 16 steady pairs from frames 8-23 the mean frame delta was 0.196/255 and 0.290% of pixels changed by more than 16/255. The worst pair changed by 0.350/255 mean with 6,832 pixels above 16/255.
+At the time, `scenarios/taa-static.json` settled the camera for 8 frames and captured 25 frames. The harness then rendered only capture frames, so those frames measured the initial convergence, not the steady image. On the 16 pairs from frames 8-23 the mean frame delta was 0.196/255 and 0.290% of pixels changed by more than 16/255. The worst pair changed by 0.350/255 mean with 6,832 pixels above 16/255.
 
-After the fix, the worst steady pair changed by 0.053/255 mean. The worst count above 16/255 was 972, or 0.105% of the frame. The scenario asserts `capture.worst_mean_delta <= 0.10` and `capture.worst_over_16_fraction <= 0.002`.
+After that fix, the worst pair in the same window changed by 0.053/255 mean. The worst count above 16/255 was 972, or 0.105% of the frame. Those numbers are historical; the accumulation fix below retargets the scenario at the steady image.
 
 The root cause was the velocity target. The box fragment shader mixed an unjittered previous projection with the jittered current sample, so a still camera stored the negative jitter. The resolve then sampled the history one jitter offset away from the pixel. The fragment shader now projects both ends in unjittered UV space. See #101.
+
+## Accumulation fix
+
+Captured on 2026-10-24 from `fix-taa-stairs-flicker`. The fix for #101 removed the reprojection error, but a still image still rippled on stair silhouettes. The ripple repeated every eight frames, the length of the jitter cycle.
+
+The earlier scenario captured 25 frames and warmed up four captures. The harness then rendered only capture frames, so those frames were the initial convergence, not the steady image. That is why the gate passed while the flicker remained. The new `settle` command renders frames without writing a PNG.
+
+### Root cause
+
+The resolve blended with a fixed weight of 0.9. Over one eight-phase jitter cycle the weights were 0.1, 0.09, 0.081, and so on, so a still pixel settled into a period-eight cycle instead of a fixed value. Longer fixed weights reduced the ripple, but a global weight or count froze edge patterns after camera motion: a 300-frame global ramp left a hold image 95/255 away from a fresh still image on 1,619 pixels.
+
+### Change
+
+Each history image now has a per-pixel sample count. The resolve averages a new sample with weight one over the count plus one, up to 512. The count follows the reprojected surface, and a depth rejection resets it to one, so a disocclusion reconverges in a few frames. The history clamp uses a 2σ variance box in YCoCg instead of the min/max intersection; the min/max box collapses on flat neighborhoods and causes phase-dependent pops.
+
+### Still camera at 800x600
+
+The camera is the stairs view from the reported repro: `[-12, 1.7, 6.0]`, yaw 0, pitch -0.22. The comparison uses the last 200 frames after the accumulation settles.
+
+| Metric | Before | After |
+| --- | --- | --- |
+| worst mean frame delta | 0.0409/255 | 0.0013/255 |
+| worst single-pixel delta | 41/255 | 4/255 |
+| pixels above 16/255 in one pair | 51 | 0 |
+| pixels with a 200-frame range above 16/255 | 144 | 0 |
+| pixels with a 200-frame range above 4/255 | 5,660 | 220 |
+| worst 200-frame per-pixel range | 42/255 | 12/255 |
+
+The arena stairs region alone drops from a 30/255 range and 924 pixels above 8/255 to a 12/255 range and 2 pixels above 8/255.
+
+![Temporal range over 200 still frames](taa/taa-stairs-range-800x600.png)
+
+The scenario settles 520 frames, so the accumulation count reaches the 512 cap. The 800x600 worst pair is 0.0022/255 mean and the 1280x720 worst pair is 0.0031/255. The static scenario gates `capture.worst_mean_delta <= 0.02` and `capture.worst_over_16_fraction <= 0.000005`.
+
+The pre-fix renderer fails both new gates: the static worst pair is 0.058/255 with 51 pixels above 16/255, and the motion worst hold pair is 0.052/255 with 202 pixels above 16/255.
+
+### After motion
+
+Move the camera up the stairs, turn 180 degrees, hold, and compare the last hold frame with a fresh still image of the same view at 800x600. The per-pixel count reconverges after the disocclusions, so the hold image returns to the fresh image instead of keeping a baked edge pattern.
+
+| Variant | Pixels above 16/255 | Worst pixel | Mean |
+| --- | --- | --- | --- |
+| Before, fixed 0.9 weight | 202 | 19/255 | 0.054 |
+| Global 256-frame ramp | 1,619 | 95/255 | 0.172 |
+| Per-pixel count | 24 | 25/255 | 0.040 |
+
+`scenarios/taa-motion.json` gates the hold deltas after 20 warmup captures at `capture.worst_mean_delta <= 0.03` and `capture.worst_over_16_fraction <= 0.000005`.
+
+### Crate push
+
+The moving crate shadow stays sharp. Against a no-TAA reference the count variant differs by 0.39/255 mean; the count does not keep the stale shadow for the length of the history.

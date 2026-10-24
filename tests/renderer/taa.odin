@@ -40,11 +40,3 @@ jitter_stays_within_half_a_pixel :: proc(t: ^testing.T) {
 		testing.expectf(t, math.abs(y) < 0.5, "sample %d y offset %v", sample, y)
 	}
 }
-
-@(test)
-history_weight_ramps_then_holds :: proc(t: ^testing.T) {
-	testing.expectf(t, math.abs(renderer.taa_history_weight(0) - 0.5) < 1e-6, "first step")
-	testing.expectf(t, math.abs(renderer.taa_history_weight(1) - 0.75) < 1e-6, "second step")
-	testing.expectf(t, math.abs(renderer.taa_history_weight(2) - 0.9) < 1e-6, "steady weight")
-	testing.expectf(t, math.abs(renderer.taa_history_weight(9) - 0.9) < 1e-6, "clamped weight")
-}

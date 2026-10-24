@@ -76,7 +76,10 @@ Rules:
   scales with the capture size. Each capture after the first compares its
   pixels with the previous capture. `warmup` skips that many captures before
   the summary, so a scenario can ignore TAA convergence.
-- `scenarios/taa-static.json` uses capture checks to gate TAA stability.
+- `settle` advances the simulation and renders every frame without writing a
+  screenshot, so a scenario can reach a steady temporal state before it captures.
+- `scenarios/taa-static.json` and `scenarios/taa-motion.json` use capture checks
+  to gate TAA stability.
 - A `commands` array runs verbatim. It is the form that `record` writes. It does
   not add a default capture.
 
@@ -87,6 +90,7 @@ Rules:
 - `{"cmd": "face", "yaw": 0, "pitch": 0}`
 - `{"cmd": "input", "forward": 1, "right": 0, "jump": false}`
 - `{"cmd": "step", "frames": 60}`
+- `{"cmd": "settle", "frames": 300}`
 - `{"cmd": "state"}`
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw": 0, "pitch": 0}`
@@ -101,8 +105,8 @@ Rules:
 
 A past capture frame is an error. A future capture frame queues. Unknown keys,
 wrong types, and out-of-range values are per-command errors; the session stays
-usable. A `step` while the menu is open is an error, because the game pauses.
-An open menu renders even when the `view` HUD flag is off. `select` is zero-based.
+usable. A `step` or `settle` while the menu is open is an error, because the
+game pauses. A settle renders every frame and writes no screenshot. An open menu renders even when the `view` HUD flag is off. `select` is zero-based.
 `select` and `activate` need an open menu. `direction` is `-1` or `1` (default
 `1`) and needs `activate`. The rows are Window mode, Display, Resolution, Sprint
 mode, Crouch mode, Prone mode, and Resume.
@@ -144,14 +148,19 @@ scenario.
   present. The compositor controls the window size.
 - TAA history affects exact pixels. The first frame matches exactly. Later frames
   match when both runs share the same history. See the README note.
-- `scenarios/taa-static.json` settles for 8 frames, captures 25 steady frames,
+- `scenarios/taa-static.json` settles for 520 frames, captures 60 steady frames,
   and checks `capture.worst_mean_delta` and
-  `capture.worst_over_16_fraction`.
+  `capture.worst_over_16_fraction`. The settle passes the 512-sample cap.
+- `scenarios/taa-motion.json` settles, moves the camera up the stairs, turns
+  around, and holds. It captures the hold frames and checks that the image
+  settles after the motion. Run it with `--size 800x600` for the
+  stretched-window repro.
 - `scenarios/settings-menu.json` captures the settings menu and checks a changed
   input mode.
 - `scenarios/window-settings.json` captures the menu after switching to
   Windowed and changing the resolution, then checks the window settings.
-- `--no-render` and capture-free scenarios never create a Vulkan device.
+- `--no-render` and capture-free scenarios never create a Vulkan device. Under
+  `--no-render`, `settle` is a plain step.
 
 Use `capture` or `--present`. Do not use `grim` for automated screenshots.
 
@@ -181,7 +190,8 @@ Use `capture` or `--present`. Do not use `grim` for automated screenshots.
 - `tests/harness/`, `tests/frame/`, `tests/display/display.odin`,
   `tests/renderer/target.odin`.
 - `scenarios/smoke.json`, `scenarios/taa-static.json`,
-  `scenarios/settings-menu.json`, `scenarios/window-settings.json`.
+  `scenarios/taa-motion.json`, `scenarios/settings-menu.json`,
+  `scenarios/window-settings.json`.
 
 ## Adding a command
 

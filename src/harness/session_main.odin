@@ -123,7 +123,7 @@ runtime_handle_line :: proc(runtime: ^Session_Runtime, line: string) -> []byte {
 	defer command_destroy(&command, context.allocator)
 
 	backend_error := ""
-	if command.kind == .Capture {
+	if command.kind == .Capture || (command.kind == .Settle && !runtime.options.no_render) {
 		backend_error = runtime_ensure_backend(runtime, false)
 	}
 	if command.kind == .Replay {

@@ -209,6 +209,10 @@ The batch runner and the live session share one command set:
   input. Omitted fields keep their value.
 - `{"cmd": "step", "frames": 60}`: fixed steps with no wall clock. A step is an
   error while the menu is open.
+- `{"cmd": "settle", "frames": 520}`: fixed steps that render every frame but
+  write no PNG. Use it to advance the temporal history before a capture. A
+  settle is an error while the menu is open. Under `--no-render`, or in a
+  scenario with no captures, it is a plain step.
 - `{"cmd": "state"}`: player, eye, velocity, yaw, pitch, grounded, crates,
   window and input settings, menu, frame, and digest.
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`: write a PNG.
@@ -285,9 +289,14 @@ The compositor may resize the window. The PNG has the actual swapchain size. It
 matches an offscreen capture at the same size when both frames share the same
 TAA history; the first frame always matches.
 
-`scenarios/taa-static.json` settles the camera for 8 frames, then captures 25
-steady frames and checks the capture deltas. It gates TAA edge stability without
-a window.
+`scenarios/taa-static.json` settles the stairs camera for 520 frames, then
+captures 60 steady frames and checks the capture deltas. It gates TAA edge
+stability without a window. The settle passes the 512-sample cap, so the check
+sees the steady image instead of the initial convergence.
+
+`scenarios/taa-motion.json` moves the camera up the stairs, turns around, and
+holds, then captures 60 hold frames. It gates that the image settles after the
+motion. Use `--size 800x600` to reproduce the reported stretched-window case.
 
 `scenarios/settings-menu.json` opens the settings menu, captures it, changes the
 crouch input mode, closes the menu, and checks the saved state.
