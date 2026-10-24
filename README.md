@@ -285,9 +285,9 @@ The compositor may resize the window. The PNG has the actual swapchain size. It
 matches an offscreen capture at the same size when both frames share the same
 TAA history; the first frame always matches.
 
-`scenarios/taa-static.json` captures 25 consecutive frames from a static camera.
-Use it to check TAA edge stability without a window. The first frames converge;
-compare later frames to see the steady-state ripple.
+`scenarios/taa-static.json` settles the camera for 8 frames, then captures 25
+steady frames and checks the capture deltas. It gates TAA edge stability without
+a window.
 
 `scenarios/settings-menu.json` opens the settings menu, captures it, changes the
 crouch input mode, closes the menu, and checks the saved state.
