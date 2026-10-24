@@ -1,23 +1,18 @@
 #+vet explicit-allocators
 package renderer
 
+import "core:log"
+
 import vk "vendor:vulkan"
 
 TEXT_ATLAS_BINDING :: 0
 
-// The atlas never changes after init, so one descriptor set serves every frame.
+// The atlas changes only when the UI density does, so one sampler and one
+// descriptor set outlive the texture they read.
 init_text_atlas_resources :: proc(r: ^Renderer) -> bool {
-	atlas, built := text_atlas_build(r.allocator)
-	if !built {
+	if !text_atlas_rebuild(r) {
 		return false
 	}
-	r.overlay.atlas = atlas
-
-	image, uploaded := upload_texture(r, atlas.width, atlas.height, .R8_UNORM, atlas.pixels)
-	if !uploaded {
-		return false
-	}
-	r.overlay.atlas_image = image
 
 	sampler_info := vk.SamplerCreateInfo {
 		sType        = .SAMPLER_CREATE_INFO,
@@ -76,22 +71,66 @@ init_text_atlas_resources :: proc(r: ^Renderer) -> bool {
 	if !check(vk.AllocateDescriptorSets(r.device, &allocate, &r.overlay.atlas_set), "vkAllocateDescriptorSets") {
 		return false
 	}
+	text_atlas_bind(r)
+	return true
+}
 
+// Repacks the atlas for the overlay's current theme and points the descriptor at
+// the new texture. Rebuilding mid-run needs an idle device, because the old
+// image may still be sampled by a frame in flight; init has nothing in flight.
+text_atlas_rebuild :: proc(r: ^Renderer) -> bool {
+	o := &r.overlay
+	set := text_theme_layer_set(o.theme)
+	atlas, built := text_atlas_build(r.allocator, &set)
+	if !built {
+		return false
+	}
+	text_atlas_destroy(&o.atlas, r.allocator)
+	o.atlas = atlas
+
+	destroy_image(r, &o.atlas_image)
+	image, uploaded := upload_texture(r, atlas.width, atlas.height, .R8_UNORM, atlas.pixels)
+	if !uploaded {
+		return false
+	}
+	o.atlas_image = image
+	if o.atlas_set != 0 {
+		text_atlas_bind(r)
+	}
+	return true
+}
+
+text_atlas_sync :: proc(r: ^Renderer) -> bool {
+	if text_atlas_covers(&r.overlay.atlas, text_theme_layer_set(r.overlay.theme)) {
+		return true
+	}
+	if !check(vk.DeviceWaitIdle(r.device), "vkDeviceWaitIdle") {
+		return false
+	}
+	if !text_atlas_rebuild(r) {
+		return false
+	}
+	log.infof("text atlas: rebuilt for %d UI layers", r.overlay.atlas.count)
+	return true
+}
+
+@(private)
+text_atlas_bind :: proc(r: ^Renderer) {
+	o := &r.overlay
 	descriptor := vk.DescriptorImageInfo {
-		sampler     = r.overlay.atlas_sampler,
-		imageView   = r.overlay.atlas_image.view,
+		sampler     = o.atlas_sampler,
+		imageView   = o.atlas_image.view,
 		imageLayout = .SHADER_READ_ONLY_OPTIMAL,
 	}
 	write := vk.WriteDescriptorSet {
 		sType           = .WRITE_DESCRIPTOR_SET,
-		dstSet          = r.overlay.atlas_set,
+		dstSet          = o.atlas_set,
 		dstBinding      = TEXT_ATLAS_BINDING,
 		descriptorCount = 1,
 		descriptorType  = .COMBINED_IMAGE_SAMPLER,
 		pImageInfo      = &descriptor,
 	}
 	vk.UpdateDescriptorSets(r.device, 1, &write, 0, nil)
-	return true
 }
 
 destroy_text_atlas_resources :: proc(r: ^Renderer) {

@@ -268,19 +268,27 @@ _Avoid_: DPI scale, zoom
 
 **Type scale**:
 The five type roles the overlay uses: title, body, label, detail, and section
-header. Each role fixes size, leading, weight, and tracking. See
-`docs/ui/type.md`.
+header. Each role fixes an em size, leading, weight, and tracking. A size is the
+em in device pixels, so a 15 px role draws a 15 px em. See `docs/ui/type.md`.
 _Avoid_: Font sizes, text styles
 
-**SDF atlas**:
-The 1024x512 texture that holds every glyph as a signed distance field,
-rasterized once at startup from the three subset Noto faces. One field draws
-crisply at every size, so no text is ever scaled from a bitmap.
-_Avoid_: Font texture, bitmap font, glyph sheet
+**Coverage atlas**:
+The one texture that holds every glyph as the fraction of each pixel the glyph
+covers, rasterized at the device pixel size from the three subset Noto faces. It
+holds one layer per face and pixel size the theme can draw, and it is repacked
+when the density changes.
+_Avoid_: SDF atlas, font texture, bitmap font, glyph sheet
+
+**Sub-pixel phase**:
+One of four horizontal offsets a glyph is rasterized at, so text placed on a
+fraction of a pixel still lands on the pixel grid. The glyph keeps its fractional
+advance; the phase absorbs the fraction.
+_Avoid_: Sub-pixel offset, hinting
 
 **Glyph**:
-One drawable letter in the SDF atlas: a uv rectangle, an offset from the pen, and
-an advance. The HUD never draws a character directly; it draws glyphs.
+One drawable letter in the coverage atlas: a uv rectangle per sub-pixel phase, an
+offset from the pen, and an advance. The HUD never draws a character directly; it
+draws glyphs.
 _Avoid_: Character, letter
 
 **Row**:
