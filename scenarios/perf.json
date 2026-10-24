@@ -1,0 +1,6 @@
+{
+  "commands": [
+    {"cmd": "view", "hud": false, "debug": false, "hint": false, "perf": false},
+    {"cmd": "perf", "frames": 120, "warmup": 60, "trace": "trace.jsonl"}
+  ]
+}

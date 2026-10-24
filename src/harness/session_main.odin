@@ -11,6 +11,7 @@ Session_Runtime :: struct {
 	session:    Session,
 	options:    Session_Options,
 	frames_dir: string,
+	trace_dir:  string,
 	backend:    Backend,
 	has_backend: bool,
 	exit_code:  int,
@@ -41,12 +42,14 @@ session_main :: proc(options: Session_Options) -> int {
 		session    = session,
 		options    = options,
 		frames_dir = strings.clone(frames_path, context.allocator),
+		trace_dir  = strings.clone(absolute_frames, context.allocator),
 	}
 	defer {
 		if runtime.has_backend {
 			backend_destroy(&runtime.backend)
 		}
 		delete(runtime.frames_dir, context.allocator)
+		delete(runtime.trace_dir, context.allocator)
 		session_destroy(&runtime.session)
 	}
 
@@ -123,14 +126,17 @@ runtime_handle_line :: proc(runtime: ^Session_Runtime, line: string) -> []byte {
 	defer command_destroy(&command, context.allocator)
 
 	backend_error := ""
-	if command.kind == .Capture || (command.kind == .Settle && !runtime.options.no_render) {
+	if command.kind == .Capture ||
+	   (command.kind == .Perf && !runtime.options.no_render) ||
+	   (command.kind == .Settle && !runtime.options.no_render) {
 		backend_error = runtime_ensure_backend(runtime, false)
 	}
 	if command.kind == .Replay {
 		scenario, load_error := scenario_load(command.replay.path, context.allocator)
 		if load_error == "" {
 			defer scenario_destroy(&scenario, context.allocator)
-			if scenario_has_capture(scenario) {
+			if scenario_has_capture(scenario) ||
+			   (scenario_has_perf(scenario) && !runtime.options.no_render) {
 				backend_error = runtime_ensure_backend(runtime, false)
 			}
 		}
@@ -145,6 +151,15 @@ runtime_handle_line :: proc(runtime: ^Session_Runtime, line: string) -> []byte {
 	}
 
 	reply := session_execute(&runtime.session, command, trimmed)
+	if reply.ok && reply.perf != nil && runtime.session.has_trace {
+		if trace_error := write_session_trace(&runtime.session, runtime.trace_dir); trace_error != "" {
+			reply.ok = false
+			reply.error = trace_error
+			runtime.had_error = true
+		} else {
+			reply.trace = runtime.session.trace_path
+		}
+	}
 	if !reply.ok {
 		runtime.had_error = true
 		if runtime.session.render_failed {

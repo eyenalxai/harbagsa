@@ -46,10 +46,16 @@ record_scene :: proc(
 		return false
 	}
 
+	reset_timing(r, command_buffer)
+	write_timing(r, command_buffer, .Start)
 	record_acceleration(r, command_buffer, view.boxes)
+	write_timing(r, command_buffer, .After_Tlas)
 	record_scene_pass(r, command_buffer, box_count)
+	write_timing(r, command_buffer, .After_Scene)
 	record_taa_resolve(r, command_buffer, image_index)
+	write_timing(r, command_buffer, .After_Taa)
 	record_overlay_pass(r, command_buffer, image_index)
+	write_timing(r, command_buffer, .After_Overlay)
 	if capture && !record_capture_copy(r, command_buffer, image_index) {
 		return false
 	}

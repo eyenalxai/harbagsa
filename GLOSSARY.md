@@ -382,3 +382,62 @@ _Avoid_: Focus, target
 **Scene reset**:
 The `Shift+R` action that restores the starting crates, the sun, and the player.
 _Avoid_: Reload, wipe
+
+**Frame interval**:
+The wall-clock time between two consecutive iterations of the game loop. With
+the swapchain in FIFO it follows the display refresh, not the GPU cost.
+_Avoid_: Frametime, frame time, delta
+
+**CPU frame time**:
+The wall-clock time the CPU spends in one iteration of the game loop, from frame
+start to present.
+_Avoid_: Main thread time
+
+**CPU mark**:
+A named instant in the game loop where the CPU reads the monotonic clock. The
+difference between two neighbouring marks is one CPU phase duration.
+_Avoid_: Checkpoint, sample point
+
+**GPU pass time**:
+The elapsed GPU clock between the timestamps around one renderer pass. It is the
+pass's own cost, not the present interval.
+_Avoid_: Render time, draw time
+
+**Perf sample**:
+One frame of performance data: the frame interval, the CPU phase durations, and
+the GPU pass times.
+_Avoid_: Frame stats, metrics
+
+**Perf ring**:
+The fixed-size buffer of the most recent perf samples that the live overlay and
+the aggregate stats read.
+_Avoid_: History buffer, window
+
+**Perf overlay**:
+The on-screen lines toggled with `F4` that show the live frame interval, the
+CPU frame time, and the GPU pass times.
+_Avoid_: FPS counter, stats overlay
+
+**Perf run**:
+A harness run that measures frames instead of checking simulation state. It reads
+the wall clock, so its numbers are not deterministic.
+_Avoid_: Benchmark, stress test
+
+**Perf report**:
+The `perf` object in a harness reply and in `report.json` that holds the
+percentiles and per-pass means of a perf run.
+_Avoid_: Benchmark result, profile
+
+**Perf trace**:
+The opt-in per-frame file from a perf run. It holds one JSON object per perf
+sample.
+_Avoid_: Log, dump
+
+**Perf warmup**:
+The frames a perf run measures but does not count, so shader and swapchain
+warmup does not pollute the numbers. One priming frame always runs before it.
+_Avoid_: Warmup (that word belongs to convergence)
+
+**Spike**:
+A frame interval above 1.5 times the median interval of the measured window.
+_Avoid_: Hitch, stutter

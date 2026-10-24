@@ -4,6 +4,7 @@ package renderer
 import "core:log"
 
 import "src:geometry"
+import "src:perf"
 import vk "vendor:vulkan"
 
 Frame_View :: struct {
@@ -86,6 +87,7 @@ begin_frame :: proc(
 	if !check(vk.WaitForFences(r.device, 1, &r.in_flight[r.frame_index], true, max(u64)), "vkWaitForFences") {
 		return {}, .Fatal
 	}
+	read_timing(r)
 
 	image_index: u32
 	if r.target.kind == .Swapchain {
@@ -102,6 +104,7 @@ begin_frame :: proc(
 		case .SUBOPTIMAL_KHR:
 			r.target.dirty = true
 		case .ERROR_OUT_OF_DATE_KHR:
+			r.timing_valid[r.frame_index] = false
 			r.target.dirty = true
 			return {}, .Skipped
 		case:
@@ -120,6 +123,11 @@ begin_frame :: proc(
 	}
 	if !record_scene(r, command_buffer, image_index, view, capture) {
 		return {}, .Fatal
+	}
+	r.timing_frames[r.frame_index] = u64(r.frame_count)
+	r.timing_valid[r.frame_index] = true
+	if r.recorder != nil {
+		perf.recorder_mark(r.recorder, .Record)
 	}
 	if validation_failed() {
 		return {}, .Fatal
