@@ -49,7 +49,7 @@ renderer_state_reaches_the_state_and_checks :: proc(t: ^testing.T) {
 		op    = .Ge,
 		value = {kind = .Number, number = 8},
 	}
-	result := harness.check_evaluate(command, state, {}, context.allocator)
+	result := harness.check_evaluate(command, state, {}, nil, context.allocator)
 	defer harness.check_result_destroy(&result, context.allocator)
 	testing.expect(t, result.ok, "renderer check did not pass")
 
@@ -58,7 +58,7 @@ renderer_state_reaches_the_state_and_checks :: proc(t: ^testing.T) {
 		op    = .Ge,
 		value = {kind = .Number, number = 0},
 	}
-	bad := harness.check_evaluate(missing, state, {}, context.allocator)
+	bad := harness.check_evaluate(missing, state, {}, nil, context.allocator)
 	defer harness.check_result_destroy(&bad, context.allocator)
 	testing.expect(t, bad.error != "", "unknown renderer field was accepted")
 }

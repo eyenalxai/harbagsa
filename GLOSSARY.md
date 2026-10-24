@@ -229,6 +229,22 @@ _Avoid_: Export mode
 The per-channel minimum, maximum, and mean of a capture, plus the median screen motion in texels for a velocity capture over covered pixels.
 _Avoid_: Image metrics
 
+**Analysis report**:
+The `analysis.json` file from a run with color captures. It holds the capture window, the per-pair deltas, the summary, the dominant period, the worst unstable pixels' series, and the optional map paths.
+_Avoid_: Diff report
+
+**Capture check window**:
+The slice of captures a check aggregates, `{"start": S, "count": N}`. Warmup is the shorthand for skipping the first N captures.
+_Avoid_: Range
+
+**Dominant period**:
+The smallest lag within 10% of the strongest autocorrelation of the per-pair mean delta. A static TAA scene reports its jitter period.
+_Avoid_: Frequency
+
+**Worst unstable pixels**:
+The eight pixels with the highest variance over the analysis window, with their per-frame mean channel value.
+_Avoid_: Hot pixels
+
 **Session**:
 The live harness process that reads one JSON command per line and writes one
 JSON reply per line.

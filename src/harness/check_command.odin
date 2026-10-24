@@ -23,11 +23,18 @@ Check_Value :: struct {
 	text:    string,
 }
 
+Capture_Window :: struct {
+	start: int,
+	count: int,
+	has:   bool,
+}
+
 Check_Command :: struct {
 	field:  string,
 	op:     Check_Op,
 	value:  Check_Value,
 	warmup: int,
+	window: Capture_Window,
 }
 
 check_op_name :: proc(op: Check_Op) -> string {

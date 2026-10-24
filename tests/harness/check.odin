@@ -20,7 +20,7 @@ capture_check_reads_the_summary :: proc(t: ^testing.T) {
 		op    = .Le,
 		value = {kind = .Number, number = 0.1},
 	}
-	result := harness.check_evaluate(command, state, summary, context.allocator)
+	result := harness.check_evaluate(command, state, summary, nil, context.allocator)
 	defer harness.check_result_destroy(&result, context.allocator)
 	testing.expect(t, result.ok, "capture mean check did not pass")
 }
@@ -39,7 +39,7 @@ capture_check_fails_above_the_limit :: proc(t: ^testing.T) {
 		op    = .Le,
 		value = {kind = .Number, number = 0.1},
 	}
-	result := harness.check_evaluate(command, state, summary, context.allocator)
+	result := harness.check_evaluate(command, state, summary, nil, context.allocator)
 	defer harness.check_result_destroy(&result, context.allocator)
 	testing.expect(t, !result.ok, "capture mean check accepted a value above the limit")
 }
@@ -52,7 +52,7 @@ capture_check_needs_a_capture :: proc(t: ^testing.T) {
 		op    = .Le,
 		value = {kind = .Number, number = 0.1},
 	}
-	result := harness.check_evaluate(command, state, {}, context.allocator)
+	result := harness.check_evaluate(command, state, {}, nil, context.allocator)
 	defer harness.check_result_destroy(&result, context.allocator)
 	testing.expect(t, result.error != "", "empty capture summary was accepted")
 }
