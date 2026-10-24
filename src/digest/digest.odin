@@ -46,6 +46,13 @@ write_string :: proc(hash: ^FNV, text: string) {
 	}
 }
 
+// A string loop iterates runes; pixel data must hash every byte.
+write_bytes :: proc(hash: ^FNV, bytes: []u8) {
+	for byte in bytes {
+		hash.value = (hash.value ~ u64(byte)) * FNV_PRIME
+	}
+}
+
 hex :: proc(hash: FNV, allocator: mem.Allocator) -> string {
 	return fmt.aprintf("%016x", hash.value, allocator = allocator)
 }

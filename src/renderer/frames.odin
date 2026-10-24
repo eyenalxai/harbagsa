@@ -62,7 +62,7 @@ init_frames :: proc(r: ^Renderer) -> Error {
 begin_frame :: proc(
 	r: ^Renderer,
 	view: Frame_View,
-	capture := Capture_Request{},
+	capture := Frame_Capture{},
 ) -> (
 	frame: Frame,
 	status: Frame_Status,

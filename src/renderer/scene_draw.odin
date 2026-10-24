@@ -11,7 +11,7 @@ record_scene :: proc(
 	command_buffer: vk.CommandBuffer,
 	image_index: u32,
 	view: Frame_View,
-	capture: Capture_Request,
+	capture: Frame_Capture,
 ) -> bool {
 	r.frame_count += 1
 	if int(image_index) >= len(r.target.views) {
@@ -78,6 +78,7 @@ record_scene :: proc(
 		return false
 	}
 
+	r.taa.applied_history_read = r.taa.history_read
 	r.taa.history_read = (r.taa.history_read + 1) % TAA_HISTORY_IMAGES
 	r.taa.history_valid = true
 	r.taa.convergence_frames = min(r.taa.convergence_frames + 1, TAA_MAX_SAMPLES)

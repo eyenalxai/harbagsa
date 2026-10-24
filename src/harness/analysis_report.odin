@@ -50,12 +50,33 @@ write_analysis :: proc(
 ) {
 	frames := analysis_frames(captures, allocator)
 	defer delete(frames, allocator)
+	if !config.enabled || len(captures) == 0 {
+		return "", ""
+	}
 	window := analysis_window(frames, config)
 	comparable := analysis_comparable(window, allocator)
 	defer delete(comparable, allocator)
 	window = comparable
-	if !config.enabled || len(window) == 0 {
-		return "", ""
+	if len(window) == 0 {
+		staging_path := join_path({staging_dir, "analysis.json"}, allocator)
+		report := Analysis_Report {
+			window = {start = config.start, count = 0},
+			frames = make([]int, 0, allocator),
+			pairs = make([]Analysis_Pair, 0, allocator),
+			summary = analysis_summary(window),
+			worst_pixels = make([]Analysis_Pixel, 0, allocator),
+		}
+		defer {
+			delete(report.frames, allocator)
+			delete(report.pairs, allocator)
+			delete(report.worst_pixels, allocator)
+		}
+		if write_error := write_json_file(staging_path, report); write_error != "" {
+			delete(staging_path, allocator)
+			return "", write_error
+		}
+		delete(staging_path, allocator)
+		return join_path({final_dir, "analysis.json"}, allocator), ""
 	}
 
 	first_width := window[0].width
@@ -190,28 +211,6 @@ write_analysis :: proc(
 	}
 	delete(staging_path, allocator)
 	return join_path({final_dir, "analysis.json"}, allocator), ""
-}
-
-@(private)
-analysis_pairs :: proc(window: []Capture_Result, allocator: mem.Allocator) -> []Analysis_Pair {
-	if len(window) < 2 {
-		return nil
-	}
-	pairs := make([]Analysis_Pair, len(window) - 1, allocator)
-	for capture, index in window {
-		if index == 0 {
-			continue
-		}
-		pairs[index - 1] = {
-			from = window[index - 1].frame,
-			to = capture.frame,
-			mean = capture.delta_mean,
-			max = f32(capture.delta_max),
-			over_16 = capture.delta_over_16,
-			over_16_fraction = capture_delta_fraction(capture),
-		}
-	}
-	return pairs
 }
 
 @(private)

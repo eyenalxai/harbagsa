@@ -226,6 +226,9 @@ scenario.
   around, and holds. It captures the hold frames and checks that the image
   settles after the motion. Run it with `--size 800x600` for the
   stretched-window repro.
+- `scenarios/capture-free.json` settles without captures, then captures twice.
+  Run it twice and compare the state digest and the PNG hashes to prove the
+  offscreen sequence is deterministic.
 - `scenarios/settings-menu.json` captures the settings menu and checks a changed
   input mode.
 - `scenarios/window-settings.json` captures the menu after switching to
@@ -275,9 +278,11 @@ scene color, history, and depth.
 
 ## Analysis
 
-A run with color PNG captures writes `analysis.json` beside `report.json`, and
-`report.json` links it in `analysis`. The analysis is on by default. Disable it
-with `"analysis": false` or `--no-analysis`.
+A run with captures writes `analysis.json` beside `report.json`, and
+`report.json` links it in `analysis`. The pair and pixel analysis uses color PNG
+captures; a run with only intermediate captures writes an empty window and
+summary. The analysis is on by default. Disable it with `"analysis": false` or
+`--no-analysis`.
 
 `analysis.json` holds:
 
@@ -361,10 +366,8 @@ error.
 An override starts from the current state. A scenario can put the same fields in
 a top-level `renderer_debug` object; it compiles to the command before the steps.
 
-Every change to a TAA input resets the history with reason `debug_override`: TAA,
-jitter, history weight, clamp, and depth trust. A shadow phase change does not
-reset history, because it changes the next frame rather than the accumulated
-history.
+Every change to the override resets the history with reason `debug_override`,
+including a new shadow phase.
 
 `scenarios/renderer-debug.json` sets every override and clears it.
 `scenarios/renderer-debug-converge.json` turns jitter off and freezes the phase,
@@ -448,7 +451,7 @@ ranked causes are in `docs/evidence/perf-baseline.md`.
   `scenarios/window-settings.json`, `scenarios/renderer-state.json`,
   `scenarios/renderer-reset.json`, `scenarios/capture-targets.json`,
   `scenarios/renderer-debug.json`, `scenarios/renderer-debug-converge.json`,
-  `scenarios/renderer-debug-jitter.json`.
+  `scenarios/renderer-debug-jitter.json`, `scenarios/capture-free.json`.
 
 ## Adding a command
 
