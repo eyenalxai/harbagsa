@@ -461,8 +461,9 @@ because one direction still moves.
 _Avoid_: Disabled row, greyed row
 
 **Status note**:
-The one-line reason under the settings panel after a blocked change. It replaces
-`MENU_NOTE` for one rendered frame, then the default note returns.
+The one-line reason under the settings panel after a blocked change. It holds
+for two seconds of frame time, then the default note returns. A new blocked
+press restarts the hold; a successful change clears it.
 _Avoid_: Error message, toast, tooltip
 
 **Value column**:
