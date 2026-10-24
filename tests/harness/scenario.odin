@@ -2,8 +2,10 @@
 #+vet !unused-procedures // @(test) procs are called by the test runner, not by name
 package harness_test
 
+import "core:strings"
 import "core:testing"
 
+import "src:game"
 import "src:harness"
 
 SMOKE :: `{
@@ -213,7 +215,7 @@ command_parser_validates_ranges :: proc(t: ^testing.T) {
 @(test)
 menu_command_parses_its_fields :: proc(t: ^testing.T) {
 	command, error := harness.command_parse_string(
-		`{"cmd": "menu", "open": true, "select": 2, "activate": true}`,
+		`{"cmd": "menu", "open": true, "item": "Resolution", "activate": true}`,
 		context.allocator,
 	)
 	defer harness.command_destroy(&command, context.allocator)
@@ -223,7 +225,8 @@ menu_command_parses_its_fields :: proc(t: ^testing.T) {
 	}
 	testing.expect(t, command.kind == .Menu, "menu command has the wrong kind")
 	testing.expect(t, command.menu.has_open && command.menu.open, "menu open was not parsed")
-	testing.expect(t, command.menu.has_select && command.menu.select == 2, "menu select was not parsed")
+	testing.expect(t, command.menu.has_item, "menu item was not parsed")
+	testing.expect_value(t, command.menu.item, game.Menu_Item.Resolution)
 	testing.expect(t, command.menu.activate, "menu activate was not parsed")
 }
 
@@ -234,9 +237,15 @@ menu_command_rejects_bad_fields :: proc(t: ^testing.T) {
 	if error != "" {
 		delete(error, context.allocator)
 	}
-	_, error = harness.command_parse_string(`{"cmd": "menu", "select": 8}`, context.allocator)
-	testing.expectf(t, error != "", "out-of-range menu row was accepted")
+	_, error = harness.command_parse_string(`{"cmd": "menu", "item": "Nope"}`, context.allocator)
+	testing.expectf(t, error != "", "unknown menu item was accepted")
 	if error != "" {
+		testing.expectf(
+			t,
+			strings.contains(error, "Type weight") && strings.contains(error, "Window mode"),
+			"the error does not list the valid names: %s",
+			error,
+		)
 		delete(error, context.allocator)
 	}
 }

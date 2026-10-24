@@ -10,7 +10,7 @@ import "src:harness"
 menu_set_command_sets_and_reports_the_type_weight :: proc(t: ^testing.T) {
 	session, _ := harness.session_create(context.allocator)
 	defer harness.session_destroy(&session)
-	reply := execute(t, &session, `{"cmd": "menu", "open": true, "select": 3}`)
+	reply := execute(t, &session, `{"cmd": "menu", "open": true, "item": "Type weight"}`)
 	harness.reply_destroy(&reply, context.allocator)
 
 	reply = execute(t, &session, `{"cmd": "menu", "set": 900}`)
@@ -21,6 +21,7 @@ menu_set_command_sets_and_reports_the_type_weight :: proc(t: ^testing.T) {
 	defer harness.state_destroy(&state, context.allocator)
 	testing.expect_value(t, state.settings.type_weight, 900)
 
-	_, parse_error := harness.command_parse_string(`{"cmd": "menu", "set": 50}`, context.allocator)
+	parse_error := execute_expect_error(t, &session, `{"cmd": "menu", "set": 50}`)
 	testing.expect(t, parse_error != "", "a weight below the axis was accepted")
+	delete(parse_error, context.allocator)
 }

@@ -135,7 +135,7 @@ Rules:
 - `{"cmd": "view", "hud": true, "debug": false, "hint": false, "perf": false}`
 - `{"cmd": "sun", "azimuth": 52.1, "elevation": 15, "diameter": 0.53}`
 - `{"cmd": "debug_mode", "active": true}`
-- `{"cmd": "menu", "open": true, "select": 1, "activate": true, "direction": -1}`
+- `{"cmd": "menu", "open": true, "item": "Type weight", "activate": true, "direction": -1}`
 - `{"cmd": "menu", "set": 900}`
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`
 - `{"cmd": "perf", "frames": 120, "warmup": 60}`
@@ -148,12 +148,11 @@ Rules:
 A past capture frame is an error. A future capture frame queues. Unknown keys,
 wrong types, and out-of-range values are per-command errors; the session stays
 usable. A `step` or `settle` while the menu is open is an error, because the
-game pauses. A settle renders every frame and writes no screenshot. An open menu renders even when the `view` HUD flag is off. `select` is zero-based.
-`select`, `activate`, and `set` need an open menu. `direction` is `-1` or `1`
-(default `1`) and needs `activate`. `set` is a number in 100..900 and sets the
-Type weight directly, without the ten-unit step. The rows are Window mode,
-Display, Resolution, Type weight, Sprint mode, Crouch mode, Prone mode, and
-Resume.
+game pauses. A settle renders every frame and writes no screenshot. An open menu renders even when the `view` HUD flag is off. `item` selects a row by name:
+Window mode, Display, Resolution, Type weight, Sprint mode, Crouch mode, Prone
+mode, or Resume. `item`, `activate`, and `set` need an open menu. `direction` is
+`-1` or `1` (default `1`) and needs `activate`. `set` is a number in 100..900 and
+sets the Type weight directly, without the ten-unit step.
 
 A capture names its target and format. See **Capture targets**.
 

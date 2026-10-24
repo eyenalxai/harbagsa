@@ -294,12 +294,14 @@ The batch runner and the live session share one command set:
 - `{"cmd": "debug_mode", "active": true}`: enter or leave the `F2` debug mode.
   Entering swaps the player for the free-fly camera; leaving restores the player.
   Repeating the same value is a no-op.
-- `{"cmd": "menu", "open": true, "select": 1, "activate": true, "direction": -1, "set": 900}`:
-  open or close the settings menu, select a row, activate the selected row, or
-  set the Type weight. `select` is zero-based and needs an open menu. `activate`
-  and `set` also need an open menu. `direction` is `-1` or `1` (default `1`) and
-  needs `activate`; `set` is a weight in 100..900. Omitted fields keep the state.
-  An open menu renders even when `hud` is off.
+- `{"cmd": "menu", "open": true, "item": "Type weight", "activate": true, "direction": -1, "set": 900}`:
+  open or close the settings menu, select a row by name, activate the selected
+  row, or set the Type weight. `item` is `Window mode`, `Display`, `Resolution`,
+  `Type weight`, `Sprint mode`, `Crouch mode`, `Prone mode`, or `Resume`, and
+  needs an open menu. `activate` and `set` also need an open menu. `direction`
+  is `-1` or `1` (default `1`) and needs `activate`; `set` is a weight in
+  100..900. Omitted fields keep the state. An open menu renders even when `hud`
+  is off.
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`:
   evaluate a predicate now.
 - `{"cmd": "perf", "frames": 120, "warmup": 60, "prime": 2.0, "name": "default", "trace": "trace.jsonl"}`:

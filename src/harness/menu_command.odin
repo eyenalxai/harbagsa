@@ -2,6 +2,8 @@
 package harness
 
 import "core:encoding/json"
+import "core:fmt"
+import "core:strings"
 
 import "src:game"
 import "src:ui"
@@ -9,8 +11,8 @@ import "src:ui"
 Menu_Command :: struct {
 	open:          bool,
 	has_open:      bool,
-	select:        int,
-	has_select:    bool,
+	item:          game.Menu_Item,
+	has_item:      bool,
 	activate:      bool,
 	has_activate:  bool,
 	direction:     int,
@@ -20,7 +22,7 @@ Menu_Command :: struct {
 }
 
 parse_menu :: proc(object: json.Object) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "open", "select", "activate", "direction", "set"}); unknown {
+	if key, unknown := json_unknown_key(object, {"cmd", "open", "item", "activate", "direction", "set"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 
@@ -33,16 +35,17 @@ parse_menu :: proc(object: json.Object) -> (Command, string) {
 		command.menu.open = open
 		command.menu.has_open = true
 	}
-	if value, has := json_get(object, "select"); has {
-		selected, ok := json_integer(value)
-		if !ok || selected < 0 || selected >= game.MENU_ITEM_COUNT {
-			return {}, format_error(
-				"'select' must be an integer in [0, %d]",
-				game.MENU_ITEM_COUNT - 1,
-			)
+	if value, has := json_get(object, "item"); has {
+		name, ok := json_string(value)
+		if !ok {
+			return {}, "'item' must be a string"
 		}
-		command.menu.select = selected
-		command.menu.has_select = true
+		item, found := game.menu_item_from_name(name)
+		if !found {
+			return {}, format_error("unknown menu item %q; use %s", name, menu_item_names())
+		}
+		command.menu.item = item
+		command.menu.has_item = true
 	}
 	if value, has := json_get(object, "activate"); has {
 		activate, ok := json_boolean(value)
@@ -76,10 +79,22 @@ parse_menu :: proc(object: json.Object) -> (Command, string) {
 		command.menu.has_set = true
 	}
 	if !command.menu.has_open &&
-	   !command.menu.has_select &&
+	   !command.menu.has_item &&
 	   !command.menu.has_activate &&
 	   !command.menu.has_set {
-		return {}, "menu needs 'open', 'select', 'activate', or 'set'"
+		return {}, "menu needs 'open', 'item', 'activate', or 'set'"
 	}
 	return command, ""
+}
+
+@(private)
+menu_item_names :: proc() -> string {
+	builder := strings.builder_make(allocator = context.temp_allocator)
+	for name, index in game.MENU_ITEM_NAMES {
+		if index > 0 {
+			fmt.sbprint(&builder, ", ")
+		}
+		fmt.sbprint(&builder, name)
+	}
+	return strings.to_string(builder)
 }
