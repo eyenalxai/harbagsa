@@ -81,6 +81,47 @@ blocked_row_keeps_its_band_and_draws_the_value_secondary :: proc(t: ^testing.T) 
 	style := renderer.row_value_style(overlay.theme, row)
 	testing.expect_value(t, style.color, overlay.theme.text_secondary)
 	testing.expect(t, style.color != overlay.theme.text_tertiary, "the value uses tertiary")
+
+	theme := overlay.theme
+	panel := widest_quad(overlay, theme.surface_menu)
+	testing.expect(t, panel.width > 0, "the panel is missing")
+	layout := renderer.rows_measure(
+		&overlay.atlas,
+		theme,
+		hud.menu.view.rows,
+		{value_align = .Right},
+	)
+	value_x := panel.x + theme.spacing.xl + theme.spacing.sm + layout.value_column
+
+	secondary: [256]Rect
+	secondary_count := quads_from_x(overlay, theme.text_secondary, value_x, secondary[:])
+	secondary_in_band := 0
+	for quad in secondary[:secondary_count] {
+		if quad.y < band.y + band.height && quad.y + quad.height > band.y {
+			secondary_in_band += 1
+		}
+	}
+	testing.expectf(
+		t,
+		secondary_in_band > 0,
+		"the blocked value does not draw in secondary at or right of x %v",
+		value_x,
+	)
+
+	tertiary: [256]Rect
+	tertiary_count := quads_from_x(overlay, theme.text_tertiary, value_x, tertiary[:])
+	tertiary_in_band := 0
+	for quad in tertiary[:tertiary_count] {
+		if quad.y < band.y + band.height && quad.y + quad.height > band.y {
+			tertiary_in_band += 1
+		}
+	}
+	testing.expectf(
+		t,
+		tertiary_in_band == 0,
+		"%d quads at the blocked value column draw in tertiary",
+		tertiary_in_band,
+	)
 }
 
 @(test)

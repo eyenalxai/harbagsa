@@ -8,7 +8,7 @@ import "core:strconv"
 import "core:strings"
 import "core:testing"
 
-DOC_DIRS := [?]string{"docs/ui", "docs/design"}
+DOC_DIRS := [?]string{"docs/ui", "docs/design", "docs/evidence"}
 
 TABLE_CELL_MAX :: 8
 

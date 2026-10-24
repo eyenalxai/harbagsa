@@ -228,4 +228,10 @@ theme_contrast_meets_the_floor :: proc(t: ^testing.T) {
 		renderer.ui_contrast(theme.accent, raised) >= 3.0,
 		"the accent bar is a non-text element and needs 3:1",
 	)
+	track := renderer.ui_composite(theme.slider_track, raised)
+	testing.expectf(
+		t,
+		renderer.ui_contrast(track, raised) >= 3.0,
+		"the slider track is a non-text element and needs 3:1",
+	)
 }

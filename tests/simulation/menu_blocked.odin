@@ -27,6 +27,28 @@ display_press_is_blocked_with_one_display :: proc(t: ^testing.T) {
 }
 
 @(test)
+a_successful_change_clears_a_blocked_note :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+	menu: game.Menu_State
+	menu.displays = one_display({1920, 1080}, true)
+	game.menu_open(&menu)
+	game.menu_select(&menu, 1)
+
+	result := game.menu_change_setting(&menu, &sim.settings, -1)
+	testing.expect_value(t, result, game.Change_Result.Blocked)
+	testing.expect_value(t, menu.status, game.MENU_STATUS_ONE_DISPLAY)
+
+	game.menu_select(&menu, 3)
+	result = game.menu_change_setting(&menu, &sim.settings, 1)
+	testing.expect_value(t, result, game.Change_Result.Changed)
+	testing.expect_value(t, menu.status, "")
+
+	game.menu_view(&menu, sim.settings, false)
+	testing.expect_value(t, menu.view.note, game.MENU_NOTE)
+}
+
+@(test)
 resolution_press_is_blocked_without_modes :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)

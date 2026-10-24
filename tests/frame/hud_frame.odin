@@ -41,22 +41,26 @@ frame_ring_covers_each_corner_once_and_never_overlaps :: proc(t: ^testing.T) {
 		}
 	}
 
-	corners := [4][2]f32 {
+	points := [8][2]f32 {
 		{x + thickness * 0.5, y + thickness * 0.5},
 		{x + width - thickness * 0.5, y + thickness * 0.5},
 		{x + thickness * 0.5, y + height - thickness * 0.5},
 		{x + width - thickness * 0.5, y + height - thickness * 0.5},
+		{x + width * 0.5, y + thickness * 0.5},
+		{x + width * 0.5, y + height - thickness * 0.5},
+		{x + thickness * 0.5, y + height * 0.5},
+		{x + width - thickness * 0.5, y + height * 0.5},
 	}
-	for corner in corners {
+	for point in points {
 		covered := 0
 		for rect in rects[:count] {
-			if corner.x >= rect.x &&
-			   corner.x < rect.x + rect.width &&
-			   corner.y >= rect.y &&
-			   corner.y < rect.y + rect.height {
+			if point.x >= rect.x &&
+			   point.x < rect.x + rect.width &&
+			   point.y >= rect.y &&
+			   point.y < rect.y + rect.height {
 				covered += 1
 			}
 		}
-		testing.expectf(t, covered == 1, "corner %v is covered %d times", corner, covered)
+		testing.expectf(t, covered == 1, "point %v is covered %d times", point, covered)
 	}
 }

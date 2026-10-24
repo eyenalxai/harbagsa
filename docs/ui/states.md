@@ -1,8 +1,9 @@
 # Row states
 
-A row is drawn from five inputs: `kind`, `numeric`, `selected`, `value_align`,
-and `frame_width`. `kind` and `numeric` live on `ui.Row`; `selected`,
-`value_align`, and `frame_width` live on `Rows_Options`.
+A row is drawn from six inputs: `kind`, `numeric`, `selected`, `blocked`,
+`value_align`, and `frame_width`. `kind`, `numeric`, and `blocked` live on
+`ui.Row`; `selected`, `value_align`, and `frame_width` live on `Rows_Options`. A
+`Slider` also reads `ratio` and `ticks` to draw its track.
 
 `selected` matches an index only when `frame_width > 0` and the kind is
 `Setting`, `Action`, or `Slider`. A zero `frame_width` means the row block is

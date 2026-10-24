@@ -100,7 +100,9 @@ _Avoid_: Camera lag
 
 **Settle time**:
 The time a smoothed value takes to close 99% of the gap to its target. The eye
-height settles in 0.20 s and the step offset in 0.27 s.
+height settles in 0.184 s and the step offset in 0.256 s, both continuous
+values from the exponential rate constants. At 60 Hz the next whole step lands
+at 0.20 s and 0.27 s.
 _Avoid_: Smoothing time, decay time
 
 **Coyote time**:

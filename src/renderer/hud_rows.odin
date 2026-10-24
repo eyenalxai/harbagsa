@@ -223,7 +223,7 @@ rows_emit_slider :: proc(
 	ratio := clamp(row.ratio, 0, 1)
 	knob_center := track_x + knob * 0.5 + ratio * travel
 
-	hud_emit_rect(o, track_x, track_y, track_width, thickness, theme.line_separator)
+	hud_emit_rect(o, track_x, track_y, track_width, thickness, theme.slider_track)
 	hud_emit_rect(o, track_x, track_y, max(knob_center - track_x, 0), thickness, theme.text_secondary)
 	if row.ticks >= 2 {
 		pitch := travel / f32(row.ticks - 1)
