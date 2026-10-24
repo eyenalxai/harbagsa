@@ -1,9 +1,10 @@
 # Per-run image analysis
 
-A run with color PNG captures writes `analysis.json` beside `report.json`.
-`report.json` links it in `analysis`. The analysis is on by default and can be
-disabled with `"analysis": false` or `--no-analysis`. A scenario selects a
-capture window and the optional maps.
+A run with captures writes `analysis.json` beside `report.json`. `report.json`
+links it in `analysis`. The pair and pixel analysis uses color PNG captures; a
+run with only intermediate captures writes an empty window and summary. The
+analysis is on by default and can be disabled with `"analysis": false` or
+`--no-analysis`. A scenario selects a capture window and the optional maps.
 
 ## Why
 
@@ -14,8 +15,10 @@ report so two investigations compare the same numbers.
 
 ## Decisions
 
-- The analysis reads the color PNG captures only. An intermediate target is not
-  comparable with a color frame, and the captures already hold the deltas.
+- The analysis pairs read the color PNG captures only. An intermediate target is
+  not comparable with a color frame, and the captures already hold the deltas.
+  The file is still written for any run with captures, with an empty window when
+  no color frame exists.
 - `analysis.json` holds the window, the frames, the pairs, the summary, the
   worst pixels, and the map paths. `report.json` holds the path.
 - The dominant period is the smallest lag within 10% of the strongest
@@ -47,8 +50,9 @@ report so two investigations compare the same numbers.
 
 ## Consequences
 
-- A run with no color captures writes no `analysis.json`, and an analysis check
-  reports that the analysis is unavailable.
+- A run with no captures writes no `analysis.json`, and an analysis check
+  reports that analysis is unavailable. A run with only intermediate captures
+  writes an empty summary, not an unavailable analysis.
 - The analysis decodes each frame twice when maps or worst pixels exist. At
   1280x720 and 60 captures this is a few seconds, which is acceptable for a
   diagnostic run.
