@@ -1,20 +1,15 @@
 #+vet explicit-allocators
 package renderer
 
-HUD_Menu :: struct {
-	open:     bool,
-	title:    string,
-	lines:    []string,
-	selected: int,
-	note:     string,
-}
+import "src:ui"
 
 HUD_Frame :: struct {
 	enabled:      bool,
-	status_lines: []string,
+	menu_open:    bool,
+	view:         ui.Hud,
 	capture_hint: string,
 	captured:     bool,
-	menu:         HUD_Menu,
+	menu:         ui.Menu,
 }
 
 HUD_CROSSHAIR_ARM :: 10.0
@@ -52,99 +47,98 @@ hud_emit_rect :: proc(o: ^Overlay, x, y, width, height: f32, color: [4]f32) {
 	)
 }
 
-hud_panel_height :: proc(style: Text_Type, line_count: int) -> f32 {
-	return f32(line_count) * style.line_height
+// A translucent surface cannot be given a border by filling a larger rect, so
+// the hairline is drawn as four edges.
+hud_emit_frame :: proc(o: ^Overlay, x, y, width, height, thickness: f32, color: [4]f32) {
+	hud_emit_rect(o, x, y, width, thickness, color)
+	hud_emit_rect(o, x, y + height - thickness, width, thickness, color)
+	hud_emit_rect(o, x, y, thickness, height, color)
+	hud_emit_rect(o, x + width - thickness, y, thickness, height, color)
 }
 
-hud_emit_panel :: proc(
-	o: ^Overlay,
-	lines: []string,
-	x, y: f32,
-	style: Text_Style,
-	padding: f32,
-) {
-	width: f32
-	for line in lines {
-		width = max(width, text_measure(&o.atlas, style.type, line))
-	}
-	height := hud_panel_height(style.type, len(lines))
-	hud_emit_rect(o, x, y, width + padding * 2, height + padding * 2, o.theme.surface_hud)
-	baseline_offset := text_baseline(&o.atlas, style.type)
-	for line, index in lines {
-		text_emit(
-			o,
-			x + padding,
-			y + padding + f32(index) * style.type.line_height + baseline_offset,
-			style,
-			line,
-		)
-	}
+hud_crosshair_reach :: proc(theme: UI_Theme) -> f32 {
+	return (HUD_CROSSHAIR_GAP + HUD_CROSSHAIR_ARM) * theme.density + theme.hairline
 }
 
 build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
 	if !hud.enabled {
 		return
 	}
-	theme := o.theme
-	if hud.menu.open {
+	if hud.menu_open {
 		build_menu(o, width, height, hud.menu)
 		return
 	}
 
-	margin := theme.spacing.md
-	padding := theme.spacing.sm
-	text_style := Text_Style{type = theme.type_body, color = theme.text_primary}
-
-	hud_emit_panel(o, hud.status_lines, margin, margin, text_style, padding)
-
-	center_x := width * 0.5
-	center_y := height * 0.5
-	if !hud.captured && hud.capture_hint != "" {
-		text_width := text_measure(&o.atlas, text_style.type, hud.capture_hint)
-		text_height := text_style.type.line_height
-		text_x := center_x - text_width * 0.5
-		text_y := center_y - text_height * 0.5
-		panel_padding := padding * 1.5
-		hud_emit_rect(
-			o,
-			text_x - panel_padding,
-			text_y - panel_padding,
-			text_width + panel_padding * 2,
-			text_height + panel_padding * 2,
-			theme.surface_hud,
-		)
-		text_emit(
-			o,
-			text_x,
-			text_y + text_baseline(&o.atlas, text_style.type),
-			text_style,
-			hud.capture_hint,
-		)
-	}
-
-	draw_crosshair(o, center_x, center_y)
+	build_status_panel(o, hud.view)
+	build_capture_hint(o, width, height, hud)
+	build_crosshair(o, width * 0.5, height * 0.5)
 }
 
 @(private)
-draw_crosshair :: proc(o: ^Overlay, center_x, center_y: f32) {
+build_status_panel :: proc(o: ^Overlay, view: ui.Hud) {
+	theme := o.theme
+	rows := view.rows
+	if len(rows) == 0 {
+		return
+	}
+	padding := theme.spacing.lg
+	options := Rows_Options{value_align = .Left}
+	layout := rows_measure(&o.atlas, theme, rows, options)
+
+	x := theme.spacing.md
+	y := theme.spacing.md
+	width := layout.width + padding * 2
+	height := layout.height + padding * 2
+
+	hud_emit_rect(o, x, y, width, height, theme.surface_hud)
+	hud_emit_frame(o, x, y, width, height, theme.hairline, theme.line_hairline)
+	rows_emit(o, theme, x + padding, y + padding, layout, rows, options)
+}
+
+@(private)
+build_capture_hint :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
+	if hud.captured || hud.capture_hint == "" {
+		return
+	}
+	theme := o.theme
+	padding := theme.spacing.md
+	style := Text_Style{type = theme.type_body, color = theme.text_primary}
+	text_width := text_measure(&o.atlas, style.type, hud.capture_hint)
+	box_width := text_width + padding * 2
+	box_height := style.type.line_height + padding * 2
+	box_x := (width - box_width) * 0.5
+	// Below the crosshair, so the arms never cut through the text.
+	box_y := height * 0.5 + hud_crosshair_reach(theme) + theme.spacing.md
+
+	hud_emit_rect(o, box_x, box_y, box_width, box_height, theme.surface_hud)
+	hud_emit_frame(o, box_x, box_y, box_width, box_height, theme.hairline, theme.line_hairline)
+	text_emit(
+		o,
+		box_x + padding,
+		box_y + padding + text_baseline(&o.atlas, style.type),
+		style,
+		hud.capture_hint,
+	)
+}
+
+@(private)
+build_crosshair :: proc(o: ^Overlay, center_x, center_y: f32) {
 	theme := o.theme
 	arm := HUD_CROSSHAIR_ARM * theme.density
 	gap := HUD_CROSSHAIR_GAP * theme.density
 	thickness := theme.hairline
-	outline := theme.hairline
 
-	hud_crosshair_arm(o, center_x - gap - arm, center_y - thickness * 0.5, arm, thickness, outline)
-	hud_crosshair_arm(o, center_x + gap, center_y - thickness * 0.5, arm, thickness, outline)
-	hud_crosshair_arm(o, center_x - thickness * 0.5, center_y - gap - arm, thickness, arm, outline)
-	hud_crosshair_arm(o, center_x - thickness * 0.5, center_y + gap, thickness, arm, outline)
+	// The crosshair is emitted last so it stays on top of the panels.
+	hud_crosshair_arm(o, center_x - gap - arm, center_y - thickness * 0.5, arm, thickness)
+	hud_crosshair_arm(o, center_x + gap, center_y - thickness * 0.5, arm, thickness)
+	hud_crosshair_arm(o, center_x - thickness * 0.5, center_y - gap - arm, thickness, arm)
+	hud_crosshair_arm(o, center_x - thickness * 0.5, center_y + gap, thickness, arm)
 }
 
 @(private)
-hud_crosshair_arm :: proc(
-	o: ^Overlay,
-	x, y, width, height, outline: f32,
-) {
+hud_crosshair_arm :: proc(o: ^Overlay, x, y, width, height: f32) {
 	theme := o.theme
+	outline := theme.hairline
 	hud_emit_rect(
 		o,
 		x - outline,
