@@ -18,8 +18,8 @@ Sizes are pixels at density 1 and multiply by density. Tokens are in
 | Panel title | `type_title` | 21 | 1.25 | Medium | -0.01 em |
 | Body | `type_body` | 15 | 1.5 | Regular | 0 |
 | Label | `type_body_strong` | 15 | 1.5 | Medium | 0 |
-| Detail | `type_caption` | 12.5 | 1.45 | Regular | 0 |
-| Section header | `type_caption_caps` | 12.5 | 1.45 | Medium | +0.06 em |
+| Detail | `type_caption` | 14 | 1.45 | Regular | 0 |
+| Section header | `type_caption_caps` | 14 | 1.45 | Medium | +0.06 em |
 
 Never add a size outside this table. If a surface needs one, add a token, a
 rationale, and a line here.
@@ -31,7 +31,7 @@ boolean instead of every literal.
 ## Leading and tracking
 
 Leading is unitless in the source and baked into `line_height` in pixels. Display
-sizes tighten, body sizes relax: 1.25 at 21 px, 1.5 at 15 px, 1.45 at 12.5 px.
+sizes tighten, body sizes relax: 1.25 at 21 px, 1.5 at 15 px, 1.45 at 14 px.
 Tracking appears only on capitals, and only positive. Body text gets none.
 
 The baseline sits at
@@ -78,5 +78,7 @@ grow a character makes the whole panel jump as the player walks.
   here.
 - No weight change on interaction. There is no hover state in this UI, and a
   weight swap reflows the row.
-- No text under 12.5 px at density 1.
+- No text under 14 px at density 1. Below that a lowercase `l` is a single hairline
+  with more space around it than its own width, and the word reads with a gap in
+  it. That is a legibility floor, not a preference.
 - No truncation. A row that does not fit is a layout bug, not an ellipsis.
