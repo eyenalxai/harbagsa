@@ -5,6 +5,7 @@ import "base:runtime"
 import "core:log"
 import "core:mem"
 
+import "src:digest"
 import "src:perf"
 import vk "vendor:vulkan"
 
@@ -85,6 +86,10 @@ Renderer :: struct {
 	timestamp_period:     f32,
 	timestamp_valid_bits: u32,
 	timing_available:     bool,
+	device_name:          [256]u8,
+	device_name_len:      int,
+	render_digest:        digest.FNV,
+	has_render_digest:    bool,
 
 	target:       Target,
 	scene:        Scene,
