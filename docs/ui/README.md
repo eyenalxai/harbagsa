@@ -30,12 +30,12 @@ window 1.5, a 1440p window 2. Below 720p it stays at 1 so the smallest supported
 window still shows every row.
 
 Text rasterizes at the scaled pixel size, so the coverage atlas repacks when a
-rounded type size changes. See [type.md](type.md).
+rounded type size or the weight changes. See [type.md](type.md).
 
 ## Files
 
-- [type.md](type.md): the five type roles, leading, tracking, and the fixed-width
-  number rule.
+- [type.md](type.md): the five type roles, the weight axis, leading, tracking,
+  and the fixed-width number rule.
 - [colour.md](colour.md): the ramp, the contrast table, and the alpha rules.
 - [spacing.md](spacing.md): the spacing scale, panel anatomy, and hairlines.
 - [components.md](components.md): the status panel, the capture hint, the
@@ -44,7 +44,7 @@ rounded type size changes. See [type.md](type.md).
 ## Adding a surface
 
 1. Decide the rows. Each row is a `ui.Row` with a `kind`: `Setting`, `Action`,
-   `Metric`, `Detail`, `Header`, `Divider`, or `Spacer`.
+   `Metric`, `Detail`, `Slider`, `Header`, `Divider`, or `Spacer`.
 2. Fill the rows in `src/game`. Format every number into a fixed field.
 3. Draw the panel with `rows_measure` and `rows_emit`. Do not measure text by
    hand and do not position rows with per-row offsets.
@@ -62,4 +62,6 @@ change. A kind that only two of the four know about draws at the wrong height.
 - Selection is the raised surface plus the accent bar. Never a colour change on
   the text alone, and never a bright band behind white text.
 - Every changing number is mono, in a fixed field. See [type.md](type.md).
+- A `Slider` is a settings control, not a selection state. Its filled track and
+  knob show the value; `accent` still means selection.
 - The capture hint sits below the crosshair, never across it.

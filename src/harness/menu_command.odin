@@ -4,6 +4,7 @@ package harness
 import "core:encoding/json"
 
 import "src:game"
+import "src:ui"
 
 Menu_Command :: struct {
 	open:          bool,
@@ -14,10 +15,12 @@ Menu_Command :: struct {
 	has_activate:  bool,
 	direction:     int,
 	has_direction: bool,
+	set:           f64,
+	has_set:       bool,
 }
 
 parse_menu :: proc(object: json.Object) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "open", "select", "activate", "direction"}); unknown {
+	if key, unknown := json_unknown_key(object, {"cmd", "open", "select", "activate", "direction", "set"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 
@@ -60,8 +63,23 @@ parse_menu :: proc(object: json.Object) -> (Command, string) {
 	if command.menu.has_direction && !command.menu.activate {
 		return {}, "'direction' needs 'activate'"
 	}
-	if !command.menu.has_open && !command.menu.has_select && !command.menu.has_activate {
-		return {}, "menu needs 'open', 'select', or 'activate'"
+	if value, has := json_get(object, "set"); has {
+		weight, ok := json_number(value)
+		if !ok || weight < f64(ui.TYPE_WEIGHT_MIN) || weight > f64(ui.TYPE_WEIGHT_MAX) {
+			return {}, format_error(
+				"'set' must be a number in [%d, %d]",
+				int(ui.TYPE_WEIGHT_MIN),
+				int(ui.TYPE_WEIGHT_MAX),
+			)
+		}
+		command.menu.set = weight
+		command.menu.has_set = true
+	}
+	if !command.menu.has_open &&
+	   !command.menu.has_select &&
+	   !command.menu.has_activate &&
+	   !command.menu.has_set {
+		return {}, "menu needs 'open', 'select', 'activate', or 'set'"
 	}
 	return command, ""
 }

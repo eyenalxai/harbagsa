@@ -1,0 +1,19 @@
+{
+  "view": {"hud": true, "debug": false, "hint": false},
+  "commands": [
+    {"cmd": "step", "frames": 5},
+    {"cmd": "menu", "open": true, "select": 3},
+    {"cmd": "capture", "name": "type-weight-400"},
+    {"cmd": "menu", "set": 900},
+    {"cmd": "capture", "name": "type-weight-900"},
+    {"cmd": "menu", "set": 100},
+    {"cmd": "capture", "name": "type-weight-100"},
+    {"cmd": "menu", "open": false},
+    {"cmd": "step", "frames": 5}
+  ],
+  "checks": [
+    {"field": "settings.type_weight", "op": "eq", "value": 100},
+    {"field": "menu.selected", "op": "eq", "value": 3},
+    {"field": "menu.open", "op": "eq", "value": false}
+  ]
+}

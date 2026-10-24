@@ -2,11 +2,17 @@
 // the game never imports the renderer and the renderer never imports the game.
 package ui
 
+TYPE_WEIGHT_MIN :: f32(100)
+TYPE_WEIGHT_MAX :: f32(900)
+TYPE_WEIGHT_MONO_MAX :: f32(700)
+TYPE_WEIGHT_DEFAULT :: f32(400)
+
 Row_Kind :: enum {
 	Setting,
 	Action,
 	Metric,
 	Detail,
+	Slider,
 	Divider,
 	Header,
 	Spacer,
@@ -17,6 +23,8 @@ Row :: struct {
 	label:   string,
 	value:   string,
 	numeric: bool,
+	ratio:   f32,
+	ticks:   int,
 }
 
 Hint_Cell :: struct {

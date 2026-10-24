@@ -12,6 +12,7 @@ HUD_Frame :: struct {
 	capture_hint: string,
 	captured:     bool,
 	menu:         ui.Menu,
+	weight:       f32,
 }
 
 hud_emit_textured_quad :: proc(

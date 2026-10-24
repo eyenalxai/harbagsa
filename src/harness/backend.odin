@@ -202,6 +202,14 @@ backend_render :: proc(
 		&session.scratch,
 	)
 	perf.mark(&session.perf, .Build)
+	if request.enabled {
+		if !renderer.text_atlas_sync(&data.renderer, session.sim.settings.type_weight) {
+			return {}, format_error("text atlas sync failed")
+		}
+		if !renderer.text_atlas_wait(&data.renderer) {
+			return {}, format_error("text atlas did not settle")
+		}
+	}
 	data.renderer.recorder = &session.perf.recorder
 	capture_request := renderer.Frame_Capture {
 		target  = request.target,
