@@ -391,9 +391,8 @@ make build
 ```
 
 Read `runs/smoke/report.json` and use the absolute paths in `screenshots`. The
-PNG is RGBA, sRGB, and `1280x720` by default. The repository samples are
-`docs/evidence/harness-smoke.png`, `docs/evidence/present-window.png`,
-`docs/evidence/settings-menu.png`, and `docs/evidence/window-settings.png`. To
+PNG is RGBA, sRGB, and `1280x720` by default. Evidence is a run directory plus a
+scenario: run a scenario into `runs/<scenario-stem>/` and read `frames/`. To
 capture the owner's real window instead:
 
 ```sh
