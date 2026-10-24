@@ -13,41 +13,50 @@ persistent cache. A component never sees a hex value and never converts one.
 
 ## The palette
 
-| Token | sRGB | Alpha | Role |
-| --- | --- | --- | --- |
-| `text_primary` | `#EEF2F6` | 1.0 | a `Setting`, `Action`, `Metric`, or `Slider` value, a panel title, the selected label, the slider knob |
-| `text_secondary` | `#A7B2BF` | 1.0 | a `Setting`, `Action`, `Slider`, or `Metric` label, a blocked value, a legend key, the slider fill |
-| `text_tertiary` | `#808C99` | 1.0 | a `Detail` label, a `Detail` value, a section header, a legend action, the slider ticks |
-| `accent` | `#E6AF3A` | 1.0 | the selection bar, and nothing else |
-| `surface_hud` | `#10141A` | 0.94 | the status panel, the capture hint |
-| `surface_menu` | `#161B23` | 1.0 | the settings panel |
-| `surface_raised` | `#26313D` | 1.0 | the selected row |
-| `line_hairline` | `#FFFFFF` | 0.09 | the hairline ring around a panel |
-| `line_separator` | `#FFFFFF` | 0.16 | a divider inside a panel |
-| `slider_track` | `#FFFFFF` | 0.20 | the slider track, 3.4:1 on `surface_raised` |
-| `scrim` | `#000000` | 0.62 | the dim behind the settings panel |
-| `crosshair` | `#FFFFFF` | 0.90 | the crosshair arms |
-| `crosshair_edge` | `#000000` | 0.55 | the crosshair outline, so it reads on any background |
+The six neutral tokens share one OKLCH hue. The table records lightness,
+chroma, and hue for every token, so a future change can move one channel and
+leave the others. Hue is undefined when chroma is zero.
+
+| Token | sRGB | Alpha | L | C | H | Role |
+| --- | --- | --- | --- | --- | --- | --- |
+| `text_primary` | `#EEF2F6` | 1.0 | 0.959 | 0.007 | 247.9 | a `Setting`, `Action`, `Metric`, or `Slider` value, a panel title, the selected label, the slider knob |
+| `text_secondary` | `#A7B2BF` | 1.0 | 0.759 | 0.022 | 252.5 | a `Setting`, `Action`, `Slider`, or `Metric` label, a blocked value, a legend key, the slider fill |
+| `text_tertiary` | `#818C99` | 1.0 | 0.635 | 0.023 | 252.6 | a `Detail` label, a `Detail` value, a section header, a legend action, the slider ticks |
+| `accent` | `#E6AF3A` | 1.0 | 0.785 | 0.142 | 82.2 | the selection bar, and nothing else |
+| `surface_hud` | `#0F141A` | 0.94 | 0.189 | 0.015 | 253.2 | the status panel, the capture hint |
+| `surface_menu` | `#151B23` | 1.0 | 0.220 | 0.018 | 255.7 | the settings panel |
+| `surface_raised` | `#26313D` | 1.0 | 0.308 | 0.026 | 250.9 | the selected row |
+| `line_hairline` | `#FFFFFF` | 0.09 | 1.000 | 0.000 | 0.0 | the hairline ring around a panel |
+| `line_separator` | `#FFFFFF` | 0.16 | 1.000 | 0.000 | 0.0 | a divider inside a panel |
+| `slider_track` | `#FFFFFF` | 0.20 | 1.000 | 0.000 | 0.0 | the slider track, 3.4:1 on `surface_raised` |
+| `scrim` | `#000000` | 0.62 | 0.000 | 0.000 | 0.0 | the dim behind the settings panel |
+| `crosshair` | `#FFFFFF` | 0.90 | 1.000 | 0.000 | 0.0 | the crosshair arms |
+| `crosshair_edge` | `#000000` | 0.55 | 0.000 | 0.000 | 0.0 | the crosshair outline, so it reads on any background |
 
 The hairline is `max(1, round(density))` device pixels: 1 px at 720p, 2 px at
 1080p and above. A ring, divider, or outline is one hairline wide, not one pixel.
 
 ## Contrast
 
-Measured on the authored sRGB values, the WCAG 2 way.
+Measured on the authored sRGB values, the WCAG 2 way. WCAG 2 is the gate. APCA
+is a reference, not a gate. The APCA Lc scores on `surface_menu` are 97 for
+`text_primary`, 60 for `text_secondary`, 40 for `text_tertiary`, and 63 for
+`accent`. ADR 0019 records why the tertiary level stays below the APCA body
+floor.
 
 | Foreground | On `surface_menu` | On `surface_raised` | On `surface_hud` |
 | --- | --- | --- | --- |
-| `text_primary` | 15.4:1 | 11.7:1 | 16.4:1 |
-| `text_secondary` | 8.0:1 | 6.1:1 | 8.6:1 |
-| `text_tertiary` | 5.0:1 | 3.9:1 | 5.4:1 |
-| `accent` | 8.7:1 | 6.6:1 | 9.3:1 |
+| `text_primary` | 15.39:1 | 11.75:1 | 16.44:1 |
+| `text_secondary` | 8.05:1 | 6.14:1 | 8.60:1 |
+| `text_tertiary` | 5.07:1 | 3.86:1 | 5.40:1 |
+| `accent` | 8.70:1 | 6.64:1 | 9.30:1 |
 
 The floor is 4.5:1 for text and 3:1 for a non-text element such as the accent bar.
 `tests/renderer/text.odin` checks `text_primary` and `text_secondary` on the
-composited HUD and menu, `text_primary` on the raised surface, and `accent` and
-the slider track against the raised surface. It does not check `text_tertiary`,
-the slider fill, the ticks, or the knob.
+composited HUD and menu, `text_tertiary` on the composited menu, `text_primary`
+and `text_secondary` on the raised surface, and `accent` and the slider track
+against the raised surface. It does not check the slider fill, the ticks, or
+the knob.
 
 `text_tertiary` passes on the menu but not the text floor on the raised surface.
 That is safe by construction for text: `Setting`, `Action`, and `Slider` labels
