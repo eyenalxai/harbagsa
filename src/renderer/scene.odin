@@ -140,7 +140,8 @@ update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> 
 	r.taa.has_prev_view_projection = true
 
 	jitter: [2]f32
-	if r.taa.enabled {
+	jitter_enabled := r.taa.enabled && !(r.taa.debug.active && !r.taa.debug.jitter)
+	if jitter_enabled {
 		r.taa.applied_jitter_index = r.taa.jitter_index
 		jitter = taa_jitter(r.taa.jitter_index, extent)
 		r.taa.jitter_index = (r.taa.jitter_index + 1) % TAA_JITTER_SAMPLES
@@ -148,7 +149,7 @@ update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> 
 		r.taa.applied_jitter_index = 0
 	}
 	r.taa.current_jitter = jitter
-	r.taa.shadow_phase = r.taa.enabled ? r.frame_count % 64 : 0
+	r.taa.shadow_phase = taa_shadow_phase(r)
 
 	buffer^ = Camera_Uniform {
 		view = view,

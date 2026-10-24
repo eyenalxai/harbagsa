@@ -36,6 +36,16 @@ session_state :: proc(session: ^Session) -> State {
 		reset_count        = report.reset_count,
 		last_reset         = renderer.reset_reason_name(report.last_reset),
 		shadow_phase       = report.shadow_phase,
+		debug = {
+			active              = report.debug.active,
+			taa                 = report.debug.taa,
+			jitter              = report.debug.jitter,
+			history_weight      = report.debug.history_weight,
+			clamp               = report.debug.clamp,
+			depth_trust         = report.debug.depth_trust,
+			shadow_phase_frozen = report.debug.shadow_phase_frozen,
+			shadow_phase        = report.debug.shadow_phase,
+		},
 	}
 	return state_build(
 		&session.sim,
