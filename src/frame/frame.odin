@@ -10,10 +10,11 @@ import "src:renderer"
 PLAYER_FOV_X :: f32(90.0 * math.PI / 180.0)
 
 Options :: struct {
-	alpha:      f32,
-	debug_view: bool,
-	captured:   bool,
-	hud:        bool,
+	alpha:         f32,
+	delta_seconds: f32,
+	debug_view:    bool,
+	captured:      bool,
+	hud:           bool,
 }
 
 Scratch :: struct {
@@ -78,7 +79,7 @@ build :: proc(
 	}
 
 	if options.hud || hud.menu.open {
-		game.hud_state_update(hud, sim, debug, snapshot, options.captured)
+		game.hud_state_update(hud, sim, debug, snapshot, options.captured, options.delta_seconds)
 		scene.hud = renderer.HUD_Frame {
 			enabled      = true,
 			menu_open    = hud.menu.open,

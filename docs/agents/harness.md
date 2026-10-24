@@ -85,7 +85,7 @@ serializes Make with `flock`.
 | compare two builds | **Performance** and `ab` |
 | measure frame time | **Performance** |
 | prove a capture-free sequence is deterministic | **Screenshots** and `scenarios/capture-free.json` |
-| understand a design choice | `docs/adr/0008` to `docs/adr/0016` |
+| understand a design choice | `docs/adr/0008` to `docs/adr/0019` |
 
 ## What one run writes
 
@@ -305,6 +305,7 @@ The 2D layer is part of the feature, so its captures live next to it.
 | `scenarios/hud-debug.json` | the debug-mode readout, which shares the row renderer |
 | `scenarios/ui.json` | the settings panel with a numeric value selected, then an action row |
 | `scenarios/settings-menu.json` | the settings round trip and the menu digest |
+| `scenarios/blocked-note.json` | the blocked-change note and its clear on a successful change |
 | `scenarios/window-settings.json` | the window rows after a display change |
 | `scenarios/type-weight.json` | the Type weight slider at 400, 900, and 100 |
 
@@ -314,6 +315,7 @@ Read the evidence from a run directory:
 ./bin/harbagsa-agent run scenarios/hud.json --out runs/ui/hud
 ./bin/harbagsa-agent run scenarios/hud-debug.json --out runs/ui/hud-debug
 ./bin/harbagsa-agent run scenarios/settings-menu.json --out runs/ui/menu
+./bin/harbagsa-agent run scenarios/blocked-note.json --out runs/ui/blocked-note
 ./bin/harbagsa-agent run scenarios/window-settings.json --out runs/ui/window
 ./bin/harbagsa-agent run scenarios/type-weight.json --out runs/ui/weight
 ```
@@ -694,7 +696,7 @@ The sky is an analytic gradient. It draws after the lit pass and shades only the
 background pixels. The lit pass traces eight ambient occlusion rays per fragment
 and scales the ambient term by the visible fraction. Both features are on by
 default. The design is in
-`docs/adr/0015-sky-ambient-and-ray-traced-ambient-occlusion.md`.
+`docs/adr/0017-sky-ambient-and-ray-traced-ambient-occlusion.md`.
 
 `scenarios/sky-ao.json` settles the camera at the zenith and at the horizon,
 then captures one arena corner with the AO override off and on, and finally the

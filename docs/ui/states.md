@@ -66,8 +66,9 @@ A blocked change sets one of five strings:
 - `"Minimum weight · nothing to change"`
 - `"Maximum weight · nothing to change"`
 
-The status note is one rendered frame: `menu_view` copies `status` into the
-note and clears it; the next frame falls back to `MENU_NOTE`.
+The status note holds for two seconds of frame time. A new blocked press
+restarts the hold; a successful change clears it immediately. When the hold
+ends, the default note returns.
 
 ## Applying a change
 

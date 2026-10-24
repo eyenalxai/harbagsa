@@ -43,6 +43,7 @@ session_refresh_hud :: proc(session: ^Session) {
 		&session.debug,
 		game.simulation_snapshot(&session.sim),
 		false,
+		game.SIMULATION_STEP,
 	)
 }
 
