@@ -2,6 +2,7 @@
 package harness
 
 import "core:fmt"
+import "core:math"
 import "core:mem"
 import "core:strings"
 
@@ -53,6 +54,12 @@ Debug_State :: struct {
 	active: bool `json:"active"`,
 }
 
+Sun_State :: struct {
+	azimuth:          f32 `json:"azimuth"`,
+	elevation:        f32 `json:"elevation"`,
+	angular_diameter: f32 `json:"angular_diameter"`,
+}
+
 Menu_State :: struct {
 	open:     bool   `json:"open"`,
 	selected: int    `json:"selected"`,
@@ -91,6 +98,7 @@ State :: struct {
 	crates:        []Crate_State  `json:"crates"`,
 	settings:      Settings_State `json:"settings"`,
 	debug:         Debug_State    `json:"debug"`,
+	sun:           Sun_State      `json:"sun"`,
 	menu:          Menu_State     `json:"menu"`,
 	renderer:      Renderer_State `json:"renderer"`,
 	render_digest: string         `json:"render_digest"`,
@@ -149,6 +157,7 @@ state_build :: proc(
 		debug = {
 			active = debug.active,
 		},
+		sun = sun_state(debug),
 		menu = {
 			open = menu.open,
 			selected = int(menu.selected),
@@ -237,4 +246,14 @@ state_digest :: proc(state: State, allocator: mem.Allocator) -> string {
 @(private)
 vec_state :: proc(value: b3.Vec3) -> Vec_State {
 	return {x = value.x, y = value.y, z = value.z}
+}
+
+@(private)
+sun_state :: proc(debug: ^game.Debug_Mode) -> Sun_State {
+	azimuth, elevation := game.debug_mode_sun_angles(debug)
+	return {
+		azimuth = math.to_degrees(azimuth),
+		elevation = math.to_degrees(elevation),
+		angular_diameter = math.to_degrees(debug.sun_angular_diameter),
+	}
 }

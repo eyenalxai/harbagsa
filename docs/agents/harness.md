@@ -133,6 +133,7 @@ Rules:
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw": 0, "pitch": 0}`
 - `{"cmd": "camera", "clear": true}`
 - `{"cmd": "view", "hud": true, "debug": false, "hint": false, "perf": false}`
+- `{"cmd": "sun", "azimuth": 52.1, "elevation": 15, "diameter": 0.53}`
 - `{"cmd": "debug_mode", "active": true}`
 - `{"cmd": "menu", "open": true, "select": 1, "activate": true, "direction": -1}`
 - `{"cmd": "menu", "set": 900}`
@@ -155,6 +156,14 @@ Display, Resolution, Type weight, Sprint mode, Crouch mode, Prone mode, and
 Resume.
 
 A capture names its target and format. See **Capture targets**.
+
+The `sun` command moves the light or resizes its disk. `azimuth` is degrees from
+`+z` toward `+x`, and `elevation` is degrees above the horizon; both describe
+where the sun sits, not the direction its light travels. `diameter` is the angle
+the sun disk subtends, in degrees, and sets the penumbra width. Omitted fields
+keep their value, and `reset` restores the default sun. The state reports the
+same three values under `sun.*`, so a check can assert the light a capture used.
+Changing the sun resets TAA history with the `scene_change` reason.
 
 The harness has no compositor, so the menu uses a fixed two-display list:
 `Display 1` (1920x1080) and `Display 2` (2560x1440). Each lists smaller modes.
@@ -209,6 +218,27 @@ Movement scenarios run with `--no-render` and check the simulation state.
 `step-angle.json` walks from spawn to the 0.35 m step, turns, and climbs it at
 60 degrees. The check gates that the player ends on the tread instead of sliding
 along the riser.
+
+## Shadow scenario
+
+| Scenario | Proves |
+| --- | --- |
+| `scenarios/shadow-angle.json` | a low sun over the arena, at two sun angular diameters |
+
+`shadow-angle.json` sets the sun 15 degrees above the horizon and captures the
+wall shadow from the floor and from straight above. It captures the top-down
+edge at a 3 degree disk and at the 0.53 degree disk the build ships, so the two
+penumbra widths can be compared without a rebuild. The edge width scales with
+the diameter: about 72 px at 3 degrees and 13 px at 0.53 degrees, measured on
+the column at x=1200.
+
+```sh
+./bin/harbagsa-agent run scenarios/shadow-angle.json --out runs/shadow/angle
+```
+
+The run directory holds `wall-wide-sun.png`, `wall-real-sun.png`,
+`penumbra-wide-sun.png`, and `penumbra-real-sun.png`. Crop the same column from
+the two penumbra captures to reproduce the measurement.
 
 ## Live session
 
@@ -354,14 +384,19 @@ run never created a renderer, and `renderer.active` is `false`.
 | `last_reset` | the last reset reason |
 | `shadow_phase` | the sun sample phase the last frame used |
 
-The reset reasons are `none`, `create`, `extent`, `toggle`, `teleport`,
-`scene_change`, `debug_override`, `player_reset`, and `scene_reset`.
+The state also carries a `sun` object with `azimuth`, `elevation`, and
+`angular_diameter`, in degrees. The angles describe the sun in the sky, so the
+default sun reads about 52 degrees of azimuth and 60 degrees of elevation.
 
-The render digest is FNV-1a over the effective camera, the sun direction, every
-box, the jitter, the shadow phase, and the view flags. It changes when any of
-those change and stays the same when they do not. It is separate from the
-simulation digest: read `render_digest` for the render inputs and `digest` for
-the simulation.
+The reset reasons are `none`, `create`, `extent`, `toggle`, `teleport`,
+`scene_change`, `debug_override`, `player_reset`, and `scene_reset`. A change to
+the sun direction or the sun angular diameter is a `scene_change`.
+
+The render digest is FNV-1a over the effective camera, the sun direction and
+angular diameter, every box, the jitter, the shadow phase, and the view flags.
+It changes when any of those change and stays the same when they do not. It is
+separate from the simulation digest: read `render_digest` for the render inputs
+and `digest` for the simulation.
 
 `report.json` carries a `setup` block: the target kind (`offscreen`,
 `swapchain`, or `none`), the extent, the view flags, the device name, the frame
@@ -463,6 +498,8 @@ same size on two builds to compare. The before/after is in
 - `src/harness/perf_run.odin`: the perf run and the perf report.
 - `src/harness/perf_command.odin`: the perf command parser.
 - `src/harness/session_state.odin`: the session's renderer snapshot.
+- `src/harness/sun_command.odin`: the sun command parser.
+- `src/harness/session_sun.odin`: the sun command's session state.
 - `src/harness/session_debug.odin`: the renderer debug gate and overrides.
 - `src/harness/renderer_debug_command.odin`: the override parser.
 - `src/harness/analysis.odin`: the analysis config, summary, and period.
@@ -488,16 +525,17 @@ same size on two builds to compare. The before/after is in
   TAA, HUD and menu overlay.
 - `src/platform/`: SDL and headless adapters. `display.odin` queries displays and
   applies the window state.
-- `tests/harness/` (including `analysis.odin`, `renderer_debug.odin`, and
-  `renderer_state.odin`), `tests/frame/`, `tests/display/display.odin`,
-  `tests/renderer/` (including `target.odin`, `render_digest.odin`,
-  `capture_values.odin`, and `debug.odin`).
+- `tests/harness/` (including `analysis.odin`, `renderer_debug.odin`,
+  `renderer_state.odin`, and `sun.odin`), `tests/frame/`,
+  `tests/display/display.odin`, `tests/renderer/` (including `target.odin`,
+  `render_digest.odin`, `capture_values.odin`, and `debug.odin`).
 - `scenarios/smoke.json`, `scenarios/taa-static.json`,
   `scenarios/taa-motion.json`, `scenarios/settings-menu.json`,
   `scenarios/window-settings.json`, `scenarios/renderer-state.json`,
   `scenarios/renderer-reset.json`, `scenarios/capture-targets.json`,
   `scenarios/renderer-debug.json`, `scenarios/renderer-debug-converge.json`,
-  `scenarios/renderer-debug-jitter.json`, `scenarios/capture-free.json`.
+  `scenarios/renderer-debug-jitter.json`, `scenarios/capture-free.json`,
+  `scenarios/shadow-angle.json`.
 
 ## Adding a command
 
@@ -536,8 +574,9 @@ harness in the same change. Do not leave the automation behind the game.
 
 - New simulation input: add it to `game.Input_Snapshot`, the `input` command,
   the scenario step fields, and `tests/harness`.
-- New state field: add it to `State`, `state_build`, `state_digest`,
-  `state_field`, the report schema, and the docs.
+- New state field: add it to `State`, `state_build`, `state_field`, the report
+  schema, and the docs. Add it to `state_digest` only when it changes the
+  simulation.
 - New setting or menu row: add it to `Settings` and `DEFAULT_SETTINGS`, then
   `Menu_Item`, `MENU_ITEM_COUNT`, `MENU_ITEM_NAMES`, `menu_view`, and
   `menu_change_setting`. Add it to `Settings_State` or `Menu_State`, the digest,
@@ -566,7 +605,9 @@ harness in the same change. Do not leave the automation behind the game.
 - New scenario key or run option: add it to `scenario_parse` and its allowed
   key set, the CLI parser, the README, this page, and a parser test.
 - Render state is not simulation state: render fields do not go into
-  `state_digest`. Put them in the render digest and `Renderer_State` instead.
+  `state_digest`. Put pipeline state in the render digest and `Renderer_State`.
+  A scene input such as the sun stays at the top level and feeds the render
+  digest.
 - New renderer pass or target: keep it behind `Target` or `Frame_View`. Add an
   offscreen test when the pass must match the game.
 - New screenshot or evidence path: update the README and this page.

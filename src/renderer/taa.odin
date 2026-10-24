@@ -44,6 +44,10 @@ TAA :: struct {
 	prev_camera:     Camera,
 	has_prev_camera: bool,
 
+	prev_light_direction:      [3]f32,
+	prev_sun_angular_diameter: f32,
+	has_prev_sun:              bool,
+
 	depth:       [MAX_FRAMES_IN_FLIGHT]Image,
 	scene_color: [MAX_FRAMES_IN_FLIGHT]Image,
 	velocity:    [MAX_FRAMES_IN_FLIGHT]Image,
@@ -213,6 +217,7 @@ reset_history :: proc(r: ^Renderer, reason: History_Reset_Reason) {
 	r.taa.has_prev_view_projection = false
 	r.taa.prev_model_count = 0
 	r.taa.has_prev_models = false
+	r.taa.has_prev_sun = false
 	r.taa.applied_history_read = 0
 	r.taa.convergence_frames = 0
 	r.taa.reset_count += 1
