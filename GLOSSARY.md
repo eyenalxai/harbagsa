@@ -278,6 +278,36 @@ _Avoid_: Debug view, wireframe
 The screen-space pass that draws the debug draw and the HUD over the scene. It does not write depth.
 _Avoid_: UI layer
 
+**Scene pass**:
+The pair of scopes that draw the scene boxes into the depth, color, and velocity
+targets: the depth prepass, then the lit pass.
+_Avoid_: Main pass
+
+**Depth prepass**:
+The depth-only scope of the scene pass. It writes the nearest box surface before
+the lit pass, so the sun rays run for the surface that reaches the frame.
+_Avoid_: Z prepass
+
+**Lit pass**:
+The color scope of the scene pass. It loads the depth the prepass wrote and
+shades the boxes, including the sun shadows.
+_Avoid_: Main pass, color pass
+
+**Backface culling**:
+Dropping triangles whose winding faces away from the camera. The scene pass
+culls back faces because every box is closed.
+_Avoid_: Face culling
+
+**Overdraw**:
+Fragment work for a pixel that a nearer or later box covers again. The depth
+prepass removes it from the scene pass.
+_Avoid_: Overdrawing
+
+**Render scope**:
+One `vkCmdBeginRendering` to `vkCmdEndRendering` block. The scene pass uses one
+for the depth prepass and one for the lit pass.
+_Avoid_: Render pass (that word belongs to the Vulkan object)
+
 **HUD**:
 The 2D part of the overlay: crosshair and player state. It does not show the
 control list.

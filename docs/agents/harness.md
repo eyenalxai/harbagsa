@@ -412,7 +412,8 @@ What the numbers mean:
 
 - The frame interval is wall clock. A capture outside a perf run has no interval.
 - The GPU pass times come from Vulkan timestamps. They belong to the last
-  completed frame, two frames behind the recording frame.
+  completed frame, two frames behind the recording frame. The scene pass time
+  includes the depth prepass.
 - A device without timestamp support, a failed query pool, or a run without a
   device reports the CPU numbers and leaves the GPU fields empty.
 - Perf data never enters `State`, the state digest, or the pixel hash. A perf
@@ -421,6 +422,12 @@ What the numbers mean:
 The design and its alternatives are in
 `docs/adr/0008-performance-instrumentation.md`. The current numbers and the
 ranked causes are in `docs/evidence/perf-baseline.md`.
+
+`scenarios/perf-arena.json` and `scenarios/perf-backface.json` are the scene
+pass probes. The arena view shows every static box at once; the backface view
+covers the screen with surfaces that receive no direct sun. Run either at the
+same size on two builds to compare. The before/after is in
+`docs/evidence/perf-scene-pass.md`.
 
 ## Determinism
 
