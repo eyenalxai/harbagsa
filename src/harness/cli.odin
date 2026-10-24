@@ -41,6 +41,8 @@ cli_main :: proc() -> int {
 		return cli_run(args[1:])
 	case "session":
 		return cli_session(args[1:])
+	case "diff":
+		return cli_diff(args[1:])
 	case "help", "--help", "-h":
 		print_usage()
 		return EXIT_OK

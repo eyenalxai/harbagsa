@@ -465,6 +465,32 @@ and writes the analysis maps. `scenarios/capture-free.json` settles without
 captures and then captures; run it twice and compare the digests and PNG hashes
 to prove the offscreen sequence is deterministic.
 
+### Compare two runs
+
+```sh
+./bin/harbagsa-agent diff runs/before runs/after
+./bin/harbagsa-agent diff runs/before runs/after --max-pixels 0 --json
+```
+
+`diff` pairs the PNG captures by name from each `report.json` `screenshots`
+array. When a run has no report, or an entry has no readable path, it uses
+`frames/<name>.png`. Each row reports the size, the number of different pixels,
+the largest RGB channel delta, the mean delta, the count over 16, and whether
+the pair is identical. Alpha is ignored. `analysis-diff.png` and
+`analysis-variance.png` are derived maps, so the frame fallback skips them.
+
+Exit codes:
+
+- `0`: every pair is present, the sizes match, and no pair is over the limit.
+- `1`: a pair is missing, a pair differs in size, or `--max-pixels N` is
+  exceeded.
+- `2`: bad arguments or a run directory that cannot be read.
+
+Without `--max-pixels`, differences are reported but do not fail the command.
+`--json` prints one object with `run_a`, `run_b`, `ok`, `pairs`, and `errors`
+instead of the table. Compare `setup.revision` and `setup.dirty` before the
+pixels so a dirty tree is not mistaken for a revision change.
+
 ## Build
 
 ```sh

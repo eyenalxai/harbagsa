@@ -30,6 +30,7 @@ serializes Make with `flock`.
 | read renderer state or the render digest | **Renderer state** |
 | change a TAA input for a diagnosis | **Renderer debug overrides** |
 | measure image stability or the period | **Analysis** |
+| compare two builds or revisions | **Cross-run diff** |
 | measure frame time | **Performance** |
 | prove a capture-free sequence is deterministic | **Screenshots** and `scenarios/capture-free.json` |
 | understand a design choice | `docs/adr/0009` to `docs/adr/0013` |
@@ -363,6 +364,36 @@ is the per-pixel variance over the window, square-rooted and scaled to 0..255.
 
 `scenarios/renderer-debug-jitter.json` writes both maps.
 
+## Cross-run diff
+
+```sh
+./bin/harbagsa-agent diff runs/before runs/after
+./bin/harbagsa-agent diff runs/before runs/after --max-pixels 0 --json
+```
+
+`diff` reads each run's `report.json` and pairs the `screenshots` entries by
+name. A run without a report, or an entry whose `path` is empty or unreadable,
+falls back to `frames/<name>.png`. The frame fallback skips the derived
+`analysis-diff.png` and `analysis-variance.png` maps.
+
+Each pair reports `name`, `width`, `height`, `different_pixels`, `max_delta`,
+`mean_delta`, `over_16`, and `identical`. A pixel differs when an RGB channel
+changes; alpha is ignored. `mean_delta` is the mean over pixels of the largest
+RGB channel delta, so it matches the per-capture deltas in `report.json`.
+
+Exit codes:
+
+- `0`: every pair is present, the sizes match, and no pair is over the limit.
+- `1`: a pair is missing, a pair differs in size, or `--max-pixels N` is
+  exceeded.
+- `2`: bad arguments or a run directory that cannot be read.
+
+Without `--max-pixels`, differences are reported but do not fail the command.
+`--json` prints one object with `run_a`, `run_b`, `ok`, `pairs`, and `errors`
+instead of the table. `errors` lists missing pairs, size mismatches, decode
+failures, and limit hits. Check `setup.revision` and `setup.dirty` before the
+pixels so a dirty tree is not mistaken for a revision change.
+
 ## Renderer state
 
 Every `state` reply and `state.json` carries a `renderer` object and a
@@ -505,6 +536,9 @@ same size on two builds to compare. The before/after is in
 ## Where the code lives
 
 - `src/harness/`: CLI, scenario compiler, commands, session, runner, socket, PNG.
+- `src/harness/diff.odin`: the pure pair comparison and the diff report types.
+- `src/harness/diff_captures.odin`: run capture discovery and the frame fallback.
+- `src/harness/diff_cli.odin`: the `diff` command and its table/JSON output.
 - `src/harness/capture.odin`: the capture result, target, format, and file write.
 - `src/harness/capture_stats.odin`: the capture statistics and pixel hash.
 - `src/harness/capture_command.odin`: the capture target/format parser.
