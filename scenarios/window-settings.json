@@ -2,6 +2,8 @@
   "commands": [
     {"cmd": "menu", "open": true},
     {"cmd": "menu", "select": 1, "activate": true},
+    {"cmd": "check", "field": "settings.resolution", "op": "eq", "value": "2560x1440"},
+    {"cmd": "check", "field": "settings.window_resolution", "op": "eq", "value": "1280x720"},
     {"cmd": "menu", "select": 2, "activate": true},
     {"cmd": "capture", "name": "window-settings"},
     {"cmd": "menu", "open": false},

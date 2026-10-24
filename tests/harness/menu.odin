@@ -213,3 +213,82 @@ window_settings_are_reported_and_checkable :: proc(t: ^testing.T) {
 	defer harness.reply_destroy(&reply, context.allocator)
 	testing.expect(t, reply.ok, "settings.window_mode check failed")
 }
+
+@(test)
+menu_activate_direction_moves_backward :: proc(t: ^testing.T) {
+	session, _ := harness.session_create(context.allocator)
+	defer harness.session_destroy(&session)
+
+	reply := execute(t, &session, `{"cmd": "menu", "open": true, "select": 0, "activate": true}`)
+	harness.reply_destroy(&reply, context.allocator)
+	reply = execute(
+		t,
+		&session,
+		`{"cmd": "menu", "select": 2, "activate": true, "direction": -1}`,
+	)
+	harness.reply_destroy(&reply, context.allocator)
+
+	state := harness.session_state(&session)
+	defer harness.state_destroy(&state, context.allocator)
+	testing.expect_value(t, state.settings.window_mode, "Windowed")
+	testing.expect_value(t, state.settings.resolution, "1600x900")
+}
+
+@(test)
+menu_direction_needs_activate :: proc(t: ^testing.T) {
+	command, error := harness.command_parse_string(
+		`{"cmd": "menu", "select": 2, "direction": -1}`,
+		context.allocator,
+	)
+	if error == "" {
+		harness.command_destroy(&command, context.allocator)
+	}
+	testing.expect(t, error != "", "direction without activate was accepted")
+	testing.expect(t, strings.contains(error, "direction"), "missing direction error")
+}
+
+@(test)
+every_window_setting_changes_the_digest :: proc(t: ^testing.T) {
+	base := harness.State {
+		settings = {
+			window_mode       = "Borderless",
+			display           = "Display 1",
+			display_index     = 0,
+			resolution        = "1920x1080",
+			window_resolution = "1280x720",
+			sprint_mode       = "Hold",
+			crouch_mode       = "Toggle",
+			prone_mode        = "Toggle",
+		},
+		menu = {selected = 0, item = "Window mode"},
+	}
+
+	mode := base
+	mode.settings.window_mode = "Windowed"
+	expect_digest_differs(t, base, mode, "window mode")
+
+	display := base
+	display.settings.display = "Display 2"
+	expect_digest_differs(t, base, display, "display")
+
+	display_index := base
+	display_index.settings.display_index = 1
+	expect_digest_differs(t, base, display_index, "display index")
+
+	resolution := base
+	resolution.settings.resolution = "1280x720"
+	expect_digest_differs(t, base, resolution, "resolution")
+
+	window_resolution := base
+	window_resolution.settings.window_resolution = "1920x1080"
+	expect_digest_differs(t, base, window_resolution, "window resolution")
+}
+
+@(private)
+expect_digest_differs :: proc(t: ^testing.T, a, b: harness.State, label: string) {
+	digest_a := harness.state_digest(a, context.allocator)
+	defer delete(digest_a, context.allocator)
+	digest_b := harness.state_digest(b, context.allocator)
+	defer delete(digest_b, context.allocator)
+	testing.expectf(t, digest_a != digest_b, "%s did not change the digest", label)
+}

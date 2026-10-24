@@ -178,12 +178,12 @@ _Avoid_: Input state, controls
 **Settings**:
 The runtime window and input-mode choices: window mode, display, resolution,
 and the sprint, crouch, and prone input modes. A new simulation starts Borderless
-on display 0 with a 1280x720 window size, with sprint Hold, crouch Toggle, and
-prone Toggle. A player reset keeps the current settings.
+on display 0; the stored Windowed size is 1280x720, with sprint Hold, crouch
+Toggle, and prone Toggle. A player reset keeps the current settings.
 _Avoid_: Options, preferences
 
 **Window mode**:
-Borderless fills the selected display at its desktop size. Windowed is a
+Borderless fills the selected display at its desktop size. Windowed requests a
 fixed-size window at the selected resolution. The settings menu changes it. A
 new simulation starts Borderless.
 _Avoid_: Fullscreen mode, display mode

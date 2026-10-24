@@ -109,11 +109,11 @@ menu_change_setting :: proc(menu: ^Menu_State, settings: ^Settings, direction: i
 	return true
 }
 
-menu_activate :: proc(menu: ^Menu_State, settings: ^Settings) -> bool {
+menu_activate :: proc(menu: ^Menu_State, settings: ^Settings, direction := 1) -> bool {
 	if !menu.open {
 		return false
 	}
-	if menu_change_setting(menu, settings, 1) {
+	if menu_change_setting(menu, settings, direction) {
 		return false
 	}
 	if menu.selected == .Resume {
