@@ -26,7 +26,7 @@ space. This is the opposite of the 2D layer, which authors sRGB hex
 | Crate, blue | `0.26 0.48 0.84` | `src/game/arena.odin:34` |
 | Sun light | `1.00 0.98 0.94` | `src/renderer/shaders/box.frag:32` |
 | Ambient | `0.24 0.25 0.28` | `src/renderer/scene.odin:20` |
-| Debug selection | `1.00 0.80 0.20` | `src/game/debug_draw_crates.odin:6` |
+| Debug selection | `1.00 0.80 0.20` | `src/game/debug_draw_objects.odin:6` |
 
 Rules:
 
@@ -42,16 +42,17 @@ Rules:
 
 The sun is one directional light. Its angular diameter is a scene input, not a
 renderer constant: it defaults to the real 0.53°
-(`src/game/debug_mode.odin:11`) and the harness `sun` command can change it. A
+(`src/game/debug_mode.odin:12`) and the harness `sun` command can change it. A
 wider disk widens every penumbra, so the shadow stops reading as a shadow. The
 shader takes 16 samples on a Vogel disk, so a penumbra has 17 levels and softens
 with blocker distance.
 
-The sun is the only light with a direction. Ambient is one flat value, not a
-hemisphere and not occluded. The whole shading line is:
+The sun is the only light with a direction. Ambient comes from the sky gradient
+when the sky pass is on, or from the flat `AMBIENT_COLOR` when it is off. The
+ambient occlusion rays darken that term in corners and tunnels:
 
 ```text
-albedo * (ambient + diffuse * sun * visibility)
+albedo * (ambient * ao + diffuse * sun * visibility)
 ```
 
 If a surface must look different, change its albedo. Do not add a lighting term.
@@ -64,12 +65,14 @@ material distinguishes one box from another except its colour.
 
 ## The sky
 
-The sky is the clear colour, not a shader. `DEFAULT_CLEAR_COLOR` is
-`(0.10, 0.45, 0.75)`, written linear into an RGBA16F target. The sRGB attachment
-encodes it to about `#59B3E1`. There is no gradient, skybox, or cloud.
+The sky is an analytic gradient, not a texture. `sky.glsl` gives one ramp for
+the sky pass and a narrower two-colour ramp for the ambient term, scaled to the
+scene exposure. With the sky pass off, `DEFAULT_CLEAR_COLOR` is
+`(0.10, 0.45, 0.75)`, written linear into an RGBA16F target.
 
-The sky is the only large field of one colour in the frame. Do not give it a
-gradient; the penumbra already provides the only soft edge.
+The gradient is the only large soft field in the frame. Keep the horizon band
+narrow so it does not compete with the penumbra, and do not add a skybox or a
+cloud.
 
 ## Geometry
 

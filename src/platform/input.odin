@@ -2,7 +2,6 @@
 package platform
 
 import "core:c"
-import "core:log"
 import "vendor:sdl3"
 
 // Jump, reset, debug, the stance edges, and the editor actions are key-down
@@ -56,6 +55,8 @@ Events :: struct {
 	secondary_pressed:      bool,
 	secondary_released:     bool,
 	pointer:                [2]f32,
+	pointer_down:           bool,
+	pointer_released:       bool,
 	pointer_moved:          bool,
 	pointer_pressed:        bool,
 	fly_up:                 bool,
@@ -136,6 +137,7 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 				events.primary_pressed = true
 			} else {
 				events.pointer_pressed = true
+			events.pointer_down = true
 				if window.capture_on_click {
 					events.captured = set_cursor_capture(window, true)
 				}
@@ -146,6 +148,8 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 	case .MOUSE_BUTTON_UP:
 		if event.button.button == sdl3.BUTTON_LEFT {
 			events.primary_released = true
+			events.pointer_down = false
+			events.pointer_released = true
 		} else if event.button.button == sdl3.BUTTON_RIGHT {
 			events.secondary_released = true
 		}
@@ -202,24 +206,4 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 pointer_for :: proc(window: ^Window, x, y: f32) -> [2]f32 {
 	width, height := window_size(window)
 	return normalize_pointer(x, y, width, height)
-}
-
-@(private)
-window_size :: proc(window: ^Window) -> (width, height: f32) {
-	w, h: c.int
-	if !sdl3.GetWindowSize(window.handle, &w, &h) {
-		return 0, 0
-	}
-	return f32(w), f32(h)
-}
-
-set_cursor_capture :: proc(window: ^Window, enabled: bool) -> bool {
-	if !sdl3.SetWindowRelativeMouseMode(window.handle, enabled) {
-		log.errorf("platform: SDL_SetWindowRelativeMouseMode failed: %v", sdl3.GetError())
-	}
-	return sdl3.GetWindowRelativeMouseMode(window.handle)
-}
-
-set_click_capture :: proc(window: ^Window, allowed: bool) {
-	window.capture_on_click = allowed
 }

@@ -56,10 +56,10 @@ command_parse :: proc(value: json.Value, allocator := context.allocator) -> (Com
 		return parse_view(object)
 	case "sun":
 		return parse_sun(object)
-	case "crates":
-		return parse_crates(object)
 	case "debug_mode":
 		return parse_debug_mode(object)
+	case "editor":
+		return parse_editor(object)
 	case "menu":
 		return parse_menu(object)
 	case "check":

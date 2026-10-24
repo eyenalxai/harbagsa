@@ -1,10 +1,11 @@
 # Gated renderer debug overrides
 
-The harness can change TAA and point-light inputs: TAA on or off, jitter, history
-weight, clamp, depth trust, the shadow phase, point-light shadows, and a
-synthetic light count. The command is diagnostic. A build with
-`ENABLE_RENDERER_DEBUG=true`, or a run with `--debug-renderer`, accepts it. Every
-other build rejects it with an error that names both gates.
+The harness can change renderer inputs: TAA on or off, jitter, history
+weight, clamp, depth trust, the shadow phase, the sky, ambient occlusion,
+point-light shadows, and a synthetic light count. The command is
+diagnostic. A build with `ENABLE_RENDERER_DEBUG=true`, or a run with
+`--debug-renderer`, accepts it. Every other build rejects it with an error
+that names both gates.
 
 ## Why
 
@@ -29,13 +30,16 @@ without a second build.
   averages, so the old history no longer describes the same input. A light
   change resets for the same reason: the new light contribution differs from
   the image the history holds.
-- `clear` restores the defaults and turns TAA on. A scenario can therefore end
-  in the product configuration regardless of the path it took.
+- `clear` restores the defaults and turns TAA, the sky, and the ambient
+  occlusion on. A scenario can therefore end in the product configuration
+  regardless of the path it took.
 - `light_shadows` disables the point-light shadow rays without removing the
   light contribution, so the shadow cost is measurable on its own.
 - `synthetic_lights` replaces the frame's light list with 0 to 8 fixed test
-  lights. The game has no lamps yet, so this is how the perf scenario fills the
-  light budget.
+  lights, so the point-light cost is measurable without placing lamps.
+- `sky` turns the sky pass and its ambient term on or off. `ao` turns the
+  ambient occlusion rays on or off but keeps the sky light, so the two terms
+  can be measured apart.
 - The resolve takes the overrides as push constants. A fixed weight replaces
   `count / (count + 1)`; a flag skips the clamp; a flag forces the depth trust.
 - The renderer report carries the override struct, so a scenario asserts the
