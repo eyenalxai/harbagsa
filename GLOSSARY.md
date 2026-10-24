@@ -393,6 +393,14 @@ _Avoid_: Frame hash, image hash
 The cause recorded at each TAA history reset: create, extent, toggle, teleport, scene change, debug override, player reset, or scene reset.
 _Avoid_: Reset flag
 
+**Renderer debug override**:
+A gated change to a TAA input for diagnosis: TAA, jitter, history weight, clamp, depth trust, or shadow phase. Every input except the shadow phase resets history.
+_Avoid_: Debug flag
+
+**Debug override gate**:
+The `ENABLE_RENDERER_DEBUG` build define or the `--debug-renderer` flag that lets a run use renderer debug overrides. A release build without either rejects the command.
+_Avoid_: Debug mode (that word belongs to `F2`)
+
 **View flags**:
 The toggles that change the overlay: HUD, menu, debug draw, capture hint, and perf. The render digest covers them because they change the image.
 _Avoid_: Draw flags

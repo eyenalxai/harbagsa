@@ -105,6 +105,7 @@ run_batch :: proc(options: Run_Options) -> int {
 		print_summary_failure(session_error, EXIT_RENDER)
 		return EXIT_RENDER
 	}
+	session.debug_renderer = options.debug_renderer
 	defer session_destroy(&session)
 
 	has_capture := scenario_has_capture(scenario)

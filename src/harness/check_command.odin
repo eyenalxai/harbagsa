@@ -29,3 +29,39 @@ Check_Command :: struct {
 	value:  Check_Value,
 	warmup: int,
 }
+
+check_op_name :: proc(op: Check_Op) -> string {
+	switch op {
+	case .Eq:
+		return "eq"
+	case .Ne:
+		return "ne"
+	case .Lt:
+		return "lt"
+	case .Le:
+		return "le"
+	case .Gt:
+		return "gt"
+	case .Ge:
+		return "ge"
+	}
+	return "eq"
+}
+
+check_op_parse :: proc(name: string) -> (op: Check_Op, ok: bool) {
+	switch name {
+	case "eq":
+		return .Eq, true
+	case "ne":
+		return .Ne, true
+	case "lt":
+		return .Lt, true
+	case "le":
+		return .Le, true
+	case "gt":
+		return .Gt, true
+	case "ge":
+		return .Ge, true
+	}
+	return .Eq, false
+}

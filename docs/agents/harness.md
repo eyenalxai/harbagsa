@@ -88,6 +88,8 @@ Rules:
   to gate TAA stability.
 - A `commands` array runs verbatim. It is the form that `record` writes. It does
   not add a default capture.
+- A top-level `renderer_debug` object compiles to the renderer debug command
+  before the steps. See **Renderer debug overrides**.
 
 ## Commands
 
@@ -106,6 +108,7 @@ Rules:
 - `{"cmd": "menu", "open": true, "select": 1, "activate": true, "direction": -1}`
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`
 - `{"cmd": "perf", "frames": 120, "warmup": 60}`
+- `{"cmd": "renderer_debug", "jitter": false, "shadow_phase": 12}`
 - `{"cmd": "record", "path": "scenarios/walk.json"}`
 - `{"cmd": "record"}`
 - `{"cmd": "replay", "path": "scenarios/walk.json"}`
@@ -292,6 +295,37 @@ to compare two runs before you compare their pixels.
 `scenarios/renderer-state.json` checks the steady state. `scenarios/renderer-reset.json`
 checks a teleport reset.
 
+## Renderer debug overrides
+
+`{"cmd": "renderer_debug", ...}` changes TAA inputs without editing source. It is
+diagnostic and gated. A build with `-define:ENABLE_RENDERER_DEBUG=true`, or a run
+with `--debug-renderer`, accepts it. Any other build rejects it with a clear
+error.
+
+| Field | Effect |
+| --- | --- |
+| `taa` | turn TAA on or off |
+| `jitter` | enable or disable the camera jitter |
+| `history_weight` | fix the resolve history weight in [0, 1] |
+| `clamp` | enable or disable the YCoCg neighborhood clamp |
+| `depth_trust` | force the depth test to trust the history |
+| `freeze_shadow_phase` | freeze the sun sample phase |
+| `shadow_phase` | set a phase in [0, 63] and freeze it |
+| `clear` | reset every override and turn TAA on |
+
+An override starts from the current state. A scenario can put the same fields in
+a top-level `renderer_debug` object; it compiles to the command before the steps.
+
+Every change to a TAA input resets the history with reason `debug_override`: TAA,
+jitter, history weight, clamp, and depth trust. A shadow phase change does not
+reset history, because it changes the next frame rather than the accumulated
+history.
+
+`scenarios/renderer-debug.json` sets every override and clears it.
+`scenarios/renderer-debug-converge.json` turns jitter off and freezes the phase,
+so the image converges. `scenarios/renderer-debug-jitter.json` freezes the phase
+and lets jitter cycle, so the analysis can find the period.
+
 ## Performance
 
 The renderer records a perf sample every frame: the frame interval, five CPU
@@ -345,6 +379,7 @@ ranked causes are in `docs/evidence/perf-baseline.md`.
 - `src/harness/perf_run.odin`: the perf run and the perf report.
 - `src/harness/perf_command.odin`: the perf command parser.
 - `src/harness/session_state.odin`: the session's renderer snapshot.
+- `src/harness/session_debug.odin`: the renderer debug gate and overrides.
 - `src/harness/report_setup.odin`: the run's setup block.
 - `src/digest/digest.odin`: FNV-1a for the state and render digests.
 - `src/perf/`: the perf sample, ring, statistics, and text formatting.
@@ -363,7 +398,9 @@ ranked causes are in `docs/evidence/perf-baseline.md`.
 - `scenarios/smoke.json`, `scenarios/taa-static.json`,
   `scenarios/taa-motion.json`, `scenarios/settings-menu.json`,
   `scenarios/window-settings.json`, `scenarios/renderer-state.json`,
-  `scenarios/renderer-reset.json`, `scenarios/capture-targets.json`.
+  `scenarios/renderer-reset.json`, `scenarios/capture-targets.json`,
+  `scenarios/renderer-debug.json`, `scenarios/renderer-debug-converge.json`,
+  `scenarios/renderer-debug-jitter.json`.
 
 ## Adding a command
 
