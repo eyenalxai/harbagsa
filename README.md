@@ -124,6 +124,8 @@ stairs.
 
 The HUD shows the stance, gait, horizontal speed, grounded state, movement
 state, and position, or the debug mode selection, object count, and sun angles.
+While the placement tool is armed, it shows the armed prefab, body, height, yaw,
+snap, and object count instead.
 The settings menu shows the control list. Borderless fills the selected display;
 Windowed uses the chosen resolution.
 
@@ -243,7 +245,8 @@ frame of its block. Capture frames are zero-based frame numbers. Check operators
 are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. Check fields use the `state.json`
 shape, for example `player.position.y`, `player.grounded`, `objects.1.position.z`,
 `objects.count`, `settings.window_mode`, `settings.resolution`, `menu.open`,
-`debug.active`, `renderer.taa_enabled`, or `render_digest`. A capture check can
+`debug.active`, `debug.placement.armed`, `renderer.taa_enabled`, or
+`render_digest`. A capture check can
 also read `capture.target`, `capture.format`, and `capture.stats.*` for the last
 capture in its window. Add `"window": {"start": 2, "count": 8}` to aggregate over
 part of the captures; `warmup` stays the shorthand for skipping the first N.
@@ -264,7 +267,8 @@ gradient that bands after the 8-bit write shows up as a long run. Disable it wit
 The batch runner and the live session share one command set:
 
 - `{"cmd": "reset"}`: fresh simulation. Placed objects return to spawn, the
-  settings return to their defaults, and the menu closes.
+  settings return to their defaults, the menu closes, and the debug palette and
+  placement reset.
 - `{"cmd": "look", "dx": 220, "dy": 0}`: pixel look delta through the game
   sensitivity and pitch clamp.
 - `{"cmd": "face", "yaw": 0, "pitch": 0}`: set the player view directly.
@@ -279,11 +283,14 @@ The batch runner and the live session share one command set:
 - `{"cmd": "state"}`: player, eye, velocity, yaw, pitch, grounded, objects,
   window and input settings, debug mode, menu, renderer state, render digest,
   frame, and simulation digest. Each object entry carries its id, prefab, body
-  mode, position, rotation, scale, and spawn age. The renderer object reports
-  the frame count, TAA state, jitter index, history validity, convergence
-  frames, history read index and weight, reset count and reason, and shadow
-  phase. `render_digest` covers the effective camera, sun, boxes, jitter, shadow
-  phase, and view flags.
+  mode, position, rotation, scale, and spawn age. The debug entry carries
+  `active`, `selection`, `selected_id`, the palette (`open`, `selected`,
+  `body`), and the placement (`armed`, `prefab`, `position`, `height`, `yaw`,
+  `snap`). The renderer object
+  reports the frame count, TAA state, jitter index, history validity,
+  convergence frames, history read index and weight, reset count and reason, and
+  shadow phase. `render_digest` covers the effective camera, sun, boxes, jitter,
+  shadow phase, and view flags.
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`: write a PNG.
   `frame` is optional. A past frame is an error; a future frame queues. Add
   `"target": "velocity"`, `"history"`, `"depth"`, or `"scene_color"` to read an
@@ -314,14 +321,25 @@ The batch runner and the live session share one command set:
 - `{"cmd": "debug_mode", "active": true}`: enter or leave the `F2` debug mode.
   Entering swaps the player for the free-fly camera; leaving restores the player.
   Repeating the same value is a no-op.
-- `{"cmd": "menu", "open": true, "item": "Type weight", "activate": true, "direction": -1, "set": 900}`:
-  open or close the settings menu, select a row by name, activate the selected
-  row, or set the Type weight. `item` is `Window mode`, `Display`, `Resolution`,
-  `Type weight`, `Sprint mode`, `Crouch mode`, `Prone mode`, or `Resume`, and
-  needs an open menu. `activate` and `set` also need an open menu. `direction`
-  is `-1` or `1` (default `1`) and needs `activate`; `set` is a weight in
-  100..900. Omitted fields keep the state. An open menu renders even when `hud`
-  is off.
+- `{"cmd": "editor", "open": true, "select": 4, "body": "static", "pick": true, "height": 0.5, "yaw": 45, "snap": true, "cancel": false}`:
+  drive the debug placement tool. The command needs debug mode. `open` opens or
+  closes the object palette, `select` is the zero-based prefab index, `body` is
+  `static` or `dynamic`, and `pick` arms the selected prefab. `height` is the
+  offset above the surface in metres, `yaw` is the rotation in degrees, and
+  `snap` toggles the 0.25 m X/Z grid. `cancel` clears the armed tool. Every field
+  is optional; fields apply in that order.
+- `{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw": 0, "pitch": -0.6}}`:
+  set the debug camera. `yaw` and `pitch` are radians, as in the `camera`
+  command. The editor command accepts this alongside the other fields.
+- `{"cmd": "editor", "place": {"prefab": "Block", "position": [0, 0.5, 10], "yaw": 0, "body": "static"}}`:
+  create an object at an exact transform, bypassing the placement ray. `prefab`
+  and `position` are required; `yaw` (degrees) defaults to 0 and `body` to the
+  prefab's default.
+- `{"cmd": "menu", "open": true, "select": 1, "activate": true, "direction": -1}`:
+  open or close the settings menu, select a row, and activate the selected row.
+  `select` is zero-based and needs an open menu. `activate` also needs an open
+  menu. `direction` is `-1` or `1` (default `1`) and needs `activate`. Omitted
+  fields keep the state. An open menu renders even when `hud` is off.
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`:
   evaluate a predicate now. Use `other` to compare two fields.
 - `{"cmd": "displays", "set": [{"name": "Solo", "desktop": "1280x720", "modes": ["1280x720"]}]}`:
@@ -476,11 +494,9 @@ motion. Use `--size 800x600` to reproduce the reported stretched-window case.
 `scenarios/settings-menu.json` opens the settings menu, captures it, changes the
 crouch input mode, closes the menu, and checks the saved state.
 
-`scenarios/blocked-note.json` opens the menu, blocks the Type weight at 900,
-captures the status note, sets the weight to 400, and captures the cleared note.
-
-`scenarios/type-weight.json` opens the menu, selects Type weight, captures 400,
-sets 900 and 100, captures both, and checks the stored value.
+`scenarios/editor-ghost.json` enters debug mode, picks the platform prefab, and
+captures the ghost on the floor and raised, then places a block and cancels the
+tool. It checks the palette, placement, and object state without a window.
 
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window

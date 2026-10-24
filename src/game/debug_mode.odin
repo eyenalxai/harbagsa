@@ -48,6 +48,8 @@ Debug_Mode :: struct {
 	sun_elevation:      f32,
 	sun_drag_dx:        f32,
 	sun_drag_dy:        f32,
+	palette:            Palette,
+	placement:          Placement,
 }
 
 Debug_Input :: struct {
@@ -67,6 +69,13 @@ Debug_Input :: struct {
 debug_mode_create :: proc() -> Debug_Mode {
 	return {
 		sun_direction = DEFAULT_SUN_DIRECTION,
+		palette = {
+			selected = 0,
+			body_mode = prefab(.Crate).body_mode,
+		},
+		placement = {
+			prefab = .Crate,
+		},
 	}
 }
 
@@ -167,6 +176,7 @@ debug_mode_update :: proc(dm: ^Debug_Mode, sim: ^Simulation, input: Debug_Input,
 	debug_fly(dm, input, delta)
 	debug_edit_objects(dm, sim, input)
 	debug_edit_sun(dm, input)
+	debug_placement_refresh(dm, sim)
 }
 
 @(private)
@@ -180,6 +190,8 @@ debug_mode_enter :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 debug_mode_exit :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	dm.active = false
 	debug_mode_clear_selection(dm)
+	palette_close(&dm.palette)
+	debug_placement_cancel(dm)
 
 	player_place(&sim.player, dm.saved_player.position, dm.saved_player.yaw, dm.saved_player.pitch)
 }

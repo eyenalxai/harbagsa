@@ -52,16 +52,6 @@ Settings_State :: struct {
 	type_weight:       f32    `json:"type_weight"`,
 }
 
-Debug_State :: struct {
-	active: bool `json:"active"`,
-}
-
-Sun_State :: struct {
-	azimuth:          f32 `json:"azimuth"`,
-	elevation:        f32 `json:"elevation"`,
-	angular_diameter: f32 `json:"angular_diameter"`,
-}
-
 Menu_State :: struct {
 	open:     bool   `json:"open"`,
 	selected: int    `json:"selected"`,
@@ -177,6 +167,21 @@ state_build :: proc(
 		},
 		debug = {
 			active = debug.active,
+			selection = game.debug_selection_name(debug.selection),
+			selected_id = selected_object_id(debug, sim),
+			palette = {
+				open = debug.palette.open,
+				selected = debug.palette.selected,
+				body = game.body_mode_name(debug.palette.body_mode),
+			},
+			placement = {
+				armed = debug.placement.armed,
+				prefab = game.prefab_name(debug.placement.prefab),
+				position = debug_placement_position(debug),
+				height = debug.placement.height,
+				yaw = debug.placement.yaw_degrees,
+				snap = debug.placement.snap,
+			},
 		},
 		sun = sun_state(debug),
 		menu = {

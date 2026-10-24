@@ -210,6 +210,50 @@ debug_view_collects_world_lines :: proc(t: ^testing.T) {
 	testing.expect(t, len(scene.debug_lines) > 0, "debug view produced no lines")
 }
 
+@(test)
+debug_hud_reports_the_armed_placement :: proc(t: ^testing.T) {
+	sim, debug, hud, scratch := create_state(t)
+	defer game.simulation_destroy(&sim)
+	debug.active = true
+	debug.camera = {position = {0, 1.7, 14}, yaw = 0, pitch = -0.9}
+	testing.expect(t, game.debug_palette_select(&debug, 4), "select failed")
+	testing.expect(t, game.debug_palette_pick(&debug, &sim), "pick failed")
+	game.debug_placement_set_height(&debug, 0.5)
+	game.debug_placement_set_yaw(&debug, 90)
+	game.debug_placement_set_snap(&debug, true)
+
+	scene := frame.build(
+		&sim,
+		&debug,
+		{alpha = 1.0, captured = true, hud = true},
+		nil,
+		&hud,
+		&scratch,
+	)
+	rows := scene.hud.view.rows
+	testing.expect_value(t, len(rows), game.HUD_PLACEMENT_ROW_COUNT)
+	testing.expect_value(t, rows[1].label, "Prefab")
+	testing.expect_value(t, rows[1].value, "Platform")
+	testing.expect_value(t, rows[2].label, "Body")
+	testing.expect_value(t, rows[2].value, "static")
+	testing.expect_value(t, rows[5].label, "Snap")
+	testing.expect_value(t, rows[5].value, "0.25 m")
+	testing.expect(t, strings.contains(rows[3].value, "0.50"), "height row is missing")
+	testing.expect(t, strings.contains(rows[4].value, "90.0"), "yaw row is missing")
+
+	height_width := len(rows[3].value)
+	game.debug_placement_set_height(&debug, 12.25)
+	scene = frame.build(
+		&sim,
+		&debug,
+		{alpha = 1.0, captured = true, hud = true},
+		nil,
+		&hud,
+		&scratch,
+	)
+	testing.expect_value(t, len(scene.hud.view.rows[3].value), height_width)
+}
+
 @(private)
 expect_eye :: proc(t: ^testing.T, actual: [3]f32, expected: b3.Vec3, message: string) {
 	testing.expectf(

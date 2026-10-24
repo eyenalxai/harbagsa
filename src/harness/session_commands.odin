@@ -131,6 +131,9 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 		if session.debug.active != command.debug_mode.active {
 			game.debug_mode_toggle(&session.debug, &session.sim)
 		}
+	case .Editor:
+		command_error = session_editor(session, command.editor)
+		owns_error = true
 	case .Menu:
 		command_error = session_menu(session, command.menu)
 	case .Check:

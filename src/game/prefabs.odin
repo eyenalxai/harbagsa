@@ -110,6 +110,8 @@ PREFABS := [Prefab_Id]Prefab {
 	},
 }
 
+PREFAB_COUNT :: len(PREFABS)
+
 prefab :: proc(id: Prefab_Id) -> Prefab {
 	return PREFABS[id]
 }
@@ -118,6 +120,25 @@ prefab_name :: proc(id: Prefab_Id) -> string {
 	return PREFABS[id].name
 }
 
+prefab_parse :: proc(name: string) -> (Prefab_Id, bool) {
+	for id in Prefab_Id {
+		if PREFABS[id].name == name {
+			return id, true
+		}
+	}
+	return .Crate, false
+}
+
 body_mode_name :: proc(mode: Body_Mode) -> string {
 	return mode == .Static ? "static" : "dynamic"
+}
+
+body_mode_parse :: proc(name: string) -> (Body_Mode, bool) {
+	switch name {
+	case "static":
+		return .Static, true
+	case "dynamic":
+		return .Dynamic, true
+	}
+	return .Static, false
 }

@@ -16,21 +16,11 @@ collect_object_editor_lines :: proc(dm: ^Debug_Mode, sim: ^Simulation, collector
 		return
 	}
 
-	half := simulation_object_box(sim, id).half_extents
-	local_corners := [8][3]f32 {
-		{-half.x, -half.y, -half.z},
-		{half.x, -half.y, -half.z},
-		{half.x, half.y, -half.z},
-		{-half.x, half.y, -half.z},
-		{-half.x, -half.y, half.z},
-		{half.x, -half.y, half.z},
-		{half.x, half.y, half.z},
-		{-half.x, half.y, half.z},
-	}
-	world_corners: [8][3]f32
-	for corner, corner_index in local_corners {
-		world_corners[corner_index] = b3.ToVec3(b3.Body_GetWorldPoint(body, corner))
-	}
-
-	append_box_edges(collector, world_corners, OBJECT_OUTLINE_COLOR)
+	box := simulation_object_box(sim, id)
+	corners := oriented_box_corners(
+		box.center,
+		box.half_extents,
+		transmute(b3.Quat)box.rotation,
+	)
+	append_box_edges(collector, corners, OBJECT_OUTLINE_COLOR)
 }
