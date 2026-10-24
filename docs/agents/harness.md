@@ -199,6 +199,18 @@ density changes, so a capture at another size exercises that path:
 ./bin/harbagsa-agent run scenarios/settings-menu.json --size 2560x1440 --out /tmp/menu-2x
 ```
 
+## Movement scenarios
+
+Movement scenarios run with `--no-render` and check the simulation state.
+
+| Scenario | Proves |
+| --- | --- |
+| `scenarios/step-angle.json` | the step-up climbs the 0.35 m step from a 60 degree approach |
+
+`step-angle.json` walks from spawn to the 0.35 m step, turns, and climbs it at
+60 degrees. The check gates that the player ends on the tread instead of sliding
+along the riser.
+
 ## Live session
 
 ```sh
