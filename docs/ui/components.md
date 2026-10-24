@@ -176,7 +176,7 @@ Type weight. At density 1:
   knob travel is `inner_width - knob`; stop `i` centres at
   `inner_x + knob / 2 + i * travel / 8`. The fill runs from the inner edge to
   the knob centre.
-- The track uses `line_separator`; the ticks use `text_tertiary`; the fill uses
+- The track uses `slider_track`; the ticks use `text_tertiary`; the fill uses
   `text_secondary`; the knob uses `text_primary`. `accent` stays the selection
   bar.
 - The selection band is 44.5 px at density 1 and carries the same
