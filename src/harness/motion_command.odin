@@ -1,0 +1,151 @@
+#+vet explicit-allocators
+package harness
+
+import "core:encoding/json"
+import "core:math"
+
+@(private)
+parse_look :: proc(object: json.Object) -> (Command, string) {
+	if key, unknown := json_unknown_key(object, {"cmd", "dx", "dy"}); unknown {
+		return {}, format_error("unknown key %q", key)
+	}
+	dx, dx_ok := number_field(object, "dx")
+	dy, dy_ok := number_field(object, "dy")
+	if !dx_ok || !dy_ok {
+		return {}, format_error("%s", "look needs numeric 'dx' and 'dy'")
+	}
+	return {kind = .Look, look = {dx = f32(dx), dy = f32(dy)}}, ""
+}
+
+@(private)
+parse_face :: proc(object: json.Object) -> (Command, string) {
+	if key, unknown := json_unknown_key(object, {"cmd", "yaw", "pitch"}); unknown {
+		return {}, format_error("unknown key %q", key)
+	}
+	yaw, yaw_ok := number_field(object, "yaw")
+	pitch, pitch_ok := number_field(object, "pitch")
+	if !yaw_ok || !pitch_ok {
+		return {}, format_error("%s", "face needs numeric 'yaw' and 'pitch'")
+	}
+	return {kind = .Face, face = {yaw = f32(yaw), pitch = f32(pitch)}}, ""
+}
+
+@(private)
+parse_input :: proc(object: json.Object) -> (Command, string) {
+	if key, unknown := json_unknown_key(object, {"cmd", "forward", "right", "jump"}); unknown {
+		return {}, format_error("unknown key %q", key)
+	}
+	input, input_error := parse_input_fields(object)
+	if input_error != "" {
+		return {}, input_error
+	}
+	return {kind = .Input, input = input}, ""
+}
+
+parse_input_fields :: proc(object: json.Object) -> (input: Input_Command, error: string) {
+	if value, has := json_get(object, "forward"); has {
+		forward, ok := json_number(value)
+		if !ok || forward < -1 || forward > 1 {
+			return {}, format_error("%s", "'forward' must be a number in [-1, 1]")
+		}
+		input.forward = f32(forward)
+		input.has_forward = true
+	}
+	if value, has := json_get(object, "right"); has {
+		right, ok := json_number(value)
+		if !ok || right < -1 || right > 1 {
+			return {}, format_error("%s", "'right' must be a number in [-1, 1]")
+		}
+		input.right = f32(right)
+		input.has_right = true
+	}
+	if value, has := json_get(object, "jump"); has {
+		jump, ok := json_boolean(value)
+		if !ok {
+			return {}, format_error("%s", "'jump' must be a boolean")
+		}
+		input.jump = jump
+		input.has_jump = true
+	}
+	return input, ""
+}
+
+@(private)
+parse_camera :: proc(object: json.Object) -> (Command, string) {
+	if key, unknown := json_unknown_key(
+		object,
+		{"cmd", "position", "yaw", "pitch", "look_at", "fov", "clear"},
+	); unknown {
+		return {}, format_error("unknown key %q", key)
+	}
+	command := Command{kind = .Camera}
+	if value, has := json_get(object, "clear"); has {
+		clear, ok := json_boolean(value)
+		if !ok {
+			return {}, format_error("%s", "'clear' must be a boolean")
+		}
+		command.camera.clear = clear
+	}
+	if command.camera.clear {
+		for key, _ in object {
+			if key != "cmd" && key != "clear" {
+				return {}, format_error("%s", "camera 'clear' cannot be combined with another field")
+			}
+		}
+		return command, ""
+	}
+	position, position_ok := vec3_field(object, "position")
+	if !position_ok {
+		return {}, format_error("%s", "camera needs 'position'")
+	}
+	command.camera.position = position
+	look_at, look_at_ok := vec3_field(object, "look_at")
+	yaw, yaw_ok := number_field(object, "yaw")
+	pitch, pitch_ok := number_field(object, "pitch")
+	if look_at_ok && (yaw_ok || pitch_ok) {
+		return {}, format_error("%s", "camera takes 'look_at' or 'yaw' and 'pitch', not both")
+	}
+	if look_at_ok {
+		angles, angles_ok := camera_look_at_angles(position, look_at)
+		if !angles_ok {
+			return {}, format_error("%s", "camera 'look_at' must differ from 'position'")
+		}
+		command.camera.yaw = angles.yaw
+		command.camera.pitch = angles.pitch
+		command.camera.has_angles = true
+	} else if yaw_ok && pitch_ok {
+		command.camera.yaw = f32(yaw)
+		command.camera.pitch = f32(pitch)
+		command.camera.has_angles = true
+	} else {
+		return {}, format_error("%s", "camera needs 'look_at' or 'yaw' and 'pitch'")
+	}
+	if value, has := json_get(object, "fov"); has {
+		fov, fov_ok := json_number(value)
+		if !fov_ok || fov < 1 || fov > 170 {
+			return {}, format_error("%s", "'fov' must be a number in [1, 170]")
+		}
+		command.camera.fov = f32(fov)
+		command.camera.has_fov = true
+	}
+	return command, ""
+}
+
+Camera_Angles :: struct {
+	yaw:   f32,
+	pitch: f32,
+}
+
+// The camera forward is (-sin yaw cos pitch, sin pitch, -cos yaw cos pitch).
+// Solving for that basis removes the hand-computed angles that got a view wrong.
+camera_look_at_angles :: proc(position, target: [3]f32) -> (angles: Camera_Angles, ok: bool) {
+	delta := target - position
+	length := math.sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z)
+	if length <= 1e-6 {
+		return {}, false
+	}
+	direction := delta / length
+	angles.pitch = math.asin(clamp(direction.y, -1, 1))
+	angles.yaw = math.atan2(-direction.x, -direction.z)
+	return angles, true
+}

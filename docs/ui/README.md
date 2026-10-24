@@ -6,11 +6,12 @@ one accent that means "this row". Nothing moves.
 
 The type has to carry the whole personality, because nothing else does.
 
-Thirteen files in `src/renderer` draw the overlay. `src/renderer/ui_theme.odin`
+Fourteen files in `src/renderer` draw the overlay. `src/renderer/ui_theme.odin`
 holds the tokens. `src/ui/ui.odin` holds the data the game hands over.
-`src/renderer/hud_rows.odin` lays rows out, `src/renderer/hud_menu.odin` builds
-the settings panel and its legend, and `src/renderer/hud.odin` draws the status
-panel, capture hint, and crosshair. `src/renderer/overlay.odin`,
+`src/renderer/hud_rows.odin` lays rows out, `src/renderer/hud_slider.odin` draws
+the slider row, `src/renderer/hud_menu.odin` builds the settings panel and its
+legend, and `src/renderer/hud.odin` draws the status panel, capture hint, and
+crosshair. `src/renderer/overlay.odin`,
 `src/renderer/overlay_draw.odin`, and `src/renderer/overlay_pipeline.odin` own
 the vertex stream, pass, and pipelines. `src/renderer/text.odin`,
 `src/renderer/text_shaper.odin`, `src/renderer/text_atlas.odin`,
@@ -28,8 +29,8 @@ coverage atlas. Change a value in the theme, not in a component.
 | `src/renderer` | tokens, layout, drawing | invent content |
 
 A component reads `theme.*`. A literal `[4]f32` colour or a bare pixel size in
-`src/renderer/hud.odin`, `src/renderer/hud_menu.odin`, or
-`src/renderer/hud_rows.odin` is a bug.
+`src/renderer/hud.odin`, `src/renderer/hud_menu.odin`,
+`src/renderer/hud_rows.odin`, or `src/renderer/hud_slider.odin` is a bug.
 
 ## Density
 
@@ -70,8 +71,9 @@ If the surface needs a kind that does not exist, add it to `ui.Row_Kind` and to
 `rows_emit_row` in the same change. Add it to the `rows_measure` switch too when
 it has no label or value to measure. A kind that only part of that set knows
 about draws at the wrong height or draws nothing. A kind that draws a control
-also adds its emitter and publishes its travel rect for the pointer, as the
-`Slider` does with `rows_emit_slider`.
+also adds its emitter and publishes its travel rect for the pointer. The
+`Slider` does that in `src/renderer/hud_slider.odin`; `menu_slider_rect` exposes
+the same rect before the first draw.
 
 ## Rules that are easy to break
 

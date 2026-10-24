@@ -11,7 +11,7 @@ verbose_summary_lines :: proc(report: Report, allocator: mem.Allocator) -> []str
 		len(report.failures) +
 		len(report.perf)
 	lines := make([dynamic]string, 0, capacity, allocator)
-	append(&lines, fmt.aprintf("run: %s", report.scenario, allocator = allocator))
+	append(&lines, fmt.aprintf("run: %s", report.scenario.path, allocator = allocator))
 	append(&lines, fmt.aprintf(
 		"setup: revision %s dirty %v target %s %dx%d",
 		report.setup.revision,
