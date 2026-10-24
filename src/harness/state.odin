@@ -34,14 +34,33 @@ Crate_State :: struct {
 	rotation: Quat_State `json:"rotation"`,
 }
 
-State :: struct {
-	frame:  int           `json:"frame"`,
-	player: Player_State `json:"player"`,
-	crates: []Crate_State `json:"crates"`,
-	digest: string        `json:"digest"`,
+Settings_State :: struct {
+	sprint_mode: string `json:"sprint_mode"`,
+	crouch_mode: string `json:"crouch_mode"`,
+	prone_mode:  string `json:"prone_mode"`,
 }
 
-state_build :: proc(sim: ^game.Simulation, frame: int, allocator: mem.Allocator) -> State {
+Menu_State :: struct {
+	open:     bool   `json:"open"`,
+	selected: int    `json:"selected"`,
+	item:     string `json:"item"`,
+}
+
+State :: struct {
+	frame:    int            `json:"frame"`,
+	player:   Player_State   `json:"player"`,
+	crates:   []Crate_State  `json:"crates"`,
+	settings: Settings_State `json:"settings"`,
+	menu:     Menu_State     `json:"menu"`,
+	digest:   string         `json:"digest"`,
+}
+
+state_build :: proc(
+	sim: ^game.Simulation,
+	frame: int,
+	menu: ^game.Menu_State,
+	allocator: mem.Allocator,
+) -> State {
 	snapshot := game.simulation_snapshot(sim)
 	state := State {
 		frame = frame,
@@ -52,6 +71,16 @@ state_build :: proc(sim: ^game.Simulation, frame: int, allocator: mem.Allocator)
 			yaw = snapshot.yaw,
 			pitch = snapshot.pitch,
 			grounded = snapshot.grounded,
+		},
+		settings = {
+			sprint_mode = game.input_mode_name(sim.settings.sprint_mode),
+			crouch_mode = game.input_mode_name(sim.settings.crouch_mode),
+			prone_mode = game.input_mode_name(sim.settings.prone_mode),
+		},
+		menu = {
+			open = menu.open,
+			selected = int(menu.selected),
+			item = game.menu_selected_name(menu),
 		},
 	}
 	crate_count := game.simulation_crate_count(sim)
@@ -98,6 +127,11 @@ state_digest :: proc(state: State, allocator: mem.Allocator) -> string {
 	hash = digest_f32(hash, state.player.yaw)
 	hash = digest_f32(hash, state.player.pitch)
 	hash = digest_u64(hash, state.player.grounded ? 1 : 0)
+	hash = digest_string(hash, state.settings.sprint_mode)
+	hash = digest_string(hash, state.settings.crouch_mode)
+	hash = digest_string(hash, state.settings.prone_mode)
+	hash = digest_u64(hash, state.menu.open ? 1 : 0)
+	hash = digest_u64(hash, u64(state.menu.selected))
 	hash = digest_u64(hash, u64(len(state.crates)))
 	for crate in state.crates {
 		hash = digest_f32(hash, crate.position.x)
@@ -118,6 +152,15 @@ digest_u64 :: proc(hash: u64, value: u64) -> u64 {
 	for shift < 8 {
 		result = (result ~ (value >> (shift * 8))) * 0x100000001b3
 		shift += 1
+	}
+	return result
+}
+
+@(private)
+digest_string :: proc(hash: u64, text: string) -> u64 {
+	result := hash
+	for byte in text {
+		result = (result ~ u64(byte)) * 0x100000001b3
 	}
 	return result
 }
