@@ -152,3 +152,88 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 		_ = os.remove(TEST_PNG)
 	}
 }
+
+@(test)
+offscreen_target_keeps_one_frame_in_flight :: proc(t: ^testing.T) {
+	testing.expect_value(t, renderer.frames_in_flight(.Offscreen), 1)
+	testing.expect_value(t, renderer.frames_in_flight(.Swapchain), renderer.MAX_FRAMES_IN_FLIGHT)
+}
+
+@(test)
+offscreen_capture_free_sequence_is_deterministic :: proc(t: ^testing.T) {
+	first, first_ok, first_attempted := render_offscreen_sequence()
+	defer if first != nil {
+		delete(first, context.allocator)
+	}
+	second, second_ok, second_attempted := render_offscreen_sequence()
+	defer if second != nil {
+		delete(second, context.allocator)
+	}
+	if !first_attempted || !second_attempted {
+		log.info("skipping the offscreen determinism test: no Vulkan device")
+		return
+	}
+	testing.expect(t, first_ok && second_ok, "the offscreen sequence did not render")
+	if !first_ok || !second_ok {
+		return
+	}
+	testing.expect_value(t, len(first), len(second))
+	different := false
+	for value, index in first {
+		if index >= len(second) || value != second[index] {
+			different = true
+			break
+		}
+	}
+	testing.expect(t, !different, "two capture-free offscreen runs produced different pixels")
+}
+
+// The sequence draws without a capture first, so the second slot would write the
+// single offscreen image while the first frame still reads it.
+@(private)
+render_offscreen_sequence :: proc() -> (pixels: []u8, ok: bool, attempted: bool) {
+	headless: platform.Headless
+	if !platform.headless_init(&headless, TEST_WIDTH, TEST_HEIGHT) {
+		return nil, false, false
+	}
+	defer platform.headless_deinit(&headless)
+
+	state, init_error := renderer.init(
+		renderer.Config {
+			platform = platform.headless_platform(&headless),
+			target = .Offscreen,
+			width = TEST_WIDTH,
+			height = TEST_HEIGHT,
+		},
+		context.allocator,
+	)
+	if init_error != .None {
+		return nil, false, false
+	}
+	defer renderer.deinit(&state)
+
+	sim := game.simulation_create()
+	if !game.simulation_is_valid(&sim) {
+		return nil, false, true
+	}
+	defer game.simulation_destroy(&sim)
+	debug := game.debug_mode_create()
+	hud: game.HUD_State
+	scratch: frame.Scratch
+	scene := frame.build(&sim, &debug, {alpha = 1.0, captured = true}, nil, &hud, &scratch)
+	for _ in 0 ..< 12 {
+		if frame.draw(&state, scene, false) != .Ok {
+			return nil, false, true
+		}
+	}
+	if frame.draw(&state, scene, true) != .Ok {
+		return nil, false, true
+	}
+	data, _, _, read_ok := renderer.read_capture(&state)
+	if !read_ok {
+		return nil, false, true
+	}
+	pixels = make([]u8, len(data), context.allocator)
+	copy(pixels, data)
+	return pixels, true, true
+}
