@@ -1,8 +1,10 @@
 # The 2D layer
 
 The overlay is a technical readout, not a poster. It sits on hard-edged geometry
-and it never competes with it: square corners, one-pixel hairlines, two hues, and
-one accent that means "this row". Nothing moves.
+and never competes with it. Square corners, one-pixel hairlines, two hues, and one
+accent that means "this row". Nothing moves.
+
+The type has to carry the whole personality, because nothing else does.
 
 Three files decide everything. `src/renderer/ui_theme.odin` holds the tokens.
 `src/ui/ui.odin` holds the data the game hands over. `src/renderer/hud_rows.odin`
