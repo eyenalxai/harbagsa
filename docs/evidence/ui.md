@@ -2,8 +2,9 @@
 
 The 2D layer is drawn by the overlay pass: a status panel, a capture hint, a
 crosshair, and the settings panel. The captures come from `bin/harbagsa-agent` at
-1280x720. Run the scenario into a run directory and read the PNGs from `frames/`.
-Screenshots stay out of the repository; point at the run directory instead.
+1280x720. Evidence is a run directory plus a scenario. Run the scenario into
+`runs/<scenario-stem>/` and read the frames from `frames/`. Screenshots stay out
+of the repository.
 
 ## Settings panel
 

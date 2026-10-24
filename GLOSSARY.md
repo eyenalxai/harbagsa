@@ -98,6 +98,11 @@ _Avoid_: Stick to ground
 The short vertical camera lag after a step-up or step-down. It decays after the capsule settles and does not move the player.
 _Avoid_: Camera lag
 
+**Settle time**:
+The time a smoothed value takes to close 99% of the gap to its target. The eye
+height settles in 0.20 s and the step offset in 0.27 s.
+_Avoid_: Smoothing time, decay time
+
 **Coyote time**:
 The 0.10 s after leaving a walkable surface during which a jump still works.
 _Avoid_: Grace period
@@ -113,6 +118,12 @@ _Avoid_: Action state
 **Arena**:
 The fixed test level: a floor, walls, stairs, ramps, tunnels, mantle walls, a dive platform, a slide lane, and a few crates.
 _Avoid_: Map, level
+
+**World palette**:
+The scene colours, authored as linear RGBA floats because the renderer shades in
+linear space. The 2D layer authors sRGB hex instead; a value does not move
+between the two tables.
+_Avoid_: Scene colours, 3D palette
 
 **Sun**:
 The directional light that lights the arena and casts the sun shadows. Debug mode rotates it.
@@ -290,6 +301,11 @@ _Avoid_: Debug view, wireframe
 The screen-space pass that draws the debug draw and the HUD over the scene. It does not write depth.
 _Avoid_: UI layer
 
+**Overlay budget**:
+The fixed cost of the 2D layer: one coverage atlas, 24576 HUD vertices, and 32768
+debug vertices. A change that needs more is a design change.
+_Avoid_: UI budget, draw budget
+
 **Scene pass**:
 The pair of scopes that draw the scene boxes into the depth, color, and velocity
 targets: the depth prepass, then the lit pass.
@@ -377,8 +393,8 @@ _Avoid_: Seek bar, range, gauge
 **Coverage atlas**:
 The one texture that holds every glyph as the fraction of each pixel the glyph
 covers, rasterized at the device pixel size from the two subset Roboto variable
-faces. It holds one layer per face, weight, and pixel size the theme can draw, and
-it is repacked on a worker when the weight or the density changes.
+faces. A layer is keyed by face, weight, and pixel size. The first build is
+synchronous at startup; later weight or density changes repack on a worker.
 _Avoid_: SDF atlas, font texture, bitmap font, glyph sheet
 
 **Sub-pixel phase**:
@@ -394,11 +410,23 @@ never draws a character directly; it draws glyphs.
 _Avoid_: Character, letter
 
 **Row**:
-One line of the overlay: a kind, a label, a value, and whether the value is
-numeric. A slider row also carries a ratio and a tick count. The game fills rows;
-the renderer lays them out. The kind set is closed: setting, action, metric,
-detail, slider, header, divider, spacer.
+One line of the overlay: a kind, a label, a value, whether the value is numeric,
+and whether the value is blocked. A slider row also carries a ratio and a tick
+count. The game fills rows; the renderer lays them out. The kind set is closed:
+setting, action, metric, detail, slider, header, divider.
 _Avoid_: Line, item, entry
+
+**Blocked row**:
+A settings row that cannot change in the current state. It stays selectable and
+keeps its selection band; only its value moves to `text_secondary`. Display and
+Resolution can be blocked. The Type weight row is not blocked at an axis end,
+because one direction still moves.
+_Avoid_: Disabled row, greyed row
+
+**Status note**:
+The one-line reason under the settings panel after a blocked change. It replaces
+`MENU_NOTE` for one rendered frame, then the default note returns.
+_Avoid_: Error message, toast, tooltip
 
 **Value column**:
 The measured x where row values start, or end when they are right-aligned. It is

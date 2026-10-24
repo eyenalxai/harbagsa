@@ -1,5 +1,8 @@
 # Ground speed, step-up, and step smoothing
 
+> 0004 until 2026-10-24. The temporal anti-aliasing ADR claimed 0004 first, so
+> this one moved.
+
 Movement uses the walkable ground plane. The wish velocity is projected onto the
 ground normal and normalized to the stance speed. A straight climb keeps the
 stance speed along the surface, so the horizontal speed drops by the slope
@@ -14,9 +17,11 @@ horizontal travel. A short step grace keeps the capsule grounded while its
 center crosses the tread, and the ground snap follows a step-down.
 
 The camera carries a separate step smoothing offset. A step-up or step-down
-moves the offset by the vertical correction; the offset decays over about 0.1 s.
-The eye position adds this offset, so the capsule can step while the view stays
-smooth. The offset never changes the player position.
+moves the offset by the vertical correction; the offset decays as
+`offset *= exp(-STEP_SMOOTH_RATE * dt)` at 18 /s, so the 0.40 m clamp falls
+below the 1 mm epsilon in 20 steps at 60 Hz, about 0.33 s. The eye position adds
+this offset, so the capsule can step while the view stays smooth. The offset
+never changes the player position.
 
 ## Why
 
