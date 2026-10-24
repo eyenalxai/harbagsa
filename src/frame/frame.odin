@@ -52,7 +52,7 @@ build :: proc(
 		}
 	}
 	for object in game.simulation_objects(sim) {
-		box := game.simulation_object_box(sim, object.id)
+		box := game.simulation_object_visual_box(sim, object.id)
 		if !push_scene_box(scratch, &box_count, box) {
 			break
 		}

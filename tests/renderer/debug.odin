@@ -114,3 +114,51 @@ render_digest_is_stable_for_a_static_scene :: proc(t: ^testing.T) {
 	testing.expect(t, state.has_render_digest, "the render digest is missing")
 	testing.expect_value(t, state.render_digest.value, first.value)
 }
+
+@(test)
+spawn_pop_keeps_taa_history :: proc(t: ^testing.T) {
+	device: Test_Device
+	if !open_test_device(&device) {
+		log.info("skipping the spawn pop history test: no Vulkan device")
+		return
+	}
+	defer close_test_device(&device)
+	state := &device.state
+
+	sim := game.simulation_create()
+	if !game.simulation_is_valid(&sim) {
+		return
+	}
+	defer game.simulation_destroy(&sim)
+	id := game.simulation_create_object(
+		&sim,
+		{prefab = .Block, body_mode = .Static, center = {0, 0.5, 9}, yaw = 0},
+	)
+	testing.expect(t, id != game.INVALID_OBJECT_ID, "block did not create")
+
+	editor := game.debug_mode_create()
+	hud: game.HUD_State
+	scratch: frame.Scratch
+	scene := frame.build(&sim, &editor, {alpha = 1.0}, nil, &hud, &scratch)
+	if frame.draw(state, scene) != .Ok {
+		return
+	}
+	before := state.taa.reset_count
+	box_before := scene.boxes[len(scene.boxes) - 1].half_extents.y
+	model_before := state.taa.prev_models[state.taa.prev_model_count - 1]
+
+	game.simulation_step_world(&sim, game.SIMULATION_STEP)
+	scene = frame.build(&sim, &editor, {alpha = 1.0}, nil, &hud, &scratch)
+	box_after := scene.boxes[len(scene.boxes) - 1].half_extents.y
+	if frame.draw(state, scene) != .Ok {
+		return
+	}
+
+	testing.expect(t, box_after > box_before, "the visual box did not grow")
+	testing.expect(
+		t,
+		state.taa.prev_models[state.taa.prev_model_count - 1] != model_before,
+		"the pop did not change the model",
+	)
+	testing.expect_value(t, state.taa.reset_count, before)
+}

@@ -42,6 +42,7 @@ Simulation :: struct {
 	objects:        [MAX_PLACED_OBJECTS]Placed_Object,
 	object_count:   int,
 	next_object_id: Object_Id,
+	time:           f32,
 	settings:       Settings,
 }
 
@@ -155,7 +156,7 @@ simulation_step :: proc(sim: ^Simulation, input: Input_Snapshot, time_step: f32)
 		}
 		move_player(sim, time_step)
 	}
-	b3.World_Step(sim.world_id, time_step, SIMULATION_SUB_STEPS)
+	simulation_step_world(sim, time_step)
 
 	probe = probe_ground(sim)
 	sim.player.grounded = is_grounded(sim, probe)
@@ -206,11 +207,13 @@ simulation_snapshot :: proc(sim: ^Simulation) -> Render_Snapshot {
 }
 
 // The debug mode keeps the placed objects alive while the player is not
-// simulated.
+// simulated. Time advances here only, so a caller that keeps the player still
+// and a caller that moves it share one clock.
 simulation_step_world :: proc(sim: ^Simulation, time_step: f32) {
 	if !b3.World_IsValid(sim.world_id) || time_step <= 0.0 {
 		return
 	}
+	sim.time += time_step
 	b3.World_Step(sim.world_id, time_step, SIMULATION_SUB_STEPS)
 }
 

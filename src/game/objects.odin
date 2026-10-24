@@ -18,6 +18,7 @@ Placed_Object :: struct {
 	body:       b3.BodyId,
 	color:      [4]f32,
 	spawn_time: f32,
+	settled:    bool,
 }
 
 Object_Spawn :: struct {
@@ -54,7 +55,18 @@ simulation_object_body :: proc(sim: ^Simulation, id: Object_Id) -> b3.BodyId {
 
 simulation_object_box :: proc(sim: ^Simulation, id: Object_Id) -> geometry.Box {
 	object, ok := simulation_object_find(sim, id)
-	if !ok || !b3.Body_IsValid(object.body) {
+	if !ok {
+		return {}
+	}
+	return object_box(object)
+}
+
+// The pop is visual only. The body keeps its full size, so the editor and the
+// harness state use this box while the renderer and the outline use
+// simulation_object_visual_box.
+@(private)
+object_box :: proc(object: Placed_Object) -> geometry.Box {
+	if !b3.Body_IsValid(object.body) {
 		return {}
 	}
 	rotation := b3.Body_GetRotation(object.body)
@@ -68,7 +80,7 @@ simulation_object_box :: proc(sim: ^Simulation, id: Object_Id) -> geometry.Box {
 }
 
 simulation_create_object :: proc(sim: ^Simulation, spawn: Object_Spawn) -> Object_Id {
-	return create_object(sim, spawn, prefab(spawn.prefab).color)
+	return create_object(sim, spawn, prefab(spawn.prefab).color, false)
 }
 
 simulation_remove_object :: proc(sim: ^Simulation, id: Object_Id) -> bool {
@@ -197,6 +209,7 @@ simulation_reset_objects :: proc(sim: ^Simulation) {
 				yaw = 0.0,
 			},
 			colors[index],
+			true,
 		)
 	}
 }
@@ -207,7 +220,12 @@ simulation_reset_scene :: proc(sim: ^Simulation) {
 }
 
 @(private)
-create_object :: proc(sim: ^Simulation, spawn: Object_Spawn, color: [4]f32) -> Object_Id {
+create_object :: proc(
+	sim: ^Simulation,
+	spawn: Object_Spawn,
+	color: [4]f32,
+	settled: bool,
+) -> Object_Id {
 	if sim.object_count >= MAX_PLACED_OBJECTS {
 		return INVALID_OBJECT_ID
 	}
@@ -231,9 +249,8 @@ create_object :: proc(sim: ^Simulation, spawn: Object_Spawn, color: [4]f32) -> O
 		body_mode = spawn.body_mode,
 		body = body,
 		color = color,
-		// The spawn clock lands with the pop animation; until then every object
-		// reports a settled spawn time.
-		spawn_time = 0.0,
+		spawn_time = sim.time,
+		settled = settled,
 	}
 	sim.object_count += 1
 	sim.next_object_id += 1

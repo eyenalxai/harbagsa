@@ -41,9 +41,25 @@ placed_objects_render_after_the_arena :: proc(t: ^testing.T) {
 	arena_count := len(game.arena_static_boxes())
 	testing.expect(t, len(scene.boxes) > arena_count, "placed object was not added")
 	box := scene.boxes[len(scene.boxes) - 1]
-	testing.expect_value(t, box.half_extents, game.prefab(.Platform).half_extents)
+	visual := game.simulation_object_visual_box(&sim, id)
+	testing.expect_value(t, box.half_extents, visual.half_extents)
 	testing.expect_value(t, box.color, game.prefab(.Platform).color)
-	testing.expect_value(t, box.center, game.simulation_object_box(&sim, id).center)
+	testing.expect_value(t, box.center, visual.center)
+	testing.expect(
+		t,
+		box.half_extents.y < game.prefab(.Platform).half_extents.y,
+		"a fresh object did not pop",
+	)
+}
+
+@(test)
+settled_objects_render_at_full_size :: proc(t: ^testing.T) {
+	sim, debug, hud, scratch := create_state(t)
+	defer game.simulation_destroy(&sim)
+	scene := frame.build(&sim, &debug, {}, nil, &hud, &scratch)
+	arena_count := len(game.arena_static_boxes())
+	box := scene.boxes[arena_count]
+	testing.expect_value(t, box.half_extents, game.prefab(.Crate).half_extents)
 }
 
 @(test)

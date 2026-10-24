@@ -204,10 +204,8 @@ state_build :: proc(
 			body      = game.body_mode_name(object.body_mode),
 			position  = vec_state(box.center),
 			rotation  = quat_state(box.rotation),
-			// The pop animation lands in a later ticket; until then every object
-			// reports its settled shape and spawn age.
-			scale     = 1.0,
-			spawn_age = 0.0,
+			scale     = game.simulation_object_scale(sim, object.id),
+			spawn_age = game.simulation_object_spawn_age(sim, object.id),
 		}
 	}
 	state.digest = state_digest(state, allocator)
