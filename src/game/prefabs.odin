@@ -43,6 +43,7 @@ INITIAL_CRATE_COLORS :: [INITIAL_CRATE_COUNT][4]f32 {
 
 Prefab :: struct {
 	name:         string,
+	short_name:   string,
 	half_extents: [3]f32,
 	color:        [4]f32,
 	body_mode:    Body_Mode,
@@ -53,6 +54,7 @@ Prefab :: struct {
 PREFABS := [Prefab_Id]Prefab {
 	.Crate = {
 		name = "Crate",
+		short_name = "Crate",
 		half_extents = {0.5, 0.5, 0.5},
 		color = CRATE_GREEN_COLOR,
 		body_mode = .Dynamic,
@@ -60,6 +62,7 @@ PREFABS := [Prefab_Id]Prefab {
 	},
 	.Small_Crate = {
 		name = "Small crate",
+		short_name = "Small",
 		half_extents = {0.25, 0.25, 0.25},
 		color = CRATE_AMBER_COLOR,
 		body_mode = .Dynamic,
@@ -67,6 +70,7 @@ PREFABS := [Prefab_Id]Prefab {
 	},
 	.Wide_Crate = {
 		name = "Wide crate",
+		short_name = "Wide",
 		half_extents = {1.0, 0.5, 0.5},
 		color = CRATE_BLUE_COLOR,
 		body_mode = .Dynamic,
@@ -74,6 +78,7 @@ PREFABS := [Prefab_Id]Prefab {
 	},
 	.Block = {
 		name = "Block",
+		short_name = "Block",
 		half_extents = {1.0, 0.5, 1.0},
 		color = FLOOR_COLOR,
 		body_mode = .Static,
@@ -81,6 +86,7 @@ PREFABS := [Prefab_Id]Prefab {
 	},
 	.Platform = {
 		name = "Platform",
+		short_name = "Platform",
 		half_extents = {2.0, 0.25, 2.0},
 		color = WALKABLE_COLOR,
 		body_mode = .Static,
@@ -88,6 +94,7 @@ PREFABS := [Prefab_Id]Prefab {
 	},
 	.Ramp = {
 		name = "Ramp",
+		short_name = "Ramp",
 		half_extents = {1.0, 0.25, 1.5},
 		color = WALKABLE_COLOR,
 		body_mode = .Static,
@@ -96,6 +103,7 @@ PREFABS := [Prefab_Id]Prefab {
 	},
 	.Pillar = {
 		name = "Pillar",
+		short_name = "Pillar",
 		half_extents = {0.25, 1.5, 0.25},
 		color = FLOOR_COLOR,
 		body_mode = .Static,
@@ -103,6 +111,7 @@ PREFABS := [Prefab_Id]Prefab {
 	},
 	.Wall = {
 		name = "Wall",
+		short_name = "Wall",
 		half_extents = {2.0, 1.5, 0.25},
 		color = WALL_COLOR,
 		body_mode = .Static,
