@@ -106,11 +106,12 @@ run :: proc() -> bool {
 		}
 
 		handle_settings_menu_events(
+			&state,
 			&window,
 			&hud.menu,
 			&sim.settings,
+			debug.active,
 			&events,
-			menu_slider_for_window(&state, &window),
 			&accumulator,
 			&menu_recapture,
 			&latches,

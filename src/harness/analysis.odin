@@ -29,6 +29,16 @@ Analysis_Period :: struct {
 	correlation: f32   `json:"correlation"`,
 }
 
+// A band is a run of identical 8-bit values along a column. A gradient that is
+// continuous before the resolve bands after it, and this metric names the run
+// the eye sees.
+Analysis_Bands :: struct {
+	longest_run: int `json:"longest_run"`,
+	median_run:  int `json:"median_run"`,
+	levels:      int `json:"levels"`,
+	columns:     int `json:"columns"`,
+}
+
 Analysis_Summary :: struct {
 	pairs:                  int             `json:"pairs"`,
 	worst_mean:             f32             `json:"worst_mean"`,
@@ -36,6 +46,7 @@ Analysis_Summary :: struct {
 	worst_over_16:          int             `json:"worst_over_16"`,
 	worst_over_16_fraction: f32             `json:"worst_over_16_fraction"`,
 	period:                 Analysis_Period `json:"period"`,
+	bands:                  Analysis_Bands  `json:"bands"`,
 }
 
 analysis_frames :: proc(captures: []Capture_Result, allocator: mem.Allocator) -> []Capture_Result {
@@ -46,6 +57,11 @@ analysis_frames :: proc(captures: []Capture_Result, allocator: mem.Allocator) ->
 capture_matches :: proc(capture: Capture_Result, width, height: u32, by_size: bool) -> bool {
 	if by_size {
 		return capture.width == width && capture.height == height
+	}
+	// A cropped PNG covers a rectangle, not the frame, so it cannot join the
+	// pair or variance series.
+	if _, cropped := capture.crop.?; cropped {
+		return false
 	}
 	return capture.target == "color" && capture.format == "png"
 }
@@ -194,6 +210,16 @@ session_refresh_analysis :: proc(session: ^Session) {
 	comparable := analysis_comparable(window, session.allocator)
 	defer delete(comparable, session.allocator)
 	session.analysis = analysis_summary(comparable)
+	if len(comparable) > 0 {
+		image, width, height, image_ok := analysis_load_png(
+			comparable[len(comparable) - 1].path,
+			session.allocator,
+		)
+		if image_ok {
+			session.analysis.bands = analysis_bands(image, width, height)
+			delete(image, session.allocator)
+		}
+	}
 	session.has_analysis = true
 }
 

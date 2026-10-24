@@ -31,11 +31,15 @@ session_queue_capture :: proc(
 	}
 	alpha := command.has_alpha ? command.alpha : session.alpha
 	request := Capture_Request {
-		name    = name,
-		alpha   = alpha,
-		target  = command.target,
-		format  = command.format,
-		enabled = true,
+		name      = name,
+		alpha     = alpha,
+		target    = command.target,
+		format    = command.format,
+		enabled   = true,
+		region    = command.region,
+		profile   = command.profile,
+		crop      = command.crop,
+		histogram = command.histogram,
 	}
 	if frame == session.frame {
 		return true, session_draw(session, request)
@@ -43,11 +47,15 @@ session_queue_capture :: proc(
 	append(
 		&session.pending,
 		Pending_Capture {
-			name   = strings.clone(name, session.allocator),
-			frame  = frame,
-			alpha  = alpha,
-			target = command.target,
-			format = command.format,
+			name      = strings.clone(name, session.allocator),
+			frame     = frame,
+			alpha     = alpha,
+			target    = command.target,
+			format    = command.format,
+			region    = command.region,
+			profile   = command.profile,
+			crop      = command.crop,
+			histogram = command.histogram,
 		},
 	)
 	return false, ""

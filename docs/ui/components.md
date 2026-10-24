@@ -179,8 +179,10 @@ all of `row_label_style`, `row_value_style`, `row_gap`, `row_height`, and
 `rows_emit_row` in the same change. Add it to the `rows_measure` switch too when
 it has no label or value to measure. A kind that only part of that set knows
 about draws at the wrong height or draws nothing. A kind that draws a control
-also needs its emitter: the `Slider` adds `rows_emit_slider` and publishes its
-travel rect for the pointer.
+also needs its emitter: the `Slider` adds `rows_emit_slider` in
+`src/renderer/hud_slider.odin` and publishes its travel rect for the pointer.
+`menu_slider_rect` measures the same rect before the first draw, so a press on
+the opening frame starts a drag.
 
 ## Slider row
 

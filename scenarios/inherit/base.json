@@ -1,0 +1,10 @@
+{
+  "size": "320x180",
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "sun", "elevation": "${elevation}"},
+    {"cmd": "camera", "position": [0, 1.7, 0], "yaw": 0, "pitch": 0},
+    {"cmd": "settle", "frames": 4},
+    {"cmd": "capture", "name": "${name}"}
+  ]
+}

@@ -135,12 +135,13 @@ open.
 The summary row holds frames per second, the frame interval, the CPU frame
 time, the p95 interval, the spike count, and the GPU total with the costliest
 pass. The pass row holds the last completed frame's GPU pass times: the TLAS
-build, the depth prepass, the lit scene pass, the TAA resolve, and the overlay
-pass. The sky runs inside the scene pass.
+build, the depth prepass, the lit scene pass, the sky pass, the TAA resolve, and
+the overlay pass.
 
 The GPU numbers belong to the last completed frame, so they are two frames
 behind the frame being recorded. A device without timestamp support shows the
-CPU numbers only. The overlay adds six timestamp writes per frame.
+CPU numbers only. The overlay adds seven timestamp writes per frame. Both sky
+timestamps are written even when the sky is off, so the pass reads near zero.
 
 ## Agent harness
 
@@ -189,7 +190,13 @@ Exit codes:
 Options:
 
 - `--out DIR`: replace this run directory atomically. Default: `runs/<stem>`.
-- `--size WxH`: capture size. Default: `1280x720`.
+- `--tag NAME`: append NAME to the run directory, so `runs/smoke/before` and
+  `runs/smoke/after` coexist. The report records the final directory.
+- `--size WxH`: capture size. Default: `1280x720`. A scenario `size` and
+  `--size` together are an error.
+- `--renderer-debug KEY=VALUE`: apply a gated renderer override before the
+  commands. Repeat the flag for more fields. It needs the same gate as the
+  command.
 - `--no-render`: run the simulation and checks only. No Vulkan device is created.
 - `--present`: render the real SDL window and capture the swapchain image
   before present. No compositor and no `grim`.
@@ -199,6 +206,13 @@ Options:
 - `--verbose` (or `--summary`): write the setup revision and dirty flag, every
   capture, every check result, every failure, and every named perf result to
   standard error. Standard output stays one JSON line.
+
+`run -` reads the scenario from standard input. It leaves no throwaway file
+behind:
+
+```sh
+printf '%s\n' '{"cmd":"step","frames":2}' | ./bin/harbagsa-agent run -
+```
 
 The harness view starts with the HUD off, the debug draw off, and the capture
 hint off. Only a `capture` command writes a PNG. A scenario with no capture and
@@ -223,19 +237,33 @@ no perf run never creates a Vulkan device unless `--present` asks for the window
 }
 ```
 
+A scenario may declare `"size": "1280x720"` to pin its pixels. It may extend
+another scenario with `"extends": "base.json"`, which merges the base object and
+lets the child win. A `parameters` block substitutes `${name}` in any command
+value; a parameter must be a string, number, or boolean. The base path resolves
+against the extending file.
+
 The `commands` array runs verbatim, and `record` writes this form. Only a
 `capture` command writes a PNG; a scenario without one renders nothing unless
 `--present` asks for the window. `step` advances one fixed
 `SIMULATION_STEP` per frame. `look` applies once. `input` persists until the
 next `input`; `jump` is an edge on the next step.
 
-Check operators are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. Check fields use
-the `state.json` shape, for example `player.position.y`, `player.grounded`,
+Check operators are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. A check compares
+with `value`, or with another field with `other`:
+`{"cmd":"check","field":"capture.1.stats.mean.y","op":"gt","other":"capture.0.stats.mean.y"}`.
+A type mismatch or a missing field is a check error. `capture.N.*` names one
+capture in the window; `capture.first` and `capture.last` are aliases.
+
+Check fields use the `state.json` shape, for example `player.position.y`, `player.grounded`,
 `crates.0.position.z`, `crates.count`, `settings.window_mode`,
 `settings.resolution`, `menu.open`, `debug.active`, `sun.elevation`,
-`sun.angular_diameter`, `renderer.taa_enabled`, or `render_digest`. A capture
-check can also read `capture.target`, `capture.format`, and `capture.stats.*`
-for the last capture in its window. Add `"window": {"start": 2, "count": 8}` to
+`sun.angular_diameter`, `camera.fov`, `camera.overridden`, `settle.converged`,
+`menu.status`, `menu.blocked`, `rows.menu.3.kind`, `renderer.taa_enabled`,
+`renderer.text_truncated_runs`, or `render_digest`. A capture check can also read
+`capture.target`, `capture.format`, `capture.stats.*`, `capture.region.*`,
+`capture.profile.*`, `capture.crop.*`, `capture.histogram.*`, and
+`capture.render_digest` for the last capture in its window. Add `"window": {"start": 2, "count": 8}` to
 aggregate over part of the captures; `warmup` stays the shorthand for skipping
 the first N.
 
@@ -243,7 +271,10 @@ A run with captures writes `analysis.json`. It holds per-pair deltas, a
 summary, the dominant period, the worst unstable pixels' series, and optional
 diff and variance maps. The pair and pixel analysis uses color captures; a run
 with only intermediate captures writes an empty summary. Checks read `analysis.period.frames`,
-`analysis.period.correlation`, and the `analysis.worst_*` fields. Disable it with
+`analysis.period.correlation`, `analysis.bands.longest_run`,
+`analysis.bands.median_run`, `analysis.bands.levels`, and the `analysis.worst_*`
+fields. `analysis.bands` measures the identical-luma runs down the columns, so a
+gradient that bands after the 8-bit write shows up as a long run. Disable it with
 `"analysis": false` or `--no-analysis`; select a window and maps with
 `"analysis": {"start": 2, "count": 8, "maps": true}`.
 
@@ -263,31 +294,43 @@ The batch runner and the live session share one command set:
 - `{"cmd": "settle", "frames": 520}`: fixed steps that render every frame but
   write no PNG. Use it to advance the temporal history before a capture. A
   settle is an error while the menu is open. Under `--no-render`, or in a
-  scenario with no captures, it is a plain step.
-- `{"cmd": "state"}`: player, eye, velocity, yaw, pitch, grounded, crates,
-  window and input settings, debug mode, sun, menu, renderer state, render
-  digest, frame, and simulation digest. The sun object reports azimuth,
+  scenario with no captures, it is a plain step. `{"cmd":"settle","until":"converged"}`
+  waits for the 512-sample cap and reports the frames and the result in
+  `settle.frames` and `settle.converged`.
+- `{"cmd": "state"}`: player, eye, velocity, yaw, pitch, grounded, camera,
+  crates, window and input settings, debug mode, sun, menu, rows, settle,
+  renderer state, render digest, frame, and simulation digest. The sun object reports azimuth,
   elevation, and angular diameter in degrees. The renderer object reports the
   frame count, TAA state, jitter index, history validity, convergence frames,
   history read index and weight, reset count and reason, shadow phase, the
-  applied atlas weight, and the debug override values. `render_digest` covers
-  the effective camera, the sun direction and angular diameter, boxes, jitter,
-  shadow phase, applied atlas weight, the sky and AO flags, and view flags.
+  applied atlas weight, text truncations and dropped fonts, and the debug
+  override values. `camera` reports the effective position, yaw, pitch, fov,
+  and whether an override is active. `rows` dumps the HUD and menu rows.
+  `render_digest` covers the target extent, the effective camera, the sun
+  direction and angular diameter, boxes, jitter, shadow phase, applied atlas
+  weight, the sky and AO flags, and view flags.
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`: write a PNG.
   `frame` is optional. A past frame is an error; a future frame queues. Add
   `"target": "velocity"`, `"history"`, `"depth"`, or `"scene_color"` to read an
-  intermediate image, and `"format": "float"`, `"raw"`, or `"stats"` to choose
-  the output. The default is a color PNG.
+  intermediate image, and `"format": "float"`, `"raw"`, `"stats"`, or
+  `"profile"` to choose the output. The default is a color PNG. A stats capture
+  accepts `"region": {"x","y","w","h"}` or `"rect": [x,y,w,h]` and an optional
+  `"histogram": 8`. A color capture accepts `"crop": {"x","y","w","h","scale"}`
+  to write a scaled PNG, and a `"profile"` block to measure an edge. Region,
+  profile, and crop do not change the capture extent; the crop reports
+  `written_width` and `written_height`.
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw": 0, "pitch": 0}`: inspection
-  camera. It does not move the player. `{"cmd": "camera", "clear": true}` drops
-  the override.
+  camera. It does not move the player. It accepts `look_at` instead of
+  `yaw`/`pitch`, and `fov` in degrees (1..170). `look_at` with yaw/pitch is an
+  error. `{"cmd": "camera", "clear": true}` drops the override.
 - `{"cmd": "view", "hud": true, "debug": false, "hint": false, "perf": false}`:
   toggle the HUD, the debug draw, the capture hint, and the perf overlay.
 - `{"cmd": "sun", "azimuth": 52.1, "elevation": 15, "diameter": 0.53}`: move the
   sun or resize its disk. `azimuth` is degrees from `+z` toward `+x`, `elevation`
   is degrees above the horizon, and `diameter` is the angle the sun disk
-  subtends in degrees. Omitted fields keep the value. A change resets TAA
-  history, like a scene change.
+  subtends in degrees. Omitted fields keep the value. `{"cmd":"sun","clear":true}`
+  restores the default direction and diameter. A change resets TAA history, like
+  a scene change.
 - `{"cmd": "crates", "clear": true}`: edit the dynamic crates. `reset` restores
   the starting three, `clear` removes every crate, `add` creates one crate or a
   row-major grid, and `remove` drops one by index. A grid add steps `columns`
@@ -305,7 +348,13 @@ The batch runner and the live session share one command set:
   100..900. Omitted fields keep the state. An open menu renders even when `hud`
   is off.
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`:
-  evaluate a predicate now.
+  evaluate a predicate now. Use `other` to compare two fields.
+- `{"cmd": "displays", "set": [{"name": "Solo", "desktop": "1280x720", "modes": ["1280x720"]}]}`:
+  script the display list; `{"cmd":"displays","clear":true}` restores the
+  fallback list. A display may have zero modes, which blocks the menu's
+  Resolution row.
+- `{"cmd": "rows"}`: reply with the HUD and menu rows: kind, label, value,
+  blocked, ratio, and ticks.
 - `{"cmd": "perf", "frames": 120, "warmup": 60, "prime": 2.0, "name": "default", "trace": "trace.jsonl"}`:
   measure frames. `frames` defaults to 120, `warmup` to 60, and `prime` to 2.0
   seconds (`0` disables the time loop). `name` labels the result; `report.json`
@@ -326,9 +375,10 @@ The batch runner and the live session share one command set:
 Unknown keys, wrong types, and out-of-range values are per-command errors. The
 session stays usable.
 
-The harness has no compositor, so it uses a fixed two-display list. `Display 1`
-is 1920x1080 with 1600x900 and 1280x720 below it. `Display 2` is 2560x1440 with
-1920x1080 and 1280x720 below it. `settings.resolution` is the effective size:
+The harness has no compositor, so it starts with a fixed two-display list.
+`Display 1` is 1920x1080 with 1600x900 and 1280x720 below it. `Display 2` is
+2560x1440 with 1920x1080 and 1280x720 below it. The `displays` command replaces
+the list for a scenario. `settings.resolution` is the effective size:
 the display's desktop mode in Borderless, the stored size in Windowed.
 `settings.window_resolution` is always the stored Windowed size.
 
@@ -365,7 +415,9 @@ session never creates a Vulkan device.
 
 A `perf` command steps the simulation and draws one frame per measurement. The
 reply and `report.json` carry the interval distribution, `p50`/`p95`/`mean` for
-every CPU phase and GPU pass, and the prime frame count. `prime` (seconds,
+every CPU phase and GPU pass, and the prime frame count. The GPU passes are the
+TLAS build, the depth prepass, the lit scene, the sky, the TAA resolve, and the
+overlay. The sky has its own timestamps. `prime` (seconds,
 default 2.0) warms the device clock before the measured window. `name` labels
 the result and `report.json` keeps every named result in a `perf` array. Add
 `"trace": "trace.jsonl"` to write one JSON object per measured frame under the
@@ -384,7 +436,15 @@ them at the same size to compare two builds. `scenarios/perf-crates.json` adds
 60 crates in a grid and measures them.
 
 To compare two builds, use
-[the benchmark recipe](docs/agents/harness.md#benchmark-two-builds).
+[the benchmark recipe](docs/agents/harness.md#benchmark-two-builds) or the
+wrapper:
+
+```sh
+./bin/harbagsa-agent ab --base origin/main --scenario scenarios/perf.json --out runs/ab
+```
+
+The wrapper translates `--base` to the `tools/ab.sh` `--ref` flag and passes the
+rest through. It writes the same `summary.json` and `summary.md`.
 
 ### Movement checks
 
@@ -401,6 +461,14 @@ of sliding along the riser. The scenario needs no renderer:
 ```sh
 make build
 ./bin/harbagsa-agent run scenarios/smoke.json
+```
+
+The one-command form prints the capture paths:
+
+```sh
+make shot SCENARIO=scenarios/ui.json
+make ui
+make smoke
 ```
 
 Read `runs/smoke/report.json` and use the absolute paths in `screenshots`. The

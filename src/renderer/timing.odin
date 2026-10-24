@@ -11,7 +11,8 @@ Timing_Boundary :: enum u32 {
 	Start,
 	After_Tlas,
 	After_Depth,
-	After_Scene,
+	After_Lit,
+	After_Sky,
 	After_Taa,
 	After_Overlay,
 }
@@ -128,12 +129,18 @@ read_timing :: proc(r: ^Renderer) {
 	)
 	times.passes[.Scene] = ticks_duration(
 		values[Timing_Boundary.After_Depth],
-		values[Timing_Boundary.After_Scene],
+		values[Timing_Boundary.After_Lit],
+		period,
+		mask,
+	)
+	times.passes[.Sky] = ticks_duration(
+		values[Timing_Boundary.After_Lit],
+		values[Timing_Boundary.After_Sky],
 		period,
 		mask,
 	)
 	times.passes[.Taa] = ticks_duration(
-		values[Timing_Boundary.After_Scene],
+		values[Timing_Boundary.After_Sky],
 		values[Timing_Boundary.After_Taa],
 		period,
 		mask,

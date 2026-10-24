@@ -76,16 +76,18 @@ gpu_stats_aggregate_available_samples :: proc(t: ^testing.T) {
 	with_gpu.gpu.passes[.Tlas] = 1 * time.Millisecond
 	with_gpu.gpu.passes[.Depth] = 1 * time.Millisecond
 	with_gpu.gpu.passes[.Scene] = 4 * time.Millisecond
+	with_gpu.gpu.passes[.Sky] = 1 * time.Millisecond
 	with_gpu.gpu.passes[.Taa] = 2 * time.Millisecond
 	with_gpu.gpu.passes[.Overlay] = 1 * time.Millisecond
-	with_gpu.gpu.total = 9 * time.Millisecond
+	with_gpu.gpu.total = 10 * time.Millisecond
 
 	samples := [2]perf.Sample{with_gpu, make_sample(16, 1, 1, 1, 1, 1)}
 	stats := perf.stats_from_samples(samples[:])
 	testing.expect(t, stats.gpu.available, "GPU stats are missing")
 	expect_near(t, stats.gpu.passes[.Depth].mean, 1, "depth mean")
 	expect_near(t, stats.gpu.passes[.Scene].mean, 4, "scene mean")
-	expect_near(t, stats.gpu.total.mean, 9, "gpu total")
+	expect_near(t, stats.gpu.passes[.Sky].mean, 1, "sky mean")
+	expect_near(t, stats.gpu.total.mean, 10, "gpu total")
 	testing.expect_value(t, stats.gpu.top, perf.Pass.Scene)
 }
 
@@ -99,7 +101,8 @@ gpu_fields_appear_in_the_overlay_text :: proc(t: ^testing.T) {
 	summary.gpu.available = true
 	summary.gpu.passes[.Depth] = perf.Distribution{mean = 0.30}
 	summary.gpu.passes[.Scene] = perf.Distribution{mean = 2.70}
-	summary.gpu.total = perf.Distribution{mean = 3.10}
+	summary.gpu.passes[.Sky] = perf.Distribution{mean = 0.20}
+	summary.gpu.total = perf.Distribution{mean = 3.30}
 	summary.gpu.top = .Scene
 
 	buffer: [96]u8
@@ -110,7 +113,9 @@ gpu_fields_appear_in_the_overlay_text :: proc(t: ^testing.T) {
 	pass_line := perf.format_passes(buffer[:], summary)
 	testing.expect(t, strings.contains(pass_line, "depth"), "pass line has no depth entry")
 	testing.expect(t, strings.contains(pass_line, "scene"), "pass line has no scene entry")
+	testing.expect(t, strings.contains(pass_line, "sky"), "pass line has no sky entry")
 	testing.expect(t, len(pass_line) < len(buffer), "pass line did not fit")
+	testing.expect_value(t, perf.pass_name(.Sky), "sky")
 	testing.expect_value(t, perf.format_passes(buffer[:], perf.Stats{}), "gpu --")
 }
 
