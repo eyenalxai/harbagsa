@@ -5,7 +5,6 @@ layout(set = 0, binding = 0) uniform Camera {
     vec4 light_direction;
     vec4 ambient;
     vec4 screen;
-    mat4 light_view_projection;
+    vec4 sun;
     vec4 jitter;
-    vec4 shadow_params;
 } camera;
