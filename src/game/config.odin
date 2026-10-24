@@ -109,6 +109,8 @@ MAX_COLLISION_PLANES :: 16
 MOVE_ITERATIONS :: 5
 MOVE_TOLERANCE :: 0.01
 
+MENU_STATUS_SECONDS :: 2.0
+
 Stance_Info :: struct {
 	height:       f32,
 	eye:          f32,
