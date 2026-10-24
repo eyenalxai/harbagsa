@@ -44,11 +44,11 @@ session_renderer_debug :: proc(session: ^Session, command: Renderer_Debug_Comman
 			debug.shadow_phase = session.renderer_report.shadow_phase
 		}
 	}
-	if command.has_sky {
-		debug.sky = command.sky
+	if command.has_light_shadows {
+		debug.light_shadows = command.light_shadows
 	}
-	if command.has_ao {
-		debug.ao = command.ao
+	if command.has_synthetic_lights {
+		debug.synthetic_lights = command.synthetic_lights
 	}
 	session.backend.set_debug(session.backend.ctx, debug)
 	session_refresh_renderer(session)

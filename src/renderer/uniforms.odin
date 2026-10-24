@@ -8,8 +8,8 @@ MAX_SCENE_BOXES :: 256
 // The uniform block mirrors camera.glsl. Mat4 is column-major, so the
 // matrices upload directly. screen carries the gamma flag in .x, the render
 // extent in .y and .z, and the TAA sample phase in .w. sun.x is the tangent
-// of the sun angular radius and sun.y is the camera far plane, so the sky
-// pass writes the same depth as the velocity clear.
+// of the sun angular radius, sun.y the point light count, and sun.z the
+// point-light shadow flag.
 Camera_Uniform :: struct {
 	view:                 Mat4,
 	projection:           Mat4,
@@ -24,6 +24,7 @@ Camera_Uniform :: struct {
 	lighting:             [4]f32,
 }
 
+// color.rgb is the box colour and color.a the emissive strength.
 Object_Data :: struct {
 	model:      Mat4,
 	prev_model: Mat4,
@@ -51,9 +52,10 @@ TAA_Params :: struct {
 CAMERA_BINDING :: 0
 OBJECT_BINDING :: 1
 ACCELERATION_BINDING :: 2
+LIGHT_BINDING :: 3
 
 create_scene_resources :: proc(r: ^Renderer) -> bool {
-	bindings := [3]vk.DescriptorSetLayoutBinding {
+	bindings := [4]vk.DescriptorSetLayoutBinding {
 		{
 			binding = CAMERA_BINDING,
 			descriptorType = .UNIFORM_BUFFER,
@@ -72,6 +74,12 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 			descriptorCount = 1,
 			stageFlags = {.FRAGMENT},
 		},
+		{
+			binding = LIGHT_BINDING,
+			descriptorType = .STORAGE_BUFFER,
+			descriptorCount = 1,
+			stageFlags = {.FRAGMENT},
+		},
 	}
 	layout_info := vk.DescriptorSetLayoutCreateInfo {
 		sType = .DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -87,7 +95,7 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 
 	pool_sizes := [3]vk.DescriptorPoolSize {
 		{type = .UNIFORM_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT},
-		{type = .STORAGE_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT},
+		{type = .STORAGE_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT * 2},
 		{type = .ACCELERATION_STRUCTURE_KHR, descriptorCount = MAX_FRAMES_IN_FLIGHT},
 	}
 	pool_info := vk.DescriptorPoolCreateInfo {
@@ -136,8 +144,18 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 		) {
 			return false
 		}
+		if !create_mapped_buffer(
+			r,
+			vk.DeviceSize(MAX_POINT_LIGHTS * size_of(Light)),
+			{.STORAGE_BUFFER},
+			&r.scene.light_buffers[i],
+			&r.scene.light_memory[i],
+			&r.scene.light_mapped[i],
+		) {
+			return false
+		}
 
-		buffer_infos := [2]vk.DescriptorBufferInfo {
+		buffer_infos := [3]vk.DescriptorBufferInfo {
 			{
 				buffer = r.scene.camera_buffers[i],
 				offset = 0,
@@ -148,8 +166,13 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 				offset = 0,
 				range = vk.DeviceSize(MAX_SCENE_BOXES * size_of(Object_Data)),
 			},
+			{
+				buffer = r.scene.light_buffers[i],
+				offset = 0,
+				range = vk.DeviceSize(MAX_POINT_LIGHTS * size_of(Light)),
+			},
 		}
-		writes := [2]vk.WriteDescriptorSet {
+		writes := [3]vk.WriteDescriptorSet {
 			{
 				sType = .WRITE_DESCRIPTOR_SET,
 				dstSet = r.scene.descriptor_sets[i],
@@ -165,6 +188,14 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 				descriptorCount = 1,
 				descriptorType = .STORAGE_BUFFER,
 				pBufferInfo = &buffer_infos[1],
+			},
+			{
+				sType = .WRITE_DESCRIPTOR_SET,
+				dstSet = r.scene.descriptor_sets[i],
+				dstBinding = LIGHT_BINDING,
+				descriptorCount = 1,
+				descriptorType = .STORAGE_BUFFER,
+				pBufferInfo = &buffer_infos[2],
 			},
 		}
 		vk.UpdateDescriptorSets(r.device, u32(len(writes)), &writes[0], 0, nil)

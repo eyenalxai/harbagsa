@@ -85,7 +85,7 @@ record_acceleration :: proc(
 	for box, index in boxes {
 		instance: vk.AccelerationStructureInstanceKHR
 		instance.transform = acceleration_transform(box_model_matrix(box))
-		instance.mask = 0xFF
+		instance.mask = box_instance_mask(box)
 		instance.accelerationStructureReference = u64(r.acceleration.blas_address)
 		instances[index] = instance
 	}

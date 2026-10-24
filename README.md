@@ -286,11 +286,11 @@ The batch runner and the live session share one command set:
   mode, position, rotation, scale, and spawn age. The debug entry carries
   `active`, `selection`, `selected_id`, the palette (`open`, `selected`,
   `body`), and the placement (`armed`, `prefab`, `position`, `height`, `yaw`,
-  `snap`). The renderer object
-  reports the frame count, TAA state, jitter index, history validity,
-  convergence frames, history read index and weight, reset count and reason, and
-  shadow phase. `render_digest` covers the effective camera, sun, boxes, jitter,
-  shadow phase, and view flags.
+  `snap`). The renderer object reports the frame count, TAA state, jitter index,
+  history validity, convergence frames, history read index and weight, reset
+  count and reason, shadow phase, and the active light count. `render_digest`
+  covers the effective camera, sun, boxes, point lights, emissive strengths,
+  jitter, shadow phase, and view flags.
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`: write a PNG.
   `frame` is optional. A past frame is an error; a future frame queues. Add
   `"target": "velocity"`, `"history"`, `"depth"`, or `"scene_color"` to read an
@@ -449,6 +449,13 @@ of sliding along the riser. The scenario needs no renderer:
 ./bin/harbagsa-agent run scenarios/step-angle.json --no-render
 ```
 
+`scenarios/perf-lamps.json` injects eight synthetic point lights through the
+renderer debug override, then measures the same view with point-light shadows on
+and off. It writes `trace-shadows-on.jsonl` and `trace-shadows-off.jsonl` in one
+run, so the shadow cost is a paired comparison. Only a build with
+`ENABLE_RENDERER_DEBUG` or a run with `--debug-renderer` accepts it. The result
+is in [the point light evidence](docs/evidence/perf-lamps.md).
+
 ### Screenshot workflow
 
 ```sh
@@ -521,11 +528,12 @@ screen motion in texels. `"format": "float"` writes a `.f32` file and `"raw"`
 writes the exact texel bytes. A PNG capture is color only.
 `scenarios/capture-targets.json` covers every target.
 
-`renderer_debug` changes renderer inputs for a diagnosis: TAA, jitter, history
-weight, clamp, depth trust, the shadow phase, the sky, and the ambient
-occlusion. Every build rejects it unless `--debug-renderer` is passed or the
-build used the `ENABLE_RENDERER_DEBUG` define. Changing an input resets history
-and records the `debug_override` reason.
+`renderer_debug` changes TAA inputs and point-light inputs for a diagnosis: TAA,
+jitter, history weight, clamp, depth trust, the shadow phase, the point-light
+shadow switch, and the synthetic light count. Every build rejects it unless
+`--debug-renderer` is passed or the build used the `ENABLE_RENDERER_DEBUG`
+define. Changing an input resets history and records the `debug_override`
+reason.
 `scenarios/renderer-debug.json` covers the overrides, and
 `scenarios/renderer-debug-converge.json` shows the image converging with jitter
 off. `scenarios/renderer-debug-jitter.json` freezes the phase, lets jitter
