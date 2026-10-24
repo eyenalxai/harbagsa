@@ -34,7 +34,7 @@ MENU_ITEM_NAMES := [MENU_ITEM_COUNT]string {
 	"Resume",
 }
 
-// One row per menu item, in item order, so the harness `select` index and the
+// One row per menu item, in item order, so the harness item name and the
 // drawn row index stay independent of where the dividers sit.
 MENU_ITEM_ROWS := [MENU_ITEM_COUNT]int{0, 1, 2, 3, 4, 5, 6, MENU_ROW_RESUME}
 
@@ -102,6 +102,15 @@ menu_select :: proc(menu: ^Menu_State, index: int) {
 
 menu_selected_name :: proc(menu: ^Menu_State) -> string {
 	return MENU_ITEM_NAMES[menu.selected]
+}
+
+menu_item_from_name :: proc(name: string) -> (Menu_Item, bool) {
+	for index in 0 ..< MENU_ITEM_COUNT {
+		if MENU_ITEM_NAMES[index] == name {
+			return Menu_Item(index), true
+		}
+	}
+	return .Window_Mode, false
 }
 
 menu_change_setting :: proc(

@@ -107,7 +107,7 @@ session_record_stop :: proc(session: ^Session) -> (path: string, error: string) 
 
 session_replay :: proc(session: ^Session, path: string) -> (Replay_Summary, string) {
 	if session.recording {
-		return {}, "stop recording before replay"
+		return {}, format_error("%s", "stop recording before replay")
 	}
 	scenario, load_error := scenario_load(path, session.allocator)
 	if load_error != "" {
@@ -124,10 +124,10 @@ session_replay :: proc(session: ^Session, path: string) -> (Replay_Summary, stri
 		#partial switch command.kind {
 		case .Replay:
 			summary.ok = false
-			return summary, "nested replay is not supported"
+			return summary, format_error("%s", "nested replay is not supported")
 		case .Record:
 			summary.ok = false
-			return summary, "record is not allowed in a replay"
+			return summary, format_error("%s", "record is not allowed in a replay")
 		case .Quit:
 			return summary, ""
 		}

@@ -1,11 +1,15 @@
 {
   "view": {"hud": false, "debug": false, "hint": false},
-  "steps": [
-    {"frames": 90, "forward": 1},
-    {"frames": 1, "jump": true},
-    {"frames": 30, "forward": 1}
+  "commands": [
+    {"cmd": "capture", "name": "frame_0000", "frame": 0},
+    {"cmd": "capture", "name": "frame_0090", "frame": 90},
+    {"cmd": "capture", "name": "frame_0121", "frame": 121},
+    {"cmd": "input", "forward": 1},
+    {"cmd": "step", "frames": 90},
+    {"cmd": "input", "jump": true},
+    {"cmd": "step", "frames": 1},
+    {"cmd": "step", "frames": 30}
   ],
-  "capture": [0, 90, 121],
   "checks": [
     {"field": "crates.0.position.z", "op": "lt", "value": 7.5}
   ]

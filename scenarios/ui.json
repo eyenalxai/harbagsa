@@ -1,9 +1,9 @@
 {
   "commands": [
     {"cmd": "step", "frames": 5},
-    {"cmd": "menu", "open": true, "select": 2},
+    {"cmd": "menu", "open": true, "item": "Resolution"},
     {"cmd": "capture", "name": "menu-number"},
-    {"cmd": "menu", "select": 7},
+    {"cmd": "menu", "item": "Resume"},
     {"cmd": "capture", "name": "menu-action"},
     {"cmd": "menu", "open": false}
   ],

@@ -1,0 +1,10 @@
+{
+  "commands": [
+    {"cmd": "crates", "clear": true},
+    {"cmd": "crates", "add": {"origin": [0, 0.5, 6], "count": 60, "columns": 10, "spacing": [1.0, 0.0, 1.0]}},
+    {"cmd": "perf", "frames": 120, "warmup": 60, "prime": 1.0, "name": "crates"}
+  ],
+  "checks": [
+    {"field": "crates.count", "op": "eq", "value": 60}
+  ]
+}

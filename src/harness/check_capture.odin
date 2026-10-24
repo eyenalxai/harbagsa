@@ -25,7 +25,7 @@ capture_field :: proc(capture: Capture_Summary, path: string) -> (Check_Value, s
 	if strings.has_prefix(path, "stats.") {
 		stats, has_stats := capture.last_stats.?
 		if !has_stats {
-			return {}, "the last capture has no statistics"
+			return {}, format_error("%s", "the last capture has no statistics")
 		}
 		return capture_stats_field(stats, path[len("stats."):])
 	}
@@ -37,7 +37,7 @@ capture_stats_field :: proc(stats: Capture_Stats, path: string) -> (Check_Value,
 	if path == "velocity_median_texels" {
 		median, has_median := stats.velocity_median_texels.?
 		if !has_median {
-			return {}, "the last capture has no velocity median"
+			return {}, format_error("%s", "the last capture has no velocity median")
 		}
 		return {kind = .Number, number = f64(median)}, ""
 	}

@@ -18,7 +18,7 @@ parse_sun :: proc(object: json.Object) -> (Command, string) {
 	if value, has := json_get(object, "azimuth"); has {
 		azimuth, ok := json_number(value)
 		if !ok {
-			return {}, "'azimuth' must be a number"
+			return {}, format_error("%s", "'azimuth' must be a number")
 		}
 		command.sun.azimuth = f32(azimuth)
 		command.sun.has_azimuth = true
@@ -26,7 +26,7 @@ parse_sun :: proc(object: json.Object) -> (Command, string) {
 	if value, has := json_get(object, "elevation"); has {
 		elevation, ok := json_number(value)
 		if !ok || elevation < -90 || elevation > 90 {
-			return {}, "'elevation' must be a number in [-90, 90]"
+			return {}, format_error("%s", "'elevation' must be a number in [-90, 90]")
 		}
 		command.sun.elevation = f32(elevation)
 		command.sun.has_elevation = true
@@ -41,7 +41,7 @@ parse_sun :: proc(object: json.Object) -> (Command, string) {
 		command.sun.has_diameter = true
 	}
 	if !command.sun.has_azimuth && !command.sun.has_elevation && !command.sun.has_diameter {
-		return {}, "sun needs 'azimuth', 'elevation' or 'diameter'"
+		return {}, format_error("%s", "sun needs 'azimuth', 'elevation' or 'diameter'")
 	}
 	return command, ""
 }

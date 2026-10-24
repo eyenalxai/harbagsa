@@ -26,6 +26,7 @@ Phase :: enum u8 {
 
 Pass :: enum u8 {
 	Tlas,
+	Depth,
 	Scene,
 	Taa,
 	Overlay,
