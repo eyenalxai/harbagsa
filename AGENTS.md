@@ -32,6 +32,12 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 
 External API and language references: see `docs/agents/references.md`.
 
+### UI
+
+The 2D layer has its own guide: `docs/ui/`. Read `docs/ui/README.md` before
+drawing anything in the overlay, then the topic file for the job: type, colour,
+spacing, or components.
+
 ### Automation
 
 Use `bin/harbagsa-agent` to drive the simulation, run checks, and take
