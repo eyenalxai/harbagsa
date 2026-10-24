@@ -14,9 +14,6 @@ HUD_Frame :: struct {
 	menu:         ui.Menu,
 }
 
-HUD_CROSSHAIR_ARM :: 10.0
-HUD_CROSSHAIR_GAP :: 4.0
-
 hud_emit_textured_quad :: proc(
 	o: ^Overlay,
 	a, b, c, d: [2]f32,
@@ -59,7 +56,7 @@ hud_emit_frame :: proc(o: ^Overlay, x, y, width, height, thickness: f32, color: 
 }
 
 hud_crosshair_reach :: proc(theme: UI_Theme) -> f32 {
-	return (HUD_CROSSHAIR_GAP + HUD_CROSSHAIR_ARM) * theme.density + theme.hairline
+	return theme.crosshair_gap + theme.crosshair_arm + theme.hairline
 }
 
 build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
@@ -126,8 +123,8 @@ build_capture_hint :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
 @(private)
 build_crosshair :: proc(o: ^Overlay, center_x, center_y: f32) {
 	theme := o.theme
-	arm := hud_snap(HUD_CROSSHAIR_ARM * theme.density)
-	gap := hud_snap(HUD_CROSSHAIR_GAP * theme.density)
+	arm := hud_snap(theme.crosshair_arm)
+	gap := hud_snap(theme.crosshair_gap)
 	thickness := theme.hairline
 
 	// The crosshair is emitted last so it stays on top of the panels. Its edges
