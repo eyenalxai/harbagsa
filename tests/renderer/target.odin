@@ -198,25 +198,12 @@ render_offscreen_sequence :: proc() -> (
 	ok: bool,
 	attempted: bool,
 ) {
-	headless: platform.Headless
-	if !platform.headless_init(&headless, TEST_WIDTH, TEST_HEIGHT) {
+	device: Test_Device
+	if !open_test_device(&device) {
 		return nil, 0, false, false
 	}
-	defer platform.headless_deinit(&headless)
-
-	state, init_error := renderer.init(
-		renderer.Config {
-			platform = platform.headless_platform(&headless),
-			target = .Offscreen,
-			width = TEST_WIDTH,
-			height = TEST_HEIGHT,
-		},
-		context.allocator,
-	)
-	if init_error != .None {
-		return nil, 0, false, false
-	}
-	defer renderer.deinit(&state)
+	defer close_test_device(&device)
+	state := &device.state
 
 	sim := game.simulation_create()
 	if !game.simulation_is_valid(&sim) {
@@ -228,18 +215,18 @@ render_offscreen_sequence :: proc() -> (
 	scratch: frame.Scratch
 	scene := frame.build(&sim, &debug, {alpha = 1.0, captured = true}, nil, &hud, &scratch)
 	for _ in 0 ..< 12 {
-		if frame.draw(&state, scene) != .Ok {
+		if frame.draw(state, scene) != .Ok {
 			return nil, 0, false, true
 		}
 	}
-	if frame.draw(&state, scene, {target = .Color, enabled = true}) != .Ok {
+	if frame.draw(state, scene, {target = .Color, enabled = true}) != .Ok {
 		return nil, 0, false, true
 	}
-	data, _, _, _, read_ok := renderer.read_capture_target(&state, .Color)
+	data, _, _, _, read_ok := renderer.read_capture_target(state, .Color)
 	if !read_ok {
 		return nil, 0, false, true
 	}
-	value, has_digest := renderer.last_render_digest(&state)
+	value, has_digest := renderer.last_render_digest(state)
 	pixels = make([]u8, len(data), context.allocator)
 	copy(pixels, data)
 	return pixels, has_digest ? value.value : 0, true, true

@@ -1,0 +1,53 @@
+# Gated renderer debug overrides
+
+The harness can change six TAA inputs: TAA on or off, jitter, history weight,
+clamp, depth trust, and the shadow phase. The command is diagnostic. A build
+with `ENABLE_RENDERER_DEBUG=true`, or a run with `--debug-renderer`, accepts it.
+Every other build rejects it with an error that names both gates.
+
+## Why
+
+The TAA investigation changed one input at a time and compared the result. Each
+change meant a source edit and a rebuild, or a shader patch. A gated command
+turns the causal matrix into a scenario, which is repeatable and recorded.
+
+The overrides must not become a product feature. A player must not be able to
+turn off the clamp or freeze the sun phase in a shipped build, and a release
+must not carry a reachable code path that does. A compile-time define keeps the
+surface out of a release; the runtime flag lets the debug harness binary use it
+without a second build.
+
+## Decisions
+
+- `TAA_Debug` holds the override values. `active` is false by default, so the
+  renderer ignores every field until the command sets it.
+- A first command copies the current effective state into the struct, so an
+  omitted field keeps its value.
+- A change to a TAA input resets the history with reason `debug_override`. The
+  shadow phase is not a TAA input: it changes the next frame's sun samples, not
+  the accumulated history.
+- `clear` restores the defaults and turns TAA on. A scenario can therefore end
+  in the product configuration regardless of the path it took.
+- The resolve takes the overrides as push constants. A fixed weight replaces
+  `count / (count + 1)`; a flag skips the clamp; a flag forces the depth trust.
+- The renderer report carries the override struct, so a scenario asserts the
+  inputs as well as the image.
+
+## Considered Options
+
+- **Source edits per probe**: exact, but slow and not repeatable. A scenario is
+  the unit the investigation needs.
+- **Only a build define**: no runtime cost, but every probe needs a rebuild.
+- **Only a runtime flag**: simple, but a release build would carry a reachable
+  path that changes TAA behavior.
+- **A separate debug renderer binary**: two renderers to keep in step. A gate on
+  one renderer is smaller.
+
+## Consequences
+
+- The default `make build` agent rejects the command. Use `--debug-renderer`
+  or add `-define:ENABLE_RENDERER_DEBUG=true`.
+- The shader has three more push constants. A push constant update is already
+  one call per resolve.
+- The clear path resets the history. A scenario that uses the command and then
+  measures pixels must account for the reset.

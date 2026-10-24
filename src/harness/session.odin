@@ -57,6 +57,8 @@ Session :: struct {
 	trace_samples:   [dynamic]perf_pkg.Sample,
 	trace_path:      string,
 	has_trace:       bool,
+
+	debug_renderer: bool,
 }
 
 session_create :: proc(allocator: mem.Allocator) -> (Session, string) {

@@ -58,18 +58,30 @@ Menu_State :: struct {
 	item:     string `json:"item"`,
 }
 
+Renderer_Debug_State :: struct {
+	active:              bool   `json:"active"`,
+	taa:                 bool   `json:"taa"`,
+	jitter:              bool   `json:"jitter"`,
+	history_weight:      f32    `json:"history_weight"`,
+	clamp:               bool   `json:"clamp"`,
+	depth_trust:         bool   `json:"depth_trust"`,
+	shadow_phase_frozen: bool   `json:"shadow_phase_frozen"`,
+	shadow_phase:        u32    `json:"shadow_phase"`,
+}
+
 Renderer_State :: struct {
-	active:             bool   `json:"active"`,
-	frame_count:        u32    `json:"frame_count"`,
-	taa_enabled:        bool   `json:"taa_enabled"`,
-	jitter_index:       int    `json:"jitter_index"`,
-	history_valid:      bool   `json:"history_valid"`,
-	convergence_frames: int    `json:"convergence_frames"`,
-	history_read:       int    `json:"history_read"`,
-	history_weight:     f32    `json:"history_weight"`,
-	reset_count:        int    `json:"reset_count"`,
-	last_reset:         string `json:"last_reset"`,
-	shadow_phase:       u32    `json:"shadow_phase"`,
+	active:             bool                 `json:"active"`,
+	frame_count:        u32                  `json:"frame_count"`,
+	taa_enabled:        bool                 `json:"taa_enabled"`,
+	jitter_index:       int                  `json:"jitter_index"`,
+	history_valid:      bool                 `json:"history_valid"`,
+	convergence_frames: int                  `json:"convergence_frames"`,
+	history_read:       int                  `json:"history_read"`,
+	history_weight:     f32                  `json:"history_weight"`,
+	reset_count:        int                  `json:"reset_count"`,
+	last_reset:         string               `json:"last_reset"`,
+	shadow_phase:       u32                  `json:"shadow_phase"`,
+	debug:              Renderer_Debug_State `json:"debug"`,
 }
 
 State :: struct {

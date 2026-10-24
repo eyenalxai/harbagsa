@@ -52,6 +52,18 @@ Renderer_Report :: struct {
 	reset_count:        int,
 	last_reset:         History_Reset_Reason,
 	shadow_phase:       u32,
+	debug:              Debug_Report,
+}
+
+Debug_Report :: struct {
+	active:               bool,
+	taa:                  bool,
+	jitter:               bool,
+	history_weight:       f32,
+	clamp:                bool,
+	depth_trust:          bool,
+	shadow_phase_frozen:  bool,
+	shadow_phase:         u32,
 }
 
 Setup_Report :: struct {
@@ -78,8 +90,20 @@ renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
 		reset_count        = r.taa.reset_count,
 		last_reset         = r.taa.last_reset,
 		shadow_phase       = r.taa.shadow_phase,
+		debug = {
+			active = r.taa.debug.active,
+			taa = r.taa.enabled,
+			jitter = r.taa.debug.active ? r.taa.debug.jitter : r.taa.enabled,
+			history_weight = r.taa.debug.history_weight,
+			clamp = r.taa.debug.active ? r.taa.debug.clamp : true,
+			depth_trust = r.taa.debug.active && r.taa.debug.force_depth_trust,
+			shadow_phase_frozen = r.taa.debug.active && r.taa.debug.freeze_shadow_phase,
+			shadow_phase = r.taa.debug.shadow_phase,
+		},
 	}
-	if r.taa.enabled && r.taa.history_valid && r.taa.convergence_frames > 0 {
+	if r.taa.debug.active && r.taa.debug.history_weight >= 0 {
+		report.history_weight = r.taa.debug.history_weight
+	} else if r.taa.enabled && r.taa.history_valid && r.taa.convergence_frames > 0 {
 		count := f32(r.taa.convergence_frames)
 		report.history_weight = count / (count + 1)
 	}
