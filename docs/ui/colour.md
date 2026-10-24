@@ -13,9 +13,10 @@ persistent cache. A component never sees a hex value and never converts one.
 
 ## The palette
 
-The six neutral tokens share one OKLCH hue. The table records lightness,
-chroma, and hue for every token, so a future change can move one channel and
-leave the others. Hue is undefined when chroma is zero.
+The six neutral tokens are authored at OKLCH hue 253. The 8-bit hex rounds each
+token, so the measured hues span 7.8 degrees. The table records the measured
+value for every token, so a future change can move one channel and leave the
+others. Hue is undefined when chroma is zero.
 
 | Token | sRGB | Alpha | L | C | H | Role |
 | --- | --- | --- | --- | --- | --- | --- |
