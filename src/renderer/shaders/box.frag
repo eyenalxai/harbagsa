@@ -97,9 +97,16 @@ void main() {
     if (previous_clip.w > 0.0) {
         previous_uv = (previous_clip.xy / previous_clip.w) * 0.5 + 0.5;
     }
-    vec2 pixel_uv = gl_FragCoord.xy / camera.screen.yz;
+    // The vertex shader jitters the clip position. The velocity target needs
+    // unjittered screen motion, so project the current world point with the
+    // unjittered current view-projection.
+    vec2 current_uv = vec2(2.0);
+    vec4 current_clip = camera.projection * camera.view * world_position;
+    if (current_clip.w > 0.0) {
+        current_uv = (current_clip.xy / current_clip.w) * 0.5 + 0.5;
+    }
     float view_depth = -(camera.view * world_position).z;
 
     out_color = vec4(color, 1.0);
-    out_velocity = vec4(previous_uv - pixel_uv, view_depth, 0.0);
+    out_velocity = vec4(previous_uv - current_uv, view_depth, 0.0);
 }
