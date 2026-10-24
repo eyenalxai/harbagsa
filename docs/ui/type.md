@@ -1,7 +1,7 @@
 # Type
 
 Five roles, two faces, one axis. The faces are Roboto Condensed and Roboto Mono,
-both variable, subset to ASCII plus `·` and `×`. Each face is one file; the
+both variable, subset to ASCII plus `·`, `×`, and `…`. Each face is one file; the
 weight is a coordinate, not a separate asset. Both are SIL OFL 1.1;
 `src/renderer/fonts/PROVENANCE.md` records how they were cut.
 
@@ -30,9 +30,9 @@ The base weight defaults to 400 and is stored as a whole unit in
 | Detail | `type_caption` | 14 | 1.45 | base | 0 |
 | Section header | `type_caption_caps` | 14 | 1.45 | base + 100 | +0.06 em |
 
-The strong offset clamps at 900. At base 900 the title and labels match the
-body; size and colour still separate the roles. Mono uses `min(base, 700)`, so
-above 700 the numbers stop gaining weight.
+The strong offset clamps at 900. At base 900 the title and labels reach the
+body's weight; size and colour still separate the roles. Mono uses
+`min(base, 700)`, so above 700 the numbers stop gaining weight.
 
 Never add a size outside this table. If a surface needs one, add a token, a
 rationale, and a line here.
@@ -50,17 +50,18 @@ mark the named instances. The value is the number only, right-aligned.
 - Left and Right step by 10 and clamp to 100..900.
 - A press on the track starts a drag. The cursor x maps onto the track, and the
   value follows it to the whole unit.
-- The menu content width freezes when the menu opens, with 5 % headroom for the
-  axis, so the track cannot move under the cursor.
-- The weight applies to the menu and the HUD together. The atlas rebuilds on a
-  worker; the number and knob update immediately and the glyphs follow on the
-  next swap.
+- The menu content width freezes when the menu opens, at 5 % above its opening
+  value. The frozen value is a floor, not a cap; for this axis the headroom
+  covers the growth, so the track does not move under the cursor.
+- The weight applies to the menu and the HUD together. The first atlas builds
+  synchronously at startup; later weight changes repack on a worker. The number
+  and knob update immediately and the glyphs follow on the next swap.
 
 ## The atlas
 
 The atlas holds one layer per `(face, weight, pixel size)` pair the theme can
 draw. Seven are in use at the default base weight; at base 900 the strong layers
-merge with the body and the count drops:
+merge with the body and the count drops to five:
 
 - title 21 at base + 100
 - body 15 at base
@@ -90,7 +91,9 @@ resamples the coverage across two texels and blurs the whole line.
 
 Leading is unitless in the source and baked into `line_height` in pixels. Display
 sizes tighten, body sizes relax: 1.25 at 21 px, 1.5 at 15 px, 1.45 at 14 px.
-Tracking appears only on capitals, and only positive. Body text gets none.
+Tracking appears on two roles only: the title tightens by `-0.01 em`, and the
+section header opens by `+0.06 em`. The section header is the only role in
+capitals. Body text gets none.
 
 The baseline sits at
 `(line_height - (ascent - descent)) / 2 + ascent` from the top of the line box, so
