@@ -32,6 +32,10 @@ UI_LEADING_CAPTION :: 1.45
 UI_TRACKING_TITLE :: -0.01
 UI_TRACKING_CAPS :: 0.06
 
+UI_CROSSHAIR_ARM :: 10.0
+UI_CROSSHAIR_GAP :: 4.0
+UI_MENU_MIN_WIDTH :: 200.0
+
 Text_Type :: struct {
 	size:        f32,
 	line_height: f32,
@@ -54,6 +58,9 @@ UI_Theme :: struct {
 	density: f32,
 	hairline: f32,
 	spacing: UI_Spacing,
+	crosshair_arm: f32,
+	crosshair_gap: f32,
+	menu_min_width: f32,
 
 	type_title:        Text_Type,
 	type_body:         Text_Type,
@@ -82,6 +89,10 @@ ui_theme_init :: proc(render_height: u32) -> UI_Theme {
 	// One device pixel, never a fraction of one: a half-pixel hairline resolves
 	// to a two-pixel grey smear on a non-integer density.
 	theme.hairline = max(1.0, math.round(density))
+
+	theme.crosshair_arm = UI_CROSSHAIR_ARM * density
+	theme.crosshair_gap = UI_CROSSHAIR_GAP * density
+	theme.menu_min_width = UI_MENU_MIN_WIDTH * density
 
 	theme.spacing = {
 		xxs = 2.0 * density,
