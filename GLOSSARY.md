@@ -390,6 +390,28 @@ The type and spacing scale factor, `clamp(render height / 720, 1, 2)`. A 720p
 target gets 1, a 1080p target 1.5, a 1440p target 2.
 _Avoid_: DPI scale, zoom
 
+**OKLCH**:
+A perceptual colour space with lightness, chroma, and hue. The neutral tokens
+are authored in it so one hue can be held across the ramp.
+_Avoid_: HSL, HSV
+
+**Neutral ramp**:
+The six cool ink and surface tokens: `text_primary`, `text_secondary`,
+`text_tertiary`, `surface_hud`, `surface_menu`, and `surface_raised`. They
+share one OKLCH hue.
+_Avoid_: Grey scale, grey ramp
+
+**WCAG 2**:
+The W3C contrast standard for text and non-text elements. The 2D layer uses its
+4.5:1 body-text floor as the gate.
+_Avoid_: Contrast score
+
+**APCA**:
+The perceptual contrast algorithm built for WCAG 3. It reports Lc and accounts
+for font size and weight. The project records its scores as a reference, not a
+gate.
+_Avoid_: Contrast ratio
+
 **Type scale**:
 The five type roles the overlay uses: title, body, label, detail, and section
 header. Each role fixes an em size, leading, and tracking, and derives its weight
