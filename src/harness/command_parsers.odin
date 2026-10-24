@@ -175,14 +175,6 @@ parse_check :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 	if !parsed_op {
 		return {}, format_error("unknown check op %q", op_name)
 	}
-	value, value_ok := json_get(object, "value")
-	if !value_ok {
-		return {}, "check needs 'value'"
-	}
-	check_value, value_error := parse_check_value(value, allocator)
-	if value_error != "" {
-		return {}, value_error
-	}
 	warmup := 0
 	if warmup_value, has := json_get(object, "warmup"); has {
 		parsed, parsed_ok := json_integer(warmup_value)
@@ -197,6 +189,14 @@ parse_check :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 	}
 	if window.has && warmup != 0 {
 		return {}, "a check cannot use both 'warmup' and 'window'"
+	}
+	value, value_ok := json_get(object, "value")
+	if !value_ok {
+		return {}, "check needs 'value'"
+	}
+	check_value, value_error := parse_check_value(value, allocator)
+	if value_error != "" {
+		return {}, value_error
 	}
 	return {
 		kind = .Check,

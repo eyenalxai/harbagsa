@@ -51,18 +51,18 @@ renderer_state_reaches_the_state_and_checks :: proc(t: ^testing.T) {
 		op    = .Eq,
 		value = {kind = .Number, number = 900},
 	}
-	result := harness.check_evaluate(command, state, {}, nil, context.allocator)
-	defer harness.check_result_destroy(&result, context.allocator)
-	testing.expect(t, result.ok, "applied atlas weight check did not pass")
+	weight_result := harness.check_evaluate(command, state, {}, nil, context.allocator)
+	defer harness.check_result_destroy(&weight_result, context.allocator)
+	testing.expect(t, weight_result.ok, "applied atlas weight check did not pass")
 
 	command = harness.Check_Command {
 		field = "renderer.convergence_frames",
 		op    = .Ge,
 		value = {kind = .Number, number = 8},
 	}
-	result = harness.check_evaluate(command, state, {}, nil, context.allocator)
-	defer harness.check_result_destroy(&result, context.allocator)
-	testing.expect(t, result.ok, "renderer check did not pass")
+	convergence_result := harness.check_evaluate(command, state, {}, nil, context.allocator)
+	defer harness.check_result_destroy(&convergence_result, context.allocator)
+	testing.expect(t, convergence_result.ok, "renderer check did not pass")
 
 	missing := harness.Check_Command {
 		field = "renderer.speed",

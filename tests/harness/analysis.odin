@@ -100,9 +100,6 @@ check_window_parses_and_rejects_bad_ranges :: proc(t: ^testing.T) {
 	for line in bad {
 		_, line_error := harness.command_parse_string(line, context.allocator)
 		testing.expectf(t, line_error != "", "bad window was accepted: %s", line)
-		if line_error != "" {
-			delete(line_error, context.allocator)
-		}
 	}
 }
 

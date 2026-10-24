@@ -57,9 +57,6 @@ capture_rejects_bad_target_and_format_pairs :: proc(t: ^testing.T) {
 	for pair in pairs {
 		_, error := harness.command_parse_string(pair, context.allocator)
 		testing.expectf(t, error != "", "invalid capture was accepted: %s", pair)
-		if error != "" {
-			delete(error, context.allocator)
-		}
 	}
 }
 

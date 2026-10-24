@@ -43,14 +43,14 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 	if value, has := json_get(object, "clear"); has {
 		clear, ok := json_boolean(value)
 		if !ok {
-			return {}, "'clear' must be a boolean"
+			return {}, format_error("%s", "'clear' must be a boolean")
 		}
 		command.clear = clear
 	}
 	if value, has := json_get(object, "taa"); has {
 		flag, ok := json_boolean(value)
 		if !ok {
-			return {}, "'taa' must be a boolean"
+			return {}, format_error("%s", "'taa' must be a boolean")
 		}
 		command.taa = flag
 		command.has_taa = true
@@ -58,7 +58,7 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 	if value, has := json_get(object, "jitter"); has {
 		flag, ok := json_boolean(value)
 		if !ok {
-			return {}, "'jitter' must be a boolean"
+			return {}, format_error("%s", "'jitter' must be a boolean")
 		}
 		command.jitter = flag
 		command.has_jitter = true
@@ -66,7 +66,7 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 	if value, has := json_get(object, "history_weight"); has {
 		weight, ok := json_number(value)
 		if !ok || weight < 0 || weight > 1 {
-			return {}, "'history_weight' must be a number in [0, 1]"
+			return {}, format_error("%s", "'history_weight' must be a number in [0, 1]")
 		}
 		command.history_weight = f32(weight)
 		command.has_history_weight = true
@@ -74,7 +74,7 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 	if value, has := json_get(object, "clamp"); has {
 		flag, ok := json_boolean(value)
 		if !ok {
-			return {}, "'clamp' must be a boolean"
+			return {}, format_error("%s", "'clamp' must be a boolean")
 		}
 		command.clamp = flag
 		command.has_clamp = true
@@ -82,7 +82,7 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 	if value, has := json_get(object, "depth_trust"); has {
 		flag, ok := json_boolean(value)
 		if !ok {
-			return {}, "'depth_trust' must be a boolean"
+			return {}, format_error("%s", "'depth_trust' must be a boolean")
 		}
 		command.depth_trust = flag
 		command.has_depth_trust = true
@@ -90,7 +90,7 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 	if value, has := json_get(object, "freeze_shadow_phase"); has {
 		flag, ok := json_boolean(value)
 		if !ok {
-			return {}, "'freeze_shadow_phase' must be a boolean"
+			return {}, format_error("%s", "'freeze_shadow_phase' must be a boolean")
 		}
 		command.freeze_shadow_phase = flag
 		command.has_freeze_shadow_phase = true
@@ -98,7 +98,7 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 	if value, has := json_get(object, "shadow_phase"); has {
 		phase, ok := json_integer(value)
 		if !ok || phase < 0 || phase >= 64 {
-			return {}, "'shadow_phase' must be an integer in [0, 63]"
+			return {}, format_error("%s", "'shadow_phase' must be an integer in [0, 63]")
 		}
 		command.shadow_phase = int(phase)
 		command.has_shadow_phase = true
@@ -111,7 +111,7 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 		   command.has_depth_trust ||
 		   command.has_freeze_shadow_phase ||
 		   command.has_shadow_phase {
-			return {}, "'clear' cannot be combined with overrides"
+			return {}, format_error("%s", "'clear' cannot be combined with overrides")
 		}
 	}
 	return command, ""

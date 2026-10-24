@@ -13,12 +13,15 @@ parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command
 		return {}, format_error("unknown key %q", key)
 	}
 	command := Command{kind = .Capture}
+	capture_name: string
+	has_capture_name := false
 	if value, has := json_get(object, "name"); has {
 		name, ok := json_string(value)
 		if !ok || !valid_capture_name(name) {
 			return {}, "'name' must use only letters, digits, '-' and '_'"
 		}
-		command.capture.name = strings.clone(name, allocator)
+		capture_name = name
+		has_capture_name = true
 	}
 	if value, has := json_get(object, "frame"); has {
 		frame, ok := json_integer(value)
@@ -60,6 +63,9 @@ parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command
 	if (command.capture.format == .Float || command.capture.format == .Raw) &&
 	   command.capture.target == .Color {
 		return {}, "a float or raw capture needs an intermediate target"
+	}
+	if has_capture_name {
+		command.capture.name = strings.clone(capture_name, allocator)
 	}
 	return command, ""
 }

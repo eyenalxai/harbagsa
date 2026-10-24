@@ -50,6 +50,8 @@ parse_perf :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, s
 		}
 		command.perf.prime = prime
 	}
+	perf_name: string
+	has_perf_name := false
 	if value, has := json_get(object, "name"); has {
 		name, ok := json_string(value)
 		if !ok || len(name) > MAX_PERF_NAME || !valid_capture_name(name) {
@@ -58,8 +60,8 @@ parse_perf :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, s
 				MAX_PERF_NAME,
 			)
 		}
-		command.perf.name = strings.clone(name, allocator)
-		command.perf.has_name = true
+		perf_name = name
+		has_perf_name = true
 	}
 	if value, has := json_get(object, "trace"); has {
 		path, ok := json_string(value)
@@ -68,6 +70,10 @@ parse_perf :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, s
 		}
 		command.perf.trace = strings.clone(path, allocator)
 		command.perf.has_trace = true
+	}
+	if has_perf_name {
+		command.perf.name = strings.clone(perf_name, allocator)
+		command.perf.has_name = true
 	}
 	return command, ""
 }
