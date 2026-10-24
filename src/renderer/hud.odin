@@ -48,12 +48,13 @@ hud_emit_rect :: proc(o: ^Overlay, x, y, width, height: f32, color: [4]f32) {
 }
 
 // A translucent surface cannot be given a border by filling a larger rect, so
-// the hairline is drawn as four edges.
+// the hairline is drawn as four edges. The sides span the inner height: a full
+// height side would blend its ends twice at the corners.
 hud_emit_frame :: proc(o: ^Overlay, x, y, width, height, thickness: f32, color: [4]f32) {
 	hud_emit_rect(o, x, y, width, thickness, color)
 	hud_emit_rect(o, x, y + height - thickness, width, thickness, color)
-	hud_emit_rect(o, x, y, thickness, height, color)
-	hud_emit_rect(o, x + width - thickness, y, thickness, height, color)
+	hud_emit_rect(o, x, y + thickness, thickness, height - thickness * 2, color)
+	hud_emit_rect(o, x + width - thickness, y + thickness, thickness, height - thickness * 2, color)
 }
 
 hud_crosshair_reach :: proc(theme: UI_Theme) -> f32 {

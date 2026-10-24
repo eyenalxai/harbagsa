@@ -36,6 +36,12 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 
 External API and language references: see `docs/agents/references.md`.
 
+### Design
+
+The visual direction has its own guide: `docs/design/`. Read
+`docs/design/README.md` before a visual change, then the topic file for the job:
+`world.md`, `motion.md`, or `review.md`.
+
 ### UI
 
 The 2D layer has its own guide: `docs/ui/`. Read `docs/ui/README.md` before

@@ -1,5 +1,8 @@
 # Variable-weight type with FreeType and HarfBuzz
 
+> 0014 until 2026-10-24. The scene-pass ADR claimed 0014 first, so this one
+> moved.
+
 The 2D layer draws Roboto Condensed and Roboto Mono from one variable file per
 face. Weight is a settings value, the atlas is keyed by face, weight, and pixel
 size, and HarfBuzz shapes every string. This replaces the three static Noto

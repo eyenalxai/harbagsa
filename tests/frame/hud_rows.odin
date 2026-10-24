@@ -10,27 +10,62 @@ import "src:renderer"
 import "src:ui"
 
 @(test)
-status_panel_width_survives_a_full_sweep :: proc(t: ^testing.T) {
+status_panel_width_stays_fixed_per_density :: proc(t: ^testing.T) {
 	sim, debug, hud, _ := create_state(t)
 	defer game.simulation_destroy(&sim)
 
-	theme := renderer.ui_theme_init(720)
-	atlas, built := build_atlas(t, theme)
-	testing.expect(t, built, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas)
 	positions := [5][3]f32{{0, 0, 14}, {-19.9, 0.1, -19.9}, {19.9, 0, 0}, {-0.1, 0, 0.1}, {9.9, 9.9, 9.9}}
-	expected := measure_status_panel(t, &sim, &debug, &hud, &atlas, theme, positions[0])
+	stances := [3]game.Stance{.Standing, .Crouching, .Prone}
+	gaits := [2]game.Gait{.Walk, .Sprint}
+	densities := [3]u32{720, 1080, 1440}
 
-	for position in positions[1:] {
-		actual := measure_status_panel(t, &sim, &debug, &hud, &atlas, theme, position)
-		testing.expectf(
+	for density in densities {
+		theme := renderer.ui_theme_init(density)
+		atlas, built := build_atlas(t, theme)
+		testing.expect(t, built, "the atlas did not build")
+		if !built {
+			continue
+		}
+		expected := measure_status_panel(
 			t,
-			actual.width == expected.width,
-			"the panel width moved from %v to %v at %v",
-			expected.width,
-			actual.width,
-			position,
+			&sim,
+			&debug,
+			&hud,
+			&atlas,
+			theme,
+			positions[0],
+			stances[0],
+			gaits[0],
 		)
+		for stance in stances {
+			for gait in gaits {
+				for position in positions {
+					actual := measure_status_panel(
+						t,
+						&sim,
+						&debug,
+						&hud,
+						&atlas,
+						theme,
+						position,
+						stance,
+						gait,
+					)
+					testing.expectf(
+						t,
+						actual.width == expected.width,
+						"the width moved from %v to %v at density %v, %v, %v, %v",
+						expected.width,
+						actual.width,
+						density,
+						stance,
+						gait,
+						position,
+					)
+				}
+			}
+		}
+		renderer.text_atlas_destroy(&atlas)
 	}
 }
 
@@ -151,12 +186,14 @@ measure_status_panel :: proc(
 	atlas: ^renderer.Text_Atlas,
 	theme: renderer.UI_Theme,
 	position: [3]f32,
+	stance: game.Stance,
+	gait: game.Gait,
 ) -> renderer.Rows_Layout {
 	snapshot := game.simulation_snapshot(sim)
 	snapshot.position = position
 	snapshot.velocity = {}
-	snapshot.stance = .Standing
-	snapshot.gait = .Walk
+	snapshot.stance = stance
+	snapshot.gait = gait
 	snapshot.movement_state = .None
 	snapshot.grounded = true
 

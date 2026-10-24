@@ -8,6 +8,7 @@ import "core:testing"
 import "src:display"
 import "src:frame"
 import "src:game"
+import "src:renderer"
 
 @(test)
 menu_maps_to_the_hud :: proc(t: ^testing.T) {
@@ -52,6 +53,34 @@ menu_renders_without_the_hud_flag :: proc(t: ^testing.T) {
 	)
 	testing.expect(t, scene.hud.enabled, "menu needs the HUD overlay")
 	testing.expect(t, scene.hud.menu_open, "menu flag was dropped")
+}
+
+@(test)
+blocked_row_keeps_its_band_and_draws_the_value_secondary :: proc(t: ^testing.T) {
+	sim, _, hud, _ := create_state(t)
+	defer game.simulation_destroy(&sim)
+	hud.menu.displays = display.fallback_list()
+	hud.menu.displays.count = 1
+	game.menu_open(&hud.menu)
+	game.menu_select(&hud.menu, 1)
+	game.menu_view(&hud.menu, sim.settings, false)
+
+	row := hud.menu.view.rows[1]
+	testing.expect(t, row.blocked, "the Display row is not blocked")
+	testing.expect_value(t, hud.menu.view.selected, game.MENU_ITEM_ROWS[1])
+
+	overlay, ok := build_menu_overlay(t, hud.menu.view)
+	testing.expect(t, ok, "the menu did not build")
+	if !ok {
+		return
+	}
+	defer destroy_overlay_scratch(&overlay)
+
+	band := widest_quad(overlay, overlay.theme.surface_raised)
+	testing.expect(t, band.width > 0, "the blocked row lost its selection band")
+	style := renderer.row_value_style(overlay.theme, row)
+	testing.expect_value(t, style.color, overlay.theme.text_secondary)
+	testing.expect(t, style.color != overlay.theme.text_tertiary, "the value uses tertiary")
 }
 
 @(test)

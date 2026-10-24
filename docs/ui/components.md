@@ -1,12 +1,14 @@
 # Components
 
-Four surfaces. Each one exists for a reason; if a new panel is not one of these,
-read [README.md](README.md#adding-a-surface) first.
+Eight sections. Each one exists for a reason; if a new component is not one of
+these, read [README.md](README.md#adding-a-surface) first.
 
 ## Status panel
 
-Use for the player's live state. It is the only persistent overlay. It draws in
-the top-left margin and never moves.
+Use for the player's live state. It is the persistent overlay while the menu is
+closed. `build_hud` returns after building the menu, so the status panel, the
+capture hint, and the crosshair are all hidden while the menu is open. It draws
+in the top-left margin and never moves.
 
 ```odin
 theme := o.theme
@@ -34,7 +36,7 @@ literal that no longer matches the theme.
 ## Capture hint
 
 Use when the cursor is not captured and the player needs one instruction. It is
-transient: it disappears the moment the player clicks.
+transient: it disappears when capture is set.
 
 ```odin
 box_y := height * 0.5 + hud_crosshair_reach(theme) + theme.spacing.md
@@ -70,6 +72,11 @@ hud_emit_rect(o, panel_x, panel_y, panel_width, panel_height, theme.surface_menu
 hud_emit_frame(o, panel_x, panel_y, panel_width, panel_height, theme.hairline, theme.line_hairline)
 ```
 
+The panel pads with `spacing.xl`. Its inner edge runs from `panel_x + padding` to
+`panel_x + panel_width - padding`. Rows start `spacing.sm` inside that edge, so
+the label is inset while the selection band and every divider span the full
+inner width, from `frame_x` to `frame_x + frame_width`.
+
 Incorrect: filling a larger rect behind the panel to fake a border.
 
 ```odin
@@ -77,13 +84,16 @@ hud_emit_rect(o, panel_x - 1, panel_y - 1, panel_width + 2, panel_height + 2, th
 hud_emit_rect(o, panel_x, panel_y, panel_width, panel_height, theme.surface_menu)
 ```
 
-The panel is opaque but the ring is 9% white; the fill shows through and the edge
-turns grey instead of a hairline.
+`surface_menu` is opaque at alpha 1.0, so the panel covers the larger rect and no
+border appears at all. On a translucent surface such as `surface_hud` the fill
+shows through and the edge turns grey instead of a hairline. Both are wrong.
 
 ## Selection band
 
-Use on a `Setting`, `Action`, or `Slider` row only. Two signals together: the row lifts to
-`surface_raised`, and a two-pixel `accent` bar sits on its leading edge.
+Use on a `Setting`, `Action`, or `Slider` row only. Two signals together: the row
+lifts to `surface_raised`, and a `max(2, hairline * 2)` `accent` bar sits on its
+leading edge (2 px at 720p). The label lifts to `text_primary`; the value keeps
+its own style. The band extends `spacing.xxs` above and below the row.
 
 ```odin
 if options.frame_width > 0 && index == options.selected && selectable {
@@ -99,14 +109,16 @@ Incorrect: a bright band behind white text, or a colour change alone.
 hud_emit_rect(o, x, y, width, height, {0.28, 0.45, 0.6, 0.45})
 ```
 
-That composite measures 4.2:1 against white, under the 4.5:1 floor, and it was the
-original bug.
+That composite is the original bug: a bright band behind white text hides the
+surface step and removes the contrast the row needs. The fix is the two-signal
+rule, not a different tint.
 
 ## Legend grid
 
-Use for the control list, and only there. Keys are right-aligned against their
-action so a one-letter key does not float in a column sized by the longest
-shortcut.
+Use for the control list, and only there. The renderer owns the column count:
+`HINT_COLUMNS :: 3`. The `ui.Menu` data carries `hints` but no column field.
+Keys are right-aligned against their action so a one-letter key does not float
+in a column sized by the longest shortcut.
 
 ```odin
 text_emit_aligned(o, cell_x + grid.key_width[column], baseline, keys_style, cell.keys, .Right)
@@ -119,12 +131,14 @@ Incorrect: padding a string with runs of spaces.
 text_emit(o, x, baseline, style, "WASD move    Mouse look    Left click capture")
 ```
 
-A proportional font gives every run of spaces a different width, so nothing lines
-up; the original panel shipped exactly this.
+A space has one advance, so a run of spaces is not random. The old bug was
+padding by character count: a proportional font gives every character its own
+width, so the key and action columns cannot line up. The original panel shipped
+exactly this.
 
 ## Rows
 
-`ui.Row_Kind` is closed. Each kind has one meaning.
+`ui.Row_Kind` is closed. Seven kinds, one meaning each.
 
 | Kind | Reads as | Selectable |
 | --- | --- | --- |
@@ -135,30 +149,38 @@ up; the original panel shipped exactly this.
 | `Slider` | label and number, full-width ticked track below | yes |
 | `Header` | tracked capitals, starts a section | no |
 | `Divider` | one separator line | no |
-| `Spacer` | a gap, for rhythm only | no |
 
-An unlisted kind does not exist. If a surface needs one, extend `Row_Kind` and all
-four of `row_label_style`, `row_value_style`, `row_gap`, and `row_height` in the
-same change. A kind that only two of the four know about draws at the wrong
-height. A kind that draws a control also needs its emitter: the `Slider` adds
-`rows_emit_slider` and publishes its travel rect for the pointer.
+Every row also carries `numeric`, `blocked`, `ratio`, and `ticks`. The `Slider`
+emitter reads `ratio` and `ticks`. `rows_measure` skips `Header` when it measures
+the label column and skips values on `Header` and `Divider` rows.
+
+An unlisted kind does not exist. If a surface needs one, extend `Row_Kind` and
+all of `row_label_style`, `row_value_style`, `row_gap`, `row_height`, and
+`rows_emit_row` in the same change. Add it to the `rows_measure` switch too when
+it has no label or value to measure. A kind that only part of that set knows
+about draws at the wrong height or draws nothing. A kind that draws a control
+also needs its emitter: the `Slider` adds `rows_emit_slider` and publishes its
+travel rect for the pointer.
 
 ## Slider row
 
 Use for one continuous value with named stops. The settings menu uses it for the
 Type weight. At density 1:
 
-- Line one is 22.5 px tall. The label sits at the left in `type_body_strong`,
-  the value right-aligned at the inner edge in `type_body`, numeric.
+- Line one is 22.5 px tall. The label sits at the left in `type_body_strong`.
+  With `value_align = .Right` the value sits at the inner edge in `type_body`,
+  numeric.
 - A 6 px gap, then a 12 px track zone: a 2 px track, nine 1x6 ticks, and an 8x8
   knob. The row is 40.5 px tall.
-- The track spans the panel inner width. The knob travel is `inner_width - knob`;
-  stop `i` centres at `inner_x + knob / 2 + i * travel / 8`. The fill runs from
-  the inner edge to the knob centre.
+- `ratio` is 0..1 and `ticks` is 9. The track spans the panel inner width. The
+  knob travel is `inner_width - knob`; stop `i` centres at
+  `inner_x + knob / 2 + i * travel / 8`. The fill runs from the inner edge to
+  the knob centre.
 - The track uses `line_separator`; the ticks use `text_tertiary`; the fill uses
   `text_secondary`; the knob uses `text_primary`. `accent` stays the selection
   bar.
-- The selection band grows to 44.5 px and still carries the 2 px accent bar.
+- The selection band is 44.5 px at density 1 and carries the same
+  `max(2, hairline * 2)` accent bar.
 
 Incorrect: drawing the fill in `accent`, or sizing the track from the value
 column. The track is the inner width, and a selected row already has the accent
