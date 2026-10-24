@@ -5,6 +5,7 @@ import "core:fmt"
 import "core:mem"
 import "core:strings"
 
+import "src:display"
 import "src:frame"
 import "src:game"
 import "src:renderer"
@@ -73,6 +74,7 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 		alpha = 1.0,
 		debug = game.debug_mode_create(),
 	}
+	session.hud.menu.displays = display.fallback_list()
 	session.sim = game.simulation_create()
 	if !game.simulation_is_valid(&session.sim) {
 		return {}, "simulation init failed"
