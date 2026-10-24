@@ -267,9 +267,10 @@ The batch runner and the live session share one command set:
   digest, frame, and simulation digest. The sun object reports azimuth,
   elevation, and angular diameter in degrees. The renderer object reports the
   frame count, TAA state, jitter index, history validity, convergence frames,
-  history read index and weight, reset count and reason, and shadow phase.
-  `render_digest` covers the effective camera, sun, boxes, jitter, shadow phase,
-  and view flags.
+  history read index and weight, reset count and reason, shadow phase, and the
+  applied atlas weight. `render_digest` covers the effective camera, the sun
+  direction and angular diameter, boxes, jitter, shadow phase, applied atlas
+  weight, and view flags.
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`: write a PNG.
   `frame` is optional. A past frame is an error; a future frame queues. Add
   `"target": "velocity"`, `"history"`, `"depth"`, or `"scene_color"` to read an

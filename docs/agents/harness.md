@@ -36,7 +36,7 @@ serializes Make with `flock`.
 | compare two builds or revisions | **Cross-run diff** |
 | measure frame time | **Performance** |
 | prove a capture-free sequence is deterministic | **Screenshots** and `scenarios/capture-free.json` |
-| understand a design choice | `docs/adr/0009` to `docs/adr/0013` |
+| understand a design choice | `docs/adr/0008` to `docs/adr/0015` |
 
 ## What one run writes
 
@@ -52,7 +52,8 @@ serializes Make with `flock`.
 - `trace.jsonl`: one JSON object per measured frame, when the perf command asks
   for a trace.
 - `state.json`: the final state alone. It holds the player, crates, window and
-  input settings, menu, frame, renderer, render digest, and simulation digest.
+  input settings, debug mode, sun, menu, frame, renderer, render digest, and
+  simulation digest.
 - `frames/<name>.png`, `.f32`, or `.bin`: captures. A color capture is a PNG;
   `float` and `raw` write the intermediate target.
 - Each screenshot entry carries `delta_mean`, `delta_max`, and `delta_over_16`
@@ -608,18 +609,22 @@ frame-rate change.
 
 ## Where the code lives
 
-- `src/harness/`: CLI, scenario compiler, commands, session, runner, socket, PNG.
+- `src/harness/`: CLI, scenario parser, commands, session, runner, socket, PNG.
+- `src/harness/scenario.odin`: the one `commands` scenario form and the analysis config.
 - `src/harness/diff.odin`: the pure pair comparison and the diff report types.
 - `src/harness/diff_captures.odin`: run capture discovery and the frame fallback.
 - `src/harness/diff_cli.odin`: the `diff` command and its table/JSON output.
 - `src/harness/capture.odin`: the capture result, target, format, and file write.
 - `src/harness/capture_stats.odin`: the capture statistics and pixel hash.
 - `src/harness/capture_command.odin`: the capture target/format parser.
-- `src/harness/perf_run.odin`: the perf run and the perf report.
+- `src/harness/perf_run.odin`: the perf run and its prime loop.
+- `src/harness/perf_report.odin`: the perf report types and fill.
 - `src/harness/perf_command.odin`: the perf command parser.
 - `src/harness/session_state.odin`: the session's renderer snapshot.
 - `src/harness/sun_command.odin`: the sun command parser.
 - `src/harness/session_sun.odin`: the sun command's session state.
+- `src/harness/crates_command.odin`: the crates command parser.
+- `src/harness/session_crates.odin`: the crates command's session state.
 - `src/harness/session_debug.odin`: the renderer debug gate and overrides.
 - `src/harness/renderer_debug_command.odin`: the override parser.
 - `src/harness/analysis.odin`: the analysis config, summary, and period.
@@ -629,6 +634,7 @@ frame-rate change.
 - `src/harness/check_analysis.odin`: analysis check fields.
 - `src/harness/report.odin`: the run report and summary types.
 - `src/harness/report_setup.odin`: the run's setup block.
+- `src/harness/build_info.odin`: the injected revision and dirty flag.
 - `src/harness/run_summary.odin`: the `--verbose` run summary.
 - `src/digest/digest.odin`: FNV-1a for the state and render digests.
 - `src/perf/`: the perf sample, ring, statistics, and text formatting.
@@ -646,17 +652,22 @@ frame-rate change.
   TAA, HUD and menu overlay.
 - `src/platform/`: SDL and headless adapters. `display.odin` queries displays and
   applies the window state.
-- `tests/harness/` (including `analysis.odin`, `renderer_debug.odin`,
-  `renderer_state.odin`, and `sun.odin`), `tests/frame/`,
+- `tests/harness/` (including `analysis.odin`, `crates.odin`, `diff.odin`,
+  `menu_digest.odin`, `renderer_debug.odin`, `renderer_state.odin`,
+  `setup.odin`, `sun.odin`, and `verbose.odin`), `tests/frame/`,
   `tests/display/display.odin`, `tests/renderer/` (including `target.odin`,
   `render_digest.odin`, `capture_values.odin`, and `debug.odin`).
 - `scenarios/smoke.json`, `scenarios/taa-static.json`,
-  `scenarios/taa-motion.json`, `scenarios/settings-menu.json`,
-  `scenarios/window-settings.json`, `scenarios/renderer-state.json`,
-  `scenarios/renderer-reset.json`, `scenarios/capture-targets.json`,
-  `scenarios/renderer-debug.json`, `scenarios/renderer-debug-converge.json`,
+  `scenarios/taa-motion.json`, `scenarios/hud.json`, `scenarios/hud-debug.json`,
+  `scenarios/ui.json`, `scenarios/type-weight.json`,
+  `scenarios/settings-menu.json`, `scenarios/window-settings.json`,
+  `scenarios/renderer-state.json`, `scenarios/renderer-reset.json`,
+  `scenarios/capture-targets.json`, `scenarios/renderer-debug.json`,
+  `scenarios/renderer-debug-converge.json`,
   `scenarios/renderer-debug-jitter.json`, `scenarios/capture-free.json`,
-  `scenarios/shadow-angle.json`.
+  `scenarios/shadow-angle.json`, `scenarios/perf.json`,
+  `scenarios/perf-crates.json`, `scenarios/perf-arena.json`,
+  `scenarios/perf-backface.json`, `scenarios/step-angle.json`.
 
 ## Adding a command
 
@@ -665,7 +676,8 @@ Change:
 - `Command_Kind` and `Command` in `src/harness/command.odin`.
 - `command_name` and `command_destroy`.
 - `command_parse` and a parser in `src/harness/command_parsers.odin`, or a new
-  file when the command grows (`src/harness/menu_command.odin` is the example).
+  file when the command grows (`src/harness/menu_command.odin` and
+  `src/harness/crates_command.odin` are the examples).
 - `session_execute` and `session_record_command` in
   `src/harness/session_commands.odin`, with a helper in a `session_*.odin` file
   when the command has its own state.

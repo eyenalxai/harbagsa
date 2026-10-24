@@ -46,6 +46,12 @@ numbers. `F4` shows a summary line and a pass line.
 - A slot reports the frame it measured, which is two frames older than the
   frame being recorded. The overlay and the report describe it as the last
   completed sample.
+- A perf run primes the device for a wall-clock duration before the warmup, so a
+  cold clock and an empty shader cache do not pollute the measured window. The
+  prime frames stay out of the trace and the statistics.
+- A run keeps every named perf result in `report.json`; the session reply keeps
+  the last one. The report carries `p50`, `p95`, and `mean` for every CPU phase
+  and GPU pass, not only a mean.
 - A device with no timestamp support, a failed query pool, or a run with no
   device reports the CPU numbers and marks the GPU fields unavailable. Nothing
   fails.
