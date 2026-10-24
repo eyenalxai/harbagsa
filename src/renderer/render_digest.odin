@@ -18,6 +18,8 @@ View_Flags :: bit_set[View_Flag]
 // with the same digest draw the same scene, so a measurement can assert the
 // inputs before it compares pixels.
 Render_Digest_Input :: struct {
+	width:                u32,
+	height:               u32,
 	camera:               Camera,
 	light_direction:      [3]f32,
 	sun_angular_diameter: f32,
@@ -32,6 +34,10 @@ Render_Digest_Input :: struct {
 
 render_digest :: proc(input: Render_Digest_Input) -> digest.FNV {
 	hash := digest.fnv()
+	// The aspect changes the projection, so two sizes with one camera do not
+	// draw the same image.
+	digest.write_u32(&hash, input.width)
+	digest.write_u32(&hash, input.height)
 	digest.write_f32(&hash, input.camera.position.x)
 	digest.write_f32(&hash, input.camera.position.y)
 	digest.write_f32(&hash, input.camera.position.z)

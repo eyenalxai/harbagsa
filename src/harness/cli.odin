@@ -10,16 +10,26 @@ import "core:strings"
 DEFAULT_WIDTH :: 1280
 DEFAULT_HEIGHT :: 720
 MAX_SIZE :: 16384
+MAX_DEBUG_OVERRIDES :: 8
+
+Debug_Override :: struct {
+	key:   string,
+	value: string,
+}
 
 Common_Options :: struct {
-	out_dir:        string,
-	width:          u32,
-	height:         u32,
-	present:        bool,
-	no_render:      bool,
-	no_analysis:    bool,
-	debug_renderer: bool,
-	verbose:        bool,
+	out_dir:              string,
+	tag:                  string,
+	width:                u32,
+	height:               u32,
+	has_size:             bool,
+	present:              bool,
+	no_render:            bool,
+	no_analysis:          bool,
+	debug_renderer:       bool,
+	verbose:              bool,
+	debug_overrides:      [MAX_DEBUG_OVERRIDES]Debug_Override,
+	debug_override_count: int,
 }
 
 Session_Options :: struct {
@@ -44,6 +54,8 @@ cli_main :: proc() -> int {
 		return cli_session(args[1:])
 	case "diff":
 		return cli_diff(args[1:])
+	case "ab":
+		return cli_ab(args[1:])
 	case "help", "--help", "-h":
 		print_usage()
 		return EXIT_OK
@@ -135,6 +147,38 @@ parse_common_option :: proc(
 		}
 		options.width = width
 		options.height = height
+		options.has_size = true
+		return index + 2, true, ""
+	case "--tag":
+		if index + 1 >= len(args) {
+			return index, true, "--tag needs a name"
+		}
+		if !valid_capture_name(args[index + 1]) {
+			return index, true, "--tag must use only letters, digits, '-' and '_'"
+		}
+		options.tag = args[index + 1]
+		return index + 2, true, ""
+	case "--renderer-debug":
+		if index + 1 >= len(args) {
+			return index, true, "--renderer-debug needs KEY=VALUE"
+		}
+		if options.debug_override_count >= MAX_DEBUG_OVERRIDES {
+			return index, true, "--renderer-debug accepts at most 8 overrides"
+		}
+		override := args[index + 1]
+		separator := strings.index_byte(override, '=')
+		if separator <= 0 || separator + 1 >= len(override) {
+			return index, true, "--renderer-debug needs KEY=VALUE"
+		}
+		key := override[:separator]
+		if !valid_capture_name(key) {
+			return index, true, "--renderer-debug needs a field name like sky"
+		}
+		options.debug_overrides[options.debug_override_count] = {
+			key   = key,
+			value = override[separator + 1:],
+		}
+		options.debug_override_count += 1
 		return index + 2, true, ""
 	case "--present":
 		options.present = true
@@ -180,11 +224,14 @@ cli_error :: proc(message: string) -> int {
 @(private)
 print_usage :: proc() {
 	fmt.eprintln("usage:")
-	fmt.eprintln("  harbagsa-agent run <scenario.json> [--out DIR] [--size WxH] [--present] [--no-render] [--no-analysis] [--debug-renderer] [--verbose]")
-	fmt.eprintln("  harbagsa-agent session [--socket PATH] [--out DIR] [--size WxH] [--present] [--no-render] [--no-analysis] [--debug-renderer]")
+	fmt.eprintln("  harbagsa-agent run <scenario.json|-> [--out DIR] [--tag NAME] [--size WxH] [--present] [--no-render] [--no-analysis] [--debug-renderer] [--renderer-debug KEY=VALUE] [--verbose]")
+	fmt.eprintln("  harbagsa-agent session [--socket PATH] [--out DIR] [--size WxH] [--present] [--no-render] [--no-analysis] [--debug-renderer] [--renderer-debug KEY=VALUE]")
 	fmt.eprintln("  harbagsa-agent diff <run-a> <run-b> [--max-pixels N] [--json]")
+	fmt.eprintln("  harbagsa-agent ab [--base REF] [--scenario PATH] [--size WxH] [--runs N] [--prime SECONDS] [--out DIR]")
 	fmt.eprintln("  harbagsa-agent help | -h | --help")
 	fmt.eprintln("")
+	fmt.eprintln("run - reads the scenario from standard input.")
+	fmt.eprintln("--tag NAME appends NAME to the run directory so two runs coexist.")
 	fmt.eprintln("run --verbose writes captures, checks, failures, setup, and perf to standard error;")
 	fmt.eprintln("standard output stays one JSON line.")
 	fmt.eprintln("perf takes {\"cmd\": \"perf\", \"frames\": N, \"warmup\": M, \"prime\": SECONDS, \"name\": \"label\", \"trace\": \"trace.jsonl\"}.")

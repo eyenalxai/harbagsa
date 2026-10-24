@@ -9,7 +9,7 @@ Run_Options :: struct {
 Report :: struct {
 	ok:          bool             `json:"ok"`,
 	exit_code:   int              `json:"exit_code"`,
-	scenario:    string           `json:"scenario"`,
+	scenario:    Scenario_Source  `json:"scenario"`,
 	run_dir:     string           `json:"run_dir"`,
 	frame:       int              `json:"frame"`,
 	state:       State            `json:"state"`,
