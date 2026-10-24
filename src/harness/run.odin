@@ -12,39 +12,6 @@ EXIT_CHECK :: 1
 EXIT_SCENARIO :: 2
 EXIT_RENDER :: 3
 
-Run_Options :: struct {
-	using common: Common_Options,
-	scenario:     string,
-}
-
-Report :: struct {
-	ok:          bool             `json:"ok"`,
-	exit_code:   int              `json:"exit_code"`,
-	scenario:    string           `json:"scenario"`,
-	run_dir:     string           `json:"run_dir"`,
-	frame:       int              `json:"frame"`,
-	state:       State            `json:"state"`,
-	setup:       Setup_State      `json:"setup"`,
-	screenshots: []Capture_Result `json:"screenshots"`,
-	checks:      []Check_Result   `json:"checks"`,
-	failures:    []string         `json:"failures"`,
-	digest:      string           `json:"digest"`,
-	error:       string           `json:"error,omitempty"`,
-	perf:        Maybe(Perf_Report) `json:"perf,omitempty"`,
-	trace:       string           `json:"trace,omitempty"`,
-}
-
-Run_Summary :: struct {
-	ok:          bool     `json:"ok"`,
-	exit_code:   int      `json:"exit_code"`,
-	run_dir:     string   `json:"run_dir"`,
-	report:      string   `json:"report"`,
-	state:       string   `json:"state"`,
-	screenshots: []string `json:"screenshots"`,
-	digest:      string   `json:"digest"`,
-	error:       string   `json:"error,omitempty"`,
-}
-
 run_batch :: proc(options: Run_Options) -> int {
 	scenario, load_error := scenario_load(options.scenario, context.allocator)
 	if load_error != "" {
@@ -106,6 +73,10 @@ run_batch :: proc(options: Run_Options) -> int {
 		return EXIT_RENDER
 	}
 	session.debug_renderer = options.debug_renderer
+	session.analysis_config = scenario.analysis
+	if options.no_analysis {
+		session.analysis_config.enabled = false
+	}
 	defer session_destroy(&session)
 
 	has_capture := scenario_has_capture(scenario)
@@ -148,6 +119,26 @@ run_batch :: proc(options: Run_Options) -> int {
 			}
 		}
 	}
+	final_frames_dir := join_path({absolute_out, "frames"}, context.allocator)
+	defer delete(final_frames_dir, context.allocator)
+	analysis_path, analysis_error := write_analysis(
+		staging,
+		frames_dir,
+		absolute_out,
+		final_frames_dir,
+		session.captures[:],
+		session.analysis_config,
+		context.allocator,
+	)
+	analysis_failed := false
+	if analysis_error != "" {
+		analysis_failed = true
+		if failure == "" {
+			failure = analysis_error
+		} else {
+			delete(analysis_error, context.allocator)
+		}
+	}
 	state := session_state(&session)
 	defer state_destroy(&state, context.allocator)
 	state_path := join_path({staging, "state.json"}, context.allocator)
@@ -181,11 +172,18 @@ run_batch :: proc(options: Run_Options) -> int {
 	if session.has_trace && !trace_failed {
 		report.trace = perf_trace_path(session.trace_name, absolute_out, context.allocator)
 	}
+	if analysis_path != "" && !analysis_failed {
+		report.analysis = analysis_path
+	}
 	exit_code := EXIT_OK
 	if len(session.failures) > 0 || failure != "" {
 		exit_code = EXIT_CHECK
 	}
-	if backend_error != "" || session.render_failed || state_write_failed || trace_failed {
+	if backend_error != "" ||
+	   session.render_failed ||
+	   state_write_failed ||
+	   trace_failed ||
+	   analysis_failed {
 		exit_code = EXIT_RENDER
 	}
 	report.ok = exit_code == EXIT_OK
@@ -202,6 +200,9 @@ run_batch :: proc(options: Run_Options) -> int {
 	}
 	if report.trace != "" {
 		delete(report.trace, context.allocator)
+	}
+	if analysis_path != "" {
+		delete(analysis_path, context.allocator)
 	}
 
 	summary := build_summary(report, absolute_out)

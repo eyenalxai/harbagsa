@@ -24,8 +24,12 @@ serializes Make with `flock`.
 `runs/<scenario-stem>/`
 
 - `report.json`: `ok`, `exit_code`, `frame`, `state`, `setup`, `screenshots`,
-  `checks`, `failures`, `digest`, `error`, `perf` when a perf run happened, and
-  `trace` when the run wrote a perf trace.
+  `checks`, `failures`, `digest`, `error`, `perf` when a perf run happened,
+  `trace` when the run wrote a perf trace, and `analysis` when the run wrote an
+  analysis report.
+- `analysis.json`: the per-run image analysis. See **Analysis**.
+- `frames/analysis-diff.png` and `frames/analysis-variance.png`: the optional
+  analysis maps.
 - `trace.jsonl`: one JSON object per measured frame, when the perf command asks
   for a trace.
 - `state.json`: the final state alone. It holds the player, crates, window and
@@ -80,8 +84,18 @@ Rules:
   scales with the capture size. Each capture after the first compares its
   pixels with the previous capture. `warmup` skips that many captures before
   the summary, so a scenario can ignore TAA convergence.
+- A check window selects captures instead: `"window": {"start": 2, "count": 8}`.
+  `capture.count` is the window's count and every capture field aggregates only
+  the window. `warmup` and `window` cannot be combined.
+- A scenario-level `analysis` object controls the analysis report. `false`
+  disables it; `{"start": 2, "count": 8, "maps": true}` selects a window and
+  writes the maps. `--no-analysis` disables it for a run.
 - A state check can read `renderer.*` fields and `render_digest`. The field set
   is in **Renderer state**.
+- An analysis check reads `analysis.pairs`, `analysis.worst_mean`,
+  `analysis.worst_max`, `analysis.worst_over_16`,
+  `analysis.worst_over_16_fraction`, `analysis.period.frames`, and
+  `analysis.period.correlation`.
 - `settle` advances the simulation and renders every frame without writing a
   screenshot, so a scenario can reach a steady temporal state before it captures.
 - `scenarios/taa-static.json` and `scenarios/taa-motion.json` use capture checks
@@ -205,8 +219,9 @@ scenario.
 - TAA history affects exact pixels. The first frame matches exactly. Later frames
   match when both runs share the same history. See the README note.
 - `scenarios/taa-static.json` settles for 520 frames, captures 60 steady frames,
-  and checks `capture.worst_mean_delta` and
-  `capture.worst_over_16_fraction`. The settle passes the 512-sample cap.
+  and checks `capture.worst_mean_delta`,
+  `capture.worst_over_16_fraction`, and the analysis period. The settle passes
+  the 512-sample cap.
 - `scenarios/taa-motion.json` settles, moves the camera up the stairs, turns
   around, and holds. It captures the hold frames and checks that the image
   settles after the motion. Run it with `--size 800x600` for the
@@ -257,6 +272,36 @@ A check reads the last capture in its window: `capture.target`,
 
 `scenarios/capture-targets.json` covers a static and a moving velocity capture,
 scene color, history, and depth.
+
+## Analysis
+
+A run with color PNG captures writes `analysis.json` beside `report.json`, and
+`report.json` links it in `analysis`. The analysis is on by default. Disable it
+with `"analysis": false` or `--no-analysis`.
+
+`analysis.json` holds:
+
+- `window`: the capture `start` and `count` the analysis used.
+- `frames`: the frame number of each analyzed capture.
+- `pairs`: one entry per consecutive pair with `mean`, `max`, `over_16`, and
+  `over_16_fraction`.
+- `summary`: the pair count, the worst values, and the dominant period.
+- `worst_pixels`: the eight most unstable pixels with `x`, `y`, their mean
+  channel value, and the per-frame series.
+- `maps`: the diff and variance image paths, when `maps` is on.
+
+The dominant period is the lag with the strongest autocorrelation over the
+per-pair mean series. A periodic series correlates at every multiple of its
+period, so the report keeps the smallest lag within 10% of the strongest and
+gives its correlation. `scenarios/taa-static.json` reports period 8 with the
+jitter cycle.
+
+`"analysis": {"start": 2, "count": 8, "maps": true}` analyzes captures 2
+through 9 and writes `analysis-diff.png` and `analysis-variance.png` beside the
+captures. The diff map is the first-to-last frame difference. The variance map
+is the per-pixel variance over the window, square-rooted and scaled to 0..255.
+
+`scenarios/renderer-debug-jitter.json` writes both maps.
 
 ## Renderer state
 
@@ -380,6 +425,9 @@ ranked causes are in `docs/evidence/perf-baseline.md`.
 - `src/harness/perf_command.odin`: the perf command parser.
 - `src/harness/session_state.odin`: the session's renderer snapshot.
 - `src/harness/session_debug.odin`: the renderer debug gate and overrides.
+- `src/harness/analysis.odin`: the analysis config, summary, and period.
+- `src/harness/analysis_report.odin`: the analysis file.
+- `src/harness/analysis_images.odin`: PNG decode and the analysis maps.
 - `src/harness/report_setup.odin`: the run's setup block.
 - `src/digest/digest.odin`: FNV-1a for the state and render digests.
 - `src/perf/`: the perf sample, ring, statistics, and text formatting.
