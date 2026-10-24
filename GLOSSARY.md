@@ -230,7 +230,8 @@ _Avoid_: Handle, slot
 
 **Object palette**:
 The debug-mode prefab chooser. It holds the open flag, the selected catalog
-index, and the body mode for the next placement.
+index, and the body mode for the next placement. The bottom dock draws twelve
+cells, an isometric preview, and the key hints.
 _Avoid_: Toolbar, inventory
 
 **Placement**:

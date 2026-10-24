@@ -1,7 +1,7 @@
 # Components
 
-Eight sections. Each one exists for a reason; if a new component is not one of
-these, read [README.md](README.md#adding-a-surface) first.
+Five surfaces. Each one exists for a reason; if a new panel is not one of these,
+read [README.md](README.md#adding-a-surface) first.
 
 ## Status panel
 
@@ -98,6 +98,59 @@ hud_emit_rect(o, panel_x, panel_y, panel_width, panel_height, theme.surface_menu
 `surface_menu` is opaque at alpha 1.0, so the panel covers the larger rect and no
 border appears at all. On a translucent surface such as `surface_hud` the fill
 shows through and the edge turns grey instead of a hairline. Both are wrong.
+
+## Object palette
+
+Use for the debug object picker. It is a bottom dock, not a modal: the scene
+stays visible and the crosshair stays clear.
+
+```odin
+layout := palette_layout(theme, width, height, palette.item_count)
+hud_emit_rect(o, layout.panel.x, layout.panel.y, layout.panel.width, layout.panel.height, theme.surface_hud)
+hud_emit_frame(o, layout.panel.x, layout.panel.y, layout.panel.width, layout.panel.height, theme.hairline, theme.line_hairline)
+for item, index in palette.items[:layout.card_count] {
+	build_palette_card(o, layout.cards[index], item, index == palette.selected)
+}
+```
+
+The layout is one function for the draw and the hit test, so a card cannot move
+under the pointer unnoticed. `palette_card_at` takes a normalized pointer and
+returns the card index, or `-1` outside the panel and on an empty slot. The
+panel rectangle is part of the same layout for an outside-click test.
+
+- The grid is 6x2 cards of 72 px at density 1 with `spacing.xs` gaps. A preview
+  pane sits to the right and a footer spans the bottom.
+- The panel is 678 x 226 at density 1, centred, with `spacing.xl` below it. It
+  fits 800x600 with the crosshair clear and clamps its top to `spacing.md` on a
+  shorter target.
+- The grid reserves twelve cells. A cell with a prefab draws a card; the rest
+  draw only the hairline frame. An empty cell has no card and no hit.
+- A card shows the isometric thumbnail, the short name, and the number key. The
+  selected card is `surface_raised` plus a two-pixel `accent` bar on its leading
+  edge. Draw the ring first and the bar second, or the ring dulls the bar.
+- The preview shows a larger isometric box, the full name, the size in
+  `W × H × D m`, the body, the optional light line, and the object count.
+- The footer carries the key hints. The capture hint is suppressed while the
+  palette is open, because the palette is the instruction.
+
+The thumbnail and the preview share a pure projection helper. It rotates the
+box by its base pitch, projects the eight corners, and returns the three faces
+the camera sees: right, front, then top, back to front. The renderer shades the
+three faces and keeps the object colour as content:
+
+```odin
+box := palette_project_box(item.half_extents, item.base_pitch)
+transform := palette_fit_transform(box, thumbnail)
+```
+
+Incorrect: a second 3D pass, a rendered image, or a depth buffer for a card.
+
+```odin
+render_thumbnail_to_texture(item)
+```
+
+The palette is HUD geometry. A second pass costs a target, a barrier, and a
+descriptor for a 72 px square. The box is already three quads.
 
 ## Selection band
 

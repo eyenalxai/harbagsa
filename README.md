@@ -505,6 +505,10 @@ crouch input mode, closes the menu, and checks the saved state.
 captures the ghost on the floor and raised, then places a block and cancels the
 tool. It checks the palette, placement, and object state without a window.
 
+`scenarios/debug-palette.json` opens the object palette in debug mode and
+captures the Platform and Ramp previews. Run it with `--size 800x600` to check
+that the bottom dock still fits and clears the crosshair.
+
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window
 settings.

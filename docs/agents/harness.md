@@ -337,7 +337,10 @@ centre (zero when not armed). The ghost is drawn as debug lines while armed: the
 oriented box, the footprint on the surface, and the height guide.
 
 `scenarios/editor-ghost.json` captures the armed ghost on the floor and raised,
-then places a block at an exact transform.
+then places a block at an exact transform. `scenarios/debug-palette.json` opens
+the palette, captures the Platform preview, selects the Ramp, and captures its
+pitched preview. Run it with `--size 800x600` to check the dock fits the smallest
+supported window.
 
 The harness has no compositor, so the menu uses a fixed two-display list:
 `Display 1` (1920x1080) and `Display 2` (2560x1440). Each lists smaller modes.
@@ -355,6 +358,7 @@ The 2D layer is part of the feature, so its captures live next to it.
 | `scenarios/hud.json` | the status panel at spawn, mid-walk, and facing the arena |
 | `scenarios/hud-debug.json` | the debug-mode readout, which shares the row renderer |
 | `scenarios/editor-ghost.json` | the armed placement HUD, the ghost, and an exact place |
+| `scenarios/debug-palette.json` | the open palette, its selection, and the cube and ramp previews |
 | `scenarios/ui.json` | the settings panel with a numeric value selected, then an action row |
 | `scenarios/settings-menu.json` | the settings round trip and the menu digest |
 | `scenarios/blocked-note.json` | the blocked-change note and its clear on a successful change |
@@ -1026,8 +1030,9 @@ harness in the same change. Do not leave the automation behind the game.
 - New renderer pass or target: keep it behind `Target` or `Frame_View`. Add an
   offscreen test when the pass must match the game.
 - New screenshot or evidence path: update the README and this page.
-- New prefab: add it to `Prefab_Id` and `PREFABS` in `src/game/prefabs.odin`.
-  The renderer, the game API, and the harness read the catalog generically.
+- New prefab: add it to `Prefab_Id` and `PREFABS` in `src/game/prefabs.odin`,
+  including its `short_name` for the palette card. The renderer, the game API,
+  and the harness read the catalog generically.
 - New domain word: add it to `GLOSSARY.md` before you use it.
 
 If you cannot update the harness in the same change, open a ticket and state the

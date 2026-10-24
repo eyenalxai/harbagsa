@@ -12,7 +12,7 @@ HUD_Frame :: struct {
 	capture_hint: string,
 	captured:     bool,
 	menu:         ui.Menu,
-	weight:       f32,
+	palette:      ui.Palette,
 }
 
 hud_emit_textured_quad :: proc(
@@ -71,6 +71,9 @@ build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
 	}
 
 	build_status_panel(o, hud.view)
+	if hud.palette.open {
+		build_palette(o, width, height, hud.palette)
+	}
 	build_capture_hint(o, width, height, hud)
 	build_crosshair(o, width * 0.5, height * 0.5)
 }
@@ -98,7 +101,7 @@ build_status_panel :: proc(o: ^Overlay, view: ui.Hud) {
 
 @(private)
 build_capture_hint :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
-	if hud.captured || hud.capture_hint == "" {
+	if hud.captured || hud.capture_hint == "" || hud.palette.open {
 		return
 	}
 	theme := o.theme
