@@ -14,14 +14,12 @@ layout(push_constant) uniform PushConstants {
 #include "gamma.glsl"
 
 void main() {
+    // The atlas is rasterized at the device pixel size and sits on the pixel
+    // grid, so the sample is already the coverage of this pixel: no threshold,
+    // no derivative, no reconstruction.
     float coverage = 1.0;
     if (v_uv.x >= 0.0) {
-        // The atlas stores the distance to the glyph outline, so one field
-        // renders crisply at every size. The derivative sets the antialiasing
-        // width, which is what keeps small text from turning into grey mush.
-        float distance = texture(atlas, v_uv).r;
-        float width = max(fwidth(distance) * 0.5, 0.001);
-        coverage = smoothstep(0.5 - width, 0.5 + width, distance);
+        coverage = texture(atlas, v_uv).r;
     }
     out_color = vec4(apply_gamma(v_color.rgb, hud.viewport.z), v_color.a * coverage);
 }

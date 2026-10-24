@@ -54,6 +54,7 @@ Overlay :: struct {
 
 init_overlay :: proc(r: ^Renderer) -> Error {
 	o := &r.overlay
+	o.theme = ui_theme_init(r.target.config.height)
 	o.debug_vertices = make([]Debug_Vertex, MAX_DEBUG_VERTICES, r.allocator)
 	o.hud_vertices = make([]HUD_Vertex, MAX_HUD_VERTICES, r.allocator)
 
@@ -130,6 +131,9 @@ prepare_overlay :: proc(r: ^Renderer, debug_lines: []geometry.Line, hud: HUD_Fra
 	}
 
 	o.theme = ui_theme_init(r.target.config.height)
+	if !text_atlas_sync(r) {
+		return false
+	}
 	build_hud(o, f32(r.target.config.width), f32(r.target.config.height), hud)
 
 	frame := r.frame_index

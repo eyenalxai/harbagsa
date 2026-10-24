@@ -136,16 +136,26 @@ Regenerate the evidence in `docs/evidence/` with:
 ```sh
 ./bin/harbagsa-agent run scenarios/hud.json --out /tmp/hud
 ./bin/harbagsa-agent run scenarios/hud-debug.json --out /tmp/hud-debug
-./bin/harbagsa-agent run scenarios/ui.json --out /tmp/ui
-cp /tmp/hud/frames/hud-spawn.png docs/evidence/hud.png
+./bin/harbagsa-agent run scenarios/settings-menu.json --out /tmp/menu
+./bin/harbagsa-agent run scenarios/window-settings.json --out /tmp/window
+cp /tmp/hud/frames/hud-arena.png docs/evidence/hud.png
 cp /tmp/hud-debug/frames/hud-debug.png docs/evidence/hud-debug.png
-cp /tmp/ui/frames/menu-number.png docs/evidence/settings-menu.png
+cp /tmp/menu/frames/settings-menu.png docs/evidence/settings-menu.png
+cp /tmp/window/frames/window-settings.png docs/evidence/window-settings.png
 ```
 
-The menu crop is the panel region scaled 2x with nearest-neighbour:
+The menu crop is the panel region scaled 2x with nearest-neighbour, so a reader
+sees the pixels the rasterizer produced:
 
 ```sh
-python3 -c "from PIL import Image; im = Image.open('docs/evidence/settings-menu.png'); im.crop((440,140,840,560)).resize((800,840), Image.NEAREST).save('docs/evidence/settings-menu-crop.png')"
+python3 -c "from PIL import Image; im = Image.open('docs/evidence/settings-menu.png'); im.crop((361,129,918,590)).resize((1114,922), Image.NEAREST).save('docs/evidence/settings-menu-crop.png')"
+```
+
+Text is rasterized at the device pixel size and the atlas repacks when the
+density changes, so a capture at another size exercises that path:
+
+```sh
+./bin/harbagsa-agent run scenarios/settings-menu.json --size 2560x1440 --out /tmp/menu-2x
 ```
 
 ## Live session
