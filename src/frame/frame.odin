@@ -11,6 +11,7 @@ PLAYER_FOV_X :: f32(90.0 * math.PI / 180.0)
 
 Options :: struct {
 	alpha:      f32,
+	delta:      f32,
 	debug_view: bool,
 	captured:   bool,
 	hud:        bool,
@@ -78,7 +79,7 @@ build :: proc(
 	}
 
 	if options.hud || hud.menu.open {
-		game.hud_state_update(hud, sim, debug, snapshot, options.captured)
+		game.hud_state_update(hud, sim, debug, snapshot, options.captured, options.delta)
 		scene.hud = renderer.HUD_Frame {
 			enabled      = true,
 			menu_open    = hud.menu.open,
