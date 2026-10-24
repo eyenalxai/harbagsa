@@ -101,13 +101,14 @@ mantle_onto_a_crate_tracks_the_body :: proc(t: ^testing.T) {
 	sim.player.yaw = 0
 	sim.player.grounded = false
 
-	b3.Body_SetLinearVelocity(game.simulation_crate_body(&sim, 0), {0.0, 0.0, 1.0})
+	object_id := game.simulation_objects(&sim)[0].id
+	b3.Body_SetLinearVelocity(game.simulation_object_body(&sim, object_id), {0.0, 0.0, 1.0})
 	step(&sim, game.Input_Snapshot{jump_pressed = true}, 1)
 	testing.expect_value(t, sim.player.movement_state, game.Movement_State.Mantling)
 
 	step(&sim, {}, 20)
 	testing.expect_value(t, sim.player.movement_state, game.Movement_State.None)
-	crate := game.simulation_crate_box(&sim, 0).center
+	crate := game.simulation_object_box(&sim, object_id).center
 	testing.expectf(
 		t,
 		sim.player.position.y > 0.9 && sim.player.position.y < 1.2,

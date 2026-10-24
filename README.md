@@ -43,7 +43,7 @@ SPIR-V lives in `build/shaders/` and is embedded into the binary.
 - `Z`: prone. The settings menu switches the input mode between Hold and
   Toggle. Crawl while prone. Dive in the air or from a sprint.
 - `R`: return the player to spawn.
-- `Shift+R`: reset the crates, the sun, and the player.
+- `Shift+R`: reset the placed objects, the sun, and the player.
 - `F1`: toggle the debug draw.
 - `F2`: toggle debug mode.
 - `F3`: toggle temporal anti-aliasing (TAA). TAA is on by default.
@@ -112,18 +112,18 @@ stairs.
 - `WASD`: fly horizontally.
 - Mouse: look while not dragging; drag the selection while the left button is held.
 - `Space` / `Ctrl`: fly up / down.
-- Left click: select a crate. Drag it on a horizontal plane.
-- Wheel: raise or lower the selected crate.
+- Left click: select a placed object. Drag it on a horizontal plane.
+- Wheel: raise or lower the selected object.
 - `E`: add a crate on the surface under the crosshair.
-- `Delete` or `X`: remove the selected crate.
+- `Delete` or `X`: remove the selected object.
 - `L`: select the sun. Drag to rotate it.
 - `R`: reset the player and return the camera to spawn.
-- `Shift+R`: reset the crates, the sun, and the player.
+- `Shift+R`: reset the placed objects, the sun, and the player.
 - `F2`: leave debug mode. The player returns to the saved position and view.
 - `Esc`: open the settings menu.
 
 The HUD shows the stance, gait, horizontal speed, grounded state, movement
-state, and position, or the debug mode selection, crate count, and sun angles.
+state, and position, or the debug mode selection, object count, and sun angles.
 The settings menu shows the control list. Borderless fills the selected display;
 Windowed uses the chosen resolution.
 
@@ -232,40 +232,21 @@ no perf run never creates a Vulkan device unless `--present` asks for the window
     {"cmd": "capture", "name": "after-jump"}
   ],
   "checks": [
-    {"field": "crates.0.position.z", "op": "lt", "value": 7.5}
+    {"field": "objects.1.position.z", "op": "lt", "value": 7.5}
   ]
 }
 ```
 
-A scenario may declare `"size": "1280x720"` to pin its pixels. It may extend
-another scenario with `"extends": "base.json"`, which merges the base object and
-lets the child win. A `parameters` block substitutes `${name}` in any command
-value; a parameter must be a string, number, or boolean. The base path resolves
-against the extending file.
-
-The `commands` array runs verbatim, and `record` writes this form. Only a
-`capture` command writes a PNG; a scenario without one renders nothing unless
-`--present` asks for the window. `step` advances one fixed
-`SIMULATION_STEP` per frame. `look` applies once. `input` persists until the
-next `input`; `jump` is an edge on the next step.
-
-Check operators are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. A check compares
-with `value`, or with another field with `other`:
-`{"cmd":"check","field":"capture.1.stats.mean.y","op":"gt","other":"capture.0.stats.mean.y"}`.
-A type mismatch or a missing field is a check error. `capture.N.*` names one
-capture in the window; `capture.first` and `capture.last` are aliases.
-
-Check fields use the `state.json` shape, for example `player.position.y`, `player.grounded`,
-`crates.0.position.z`, `crates.count`, `settings.window_mode`,
-`settings.resolution`, `menu.open`, `debug.active`, `sun.elevation`,
-`sun.angular_diameter`, `camera.fov`, `camera.overridden`, `settle.converged`,
-`menu.status`, `menu.blocked`, `rows.menu.3.kind`, `renderer.taa_enabled`,
-`renderer.text_truncated_runs`, or `render_digest`. A capture check can also read
-`capture.target`, `capture.format`, `capture.stats.*`, `capture.region.*`,
-`capture.profile.*`, `capture.crop.*`, `capture.histogram.*`, and
-`capture.render_digest` for the last capture in its window. Add `"window": {"start": 2, "count": 8}` to
-aggregate over part of the captures; `warmup` stays the shorthand for skipping
-the first N.
+One step means one fixed `SIMULATION_STEP`. `look` applies once before the
+step. `forward`, `right`, and `jump` persist; `jump` is an edge on the first
+frame of its block. Capture frames are zero-based frame numbers. Check operators
+are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. Check fields use the `state.json`
+shape, for example `player.position.y`, `player.grounded`, `objects.1.position.z`,
+`objects.count`, `settings.window_mode`, `settings.resolution`, `menu.open`,
+`debug.active`, `renderer.taa_enabled`, or `render_digest`. A capture check can
+also read `capture.target`, `capture.format`, and `capture.stats.*` for the last
+capture in its window. Add `"window": {"start": 2, "count": 8}` to aggregate over
+part of the captures; `warmup` stays the shorthand for skipping the first N.
 
 A run with captures writes `analysis.json`. It holds per-pair deltas, a
 summary, the dominant period, the worst unstable pixels' series, and optional
@@ -282,8 +263,8 @@ gradient that bands after the 8-bit write shows up as a long run. Disable it wit
 
 The batch runner and the live session share one command set:
 
-- `{"cmd": "reset"}`: fresh simulation. Crates return to spawn, the settings
-  return to their defaults, the sun returns to its default, and the menu closes.
+- `{"cmd": "reset"}`: fresh simulation. Placed objects return to spawn, the
+  settings return to their defaults, and the menu closes.
 - `{"cmd": "look", "dx": 220, "dy": 0}`: pixel look delta through the game
   sensitivity and pitch clamp.
 - `{"cmd": "face", "yaw": 0, "pitch": 0}`: set the player view directly.
@@ -294,21 +275,15 @@ The batch runner and the live session share one command set:
 - `{"cmd": "settle", "frames": 520}`: fixed steps that render every frame but
   write no PNG. Use it to advance the temporal history before a capture. A
   settle is an error while the menu is open. Under `--no-render`, or in a
-  scenario with no captures, it is a plain step. `{"cmd":"settle","until":"converged"}`
-  waits for the 512-sample cap and reports the frames and the result in
-  `settle.frames` and `settle.converged`.
-- `{"cmd": "state"}`: player, eye, velocity, yaw, pitch, grounded, camera,
-  crates, window and input settings, debug mode, sun, menu, rows, settle,
-  renderer state, render digest, frame, and simulation digest. The sun object reports azimuth,
-  elevation, and angular diameter in degrees. The renderer object reports the
-  frame count, TAA state, jitter index, history validity, convergence frames,
-  history read index and weight, reset count and reason, shadow phase, the
-  applied atlas weight, text truncations and dropped fonts, and the debug
-  override values. `camera` reports the effective position, yaw, pitch, fov,
-  and whether an override is active. `rows` dumps the HUD and menu rows.
-  `render_digest` covers the target extent, the effective camera, the sun
-  direction and angular diameter, boxes, jitter, shadow phase, applied atlas
-  weight, the sky and AO flags, and view flags.
+  scenario with no captures, it is a plain step.
+- `{"cmd": "state"}`: player, eye, velocity, yaw, pitch, grounded, objects,
+  window and input settings, debug mode, menu, renderer state, render digest,
+  frame, and simulation digest. Each object entry carries its id, prefab, body
+  mode, position, rotation, scale, and spawn age. The renderer object reports
+  the frame count, TAA state, jitter index, history validity, convergence
+  frames, history read index and weight, reset count and reason, and shadow
+  phase. `render_digest` covers the effective camera, sun, boxes, jitter, shadow
+  phase, and view flags.
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`: write a PNG.
   `frame` is optional. A past frame is an error; a future frame queues. Add
   `"target": "velocity"`, `"history"`, `"depth"`, or `"scene_color"` to read an

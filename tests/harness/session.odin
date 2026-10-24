@@ -87,7 +87,13 @@ session_steps_and_reports_state :: proc(t: ^testing.T) {
 	testing.expect(t, state_reply.state != nil, "state reply has no state")
 	if state_reply.state != nil {
 		testing.expect_value(t, state_reply.state.frame, 60)
-		testing.expect_value(t, len(state_reply.state.crates), game.INITIAL_CRATE_COUNT)
+		testing.expect_value(t, len(state_reply.state.objects), game.INITIAL_CRATE_COUNT)
+		object := state_reply.state.objects[0]
+		testing.expect_value(t, object.id, 1)
+		testing.expect_value(t, object.prefab, "Crate")
+		testing.expect_value(t, object.body, "dynamic")
+		testing.expect_value(t, object.scale, 1.0)
+		testing.expect_value(t, object.spawn_age, 0.0)
 		testing.expect(t, state_reply.state.digest != "", "state digest is empty")
 	}
 }
@@ -152,7 +158,7 @@ face_sets_the_view_directly :: proc(t: ^testing.T) {
 }
 
 @(test)
-reset_returns_crates_to_spawn :: proc(t: ^testing.T) {
+reset_returns_objects_to_spawn :: proc(t: ^testing.T) {
 	session, _ := harness.session_create(context.allocator)
 	defer harness.session_destroy(&session)
 	execute(t, &session, `{"cmd": "input", "forward": 1}`)
@@ -161,8 +167,9 @@ reset_returns_crates_to_spawn :: proc(t: ^testing.T) {
 	reset_reply := execute(t, &session, `{"cmd": "reset"}`)
 	harness.reply_destroy(&reset_reply, context.allocator)
 	testing.expect(t, session.sim.player.position == game.SPAWN_POSITION, "player did not reset")
-	box := game.simulation_crate_box(&session.sim, 0)
-	testing.expect(t, box.center == game.INITIAL_CRATE_POSITIONS[0], "crate did not reset")
+	id := game.simulation_objects(&session.sim)[0].id
+	box := game.simulation_object_box(&session.sim, id)
+	testing.expect(t, box.center == game.INITIAL_CRATE_POSITIONS[0], "object did not reset")
 }
 
 @(test)
@@ -267,4 +274,18 @@ digest_is_deterministic :: proc(t: ^testing.T) {
 	defer harness.state_destroy(&second_state, context.allocator)
 	testing.expect_value(t, first_state.digest, second_state.digest)
 	testing.expect(t, math.abs(first_state.player.position.z - second_state.player.position.z) == 0, "state diverged")
+}
+
+@(test)
+object_edit_changes_the_state_digest :: proc(t: ^testing.T) {
+	session, _ := harness.session_create(context.allocator)
+	defer harness.session_destroy(&session)
+	before := harness.session_state(&session)
+	defer harness.state_destroy(&before, context.allocator)
+
+	id := game.simulation_objects(&session.sim)[0].id
+	testing.expect(t, game.simulation_move_object(&session.sim, id, {0, 2, 0}), "move failed")
+	after := harness.session_state(&session)
+	defer harness.state_destroy(&after, context.allocator)
+	testing.expect(t, after.digest != before.digest, "object transform did not change the digest")
 }

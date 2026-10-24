@@ -52,13 +52,44 @@ capture_check_needs_a_capture :: proc(t: ^testing.T) {
 }
 
 @(test)
-bare_state_field_reports_an_error_without_crashing :: proc(t: ^testing.T) {
-	command := harness.Check_Command {
-		field = "sun",
-		op    = .Eq,
-		value = {kind = .Number, number = 0},
+object_check_reads_the_state_by_id :: proc(t: ^testing.T) {
+	state := harness.State {
+		objects = []harness.Object_State {
+			{
+				id = 7,
+				prefab = "Crate",
+				body = "dynamic",
+				position = {x = 0, y = 1, z = 2},
+				rotation = {w = 1},
+				scale = 1,
+				spawn_age = 0,
+			},
+		},
 	}
-	result := harness.check_evaluate(command, {}, {}, nil, context.allocator)
+	position := harness.Check_Command {
+		field = "objects.7.position.z",
+		op    = .Eq,
+		value = {kind = .Number, number = 2},
+	}
+	result := harness.check_evaluate(position, state, {}, nil, context.allocator)
 	defer harness.check_result_destroy(&result, context.allocator)
-	testing.expect(t, result.error != "", "a bare sun field did not report an error")
+	testing.expectf(t, result.ok, "object position check failed: %s", result.error)
+
+	prefab := harness.Check_Command {
+		field = "objects.7.prefab",
+		op    = .Eq,
+		value = {kind = .String, text = "Crate"},
+	}
+	result = harness.check_evaluate(prefab, state, {}, nil, context.allocator)
+	defer harness.check_result_destroy(&result, context.allocator)
+	testing.expectf(t, result.ok, "object prefab check failed: %s", result.error)
+
+	count := harness.Check_Command {
+		field = "objects.count",
+		op    = .Eq,
+		value = {kind = .Number, number = 1},
+	}
+	result = harness.check_evaluate(count, state, {}, nil, context.allocator)
+	defer harness.check_result_destroy(&result, context.allocator)
+	testing.expectf(t, result.ok, "object count check failed: %s", result.error)
 }

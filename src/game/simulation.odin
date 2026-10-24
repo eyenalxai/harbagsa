@@ -37,12 +37,12 @@ Render_Snapshot :: struct {
 }
 
 Simulation :: struct {
-	world_id:               b3.WorldId,
-	player:                 Player,
-	crates:                 [MAX_CRATES]Crate,
-	crate_count:            int,
-	next_crate_color_index: int,
-	settings:               Settings,
+	world_id:       b3.WorldId,
+	player:         Player,
+	objects:        [MAX_PLACED_OBJECTS]Placed_Object,
+	object_count:   int,
+	next_object_id: Object_Id,
+	settings:       Settings,
 }
 
 simulation_create :: proc() -> Simulation {
@@ -57,7 +57,7 @@ simulation_create :: proc() -> Simulation {
 	}
 
 	create_arena(&sim)
-	simulation_reset_crates(&sim)
+	simulation_reset_objects(&sim)
 	simulation_reset(&sim)
 	return sim
 }
@@ -205,7 +205,8 @@ simulation_snapshot :: proc(sim: ^Simulation) -> Render_Snapshot {
 	}
 }
 
-// The debug mode keeps the crates alive while the player is not simulated.
+// The debug mode keeps the placed objects alive while the player is not
+// simulated.
 simulation_step_world :: proc(sim: ^Simulation, time_step: f32) {
 	if !b3.World_IsValid(sim.world_id) || time_step <= 0.0 {
 		return
@@ -225,15 +226,12 @@ create_arena :: proc(sim: ^Simulation) {
 
 @(private)
 create_static_box :: proc(world_id: b3.WorldId, box: geometry.Box) {
-	body_def := b3.DefaultBodyDef()
-	body_def.position = box.center
-	body_def.rotation.x = box.rotation.x
-	body_def.rotation.y = box.rotation.y
-	body_def.rotation.z = box.rotation.z
-	body_def.rotation.w = box.rotation.w
-	body_id := b3.CreateBody(world_id, body_def)
-
-	hull := b3.MakeBoxHull(box.half_extents.x, box.half_extents.y, box.half_extents.z)
-	shape_def := b3.DefaultShapeDef()
-	_ = b3.CreateHullShape(body_id, shape_def, &hull.base)
+	_ = create_box_body(
+		world_id,
+		.staticBody,
+		box.center,
+		transmute(b3.Quat)box.rotation,
+		box.half_extents,
+		0.0,
+	)
 }

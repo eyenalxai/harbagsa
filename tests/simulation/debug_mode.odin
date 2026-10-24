@@ -131,29 +131,31 @@ reset_player_moves_the_debug_camera_to_spawn :: proc(t: ^testing.T) {
 }
 
 @(test)
-reset_scene_restores_crates_sun_and_player :: proc(t: ^testing.T) {
+reset_scene_restores_objects_sun_and_player :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 
 	dm := game.debug_mode_create()
 	game.debug_mode_toggle(&dm, &sim)
 
-	_ = game.simulation_remove_crate(&sim, 0)
-	_ = game.simulation_add_default_crate(&sim, {5, 5, 5})
+	_ = game.simulation_remove_object(&sim, game.simulation_objects(&sim)[0].id)
+	_ = game.simulation_create_object(
+		&sim,
+		{prefab = .Crate, body_mode = .Dynamic, center = {5, 5, 5}, yaw = 0.0},
+	)
 	dm.sun_direction = {0.0, -1.0, 0.0}
-	dm.sun_angular_diameter = 0.2
-	dm.selection = .Crate
-	dm.selected_crate = 0
-	dm.dragging = .Crate
+	dm.selection = .Object
+	dm.selected_object_id = game.simulation_objects(&sim)[0].id
+	dm.dragging = .Object
 	dm.camera.position = {5, 5, 5}
 
 	game.debug_mode_reset_scene(&dm, &sim)
 
-	testing.expect_value(t, game.simulation_crate_count(&sim), game.INITIAL_CRATE_COUNT)
+	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT)
 	testing.expect_value(t, dm.sun_direction, game.DEFAULT_SUN_DIRECTION)
 	testing.expect_value(t, dm.sun_angular_diameter, game.SUN_ANGULAR_DIAMETER)
 	testing.expect_value(t, dm.selection, game.Debug_Selection.None)
-	testing.expect_value(t, dm.selected_crate, -1)
+	testing.expect_value(t, dm.selected_object_id, game.INVALID_OBJECT_ID)
 	testing.expect_value(t, dm.dragging, game.Debug_Drag.None)
 	testing.expect_value(t, sim.player.position, game.SPAWN_POSITION)
 	expected_eye := game.SPAWN_POSITION + b3.Vec3{0.0, game.PLAYER_STANDING_EYE, 0.0}

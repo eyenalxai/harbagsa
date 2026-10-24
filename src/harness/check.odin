@@ -3,7 +3,6 @@ package harness
 
 import "core:fmt"
 import "core:mem"
-import "core:strconv"
 import "core:strings"
 
 CHECK_EPSILON :: 1e-6
@@ -138,7 +137,54 @@ compare_number :: proc(actual: f64, op: Check_Op, expected: f64) -> (bool, strin
 	case .Ge:
 		return actual >= expected, ""
 	}
-	return false, format_error("%s", "unknown check op")
+	return false, "unknown check op"
+}
+
+state_field :: proc(state: State, path: string) -> (Check_Value, string) {
+	if path == "frame" {
+		return {kind = .Number, number = f64(state.frame)}, ""
+	}
+	if path == "digest" {
+		return {kind = .String, text = state.digest}, ""
+	}
+	if path == "render_digest" {
+		return {kind = .String, text = state.render_digest}, ""
+	}
+
+	head, tail, has_tail := split_field(path)
+	switch head {
+	case "player":
+		if !has_tail {
+			return {}, "player needs a field"
+		}
+		return player_field(state.player, tail)
+	case "objects":
+		if !has_tail {
+			return {}, "objects needs an id or 'count'"
+		}
+		return objects_field(state.objects, tail)
+	case "settings":
+		if !has_tail {
+			return {}, "settings needs a field"
+		}
+		return settings_field(state.settings, tail)
+	case "debug":
+		if !has_tail {
+			return {}, "debug needs a field"
+		}
+		return debug_field(state.debug, tail)
+	case "menu":
+		if !has_tail {
+			return {}, "menu needs a field"
+		}
+		return menu_field(state.menu, tail)
+	case "renderer":
+		if !has_tail {
+			return {}, "renderer needs a field"
+		}
+		return renderer_field(state.renderer, tail)
+	}
+	return {}, fmt.aprintf("unknown state field %q", path, allocator = context.allocator)
 }
 
 // `capture.N.*` names one capture in the check window, so two captures of the
@@ -168,24 +214,40 @@ capture_path_field :: proc(captures: []Capture_Result, path: string) -> (Check_V
 }
 
 @(private)
-capture_one_field :: proc(capture: Capture_Result, path: string) -> (Check_Value, string) {
-	switch path {
-	case "delta_mean":
-		return {kind = .Number, number = f64(capture.delta_mean)}, ""
-	case "delta_max":
-		return {kind = .Number, number = f64(capture.delta_max)}, ""
-	case "delta_over_16":
-		return {kind = .Number, number = f64(capture.delta_over_16)}, ""
-	case "frame":
-		return {kind = .Number, number = f64(capture.frame)}, ""
-	case "written_width":
-		return {kind = .Number, number = f64(capture.written_width)}, ""
-	case "written_height":
-		return {kind = .Number, number = f64(capture.written_height)}, ""
-	case "render_digest":
-		return {kind = .String, text = capture.render_digest}, ""
+vec_field :: proc(value: Vec_State, axis: string) -> (Check_Value, string) {
+	switch axis {
+	case "x":
+		return {kind = .Number, number = f64(value.x)}, ""
+	case "y":
+		return {kind = .Number, number = f64(value.y)}, ""
+	case "z":
+		return {kind = .Number, number = f64(value.z)}, ""
 	}
-	return capture_field(capture_summary([]Capture_Result{capture}), path)
+	return {}, fmt.aprintf("unknown axis %q", axis, allocator = context.allocator)
+}
+
+@(private)
+quat_field :: proc(value: Quat_State, axis: string) -> (Check_Value, string) {
+	switch axis {
+	case "x":
+		return {kind = .Number, number = f64(value.x)}, ""
+	case "y":
+		return {kind = .Number, number = f64(value.y)}, ""
+	case "z":
+		return {kind = .Number, number = f64(value.z)}, ""
+	case "w":
+		return {kind = .Number, number = f64(value.w)}, ""
+	}
+	return {}, fmt.aprintf("unknown rotation axis %q", axis, allocator = context.allocator)
+}
+
+@(private)
+split_field :: proc(path: string) -> (head, tail: string, has_tail: bool) {
+	index := strings.index_byte(path, '.')
+	if index < 0 {
+		return path, "", false
+	}
+	return path[:index], path[index + 1:], true
 }
 
 check_value_display :: proc(value: Check_Value, allocator: mem.Allocator) -> string {

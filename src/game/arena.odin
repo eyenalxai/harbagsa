@@ -8,36 +8,15 @@ ARENA_HALF_SIZE :: ARENA_SIZE * 0.5
 ARENA_WALL_HEIGHT :: 4.0
 ARENA_WALL_THICKNESS :: 0.5
 ARENA_FLOOR_THICKNESS :: 1.0
-ARENA_CRATE_SIZE :: 1.0
-ARENA_CRATE_HALF_SIZE :: ARENA_CRATE_SIZE * 0.5
 
-// Floor and walls first, props next. Crates are dynamic and live in Simulation.
+// Floor and walls first, props next. Placed objects live in Simulation and
+// render after this fixed set.
 ARENA_BASE_BOX_COUNT :: 5
 ARENA_STATIC_BOX_COUNT :: ARENA_BASE_BOX_COUNT + ARENA_PROP_COUNT
-INITIAL_CRATE_COUNT :: 3
-MAX_CRATES :: 64
-MAX_SCENE_BOXES :: ARENA_STATIC_BOX_COUNT + MAX_CRATES
-
-INITIAL_CRATE_POSITIONS :: [INITIAL_CRATE_COUNT][3]f32 {
-	{0, ARENA_CRATE_HALF_SIZE, 8},
-	{-3, ARENA_CRATE_HALF_SIZE, 6},
-	{3, ARENA_CRATE_HALF_SIZE, 6},
-}
-
-CRATE_HALF_EXTENTS :: [3]f32{ARENA_CRATE_HALF_SIZE, ARENA_CRATE_HALF_SIZE, ARENA_CRATE_HALF_SIZE}
+MAX_SCENE_BOXES :: ARENA_STATIC_BOX_COUNT + MAX_PLACED_OBJECTS
 
 FLOOR_COLOR :: [4]f32{0.42, 0.43, 0.46, 1.0}
 WALL_COLOR :: [4]f32{0.55, 0.34, 0.26, 1.0}
-INITIAL_CRATE_COLORS :: [INITIAL_CRATE_COUNT][4]f32 {
-	{0.30, 0.68, 0.38, 1.0},
-	{0.86, 0.56, 0.20, 1.0},
-	{0.26, 0.48, 0.84, 1.0},
-}
-
-initial_crate_colors :: proc() -> [][4]f32 {
-	@(static) colors := INITIAL_CRATE_COLORS
-	return colors[:]
-}
 
 arena_static_boxes :: proc() -> []geometry.Box {
 	@(static) boxes: [ARENA_STATIC_BOX_COUNT]geometry.Box

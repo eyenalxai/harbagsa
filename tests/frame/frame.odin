@@ -19,14 +19,54 @@ create_state :: proc(t: ^testing.T) -> (game.Simulation, game.Debug_Mode, game.H
 }
 
 @(test)
-build_combines_arena_and_crates :: proc(t: ^testing.T) {
+build_combines_arena_and_objects :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
 	defer game.simulation_destroy(&sim)
 	scene := frame.build(&sim, &debug, {}, nil, &hud, &scratch)
-	expected := len(game.arena_static_boxes()) + game.simulation_crate_count(&sim)
+	expected := len(game.arena_static_boxes()) + game.simulation_object_count(&sim)
 	testing.expect_value(t, len(scene.boxes), expected)
 	testing.expect_value(t, len(scene.debug_lines), 0)
 	testing.expect(t, !scene.hud.enabled, "headless defaults must leave the HUD off")
+}
+
+@(test)
+placed_objects_render_after_the_arena :: proc(t: ^testing.T) {
+	sim, debug, hud, scratch := create_state(t)
+	defer game.simulation_destroy(&sim)
+	id := game.simulation_create_object(
+		&sim,
+		{prefab = .Platform, body_mode = .Static, center = {0, 5, 0}, yaw = 0},
+	)
+	scene := frame.build(&sim, &debug, {}, nil, &hud, &scratch)
+	arena_count := len(game.arena_static_boxes())
+	testing.expect(t, len(scene.boxes) > arena_count, "placed object was not added")
+	box := scene.boxes[len(scene.boxes) - 1]
+	testing.expect_value(t, box.half_extents, game.prefab(.Platform).half_extents)
+	testing.expect_value(t, box.color, game.prefab(.Platform).color)
+	testing.expect_value(t, box.center, game.simulation_object_box(&sim, id).center)
+}
+
+@(test)
+scene_box_cap_fits_the_renderer :: proc(t: ^testing.T) {
+	testing.expect(
+		t,
+		game.MAX_SCENE_BOXES < renderer.MAX_SCENE_BOXES,
+		"the game scene cap reached the renderer box limit",
+	)
+}
+
+@(test)
+scene_fills_the_box_cap_without_writing_past_it :: proc(t: ^testing.T) {
+	sim, debug, hud, scratch := create_state(t)
+	defer game.simulation_destroy(&sim)
+	for game.simulation_object_count(&sim) < game.MAX_PLACED_OBJECTS {
+		_ = game.simulation_create_object(
+			&sim,
+			{prefab = .Block, body_mode = .Static, center = {0, -5, 0}, yaw = 0},
+		)
+	}
+	scene := frame.build(&sim, &debug, {}, nil, &hud, &scratch)
+	testing.expect_value(t, len(scene.boxes), game.MAX_SCENE_BOXES)
 }
 
 @(test)
@@ -45,6 +85,30 @@ hud_can_be_enabled :: proc(t: ^testing.T) {
 	testing.expect_value(t, len(scene.hud.view.rows), game.HUD_ROW_COUNT)
 	testing.expect_value(t, scene.hud.view.rows[0].kind, ui.Row_Kind.Header)
 	testing.expect_value(t, scene.hud.view.rows[0].label, "Standing · Walk")
+}
+
+@(test)
+debug_hud_names_the_selected_prefab :: proc(t: ^testing.T) {
+	sim, debug, hud, scratch := create_state(t)
+	defer game.simulation_destroy(&sim)
+	id := game.simulation_create_object(
+		&sim,
+		{prefab = .Platform, body_mode = .Static, center = {0, 5, 0}, yaw = 0},
+	)
+	debug.active = true
+	debug.selection = .Object
+	debug.selected_object_id = id
+	scene := frame.build(
+		&sim,
+		&debug,
+		{alpha = 1.0, captured = true, hud = true},
+		nil,
+		&hud,
+		&scratch,
+	)
+	testing.expect_value(t, scene.hud.view.rows[1].label, "Selection")
+	testing.expect_value(t, scene.hud.view.rows[1].value, "Platform")
+	testing.expect_value(t, scene.hud.view.rows[2].label, "Objects")
 }
 
 @(test)

@@ -1,9 +1,8 @@
 # Colour
 
 Two hues and a neutral ramp. Cool ink for surfaces, one amber accent that means
-"selected". The accent is sRGB `#E6AF3A`. The debug crate outline and the sun
-gizmo are a linear `[1.0, 0.8, 0.2]`, a different value from the sRGB `#E6AF3A`;
-they live in different spaces, so the accent is not reused from the debug draw.
+"selected". The accent is already the debug selection colour on placed objects
+and the sun gizmo, so it is reused rather than invented.
 
 Every colour lives in `src/renderer/ui_theme.odin` as an sRGB hex constant. It is
 converted to linear when `ui_theme_init` builds the theme, because the renderer

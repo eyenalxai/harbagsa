@@ -9,84 +9,91 @@ import game "src:game"
 
 // A level ray from the spawn eye passes over the 1 m crates, so the select
 // tests aim slightly down.
-CRATE_EDITOR_SELECT_PITCH :: -0.2
-CRATE_EDITOR_FLOOR_PITCH :: -0.9
+OBJECT_EDITOR_SELECT_PITCH :: -0.2
+OBJECT_EDITOR_FLOOR_PITCH :: -0.9
 
 @(private)
-crate_editor_setup :: proc(t: ^testing.T) -> (game.Simulation, game.Debug_Mode) {
+object_editor_setup :: proc(t: ^testing.T) -> (game.Simulation, game.Debug_Mode) {
 	sim := create(t)
 	dm := game.debug_mode_create()
 	dm.active = true
 	dm.camera = {
 		position = sim.player.position + b3.Vec3{0.0, game.PLAYER_STANDING_EYE, 0.0},
 		yaw      = 0.0,
-		pitch    = CRATE_EDITOR_SELECT_PITCH,
+		pitch    = OBJECT_EDITOR_SELECT_PITCH,
 	}
 	return sim, dm
 }
 
 @(private)
-crate_editor_step :: proc(dm: ^game.Debug_Mode, sim: ^game.Simulation, input: game.Debug_Input) {
+object_editor_step :: proc(dm: ^game.Debug_Mode, sim: ^game.Simulation, input: game.Debug_Input) {
 	game.debug_mode_update(dm, sim, input, game.SIMULATION_STEP)
 }
 
 @(private)
-crate_editor_select :: proc(dm: ^game.Debug_Mode, sim: ^game.Simulation) {
-	crate_editor_step(dm, sim, game.Debug_Input{primary_pressed = true, captured = true})
+object_editor_select :: proc(dm: ^game.Debug_Mode, sim: ^game.Simulation) {
+	object_editor_step(dm, sim, game.Debug_Input{primary_pressed = true, captured = true})
+}
+
+@(private)
+first_object_id :: proc(sim: ^game.Simulation) -> game.Object_Id {
+	return game.simulation_objects(sim)[0].id
 }
 
 @(test)
-debug_edit_selects_crate_under_crosshair :: proc(t: ^testing.T) {
-	sim, dm := crate_editor_setup(t)
+debug_edit_selects_object_under_crosshair :: proc(t: ^testing.T) {
+	sim, dm := object_editor_setup(t)
 	defer game.simulation_destroy(&sim)
 
-	crate_editor_select(&dm, &sim)
+	object_editor_select(&dm, &sim)
 
-	testing.expect_value(t, dm.selection, game.Debug_Selection.Crate)
-	testing.expect_value(t, dm.selected_crate, 0)
-	testing.expect_value(t, dm.dragging, game.Debug_Drag.Crate)
+	testing.expect_value(t, dm.selection, game.Debug_Selection.Object)
+	testing.expect_value(t, dm.selected_object_id, first_object_id(&sim))
+	testing.expect_value(t, dm.dragging, game.Debug_Drag.Object)
 }
 
 @(test)
-debug_edit_drag_moves_crate_horizontally :: proc(t: ^testing.T) {
-	sim, dm := crate_editor_setup(t)
+debug_edit_drag_moves_object_horizontally :: proc(t: ^testing.T) {
+	sim, dm := object_editor_setup(t)
 	defer game.simulation_destroy(&sim)
 
-	crate_editor_select(&dm, &sim)
-	before := game.simulation_crate_box(&sim, 0).center
+	object_editor_select(&dm, &sim)
+	id := first_object_id(&sim)
+	before := game.simulation_object_box(&sim, id).center
 
-	crate_editor_step(
+	object_editor_step(
 		&dm,
 		&sim,
 		game.Debug_Input{look_delta = {10.0, 0.0}, captured = true},
 	)
 
-	after := game.simulation_crate_box(&sim, 0).center
-	testing.expect_value(t, dm.dragging, game.Debug_Drag.Crate)
-	expect_near(t, after.x - before.x, 10.0 * game.CRATE_DRAG_SCALE, 0.0001, "drag x")
+	after := game.simulation_object_box(&sim, id).center
+	testing.expect_value(t, dm.dragging, game.Debug_Drag.Object)
+	expect_near(t, after.x - before.x, 10.0 * game.OBJECT_DRAG_SCALE, 0.0001, "drag x")
 	expect_near(t, after.z, before.z, 0.0001, "drag z")
 	expect_near(t, after.y, before.y, 0.0001, "drag y")
 }
 
 @(test)
-debug_edit_wheel_raises_and_clamps_crate :: proc(t: ^testing.T) {
-	sim, dm := crate_editor_setup(t)
+debug_edit_wheel_raises_and_clamps_object :: proc(t: ^testing.T) {
+	sim, dm := object_editor_setup(t)
 	defer game.simulation_destroy(&sim)
 
-	crate_editor_select(&dm, &sim)
-	crate_editor_step(&dm, &sim, game.Debug_Input{primary_released = true, captured = true})
+	object_editor_select(&dm, &sim)
+	object_editor_step(&dm, &sim, game.Debug_Input{primary_released = true, captured = true})
 	testing.expect_value(t, dm.dragging, game.Debug_Drag.None)
 
-	before := game.simulation_crate_box(&sim, 0).center.y
-	crate_editor_step(&dm, &sim, game.Debug_Input{wheel_delta = 2.0, captured = true})
-	after := game.simulation_crate_box(&sim, 0).center.y
-	expect_near(t, after - before, 2.0 * game.CRATE_WHEEL_STEP, 0.0001, "wheel height")
+	id := first_object_id(&sim)
+	before := game.simulation_object_box(&sim, id).center.y
+	object_editor_step(&dm, &sim, game.Debug_Input{wheel_delta = 2.0, captured = true})
+	after := game.simulation_object_box(&sim, id).center.y
+	expect_near(t, after - before, 2.0 * game.OBJECT_WHEEL_STEP, 0.0001, "wheel height")
 
-	crate_editor_step(&dm, &sim, game.Debug_Input{wheel_delta = -100.0, captured = true})
+	object_editor_step(&dm, &sim, game.Debug_Input{wheel_delta = -100.0, captured = true})
 	expect_near(
 		t,
-		game.simulation_crate_box(&sim, 0).center.y,
-		game.CRATE_HALF_EXTENTS.y,
+		game.simulation_object_box(&sim, id).center.y,
+		game.prefab(.Crate).half_extents.y,
 		0.0001,
 		"wheel floor clamp",
 	)
@@ -94,22 +101,26 @@ debug_edit_wheel_raises_and_clamps_crate :: proc(t: ^testing.T) {
 
 @(test)
 debug_edit_add_places_crate_on_surface :: proc(t: ^testing.T) {
-	sim, dm := crate_editor_setup(t)
+	sim, dm := object_editor_setup(t)
 	defer game.simulation_destroy(&sim)
-	dm.camera.pitch = CRATE_EDITOR_FLOOR_PITCH
+	dm.camera.pitch = OBJECT_EDITOR_FLOOR_PITCH
 
-	crate_editor_step(&dm, &sim, game.Debug_Input{add_pressed = true, captured = true})
+	object_editor_step(&dm, &sim, game.Debug_Input{add_pressed = true, captured = true})
 
-	testing.expect_value(t, game.simulation_crate_count(&sim), game.INITIAL_CRATE_COUNT + 1)
-	testing.expect_value(t, dm.selection, game.Debug_Selection.Crate)
-	testing.expect_value(t, dm.selected_crate, game.INITIAL_CRATE_COUNT)
+	testing.expect_value(
+		t,
+		game.simulation_object_count(&sim),
+		game.INITIAL_CRATE_COUNT + 1,
+	)
+	testing.expect_value(t, dm.selection, game.Debug_Selection.Object)
+	testing.expect_value(t, dm.selected_object_id, game.Object_Id(game.INITIAL_CRATE_COUNT + 1))
 	testing.expect_value(t, dm.dragging, game.Debug_Drag.None)
 
-	box := game.simulation_crate_box(&sim, dm.selected_crate)
+	box := game.simulation_object_box(&sim, dm.selected_object_id)
 	expect_near(
 		t,
 		box.center.y,
-		game.CRATE_HALF_EXTENTS.y + game.CRATE_ADD_GAP,
+		game.prefab(.Crate).half_extents.y + game.OBJECT_ADD_GAP,
 		0.0001,
 		"added crate bottom",
 	)
@@ -117,79 +128,92 @@ debug_edit_add_places_crate_on_surface :: proc(t: ^testing.T) {
 
 @(test)
 debug_edit_add_is_ignored_when_full :: proc(t: ^testing.T) {
-	sim, dm := crate_editor_setup(t)
+	sim, dm := object_editor_setup(t)
 	defer game.simulation_destroy(&sim)
-	dm.camera.pitch = CRATE_EDITOR_FLOOR_PITCH
+	dm.camera.pitch = OBJECT_EDITOR_FLOOR_PITCH
 
-	for game.simulation_crate_count(&sim) < game.MAX_CRATES {
-		_ = game.simulation_add_default_crate(&sim, {0.0, 50.0, 0.0})
+	for game.simulation_object_count(&sim) < game.MAX_PLACED_OBJECTS {
+		_ = game.simulation_create_object(
+			&sim,
+			{prefab = .Block, body_mode = .Static, center = {0.0, -5.0, 0.0}, yaw = 0.0},
+		)
 	}
 
-	crate_editor_step(&dm, &sim, game.Debug_Input{add_pressed = true, captured = true})
+	object_editor_step(&dm, &sim, game.Debug_Input{add_pressed = true, captured = true})
 
-	testing.expect_value(t, game.simulation_crate_count(&sim), game.MAX_CRATES)
+	testing.expect_value(t, game.simulation_object_count(&sim), game.MAX_PLACED_OBJECTS)
 	testing.expect_value(t, dm.selection, game.Debug_Selection.None)
-	testing.expect_value(t, dm.selected_crate, -1)
+	testing.expect_value(t, dm.selected_object_id, game.INVALID_OBJECT_ID)
 }
 
 @(test)
-debug_edit_delete_removes_selected_crate :: proc(t: ^testing.T) {
-	sim, dm := crate_editor_setup(t)
+debug_edit_delete_removes_selected_object :: proc(t: ^testing.T) {
+	sim, dm := object_editor_setup(t)
 	defer game.simulation_destroy(&sim)
 
-	crate_editor_select(&dm, &sim)
-	crate_editor_step(&dm, &sim, game.Debug_Input{delete_pressed = true, captured = true})
+	object_editor_select(&dm, &sim)
+	object_editor_step(&dm, &sim, game.Debug_Input{delete_pressed = true, captured = true})
 
-	testing.expect_value(t, game.simulation_crate_count(&sim), game.INITIAL_CRATE_COUNT - 1)
+	testing.expect_value(
+		t,
+		game.simulation_object_count(&sim),
+		game.INITIAL_CRATE_COUNT - 1,
+	)
 	testing.expect_value(t, dm.selection, game.Debug_Selection.None)
-	testing.expect_value(t, dm.selected_crate, -1)
+	testing.expect_value(t, dm.selected_object_id, game.INVALID_OBJECT_ID)
 	testing.expect_value(t, dm.dragging, game.Debug_Drag.None)
 }
 
 @(test)
 debug_edit_empty_click_clears_selection :: proc(t: ^testing.T) {
-	sim, dm := crate_editor_setup(t)
+	sim, dm := object_editor_setup(t)
 	defer game.simulation_destroy(&sim)
 
-	crate_editor_select(&dm, &sim)
-	crate_editor_step(&dm, &sim, game.Debug_Input{primary_released = true, captured = true})
+	object_editor_select(&dm, &sim)
+	object_editor_step(&dm, &sim, game.Debug_Input{primary_released = true, captured = true})
 	dm.camera.pitch = 0.6
 
-	crate_editor_step(&dm, &sim, game.Debug_Input{primary_pressed = true, captured = true})
+	object_editor_step(&dm, &sim, game.Debug_Input{primary_pressed = true, captured = true})
 
 	testing.expect_value(t, dm.selection, game.Debug_Selection.None)
-	testing.expect_value(t, dm.selected_crate, -1)
+	testing.expect_value(t, dm.selected_object_id, game.INVALID_OBJECT_ID)
 	testing.expect_value(t, dm.dragging, game.Debug_Drag.None)
-	testing.expect_value(t, game.simulation_crate_count(&sim), game.INITIAL_CRATE_COUNT)
+	testing.expect_value(
+		t,
+		game.simulation_object_count(&sim),
+		game.INITIAL_CRATE_COUNT,
+	)
 }
 
 @(test)
 debug_edit_clears_stale_selection :: proc(t: ^testing.T) {
-	sim, dm := crate_editor_setup(t)
+	sim, dm := object_editor_setup(t)
 	defer game.simulation_destroy(&sim)
 
-	dm.selection = .Crate
-	dm.selected_crate = game.INITIAL_CRATE_COUNT - 1
-	dm.dragging = .Crate
-	testing.expect(t, game.simulation_remove_crate(&sim, dm.selected_crate), "remove failed")
+	objects := game.simulation_objects(&sim)
+	id := objects[len(objects) - 1].id
+	dm.selection = .Object
+	dm.selected_object_id = id
+	dm.dragging = .Object
+	testing.expect(t, game.simulation_remove_object(&sim, id), "remove failed")
 
-	crate_editor_step(&dm, &sim, game.Debug_Input{captured = true})
+	object_editor_step(&dm, &sim, game.Debug_Input{captured = true})
 
 	testing.expect_value(t, dm.selection, game.Debug_Selection.None)
-	testing.expect_value(t, dm.selected_crate, -1)
+	testing.expect_value(t, dm.selected_object_id, game.INVALID_OBJECT_ID)
 	testing.expect_value(t, dm.dragging, game.Debug_Drag.None)
 }
 
 @(test)
-debug_edit_draws_selected_crate_outline :: proc(t: ^testing.T) {
-	sim, dm := crate_editor_setup(t)
+debug_edit_draws_selected_object_outline :: proc(t: ^testing.T) {
+	sim, dm := object_editor_setup(t)
 	defer game.simulation_destroy(&sim)
 
 	lines: game.Debug_Lines
-	game.collect_crate_editor_lines(&dm, &sim, &lines)
+	game.collect_object_editor_lines(&dm, &sim, &lines)
 	testing.expect_value(t, lines.count, 0)
 
-	crate_editor_select(&dm, &sim)
-	game.collect_crate_editor_lines(&dm, &sim, &lines)
+	object_editor_select(&dm, &sim)
+	game.collect_object_editor_lines(&dm, &sim, &lines)
 	testing.expect_value(t, lines.count, 12)
 }

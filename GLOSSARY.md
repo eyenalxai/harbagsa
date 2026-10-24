@@ -188,8 +188,29 @@ A ray from a surface point toward a sample point on the sun. A hit means the sun
 _Avoid_: Light ray
 
 **Crate**:
-A dynamic box that the player can push.
+The 1 m dynamic box prefab. The three starting objects use it.
 _Avoid_: Prop, box
+
+**Placed object**:
+One prefab instance in the simulation: a stable id, a prefab, a body mode, a
+physics body, and a spawn time. Debug mode edits placed objects; the static
+arena is separate.
+_Avoid_: Prop, entity, crate
+
+**Prefab**:
+A named box archetype in the fixed catalog: half extents, colour, default body
+mode, and an optional base pitch. The ramp carries a 20 degree base pitch.
+_Avoid_: Template, class, prototype
+
+**Body mode**:
+Static or dynamic. A static placed object collides and never moves. A dynamic
+placed object uses the prefab density and can be pushed.
+_Avoid_: Body type
+
+**Object id**:
+The stable number that addresses a placed object through the game API and the
+harness. The list index stays internal.
+_Avoid_: Handle, slot
 
 **Slide lane**:
 The marked arena strip for crouch slides.
@@ -584,7 +605,8 @@ The `F3` control that enables or disables temporal anti-aliasing.
 _Avoid_: AA switch
 
 **Debug mode**:
-The `F2` mode where the player becomes a free-fly camera and can edit crates and the sun.
+The `F2` mode where the player becomes a free-fly camera and can edit placed
+objects and the sun.
 _Avoid_: Edit mode, sandbox
 
 **Free-fly camera**:
@@ -592,7 +614,7 @@ The debug mode camera that ignores gravity and collision.
 _Avoid_: Noclip, spectator
 
 **Selection**:
-The crate or the sun that debug mode acts on.
+The placed object or the sun that debug mode acts on.
 _Avoid_: Focus, target
 
 **Scene reset**:

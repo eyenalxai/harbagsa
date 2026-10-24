@@ -13,13 +13,13 @@ DEBUG_FLY_SPEED :: 10.0
 
 Debug_Selection :: enum {
 	None,
-	Crate,
+	Object,
 	Sun,
 }
 
 Debug_Drag :: enum {
 	None,
-	Crate,
+	Object,
 	Sun,
 }
 
@@ -36,19 +36,18 @@ Saved_Player :: struct {
 }
 
 Debug_Mode :: struct {
-	active:               bool,
-	camera:               Debug_Camera,
-	saved_player:         Saved_Player,
-	sun_direction:        [3]f32,
-	sun_angular_diameter: f32,
-	selection:            Debug_Selection,
-	selected_crate:       int,
-	dragging:             Debug_Drag,
-	drag_position:        b3.Vec3,
-	sun_azimuth:          f32,
-	sun_elevation:        f32,
-	sun_drag_dx:          f32,
-	sun_drag_dy:          f32,
+	active:             bool,
+	camera:             Debug_Camera,
+	saved_player:       Saved_Player,
+	sun_direction:      [3]f32,
+	selection:          Debug_Selection,
+	selected_object_id: Object_Id,
+	dragging:           Debug_Drag,
+	drag_position:      b3.Vec3,
+	sun_azimuth:        f32,
+	sun_elevation:      f32,
+	sun_drag_dx:        f32,
+	sun_drag_dy:        f32,
 }
 
 Debug_Input :: struct {
@@ -68,8 +67,6 @@ Debug_Input :: struct {
 debug_mode_create :: proc() -> Debug_Mode {
 	return {
 		sun_direction = DEFAULT_SUN_DIRECTION,
-		sun_angular_diameter = SUN_ANGULAR_DIAMETER,
-		selected_crate = -1,
 	}
 }
 
@@ -100,7 +97,7 @@ debug_mode_sun_angles :: proc(dm: ^Debug_Mode) -> (azimuth, elevation: f32) {
 debug_mode_clear_selection :: proc(dm: ^Debug_Mode) {
 	debug_mode_end_drag(dm)
 	dm.selection = .None
-	dm.selected_crate = -1
+	dm.selected_object_id = INVALID_OBJECT_ID
 }
 
 debug_mode_end_drag :: proc(dm: ^Debug_Mode) {
@@ -109,13 +106,14 @@ debug_mode_end_drag :: proc(dm: ^Debug_Mode) {
 	dm.sun_drag_dy = 0.0
 }
 
-debug_selected_crate :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> (index: int, ok: bool) {
-	if dm.selection != .Crate ||
-	   dm.selected_crate < 0 ||
-	   dm.selected_crate >= simulation_crate_count(sim) {
-		return -1, false
+debug_selected_object_id :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> (Object_Id, bool) {
+	if dm.selection != .Object || dm.selected_object_id == INVALID_OBJECT_ID {
+		return INVALID_OBJECT_ID, false
 	}
-	return dm.selected_crate, true
+	if _, ok := simulation_object_find(sim, dm.selected_object_id); !ok {
+		return INVALID_OBJECT_ID, false
+	}
+	return dm.selected_object_id, true
 }
 
 debug_camera_forward :: proc(camera: Debug_Camera) -> b3.Vec3 {
@@ -167,7 +165,7 @@ debug_mode_update :: proc(dm: ^Debug_Mode, sim: ^Simulation, input: Debug_Input,
 	}
 
 	debug_fly(dm, input, delta)
-	debug_edit_crates(dm, sim, input)
+	debug_edit_objects(dm, sim, input)
 	debug_edit_sun(dm, input)
 }
 

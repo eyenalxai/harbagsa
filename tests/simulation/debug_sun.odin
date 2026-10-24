@@ -56,7 +56,7 @@ sun_key_toggles_selection :: proc(t: ^testing.T) {
 
 	game.debug_mode_update(&dm, &sim, {sun_pressed = true}, DT)
 	testing.expect_value(t, dm.selection, game.Debug_Selection.Sun)
-	testing.expect_value(t, dm.selected_crate, -1)
+	testing.expect_value(t, dm.selected_object_id, game.INVALID_OBJECT_ID)
 	testing.expect_value(t, dm.dragging, game.Debug_Drag.None)
 
 	game.debug_mode_update(&dm, &sim, {sun_pressed = true}, DT)
@@ -131,23 +131,25 @@ sun_click_deselects_and_drag_keeps_selection :: proc(t: ^testing.T) {
 }
 
 @(test)
-sun_crate_hit_takes_selection :: proc(t: ^testing.T) {
+sun_object_hit_takes_selection :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 
 	dm := game.debug_mode_create()
 	dm.active = true
 	eye := game.SPAWN_POSITION + b3.Vec3{0.0, game.PLAYER_STANDING_EYE, 0.0}
-	crate := game.simulation_crate_box(&sim, 0).center
+	object_id := game.simulation_objects(&sim)[0].id
+	object := game.simulation_object_box(&sim, object_id).center
 	dm.camera.position = eye
 	dm.camera.yaw = 0.0
-	dm.camera.pitch = math.atan2(crate.y - eye.y, eye.z - crate.z)
+	dm.camera.pitch = math.atan2(object.y - eye.y, eye.z - object.z)
 
 	game.debug_mode_update(&dm, &sim, {sun_pressed = true}, DT)
 	testing.expect_value(t, dm.selection, game.Debug_Selection.Sun)
 
 	game.debug_mode_update(&dm, &sim, {primary_pressed = true, captured = true}, DT)
-	testing.expect_value(t, dm.selection, game.Debug_Selection.Crate)
+	testing.expect_value(t, dm.selection, game.Debug_Selection.Object)
+	testing.expect_value(t, dm.selected_object_id, object_id)
 }
 
 @(test)

@@ -162,7 +162,7 @@ move_player :: proc(sim: ^Simulation, time_step: f32) {
 		}
 	}
 
-	apply_crate_impulses(sim, &contacts)
+	apply_object_impulses(sim, &contacts)
 	sim.player.velocity = b3.ClipVector(
 		sim.player.velocity,
 		raw_data(contacts.planes[:]),
@@ -202,10 +202,10 @@ collect_planes :: proc "c" (
 	return true
 }
 
-// Push dynamic crates with the same impulse the official mover sample applies.
-// The player has infinite mass, so only the crate receives the impulse.
+// Push dynamic objects with the same impulse the official mover sample applies.
+// The player has infinite mass, so only the object receives the impulse.
 @(private)
-apply_crate_impulses :: proc(sim: ^Simulation, contacts: ^Solver_Context) {
+apply_object_impulses :: proc(sim: ^Simulation, contacts: ^Solver_Context) {
 	for index in 0 ..< contacts.count {
 		body_id := b3.Shape_GetBody(contacts.shape_ids[index])
 		if !b3.Body_IsValid(body_id) || b3.Body_GetType(body_id) != .dynamicBody {

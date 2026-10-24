@@ -11,6 +11,6 @@
     {"cmd": "step", "frames": 30}
   ],
   "checks": [
-    {"field": "crates.0.position.z", "op": "lt", "value": 7.5}
+    {"field": "objects.1.position.z", "op": "lt", "value": 7.5}
   ]
 }

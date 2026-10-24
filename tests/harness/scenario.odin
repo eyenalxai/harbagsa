@@ -23,7 +23,7 @@ SMOKE :: `{
     {"cmd": "step", "frames": 30}
   ],
   "checks": [
-    {"field": "crates.0.position.z", "op": "lt", "value": 7.5}
+    {"field": "objects.1.position.z", "op": "lt", "value": 7.5}
   ]
 }`
 
@@ -73,7 +73,7 @@ scenario_compiles_to_commands :: proc(t: ^testing.T) {
 	}
 
 	check := scenario.commands[len(scenario.commands) - 1].check
-	testing.expect_value(t, check.field, "crates.0.position.z")
+	testing.expect_value(t, check.field, "objects.1.position.z")
 	testing.expect(t, check.op == .Lt, "check op was not parsed")
 	testing.expect(t, check.value.kind == .Number, "check value is not a number")
 	testing.expect(t, check.value.number == 7.5, "check value changed")

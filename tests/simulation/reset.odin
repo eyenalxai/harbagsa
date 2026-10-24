@@ -78,12 +78,13 @@ snapshot_exposes_interpolation_state :: proc(t: ^testing.T) {
 }
 
 @(test)
-crate_rotation_is_exposed_for_the_renderer :: proc(t: ^testing.T) {
+object_rotation_is_exposed_for_the_renderer :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 
 	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 120)
-	q := game.simulation_crate_box(&sim, 0).rotation
+	id := game.simulation_objects(&sim)[0].id
+	q := game.simulation_object_box(&sim, id).rotation
 	length_sq := q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w
-	testing.expectf(t, abs(length_sq - 1.0) < 0.01, "crate rotation is not normalized: %v", length_sq)
+	testing.expectf(t, abs(length_sq - 1.0) < 0.01, "object rotation is not normalized: %v", length_sq)
 }
