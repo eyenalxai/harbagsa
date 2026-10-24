@@ -124,7 +124,8 @@ open.
 The summary row holds frames per second, the frame interval, the CPU frame
 time, the p95 interval, the spike count, and the GPU total with the costliest
 pass. The pass row holds the last completed frame's GPU pass times: the TLAS
-build, the scene pass, the TAA resolve, and the overlay pass.
+build, the scene pass, the TAA resolve, and the overlay pass. The scene pass
+time includes the depth prepass.
 
 The GPU numbers belong to the last completed frame, so they are two frames
 behind the frame being recorded. A device without timestamp support shows the
@@ -340,6 +341,13 @@ because nothing waits for the display. `--present` measures pacing, because FIFO
 bounds the rate.
 
 The first baseline is in [the perf baseline](docs/evidence/perf-baseline.md).
+The scene-pass before/after is in
+[the scene pass evidence](docs/evidence/perf-scene-pass.md).
+
+`scenarios/perf-arena.json` measures the whole arena from above, and
+`scenarios/perf-backface.json` measures the near wall where every covered pixel
+faces away from the sun. Both are regression probes for the scene pass; run
+them at the same size to compare two builds.
 
 ### Screenshot workflow
 
