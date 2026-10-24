@@ -87,6 +87,10 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 	session.scratch = new(frame.Scratch, allocator)
 	session.sim = game.simulation_create()
 	if !game.simulation_is_valid(&session.sim) {
+		game.debug_mode_destroy(&session.debug)
+		if session.scratch != nil {
+			free(session.scratch, allocator)
+		}
 		return {}, "simulation init failed"
 	}
 	session.pending = make([dynamic]Pending_Capture, 0, 8, allocator)
