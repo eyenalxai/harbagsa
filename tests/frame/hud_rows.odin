@@ -10,27 +10,62 @@ import "src:renderer"
 import "src:ui"
 
 @(test)
-status_panel_width_survives_a_full_sweep :: proc(t: ^testing.T) {
+status_panel_width_stays_fixed_per_density :: proc(t: ^testing.T) {
 	sim, debug, hud, _ := create_state(t)
 	defer game.simulation_destroy(&sim)
 
-	theme := renderer.ui_theme_init(720)
-	atlas, built := build_atlas(t, theme)
-	testing.expect(t, built, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas)
 	positions := [5][3]f32{{0, 0, 14}, {-19.9, 0.1, -19.9}, {19.9, 0, 0}, {-0.1, 0, 0.1}, {9.9, 9.9, 9.9}}
-	expected := measure_status_panel(t, &sim, &debug, &hud, &atlas, theme, positions[0])
+	stances := [3]game.Stance{.Standing, .Crouching, .Prone}
+	gaits := [2]game.Gait{.Walk, .Sprint}
+	densities := [3]u32{720, 1080, 1440}
 
-	for position in positions[1:] {
-		actual := measure_status_panel(t, &sim, &debug, &hud, &atlas, theme, position)
-		testing.expectf(
+	for density in densities {
+		theme := renderer.ui_theme_init(density)
+		atlas, built := build_atlas(t, theme)
+		testing.expect(t, built, "the atlas did not build")
+		if !built {
+			continue
+		}
+		expected := measure_status_panel(
 			t,
-			actual.width == expected.width,
-			"the panel width moved from %v to %v at %v",
-			expected.width,
-			actual.width,
-			position,
+			&sim,
+			&debug,
+			&hud,
+			&atlas,
+			theme,
+			positions[0],
+			stances[0],
+			gaits[0],
 		)
+		for stance in stances {
+			for gait in gaits {
+				for position in positions {
+					actual := measure_status_panel(
+						t,
+						&sim,
+						&debug,
+						&hud,
+						&atlas,
+						theme,
+						position,
+						stance,
+						gait,
+					)
+					testing.expectf(
+						t,
+						actual.width == expected.width,
+						"the width moved from %v to %v at density %v, %v, %v, %v",
+						expected.width,
+						actual.width,
+						density,
+						stance,
+						gait,
+						position,
+					)
+				}
+			}
+		}
+		renderer.text_atlas_destroy(&atlas)
 	}
 }
 
@@ -138,10 +173,6 @@ build_atlas :: proc(t: ^testing.T, theme: renderer.UI_Theme) -> (renderer.Text_A
 	return renderer.text_atlas_build(context.allocator, &set)
 }
 
-Rect :: struct {
-	x, y, width, height: f32,
-}
-
 @(private)
 measure_status_panel :: proc(
 	t: ^testing.T,
@@ -151,12 +182,14 @@ measure_status_panel :: proc(
 	atlas: ^renderer.Text_Atlas,
 	theme: renderer.UI_Theme,
 	position: [3]f32,
+	stance: game.Stance,
+	gait: game.Gait,
 ) -> renderer.Rows_Layout {
 	snapshot := game.simulation_snapshot(sim)
 	snapshot.position = position
 	snapshot.velocity = {}
-	snapshot.stance = .Standing
-	snapshot.gait = .Walk
+	snapshot.stance = stance
+	snapshot.gait = gait
 	snapshot.movement_state = .None
 	snapshot.grounded = true
 
@@ -183,74 +216,4 @@ build_menu_overlay :: proc(t: ^testing.T, menu: ui.Menu) -> (overlay: renderer.O
 destroy_overlay_scratch :: proc(overlay: ^renderer.Overlay) {
 	delete(overlay.hud_vertices, context.allocator)
 	renderer.text_atlas_destroy(&overlay.atlas)
-}
-
-// Fills buffer with every quad drawn in one colour and returns the count. The
-// tests read geometry, not pixels, so this is the only way to see the layout.
-@(private)
-quads_with :: proc(overlay: renderer.Overlay, color: [4]f32, buffer: []Rect) -> int {
-	count := 0
-	for vertex in 0 ..< overlay.hud_count / 6 {
-		if count >= len(buffer) {
-			break
-		}
-		first := overlay.hud_vertices[vertex * 6]
-		if first.color != color {
-			continue
-		}
-		quad := rect_at(overlay, vertex * 6)
-		if quad.width > 0 && quad.height > 0 {
-			buffer[count] = quad
-			count += 1
-		}
-	}
-	return count
-}
-
-@(private)
-widest_quad :: proc(overlay: renderer.Overlay, color: [4]f32) -> Rect {
-	buffer: [64]Rect
-	count := quads_with(overlay, color, buffer[:])
-	best: Rect
-	for quad in buffer[:count] {
-		if quad.width * quad.height > best.width * best.height {
-			best = quad
-		}
-	}
-	return best
-}
-
-@(private)
-bounds_of :: proc(overlay: renderer.Overlay, color: [4]f32) -> Rect {
-	buffer: [64]Rect
-	count := quads_with(overlay, color, buffer[:])
-	if count == 0 {
-		return {}
-	}
-	bounds := buffer[0]
-	for quad in buffer[1:count] {
-		right := max(bounds.x + bounds.width, quad.x + quad.width)
-		bottom := max(bounds.y + bounds.height, quad.y + quad.height)
-		bounds.x = min(bounds.x, quad.x)
-		bounds.y = min(bounds.y, quad.y)
-		bounds.width = right - bounds.x
-		bounds.height = bottom - bounds.y
-	}
-	return bounds
-}
-
-@(private)
-rect_at :: proc(overlay: renderer.Overlay, first: int) -> Rect {
-	x0 := overlay.hud_vertices[first].position.x
-	y0 := overlay.hud_vertices[first].position.y
-	x1 := x0
-	y1 := y0
-	for offset in 1 ..< 6 {
-		position := overlay.hud_vertices[first + offset].position
-		x0 = min(x0, position.x)
-		y0 = min(y0, position.y)
-		x1 = max(x1, position.x)
-		y1 = max(y1, position.y)
-	}
-	return {x = x0, y = y0, width = x1 - x0, height = y1 - y0}
 }

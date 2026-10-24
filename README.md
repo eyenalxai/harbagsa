@@ -394,9 +394,8 @@ make build
 ```
 
 Read `runs/smoke/report.json` and use the absolute paths in `screenshots`. The
-PNG is RGBA, sRGB, and `1280x720` by default. The repository samples are
-`docs/evidence/harness-smoke.png`, `docs/evidence/present-window.png`,
-`docs/evidence/settings-menu.png`, and `docs/evidence/window-settings.png`. To
+PNG is RGBA, sRGB, and `1280x720` by default. Evidence is a run directory plus a
+scenario: run a scenario into `runs/<scenario-stem>/` and read `frames/`. To
 capture the owner's real window instead:
 
 ```sh
@@ -500,8 +499,8 @@ make test
 strict compiler checks on the game, the agent, and every library package. If
 `spirv-val` is not installed, the shader check prints a skip message and does
 not fail the build. `make check-spirv` runs only the shader check. `make test`
-runs the display, physics, simulation, frame, perf, harness, and renderer tests
-headless. The offscreen render test logs a skip when no Vulkan device is
+runs the display, physics, simulation, frame, perf, harness, renderer, and docs
+tests headless. The offscreen render test logs a skip when no Vulkan device is
 available.
 
 If more than one agent or terminal can build in this checkout, use the
