@@ -39,21 +39,39 @@ Analysis_Summary :: struct {
 }
 
 analysis_frames :: proc(captures: []Capture_Result, allocator: mem.Allocator) -> []Capture_Result {
+	return filter_captures(captures, 0, 0, false, allocator)
+}
+
+@(private)
+capture_matches :: proc(capture: Capture_Result, width, height: u32, by_size: bool) -> bool {
+	if by_size {
+		return capture.width == width && capture.height == height
+	}
+	return capture.target == "color" && capture.format == "png"
+}
+
+@(private)
+filter_captures :: proc(
+	items: []Capture_Result,
+	width, height: u32,
+	by_size: bool,
+	allocator: mem.Allocator,
+) -> []Capture_Result {
 	count := 0
-	for capture in captures {
-		if capture.target == "color" && capture.format == "png" {
+	for capture in items {
+		if capture_matches(capture, width, height, by_size) {
 			count += 1
 		}
 	}
-	frames := make([]Capture_Result, count, allocator)
+	result := make([]Capture_Result, count, allocator)
 	index := 0
-	for capture in captures {
-		if capture.target == "color" && capture.format == "png" {
-			frames[index] = capture
+	for capture in items {
+		if capture_matches(capture, width, height, by_size) {
+			result[index] = capture
 			index += 1
 		}
 	}
-	return frames
+	return result
 }
 
 analysis_window :: proc(frames: []Capture_Result, config: Analysis_Config) -> []Capture_Result {
@@ -76,21 +94,7 @@ analysis_comparable :: proc(frames: []Capture_Result, allocator: mem.Allocator) 
 		return nil
 	}
 	last := frames[len(frames) - 1]
-	count := 0
-	for capture in frames {
-		if capture.width == last.width && capture.height == last.height {
-			count += 1
-		}
-	}
-	result := make([]Capture_Result, count, allocator)
-	index := 0
-	for capture in frames {
-		if capture.width == last.width && capture.height == last.height {
-			result[index] = capture
-			index += 1
-		}
-	}
-	return result
+	return filter_captures(frames, last.width, last.height, true, allocator)
 }
 
 analysis_summary :: proc(frames: []Capture_Result) -> Analysis_Summary {
@@ -98,20 +102,10 @@ analysis_summary :: proc(frames: []Capture_Result) -> Analysis_Summary {
 	if len(frames) < 2 {
 		return summary
 	}
-	means := make([]f32, len(frames) - 1, context.temp_allocator)
-	for capture, index in frames {
-		if index == 0 {
-			continue
-		}
-		pair := Analysis_Pair {
-			from = frames[index - 1].frame,
-			to = capture.frame,
-			mean = capture.delta_mean,
-			max = f32(capture.delta_max),
-			over_16 = capture.delta_over_16,
-			over_16_fraction = capture_delta_fraction(capture),
-		}
-		means[index - 1] = pair.mean
+	pairs := analysis_pairs(frames, context.temp_allocator)
+	means := make([]f32, len(pairs), context.temp_allocator)
+	for pair, index in pairs {
+		means[index] = pair.mean
 		summary.pairs += 1
 		summary.worst_mean = max(summary.worst_mean, pair.mean)
 		summary.worst_max = max(summary.worst_max, pair.max)
@@ -126,7 +120,8 @@ analysis_summary :: proc(frames: []Capture_Result) -> Analysis_Summary {
 }
 
 @(private)
-capture_delta_fraction :: proc(capture: Capture_Result) -> f32 {	pixels := f32(capture.width) * f32(capture.height)
+capture_delta_fraction :: proc(capture: Capture_Result) -> f32 {
+	pixels := f32(capture.width) * f32(capture.height)
 	if pixels <= 0 {
 		return 0
 	}
@@ -190,7 +185,7 @@ autocorrelation :: proc(series: []f32, mean: f32, variance: f64, lag: int) -> f3
 session_refresh_analysis :: proc(session: ^Session) {
 	session.has_analysis = false
 	session.analysis = {}
-	if !session.analysis_config.enabled {
+	if !session.analysis_config.enabled || len(session.captures) == 0 {
 		return
 	}
 	frames := analysis_frames(session.captures[:], session.allocator)
@@ -198,9 +193,27 @@ session_refresh_analysis :: proc(session: ^Session) {
 	window := analysis_window(frames, session.analysis_config)
 	comparable := analysis_comparable(window, session.allocator)
 	defer delete(comparable, session.allocator)
-	if len(comparable) == 0 {
-		return
-	}
 	session.analysis = analysis_summary(comparable)
 	session.has_analysis = true
+}
+
+analysis_pairs :: proc(window: []Capture_Result, allocator: mem.Allocator) -> []Analysis_Pair {
+	if len(window) < 2 {
+		return nil
+	}
+	pairs := make([]Analysis_Pair, len(window) - 1, allocator)
+	for capture, index in window {
+		if index == 0 {
+			continue
+		}
+		pairs[index - 1] = {
+			from = window[index - 1].frame,
+			to = capture.frame,
+			mean = capture.delta_mean,
+			max = f32(capture.delta_max),
+			over_16 = capture.delta_over_16,
+			over_16_fraction = capture_delta_fraction(capture),
+		}
+	}
+	return pairs
 }

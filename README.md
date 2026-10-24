@@ -210,9 +210,10 @@ also read `capture.target`, `capture.format`, and `capture.stats.*` for the last
 capture in its window. Add `"window": {"start": 2, "count": 8}` to aggregate over
 part of the captures; `warmup` stays the shorthand for skipping the first N.
 
-A run with color captures writes `analysis.json`. It holds per-pair deltas, a
+A run with captures writes `analysis.json`. It holds per-pair deltas, a
 summary, the dominant period, the worst unstable pixels' series, and optional
-diff and variance maps. Checks read `analysis.period.frames`,
+diff and variance maps. The pair and pixel analysis uses color captures; a run
+with only intermediate captures writes an empty summary. Checks read `analysis.period.frames`,
 `analysis.period.correlation`, and the `analysis.worst_*` fields. Disable it with
 `"analysis": false` or `--no-analysis`; select a window and maps with
 `"analysis": {"start": 2, "count": 8, "maps": true}`.
@@ -401,7 +402,9 @@ TAA input resets history and records the `debug_override` reason.
 `scenarios/renderer-debug.json` covers the overrides, and
 `scenarios/renderer-debug-converge.json` shows the image converging with jitter
 off. `scenarios/renderer-debug-jitter.json` freezes the phase, lets jitter cycle,
-and writes the analysis maps.
+and writes the analysis maps. `scenarios/capture-free.json` settles without
+captures and then captures; run it twice and compare the digests and PNG hashes
+to prove the offscreen sequence is deterministic.
 
 ## Build
 
