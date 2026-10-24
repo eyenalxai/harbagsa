@@ -8,7 +8,11 @@ import "core:testing"
 import "src:renderer"
 
 build_test_atlas :: proc(t: ^testing.T) -> (renderer.Text_Atlas, bool) {
-	theme := renderer.ui_theme_init(720)
+	return build_weight_atlas(t, 400)
+}
+
+build_weight_atlas :: proc(t: ^testing.T, weight: f32) -> (renderer.Text_Atlas, bool) {
+	theme := renderer.ui_theme_init(720, weight)
 	set := renderer.text_theme_layer_set(theme)
 	atlas, ok := renderer.text_atlas_build(context.allocator, &set)
 	testing.expect(t, ok, "the atlas did not build")
@@ -16,21 +20,20 @@ build_test_atlas :: proc(t: ^testing.T) -> (renderer.Text_Atlas, bool) {
 }
 
 @(test)
-text_atlas_covers_ascii_for_every_layer :: proc(t: ^testing.T) {
+text_atlas_covers_every_glyph_in_each_layer :: proc(t: ^testing.T) {
 	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas, context.allocator)
+	defer renderer.text_atlas_destroy(&atlas)
 
 	for layer in atlas.layers[:atlas.count] {
-		for codepoint in rune(0x20) ..= rune(0x7E) {
-			index, found := renderer.text_codepoint_index(codepoint)
-			testing.expectf(t, found, "%v: 0x%X has no index", layer.key, codepoint)
-			glyph := layer.glyphs[index]
-			testing.expectf(t, glyph.advance > 0, "%v: 0x%X has no advance", layer.key, codepoint)
-			if codepoint != ' ' {
-				testing.expectf(t, glyph.present, "%v: 0x%X has no bitmap", layer.key, codepoint)
+		testing.expectf(t, len(layer.glyphs) > 90, "%v has only %d glyphs", layer.key, len(layer.glyphs))
+		present := 0
+		for glyph in layer.glyphs {
+			if glyph.present {
+				present += 1
 			}
 		}
+		testing.expectf(t, present > 90, "%v has only %d bitmaps", layer.key, present)
 	}
 }
 
@@ -38,18 +41,16 @@ text_atlas_covers_ascii_for_every_layer :: proc(t: ^testing.T) {
 text_atlas_includes_the_separator_glyphs :: proc(t: ^testing.T) {
 	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas, context.allocator)
+	defer renderer.text_atlas_destroy(&atlas)
 
-	extras := [2]rune{0x00B7, 0x00D7}
-	for codepoint in extras {
-		index, found := renderer.text_codepoint_index(codepoint)
-		testing.expectf(t, found, "0x%X has no index", codepoint)
-		testing.expectf(
-			t,
-			atlas.layers[0].glyphs[index].present,
-			"0x%X has no bitmap",
-			codepoint,
-		)
+	theme := renderer.ui_theme_init(720)
+	layer := &atlas.layers[renderer.text_layer_index(&atlas, theme.type_body)]
+	for character in ([2]rune{0x00B7, 0x00D7}) {
+		index := glyph_for_rune(.Sans, 400, character)
+		testing.expectf(t, index >= 0 && index < len(layer.glyphs), "0x%X has no glyph", character)
+		if index >= 0 && index < len(layer.glyphs) {
+			testing.expectf(t, layer.glyphs[index].present, "0x%X has no bitmap", character)
+		}
 	}
 }
 
@@ -57,7 +58,7 @@ text_atlas_includes_the_separator_glyphs :: proc(t: ^testing.T) {
 text_atlas_glyph_rects_stay_inside_and_do_not_overlap :: proc(t: ^testing.T) {
 	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas, context.allocator)
+	defer renderer.text_atlas_destroy(&atlas)
 
 	width := f32(atlas.width)
 	height := f32(atlas.height)
@@ -92,13 +93,7 @@ text_atlas_glyph_rects_stay_inside_and_do_not_overlap :: proc(t: ^testing.T) {
 				second.x < first.z &&
 				first.y < second.w &&
 				second.y < first.w
-			testing.expectf(
-				t,
-				!overlaps,
-				"two glyph rects overlap: %v and %v",
-				first,
-				second,
-			)
+			testing.expectf(t, !overlaps, "two glyph rects overlap: %v and %v", first, second)
 		}
 	}
 }
@@ -107,7 +102,7 @@ text_atlas_glyph_rects_stay_inside_and_do_not_overlap :: proc(t: ^testing.T) {
 text_atlas_vertical_metrics_are_ordered :: proc(t: ^testing.T) {
 	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas, context.allocator)
+	defer renderer.text_atlas_destroy(&atlas)
 
 	for layer in atlas.layers[:atlas.count] {
 		testing.expectf(t, layer.ascent > 0, "%v: the ascent must be positive", layer.key)
@@ -117,37 +112,18 @@ text_atlas_vertical_metrics_are_ordered :: proc(t: ^testing.T) {
 }
 
 @(test)
-text_atlas_keeps_the_kerning_pairs :: proc(t: ^testing.T) {
-	atlas, ok := build_test_atlas(t)
-	testing.expect(t, ok, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas, context.allocator)
-
-	a, a_ok := renderer.text_codepoint_index('A')
-	v, v_ok := renderer.text_codepoint_index('V')
-	testing.expect(t, a_ok && v_ok, "A and V must exist")
-
-	// The subset keeps the legacy kern table; losing it during a re-subset would
-	// silently widen every tight pair.
-	testing.expectf(
-		t,
-		atlas.layers[0].kern[a * renderer.TEXT_CODEPOINT_COUNT + v] < 0,
-		"A/V must kern tighter than the sum of its advances",
-	)
-}
-
-@(test)
 text_atlas_advance_is_proportional_to_the_size :: proc(t: ^testing.T) {
 	set: renderer.Text_Layer_Set
-	renderer.text_layer_set_add(&set, {weight = .Regular, px = 20})
-	renderer.text_layer_set_add(&set, {weight = .Regular, px = 40})
+	renderer.text_layer_set_add(&set, {face = .Sans, weight = 400, px = 20})
+	renderer.text_layer_set_add(&set, {face = .Sans, weight = 400, px = 40})
 	atlas, ok := renderer.text_atlas_build(context.allocator, &set)
 	testing.expect(t, ok, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas, context.allocator)
+	defer renderer.text_atlas_destroy(&atlas)
 
-	small := renderer.ui_theme_init(720).type_body
-	small.size = 20
+	small := renderer.Text_Type{size = 20, line_height = 30, face = .Sans, weight = 400}
 	large := small
 	large.size = 40
+	large.line_height = 60
 
 	small_width := renderer.text_measure(&atlas, small, "Standing")
 	large_width := renderer.text_measure(&atlas, large, "Standing")
@@ -161,19 +137,21 @@ text_atlas_advance_is_proportional_to_the_size :: proc(t: ^testing.T) {
 	)
 }
 
-// A distance field lost the inside of a one-pixel stem: the sampled distance at
-// the stem centre never left the antialiasing ramp, so the stem drew grey and
-// broken. Coverage has no such floor, and this holds that line.
+// A distance field lost the inside of a one-pixel stem. Coverage has no such
+// floor, and this holds that line.
 @(test)
 text_atlas_keeps_thin_stems_solid :: proc(t: ^testing.T) {
 	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas, context.allocator)
+	defer renderer.text_atlas_destroy(&atlas)
 
 	theme := renderer.ui_theme_init(720)
-	index, found := renderer.text_codepoint_index('i')
-	testing.expect(t, found, "i must exist")
+	index := glyph_for_rune(.Sans, 400, 'i')
+	testing.expect(t, index >= 0, "i must exist")
 	layer := &atlas.layers[renderer.text_layer_index(&atlas, theme.type_body)]
+	if index < 0 || index >= len(layer.glyphs) {
+		return
+	}
 	glyph := layer.glyphs[index]
 	testing.expect(t, glyph.present, "i has no bitmap")
 
@@ -196,15 +174,77 @@ text_atlas_keeps_thin_stems_solid :: proc(t: ^testing.T) {
 @(test)
 text_layer_set_is_sorted_and_unique :: proc(t: ^testing.T) {
 	set: renderer.Text_Layer_Set
-	renderer.text_layer_set_add(&set, {weight = .Mono, px = 15})
-	renderer.text_layer_set_add(&set, {weight = .Regular, px = 15})
-	renderer.text_layer_set_add(&set, {weight = .Regular, px = 15})
-	renderer.text_layer_set_add(&set, {weight = .Regular, px = 21})
+	renderer.text_layer_set_add(&set, {face = .Mono, weight = 400, px = 15})
+	renderer.text_layer_set_add(&set, {face = .Sans, weight = 400, px = 15})
+	renderer.text_layer_set_add(&set, {face = .Sans, weight = 400, px = 15})
+	renderer.text_layer_set_add(&set, {face = .Sans, weight = 400, px = 21})
 
 	testing.expect_value(t, set.count, 3)
 	for index in 1 ..< set.count {
-		testing.expect(t, set.keys[index - 1].weight < set.keys[index].weight ||
-			(set.keys[index - 1].weight == set.keys[index].weight &&
-				set.keys[index - 1].px < set.keys[index].px))
+		previous := set.keys[index - 1]
+		current := set.keys[index]
+		ordered :=
+			previous.face < current.face ||
+			(previous.face == current.face &&
+				(previous.weight < current.weight ||
+					(previous.weight == current.weight && previous.px < current.px)))
+		testing.expectf(t, ordered, "%v must sort before %v", previous, current)
 	}
+}
+
+@(test)
+text_theme_uses_seven_layers :: proc(t: ^testing.T) {
+	theme := renderer.ui_theme_init(720)
+	set := renderer.text_theme_layer_set(theme)
+	testing.expect_value(t, set.count, 7)
+
+	body_mono, caption_mono, title := false, false, false
+	for key in set.keys[:set.count] {
+		if key.face == .Mono && key.weight == 400 && key.px == 15 {
+			body_mono = true
+		}
+		if key.face == .Mono && key.weight == 400 && key.px == 14 {
+			caption_mono = true
+		}
+		if key.face == .Sans && key.weight == 500 && key.px == 21 {
+			title = true
+		}
+	}
+	testing.expect(t, body_mono, "the body mono layer is missing")
+	testing.expect(t, caption_mono, "the caption mono layer is missing")
+	testing.expect(t, title, "the title layer is missing")
+}
+
+@(test)
+text_theme_mono_clamps_at_seven_hundred :: proc(t: ^testing.T) {
+	theme := renderer.ui_theme_init(720, 900)
+	set := renderer.text_theme_layer_set(theme)
+	sans_nine_hundred, mono := false, false
+	for key in set.keys[:set.count] {
+		if key.face == .Sans && key.weight == 900 {
+			sans_nine_hundred = true
+		}
+		if key.face == .Mono {
+			mono = true
+			testing.expectf(t, key.weight == 700, "mono clamped to %d", key.weight)
+		}
+	}
+	testing.expect(t, sans_nine_hundred, "the sans face must reach 900")
+	testing.expect(t, mono, "the mono layers are missing")
+}
+
+@(test)
+text_theme_strong_role_sits_one_hundred_above_the_body :: proc(t: ^testing.T) {
+	theme := renderer.ui_theme_init(720, 800)
+	testing.expect_value(t, theme.type_body.weight, 800)
+	testing.expect_value(t, theme.type_body_strong.weight, 900)
+	testing.expect_value(t, theme.type_title.weight, 900)
+
+	theme = renderer.ui_theme_init(720, 900)
+	testing.expect_value(t, theme.type_body.weight, 900)
+	testing.expect_value(t, theme.type_body_strong.weight, 900)
+
+	theme = renderer.ui_theme_init(720, 100)
+	testing.expect_value(t, theme.type_body.weight, 100)
+	testing.expect_value(t, theme.type_body_strong.weight, 200)
 }

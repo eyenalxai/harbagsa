@@ -1,24 +1,30 @@
 # UI evidence
 
 The 2D layer is drawn by the overlay pass: a status panel, a capture hint, a
-crosshair, and the settings panel. These captures come from
-`bin/harbagsa-agent` at 1280x720. The recipe is in
-`docs/agents/harness.md`.
+crosshair, and the settings panel. The captures come from `bin/harbagsa-agent` at
+1280x720. Run the scenario into a run directory and read the PNGs from `frames/`.
+Screenshots stay out of the repository; point at the run directory instead.
 
 ## Settings panel
 
-| Before | After |
-| --- | --- |
-| ![before](settings-menu-before.png) | ![after](settings-menu.png) |
+```sh
+./bin/harbagsa-agent run scenarios/settings-menu.json --out runs/ui/menu
+```
 
 What changed:
 
-- Text is Noto Sans drawn from a coverage atlas rasterized at the device pixel
-  size, so a texel is already the fraction of its pixel the glyph covers. The
-  earlier distance field could not draw a one-pixel stem and left the text grey
-  and broken; ADR 0007 has the measurement.
-- A type size now means an em in device pixels. The old atlas keyed its scale to
-  the font's ascent–descent span, so the 15 px body actually drew an 11 px em.
+- Text is Roboto Condensed and Roboto Mono, drawn from a coverage atlas
+  rasterized by FreeType at the device pixel size. A texel is the fraction of its
+  pixel the glyph covers. The earlier distance field could not draw a one-pixel
+  stem; ADR 0007 has the measurement.
+- HarfBuzz shapes every string, so advances and pair kerning match the variable
+  font at the displayed weight. The old 97x97 kerning table is gone.
+- A type size still means an em in device pixels. Each layer of the atlas now
+  carries the face, the weight, and the pixel size, so a weight change never
+  silently reuses the regular outlines.
+- `Type weight` is a two-line slider row after Resolution. It runs from Thin 100
+  to Black 900, marks the nine named instances, and accepts a drag or ten-unit
+  arrow steps. The number is the only text value.
 - Values sit on one column at the panel's inner edge. The old layout padded with
   `%-12s`, which spread the value column over a 16 px range because the font is
   proportional.
@@ -31,15 +37,22 @@ What changed:
   measured columns instead of runs of four spaces.
 - `1920×1080` uses the multiplication sign.
 
-The same panel at 2x, for reading the type:
+## Type weight
 
-![crop](settings-menu-crop.png)
+```sh
+./bin/harbagsa-agent run scenarios/type-weight.json --out runs/ui/weight
+```
+
+The scenario captures the menu at 400, 900, and 100. The same frames show the
+slider at the three positions, the `Settings` title at the role weight, and the
+numeric `400`, `900`, and `100` values in Roboto Mono. Above 700 the mono face
+clamps at Bold, so the numbers stop gaining weight before the prose does.
 
 ## Status panel
 
-| Before | After |
-| --- | --- |
-| ![before](hud-before.png) | ![after](hud.png) |
+```sh
+./bin/harbagsa-agent run scenarios/hud.json --out runs/ui/hud
+```
 
 What changed:
 
@@ -47,15 +60,19 @@ What changed:
   body rows. Grounded and position are caption rows. The old panel drew six
   lines at one size and one colour.
 - Every number that changes during play is formatted into a fixed field and drawn
-  in Noto Sans Mono, so the row width never changes and the panel never resizes
-  as the player walks. A test holds this.
+  in Roboto Mono, so the row width never changes and the panel never resizes as
+  the player walks. A test holds this.
+- A numeric Detail row now draws at 14 px. It used to fall back to the 15 px mono
+  layer.
 - The position names its axes.
 - The capture hint sits below the crosshair. The old hint was centre-anchored
   and the crosshair drew straight through the text.
 
 ## Debug readout
 
-![debug](hud-debug.png)
+```sh
+./bin/harbagsa-agent run scenarios/hud-debug.json --out runs/ui/hud-debug
+```
 
 The debug mode readout uses the same row renderer: a heading, two metrics, a
-divider, and two caption rows. `scenarios/hud-debug.json` produces it.
+divider, and two caption rows.

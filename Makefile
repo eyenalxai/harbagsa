@@ -1,5 +1,5 @@
 ODIN ?= odin
-ODIN_FLAGS ?= -vet -vet-style -vet-semicolon -vet-tabs -vet-using-param -vet-unused-procedures -vet-packages:main,platform,renderer,game,geometry,frame,perf,harness,display,ui -strict-style -warnings-as-errors -disallow-do
+ODIN_FLAGS ?= -vet -vet-style -vet-semicolon -vet-tabs -vet-using-param -vet-unused-procedures -vet-packages:main,platform,renderer,font,game,geometry,frame,perf,harness,display,ui -strict-style -warnings-as-errors -disallow-do
 ODIN_COLLECTIONS := -collection:libs=vendor -collection:src=src
 # Library checks and the renderer test cannot know which procedures another
 # package calls, so they omit -vet-unused-procedures. The main check still runs
@@ -24,10 +24,38 @@ SHADERS := $(SHADER_OUT)/box.vert.spv $(SHADER_OUT)/box.frag.spv \
 	$(SHADER_OUT)/taa.vert.spv $(SHADER_OUT)/taa.frag.spv
 
 CC ?= cc
+CXX ?= c++
 BOX3D_DIR := vendor/box3d
 BOX3D_SRC := $(wildcard $(BOX3D_DIR)/src/src/*.c)
 BOX3D_OBJ := $(patsubst $(BOX3D_DIR)/src/src/%.c,build/box3d/%.o,$(BOX3D_SRC))
 BOX3D_LIB := $(BOX3D_DIR)/lib/linux-amd64/libbox3d.a
+
+FREETYPE_DIR := vendor/freetype
+FREETYPE_CONFIG := vendor/freetype-config
+FREETYPE_SRC := \
+	$(FREETYPE_DIR)/src/base/ftsystem.c \
+	$(FREETYPE_DIR)/src/base/ftinit.c \
+	$(FREETYPE_DIR)/src/base/ftdebug.c \
+	$(FREETYPE_DIR)/src/base/ftbase.c \
+	$(FREETYPE_DIR)/src/base/ftbbox.c \
+	$(FREETYPE_DIR)/src/base/ftglyph.c \
+	$(FREETYPE_DIR)/src/base/ftbitmap.c \
+	$(FREETYPE_DIR)/src/base/ftmm.c \
+	$(FREETYPE_DIR)/src/truetype/truetype.c \
+	$(FREETYPE_DIR)/src/sfnt/sfnt.c \
+	$(FREETYPE_DIR)/src/psnames/psnames.c \
+	$(FREETYPE_DIR)/src/smooth/smooth.c
+FREETYPE_OBJ := $(patsubst %.c,build/freetype/%.o,$(notdir $(FREETYPE_SRC))) build/freetype/ftgzip_stub.o
+FREETYPE_LIB := $(FREETYPE_DIR)/lib/linux-amd64/libfreetype.a
+FREETYPE_DEFS := -DFT_CONFIG_OPTIONS_H='"ftoption.h"' -DFT_CONFIG_MODULES_H='"ftmodule.h"'
+
+HARFBUZZ_DIR := vendor/harfbuzz
+HARFBUZZ_OBJ := build/harfbuzz/harfbuzz.o
+HARFBUZZ_LIB := $(HARFBUZZ_DIR)/lib/linux-amd64/libharfbuzz.a
+# HB_NO_VAR must stay off: it removes variable-font support.
+HARFBUZZ_DEFS := -DHB_NO_MT -DHB_NO_AAT -DHB_NO_LEGACY -DHB_NO_COLOR -DHB_NO_DRAW \
+	-DHB_NO_MATH -DHB_NO_NAME -DHB_NO_META -DHB_NO_METRICS -DHB_NO_STYLE \
+	-DHB_NO_HINTING -DHB_NO_OT_SHAPE_FRACTIONS -DHB_NO_EMOJI_SEQUENCES
 
 VULKAN_LAYER_DIRS ?= \
 	$(HOME)/.config/vulkan/explicit_layer.d \
@@ -53,6 +81,35 @@ build/box3d/%.o: $(BOX3D_DIR)/src/src/%.c
 	@mkdir -p $(@D)
 	$(CC) -c -O2 -std=c17 -fPIC -I$(BOX3D_DIR)/src/include $< -o $@
 
+vpath %.c $(FREETYPE_DIR)/src/base $(FREETYPE_DIR)/src/truetype \
+	$(FREETYPE_DIR)/src/sfnt $(FREETYPE_DIR)/src/psnames $(FREETYPE_DIR)/src/smooth
+
+build/freetype/%.o: %.c
+	@mkdir -p $(@D)
+	$(CC) -c -O2 -std=c99 -fPIC -DFT2_BUILD_LIBRARY $(FREETYPE_DEFS) \
+		-I$(FREETYPE_DIR)/include -I$(FREETYPE_CONFIG) $< -o $@
+
+build/freetype/ftgzip_stub.o: $(FREETYPE_CONFIG)/ftgzip_stub.c
+	@mkdir -p $(@D)
+	$(CC) -c -O2 -std=c99 -fPIC -DFT2_BUILD_LIBRARY -I$(FREETYPE_DIR)/include $< -o $@
+
+$(FREETYPE_LIB): $(FREETYPE_OBJ)
+	@mkdir -p $(@D)
+	rm -f $@.tmp
+	ar crsD $@.tmp $(FREETYPE_OBJ)
+	mv $@.tmp $@
+
+$(HARFBUZZ_OBJ): $(HARFBUZZ_DIR)/src/harfbuzz.cc
+	@mkdir -p $(@D)
+	$(CXX) -std=c++11 -O2 -fPIC -fno-exceptions -fno-rtti -fno-threadsafe-statics \
+		-DNDEBUG $(HARFBUZZ_DEFS) -I$(HARFBUZZ_DIR)/src -c $< -o $@
+
+$(HARFBUZZ_LIB): $(HARFBUZZ_OBJ)
+	@mkdir -p $(@D)
+	rm -f $@.tmp
+	ar crsD $@.tmp $(HARFBUZZ_OBJ)
+	mv $@.tmp $@
+
 $(SHADER_OUT)/%.vert.spv: $(SHADER_SRC)/%.vert $(SHADER_INCLUDES)
 	@mkdir -p $(@D)
 	$(GLSLC) --target-env=vulkan1.3 -fshader-stage=vert $< -o $@
@@ -74,16 +131,17 @@ check-spirv: shaders
 		exit $$status; \
 	fi
 
-build: $(BOX3D_LIB) shaders
+build: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	mkdir -p bin
 	$(ODIN) build . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -out:$(BIN)
 	$(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -out:$(AGENT_BIN)
 
-check: check-lines check-spirv $(BOX3D_LIB) shaders
+check: check-lines check-spirv $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) check . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
 	$(ODIN) check $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS)
 	$(ODIN) check src/platform $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/renderer $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
+	$(ODIN) check src/renderer/font $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/game $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/display $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/geometry $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
@@ -105,7 +163,7 @@ check-lines:
 
 # Box3D's world registry is not safe for concurrent world creation, so the test
 # programs share one runner thread.
-test: $(BOX3D_LIB) shaders
+test: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) test tests/display $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
 	$(ODIN) test tests/physics $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
 	$(ODIN) test tests/simulation $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
@@ -114,7 +172,7 @@ test: $(BOX3D_LIB) shaders
 	$(ODIN) test tests/harness $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
 	$(ODIN) test tests/renderer $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
 
-run: $(BOX3D_LIB) shaders
+run: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
 
 check-validation-layer:
@@ -134,7 +192,7 @@ check-validation-layer:
 	fi
 
 # The harness keeps validation bounded: a fixed scenario exits on its own.
-validate: check-validation-layer $(BOX3D_LIB) shaders
+validate: check-validation-layer $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	@mkdir -p $(dir $(VALIDATE_AGENT_BIN))
 	$(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) \
 		-define:ENABLE_VALIDATION_LAYERS=true -out:$(VALIDATE_AGENT_BIN)
@@ -145,8 +203,8 @@ validate: check-validation-layer $(BOX3D_LIB) shaders
 		printf '%s\n' 'make validate: no display, skipping the present run'; \
 	fi
 
-validate-demo: check-validation-layer $(BOX3D_LIB) shaders
+validate-demo: check-validation-layer $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ENABLE_VALIDATION_LAYERS=true
 
 clean:
-	rm -rf bin build $(BOX3D_LIB)
+	rm -rf bin build $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB)

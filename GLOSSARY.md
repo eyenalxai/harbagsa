@@ -332,15 +332,41 @@ _Avoid_: DPI scale, zoom
 
 **Type scale**:
 The five type roles the overlay uses: title, body, label, detail, and section
-header. Each role fixes an em size, leading, weight, and tracking. A size is the
-em in device pixels, so a 15 px role draws a 15 px em. See `docs/ui/type.md`.
+header. Each role fixes an em size, leading, and tracking, and derives its weight
+from the base axis position. A size is the em in device pixels, so a 15 px role
+draws a 15 px em. See `docs/ui/type.md`.
 _Avoid_: Font sizes, text styles
+
+**Weight axis**:
+The `wght` variation coordinate of a variable face. Roboto Condensed runs from
+100 to 900; Roboto Mono runs from 100 to 700. The base weight is a settings value,
+not a state. Body and detail use the base, title and labels use base + 100, and
+mono clamps at 700.
+_Avoid_: Font weight, boldness, thickness
+
+**Named instance**:
+A labelled stop on a weight axis: Thin 100, ExtraLight 200, Light 300, Regular
+400, Medium 500, SemiBold 600, Bold 700, ExtraBold 800, Black 900. The slider
+marks all nine, but it can land on any whole unit between them.
+_Avoid_: Variant, preset, style
+
+**Shaped run**:
+The glyph IDs, x offsets, and advances HarfBuzz returns for one string. Measuring
+and drawing walk the same run, so they cannot drift apart. The atlas is keyed by
+glyph ID, not by character.
+_Avoid_: Text layout, glyph list
+
+**Slider row**:
+A two-line settings row for one continuous value. Line one holds the label and the
+number; line two holds a full-width track with named-instance ticks. It is
+selectable, and a drag maps the cursor onto the track.
+_Avoid_: Seek bar, range, gauge
 
 **Coverage atlas**:
 The one texture that holds every glyph as the fraction of each pixel the glyph
-covers, rasterized at the device pixel size from the three subset Noto faces. It
-holds one layer per face and pixel size the theme can draw, and it is repacked
-when the density changes.
+covers, rasterized at the device pixel size from the two subset Roboto variable
+faces. It holds one layer per face, weight, and pixel size the theme can draw, and
+it is repacked on a worker when the weight or the density changes.
 _Avoid_: SDF atlas, font texture, bitmap font, glyph sheet
 
 **Sub-pixel phase**:
@@ -350,15 +376,16 @@ advance; the phase absorbs the fraction.
 _Avoid_: Sub-pixel offset, hinting
 
 **Glyph**:
-One drawable letter in the coverage atlas: a uv rectangle per sub-pixel phase, an
-offset from the pen, and an advance. The HUD never draws a character directly; it
-draws glyphs.
+One drawable letter in the coverage atlas: a uv rectangle and an offset from the
+pen for each sub-pixel phase. HarfBuzz supplies the advance at draw time. The HUD
+never draws a character directly; it draws glyphs.
 _Avoid_: Character, letter
 
 **Row**:
 One line of the overlay: a kind, a label, a value, and whether the value is
-numeric. The game fills rows; the renderer lays them out. The kind set is closed:
-setting, action, metric, detail, header, divider, spacer.
+numeric. A slider row also carries a ratio and a tick count. The game fills rows;
+the renderer lays them out. The kind set is closed: setting, action, metric,
+detail, slider, header, divider, spacer.
 _Avoid_: Line, item, entry
 
 **Value column**:
@@ -374,7 +401,8 @@ _Avoid_: Control list, key list
 
 **Selection band**:
 The two signals that mark the selected menu row: the raised surface and the
-accent bar on the leading edge. Neither alone is enough.
+accent bar on the leading edge. Neither alone is enough. It applies to a setting,
+an action, or a slider row.
 _Avoid_: Highlight, hover, cursor
 
 **Pause**:

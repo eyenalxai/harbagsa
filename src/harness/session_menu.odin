@@ -14,6 +14,9 @@ session_menu :: proc(session: ^Session, command: Menu_Command) -> string {
 	if command.has_activate && !will_open {
 		return "menu must be open to activate a row"
 	}
+	if command.has_set && !will_open {
+		return "menu must be open to set a value"
+	}
 
 	if command.has_open {
 		if command.open {
@@ -31,6 +34,9 @@ session_menu :: proc(session: ^Session, command: Menu_Command) -> string {
 			direction = command.direction
 		}
 		_ = game.menu_activate(&session.hud.menu, &session.sim.settings, direction)
+	}
+	if command.has_set {
+		_ = game.menu_set_type_weight(&session.hud.menu, &session.sim.settings, f32(command.set))
 	}
 	return ""
 }

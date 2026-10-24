@@ -3,6 +3,7 @@ package main
 
 import "src:game"
 import "src:platform"
+import "src:renderer"
 
 @(private)
 open_settings_menu :: proc(window: ^platform.Window, menu: ^game.Menu_State) -> bool {
@@ -31,6 +32,7 @@ handle_settings_menu_events :: proc(
 	menu: ^game.Menu_State,
 	settings: ^game.Settings,
 	events: ^platform.Events,
+	slider: renderer.Menu_Slider,
 	accumulator: ^f32,
 	recapture: ^bool,
 	latches: ^Input_Latches,
@@ -66,4 +68,52 @@ handle_settings_menu_events :: proc(
 		events.captured = close_settings_menu(window, menu, recapture^)
 		accumulator^ = 0
 	}
+	apply_weight_drag(menu, settings, events, slider)
+}
+
+@(private)
+menu_slider_for_window :: proc(r: ^renderer.Renderer, window: ^platform.Window) -> renderer.Menu_Slider {
+	slider := renderer.menu_slider_travel(r)
+	window_width, window_height := platform.window_size(window)
+	if window_width <= 0 || window_height <= 0 {
+		return slider
+	}
+	width, height := renderer.target_extent(r)
+	scale_x := f32(width) / window_width
+	scale_y := f32(height) / window_height
+	slider.x *= scale_x
+	slider.width *= scale_x
+	slider.y *= scale_y
+	slider.height *= scale_y
+	return slider
+}
+
+@(private)
+apply_weight_drag :: proc(
+	menu: ^game.Menu_State,
+	settings: ^game.Settings,
+	events: ^platform.Events,
+	slider: renderer.Menu_Slider,
+) {
+	if !menu.open || slider.width <= 0 {
+		return
+	}
+	inside :=
+		events.pointer.x >= slider.x &&
+		events.pointer.x <= slider.x + slider.width &&
+		events.pointer.y >= slider.y &&
+		events.pointer.y <= slider.y + slider.height
+	if events.pointer_pressed && inside {
+		game.menu_select(menu, int(game.Menu_Item.Type_Weight))
+		menu.dragging_weight = true
+	}
+	if !menu.dragging_weight {
+		return
+	}
+	if !events.pointer_down {
+		menu.dragging_weight = false
+		return
+	}
+	ratio := (events.pointer.x - slider.x) / slider.width
+	_ = game.menu_set_type_weight_ratio(menu, settings, ratio)
 }

@@ -215,7 +215,7 @@ menu_command_rejects_bad_fields :: proc(t: ^testing.T) {
 	if error != "" {
 		delete(error, context.allocator)
 	}
-	_, error = harness.command_parse_string(`{"cmd": "menu", "select": 9}`, context.allocator)
+	_, error = harness.command_parse_string(`{"cmd": "menu", "select": 8}`, context.allocator)
 	testing.expectf(t, error != "", "out-of-range menu row was accepted")
 	if error != "" {
 		delete(error, context.allocator)

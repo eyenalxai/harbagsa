@@ -1,23 +1,19 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the text engine consumes the codepoint lookup
+#+vet !unused-procedures // the atlas and the tests use every key helper
 package renderer
 
 import "core:log"
+import "core:math"
 import "core:mem"
 
-NOTO_SANS_REGULAR :: #load("fonts/NotoSans-Regular.ttf")
-NOTO_SANS_MEDIUM :: #load("fonts/NotoSans-Medium.ttf")
-NOTO_SANS_MONO_REGULAR :: #load("fonts/NotoSansMono-Regular.ttf")
+import "src:ui"
+
+ROBOTO_CONDENSED :: #load("fonts/RobotoCondensed-Variable.ttf")
+ROBOTO_MONO :: #load("fonts/RobotoMono-Variable.ttf")
 
 // Glyphs rasterize at the device pixel size, so the atlas is a coverage map and
-// not a distance field. A distance field cannot carry a stem thinner than the
-// reconstruction footprint: at the caption size the stem is one pixel, its
-// signed distance at the pixel centre never leaves the antialiasing ramp, and
-// the stem draws grey and broken. Coverage has no such floor.
-//
-// Four horizontal phases cover the sub-pixel positions a layout produces. The
-// phase is baked into the bitmap and the quad snaps to a whole pixel, so one
-// texel lands on one pixel exactly.
+// not a distance field. Four horizontal phases cover the sub-pixel positions a
+// layout produces.
 TEXT_SUBPIXEL_PHASES :: 4
 TEXT_GLYPH_PADDING :: 1
 TEXT_LAYER_MAX :: 8
@@ -26,29 +22,23 @@ TEXT_ATLAS_MAX_SIDE :: 4096
 TEXT_ATLAS_SIDE_STEP :: 256
 TEXT_ATLAS_PACK_HEADROOM :: 1.5
 
-TEXT_ASCII_FIRST :: 0x20
-TEXT_ASCII_LAST :: 0x7E
-TEXT_ASCII_COUNT :: TEXT_ASCII_LAST - TEXT_ASCII_FIRST + 1
-TEXT_CODEPOINT_COUNT :: TEXT_ASCII_COUNT + 2 // plus the middle dot and the multiplication sign
+BASE_WEIGHT :: ui.TYPE_WEIGHT_DEFAULT
+MIN_WEIGHT :: ui.TYPE_WEIGHT_MIN
+MAX_WEIGHT :: ui.TYPE_WEIGHT_MAX
+MONO_MAX_WEIGHT :: ui.TYPE_WEIGHT_MONO_MAX
 
-Text_Weight :: enum {
-	Regular,
-	Medium,
+Text_Face :: enum {
+	Sans,
 	Mono,
 }
 
-TEXT_WEIGHT_COUNT :: len(Text_Weight)
+TEXT_FACE_COUNT :: len(Text_Face)
 
-TEXT_FONTS := [TEXT_WEIGHT_COUNT][]byte {
-	NOTO_SANS_REGULAR,
-	NOTO_SANS_MEDIUM,
-	NOTO_SANS_MONO_REGULAR,
-}
-
-// The rasterization key. Two styles share a layer when the face and the pixel
-// size match, which is what makes one atlas serve every role.
+// The rasterization key. Two styles share a layer when the face, the weight,
+// and the pixel size match.
 Text_Layer_Key :: struct {
-	weight: Text_Weight,
+	face:   Text_Face,
+	weight: u16,
 	px:     u32,
 }
 
@@ -60,7 +50,6 @@ Text_Glyph_Phase :: struct {
 
 Text_Glyph :: struct {
 	phases:  [TEXT_SUBPIXEL_PHASES]Text_Glyph_Phase,
-	advance: f32,
 	present: bool,
 }
 
@@ -69,10 +58,7 @@ Text_Layer :: struct {
 	ascent:   f32,
 	descent:  f32,
 	line_gap: f32,
-	glyphs:   [TEXT_CODEPOINT_COUNT]Text_Glyph,
-	// Indexed by glyph index, not codepoint; a sparse map costs more to search
-	// than the table costs to hold.
-	kern: []f32,
+	glyphs:   []Text_Glyph,
 }
 
 // Every layer a theme can draw, sorted and de-duplicated so a rebuild is a
@@ -88,48 +74,40 @@ Text_Atlas :: struct {
 	pixels: []u8,
 	layers: [TEXT_LAYER_MAX]Text_Layer,
 	count:  int,
+	shaper: Text_Shaper,
+	allocator: mem.Allocator,
 }
 
-text_face :: proc(weight: Text_Weight) -> []byte {
-	return TEXT_FONTS[int(weight)]
+TEXT_FONTS := [TEXT_FACE_COUNT][]u8 {
+	ROBOTO_CONDENSED,
+	ROBOTO_MONO,
 }
 
-text_codepoint_at :: proc(index: int) -> rune {
-	if index < TEXT_ASCII_COUNT {
-		return rune(TEXT_ASCII_FIRST + index)
-	}
-	switch index - TEXT_ASCII_COUNT {
-	case 0:
-		return 0x00B7
-	case 1:
-		return 0x00D7
-	}
-	return 0
+text_face_data :: proc(face: Text_Face) -> []u8 {
+	return TEXT_FONTS[int(face)]
 }
 
-text_codepoint_index :: proc(codepoint: rune) -> (index: int, ok: bool) {
-	if codepoint >= TEXT_ASCII_FIRST && codepoint <= TEXT_ASCII_LAST {
-		return int(codepoint - TEXT_ASCII_FIRST), true
-	}
-	switch codepoint {
-	case 0x00B7:
-		return TEXT_ASCII_COUNT, true
-	case 0x00D7:
-		return TEXT_ASCII_COUNT + 1, true
-	}
-	return 0, false
+// A weight is a whole unit on the axis. FreeType and HarfBuzz accept the value
+// as a float, but the atlas keys and the settings row only need integers.
+text_weight_key :: proc(weight: f32) -> u16 {
+	return u16(math.round(clamp(weight, MIN_WEIGHT, MAX_WEIGHT)))
+}
+
+text_mono_weight :: proc(weight: f32) -> u16 {
+	return min(text_weight_key(weight), u16(MONO_MAX_WEIGHT))
 }
 
 @(private)
 text_layer_key_less :: proc(a, b: Text_Layer_Key) -> bool {
+	if a.face != b.face {
+		return a.face < b.face
+	}
 	if a.weight != b.weight {
 		return a.weight < b.weight
 	}
 	return a.px < b.px
 }
 
-// Kept sorted so a rebuild is a straight comparison against a freshly derived
-// set, whatever order the theme names its roles in.
 text_layer_set_add :: proc(set: ^Text_Layer_Set, key: Text_Layer_Key) {
 	if key.px == 0 {
 		return
@@ -155,17 +133,32 @@ text_layer_set_add :: proc(set: ^Text_Layer_Set, key: Text_Layer_Key) {
 	set.count += 1
 }
 
-text_atlas_destroy :: proc(atlas: ^Text_Atlas, allocator: mem.Allocator) {
+text_layer_set_equal :: proc(a, b: Text_Layer_Set) -> bool {
+	if a.count != b.count {
+		return false
+	}
+	for index in 0 ..< a.count {
+		if a.keys[index] != b.keys[index] {
+			return false
+		}
+	}
+	return true
+}
+
+text_atlas_destroy :: proc(atlas: ^Text_Atlas) {
+	allocator := atlas.allocator
 	if atlas.pixels != nil {
 		delete(atlas.pixels, allocator)
 		atlas.pixels = nil
 	}
 	for &layer in atlas.layers[:atlas.count] {
-		if layer.kern != nil {
-			delete(layer.kern, allocator)
-			layer.kern = nil
+		if layer.glyphs != nil {
+			delete(layer.glyphs, allocator)
+			layer.glyphs = nil
 		}
 	}
+	text_shaper_destroy(&atlas.shaper)
+	atlas.allocator = {}
 	atlas.count = 0
 	atlas.width = 0
 	atlas.height = 0

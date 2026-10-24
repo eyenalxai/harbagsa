@@ -2,12 +2,14 @@
 package game
 
 import "src:display"
+import "src:ui"
 
 Settings :: struct {
 	window:      display.Window_Settings,
 	sprint_mode: Input_Mode,
 	crouch_mode: Input_Mode,
 	prone_mode:  Input_Mode,
+	type_weight: f32,
 }
 
 DEFAULT_WINDOW_SETTINGS :: display.Window_Settings {
@@ -21,6 +23,7 @@ DEFAULT_SETTINGS :: Settings {
 	sprint_mode = DEFAULT_SPRINT_INPUT_MODE,
 	crouch_mode = DEFAULT_CROUCH_INPUT_MODE,
 	prone_mode  = DEFAULT_PRONE_INPUT_MODE,
+	type_weight = ui.TYPE_WEIGHT_DEFAULT,
 }
 
 settings_default :: proc() -> Settings {

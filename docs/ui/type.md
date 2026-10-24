@@ -1,8 +1,9 @@
 # Type
 
-Five roles, three faces, one family. The faces are Noto Sans Regular, Noto Sans
-Medium, and Noto Sans Mono Regular, subset to ASCII plus `·` and `×`. All three
-are SIL OFL 1.1; `src/renderer/fonts/PROVENANCE.md` records how they were cut.
+Five roles, two faces, one axis. The faces are Roboto Condensed and Roboto Mono,
+both variable, subset to ASCII plus `·` and `×`. Each face is one file; the
+weight is a coordinate, not a separate asset. Both are SIL OFL 1.1;
+`src/renderer/fonts/PROVENANCE.md` records how they were cut.
 
 Text is drawn from a coverage atlas rasterized at the device pixel size. A texel
 holds the fraction of the pixel the glyph covers, so the shader passes it
@@ -12,35 +13,72 @@ A distance field was used until ADR 0007. It cannot draw a stem thinner than its
 reconstruction footprint, and at these sizes every stem is thin. Do not bring it
 back.
 
-## The scale
+## The axis
 
-A size is an em in device pixels, rounded to an integer, and multiplied by
-density. Tokens are in `src/renderer/ui_theme.odin`.
+Roboto Condensed runs from Thin 100 to Black 900. The named instances are Thin
+100, ExtraLight 200, Light 300, Regular 400, Medium 500, SemiBold 600, Bold 700,
+ExtraBold 800, and Black 900. Roboto Mono runs from Thin 100 to Bold 700.
+
+The base weight defaults to 400 and is stored as a whole unit in
+`Settings.type_weight`, clamped to 100..900. Every role derives from it:
 
 | Role | Token | Size | Leading | Weight | Tracking |
 | --- | --- | --- | --- | --- | --- |
-| Panel title | `type_title` | 21 | 1.25 | Medium | -0.01 em |
-| Body | `type_body` | 15 | 1.5 | Regular | 0 |
-| Label | `type_body_strong` | 15 | 1.5 | Medium | 0 |
-| Detail | `type_caption` | 14 | 1.45 | Regular | 0 |
-| Section header | `type_caption_caps` | 14 | 1.45 | Medium | +0.06 em |
+| Panel title | `type_title` | 21 | 1.25 | base + 100 | -0.01 em |
+| Body | `type_body` | 15 | 1.5 | base | 0 |
+| Label | `type_body_strong` | 15 | 1.5 | base + 100 | 0 |
+| Detail | `type_caption` | 14 | 1.45 | base | 0 |
+| Section header | `type_caption_caps` | 14 | 1.45 | base + 100 | +0.06 em |
+
+The strong offset clamps at 900. At base 900 the title and labels match the
+body; size and colour still separate the roles. Mono uses `min(base, 700)`, so
+above 700 the numbers stop gaining weight.
 
 Never add a size outside this table. If a surface needs one, add a token, a
 rationale, and a line here.
 
-`type_caption_caps` also sets `caps = true`. That flag uppercases `a` to `z` at
-draw time, so the source string stays in sentence case and a redesign changes one
-boolean instead of every literal.
+`type_caption_caps` also sets `caps = true`. That flag uppercases `a` to `z`
+before shaping, so the source string stays in sentence case and a redesign
+changes one boolean instead of every literal.
 
-The atlas holds one layer per face and pixel size the theme can draw, so a new
-token adds a layer. `TEXT_LAYER_MAX` bounds how many fit; six are in use.
+## The settings row
 
-## Pixels and phases
+The settings menu draws a `Slider` row for the axis. It is two lines: label and
+value on the first, a full-width track with nine ticks on the second. The ticks
+mark the named instances. The value is the number only, right-aligned.
 
-The atlas is only exact on the pixel grid, so drawing snaps to it:
+- Left and Right step by 10 and clamp to 100..900.
+- A press on the track starts a drag. The cursor x maps onto the track, and the
+  value follows it to the whole unit.
+- The menu content width freezes when the menu opens, with 5 % headroom for the
+  axis, so the track cannot move under the cursor.
+- The weight applies to the menu and the HUD together. The atlas rebuilds on a
+  worker; the number and knob update immediately and the glyphs follow on the
+  next swap.
 
-- The baseline rounds to a whole pixel. A row moves by at most half a pixel, rows
-  are 20 px apart, and the alternative is resampling every edge.
+## The atlas
+
+The atlas holds one layer per `(face, weight, pixel size)` pair the theme can
+draw. Seven are in use at the default base weight; at base 900 the strong layers
+merge with the body and the count drops:
+
+- title 21 at base + 100
+- body 15 at base
+- label 15 at base + 100
+- detail 14 at base
+- section header 14 at base + 100
+- mono 15 at `min(base, 700)`
+- mono 14 at `min(base, 700)`
+
+`TEXT_LAYER_MAX` is 8. A style that names a layer the atlas does not have falls
+back to the same face, then the nearest weight, then the nearest size.
+
+FreeType instances each layer and rasterizes every glyph in the subset, keyed by
+glyph ID. HarfBuzz supplies the advances and the pair positions. A glyph is
+stored as four horizontal phase bitmaps:
+
+- The baseline rounds to a whole pixel. A row moves by at most half a pixel, and
+  the alternative is resampling every edge.
 - Each glyph snaps horizontally and takes its sub-pixel offset from one of four
   phases, rasterized into the atlas. The advance stays fractional, so the phases
   absorb the fraction and the line's measured width is unchanged.
@@ -59,12 +97,18 @@ The baseline sits at
 the ascent and descent centre inside the leading. Use `text_baseline`, never a
 guessed offset.
 
+The body line box is 22.5 px at density 1. Setting rows sit 28.5 px apart with
+the 6 px row gap. The slider row is 40.5 px tall.
+
 ## Numbers
 
 Any number that changes while the player moves uses two things together:
 
-1. `Row.numeric = true`, which swaps the value to Noto Sans Mono.
+1. `Row.numeric = true`, which swaps the value to Roboto Mono and clamps the
+   mono weight to 700.
 2. A fixed-width field, so a value cannot change the string's width.
+
+Roboto's default digits are tabular, so the digits stay equal inside a field.
 
 | Value | Format | Example |
 | --- | --- | --- |
@@ -96,8 +140,9 @@ grow a character makes the whole panel jump as the player walks.
 
 - No italic. The atlas has no italic face, and the browser never synthesises one
   here.
-- No weight change on interaction. There is no hover state in this UI, and a
-  weight swap reflows the row.
+- No weight change on hover or selection. The Type weight slider is a settings
+  value, not a state; a selection must not reflow the row.
+- No weight outside 100..900. The axis ends at Thin and Black.
 - No text under 14 px at density 1. The em is the em: a 14 px token draws a 14 px
   em. Smaller than that, a stem is under a pixel and the coverage has to spread
   it over two, which reads as a grey line.
