@@ -148,17 +148,23 @@ The default run directory is `runs/<scenario-stem>`:
 runs/smoke/
   report.json
   state.json
+  analysis.json
   frames/frame_0000.png
   frames/frame_0090.png
   frames/frame_0121.png
   run.log
 ```
 
+`analysis.json` exists when the run captured frames. With `"analysis": {"maps":
+true}` the frames directory also holds `analysis-diff.png` and
+`analysis-variance.png`.
+
 `report.json` holds the pass/fail result, the final state, the setup block,
 absolute screenshot paths, checks, the state digest, and the perf report when a
 perf run happened. `state.json` holds the final state alone.
-`analysis.json` holds the per-run image analysis when the run captured color
-frames. `run.log` holds the log lines. Standard output is one JSON summary.
+`analysis.json` holds the per-run image analysis when the run captured frames.
+The pair and pixel analysis uses color captures. `run.log` holds the log lines.
+Standard output is one JSON summary.
 
 Exit codes:
 
@@ -396,9 +402,10 @@ writes the exact texel bytes. A PNG capture is color only.
 `scenarios/capture-targets.json` covers every target.
 
 `renderer_debug` changes TAA inputs for a diagnosis: TAA, jitter, history weight,
-clamp, depth trust, and the shadow phase. It is gated behind `--debug-renderer`
-or the `ENABLE_RENDERER_DEBUG` define; a release build rejects it. Changing a
-TAA input resets history and records the `debug_override` reason.
+clamp, depth trust, and the shadow phase. Every build rejects it unless
+`--debug-renderer` is passed or the build used the `ENABLE_RENDERER_DEBUG`
+define. Changing an input resets history and records the `debug_override`
+reason.
 `scenarios/renderer-debug.json` covers the overrides, and
 `scenarios/renderer-debug-converge.json` shows the image converging with jitter
 off. `scenarios/renderer-debug-jitter.json` freezes the phase, lets jitter cycle,

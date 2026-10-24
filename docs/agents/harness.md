@@ -19,6 +19,21 @@ code 0 means every check passed.
 Use `tools/make.sh` when another agent may build in the same checkout. It
 serializes Make with `flock`.
 
+## Surface map
+
+| Task | Read |
+| --- | --- |
+| drive the simulation | **Scenario format** and **Commands** |
+| capture the final image | **Capture targets** (`color` + `png`) |
+| read velocity, history, depth, or scene color | **Capture targets** |
+| read numeric image statistics | **Capture targets** (`stats`) |
+| read renderer state or the render digest | **Renderer state** |
+| change a TAA input for a diagnosis | **Renderer debug overrides** |
+| measure image stability or the period | **Analysis** |
+| measure frame time | **Performance** |
+| prove a capture-free sequence is deterministic | **Screenshots** and `scenarios/capture-free.json` |
+| understand a design choice | `docs/adr/0009` to `docs/adr/0013` |
+
 ## What one run writes
 
 `runs/<scenario-stem>/`
@@ -424,28 +439,41 @@ ranked causes are in `docs/evidence/perf-baseline.md`.
 ## Where the code lives
 
 - `src/harness/`: CLI, scenario compiler, commands, session, runner, socket, PNG.
+- `src/harness/capture.odin`: the capture result, target, format, and file write.
+- `src/harness/capture_stats.odin`: the capture statistics and pixel hash.
+- `src/harness/capture_command.odin`: the capture target/format parser.
 - `src/harness/perf_run.odin`: the perf run and the perf report.
 - `src/harness/perf_command.odin`: the perf command parser.
 - `src/harness/session_state.odin`: the session's renderer snapshot.
 - `src/harness/session_debug.odin`: the renderer debug gate and overrides.
+- `src/harness/renderer_debug_command.odin`: the override parser.
 - `src/harness/analysis.odin`: the analysis config, summary, and period.
 - `src/harness/analysis_report.odin`: the analysis file.
 - `src/harness/analysis_images.odin`: PNG decode and the analysis maps.
+- `src/harness/check_capture.odin`: capture checks and the check window.
+- `src/harness/check_analysis.odin`: analysis check fields.
+- `src/harness/report.odin`: the run report and summary types.
 - `src/harness/report_setup.odin`: the run's setup block.
 - `src/digest/digest.odin`: FNV-1a for the state and render digests.
 - `src/perf/`: the perf sample, ring, statistics, and text formatting.
 - `src/renderer/timing.odin`: the timestamp pools, the pass boundaries, and the
   read.
+- `src/renderer/debug.odin`: the debug gate, overrides, and shadow phase.
+- `src/renderer/state.odin`: the renderer report and setup.
+- `src/renderer/render_digest.odin`: the render digest.
+- `src/renderer/capture.odin`: the target copy and RGBA f32 decode.
 - `src/frame/`: shared scene assembly and draw for the game and the harness.
 - `src/game/menu.odin`: the menu rows, settings text, and control list.
 - `src/game/settings.odin`: the runtime window and input-mode settings.
 - `src/display/`: the display list, mode ordering, and window settings types.
 - `src/renderer/`: `Target` and `Platform` ports, swapchain/offscreen targets,
-  TAA, capture readback, HUD and menu overlay.
+  TAA, HUD and menu overlay.
 - `src/platform/`: SDL and headless adapters. `display.odin` queries displays and
   applies the window state.
-- `tests/harness/`, `tests/frame/`, `tests/display/display.odin`,
-  `tests/renderer/target.odin`.
+- `tests/harness/` (including `analysis.odin`, `renderer_debug.odin`, and
+  `renderer_state.odin`), `tests/frame/`, `tests/display/display.odin`,
+  `tests/renderer/` (including `target.odin`, `render_digest.odin`,
+  `capture_values.odin`, and `debug.odin`).
 - `scenarios/smoke.json`, `scenarios/taa-static.json`,
   `scenarios/taa-motion.json`, `scenarios/settings-menu.json`,
   `scenarios/window-settings.json`, `scenarios/renderer-state.json`,
@@ -464,7 +492,11 @@ Change:
 - `session_execute` and `session_record_command` in
   `src/harness/session_commands.odin`, with a helper in a `session_*.odin` file
   when the command has its own state.
+- A scenario block when the command is a setup step: parse it into the same
+  command and append it before the steps. `renderer_debug` is the example.
 - README and, for a new domain word, `GLOSSARY.md`.
+- A section in this page when the command needs more than a line of
+  explanation. `capture` and `renderer_debug` are the examples.
 - A test in `tests/harness/`.
 
 ## Checks
@@ -502,6 +534,21 @@ harness in the same change. Do not leave the automation behind the game.
   the trace, and this page.
 - New command: follow **Adding a command**, add a JSONL test, and add a scenario
   example when it changes a normal workflow.
+- New capture target or format: add it to `Capture_Target` or `Capture_Format`,
+  the name/parse and extension helpers, `target_image`, `record_capture_copy`,
+  `read_capture_target`, and `capture_values`. Add it to the capture parser,
+  the README, this page, and a scenario. An unread target is not a tool.
+- New analysis field: add it to the `Analysis_*` types, `analysis_field`, the
+  analysis report, the docs, and a unit test. A check must read the same value
+  the file records.
+- New renderer debug override: add it to `TAA_Debug`, `set_taa_debug`, the
+  resolve push constants and shader, `renderer_debug_fields`, the renderer
+  state, the docs, and the gate test. Do not make it reachable without the
+  gate.
+- New scenario key or run option: add it to `scenario_parse` and its allowed
+  key set, the CLI parser, the README, this page, and a parser test.
+- Render state is not simulation state: render fields do not go into
+  `state_digest`. Put them in the render digest and `Renderer_State` instead.
 - New renderer pass or target: keep it behind `Target` or `Frame_View`. Add an
   offscreen test when the pass must match the game.
 - New screenshot or evidence path: update the README and this page.
@@ -520,3 +567,7 @@ gap. Do not silently ship a game feature that the harness cannot see.
   must not import `src:platform`.
 - Keep the harness tests in the normal `make test` run. Do not hide them behind a
   manual target.
+- Do not make a renderer debug override reachable without the define or
+  `--debug-renderer`.
+- Do not widen a capture target without a readback path; an unread target is not
+  a tool.
