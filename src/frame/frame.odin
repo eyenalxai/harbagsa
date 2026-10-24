@@ -22,12 +22,13 @@ Scratch :: struct {
 }
 
 Scene :: struct {
-	camera:        renderer.Camera,
-	sun_direction: [3]f32,
-	boxes:         []geometry.Box,
-	debug_lines:   []geometry.Line,
-	hud:           renderer.HUD_Frame,
-	view_flags:    renderer.View_Flags,
+	camera:               renderer.Camera,
+	sun_direction:        [3]f32,
+	sun_angular_diameter: f32,
+	boxes:                []geometry.Box,
+	debug_lines:          []geometry.Line,
+	hud:                  renderer.HUD_Frame,
+	view_flags:           renderer.View_Flags,
 }
 
 build :: proc(
@@ -41,6 +42,7 @@ build :: proc(
 	scene: Scene
 	scene.hud.weight = sim.settings.type_weight
 	scene.sun_direction = game.debug_mode_sun_direction(debug)
+	scene.sun_angular_diameter = debug.sun_angular_diameter
 
 	box_count := 0
 	for box in game.arena_static_boxes() {
@@ -114,12 +116,13 @@ draw :: proc(
 	frame, begin_status := renderer.begin_frame(
 		state,
 		renderer.Frame_View {
-			camera          = scene.camera,
-			light_direction = scene.sun_direction,
-			boxes           = scene.boxes,
-			debug_lines     = scene.debug_lines,
-			hud             = scene.hud,
-			view_flags      = scene.view_flags,
+			camera               = scene.camera,
+			light_direction      = scene.sun_direction,
+			sun_angular_diameter = scene.sun_angular_diameter,
+			boxes                = scene.boxes,
+			debug_lines          = scene.debug_lines,
+			hud                  = scene.hud,
+			view_flags           = scene.view_flags,
 		},
 		capture,
 	)

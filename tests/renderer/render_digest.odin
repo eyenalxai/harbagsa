@@ -19,6 +19,7 @@ digest_input :: proc() -> renderer.Render_Digest_Input {
 	return {
 		camera = DIGEST_CAMERA,
 		light_direction = {0.3, -0.9, 0.2},
+		sun_angular_diameter = 0.53 * 3.14159265 / 180.0,
 		boxes = {},
 		jitter = {0.001, -0.002},
 		shadow_phase = 7,
@@ -46,6 +47,14 @@ render_digest_changes_with_each_render_input :: proc(t: ^testing.T) {
 	sun := base
 	sun.light_direction.y += 0.1
 	testing.expect(t, renderer.render_digest(sun).value != baseline.value, "sun did not change the digest")
+
+	diameter := base
+	diameter.sun_angular_diameter *= 2
+	testing.expect(
+		t,
+		renderer.render_digest(diameter).value != baseline.value,
+		"sun angular diameter did not change the digest",
+	)
 
 	boxes := base
 	boxes.boxes = []geometry.Box {
