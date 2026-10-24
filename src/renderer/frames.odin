@@ -207,6 +207,6 @@ end_frame :: proc(r: ^Renderer, frame: Frame) -> Frame_Status {
 		return .Fatal
 	}
 
-	r.frame_index = (r.frame_index + 1) % MAX_FRAMES_IN_FLIGHT
+	r.frame_index = (r.frame_index + 1) % frames_in_flight(r.target.kind)
 	return status
 }

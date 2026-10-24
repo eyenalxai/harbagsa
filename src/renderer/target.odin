@@ -23,6 +23,19 @@ Readback :: struct {
 	size:   vk.DeviceSize,
 }
 
+// The offscreen target owns one color image, so a second submission would
+// write it while the first is still reading it. The swapchain rotates images and
+// keeps both slots busy.
+frames_in_flight :: proc(kind: Target_Kind) -> int {
+	switch kind {
+	case .Offscreen:
+		return 1
+	case .Swapchain:
+		return MAX_FRAMES_IN_FLIGHT
+	}
+	return 1
+}
+
 Target :: struct {
 	kind:      Target_Kind,
 	config:    Target_Config,
