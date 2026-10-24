@@ -266,11 +266,10 @@ the Resolution row. `clear` restores the fallback list.
 A past capture frame is an error. A future capture frame queues. Unknown keys,
 wrong types, and out-of-range values are per-command errors; the session stays
 usable. A `step` or `settle` while the menu is open is an error, because the
-game pauses. A settle renders every frame and writes no screenshot. An open menu renders even when the `view` HUD flag is off. `item` selects a row by name:
-Window mode, Display, Resolution, Type weight, Sprint mode, Crouch mode, Prone
-mode, or Resume. `item`, `activate`, and `set` need an open menu. `direction` is
-`-1` or `1` (default `1`) and needs `activate`. `set` is a number in 100..900 and
-sets the Type weight directly, without the ten-unit step.
+game pauses. A settle renders every frame and writes no screenshot. An open menu renders even when the `view` HUD flag is off. Opening the menu closes the object palette and cancels placement. `select` is zero-based.
+`select` and `activate` need an open menu. `direction` is `-1` or `1` (default
+`1`) and needs `activate`. The rows are Window mode, Display, Resolution, Sprint
+mode, Crouch mode, Prone mode, and Resume.
 
 `crates` edits the dynamic crates. `reset` restores the starting three, `clear`
 removes every crate, `add` creates one crate or a row-major grid, and `remove`
@@ -341,6 +340,10 @@ then places a block at an exact transform. `scenarios/debug-palette.json` opens
 the palette, captures the Platform preview, selects the Ramp, and captures its
 pitched preview. Run it with `--size 800x600` to check the dock fits the smallest
 supported window.
+
+The harness has no real cursor. Frame tests cover the card hit test, platform
+tests cover the normalized pointer math and the key map, and a manual run covers
+the cursor capture handoff.
 
 ## Spawn pop
 

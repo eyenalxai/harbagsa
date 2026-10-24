@@ -53,17 +53,20 @@ Debug_Mode :: struct {
 }
 
 Debug_Input :: struct {
-	move_forward:     f32,
-	move_right:       f32,
-	move_up:          f32,
-	look_delta:       [2]f32,
-	wheel_delta:      f32,
-	primary_pressed:  bool,
-	primary_released: bool,
-	add_pressed:      bool,
-	delete_pressed:   bool,
-	sun_pressed:      bool,
-	captured:         bool,
+	move_forward:      f32,
+	move_right:        f32,
+	move_up:           f32,
+	look_delta:        [2]f32,
+	wheel_delta:       f32,
+	primary_pressed:   bool,
+	primary_released:  bool,
+	secondary_pressed: bool,
+	delete_pressed:    bool,
+	rotate_left:       bool,
+	rotate_right:      bool,
+	large_step:        bool,
+	sun_pressed:       bool,
+	captured:          bool,
 }
 
 debug_mode_create :: proc() -> Debug_Mode {
@@ -179,6 +182,14 @@ debug_mode_update :: proc(dm: ^Debug_Mode, sim: ^Simulation, input: Debug_Input,
 	debug_placement_refresh(dm, sim)
 }
 
+// The palette and the placement tool are mutually exclusive, and the settings
+// menu owns the input while it is open.
+debug_mode_cancel_editing :: proc(dm: ^Debug_Mode) {
+	debug_mode_end_drag(dm)
+	palette_close(&dm.palette)
+	debug_placement_cancel(dm)
+}
+
 @(private)
 debug_mode_enter :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	dm.active = true
@@ -190,8 +201,7 @@ debug_mode_enter :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 debug_mode_exit :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	dm.active = false
 	debug_mode_clear_selection(dm)
-	palette_close(&dm.palette)
-	debug_placement_cancel(dm)
+	debug_mode_cancel_editing(dm)
 
 	player_place(&sim.player, dm.saved_player.position, dm.saved_player.yaw, dm.saved_player.pitch)
 }
@@ -224,7 +234,7 @@ camera_from_player :: proc(sim: ^Simulation) -> Debug_Camera {
 
 @(private)
 debug_fly :: proc(dm: ^Debug_Mode, input: Debug_Input, delta: f32) {
-	if !input.captured || delta <= 0.0 {
+	if delta <= 0.0 {
 		return
 	}
 

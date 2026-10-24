@@ -111,16 +111,31 @@ stairs.
 
 - `WASD`: fly horizontally.
 - Mouse: look while not dragging; drag the selection while the left button is held.
+  While the palette is open, the mouse moves the pointer and the camera stays still.
 - `Space` / `Ctrl`: fly up / down.
-- Left click: select a placed object. Drag it on a horizontal plane.
-- Wheel: raise or lower the selected object.
-- `E`: add a crate on the surface under the crosshair.
+- `Tab`: open or close the object palette. The cursor is released while the
+  palette is open. Picking a card recaptures it.
+- Left click: select a placed object. Drag it on a horizontal plane. While the
+  placement tool is armed, a click places the object at the ghost and keeps the
+  tool armed.
+- Wheel: raise or lower the ghost while armed, otherwise the selected object.
+- `Q` / `E`: turn the ghost left or right in 15 degree steps. Hold `Shift` for
+  45 degree steps.
+- `G`: toggle the 0.25 m grid snap.
+- `M`: flip the body mode for the next placement.
 - `Delete` or `X`: remove the selected object.
 - `L`: select the sun. Drag to rotate it.
 - `R`: reset the player and return the camera to spawn.
 - `Shift+R`: reset the placed objects, the sun, and the player.
 - `F2`: leave debug mode. The player returns to the saved position and view.
-- `Esc`: open the settings menu.
+- `Esc`: close the palette, cancel the placement, or open the settings menu, in
+  that order. The settings menu closes the palette and cancels the placement
+  when it opens.
+
+The palette shows the box prefabs in a six by two grid with a preview pane. Hover
+or use the arrow keys to change the selection, `1`-`9` selects one of the first
+nine cards, and `Enter` or a click picks. A click outside the panel closes it. A
+click inside the panel that misses every card does nothing.
 
 The HUD shows the stance, gait, horizontal speed, grounded state, movement
 state, and position, or the debug mode selection, object count, and sun angles.
@@ -339,7 +354,8 @@ The batch runner and the live session share one command set:
   open or close the settings menu, select a row, and activate the selected row.
   `select` is zero-based and needs an open menu. `activate` also needs an open
   menu. `direction` is `-1` or `1` (default `1`) and needs `activate`. Omitted
-  fields keep the state. An open menu renders even when `hud` is off.
+  fields keep the state. Opening the menu closes the object palette and cancels
+  placement. An open menu renders even when `hud` is off.
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`:
   evaluate a predicate now. Use `other` to compare two fields.
 - `{"cmd": "displays", "set": [{"name": "Solo", "desktop": "1280x720", "modes": ["1280x720"]}]}`:

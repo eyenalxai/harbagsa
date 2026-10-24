@@ -10,7 +10,6 @@ import game "src:game"
 // A level ray from the spawn eye passes over the 1 m crates, so the select
 // tests aim slightly down.
 OBJECT_EDITOR_SELECT_PITCH :: -0.2
-OBJECT_EDITOR_FLOOR_PITCH :: -0.9
 
 @(private)
 object_editor_setup :: proc(t: ^testing.T) -> (game.Simulation, game.Debug_Mode) {
@@ -100,50 +99,16 @@ debug_edit_wheel_raises_and_clamps_object :: proc(t: ^testing.T) {
 }
 
 @(test)
-debug_edit_add_places_crate_on_surface :: proc(t: ^testing.T) {
+debug_edit_right_click_clears_the_selection :: proc(t: ^testing.T) {
 	sim, dm := object_editor_setup(t)
 	defer game.simulation_destroy(&sim)
-	dm.camera.pitch = OBJECT_EDITOR_FLOOR_PITCH
 
-	object_editor_step(&dm, &sim, game.Debug_Input{add_pressed = true, captured = true})
+	object_editor_select(&dm, &sim)
+	object_editor_step(&dm, &sim, game.Debug_Input{secondary_pressed = true, captured = true})
 
-	testing.expect_value(
-		t,
-		game.simulation_object_count(&sim),
-		game.INITIAL_CRATE_COUNT + 1,
-	)
-	testing.expect_value(t, dm.selection, game.Debug_Selection.Object)
-	testing.expect_value(t, dm.selected_object_id, game.Object_Id(game.INITIAL_CRATE_COUNT + 1))
-	testing.expect_value(t, dm.dragging, game.Debug_Drag.None)
-
-	box := game.simulation_object_box(&sim, dm.selected_object_id)
-	expect_near(
-		t,
-		box.center.y,
-		game.prefab(.Crate).half_extents.y + game.OBJECT_ADD_GAP,
-		0.0001,
-		"added crate bottom",
-	)
-}
-
-@(test)
-debug_edit_add_is_ignored_when_full :: proc(t: ^testing.T) {
-	sim, dm := object_editor_setup(t)
-	defer game.simulation_destroy(&sim)
-	dm.camera.pitch = OBJECT_EDITOR_FLOOR_PITCH
-
-	for game.simulation_object_count(&sim) < game.MAX_PLACED_OBJECTS {
-		_ = game.simulation_create_object(
-			&sim,
-			{prefab = .Block, body_mode = .Static, center = {0.0, -5.0, 0.0}, yaw = 0.0},
-		)
-	}
-
-	object_editor_step(&dm, &sim, game.Debug_Input{add_pressed = true, captured = true})
-
-	testing.expect_value(t, game.simulation_object_count(&sim), game.MAX_PLACED_OBJECTS)
 	testing.expect_value(t, dm.selection, game.Debug_Selection.None)
 	testing.expect_value(t, dm.selected_object_id, game.INVALID_OBJECT_ID)
+	testing.expect_value(t, dm.dragging, game.Debug_Drag.None)
 }
 
 @(test)
