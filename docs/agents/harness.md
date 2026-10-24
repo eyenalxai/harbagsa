@@ -37,7 +37,7 @@ serializes Make with `flock`.
 | compare two builds or revisions | **Cross-run diff** |
 | measure frame time | **Performance** |
 | prove a capture-free sequence is deterministic | **Screenshots** and `scenarios/capture-free.json` |
-| understand a design choice | `docs/adr/0008` to `docs/adr/0016` |
+| understand a design choice | `docs/adr/0008` to `docs/adr/0018` |
 
 ## What one run writes
 
@@ -508,7 +508,7 @@ The sky is an analytic gradient. It draws after the lit pass and shades only the
 background pixels. The lit pass traces eight ambient occlusion rays per fragment
 and scales the ambient term by the visible fraction. Both features are on by
 default. The design is in
-`docs/adr/0015-sky-ambient-and-ray-traced-ambient-occlusion.md`.
+`docs/adr/0017-sky-ambient-and-ray-traced-ambient-occlusion.md`.
 
 `scenarios/sky-ao.json` settles the camera at the zenith and at the horizon,
 then captures one arena corner with the AO override off and on, and finally the
