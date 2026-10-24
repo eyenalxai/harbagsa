@@ -37,7 +37,7 @@ the sun rays.
 
 - The scene pass is two render scopes at this point: a depth-only scope that
   clears depth, then a color scope that loads depth and clears color and
-  velocity. `docs/adr/0015-sky-ambient-and-ray-traced-ambient-occlusion.md` adds
+  velocity. `docs/adr/0017-sky-ambient-and-ray-traced-ambient-occlusion.md` adds
   a third, the sky scope, after the lit scope.
 - The depth image is shared by every scope. A late-fragment-test to
   early-fragment-test barrier orders the prepass writes before the lit reads.
