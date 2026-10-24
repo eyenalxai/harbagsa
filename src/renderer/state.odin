@@ -2,8 +2,6 @@
 #+vet !unused-procedures // the harness reads this; the game binary does not
 package renderer
 
-import "src:digest"
-
 History_Reset_Reason :: enum {
 	None,
 	Create,
@@ -86,7 +84,7 @@ renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
 		jitter_index       = r.taa.applied_jitter_index,
 		history_valid      = r.taa.history_valid,
 		convergence_frames = r.taa.convergence_frames,
-		history_read       = r.taa.history_read,
+		history_read       = r.taa.applied_history_read,
 		reset_count        = r.taa.reset_count,
 		last_reset         = r.taa.last_reset,
 		shadow_phase       = r.taa.shadow_phase,
@@ -122,8 +120,4 @@ setup_report :: proc(r: ^Renderer) -> Setup_Report {
 		history_images = TAA_HISTORY_IMAGES,
 		max_samples = TAA_MAX_SAMPLES,
 	}
-}
-
-last_render_digest :: proc(r: ^Renderer) -> (value: digest.FNV, has: bool) {
-	return r.render_digest, r.has_render_digest
 }

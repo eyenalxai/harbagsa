@@ -28,6 +28,7 @@
     {"cmd": "check", "field": "capture.stats.velocity_median_texels", "op": "gt", "value": 1}
   ],
   "checks": [
-    {"field": "capture.count", "op": "eq", "value": 5}
+    {"field": "capture.count", "op": "eq", "value": 5},
+    {"field": "analysis.pairs", "op": "eq", "value": 0}
   ]
 }
