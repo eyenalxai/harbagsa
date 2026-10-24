@@ -52,7 +52,7 @@ startup; later changes use the worker. See [type.md](type.md).
 - [components.md](components.md): the eight components: the status panel, the
   capture hint, the crosshair, the settings panel, the selection band, the
   legend grid, the rows, and the slider row.
-- [states.md](states.md): the five row inputs, the six drawn states, blocked
+- [states.md](states.md): the six row inputs, the six drawn states, blocked
   rows, and the status note.
 
 ## Adding a surface

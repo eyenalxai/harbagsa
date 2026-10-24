@@ -35,10 +35,14 @@ The eye height reaches a new stance in 0.184 s. The step offset settles in
 0.256 s. Both are derived from the rate; the eye constant is
 `src/game/config.odin:94` and the step constant is `src/game/config.odin:77`.
 
+The step offset starts at the height of the step it absorbed: 0.20 m for one
+tread, up to the 0.40 m clamp. From 0.20 m it reaches the 0.001 m floor in about
+0.30 s; from 0.40 m it takes about 0.33 s.
+
 | Value | Rate | 1% of the gap | To zero |
 | --- | --- | --- | --- |
 | Eye height | 25 /s | 0.184 s | asymptotic |
-| Step offset | 18 /s | 0.256 s | 0.30 s, then clamped to 0 below 0.001 m |
+| Step offset | 18 /s | 0.256 s | 0.30 s from 0.20 m, 0.33 s from 0.40 m |
 
 The step test holds the visible result: `tests/simulation/stair.odin` bounds the
 per-step eye movement to 0.10 m, half of one 0.20 m tread.
