@@ -137,5 +137,8 @@ sun_command_rejects_bad_input :: proc(t: ^testing.T) {
 	for line in cases {
 		_, parse_error := harness.command_parse_string(line, context.allocator)
 		testing.expectf(t, parse_error != "", "%s must fail", line)
+		if parse_error != "" {
+			delete(parse_error, context.allocator)
+		}
 	}
 }
