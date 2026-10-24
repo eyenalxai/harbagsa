@@ -18,6 +18,9 @@ Camera :: struct {
 }
 
 AMBIENT_COLOR :: [3]f32{0.24, 0.25, 0.28}
+// The real sun is about 0.53 degrees. The demo uses a wider disk so the
+// contact-hardening cue is visible over the arena's short shadows.
+SUN_ANGULAR_DIAMETER :: 3.0 * math.PI / 180.0
 
 Scene :: struct {
 	vertex_buffer: vk.Buffer,
@@ -51,8 +54,8 @@ init_scene :: proc(r: ^Renderer) -> Error {
 	if !create_pipeline(r) {
 		return .Create_Pipeline
 	}
-	if !create_shadow_resources(r) {
-		return .Create_Shadow
+	if !create_acceleration_resources(r) {
+		return .Create_Acceleration
 	}
 	return .None
 }
@@ -62,7 +65,7 @@ destroy_scene :: proc(r: ^Renderer) {
 		return
 	}
 
-	destroy_shadow(r)
+	destroy_acceleration(r)
 	destroy_pipeline_pair(r, &r.scene.pipeline, &r.scene.pipeline_layout)
 	if r.scene.descriptor_pool != 0 {
 		vk.DestroyDescriptorPool(r.device, r.scene.descriptor_pool, nil)
@@ -148,10 +151,10 @@ update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> 
 		prev_view_projection = previous,
 		light_direction = {light_direction.x, light_direction.y, light_direction.z, 0},
 		ambient = {AMBIENT_COLOR.x, AMBIENT_COLOR.y, AMBIENT_COLOR.z, 0},
-		screen = {srgb_gamma(r), f32(extent.width), height, 0},
-		light_view_projection = r.shadow.light_view_projection,
+		// The sun sample pattern rotates only while TAA can average it.
+		screen = {srgb_gamma(r), f32(extent.width), height, r.taa.enabled ? f32(r.frame_count % 64) : 0},
+		sun = {math.tan(f32(SUN_ANGULAR_DIAMETER * 0.5)), 0, 0, 0},
 		jitter = {jitter.x, jitter.y, 0, 0},
-		shadow_params = {shadow_penumbra_scale(), 0, 0, 0},
 	}
 	return true
 }

@@ -19,7 +19,6 @@ SHADER_SRC := src/renderer/shaders
 SHADER_OUT := build/shaders
 SHADER_INCLUDES := $(SHADER_SRC)/gamma.glsl $(SHADER_SRC)/camera.glsl
 SHADERS := $(SHADER_OUT)/box.vert.spv $(SHADER_OUT)/box.frag.spv \
-	$(SHADER_OUT)/shadow.vert.spv \
 	$(SHADER_OUT)/debug.vert.spv $(SHADER_OUT)/debug.frag.spv \
 	$(SHADER_OUT)/hud.vert.spv $(SHADER_OUT)/hud.frag.spv \
 	$(SHADER_OUT)/taa.vert.spv $(SHADER_OUT)/taa.frag.spv

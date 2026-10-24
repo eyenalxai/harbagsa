@@ -75,34 +75,6 @@ box_model_matrix :: proc(box: geometry.Box) -> Mat4 {
 	)
 }
 
-draw_boxes :: proc(
-	r: ^Renderer,
-	command_buffer: vk.CommandBuffer,
-	layout: vk.PipelineLayout,
-	boxes: []geometry.Box,
-) {
-	vertex_buffer := r.scene.vertex_buffer
-	vertex_offset: vk.DeviceSize = 0
-	vk.CmdBindVertexBuffers(command_buffer, 0, 1, &vertex_buffer, &vertex_offset)
-	vk.CmdBindIndexBuffer(command_buffer, r.scene.index_buffer, 0, .UINT16)
-
-	for box in boxes {
-		push := Push_Constants {
-			model = box_model_matrix(box),
-			color = box.color,
-		}
-		vk.CmdPushConstants(
-			command_buffer,
-			layout,
-			{.VERTEX},
-			0,
-			u32(size_of(Push_Constants)),
-			&push,
-		)
-		vk.CmdDrawIndexed(command_buffer, r.scene.index_count, 1, 0, 0, 0)
-	}
-}
-
 draw_boxes_indexed :: proc(
 	r: ^Renderer,
 	command_buffer: vk.CommandBuffer,

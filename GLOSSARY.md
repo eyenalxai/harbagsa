@@ -114,33 +114,37 @@ _Avoid_: Action state
 The fixed test level: a floor, walls, stairs, ramps, tunnels, mantle walls, a dive platform, a slide lane, and a few crates.
 _Avoid_: Map, level
 
-**Light volume**:
-The fixed orthographic box around the arena that the shadow map covers.
-_Avoid_: Shadow frustum
-
 **Sun**:
-The directional light that lights the arena and casts the shadow map. Debug mode rotates it.
+The directional light that lights the arena and casts the sun shadows. Debug mode rotates it.
 _Avoid_: Lamp, light source
-
-**Shadow map**:
-The depth image rendered from the sun's point of view. The lit pass compares each surface point against it to decide whether the sun reaches the point.
-_Avoid_: Depth map
-
-**Shadow pass**:
-The depth-only pass that fills the shadow map before the lit pass.
-_Avoid_: Light pass
 
 **Sun angular diameter**:
 The angle the sun disk subtends. It sets the penumbra width. The demo uses 3°; the real sun is about 0.53°. The wider disk makes the contact-hardening cue visible over the arena's short shadows.
 _Avoid_: Light size
 
-**Percentage-closer soft shadows (PCSS)**:
-The shadow filter that estimates the penumbra from the average blocker depth and filters the shadow map with that radius. Contact shadows stay hard and distant shadows soften.
-_Avoid_: Soft shadows, blurry shadows
+**Contact hardening**:
+The shadow behavior where the penumbra grows with the distance between the blocker and the receiver. The shadow is sharp at contact and soft away from it.
+_Avoid_: Soft shadow falloff
 
-**Blocker search**:
-The PCSS step that samples the shadow map around a receiver and averages the depths closer to the sun.
-_Avoid_: Occluder search
+**Penumbra**:
+The partly lit band between the umbra and the fully lit area. Its width grows with the blocker distance and the sun angular diameter.
+_Avoid_: Soft edge, blur
+
+**Top-level acceleration structure (TLAS)**:
+The acceleration structure that holds the box instances for ray queries. The renderer rebuilds it each frame from the box transforms.
+_Avoid_: Scene BVH
+
+**Bottom-level acceleration structure (BLAS)**:
+The acceleration structure for the unit cube mesh. Every TLAS instance shares it.
+_Avoid_: Mesh BVH
+
+**Ray query**:
+A shader ray test against an acceleration structure. The sun shadow traces one ray per sun sample and counts the unblocked rays.
+_Avoid_: Ray trace, RTX
+
+**Shadow ray**:
+A ray from a surface point toward a sample point on the sun. A hit means the sun sample is blocked.
+_Avoid_: Light ray
 
 **Crate**:
 A dynamic box that the player can push.
