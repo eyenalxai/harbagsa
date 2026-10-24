@@ -140,6 +140,9 @@ text_atlas_apply :: proc(r: ^Renderer) -> bool {
 	}
 
 	old_image := o.atlas_image
+	// The caps are cumulative across rebuilds, so the new atlas inherits them
+	// before the old one is destroyed.
+	result.caps = o.atlas.caps
 	text_atlas_destroy(&o.atlas)
 	o.atlas = result
 	o.atlas_applied_weight = weight

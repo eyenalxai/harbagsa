@@ -1,0 +1,14 @@
+{
+  "size": "1280x720",
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "analysis": {"start": 0, "count": 1},
+  "commands": [
+    {"cmd": "camera", "position": [0, 1.7, 0], "yaw": 0, "pitch": 1.2},
+    {"cmd": "settle", "frames": 40},
+    {"cmd": "capture", "name": "sky"}
+  ],
+  "checks": [
+    {"field": "analysis.bands.longest_run", "op": "lt", "value": 64},
+    {"field": "analysis.bands.median_run", "op": "le", "value": 2}
+  ]
+}

@@ -2,12 +2,9 @@
 package harness
 
 import "core:fmt"
-import "core:math"
 import "core:mem"
 import "core:strings"
 
-import b3 "libs:box3d"
-import "src:digest"
 import "src:display"
 import "src:game"
 
@@ -31,6 +28,14 @@ Player_State :: struct {
 	yaw:      f32       `json:"yaw"`,
 	pitch:    f32       `json:"pitch"`,
 	grounded: bool      `json:"grounded"`,
+}
+
+Camera_State :: struct {
+	position:   Vec_State `json:"position"`,
+	yaw:        f32       `json:"yaw"`,
+	pitch:      f32       `json:"pitch"`,
+	fov:        f32       `json:"fov"`,
+	overridden: bool      `json:"overridden"`,
 }
 
 Crate_State :: struct {
@@ -64,6 +69,13 @@ Menu_State :: struct {
 	open:     bool   `json:"open"`,
 	selected: int    `json:"selected"`,
 	item:     string `json:"item"`,
+	status:   string `json:"status"`,
+	blocked:  bool   `json:"blocked"`,
+}
+
+Settle_State :: struct {
+	frames:    int  `json:"frames"`,
+	converged: bool `json:"converged"`,
 }
 
 Renderer_Debug_State :: struct {
@@ -92,17 +104,22 @@ Renderer_State :: struct {
 	last_reset:         string               `json:"last_reset"`,
 	shadow_phase:       u32                  `json:"shadow_phase"`,
 	atlas_weight:       f32                  `json:"atlas_weight"`,
+	text_truncated_runs: int                 `json:"text_truncated_runs"`,
+	text_font_drops:     int                 `json:"text_font_drops"`,
 	debug:              Renderer_Debug_State `json:"debug"`,
 }
 
 State :: struct {
 	frame:         int            `json:"frame"`,
 	player:        Player_State   `json:"player"`,
+	camera:        Camera_State   `json:"camera"`,
 	crates:        []Crate_State  `json:"crates"`,
 	settings:      Settings_State `json:"settings"`,
 	debug:         Debug_State    `json:"debug"`,
 	sun:           Sun_State      `json:"sun"`,
 	menu:          Menu_State     `json:"menu"`,
+	rows:          Rows_State     `json:"rows"`,
+	settle:        Settle_State   `json:"settle"`,
 	renderer:      Renderer_State `json:"renderer"`,
 	render_digest: string         `json:"render_digest"`,
 	digest:        string         `json:"digest"`,
@@ -111,12 +128,16 @@ State :: struct {
 state_build :: proc(
 	sim: ^game.Simulation,
 	frame: int,
-	menu: ^game.Menu_State,
+	hud: ^game.HUD_State,
 	debug: ^game.Debug_Mode,
+	camera: Camera_State,
 	renderer_state: Renderer_State,
 	render_digest: string,
+	settle: Settle_State,
 	allocator: mem.Allocator,
 ) -> State {
+	game.hud_state_update(hud, sim, debug, game.simulation_snapshot(sim), false)
+	menu := &hud.menu
 	snapshot := game.simulation_snapshot(sim)
 	resolution := game.settings_effective_resolution(sim.settings, &menu.displays)
 	window_resolution := sim.settings.window.resolution
@@ -130,6 +151,7 @@ state_build :: proc(
 			pitch = snapshot.pitch,
 			grounded = snapshot.grounded,
 		},
+		camera = camera,
 		settings = {
 			window_mode = game.window_mode_name(sim.settings.window.mode),
 			display = strings.clone(
@@ -165,7 +187,11 @@ state_build :: proc(
 			open = menu.open,
 			selected = int(menu.selected),
 			item = game.menu_selected_name(menu),
+			status = menu.status,
+			blocked = menu_selected_blocked(menu),
 		},
+		rows = rows_state_build(hud, allocator),
+		settle = settle,
 		renderer = renderer_state,
 		render_digest = render_digest == "" ? "" : strings.clone(render_digest, allocator),
 	}
@@ -192,6 +218,7 @@ state_destroy :: proc(state: ^State, allocator: mem.Allocator) {
 		delete(state.crates, allocator)
 		state.crates = nil
 	}
+	rows_state_destroy(&state.rows, allocator)
 	free_string(&state.settings.display, allocator)
 	free_string(&state.settings.resolution, allocator)
 	free_string(&state.settings.window_resolution, allocator)
@@ -204,59 +231,5 @@ free_string :: proc(text: ^string, allocator: mem.Allocator) {
 	if text^ != "" {
 		delete(text^, allocator)
 		text^ = ""
-	}
-}
-
-state_digest :: proc(state: State, allocator: mem.Allocator) -> string {
-	hash := digest.fnv()
-	digest.write_i64(&hash, i64(state.frame))
-	digest.write_f32(&hash, state.player.position.x)
-	digest.write_f32(&hash, state.player.position.y)
-	digest.write_f32(&hash, state.player.position.z)
-	digest.write_f32(&hash, state.player.eye.x)
-	digest.write_f32(&hash, state.player.eye.y)
-	digest.write_f32(&hash, state.player.eye.z)
-	digest.write_f32(&hash, state.player.velocity.x)
-	digest.write_f32(&hash, state.player.velocity.y)
-	digest.write_f32(&hash, state.player.velocity.z)
-	digest.write_f32(&hash, state.player.yaw)
-	digest.write_f32(&hash, state.player.pitch)
-	digest.write_bool(&hash, state.player.grounded)
-	digest.write_string(&hash, state.settings.window_mode)
-	digest.write_string(&hash, state.settings.display)
-	digest.write_i64(&hash, i64(state.settings.display_index))
-	digest.write_string(&hash, state.settings.resolution)
-	digest.write_string(&hash, state.settings.window_resolution)
-	digest.write_string(&hash, state.settings.sprint_mode)
-	digest.write_string(&hash, state.settings.crouch_mode)
-	digest.write_string(&hash, state.settings.prone_mode)
-	digest.write_f32(&hash, state.settings.type_weight)
-	digest.write_bool(&hash, state.menu.open)
-	digest.write_i64(&hash, i64(state.menu.selected))
-	digest.write_i64(&hash, i64(len(state.crates)))
-	for crate in state.crates {
-		digest.write_f32(&hash, crate.position.x)
-		digest.write_f32(&hash, crate.position.y)
-		digest.write_f32(&hash, crate.position.z)
-		digest.write_f32(&hash, crate.rotation.x)
-		digest.write_f32(&hash, crate.rotation.y)
-		digest.write_f32(&hash, crate.rotation.z)
-		digest.write_f32(&hash, crate.rotation.w)
-	}
-	return digest.hex(hash, allocator)
-}
-
-@(private)
-vec_state :: proc(value: b3.Vec3) -> Vec_State {
-	return {x = value.x, y = value.y, z = value.z}
-}
-
-@(private)
-sun_state :: proc(debug: ^game.Debug_Mode) -> Sun_State {
-	azimuth, elevation := game.debug_mode_sun_angles(debug)
-	return {
-		azimuth = math.to_degrees(azimuth),
-		elevation = math.to_degrees(elevation),
-		angular_diameter = math.to_degrees(debug.sun_angular_diameter),
 	}
 }
