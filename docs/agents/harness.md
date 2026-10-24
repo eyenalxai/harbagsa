@@ -10,8 +10,11 @@ page is the short operational guide for agents.
 
 ```sh
 tools/make.sh build
+./bin/harbagsa-agent --help
 ./bin/harbagsa-agent run scenarios/smoke.json
 ```
+
+`--help` and `-h` print the command list and exit 0.
 
 Read `runs/smoke/report.json`. Use the absolute paths in `screenshots`. Exit
 code 0 means every check passed.
@@ -31,32 +34,37 @@ serializes Make with `flock`.
 | change a renderer input for a diagnosis | **Renderer debug overrides** |
 | check the sky and the ambient occlusion | **Sky and ambient occlusion** |
 | measure image stability or the period | **Analysis** |
+| compare two builds or revisions | **Cross-run diff** |
 | measure frame time | **Performance** |
 | prove a capture-free sequence is deterministic | **Screenshots** and `scenarios/capture-free.json` |
-| understand a design choice | `docs/adr/0009` to `docs/adr/0015` |
+| understand a design choice | `docs/adr/0008` to `docs/adr/0016` |
 
 ## What one run writes
 
 `runs/<scenario-stem>/`
 
 - `report.json`: `ok`, `exit_code`, `frame`, `state`, `setup`, `screenshots`,
-  `checks`, `failures`, `digest`, `error`, `perf` when a perf run happened,
-  `trace` when the run wrote a perf trace, and `analysis` when the run wrote an
-  analysis report.
+  `checks`, `failures`, `digest`, `error`, `perf` (a list of named reports) when
+  perf ran, `trace` when the run wrote a perf trace, and `analysis` when the run
+  wrote an analysis report.
 - `analysis.json`: the per-run image analysis. See **Analysis**.
 - `frames/analysis-diff.png` and `frames/analysis-variance.png`: the optional
   analysis maps.
 - `trace.jsonl`: one JSON object per measured frame, when the perf command asks
   for a trace.
 - `state.json`: the final state alone. It holds the player, crates, window and
-  input settings, menu, frame, renderer, render digest, and simulation digest.
+  input settings, debug mode, sun, menu, frame, renderer, render digest, and
+  simulation digest.
 - `frames/<name>.png`, `.f32`, or `.bin`: captures. A color capture is a PNG;
   `float` and `raw` write the intermediate target.
 - Each screenshot entry carries `delta_mean`, `delta_max`, and `delta_over_16`
   against the previous capture. The first capture has zeros.
 - `run.log`: log lines from the renderer, the session, and the runner.
 
-Standard output is one JSON summary. Standard error holds logs.
+Standard output is one JSON summary. Standard error holds logs. `--verbose` (or
+`--summary`) adds a human summary to standard error: the setup revision and
+dirty flag, every capture, every check result, every failure, and every named
+perf result. The JSON line on standard output does not change.
 
 Exit codes:
 
@@ -70,12 +78,14 @@ Exit codes:
 ```json
 {
   "view": {"hud": false, "debug": false, "hint": false, "perf": false},
-  "steps": [
-    {"frames": 90, "forward": 1, "look": [220, 0]},
-    {"frames": 1, "jump": true},
-    {"frames": 30, "forward": 1}
+  "commands": [
+    {"cmd": "look", "dx": 220, "dy": 0},
+    {"cmd": "input", "forward": 1},
+    {"cmd": "step", "frames": 90},
+    {"cmd": "input", "jump": true},
+    {"cmd": "step", "frames": 1},
+    {"cmd": "capture", "name": "after-jump"}
   ],
-  "capture": [0, 90, 121],
   "checks": [
     {"field": "crates.0.position.z", "op": "lt", "value": 7.5}
   ]
@@ -84,13 +94,14 @@ Exit codes:
 
 Rules:
 
-- One step is one `SIMULATION_STEP` (1/60 s). The harness does not use wall-clock
-  time.
-- `look` applies once before the block.
-- `forward`, `right`, and `jump` persist. `jump` is an edge on the first frame of
-  its block.
-- A capture frame is a zero-based frame number. The final frame is captured by
-  default. `"capture": []` opts out of rendering for that scenario.
+- The scenario has one body form: `commands`. It runs verbatim, and `record`
+  writes the same form.
+- `step` advances one `SIMULATION_STEP` (1/60 s) per frame. The harness does not
+  use wall-clock time.
+- `look` applies once. `input` persists until the next `input`; `jump` is an
+  edge on the next step.
+- Only a `capture` command captures. A scenario with no `capture` and no perf
+  run does not create a renderer unless `--present` asks for the window.
 - A check uses the `state.json` shape. Operators: `eq`, `ne`, `lt`, `le`, `gt`,
   `ge`. Examples: `player.position.y`, `crates.count`, `settings.window_mode`,
   `settings.resolution`, `settings.sprint_mode`, `settings.type_weight`, `menu.open`.
@@ -116,10 +127,8 @@ Rules:
   screenshot, so a scenario can reach a steady temporal state before it captures.
 - `scenarios/taa-static.json` and `scenarios/taa-motion.json` use capture checks
   to gate TAA stability.
-- A `commands` array runs verbatim. It is the form that `record` writes. It does
-  not add a default capture.
 - A top-level `renderer_debug` object compiles to the renderer debug command
-  before the steps. See **Renderer debug overrides**.
+  before the commands. See **Renderer debug overrides**.
 
 ## Commands
 
@@ -135,8 +144,13 @@ Rules:
 - `{"cmd": "camera", "clear": true}`
 - `{"cmd": "view", "hud": true, "debug": false, "hint": false, "perf": false}`
 - `{"cmd": "sun", "azimuth": 52.1, "elevation": 15, "diameter": 0.53}`
+- `{"cmd": "crates", "reset": true}`
+- `{"cmd": "crates", "clear": true}`
+- `{"cmd": "crates", "add": {"position": [0, 0.5, 6]}}`
+- `{"cmd": "crates", "add": {"origin": [0, 0.5, 6], "count": 60, "columns": 10, "spacing": [1, 0, 1]}}`
+- `{"cmd": "crates", "remove": {"index": 3}}`
 - `{"cmd": "debug_mode", "active": true}`
-- `{"cmd": "menu", "open": true, "select": 1, "activate": true, "direction": -1}`
+- `{"cmd": "menu", "open": true, "item": "Type weight", "activate": true, "direction": -1}`
 - `{"cmd": "menu", "set": 900}`
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`
 - `{"cmd": "perf", "frames": 120, "warmup": 60}`
@@ -149,12 +163,18 @@ Rules:
 A past capture frame is an error. A future capture frame queues. Unknown keys,
 wrong types, and out-of-range values are per-command errors; the session stays
 usable. A `step` or `settle` while the menu is open is an error, because the
-game pauses. A settle renders every frame and writes no screenshot. An open menu renders even when the `view` HUD flag is off. `select` is zero-based.
-`select`, `activate`, and `set` need an open menu. `direction` is `-1` or `1`
-(default `1`) and needs `activate`. `set` is a number in 100..900 and sets the
-Type weight directly, without the ten-unit step. The rows are Window mode,
-Display, Resolution, Type weight, Sprint mode, Crouch mode, Prone mode, and
-Resume.
+game pauses. A settle renders every frame and writes no screenshot. An open menu renders even when the `view` HUD flag is off. `item` selects a row by name:
+Window mode, Display, Resolution, Type weight, Sprint mode, Crouch mode, Prone
+mode, or Resume. `item`, `activate`, and `set` need an open menu. `direction` is
+`-1` or `1` (default `1`) and needs `activate`. `set` is a number in 100..900 and
+sets the Type weight directly, without the ten-unit step.
+
+`crates` edits the dynamic crates. `reset` restores the starting three, `clear`
+removes every crate, `add` creates one crate or a row-major grid, and `remove`
+drops one by index. A grid add steps `columns` along x and then the next row
+along z; the y spacing is a constant offset. An add that would exceed the
+64-crate limit is rejected as a whole. `scenarios/perf-crates.json` adds 60
+crates in a grid and measures them.
 
 A capture names its target and format. See **Capture targets**.
 
@@ -208,6 +228,12 @@ agree. A capture at another size exercises the density path:
 ```sh
 ./bin/harbagsa-agent run scenarios/settings-menu.json --size 2560x1440 --out /tmp/menu-2x
 ```
+
+A UI scenario follows one shape: open the menu, select a row by name, capture,
+check the state, check the analysis, close. `scenarios/type-weight.json` is the
+worked example. The `renderer.atlas_weight` check proves the atlas worker caught
+up; the `analysis.worst_mean` check proves the captures differ. Without the
+second check the scenario could pass with identical images.
 
 ## Movement scenarios
 
@@ -366,6 +392,36 @@ is the per-pixel variance over the window, square-rooted and scaled to 0..255.
 
 `scenarios/renderer-debug-jitter.json` writes both maps.
 
+## Cross-run diff
+
+```sh
+./bin/harbagsa-agent diff runs/before runs/after
+./bin/harbagsa-agent diff runs/before runs/after --max-pixels 0 --json
+```
+
+`diff` reads each run's `report.json` and pairs the `screenshots` entries by
+name. A run without a report, or an entry whose `path` is empty or unreadable,
+falls back to `frames/<name>.png`. The frame fallback skips the derived
+`analysis-diff.png` and `analysis-variance.png` maps.
+
+Each pair reports `name`, `width`, `height`, `different_pixels`, `max_delta`,
+`mean_delta`, `over_16`, and `identical`. A pixel differs when an RGB channel
+changes; alpha is ignored. `mean_delta` is the mean over pixels of the largest
+RGB channel delta, so it matches the per-capture deltas in `report.json`.
+
+Exit codes:
+
+- `0`: every pair is present, the sizes match, and no pair is over the limit.
+- `1`: a pair is missing, a pair differs in size, or `--max-pixels N` is
+  exceeded.
+- `2`: bad arguments or a run directory that cannot be read.
+
+Without `--max-pixels`, differences are reported but do not fail the command.
+`--json` prints one object with `run_a`, `run_b`, `ok`, `pairs`, and `errors`
+instead of the table. `errors` lists missing pairs, size mismatches, decode
+failures, and limit hits. Check `setup.revision` and `setup.dirty` before the
+pixels so a dirty tree is not mistaken for a revision change.
+
 ## Renderer state
 
 Every `state` reply and `state.json` carries a `renderer` object and a
@@ -385,6 +441,7 @@ run never created a renderer, and `renderer.active` is `false`.
 | `reset_count` | history resets since renderer creation |
 | `last_reset` | the last reset reason |
 | `shadow_phase` | the sun sample phase the last frame used |
+| `atlas_weight` | the type weight the active coverage atlas holds |
 
 The state also carries a `sun` object with `azimuth`, `elevation`, and
 `angular_diameter`, in degrees. The angles describe the sun in the sky, so the
@@ -397,17 +454,19 @@ check reads the override values as `renderer.debug.*`, for example
 `renderer.debug.sky` and `renderer.debug.ao`.
 
 The render digest is FNV-1a over the effective camera, the sun direction and
-angular diameter, every box, the jitter, the shadow phase, the sky and AO
-flags, and the view flags. It changes when any of those change and stays the
-same when they do not. It is
+angular diameter, every box, the jitter, the shadow phase, the applied atlas
+weight, the sky and AO flags, and the view flags. It changes when any of those
+change and stays the same when they do not. It is
 separate from the simulation digest: read `render_digest` for the render inputs
 and `digest` for the simulation.
 
 `report.json` carries a `setup` block: the target kind (`offscreen`,
-`swapchain`, or `none`), the extent, the view flags, the device name, the frame
-count in flight, the TAA state, the jitter, history, and sample caps, and the AO
-sample count and radius. Use it to compare two runs before you compare their
-pixels.
+`swapchain`, or `none`), the extent, the build revision and dirty flag, the view
+flags, the device name, the frame count in flight, the TAA state, the jitter,
+history, and sample caps, and the AO sample count and radius. Use it to compare
+two runs before you compare their pixels. `revision` is the short HEAD; `dirty`
+says the tree had uncommitted changes. A direct `odin run` or a test build
+reports `unknown` and `false`.
 
 `scenarios/renderer-state.json` checks the steady state. `scenarios/renderer-reset.json`
 checks a teleport reset.
@@ -433,7 +492,7 @@ clear error.
 | `clear` | reset every override and turn TAA, the sky, and the AO on |
 
 An override starts from the current state. A scenario can put the same fields in
-a top-level `renderer_debug` object; it compiles to the command before the steps.
+a top-level `renderer_debug` object; it compiles to the command before the commands.
 
 Every change to the override resets the history with reason `debug_override`,
 including a new shadow phase.
@@ -466,16 +525,27 @@ Without the flag, the session rejects the command.
 ## Performance
 
 The renderer records a perf sample every frame: the frame interval, five CPU
-phases, and four GPU pass times. The game shows it on `F4`. A scenario can show
+phases, and five GPU pass times. The game shows it on `F4`. A scenario can show
 the same panel with `{"cmd": "view", "perf": true}`.
 
-`{"cmd": "perf", "frames": N, "warmup": M}` runs one priming frame, `M` warmup
-frames, and `N` measured frames. Each frame steps the simulation once and draws
-once without a capture. `frames` is capped at 600. The reply and `report.json`
-carry the interval percentiles, the CPU phase means, and the GPU pass means.
+`{"cmd": "perf", "frames": N, "warmup": M, "prime": S, "name": "label"}` runs
+one priming frame, primes until `S` seconds of wall clock pass (capped at 10,000
+frames), runs `M` warmup frames, and measures `N` frames. `prime` defaults to
+2.0 and `0` disables the time loop. Each frame steps the simulation once and
+draws once without a capture. `frames` is capped at 600. The reply and
+`report.json` carry the interval distribution, `p50`/`p95`/`mean` for every CPU
+phase and GPU pass, and `prime_seconds`/`prime_frames`. `report.json` keeps every
+named perf result in a `perf` array; the session reply carries the last one.
 `trace` writes one JSON object per measured frame under the run directory; it is
-the file to read when a percentile hides one spike. `scenarios/perf.json` is the
-ready example.
+the file to read when a percentile hides one spike. A run holds one trace, so a
+second `perf` with `trace` is rejected. `scenarios/perf.json` is the ready
+example. `scenarios/perf-crates.json` clears the crates, adds 60 in a grid, and
+measures them.
+
+The prime loop exists because GPU clocks and shader caches move between a cold
+and a warm device. A fixed warmup can stop before the device settles, so two
+builds would be compared at different clock states. Prime frames never enter the
+trace or the statistics.
 
 - Offscreen runs measure throughput: nothing waits for the display.
 - `--present` measures pacing: FIFO bounds the rate and the percentiles show
@@ -486,8 +556,8 @@ What the numbers mean:
 
 - The frame interval is wall clock. A capture outside a perf run has no interval.
 - The GPU pass times come from Vulkan timestamps. They belong to the last
-  completed frame, two frames behind the recording frame. The scene pass time
-  covers the depth prepass, the lit pass, and the sky pass.
+  completed frame, two frames behind the recording frame. The depth prepass and
+  the lit scene pass are separate passes; the sky runs inside the scene pass.
 - A device without timestamp support, a failed query pool, or a run without a
   device reports the CPU numbers and leaves the GPU fields empty.
 - Perf data never enters `State`, the state digest, or the pixel hash. A perf
@@ -502,6 +572,56 @@ pass probes. The arena view shows every static box at once; the backface view
 covers the screen with surfaces that receive no direct sun. Run either at the
 same size on two builds to compare. The before/after is in
 `docs/evidence/perf-scene-pass.md`.
+
+### Benchmark two builds
+
+A single before/after pair is noisy. Alternate the order of each pair so clock
+drift affects both sides equally, and compare medians, not one run. `--prime`
+keeps the cold clock out of the measured window.
+
+```sh
+tools/ab.sh \
+  --ref origin/main \
+  --scenario scenarios/perf.json \
+  --size 2560x1440 \
+  --runs 5 \
+  --prime 2.0 \
+  --out runs/ab
+```
+
+The ref must understand the scenario's commands. `scenarios/perf-crates.json`
+needs a ref with the `crates` command; a base without it exits non-zero, which
+is the intended failure.
+
+The tool builds the ref in a detached worktree under `build/ab/base`, builds the
+current tree in place, and copies both agents to a temporary directory. It runs
+each pair in alternating order, parses each `report.json`, and writes
+`summary.json` and `summary.md`. The table gives the median per side and the
+paired ratio for the frame interval, the GPU total, and each pass. The `setup`
+block names the revision and dirty state of each side, so the result does not
+need a hand-written label. A run directory is a complete record: the report, the
+state, the captures, and the trace.
+
+A ref that predates `prime` rejects the field. The tool reruns that base side
+with the original scenario and records `base_prime_supported: false`; the
+optimized side still uses `--prime`. The note stays in `summary.json`.
+
+To measure one build by hand, drive a session and run perf twice. The first run
+warms the path; the second is the comparable one:
+
+```sh
+printf '%s\n' \
+  '{"cmd": "perf", "frames": 120, "warmup": 60, "prime": 2.0, "name": "warm"}' \
+  '{"cmd": "perf", "frames": 120, "warmup": 60, "prime": 0, "name": "measure"}' \
+  '{"cmd": "quit"}' |
+  ./bin/harbagsa-agent session
+```
+
+Offscreen throughput is not present pacing. An offscreen perf run measures how
+fast the renderer can submit frames with nothing waiting for the display; a
+windowed FIFO run measures how often a frame reaches the screen. Compare the
+same mode on both sides, and do not use the offscreen ratio to claim a visible
+frame-rate change.
 
 ## Determinism
 
@@ -519,15 +639,22 @@ same size on two builds to compare. The before/after is in
 
 ## Where the code lives
 
-- `src/harness/`: CLI, scenario compiler, commands, session, runner, socket, PNG.
+- `src/harness/`: CLI, scenario parser, commands, session, runner, socket, PNG.
+- `src/harness/scenario.odin`: the one `commands` scenario form and the analysis config.
+- `src/harness/diff.odin`: the pure pair comparison and the diff report types.
+- `src/harness/diff_captures.odin`: run capture discovery and the frame fallback.
+- `src/harness/diff_cli.odin`: the `diff` command and its table/JSON output.
 - `src/harness/capture.odin`: the capture result, target, format, and file write.
 - `src/harness/capture_stats.odin`: the capture statistics and pixel hash.
 - `src/harness/capture_command.odin`: the capture target/format parser.
-- `src/harness/perf_run.odin`: the perf run and the perf report.
+- `src/harness/perf_run.odin`: the perf run and its prime loop.
+- `src/harness/perf_report.odin`: the perf report types and fill.
 - `src/harness/perf_command.odin`: the perf command parser.
 - `src/harness/session_state.odin`: the session's renderer snapshot.
 - `src/harness/sun_command.odin`: the sun command parser.
 - `src/harness/session_sun.odin`: the sun command's session state.
+- `src/harness/crates_command.odin`: the crates command parser.
+- `src/harness/session_crates.odin`: the crates command's session state.
 - `src/harness/session_debug.odin`: the renderer debug gate and overrides.
 - `src/harness/renderer_debug_command.odin`: the override parser.
 - `src/harness/analysis.odin`: the analysis config, summary, and period.
@@ -537,6 +664,8 @@ same size on two builds to compare. The before/after is in
 - `src/harness/check_analysis.odin`: analysis check fields.
 - `src/harness/report.odin`: the run report and summary types.
 - `src/harness/report_setup.odin`: the run's setup block.
+- `src/harness/build_info.odin`: the injected revision and dirty flag.
+- `src/harness/run_summary.odin`: the `--verbose` run summary.
 - `src/digest/digest.odin`: FNV-1a for the state and render digests.
 - `src/perf/`: the perf sample, ring, statistics, and text formatting.
 - `src/renderer/timing.odin`: the timestamp pools, the pass boundaries, and the
@@ -554,17 +683,23 @@ same size on two builds to compare. The before/after is in
   TAA, HUD and menu overlay.
 - `src/platform/`: SDL and headless adapters. `display.odin` queries displays and
   applies the window state.
-- `tests/harness/` (including `analysis.odin`, `renderer_debug.odin`,
-  `renderer_state.odin`, and `sun.odin`), `tests/frame/`,
+- `tests/harness/` (including `analysis.odin`, `crates.odin`, `diff.odin`,
+  `menu_digest.odin`, `renderer_debug.odin`, `renderer_state.odin`,
+  `setup.odin`, `sun.odin`, and `verbose.odin`), `tests/frame/`,
   `tests/display/display.odin`, `tests/renderer/` (including `target.odin`,
   `render_digest.odin`, `capture_values.odin`, and `debug.odin`).
 - `scenarios/smoke.json`, `scenarios/taa-static.json`,
-  `scenarios/taa-motion.json`, `scenarios/settings-menu.json`,
-  `scenarios/window-settings.json`, `scenarios/renderer-state.json`,
-  `scenarios/renderer-reset.json`, `scenarios/capture-targets.json`,
-  `scenarios/renderer-debug.json`, `scenarios/renderer-debug-converge.json`,
+  `scenarios/taa-motion.json`, `scenarios/hud.json`, `scenarios/hud-debug.json`,
+  `scenarios/ui.json`, `scenarios/type-weight.json`,
+  `scenarios/settings-menu.json`, `scenarios/window-settings.json`,
+  `scenarios/renderer-state.json`, `scenarios/renderer-reset.json`,
+  `scenarios/capture-targets.json`, `scenarios/renderer-debug.json`,
+  `scenarios/renderer-debug-converge.json`,
   `scenarios/renderer-debug-jitter.json`, `scenarios/sky-ao.json`,
-  `scenarios/capture-free.json`, `scenarios/shadow-angle.json`.
+  `scenarios/capture-free.json`, `scenarios/shadow-angle.json`,
+  `scenarios/perf.json`, `scenarios/perf-crates.json`,
+  `scenarios/perf-arena.json`, `scenarios/perf-backface.json`,
+  `scenarios/step-angle.json`.
 
 ## Adding a command
 
@@ -573,12 +708,13 @@ Change:
 - `Command_Kind` and `Command` in `src/harness/command.odin`.
 - `command_name` and `command_destroy`.
 - `command_parse` and a parser in `src/harness/command_parsers.odin`, or a new
-  file when the command grows (`src/harness/menu_command.odin` is the example).
+  file when the command grows (`src/harness/menu_command.odin` and
+  `src/harness/crates_command.odin` are the examples).
 - `session_execute` and `session_record_command` in
   `src/harness/session_commands.odin`, with a helper in a `session_*.odin` file
   when the command has its own state.
 - A scenario block when the command is a setup step: parse it into the same
-  command and append it before the steps. `renderer_debug` is the example.
+  command and append it before the commands. `renderer_debug` is the example.
 - README and, for a new domain word, `GLOSSARY.md`.
 - A section in this page when the command needs more than a line of
   explanation. `capture` and `renderer_debug` are the examples.
@@ -594,7 +730,10 @@ tools/make.sh build
 
 `make validate` builds the agent with validation enabled and runs
 `scenarios/smoke.json` offscreen, then with `--present` when a display is
-available. `make validate-demo` runs the game with validation enabled.
+available. `make validate-offscreen` is the headless target: it runs `smoke`,
+`type-weight`, `settings-menu`, `ui`, `shadow-angle`, and `perf-crates` offscreen,
+each into its own output directory, and stops on the first failure.
+`make validate-demo` runs the game with validation enabled.
 
 ## Keep the harness current
 
@@ -602,7 +741,7 @@ The harness is part of the product. When you add or change a feature, update the
 harness in the same change. Do not leave the automation behind the game.
 
 - New simulation input: add it to `game.Input_Snapshot`, the `input` command,
-  the scenario step fields, and `tests/harness`.
+  and `tests/harness`.
 - New state field: add it to `State`, `state_build`, `state_field`, the report
   schema, and the docs. Add it to `state_digest` only when it changes the
   simulation.
@@ -620,6 +759,8 @@ harness in the same change. Do not leave the automation behind the game.
   the trace, and this page.
 - New command: follow **Adding a command**, add a JSONL test, and add a scenario
   example when it changes a normal workflow.
+- New CLI subcommand or flag: add the dispatcher and parser, the `--help` text,
+  the README, this page, and a test.
 - New capture target or format: add it to `Capture_Target` or `Capture_Format`,
   the name/parse and extension helpers, `target_image`, `record_capture_copy`,
   `read_capture_target`, and `capture_values`. Add it to the capture parser,

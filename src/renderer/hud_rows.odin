@@ -243,10 +243,11 @@ rows_emit_slider :: proc(
 		theme.text_primary,
 	)
 	o.menu_slider = {
-		x      = track_x + knob * 0.5,
+		x      = track_x,
 		y      = hud_snap(center_y - theme.spacing.lg * 0.5),
-		width  = travel,
+		width  = track_width,
 		height = theme.spacing.lg,
+		knob   = knob,
 	}
 }
 

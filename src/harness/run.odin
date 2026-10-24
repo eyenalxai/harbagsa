@@ -16,6 +16,7 @@ run_batch :: proc(options: Run_Options) -> int {
 	scenario, load_error := scenario_load(options.scenario, context.allocator)
 	if load_error != "" {
 		print_summary_failure(load_error, EXIT_SCENARIO)
+		delete(load_error, context.allocator)
 		return EXIT_SCENARIO
 	}
 	defer scenario_destroy(&scenario, context.allocator)
@@ -166,8 +167,8 @@ run_batch :: proc(options: Run_Options) -> int {
 		digest      = state.digest,
 		error       = backend_error,
 	}
-	if session.has_perf_report {
-		report.perf = session.perf_report
+	if len(session.perf_reports) > 0 {
+		report.perf = session.perf_reports[:]
 	}
 	if session.has_trace && !trace_failed {
 		report.trace = perf_trace_path(session.trace_name, absolute_out, context.allocator)
@@ -211,6 +212,9 @@ run_batch :: proc(options: Run_Options) -> int {
 	if swap_error := swap_run_dir(absolute_out, staging); swap_error != "" {
 		print_summary_failure(swap_error, EXIT_RENDER)
 		return EXIT_RENDER
+	}
+	if options.verbose {
+		print_verbose_summary(report)
 	}
 	print_summary(summary)
 	if failure != "" {
