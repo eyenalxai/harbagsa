@@ -218,7 +218,7 @@ menu_view_lists_the_settings_and_controls :: proc(t: ^testing.T) {
 	menu: game.Menu_State
 	menu.displays = display.fallback_list()
 	game.menu_open(&menu)
-	game.menu_view(&menu, sim.settings, false)
+	game.menu_view(&menu, sim.settings, false, 0)
 
 	rows := menu.view.rows
 	testing.expect_value(t, len(rows), game.MENU_ROW_COUNT)
@@ -249,7 +249,7 @@ menu_view_lists_the_settings_and_controls :: proc(t: ^testing.T) {
 	testing.expect_value(t, menu.view.hints[14].keys, "F4")
 	testing.expect_value(t, menu.view.hints[14].action, "perf")
 
-	game.menu_view(&menu, sim.settings, true)
+	game.menu_view(&menu, sim.settings, true, 0)
 	testing.expect_value(t, menu.view.hints[0].keys, "WASD")
 	testing.expect_value(t, menu.view.hints[0].action, "fly")
 }

@@ -501,6 +501,9 @@ motion. Use `--size 800x600` to reproduce the reported stretched-window case.
 `scenarios/settings-menu.json` opens the settings menu, captures it, changes the
 crouch input mode, closes the menu, and checks the saved state.
 
+`scenarios/blocked-note.json` opens the menu, blocks the Type weight at 900,
+captures the status note, sets the weight to 400, and captures the cleared note.
+
 `scenarios/type-weight.json` opens the menu, selects Type weight, captures 400,
 sets 900 and 100, captures both, and checks the stored value.
 

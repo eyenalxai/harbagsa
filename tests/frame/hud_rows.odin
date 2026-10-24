@@ -76,7 +76,7 @@ menu_dividers_and_band_share_the_panel_inner_edge :: proc(t: ^testing.T) {
 	hud.menu.displays = display.fallback_list()
 	game.menu_open(&hud.menu)
 	game.menu_select(&hud.menu, 4)
-	game.menu_view(&hud.menu, sim.settings, false)
+	game.menu_view(&hud.menu, sim.settings, false, 0)
 
 	overlay, ok := build_menu_overlay(t, hud.menu.view)
 	testing.expect(t, ok, "the menu did not build")
@@ -159,7 +159,7 @@ every_menu_item_selects_a_selectable_row :: proc(t: ^testing.T) {
 
 	for item in game.Menu_Item {
 		hud.menu.selected = item
-		game.menu_view(&hud.menu, sim.settings, false)
+		game.menu_view(&hud.menu, sim.settings, false, 0)
 		row := hud.menu.view.rows[hud.menu.view.selected]
 		selectable := row.kind == .Setting || row.kind == .Action || row.kind == .Slider
 		testing.expectf(t, selectable, "%v selected a %v row", item, row.kind)
@@ -193,7 +193,7 @@ measure_status_panel :: proc(
 	snapshot.movement_state = .None
 	snapshot.grounded = true
 
-	game.hud_state_update(hud, sim, debug, snapshot, true)
+	game.hud_state_update(hud, sim, debug, snapshot, true, 0)
 	testing.expect(t, len(hud.view.rows) == game.HUD_ROW_COUNT, "the status rows went missing")
 	return renderer.rows_measure(atlas, theme, hud.view.rows, {value_align = .Left})
 }

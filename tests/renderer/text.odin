@@ -216,12 +216,19 @@ theme_contrast_meets_the_floor :: proc(t: ^testing.T) {
 			testing.expectf(t, ratio >= 4.5, "body text contrast is %v", ratio)
 		}
 	}
+	tertiary := renderer.ui_contrast(theme.text_tertiary, surfaces[1])
+	testing.expectf(t, tertiary >= 4.5, "detail text on the menu is %v:1", tertiary)
 
 	raised := renderer.ui_composite(theme.surface_raised, surfaces[1])
 	testing.expectf(
 		t,
 		renderer.ui_contrast(theme.text_primary, raised) >= 4.5,
 		"selected row text must stay readable",
+	)
+	testing.expectf(
+		t,
+		renderer.ui_contrast(theme.text_secondary, raised) >= 4.5,
+		"secondary text on the selected row must stay readable",
 	)
 	testing.expectf(
 		t,

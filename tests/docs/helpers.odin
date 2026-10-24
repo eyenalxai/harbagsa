@@ -105,6 +105,21 @@ strip_ticks :: proc(cell: string) -> string {
 	return cell
 }
 
+// A palette row carries a backticked hex in its second cell. The helper returns
+// false for a row that is not a palette row, and reports a malformed hex.
+parse_palette_hex :: proc(t: ^testing.T, doc_path: string, line: int, cell: string) -> (hex: u32, ok: bool) {
+	text := strip_ticks(cell)
+	if !strings.has_prefix(text, "#") {
+		return 0, false
+	}
+	value, parsed := strconv.parse_u64(text[1:], 16)
+	if !parsed {
+		testing.expectf(t, false, "%s:%d has an unreadable hex %q", doc_path, line, text)
+		return 0, false
+	}
+	return u32(value), true
+}
+
 // Inline code spans are the odd pieces of a split on the backtick. The caller
 // deletes the slice.
 line_tokens :: proc(line: string) -> []string {

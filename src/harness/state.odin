@@ -136,7 +136,7 @@ state_build :: proc(
 	settle: Settle_State,
 	allocator: mem.Allocator,
 ) -> State {
-	game.hud_state_update(hud, sim, debug, game.simulation_snapshot(sim), false)
+	game.hud_state_update(hud, sim, debug, game.simulation_snapshot(sim), false, game.SIMULATION_STEP)
 	menu := &hud.menu
 	snapshot := game.simulation_snapshot(sim)
 	resolution := game.settings_effective_resolution(sim.settings, &menu.displays)
