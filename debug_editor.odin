@@ -8,7 +8,7 @@ import "src:platform"
 import "src:renderer"
 
 Editor_State :: struct {
-	palette_recapture: bool,
+	pointer_available: bool,
 }
 
 // The game loop owns the palette handoff and the pointer. The game only sees
@@ -104,13 +104,14 @@ open_palette :: proc(
 	events: ^platform.Events,
 	state: ^Editor_State,
 ) {
-	state.palette_recapture = events.captured
 	game.debug_palette_open(debug)
 	platform.set_click_capture(window, false)
-	if platform.set_cursor_capture(window, false) {
+	released := !platform.set_cursor_capture(window, false)
+	if !released {
 		log.warn("harbagsa: cursor release for the palette failed; using the keyboard path")
 	}
-	events.captured = false
+	events.captured = !released
+	state.pointer_available = released
 }
 
 @(private)
@@ -120,8 +121,8 @@ recapture_after_palette :: proc(
 	state: ^Editor_State,
 ) {
 	platform.set_click_capture(window, true)
-	events.captured = state.palette_recapture && platform.set_cursor_capture(window, true)
-	state.palette_recapture = false
+	events.captured = platform.set_cursor_capture(window, true)
+	state.pointer_available = false
 }
 
 @(private)
@@ -147,6 +148,9 @@ handle_palette_pointer :: proc(
 	events: ^platform.Events,
 	state: ^Editor_State,
 ) {
+	if !state.pointer_available {
+		return
+	}
 	hit := renderer.palette_hit_test(renderer_state, events.pointer, game.PREFAB_COUNT)
 	if events.pointer_moved && hit.card >= 0 {
 		_ = game.debug_palette_select(debug, hit.card)
