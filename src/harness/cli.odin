@@ -19,6 +19,7 @@ Common_Options :: struct {
 	no_render:      bool,
 	no_analysis:    bool,
 	debug_renderer: bool,
+	verbose:        bool,
 }
 
 Session_Options :: struct {
@@ -146,6 +147,9 @@ parse_common_option :: proc(
 		return index + 1, true, ""
 	case "--debug-renderer":
 		options.debug_renderer = true
+		return index + 1, true, ""
+	case "--verbose", "--summary":
+		options.verbose = true
 		return index + 1, true, ""
 	}
 	return index, false, ""

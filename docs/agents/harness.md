@@ -56,7 +56,10 @@ serializes Make with `flock`.
   against the previous capture. The first capture has zeros.
 - `run.log`: log lines from the renderer, the session, and the runner.
 
-Standard output is one JSON summary. Standard error holds logs.
+Standard output is one JSON summary. Standard error holds logs. `--verbose` (or
+`--summary`) adds a human summary to standard error: the setup revision and
+dirty flag, every capture, every check result, every failure, and every named
+perf result. The JSON line on standard output does not change.
 
 Exit codes:
 
@@ -556,6 +559,7 @@ same size on two builds to compare. The before/after is in
 - `src/harness/check_analysis.odin`: analysis check fields.
 - `src/harness/report.odin`: the run report and summary types.
 - `src/harness/report_setup.odin`: the run's setup block.
+- `src/harness/run_summary.odin`: the `--verbose` run summary.
 - `src/digest/digest.odin`: FNV-1a for the state and render digests.
 - `src/perf/`: the perf sample, ring, statistics, and text formatting.
 - `src/renderer/timing.odin`: the timestamp pools, the pass boundaries, and the

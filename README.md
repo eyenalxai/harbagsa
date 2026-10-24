@@ -193,6 +193,9 @@ Options:
 - `--debug-renderer`: accept the renderer debug command. A build with
   `-define:ENABLE_RENDERER_DEBUG=true` always accepts it.
 - `--no-analysis`: skip `analysis.json` and the analysis maps.
+- `--verbose` (or `--summary`): write the setup revision and dirty flag, every
+  capture, every check result, every failure, and every named perf result to
+  standard error. Standard output stays one JSON line.
 
 The harness view starts with the HUD off, the debug draw off, and the capture
 hint off. A scenario captures the final frame by default. `capture` adds more
