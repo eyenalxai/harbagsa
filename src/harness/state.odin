@@ -47,6 +47,10 @@ Settings_State :: struct {
 	prone_mode:        string `json:"prone_mode"`,
 }
 
+Debug_State :: struct {
+	active: bool `json:"active"`,
+}
+
 Menu_State :: struct {
 	open:     bool   `json:"open"`,
 	selected: int    `json:"selected"`,
@@ -58,6 +62,7 @@ State :: struct {
 	player:   Player_State   `json:"player"`,
 	crates:   []Crate_State  `json:"crates"`,
 	settings: Settings_State `json:"settings"`,
+	debug:    Debug_State    `json:"debug"`,
 	menu:     Menu_State     `json:"menu"`,
 	digest:   string         `json:"digest"`,
 }
@@ -66,6 +71,7 @@ state_build :: proc(
 	sim: ^game.Simulation,
 	frame: int,
 	menu: ^game.Menu_State,
+	debug: ^game.Debug_Mode,
 	allocator: mem.Allocator,
 ) -> State {
 	snapshot := game.simulation_snapshot(sim)
@@ -106,6 +112,9 @@ state_build :: proc(
 			sprint_mode = game.input_mode_name(sim.settings.sprint_mode),
 			crouch_mode = game.input_mode_name(sim.settings.crouch_mode),
 			prone_mode = game.input_mode_name(sim.settings.prone_mode),
+		},
+		debug = {
+			active = debug.active,
 		},
 		menu = {
 			open = menu.open,

@@ -134,6 +134,8 @@ session_reset :: proc(session: ^Session) -> string {
 	session.input = {}
 	session.camera_override = {}
 	session.has_camera_override = false
+	// The debug mode holds a saved player from the world that just went away.
+	session.debug = game.debug_mode_create()
 	return ""
 }
 
@@ -242,7 +244,13 @@ session_draw :: proc(session: ^Session, capture: bool, name: string, alpha: f32)
 }
 
 session_state :: proc(session: ^Session) -> State {
-	return state_build(&session.sim, session.frame, &session.hud.menu, session.allocator)
+	return state_build(
+		&session.sim,
+		session.frame,
+		&session.hud.menu,
+		&session.debug,
+		session.allocator,
+	)
 }
 
 session_queue_capture :: proc(

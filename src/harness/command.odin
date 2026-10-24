@@ -14,6 +14,7 @@ Command_Kind :: enum {
 	Capture,
 	Camera,
 	View,
+	Debug_Mode,
 	Menu,
 	Check,
 	Record,
@@ -81,6 +82,10 @@ Camera_Command :: struct {
 	clear:    bool,
 }
 
+Debug_Mode_Command :: struct {
+	active: bool,
+}
+
 View_Command :: struct {
 	hud:       bool,
 	debug:     bool,
@@ -114,8 +119,9 @@ Command :: struct {
 	step:    Step_Command,
 	capture: Capture_Command,
 	camera:  Camera_Command,
-	view:    View_Command,
-	menu:    Menu_Command,
+	view:       View_Command,
+	debug_mode: Debug_Mode_Command,
+	menu:       Menu_Command,
 	check:   Check_Command,
 	record:  Record_Command,
 	replay:  Replay_Command,
@@ -141,6 +147,8 @@ command_name :: proc(kind: Command_Kind) -> string {
 		return "camera"
 	case .View:
 		return "view"
+	case .Debug_Mode:
+		return "debug_mode"
 	case .Menu:
 		return "menu"
 	case .Check:
@@ -261,6 +269,8 @@ command_parse :: proc(value: json.Value, allocator := context.allocator) -> (Com
 		return parse_camera(object)
 	case "view":
 		return parse_view(object)
+	case "debug_mode":
+		return parse_debug_mode(object)
 	case "menu":
 		return parse_menu(object)
 	case "check":
