@@ -136,6 +136,25 @@ scenario_rejects_bad_step_types :: proc(t: ^testing.T) {
 }
 
 @(test)
+scenario_view_accepts_perf :: proc(t: ^testing.T) {
+	scenario, error := harness.scenario_parse(
+		`{"view": {"perf": true}, "commands": [{"cmd": "quit"}]}`,
+		context.allocator,
+	)
+	defer harness.scenario_destroy(&scenario, context.allocator)
+	testing.expectf(t, error == "", "scenario view parse failed: %s", error)
+	if error != "" {
+		return
+	}
+	testing.expect(t, len(scenario.commands) > 0, "the view command is missing")
+	if len(scenario.commands) > 0 {
+		testing.expect(t, scenario.commands[0].kind == .View, "the first command is not a view")
+		testing.expect(t, scenario.commands[0].view.has_perf, "the perf flag is missing")
+		testing.expect(t, scenario.commands[0].view.perf, "the perf flag is false")
+	}
+}
+
+@(test)
 commands_scenario_runs_verbatim :: proc(t: ^testing.T) {
 	scenario, error := harness.scenario_parse(
 		`{"commands": [{"cmd": "step", "frames": 2}, {"cmd": "quit"}]}`,

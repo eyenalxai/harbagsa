@@ -11,7 +11,7 @@ scenario_view :: proc(value: json.Value) -> (View_Command, string) {
 	if !object_ok {
 		return {}, "scenario 'view' must be an object"
 	}
-	if key, unknown := json_unknown_key(object, {"hud", "debug", "hint"}); unknown {
+	if key, unknown := json_unknown_key(object, {"hud", "debug", "hint", "perf"}); unknown {
 		return {}, fmt.aprintf("unknown view key %q", key, allocator = context.allocator)
 	}
 	return parse_view_fields(object)
