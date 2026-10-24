@@ -5,6 +5,7 @@ import "core:encoding/json"
 import "core:mem"
 import "core:strings"
 
+
 @(private)
 parse_look :: proc(object: json.Object) -> (Command, string) {
 	if key, unknown := json_unknown_key(object, {"cmd", "dx", "dy"}); unknown {
@@ -83,37 +84,6 @@ parse_step :: proc(object: json.Object) -> (Command, string) {
 	return {kind = .Step, step = {frames = frames}}, ""
 }
 
-@(private)
-parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "name", "frame", "alpha"}); unknown {
-		return {}, format_error("unknown key %q", key)
-	}
-	command := Command{kind = .Capture}
-	if value, has := json_get(object, "name"); has {
-		name, ok := json_string(value)
-		if !ok || !valid_capture_name(name) {
-			return {}, "'name' must use only letters, digits, '-' and '_'"
-		}
-		command.capture.name = strings.clone(name, allocator)
-	}
-	if value, has := json_get(object, "frame"); has {
-		frame, ok := json_integer(value)
-		if !ok || frame < 0 {
-			return {}, "'frame' must be a non-negative integer"
-		}
-		command.capture.frame = frame
-		command.capture.has_frame = true
-	}
-	if value, has := json_get(object, "alpha"); has {
-		alpha, ok := json_number(value)
-		if !ok || alpha < 0 || alpha > 1 {
-			return {}, "'alpha' must be a number in [0, 1]"
-		}
-		command.capture.alpha = f32(alpha)
-		command.capture.has_alpha = true
-	}
-	return command, ""
-}
 
 @(private)
 parse_camera :: proc(object: json.Object) -> (Command, string) {

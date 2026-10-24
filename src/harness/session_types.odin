@@ -9,7 +9,9 @@ View :: struct {
 }
 
 Pending_Capture :: struct {
-	name:  string,
-	frame: int,
-	alpha: f32,
+	name:   string,
+	frame:  int,
+	alpha:  f32,
+	target: Capture_Target,
+	format: Capture_Format,
 }
