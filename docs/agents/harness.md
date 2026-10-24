@@ -100,9 +100,10 @@ serializes Make with `flock`.
   analysis maps.
 - `trace.jsonl`: one JSON object per measured frame, when the perf command asks
   for a trace.
-- `state.json`: the final state alone. It holds the player, camera, crates,
-  window and input settings, debug mode, sun, menu, rows, settle, frame,
-  renderer, render digest, and simulation digest.
+- `state.json`: the final state alone. It holds the player, placed objects,
+  window and input settings, menu, frame, renderer, render digest, and simulation
+  digest. Each object carries `id`, `prefab`, `body`, `position`, `rotation`,
+  `scale`, and `spawn_age`.
 - `frames/<name>.png`, `.f32`, or `.bin`: captures. A color capture is a PNG;
   `float` and `raw` write the intermediate target.
 - Each screenshot entry carries `delta_mean`, `delta_max`, and `delta_over_16`
@@ -140,7 +141,7 @@ Exit codes:
     {"cmd": "capture", "name": "after-jump"}
   ],
   "checks": [
-    {"field": "crates.0.position.z", "op": "lt", "value": 7.5}
+    {"field": "objects.1.position.z", "op": "lt", "value": 7.5}
   ]
 }
 ```
@@ -156,8 +157,12 @@ Rules:
 - Only a `capture` command captures. A scenario with no `capture` and no perf
   run does not create a renderer unless `--present` asks for the window.
 - A check uses the `state.json` shape. Operators: `eq`, `ne`, `lt`, `le`, `gt`,
-  `ge`. Examples: `player.position.y`, `crates.count`, `settings.window_mode`,
-  `settings.resolution`, `settings.sprint_mode`, `settings.type_weight`, `menu.open`.
+  `ge`. Examples: `player.position.y`, `objects.count`, `settings.window_mode`,
+  `settings.resolution`, `settings.sprint_mode`, `menu.open`.
+- An object check addresses a placed object by id: `objects.7.position.z`,
+  `objects.7.rotation.w`, `objects.7.prefab`, `objects.7.body`,
+  `objects.7.scale`, and `objects.7.spawn_age`. The id is stable while the object
+  exists. `objects.count` is the list length.
 - A capture check reads the capture summary. Fields: `capture.count`,
   `capture.worst_mean_delta`, `capture.worst_max_delta`,
   `capture.worst_over_16`, and `capture.worst_over_16_fraction`. The fraction
@@ -835,14 +840,16 @@ It translates `--base` to `tools/ab.sh --ref` and passes `--scenario`, `--size`,
 - Fixed 60 Hz. Never sleep or use a wall-clock delta.
 - A perf command is the one wall-clock exception. It never writes the state,
   the digest, or the pixel hash.
-- `reset` creates a fresh `Simulation`. Crates return to spawn, the settings
-  return to their defaults, and the menu closes.
+- `reset` creates a fresh `Simulation`. Placed objects return to spawn, the
+  settings return to their defaults, and the menu closes.
 - `look` uses the game sensitivity and pitch clamp. `face` sets yaw and pitch
   directly.
 - Capture alpha defaults to 1.0 (post-step), so a capture matches `state` at the
   same frame.
-- The digest is FNV-1a over frame, player, crates, the window and input
-  settings, and menu state. Use it in reports and regression checks.
+- The digest is FNV-1a over frame, player, the placed objects (id, prefab, body,
+  and transform), the window and input settings, and menu state. Scale and spawn
+  age are animation output, so they stay out of the digest. Use it in reports
+  and regression checks.
 
 ## Where the code lives
 
@@ -881,6 +888,7 @@ It translates `--base` to `tools/ab.sh --ref` and passes `--scenario`, `--size`,
 - `src/harness/analysis_images.odin`: PNG decode and the analysis maps.
 - `src/harness/check_capture.odin`: capture checks and the check window.
 - `src/harness/check_analysis.odin`: analysis check fields.
+- `src/harness/check_objects.odin`: placed-object check fields.
 - `src/harness/report.odin`: the run report and summary types.
 - `src/harness/report_setup.odin`: the run's setup block.
 - `src/harness/build_info.odin`: the injected revision and dirty flag.
@@ -895,6 +903,12 @@ It translates `--base` to `tools/ab.sh --ref` and passes `--scenario`, `--size`,
 - `src/renderer/sky_draw.odin`: the sky pass, after the lit pass.
 - `src/renderer/capture.odin`: the target copy and RGBA f32 decode.
 - `src/frame/`: shared scene assembly and draw for the game and the harness.
+- `src/game/prefabs.odin`: the placed-object body modes, prefab catalog, and
+  starting crate layout.
+- `src/game/objects.odin`: the placed-object list and the create, remove, move,
+  yaw, convert, and reset API.
+- `src/game/box_body.odin`: the one Box3D box-body creation path for the static
+  arena and the placed objects.
 - `src/game/menu.odin`: the menu rows, settings text, and control list.
 - `src/game/menu_input.odin`: the pure slider drag state machine.
 - `src/game/settings.odin`: the runtime window and input-mode settings.
@@ -1026,6 +1040,8 @@ harness in the same change. Do not leave the automation behind the game.
 - New renderer pass or target: keep it behind `Target` or `Frame_View`. Add an
   offscreen test when the pass must match the game.
 - New screenshot or evidence path: update the README and this page.
+- New prefab: add it to `Prefab_Id` and `PREFABS` in `src/game/prefabs.odin`.
+  The renderer, the game API, and the harness read the catalog generically.
 - New domain word: add it to `GLOSSARY.md` before you use it.
 
 If you cannot update the harness in the same change, open a ticket and state the

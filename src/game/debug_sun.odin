@@ -17,7 +17,7 @@ debug_edit_sun :: proc(dm: ^Debug_Mode, input: Debug_Input) {
 			return
 		}
 		dm.selection = .Sun
-		dm.selected_crate = -1
+		dm.selected_object_id = INVALID_OBJECT_ID
 		debug_mode_end_drag(dm)
 		dm.sun_azimuth, dm.sun_elevation = debug_mode_sun_angles(dm)
 	}
