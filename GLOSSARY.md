@@ -176,10 +176,29 @@ One frame of player intent: movement axes, sprint, crouch, prone, jump, and rese
 _Avoid_: Input state, controls
 
 **Settings**:
-The runtime input-mode choices for sprint, crouch, and prone. A new simulation
-starts with sprint Hold, crouch Toggle, and prone Toggle. A player reset keeps
-the current settings.
+The runtime window and input-mode choices: window mode, display, resolution,
+and the sprint, crouch, and prone input modes. A new simulation starts Borderless
+on display 0 with a 1280x720 window size, with sprint Hold, crouch Toggle, and
+prone Toggle. A player reset keeps the current settings.
 _Avoid_: Options, preferences
+
+**Window mode**:
+Borderless fills the selected display at its desktop size. Windowed is a
+fixed-size window at the selected resolution. The settings menu changes it. A
+new simulation starts Borderless.
+_Avoid_: Fullscreen mode, display mode
+
+**Display**:
+A connected output that shows the game. The settings menu chooses the display;
+the game starts on the display where the window opened. Borderless fills it and
+uses its desktop size. Windowed uses its resolution list, but on Wayland the
+compositor decides where the window sits.
+_Avoid_: Monitor, screen
+
+**Resolution**:
+The window size in Windowed mode, or the display's desktop size in Borderless
+mode. The list comes from the selected display.
+_Avoid_: Window size, video mode
 
 **Render snapshot**:
 The interpolatable view of the player after a simulation step.
@@ -232,8 +251,8 @@ _Avoid_: UI
 
 **Settings menu**:
 The paused overlay opened with `Esc`. It lists the active control set and changes
-the three input modes. The harness opens it with the `menu` command and reports
-`settings.*` and `menu.*` in the state.
+the window mode, display, resolution, and three input modes. The harness opens
+it with the `menu` command and reports `settings.*` and `menu.*` in the state.
 _Avoid_: Options screen, pause menu
 
 **Pause**:
