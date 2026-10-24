@@ -21,6 +21,7 @@ Command_Kind :: enum {
 	Record,
 	Replay,
 	Perf,
+	Renderer_Debug,
 	Quit,
 }
 
@@ -84,6 +85,24 @@ Replay_Command :: struct {
 	path: string,
 }
 
+Renderer_Debug_Command :: struct {
+	clear:                   bool,
+	taa:                     bool,
+	jitter:                  bool,
+	history_weight:          f32,
+	clamp:                   bool,
+	depth_trust:             bool,
+	freeze_shadow_phase:     bool,
+	shadow_phase:            int,
+	has_taa:                 bool,
+	has_jitter:              bool,
+	has_history_weight:      bool,
+	has_clamp:               bool,
+	has_depth_trust:         bool,
+	has_freeze_shadow_phase: bool,
+	has_shadow_phase:        bool,
+}
+
 Command :: struct {
 	kind:    Command_Kind,
 	look:    Look_Command,
@@ -100,6 +119,7 @@ Command :: struct {
 	record:  Record_Command,
 	replay:  Replay_Command,
 	perf:    Perf_Command,
+	renderer_debug: Renderer_Debug_Command,
 }
 
 command_name :: proc(kind: Command_Kind) -> string {
@@ -136,6 +156,8 @@ command_name :: proc(kind: Command_Kind) -> string {
 		return "replay"
 	case .Perf:
 		return "perf"
+	case .Renderer_Debug:
+		return "renderer_debug"
 	case .Quit:
 		return "quit"
 	}
@@ -166,42 +188,6 @@ check_value_destroy :: proc(value: ^Check_Value, allocator: mem.Allocator) {
 		delete(value.text, allocator)
 	}
 	value^ = {}
-}
-
-check_op_name :: proc(op: Check_Op) -> string {
-	switch op {
-	case .Eq:
-		return "eq"
-	case .Ne:
-		return "ne"
-	case .Lt:
-		return "lt"
-	case .Le:
-		return "le"
-	case .Gt:
-		return "gt"
-	case .Ge:
-		return "ge"
-	}
-	return "eq"
-}
-
-check_op_parse :: proc(name: string) -> (op: Check_Op, ok: bool) {
-	switch name {
-	case "eq":
-		return .Eq, true
-	case "ne":
-		return .Ne, true
-	case "lt":
-		return .Lt, true
-	case "le":
-		return .Le, true
-	case "gt":
-		return .Gt, true
-	case "ge":
-		return .Ge, true
-	}
-	return .Eq, false
 }
 
 command_parse_string :: proc(line: string, allocator := context.allocator) -> (Command, string) {
@@ -266,6 +252,8 @@ command_parse :: proc(value: json.Value, allocator := context.allocator) -> (Com
 		return parse_replay(object, allocator)
 	case "perf":
 		return parse_perf(object, allocator)
+	case "renderer_debug":
+		return parse_renderer_debug(object)
 	case "quit":
 		if key, unknown := json_unknown_key(object, {"cmd"}); unknown {
 			return {}, format_error("unknown key %q", key)

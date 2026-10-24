@@ -44,6 +44,7 @@ session_main :: proc(options: Session_Options) -> int {
 		frames_dir = strings.clone(frames_path, context.allocator),
 		trace_dir  = strings.clone(absolute_frames, context.allocator),
 	}
+	runtime.session.debug_renderer = options.debug_renderer
 	defer {
 		if runtime.has_backend {
 			backend_destroy(&runtime.backend)
