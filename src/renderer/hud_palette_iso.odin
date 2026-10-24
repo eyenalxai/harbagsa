@@ -6,6 +6,7 @@ import "core:math"
 
 PALETTE_ISO_COS :: f32(0.8660254)
 PALETTE_ISO_SIN :: f32(0.5)
+PALETTE_EMISSIVE_TOP_MIX :: f32(0.22)
 
 Palette_Face :: enum {
 	Right,
@@ -115,6 +116,36 @@ palette_transform_point :: proc(transform: Palette_Transform, point: [2]f32) -> 
 		point.x * transform.scale + transform.offset.x,
 		point.y * transform.scale + transform.offset.y,
 	}
+}
+
+// A lamp reads as a lamp in the grid: its top face lifts toward white and every
+// visible edge carries a light-coloured outline.
+palette_emissive_top :: proc(color: [4]f32) -> [4]f32 {
+	return {
+		color.r + (1.0 - color.r) * PALETTE_EMISSIVE_TOP_MIX,
+		color.g + (1.0 - color.g) * PALETTE_EMISSIVE_TOP_MIX,
+		color.b + (1.0 - color.b) * PALETTE_EMISSIVE_TOP_MIX,
+		color.a,
+	}
+}
+
+palette_emissive_outline :: proc(color: [4]f32) -> [4]f32 {
+	return {
+		min(color.r * 1.35 + 0.15, 1.0),
+		min(color.g * 1.35 + 0.15, 1.0),
+		min(color.b * 1.35 + 0.15, 1.0),
+		1.0,
+	}
+}
+
+palette_emit_line :: proc(o: ^Overlay, a, b: [2]f32, color: [4]f32) {
+	delta := b - a
+	length := math.sqrt(delta.x * delta.x + delta.y * delta.y)
+	if length <= 0.0 {
+		return
+	}
+	normal := [2]f32{-delta.y / length, delta.x / length} * (o.theme.hairline * 0.5)
+	hud_emit_quad(o, a + normal, b + normal, b - normal, a - normal, color)
 }
 
 @(private)

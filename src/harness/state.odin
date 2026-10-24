@@ -38,6 +38,7 @@ Object_State :: struct {
 	rotation:  Quat_State `json:"rotation"`,
 	scale:     f32        `json:"scale"`,
 	spawn_age: f32        `json:"spawn_age"`,
+	light:     Light_State `json:"light"`,
 }
 
 Settings_State :: struct {
@@ -188,6 +189,7 @@ state_build :: proc(
 			rotation  = quat_state(box.rotation),
 			scale     = game.simulation_object_scale(sim, object.id),
 			spawn_age = game.simulation_object_spawn_age(sim, object.id),
+			light     = light_state(object.light),
 		}
 	}
 	state.digest = state_digest(state, allocator)
@@ -255,6 +257,10 @@ state_digest :: proc(state: State, allocator: mem.Allocator) -> string {
 		digest.write_f32(&hash, object.rotation.y)
 		digest.write_f32(&hash, object.rotation.z)
 		digest.write_f32(&hash, object.rotation.w)
+		digest.write_bool(&hash, object.light.active)
+		digest.write_string(&hash, object.light.color)
+		digest.write_f32(&hash, object.light.intensity)
+		digest.write_f32(&hash, object.light.range)
 	}
 	return digest.hex(hash, allocator)
 }

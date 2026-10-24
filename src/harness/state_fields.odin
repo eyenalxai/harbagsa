@@ -143,6 +143,11 @@ debug_field :: proc(debug: Debug_State, path: string) -> (Check_Value, string) {
 			return {}, "debug.history needs a field"
 		}
 		return history_field(debug.history, tail)
+	case "lights":
+		if !has_tail {
+			return {}, "debug.lights needs a field"
+		}
+		return light_budget_field(debug.lights, tail)
 	}
 	return {}, fmt.aprintf("unknown settle field %q", path, allocator = context.allocator)
 }
@@ -179,6 +184,11 @@ placement_field :: proc(placement: Placement_State, path: string) -> (Check_Valu
 			return {}, "debug.placement.position needs an axis"
 		}
 		return vec_field(placement.position, tail)
+	case "light":
+		if !has_tail {
+			return {}, "debug.placement.light needs a field"
+		}
+		return light_field(placement.light, tail)
 	}
 	return {}, fmt.aprintf("unknown debug.placement field %q", path, allocator = context.allocator)
 }
@@ -224,8 +234,39 @@ inspector_field :: proc(inspector: Inspector_State, path: string) -> (Check_Valu
 			return {}, "debug.inspector.position needs an axis"
 		}
 		return vec_field(inspector.position, tail)
+	case "light":
+		if !has_tail {
+			return {}, "debug.inspector.light needs a field"
+		}
+		return light_field(inspector.light, tail)
 	}
 	return {}, fmt.aprintf("unknown debug.inspector field %q", path, allocator = context.allocator)
+}
+
+@(private)
+light_field :: proc(light: Light_State, path: string) -> (Check_Value, string) {
+	switch path {
+	case "active":
+		return {kind = .Bool, boolean = light.active}, ""
+	case "color":
+		return {kind = .String, text = light.color}, ""
+	case "intensity":
+		return {kind = .Number, number = f64(light.intensity)}, ""
+	case "range":
+		return {kind = .Number, number = f64(light.range)}, ""
+	}
+	return {}, fmt.aprintf("unknown light field %q", path, allocator = context.allocator)
+}
+
+@(private)
+light_budget_field :: proc(lights: Light_Budget_State, path: string) -> (Check_Value, string) {
+	switch path {
+	case "active":
+		return {kind = .Number, number = f64(lights.active)}, ""
+	case "lamps":
+		return {kind = .Number, number = f64(lights.lamps)}, ""
+	}
+	return {}, fmt.aprintf("unknown debug.lights field %q", path, allocator = context.allocator)
 }
 
 @(private)

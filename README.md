@@ -130,6 +130,13 @@ stairs.
 - `Delete` or `X`: remove the selected object.
 - `Ctrl+Z`: undo the last place, delete, duplicate, move, wheel height, rotate,
   or body conversion. `Ctrl+Shift+Z`: redo it.
+- `C`: cycle the next lamp's light colour through warm, cool, red, green, and
+  blue. With the palette closed and a placed lamp selected, it edits that lamp.
+- `[` / `]`: change the lamp light intensity in 0.2 steps from 0.2 to 4.0.
+- `,` / `.`: change the lamp light range in 1 m steps from 2 to 20 m.
+  The light settings stick to the next placement until the prefab changes. A
+  non-lamp object ignores them. The palette preview, the inspector, and the
+  ghost show the current light.
 - `L`: toggle the sun placement. The sun follows the crosshair on a sky dome
   and the lighting updates live. A click commits the position; `Esc` or a right
   click restores the sun from before the mode.
@@ -140,19 +147,22 @@ stairs.
   open the settings menu, in that order. The settings menu closes the palette and
   cancels the placement and the sun placement when it opens.
 
-The palette shows the box prefabs in a six by two grid with a preview pane. Hover
-or use the arrow keys to change the selection, `1`-`9` selects one of the first
-nine cards, and `Enter` or a click picks. A click outside the panel closes it. A
-click inside the panel that misses every card does nothing.
+The palette shows the eleven box prefabs in a six by two grid with a preview
+pane. Hover or use the arrow keys to change the selection, `1`-`9` selects one of
+the first nine cards, and `Enter` or a click picks. A click outside the panel
+closes it. A click inside the panel that misses every card does nothing. A lamp
+card glows, and the preview adds the colour, intensity, and range line.
 
 The HUD shows the stance, gait, horizontal speed, grounded state, movement
 state, and position. In debug mode the inspector shows the selection as the
-prefab and object id, the object count and capacity, and the selected object's
-body, size, position, yaw, and snap state. Every changing value uses a fixed
-field and the mono face, so the panel does not resize with the selection. While
-the placement tool is armed, it shows the armed prefab, body, height, yaw, snap,
-and object count instead. While sun placement is active, it adds a sun placement
-row.
+prefab and object id, the object count and capacity, the selected object's body,
+size, position, yaw, and snap state, its light values for a lamp, and the active
+light count against the lamp count. Every changing value uses a fixed field and
+the mono face, so the panel does not resize with the selection. While the
+placement tool is armed, it shows the armed prefab, body, height, yaw, snap,
+object count, and the next lamp light instead. While sun placement is active, it
+adds a sun placement row. The eight nearest lamps to the camera are active; the
+rest stay emissive but do not light the scene.
 The settings menu shows the control list. Borderless fills the selected display;
 Windowed uses the chosen resolution.
 
@@ -310,11 +320,13 @@ The batch runner and the live session share one command set:
 - `{"cmd": "state"}`: player, eye, velocity, yaw, pitch, grounded, objects,
   window and input settings, debug mode, menu, renderer state, render digest,
   frame, and simulation digest. Each object entry carries its id, prefab, body
-  mode, position, rotation, scale, and spawn age. The debug entry carries
+  mode, position, rotation, scale, spawn age, and light (`active`, `color`,
+  `intensity`, `range`). The debug entry carries
   `active`, `selection`, `selected_id`, the palette (`open`, `selected`,
   `body`), the placement (`armed`, `prefab`, `position`, `height`, `yaw`,
-  `snap`), the sun (`active`, `position`, `azimuth`, `elevation`), the inspector
-  (`prefab`, `body`, `size`, `position`, `yaw`, `snap`), and the history
+  `snap`, `light`), the sun (`active`, `position`, `azimuth`, `elevation`), the
+  inspector (`prefab`, `body`, `size`, `position`, `yaw`, `snap`, `light`), the
+  light budget (`lights.active`, `lights.lamps`), and the history
   (`depth`, `redo`). The
   renderer object reports the frame count, TAA state, jitter index,
   history validity, convergence frames, history read index and weight, reset
@@ -356,8 +368,12 @@ The batch runner and the live session share one command set:
   closes the object palette, `select` is the zero-based prefab index, `body` is
   `static` or `dynamic`, and `pick` arms the selected prefab. `height` is the
   offset above the surface in metres, `yaw` is the rotation in degrees, and
-  `snap` toggles the 0.25 m X/Z grid. `cancel` clears the armed tool. Every field
-  is optional; fields apply in that order, and the `sun` group applies last.
+  `snap` toggles the 0.25 m X/Z grid. `light_color` is `warm`, `cool`, `red`,
+  `green`, or `blue`; `light_intensity` is in [0.2, 4.0] and `light_range` in
+  [2, 20]. The light fields tune the next lamp placement, or the selected lamp
+  when neither the palette nor the placement tool owns the editor. `cancel`
+  clears the armed tool. Every field is optional; fields apply in that order,
+  and the `sun` group applies last.
 - `{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw": 0, "pitch": -0.6}}`:
   set the debug camera. `yaw` and `pitch` are radians, as in the `camera`
   command. The editor command accepts this alongside the other fields.
@@ -554,7 +570,10 @@ that the bottom dock still fits and clears the crosshair.
 `scenarios/editor-sun.json` enters sun placement, captures the sun gizmo on the
 sky dome, sets an exact sun position, and captures the committed lighting.
 `scenarios/editor-object.json` edits a placed object, captures the inspector,
-then captures the undo and redo restores.
+then captures the undo and redo restores. `scenarios/editor-lamps.json` captures
+the three lamp previews, places a warm lamp, a cool panel, a red beacon, and a
+pillar, then captures the lit scene, the point-light shadow, and the selected
+lamp edit with its undo.
 
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window

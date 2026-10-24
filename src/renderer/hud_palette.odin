@@ -105,6 +105,7 @@ build_palette_card :: proc(o: ^Overlay, card: HUD_Rect, item: ui.Palette_Item, s
 build_palette_iso :: proc(o: ^Overlay, item: ui.Palette_Item, rect: HUD_Rect) {
 	box := palette_project_box(item.half_extents, item.base_pitch)
 	transform := palette_fit_transform(box, rect)
+	outline := palette_emissive_outline(item.color)
 	for face in box.faces[:box.count] {
 		color := [4]f32{
 			item.color.r * face.shade,
@@ -112,14 +113,21 @@ build_palette_iso :: proc(o: ^Overlay, item: ui.Palette_Item, rect: HUD_Rect) {
 			item.color.b * face.shade,
 			item.color.a,
 		}
-		hud_emit_quad(
-			o,
+		if item.emissive && face.face == .Top {
+			color = palette_emissive_top(color)
+		}
+		points := [4][2]f32 {
 			palette_transform_point(transform, face.points[0]),
 			palette_transform_point(transform, face.points[1]),
 			palette_transform_point(transform, face.points[2]),
 			palette_transform_point(transform, face.points[3]),
-			color,
-		)
+		}
+		hud_emit_quad(o, points[0], points[1], points[2], points[3], color)
+		if item.emissive {
+			for index in 0 ..< len(points) {
+				palette_emit_line(o, points[index], points[(index + 1) % len(points)], outline)
+			}
+		}
 	}
 }
 
@@ -131,6 +139,7 @@ build_palette_preview :: proc(
 	palette: ^ui.Palette,
 ) {
 	theme := o.theme
+	light_line := item.light_line
 	separator_height := layout.footer.y - theme.spacing.xs - layout.preview.y
 	hud_emit_rect(
 		o,
@@ -187,7 +196,7 @@ build_palette_preview :: proc(
 		palette.body,
 	)
 	text_y += label_style.type.line_height
-	if item.light_line != "" {
+	if item.light_length > 0 {
 		baseline = text_y + text_baseline(&o.atlas, label_style.type)
 		palette_preview_line(
 			o,
@@ -197,7 +206,7 @@ build_palette_preview :: proc(
 			label_style,
 			value_style,
 			"Light",
-			item.light_line,
+			string(light_line[:item.light_length]),
 		)
 		text_y += label_style.type.line_height
 	}

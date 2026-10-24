@@ -103,10 +103,11 @@ serializes Make with `flock`.
   for a trace. A scenario with more than one traced perf command writes one file
   per command; `report.trace` names the last.
 - `state.json`: the final state alone. It holds the player, placed objects,
-  window and input settings, menu, debug palette, placement, sun, inspector, and
-  history, frame,
+  window and input settings, menu, debug palette, placement, sun, inspector,
+  light budget, and history, frame,
   renderer, render digest, and simulation digest. Each object carries `id`,
-  `prefab`, `body`, `position`, `rotation`, `scale`, and `spawn_age`.
+  `prefab`, `body`, `position`, `rotation`, `scale`, `spawn_age`, and `light`
+  (`active`, `color`, `intensity`, `range`).
 - `frames/<name>.png`, `.f32`, or `.bin`: captures. A color capture is a PNG;
   `float` and `raw` write the intermediate target.
 - Each screenshot entry carries `delta_mean`, `delta_max`, and `delta_over_16`
@@ -235,6 +236,7 @@ Rules:
 - `{"cmd": "displays", "clear": true}`
 - `{"cmd": "debug_mode", "active": true}`
 - `{"cmd": "editor", "open": true, "select": 4, "pick": true, "height": 0.5}`
+- `{"cmd": "editor", "select": 8, "light_color": "cool", "light_intensity": 2.2, "light_range": 12}`
 - `{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw": 0, "pitch": -0.6}}`
 - `{"cmd": "editor", "place": {"prefab": "Block", "position": [0, 0.5, 10], "body": "static"}}`
 - `{"cmd": "editor", "sun": {"active": true, "position": [0, 40, -30]}}`
@@ -306,12 +308,12 @@ Changing the sun resets TAA history with the `scene_change` reason.
 
 ## Editor
 
-The `editor` command drives the debug placement tool and the sun placement. It
-needs debug mode; send `{"cmd": "debug_mode", "active": true}` first. Every field
-is optional, and one command may combine fields. They apply in this order:
-`camera`, `open`, `select`, `select_object`, `body`, `height`, `yaw`, `snap`,
-`pick`, `cancel`, `place`, `move`, `rotate`, `delete`, `duplicate`, `undo`,
-`redo`, `sun`.
+The `editor` command drives the debug placement tool, the lamp light, and the sun
+placement. It needs debug mode; send `{"cmd": "debug_mode", "active": true}`
+first. Every field is optional, and one command may combine fields. They apply
+in this order: `camera`, `open`, `select`, `select_object`, `body`, `height`,
+`yaw`, `snap`, `light_color`, `light_intensity`, `light_range`, `pick`, `cancel`,
+`place`, `move`, `rotate`, `delete`, `duplicate`, `undo`, `redo`, `sun`.
 
 | Field | Meaning |
 | --- | --- |
@@ -322,6 +324,9 @@ is optional, and one command may combine fields. They apply in this order:
 | `height` | offset above the surface in metres; clamped at 0 |
 | `yaw` | rotation in degrees |
 | `snap` | round the X/Z bottom anchor to a 0.25 m grid |
+| `light_color` | `warm`, `cool`, `red`, `green`, or `blue` |
+| `light_intensity` | intensity in [0.2, 4.0], rounded to a tenth |
+| `light_range` | range in [2, 20] metres, rounded to a whole metre |
 | `cancel` | clear the armed tool without placing |
 | `camera` | `{"position", "yaw", "pitch"}` for the debug camera; yaw and pitch are radians |
 | `place` | `{"prefab", "position", "yaw", "body"}` creates at an exact transform |
@@ -335,9 +340,16 @@ is optional, and one command may combine fields. They apply in this order:
 | `sun` | `{"active", "position", "place", "cancel"}` drives sun placement |
 
 `select` follows the catalog order: Crate, Small crate, Wide crate, Block,
-Platform, Ramp, Pillar, Wall. A pick casts a 100 m ray from the debug camera. A
-hit puts the object's AABB bottom on the hit point; a miss puts it 3 m ahead of
-the camera. The state reports the ghost centre as `debug.placement.position`.
+Platform, Ramp, Pillar, Wall, Lamp, Light panel, Beacon. A pick casts a 100 m ray
+from the debug camera. A hit puts the object's AABB bottom on the hit point; a
+miss puts it 3 m ahead of the camera. The state reports the ghost centre as
+`debug.placement.position`.
+
+The three light prefabs carry a lamp light. The light fields apply to the next
+lamp placement while the palette is open or the placement tool is armed, and to
+the selected lamp otherwise. A non-lamp target is an error. `debug.placement.light`
+reports the next placement light, `debug.inspector.light` the selected lamp, and
+`debug.lights` the active and total lamp counts.
 
 `place` requires `prefab` and `position`. Its `yaw` defaults to 0 and its `body`
 to the prefab default. It bypasses the ray and leaves the armed tool unchanged.
@@ -358,10 +370,12 @@ position. `place` commits and leaves the mode. `cancel` restores the sun from
 before the mode. `active: false` leaves the mode and keeps the current sun.
 
 The state carries `debug.palette` (`open`, `selected`, `body`),
-`debug.placement` (`armed`, `prefab`, `position`, `height`, `yaw`, `snap`),
-`debug.sun` (`active`, `position`, `azimuth`, `elevation`), `debug.inspector`
-(`prefab`, `body`, `size`, `position`, `yaw`, `snap`), and `debug.history`
-(`depth`, `redo`). The sun angles and the inspector yaw are degrees.
+`debug.placement` (`armed`, `prefab`, `position`, `height`, `yaw`, `snap`,
+`light`), `debug.sun` (`active`, `position`, `azimuth`, `elevation`),
+`debug.inspector` (`prefab`, `body`, `size`, `position`, `yaw`, `snap`,
+`light`), `debug.lights` (`active`, `lamps`), and `debug.history`
+(`depth`, `redo`). The sun angles and the inspector yaw are degrees. A light
+value carries `active`, `color`, `intensity`, and `range`.
 `debug.selection` is `none` or `object`, and `debug.selected_id` is the selected
 placed object's id or 0. `debug.inspector` reports zeroes and empty strings when
 nothing is selected. `debug.history.depth` is the undo count, from 0 to 64, and
@@ -383,6 +397,10 @@ supported window. `scenarios/editor-sun.json` captures the default light, the
 sun gizmo on the sky dome, and the committed lighting.
 `scenarios/editor-object.json` selects an object, moves, rotates, and converts
 it, duplicates it, then captures the inspector and the undo and redo restores.
+`scenarios/editor-lamps.json` captures the three lamp previews, places a warm
+lamp, a cool panel, a red beacon, and a pillar, then checks the light values and
+the active and lamp counts. It captures the lit scene, the point-light shadow,
+the selected lamp edit, and its undo.
 
 The harness has no real cursor. Frame tests cover the card hit test, platform
 tests cover the normalized pointer math and the key map, and a manual run covers
@@ -430,6 +448,7 @@ The 2D layer is part of the feature, so its captures live next to it.
 | `scenarios/editor-ghost.json` | the armed placement HUD, the ghost, and an exact place |
 | `scenarios/editor-sun.json` | the default light, the sun gizmo, and the committed sun |
 | `scenarios/editor-object.json` | the inspector, the object edit flow, and the undo and redo restores |
+| `scenarios/editor-lamps.json` | the three lamp previews, the lit scene, a point-light shadow, and a lamp edit |
 | `scenarios/debug-palette.json` | the open palette, its selection, and the cube and ramp previews |
 | `scenarios/debug-pop.json` | the spawn pop at the start, overshoot, and settled frames |
 | `scenarios/ui.json` | the settings panel with a numeric value selected, then an action row |
@@ -939,6 +958,8 @@ and the second `perf` measures again. Both traces stay in the run directory:
 - `src/harness/session_state.odin`: the session's renderer snapshot.
 - `src/harness/editor_command.odin`: the `editor` command and its parser.
 - `src/harness/editor_object_command.odin`: the object editing fields.
+- `src/harness/editor_light_command.odin`: the light fields.
+- `src/harness/state_light.odin`: the object light and light budget state.
 - `src/harness/session_editor.odin`: the `editor` command execution.
 - `src/harness/session_debug.odin`: the renderer debug gate and overrides.
 - `src/harness/renderer_debug_command.odin`: the override parser.
@@ -968,6 +989,9 @@ and the second `perf` measures again. Both traces stay in the run directory:
   starting crate layout.
 - `src/game/objects.odin`: the placed-object list and the create, remove, move,
   yaw, convert, and reset API.
+- `src/game/lights.odin`: the light type, the colour cycle, the intensity and
+  range steps, the eight-nearest selection, and the light count.
+- `src/game/debug_light_tools.odin`: the keyboard and harness light edit target.
 - `src/game/object_records.odin`: the object record and snapshot capture, the
   restore path, and the one placed-object spawn path.
 - `src/game/object_history.odin`: the 64-entry heap snapshot stack and its undo
@@ -1011,8 +1035,8 @@ and the second `perf` measures again. Both traces stay in the run directory:
   `scenarios/renderer-debug.json`, `scenarios/renderer-debug-converge.json`,
   `scenarios/renderer-debug-jitter.json`, `scenarios/capture-free.json`,
   `scenarios/editor-ghost.json`, `scenarios/editor-sun.json`,
-  `scenarios/editor-object.json`, `scenarios/debug-pop.json`, and
-  `scenarios/perf-lamps.json`.
+  `scenarios/editor-object.json`, `scenarios/editor-lamps.json`,
+  `scenarios/debug-pop.json`, and `scenarios/perf-lamps.json`.
 
 ## Adding a command
 
@@ -1122,8 +1146,9 @@ harness in the same change. Do not leave the automation behind the game.
   offscreen test when the pass must match the game.
 - New screenshot or evidence path: update the README and this page.
 - New prefab: add it to `Prefab_Id` and `PREFABS` in `src/game/prefabs.odin`,
-  including its `short_name` for the palette card. The renderer, the game API,
-  and the harness read the catalog generically.
+  including its `short_name` for the palette card, and its `light` defaults when
+  it is a lamp. The renderer, the game API, and the harness read the catalog
+  generically.
 - New domain word: add it to `GLOSSARY.md` before you use it.
 
 If you cannot update the harness in the same change, open a ticket and state the

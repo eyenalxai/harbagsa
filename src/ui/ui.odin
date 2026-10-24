@@ -57,7 +57,9 @@ Palette_Item :: struct {
 	base_pitch:   f32,
 	body:         string,
 	key:          string,
-	light_line:   string,
+	light_line:   [PALETTE_TEXT_BYTES]u8,
+	light_length: int,
+	emissive:     bool,
 }
 
 // A palette travels by value through HUD_Frame, so the items, hints, and

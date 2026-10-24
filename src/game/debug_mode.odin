@@ -70,6 +70,11 @@ Debug_Input :: struct {
 	rotate_right:          bool,
 	large_step:            bool,
 	sun_placement_pressed: bool,
+	light_color_pressed:          bool,
+	light_intensity_down_pressed: bool,
+	light_intensity_up_pressed:   bool,
+	light_range_down_pressed:     bool,
+	light_range_up_pressed:       bool,
 	captured:              bool,
 }
 
@@ -212,6 +217,7 @@ debug_mode_update :: proc(dm: ^Debug_Mode, sim: ^Simulation, input: Debug_Input,
 	// The sun mode owns the click that leaves it, so the same click cannot also
 	// select a placed object.
 	if !debug_edit_sun(dm, sim, input) {
+		debug_edit_lights(dm, sim, input)
 		debug_edit_objects(dm, sim, input)
 	}
 	debug_placement_refresh(dm, sim)
