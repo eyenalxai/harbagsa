@@ -3,11 +3,13 @@ package renderer
 
 import "src:ui"
 
+// frame_x and frame_width are the panel's inner rectangle. The selection band
+// and every divider use it, so both share one edge; a zero width means the
+// caller has no panel and the row block is its own frame.
 Rows_Options :: struct {
-	value_width: f32,
 	value_align: Text_Align,
-	band_x:      f32,
-	band_width:  f32,
+	frame_x:     f32,
+	frame_width: f32,
 	selected:    int,
 }
 
@@ -99,7 +101,6 @@ rows_measure :: proc(atlas: ^Text_Atlas, theme: UI_Theme, rows: []ui.Row, option
 			)
 		}
 	}
-	layout.value_width = max(layout.value_width, options.value_width)
 	layout.value_column = layout.label_column + theme.spacing.xl
 	layout.width = layout.value_column + layout.value_width
 	return layout
@@ -136,7 +137,7 @@ rows_emit_row :: proc(
 	atlas := &o.atlas
 	row_style := row_label_style(theme, row.kind)
 	selectable := row.kind == .Setting || row.kind == .Action
-	selected := options.band_width > 0 && index == options.selected && selectable
+	selected := options.frame_width > 0 && index == options.selected && selectable
 	if selected {
 		row_style.color = theme.text_primary
 	}
@@ -144,7 +145,8 @@ rows_emit_row :: proc(
 
 	switch row.kind {
 	case .Divider:
-		hud_emit_rect(o, x, y, max(layout.width, options.band_width), theme.hairline, theme.line_separator)
+		frame_x, frame_width := rows_frame(x, layout, options)
+		hud_emit_rect(o, frame_x, y, frame_width, theme.hairline, theme.line_separator)
 		return
 	case .Spacer:
 		return
@@ -159,15 +161,15 @@ rows_emit_row :: proc(
 		band_height := row_height(theme, row.kind) + band_pad * 2
 		hud_emit_rect(
 			o,
-			options.band_x,
+			options.frame_x,
 			y - band_pad,
-			options.band_width,
+			options.frame_width,
 			band_height,
 			theme.surface_raised,
 		)
 		hud_emit_rect(
 			o,
-			options.band_x,
+			options.frame_x,
 			y - band_pad,
 			max(theme.hairline * 2, 2),
 			band_height,
@@ -200,4 +202,12 @@ rows_emit_row :: proc(
 			.Right,
 		)
 	}
+}
+
+@(private)
+rows_frame :: proc(x: f32, layout: Rows_Layout, options: Rows_Options) -> (frame_x, frame_width: f32) {
+	if options.frame_width > 0 {
+		return options.frame_x, options.frame_width
+	}
+	return x, layout.width
 }
