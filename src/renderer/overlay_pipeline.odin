@@ -52,13 +52,20 @@ create_overlay_pipelines :: proc(r: ^Renderer) -> bool {
 		return false
 	}
 
-	hud_attributes := [2]vk.VertexInputAttributeDescription {
+	hud_set_layouts := [1]vk.DescriptorSetLayout{r.overlay.atlas_layout}
+	hud_attributes := [3]vk.VertexInputAttributeDescription {
 		{location = 0, binding = 0, format = .R32G32_SFLOAT, offset = 0},
 		{
 			location = 1,
 			binding = 0,
 			format = .R32G32B32A32_SFLOAT,
 			offset = u32(offset_of(HUD_Vertex, color)),
+		},
+		{
+			location = 2,
+			binding = 0,
+			format = .R32G32_SFLOAT,
+			offset = u32(offset_of(HUD_Vertex, uv)),
 		},
 	}
 	if !create_graphics_pipeline(
@@ -67,6 +74,7 @@ create_overlay_pipelines :: proc(r: ^Renderer) -> bool {
 			vertex_spirv = HUD_VERTEX_SPIRV,
 			fragment_spirv = HUD_FRAGMENT_SPIRV,
 			name = "hud",
+			set_layouts = hud_set_layouts[:],
 			push_constant = vk.PushConstantRange {
 				stageFlags = {.VERTEX, .FRAGMENT},
 				offset = 0,

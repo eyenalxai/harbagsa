@@ -4,13 +4,10 @@ package renderer
 import "core:mem"
 
 import "src:geometry"
-import stb_easy_font "vendor:stb/easy_font"
 import vk "vendor:vulkan"
 
 MAX_DEBUG_VERTICES :: 32768
 MAX_HUD_VERTICES :: 24576
-// Each text quad is two triangles, so it uses six vertices.
-MAX_HUD_QUADS :: MAX_HUD_VERTICES / 6
 
 Debug_Vertex :: struct {
 	position: [3]f32,
@@ -20,10 +17,11 @@ Debug_Vertex :: struct {
 HUD_Vertex :: struct {
 	position: [2]f32,
 	color:    [4]f32,
+	uv:       [2]f32,
 }
 
 #assert(size_of(Debug_Vertex) == 28)
-#assert(size_of(HUD_Vertex) == 24)
+#assert(size_of(HUD_Vertex) == 32)
 
 Overlay :: struct {
 	pipeline_format: vk.Format,
@@ -44,7 +42,7 @@ Overlay :: struct {
 	hud_memory:   [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
 	hud_mapped:   [MAX_FRAMES_IN_FLIGHT]rawptr,
 
-	quads: []stb_easy_font.Quad,
+	theme: UI_Theme,
 
 	atlas:         Text_Atlas,
 	atlas_image:   Image,
@@ -58,7 +56,6 @@ init_overlay :: proc(r: ^Renderer) -> Error {
 	o := &r.overlay
 	o.debug_vertices = make([]Debug_Vertex, MAX_DEBUG_VERTICES, r.allocator)
 	o.hud_vertices = make([]HUD_Vertex, MAX_HUD_VERTICES, r.allocator)
-	o.quads = make([]stb_easy_font.Quad, MAX_HUD_QUADS, r.allocator)
 
 	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
 		if !create_mapped_buffer(
@@ -83,10 +80,10 @@ init_overlay :: proc(r: ^Renderer) -> Error {
 		}
 	}
 
-	if !create_overlay_pipelines(r) {
+	if !init_text_atlas_resources(r) {
 		return .Create_Overlay
 	}
-	if !init_text_atlas_resources(r) {
+	if !create_overlay_pipelines(r) {
 		return .Create_Overlay
 	}
 	return .None
@@ -120,10 +117,6 @@ destroy_overlay :: proc(r: ^Renderer) {
 		delete(r.overlay.hud_vertices, r.allocator)
 		r.overlay.hud_vertices = nil
 	}
-	if r.overlay.quads != nil {
-		delete(r.overlay.quads, r.allocator)
-		r.overlay.quads = nil
-	}
 }
 
 prepare_overlay :: proc(r: ^Renderer, debug_lines: []geometry.Line, hud: HUD_Frame) -> bool {
@@ -136,6 +129,7 @@ prepare_overlay :: proc(r: ^Renderer, debug_lines: []geometry.Line, hud: HUD_Fra
 		append_debug_vertex(o, line.to, line.color)
 	}
 
+	o.theme = ui_theme_init(r.target.config.height)
 	build_hud(o, f32(r.target.config.width), f32(r.target.config.height), hud)
 
 	frame := r.frame_index
@@ -184,6 +178,17 @@ record_overlay :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer) {
 
 	if o.hud_count > 0 {
 		vk.CmdBindPipeline(command_buffer, .GRAPHICS, o.hud_pipeline)
+		descriptor_set := o.atlas_set
+		vk.CmdBindDescriptorSets(
+			command_buffer,
+			.GRAPHICS,
+			o.hud_layout,
+			0,
+			1,
+			&descriptor_set,
+			0,
+			nil,
+		)
 		push := [4]f32{f32(r.target.config.width), f32(r.target.config.height), gamma, 0}
 		vk.CmdPushConstants(
 			command_buffer,
@@ -208,10 +213,10 @@ append_debug_vertex :: proc(o: ^Overlay, position: [3]f32, color: [4]f32) {
 	o.debug_count += 1
 }
 
-append_hud_vertex :: proc(o: ^Overlay, position: [2]f32, color: [4]f32) {
+append_hud_vertex :: proc(o: ^Overlay, position: [2]f32, color: [4]f32, uv: [2]f32) {
 	if o.hud_count >= len(o.hud_vertices) {
 		return
 	}
-	o.hud_vertices[o.hud_count] = {position = position, color = color}
+	o.hud_vertices[o.hud_count] = {position = position, color = color, uv = uv}
 	o.hud_count += 1
 }
