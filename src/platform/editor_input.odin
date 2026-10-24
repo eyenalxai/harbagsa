@@ -185,7 +185,6 @@ apply_editor_command :: proc(events: ^Events, command: Editor_Command) {
 	case .Rotate_Right:
 		events.rotate_right_pressed = true
 	case .Sun_Placement:
-		events.sun_pressed = true
 		events.sun_placement_pressed = true
 	case .Light_Color:
 		events.light_color_pressed = true

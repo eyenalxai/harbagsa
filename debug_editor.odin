@@ -26,7 +26,8 @@ handle_editor_events :: proc(
 		return
 	}
 
-	// Esc closes the palette, then the placement, before it reaches settings.
+	// Esc closes the palette, then the placement, then the sun placement before
+	// it reaches settings.
 	if events.cancel_pressed {
 		if debug.palette.open {
 			game.debug_palette_close(debug)
@@ -34,6 +35,9 @@ handle_editor_events :: proc(
 			events.cancel_pressed = false
 		} else if debug.placement.armed {
 			game.debug_placement_cancel(debug)
+			events.cancel_pressed = false
+		} else if debug.sun.active {
+			game.debug_sun_cancel(debug)
 			events.cancel_pressed = false
 		}
 	}
@@ -52,6 +56,13 @@ handle_editor_events :: proc(
 		game.debug_palette_close(debug)
 		recapture_after_palette(window, events, state)
 		events.secondary_pressed = false
+	}
+
+	// The palette owns the cursor while it is open, so hand the cursor back
+	// before the sun mode takes the same L press.
+	if debug.palette.open && events.sun_placement_pressed {
+		game.debug_palette_close(debug)
+		recapture_after_palette(window, events, state)
 	}
 
 	if events.flip_body_pressed {
@@ -92,7 +103,7 @@ editor_input_from_events :: proc(events: platform.Events) -> game.Debug_Input {
 		rotate_left = events.rotate_left_pressed,
 		rotate_right = events.rotate_right_pressed,
 		large_step = events.sprint_held,
-		sun_pressed = events.sun_pressed,
+		sun_placement_pressed = events.sun_placement_pressed,
 		captured = events.captured,
 	}
 }

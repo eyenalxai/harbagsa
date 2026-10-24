@@ -41,7 +41,6 @@ Events :: struct {
 	toggle_snap_pressed:    bool,
 	rotate_left_pressed:    bool,
 	rotate_right_pressed:   bool,
-	sun_pressed:            bool,
 	sun_placement_pressed:  bool,
 	light_color_pressed:    bool,
 	light_intensity_down_pressed: bool,

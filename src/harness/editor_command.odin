@@ -37,6 +37,8 @@ Editor_Command :: struct {
 	has_camera: bool,
 	place:      Editor_Place,
 	has_place:  bool,
+	sun:        Editor_Sun,
+	has_sun:    bool,
 }
 
 parse_editor :: proc(object: json.Object) -> (Command, string) {
@@ -52,6 +54,7 @@ parse_editor :: proc(object: json.Object) -> (Command, string) {
 		"cancel",
 		"camera",
 		"place",
+		"sun",
 	}
 	if key, unknown := json_unknown_key(object, allowed); unknown {
 		return {}, format_error("unknown key %q", key)
@@ -138,6 +141,14 @@ parse_editor :: proc(object: json.Object) -> (Command, string) {
 		}
 		command.editor.place = place
 		command.editor.has_place = true
+	}
+	if value, has := json_get(object, "sun"); has {
+		sun, sun_error := parse_editor_sun(value)
+		if sun_error != "" {
+			return {}, sun_error
+		}
+		command.editor.sun = sun
+		command.editor.has_sun = true
 	}
 
 	if !editor_command_has_action(object) {
@@ -234,6 +245,7 @@ editor_command_has_action :: proc(object: json.Object) -> bool {
 		"cancel",
 		"camera",
 		"place",
+		"sun",
 	}
 	for key in keys {
 		if _, present := json_get(object, key); present {

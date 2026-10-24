@@ -82,7 +82,7 @@ free_fly_moves_horizontally_and_vertically :: proc(t: ^testing.T) {
 @(test)
 debug_mode_sun_direction_is_normalized :: proc(t: ^testing.T) {
 	dm := game.debug_mode_create()
-	dm.sun_direction = {0.0, -2.0, 0.0}
+	dm.sun.position = {0.0, 100.0, 0.0}
 
 	direction := game.debug_mode_sun_direction(&dm)
 	length := math.sqrt(
@@ -94,9 +94,7 @@ debug_mode_sun_direction_is_normalized :: proc(t: ^testing.T) {
 @(test)
 debug_mode_sun_angles_follow_direction :: proc(t: ^testing.T) {
 	dm := game.debug_mode_create()
-	// The stored direction is the light travel direction: straight down means
-	// the sun stands overhead. The slight tilt keeps the azimuth defined.
-	dm.sun_direction = {0.0, -1.0, -0.1}
+	dm.sun.position = {0.0, 50.0, 0.0}
 
 	azimuth, elevation := game.debug_mode_sun_angles(&dm)
 	expect_near(t, azimuth, 0.0, 0.0001, "azimuth")
@@ -143,7 +141,9 @@ reset_scene_restores_objects_sun_and_player :: proc(t: ^testing.T) {
 		&sim,
 		{prefab = .Crate, body_mode = .Dynamic, center = {5, 5, 5}, yaw = 0.0},
 	)
-	dm.sun_direction = {0.0, -1.0, 0.0}
+	dm.sun.position = {0.0, 50.0, 0.0}
+	dm.sun.active = true
+	dm.sun.saved_position = {0.0, 40.0, 0.0}
 	dm.selection = .Object
 	dm.selected_object_id = game.simulation_objects(&sim)[0].id
 	dm.dragging = .Object
@@ -152,8 +152,8 @@ reset_scene_restores_objects_sun_and_player :: proc(t: ^testing.T) {
 	game.debug_mode_reset_scene(&dm, &sim)
 
 	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT)
-	testing.expect_value(t, dm.sun_direction, game.DEFAULT_SUN_DIRECTION)
-	testing.expect_value(t, dm.sun_angular_diameter, game.SUN_ANGULAR_DIAMETER)
+	testing.expect_value(t, dm.sun.position, game.DEFAULT_SUN_POSITION)
+	testing.expect(t, !dm.sun.active, "scene reset left sun placement active")
 	testing.expect_value(t, dm.selection, game.Debug_Selection.None)
 	testing.expect_value(t, dm.selected_object_id, game.INVALID_OBJECT_ID)
 	testing.expect_value(t, dm.dragging, game.Debug_Drag.None)

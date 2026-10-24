@@ -9,6 +9,7 @@ import "src:ui"
 
 HUD_ROW_COUNT :: 6
 HUD_PLACEMENT_ROW_COUNT :: 7
+HUD_SUN_ROW_COUNT :: 7
 HUD_PERF_ROW_COUNT :: 2
 HUD_MAX_ROWS :: HUD_PLACEMENT_ROW_COUNT + HUD_PERF_ROW_COUNT
 
@@ -121,9 +122,6 @@ hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_
 			selected = prefab_name(object.prefab)
 		}
 	}
-	if debug.selection == .Sun {
-		selected = "Sun"
-	}
 
 	azimuth, elevation := debug_mode_sun_angles(debug)
 	camera := debug.camera.position
@@ -155,7 +153,12 @@ hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_
 		),
 		numeric = true,
 	}
-	hud.view.rows = hud.rows[:HUD_ROW_COUNT]
+	row_count := HUD_ROW_COUNT
+	if debug.sun.active {
+		hud.rows[6] = {kind = .Metric, label = "Sun mode", value = "click place · Esc cancel"}
+		row_count = HUD_SUN_ROW_COUNT
+	}
+	hud.view.rows = hud.rows[:row_count]
 }
 
 @(private)

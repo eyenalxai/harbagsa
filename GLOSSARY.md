@@ -128,8 +128,20 @@ between the two tables.
 _Avoid_: Scene colours, 3D palette
 
 **Sun**:
-The directional light that lights the arena and casts the sun shadows. Debug mode rotates it.
+The directional light that lights the arena and casts the sun shadows. Debug mode places it.
 _Avoid_: Light source
+
+**Sun placement**:
+The debug mode that aims the sun on the sky dome. `L` toggles it, a click
+commits the position, and `Esc` or a right click restores the sun from before
+the mode. It is separate from the object palette and object placement.
+_Avoid_: Sun drag, sun select
+
+**Sky dome**:
+The 50 m sphere around the arena centre that holds the sun position. The aim
+point is projected onto it, and the height is clamped to 2.5 m above the arena
+floor so the sun never sits below the horizon.
+_Avoid_: Skybox, sun orbit
 
 **Point light**:
 A light with a position, colour, intensity, and range. The renderer holds up to 8 per frame, and each costs one hard shadow ray per fragment. A lamp prefab owns one.
@@ -652,7 +664,7 @@ _Avoid_: AA switch
 
 **Debug mode**:
 The `F2` mode where the player becomes a free-fly camera and can edit placed
-objects and the sun.
+objects and place the sun.
 _Avoid_: Edit mode, sandbox
 
 **Free-fly camera**:
@@ -660,7 +672,7 @@ The debug mode camera that ignores gravity and collision.
 _Avoid_: Noclip, spectator
 
 **Selection**:
-The placed object or the sun that debug mode acts on.
+The placed object that debug mode acts on.
 _Avoid_: Focus, target
 
 **Scene reset**:
