@@ -28,7 +28,7 @@ Error :: enum {
 	Create_Swapchain,
 	Create_Frames,
 	Create_Scene,
-	Create_Shadow,
+	Create_Acceleration,
 	Create_TAA,
 	Create_Overlay,
 	Create_Pipeline,
@@ -73,13 +73,14 @@ Renderer :: struct {
 	image_available: [MAX_FRAMES_IN_FLIGHT]vk.Semaphore,
 	in_flight:       [MAX_FRAMES_IN_FLIGHT]vk.Fence,
 	frame_index:     int,
+	frame_count:     u32,
 	clear_color:     [4]f32,
 
-	target:  Target,
-	scene:   Scene,
-	shadow:  Shadow,
-	taa:     TAA,
-	overlay: Overlay,
+	target:       Target,
+	scene:        Scene,
+	acceleration: Acceleration,
+	taa:          TAA,
+	overlay:      Overlay,
 }
 
 // The validation callback runs outside the normal call stack, so it needs the

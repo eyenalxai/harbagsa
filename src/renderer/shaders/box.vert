@@ -18,7 +18,7 @@ layout(push_constant) uniform PushConstants {
     uint object_index;
 } draw;
 
-layout(set = 0, binding = 2) readonly buffer Objects {
+layout(set = 0, binding = 1) readonly buffer Objects {
     ObjectData objects[];
 } scene;
 
