@@ -53,6 +53,7 @@ debug_placement_arm :: proc(dm: ^Debug_Mode, sim: ^Simulation, prefab_id: Prefab
 	if !simulation_is_valid(sim) {
 		return false
 	}
+	debug_sun_cancel(dm)
 	dm.placement.armed = true
 	dm.placement.prefab = prefab_id
 	debug_placement_refresh(dm, sim)
@@ -176,11 +177,7 @@ debug_place_object :: proc(
 
 @(private)
 placement_anchor :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> [3]f32 {
-	hit := cast_edit_ray(dm, sim)
-	if hit.hit {
-		return b3.ToVec3(hit.point)
-	}
-	return dm.camera.position + debug_camera_forward(dm.camera) * PLACEMENT_FALLBACK_DISTANCE
+	return debug_aim_point(dm, sim, PLACEMENT_FALLBACK_DISTANCE)
 }
 
 @(private)

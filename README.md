@@ -124,13 +124,15 @@ stairs.
 - `G`: toggle the 0.25 m grid snap.
 - `M`: flip the body mode for the next placement.
 - `Delete` or `X`: remove the selected object.
-- `L`: select the sun. Drag to rotate it.
+- `L`: toggle the sun placement. The sun follows the crosshair on a sky dome
+  and the lighting updates live. A click commits the position; `Esc` or a right
+  click restores the sun from before the mode.
 - `R`: reset the player and return the camera to spawn.
 - `Shift+R`: reset the placed objects, the sun, and the player.
 - `F2`: leave debug mode. The player returns to the saved position and view.
-- `Esc`: close the palette, cancel the placement, or open the settings menu, in
-  that order. The settings menu closes the palette and cancels the placement
-  when it opens.
+- `Esc`: close the palette, cancel the placement, cancel the sun placement, or
+  open the settings menu, in that order. The settings menu closes the palette and
+  cancels the placement and the sun placement when it opens.
 
 The palette shows the box prefabs in a six by two grid with a preview pane. Hover
 or use the arrow keys to change the selection, `1`-`9` selects one of the first
@@ -140,7 +142,8 @@ click inside the panel that misses every card does nothing.
 The HUD shows the stance, gait, horizontal speed, grounded state, movement
 state, and position, or the debug mode selection, object count, and sun angles.
 While the placement tool is armed, it shows the armed prefab, body, height, yaw,
-snap, and object count instead.
+snap, and object count instead. While sun placement is active, it adds a sun
+placement row.
 The settings menu shows the control list. Borderless fills the selected display;
 Windowed uses the chosen resolution.
 
@@ -282,8 +285,8 @@ gradient that bands after the 8-bit write shows up as a long run. Disable it wit
 The batch runner and the live session share one command set:
 
 - `{"cmd": "reset"}`: fresh simulation. Placed objects return to spawn, the
-  settings return to their defaults, the menu closes, and the debug palette and
-  placement reset.
+  settings return to their defaults, the menu closes, and the debug palette,
+  placement, and sun return to their defaults.
 - `{"cmd": "look", "dx": 220, "dy": 0}`: pixel look delta through the game
   sensitivity and pitch clamp.
 - `{"cmd": "face", "yaw": 0, "pitch": 0}`: set the player view directly.
@@ -300,8 +303,9 @@ The batch runner and the live session share one command set:
   frame, and simulation digest. Each object entry carries its id, prefab, body
   mode, position, rotation, scale, and spawn age. The debug entry carries
   `active`, `selection`, `selected_id`, the palette (`open`, `selected`,
-  `body`), and the placement (`armed`, `prefab`, `position`, `height`, `yaw`,
-  `snap`). The renderer object reports the frame count, TAA state, jitter index,
+  `body`), the placement (`armed`, `prefab`, `position`, `height`, `yaw`,
+  `snap`), and the sun (`active`, `position`, `azimuth`, `elevation`). The
+  renderer object reports the frame count, TAA state, jitter index,
   history validity, convergence frames, history read index and weight, reset
   count and reason, shadow phase, and the active light count. `render_digest`
   covers the effective camera, sun, boxes, point lights, emissive strengths,
@@ -342,7 +346,7 @@ The batch runner and the live session share one command set:
   `static` or `dynamic`, and `pick` arms the selected prefab. `height` is the
   offset above the surface in metres, `yaw` is the rotation in degrees, and
   `snap` toggles the 0.25 m X/Z grid. `cancel` clears the armed tool. Every field
-  is optional; fields apply in that order.
+  is optional; fields apply in that order, and the `sun` group applies last.
 - `{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw": 0, "pitch": -0.6}}`:
   set the debug camera. `yaw` and `pitch` are radians, as in the `camera`
   command. The editor command accepts this alongside the other fields.
@@ -350,12 +354,17 @@ The batch runner and the live session share one command set:
   create an object at an exact transform, bypassing the placement ray. `prefab`
   and `position` are required; `yaw` (degrees) defaults to 0 and `body` to the
   prefab's default.
+- `{"cmd": "editor", "sun": {"active": true, "position": [0, 40, -30], "place": false, "cancel": false}}`:
+  drive the sun placement. `active` enters or leaves the mode, `position` sets
+  the sun position directly, `place` commits and leaves, and `cancel` restores
+  the sun from before the mode. The fields apply in that order and every field
+  is optional.
 - `{"cmd": "menu", "open": true, "select": 1, "activate": true, "direction": -1}`:
   open or close the settings menu, select a row, and activate the selected row.
   `select` is zero-based and needs an open menu. `activate` also needs an open
   menu. `direction` is `-1` or `1` (default `1`) and needs `activate`. Omitted
   fields keep the state. Opening the menu closes the object palette and cancels
-  placement. An open menu renders even when `hud` is off.
+  placement and sun placement. An open menu renders even when `hud` is off.
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`:
   evaluate a predicate now. Use `other` to compare two fields.
 - `{"cmd": "displays", "set": [{"name": "Solo", "desktop": "1280x720", "modes": ["1280x720"]}]}`:
@@ -524,6 +533,9 @@ tool. It checks the palette, placement, and object state without a window.
 `scenarios/debug-palette.json` opens the object palette in debug mode and
 captures the Platform and Ramp previews. Run it with `--size 800x600` to check
 that the bottom dock still fits and clears the crosshair.
+
+`scenarios/editor-sun.json` enters sun placement, captures the sun gizmo on the
+sky dome, sets an exact sun position, and captures the committed lighting.
 
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window

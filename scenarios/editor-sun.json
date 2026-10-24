@@ -1,0 +1,21 @@
+{
+  "view": {"hud": true, "debug": false, "hint": false},
+  "commands": [
+    {"cmd": "debug_mode", "active": true},
+    {"cmd": "editor", "camera": {"position": [0, 1.7, 16], "yaw": 0, "pitch": 0.13}},
+    {"cmd": "check", "field": "debug.sun.active", "op": "eq", "value": false},
+    {"cmd": "capture", "name": "sun-default"},
+    {"cmd": "editor", "sun": {"active": true}},
+    {"cmd": "check", "field": "debug.sun.active", "op": "eq", "value": true},
+    {"cmd": "check", "field": "debug.sun.position.y", "op": "ge", "value": 2.5},
+    {"cmd": "editor", "sun": {"position": [0, 10, -49]}},
+    {"cmd": "check", "field": "debug.sun.position.z", "op": "eq", "value": -49},
+    {"cmd": "check", "field": "debug.sun.elevation", "op": "lt", "value": -10},
+    {"cmd": "check", "field": "debug.sun.elevation", "op": "gt", "value": -15},
+    {"cmd": "capture", "name": "sun-gizmo"},
+    {"cmd": "editor", "sun": {"place": true}},
+    {"cmd": "check", "field": "debug.sun.active", "op": "eq", "value": false},
+    {"cmd": "check", "field": "debug.sun.position.y", "op": "eq", "value": 10},
+    {"cmd": "capture", "name": "sun-placed"}
+  ]
+}

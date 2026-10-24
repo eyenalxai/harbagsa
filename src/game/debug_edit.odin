@@ -5,7 +5,6 @@ import b3 "libs:box3d"
 
 OBJECT_DRAG_SCALE :: 0.02
 OBJECT_WHEEL_STEP :: 0.5
-OBJECT_RAY_LENGTH :: 100.0
 
 debug_edit_objects :: proc(dm: ^Debug_Mode, sim: ^Simulation, input: Debug_Input) {
 	if dm.palette.open {
@@ -50,7 +49,7 @@ clear_stale_object_selection :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 
 @(private)
 press_object :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
-	hit := cast_edit_ray(dm, sim)
+	hit := debug_aim_ray(dm, sim)
 	if hit.hit {
 		id := simulation_object_id_for_body(sim, b3.Shape_GetBody(hit.shapeId))
 		if id != INVALID_OBJECT_ID {
@@ -111,14 +110,4 @@ delete_selected_object :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 		return
 	}
 	debug_mode_clear_selection(dm)
-}
-
-@(private)
-cast_edit_ray :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> b3.RayResult {
-	return b3.World_CastRayClosest(
-		sim.world_id,
-		b3.ToPos(dm.camera.position),
-		debug_camera_forward(dm.camera) * OBJECT_RAY_LENGTH,
-		b3.DefaultQueryFilter(),
-	)
 }

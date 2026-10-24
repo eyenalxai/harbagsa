@@ -9,6 +9,7 @@ Debug_State :: struct {
 	selected_id: u32             `json:"selected_id"`,
 	palette:     Palette_State   `json:"palette"`,
 	placement:   Placement_State `json:"placement"`,
+	sun:         Sun_State       `json:"sun"`,
 }
 
 Palette_State :: struct {
@@ -24,6 +25,13 @@ Placement_State :: struct {
 	height:   f32       `json:"height"`,
 	yaw:      f32       `json:"yaw"`,
 	snap:     bool      `json:"snap"`,
+}
+
+Sun_State :: struct {
+	active:    bool      `json:"active"`,
+	position:  Vec_State `json:"position"`,
+	azimuth:   f32       `json:"azimuth"`,
+	elevation: f32       `json:"elevation"`,
 }
 
 @(private)

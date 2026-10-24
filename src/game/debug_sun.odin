@@ -1,64 +1,111 @@
 #+vet explicit-allocators
+#+vet !unused-procedures // the agent harness and tests call this API; the game binary does not
 package game
 
 import "core:math"
 
 import b3 "libs:box3d"
 
-SUN_DRAG_SENSITIVITY :: 0.005
-SUN_ELEVATION_MIN :: 0.05
-SUN_ELEVATION_MAX :: 1.5
-SUN_CLICK_MOTION :: 3.0
+SUN_DOME_CENTER :: [3]f32{0.0, 0.0, 0.0}
+SUN_DOME_RADIUS :: 50.0
+SUN_DOME_MIN_HEIGHT :: 2.5
+SUN_AIM_DISTANCE :: 50.0
+SUN_AIM_EPSILON :: 0.0001
 
-debug_edit_sun :: proc(dm: ^Debug_Mode, input: Debug_Input) {
-	if dm.palette.open || dm.placement.armed {
+DEFAULT_SUN_DIRECTION :: [3]f32{-0.45, -1.0, -0.35}
+
+// The default direction at the dome radius, so a fresh sun sits on the dome and
+// matches the old default light.
+DEFAULT_SUN_POSITION :: [3]f32{19.5467, 43.4372, 15.2030}
+
+debug_sun_enter :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
+	if dm.sun.active {
 		return
 	}
-	if input.sun_pressed {
-		if dm.selection == .Sun {
-			debug_mode_clear_selection(dm)
-			return
-		}
-		dm.selection = .Sun
-		dm.selected_object_id = INVALID_OBJECT_ID
-		debug_mode_end_drag(dm)
-		dm.sun_azimuth, dm.sun_elevation = debug_mode_sun_angles(dm)
-	}
+	palette_close(&dm.palette)
+	debug_placement_cancel(dm)
+	debug_mode_end_drag(dm)
+	dm.sun.saved_position = dm.sun.position
+	dm.sun.active = true
+	debug_sun_refresh(dm, sim)
+}
 
-	if input.primary_pressed && dm.selection == .Sun && dm.dragging == .None {
-		dm.dragging = .Sun
-		dm.sun_drag_dx = 0.0
-		dm.sun_drag_dy = 0.0
-	}
+// Leaving the mode keeps the live position; the commit is just the click that
+// ends it.
+debug_sun_exit :: proc(dm: ^Debug_Mode) {
+	dm.sun.active = false
+}
 
-	if dm.dragging != .Sun {
+debug_sun_cancel :: proc(dm: ^Debug_Mode) {
+	if !dm.sun.active {
 		return
 	}
+	dm.sun.position = dm.sun.saved_position
+	dm.sun.active = false
+}
 
-	if input.captured {
-		dx := input.look_delta.x
-		dy := input.look_delta.y
-		dm.sun_drag_dx += dx
-		dm.sun_drag_dy += dy
-		dm.sun_azimuth -= dx * SUN_DRAG_SENSITIVITY
-		dm.sun_elevation = clamp(
-			dm.sun_elevation - dy * SUN_DRAG_SENSITIVITY,
-			SUN_ELEVATION_MIN,
-			SUN_ELEVATION_MAX,
-		)
-		dm.sun_direction = light_direction_from_sun(
-			sun_direction_from_angles(dm.sun_azimuth, dm.sun_elevation),
-		)
-	}
+debug_sun_reset :: proc(dm: ^Debug_Mode) {
+	dm.sun = {position = DEFAULT_SUN_POSITION}
+}
 
-	if input.primary_released {
-		motion := math.sqrt(dm.sun_drag_dx * dm.sun_drag_dx + dm.sun_drag_dy * dm.sun_drag_dy)
-		if motion < SUN_CLICK_MOTION {
-			debug_mode_clear_selection(dm)
-		} else {
-			debug_mode_end_drag(dm)
-		}
+debug_sun_toggle :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
+	if dm.sun.active {
+		debug_sun_exit(dm)
+	} else {
+		debug_sun_enter(dm, sim)
 	}
+}
+
+// The position is the source of truth; the direction is always derived, so a
+// harness capture can set a position and still get the matching shading.
+debug_sun_set_position :: proc(dm: ^Debug_Mode, position: [3]f32) {
+	dm.sun.position = position
+}
+
+debug_sun_refresh :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
+	if !dm.sun.active || sim == nil || !simulation_is_valid(sim) {
+		return
+	}
+	dm.sun.position = sun_dome_point(debug_aim_point(dm, sim, SUN_AIM_DISTANCE))
+}
+
+debug_edit_sun :: proc(dm: ^Debug_Mode, sim: ^Simulation, input: Debug_Input) -> bool {
+	if input.sun_placement_pressed {
+		debug_sun_toggle(dm, sim)
+		return true
+	}
+	if !dm.sun.active {
+		return false
+	}
+	if input.secondary_pressed {
+		debug_sun_cancel(dm)
+		return true
+	}
+	debug_sun_refresh(dm, sim)
+	if input.primary_pressed && input.captured {
+		debug_sun_exit(dm)
+	}
+	return true
+}
+
+sun_dome_point :: proc(aim: [3]f32) -> [3]f32 {
+	offset := aim - SUN_DOME_CENTER
+	length := b3.Length(offset)
+	if length <= SUN_AIM_EPSILON {
+		return DEFAULT_SUN_POSITION
+	}
+	point := SUN_DOME_CENTER + offset * (SUN_DOME_RADIUS / length)
+	point.y = max(point.y, SUN_DOME_CENTER.y + SUN_DOME_MIN_HEIGHT)
+	return point
+}
+
+sun_direction_from_position :: proc(position: [3]f32) -> [3]f32 {
+	offset := SUN_DOME_CENTER - position
+	length := b3.Length(offset)
+	if length <= SUN_AIM_EPSILON {
+		return b3.Normalize(DEFAULT_SUN_DIRECTION)
+	}
+	return offset * (1.0 / length)
 }
 
 // Sun angles in the sky: azimuth from +z toward +x, elevation above the
