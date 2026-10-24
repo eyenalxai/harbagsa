@@ -63,7 +63,7 @@ blocked_row_keeps_its_band_and_draws_the_value_secondary :: proc(t: ^testing.T) 
 	hud.menu.displays.count = 1
 	game.menu_open(&hud.menu)
 	game.menu_select(&hud.menu, 1)
-	game.menu_view(&hud.menu, sim.settings, false)
+	game.menu_view(&hud.menu, sim.settings, false, 0)
 
 	row := hud.menu.view.rows[1]
 	testing.expect(t, row.blocked, "the Display row is not blocked")
@@ -131,7 +131,7 @@ menu_slider_track_stays_inside_the_panel :: proc(t: ^testing.T) {
 	hud.menu.displays = display.fallback_list()
 	game.menu_open(&hud.menu)
 	game.menu_select(&hud.menu, 3)
-	game.menu_view(&hud.menu, sim.settings, false)
+	game.menu_view(&hud.menu, sim.settings, false, 0)
 
 	overlay, ok := build_menu_overlay(t, hud.menu.view)
 	testing.expect(t, ok, "the menu did not build")
@@ -177,7 +177,7 @@ menu_slider_rect_matches_the_drawn_track_before_the_first_draw :: proc(t: ^testi
 	hud.menu.displays = display.fallback_list()
 	game.menu_open(&hud.menu)
 	game.menu_select(&hud.menu, 3)
-	game.menu_view(&hud.menu, sim.settings, false)
+	game.menu_view(&hud.menu, sim.settings, false, 0)
 
 	theme := renderer.ui_theme_init(720)
 	atlas, built := build_atlas(t, theme)

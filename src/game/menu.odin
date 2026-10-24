@@ -63,8 +63,9 @@ Menu_State :: struct {
 	hints:           [MENU_HINT_COUNT]ui.Hint_Cell,
 	storage:         Line_Buffer,
 	displays:        display.List,
-	dragging_weight: bool,
-	status:          string,
+	dragging_weight:  bool,
+	status:           string,
+	status_remaining: f32,
 }
 
 menu_open :: proc(menu: ^Menu_State) {
@@ -75,7 +76,7 @@ menu_open :: proc(menu: ^Menu_State) {
 menu_close :: proc(menu: ^Menu_State) {
 	menu.open = false
 	menu.dragging_weight = false
-	menu.status = ""
+	menu_clear_status(menu)
 	menu.view = {}
 }
 
@@ -121,25 +122,24 @@ menu_change_setting :: proc(
 	if !menu.open || menu.selected == .Resume || direction == 0 {
 		return .Not_A_Setting
 	}
-	// A note belongs to the press that set it.
-	menu.status = ""
+	menu_clear_status(menu)
 	#partial switch menu.selected {
 	case .Window_Mode:
 		settings.window.mode = toggle_window_mode(settings.window.mode)
 	case .Display:
 		if menu.displays.count <= 1 {
-			menu.status = MENU_STATUS_ONE_DISPLAY
+			menu_set_status(menu, MENU_STATUS_ONE_DISPLAY)
 			return .Blocked
 		}
 		change_display(menu, settings, direction)
 	case .Resolution:
 		info := display.info_at(&menu.displays, settings.window.display)
 		if info.mode_count == 0 {
-			menu.status = MENU_STATUS_NO_MODES
+			menu_set_status(menu, MENU_STATUS_NO_MODES)
 			return .Blocked
 		}
 		if settings.window.mode == .Windowed && info.mode_count == 1 {
-			menu.status = MENU_STATUS_ONE_MODE
+			menu_set_status(menu, MENU_STATUS_ONE_MODE)
 			return .Blocked
 		}
 		change_resolution(menu, settings, direction)
@@ -150,7 +150,7 @@ menu_change_setting :: proc(
 			ui.TYPE_WEIGHT_MAX,
 		)
 		if weight == settings.type_weight {
-			menu.status = direction > 0 ? MENU_STATUS_MAX_WEIGHT : MENU_STATUS_MIN_WEIGHT
+			menu_set_status(menu, direction > 0 ? MENU_STATUS_MAX_WEIGHT : MENU_STATUS_MIN_WEIGHT)
 			return .Blocked
 		}
 		settings.type_weight = weight
@@ -162,19 +162,6 @@ menu_change_setting :: proc(
 		settings.prone_mode = toggle_input_mode(settings.prone_mode)
 	}
 	return .Changed
-}
-
-menu_set_type_weight :: proc(menu: ^Menu_State, settings: ^Settings, weight: f32) -> bool {
-	if !menu.open {
-		return false
-	}
-	settings.type_weight = clamp(math.round(weight), ui.TYPE_WEIGHT_MIN, ui.TYPE_WEIGHT_MAX)
-	return true
-}
-
-menu_set_type_weight_ratio :: proc(menu: ^Menu_State, settings: ^Settings, ratio: f32) -> bool {
-	span := ui.TYPE_WEIGHT_MAX - ui.TYPE_WEIGHT_MIN
-	return menu_set_type_weight(menu, settings, ui.TYPE_WEIGHT_MIN + clamp(ratio, 0, 1) * span)
 }
 
 menu_activate :: proc(menu: ^Menu_State, settings: ^Settings, direction := 1) -> bool {
@@ -191,7 +178,19 @@ menu_activate :: proc(menu: ^Menu_State, settings: ^Settings, direction := 1) ->
 	return false
 }
 
-menu_view :: proc(menu: ^Menu_State, settings: Settings, debug_active: bool) {
+@(private)
+menu_set_status :: proc(menu: ^Menu_State, status: string) {
+	menu.status = status
+	menu.status_remaining = MENU_STATUS_SECONDS
+}
+
+@(private)
+menu_clear_status :: proc(menu: ^Menu_State) {
+	menu.status = ""
+	menu.status_remaining = 0
+}
+
+menu_view :: proc(menu: ^Menu_State, settings: Settings, debug_active: bool, delta_seconds: f32) {
 	if !menu.open {
 		menu.view = {}
 		return
@@ -234,9 +233,12 @@ menu_view :: proc(menu: ^Menu_State, settings: Settings, debug_active: bool) {
 	}
 	menu.hints = hints
 
-	// The status belongs to the last blocked press. It stays until the next
-	// setting change clears it, so the harness can read the same note the
-	// panel shows.
+	if menu.status != "" {
+		menu.status_remaining = max(menu.status_remaining - delta_seconds, 0)
+		if menu.status_remaining <= 0 {
+			menu_clear_status(menu)
+		}
+	}
 	note := menu.status
 	if note == "" {
 		note = MENU_NOTE

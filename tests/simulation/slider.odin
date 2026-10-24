@@ -185,7 +185,7 @@ menu_slider_press_on_the_opening_frame_starts_the_drag :: proc(t: ^testing.T) {
 	game.menu_open(&menu)
 	// The opening frame has no published rect, so the caller refreshes the view
 	// and measures the Type weight row before it reads the pointer.
-	game.menu_view(&menu, sim.settings, false)
+	game.menu_view(&menu, sim.settings, false, 0)
 
 	row_index := game.MENU_ITEM_ROWS[game.Menu_Item.Type_Weight]
 	row := menu.view.rows[row_index]

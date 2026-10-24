@@ -1,5 +1,8 @@
 # One scenario form
 
+> 0016 until 2026-10-24. The variable-weight ADR claimed 0016 first, so this
+> one moved to 0018.
+
 A scenario has one body form: `commands`. It runs verbatim. Only a `capture`
 command captures. The `steps` form and the top-level `capture` key are gone.
 

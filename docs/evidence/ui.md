@@ -49,6 +49,31 @@ slider at the three positions, the `Settings` title at the role weight, and the
 numeric `400`, `900`, and `100` values in Roboto Mono. Above 700 the mono face
 clamps at Bold, so the numbers stop gaining weight before the prose does.
 
+## Blocked note
+
+```sh
+./bin/harbagsa-agent run scenarios/blocked-note.json --out runs/ui/blocked-note
+```
+
+The Type weight is at 900, so the press is blocked. `blocked-note.png` shows the
+reason on the frame after the press. The next command sets the weight to 400,
+and `note-cleared.png` shows the default note. A new blocked press restarts the
+two-second hold.
+
+## Neutral ramp
+
+The six neutral tokens were re-pinned to OKLCH hue 253. `scenarios/ui.json` was
+captured before and after the change, and `bin/harbagsa-agent diff` measured the
+result:
+
+- `menu-number`: 229,907 pixels differ, max delta 1 of 255, mean 0.249,
+  over-16 0.
+- `menu-action`: 228,863 pixels differ, max delta 1 of 255, mean 0.248,
+  over-16 0.
+
+The 8-bit change is one step in one channel on three tokens. The measured hue
+spread of the six neutrals is 7.8 degrees.
+
 ## Status panel
 
 ```sh
