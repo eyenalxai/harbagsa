@@ -150,6 +150,31 @@ commands_scenario_runs_verbatim :: proc(t: ^testing.T) {
 }
 
 @(test)
+settle_parses_frames :: proc(t: ^testing.T) {
+	command, error := harness.command_parse_string(`{"cmd": "settle", "frames": 30}`, context.allocator)
+	defer harness.command_destroy(&command, context.allocator)
+	testing.expectf(t, error == "", "settle parse failed: %s", error)
+	if error == "" {
+		testing.expect(t, command.kind == .Settle, "settle kind is wrong")
+		testing.expect_value(t, command.settle.frames, 30)
+	}
+}
+
+@(test)
+settle_rejects_bad_frames :: proc(t: ^testing.T) {
+	_, missing := harness.command_parse_string(`{"cmd": "settle"}`, context.allocator)
+	testing.expectf(t, missing != "", "settle without frames was accepted")
+	if missing != "" {
+		delete(missing, context.allocator)
+	}
+	_, zero := harness.command_parse_string(`{"cmd": "settle", "frames": 0}`, context.allocator)
+	testing.expectf(t, zero != "", "settle with zero frames was accepted")
+	if zero != "" {
+		delete(zero, context.allocator)
+	}
+}
+
+@(test)
 command_parser_rejects_unknown_fields :: proc(t: ^testing.T) {
 	command, error := harness.command_parse_string(`{"cmd": "step", "frames": 1, "speed": 3}`, context.allocator)
 	testing.expectf(t, error != "", "unknown command field was accepted")

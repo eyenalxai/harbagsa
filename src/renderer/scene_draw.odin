@@ -62,9 +62,6 @@ record_scene :: proc(
 	}
 
 	r.taa.history_read = (r.taa.history_read + 1) % TAA_HISTORY_IMAGES
-	if r.taa.history_valid && r.taa.converge_frames < len(TAA_CONVERGE_WEIGHTS) - 1 {
-		r.taa.converge_frames += 1
-	}
 	r.taa.history_valid = true
 	return true
 }
