@@ -410,7 +410,7 @@ The cause recorded at each TAA history reset: create, extent, toggle, teleport, 
 _Avoid_: Reset flag
 
 **Renderer debug override**:
-A gated change to a TAA input for diagnosis: TAA, jitter, history weight, clamp, depth trust, or shadow phase. Every input except the shadow phase resets history.
+A gated change to a TAA input for diagnosis: TAA, jitter, history weight, clamp, depth trust, or shadow phase. Every change resets history.
 _Avoid_: Debug flag
 
 **Debug override gate**:

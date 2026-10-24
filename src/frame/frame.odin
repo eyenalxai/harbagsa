@@ -107,7 +107,7 @@ build :: proc(
 draw :: proc(
 	state: ^renderer.Renderer,
 	scene: Scene,
-	capture := renderer.Capture_Request{},
+	capture := renderer.Frame_Capture{},
 ) -> renderer.Frame_Status {
 	frame, begin_status := renderer.begin_frame(
 		state,

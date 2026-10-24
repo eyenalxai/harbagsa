@@ -15,16 +15,16 @@ RENDERER_DEBUG_KEYS :: []string {
 	"shadow_phase",
 }
 
-	RENDERER_DEBUG_BLOCK_KEYS :: []string {
-		"clear",
-		"taa",
-		"jitter",
-		"history_weight",
-		"clamp",
-		"depth_trust",
-		"freeze_shadow_phase",
-		"shadow_phase",
-	}
+RENDERER_DEBUG_BLOCK_KEYS :: []string {
+	"clear",
+	"taa",
+	"jitter",
+	"history_weight",
+	"clamp",
+	"depth_trust",
+	"freeze_shadow_phase",
+	"shadow_phase",
+}
 
 @(private)
 parse_renderer_debug :: proc(object: json.Object) -> (Command, string) {

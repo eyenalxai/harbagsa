@@ -16,7 +16,7 @@ Capture_Target :: enum {
 	Scene_Color,
 }
 
-Capture_Request :: struct {
+Frame_Capture :: struct {
 	target:  Capture_Target,
 	enabled: bool,
 }
@@ -53,34 +53,35 @@ capture_target_parse :: proc(name: string) -> (target: Capture_Target, ok: bool)
 	return .Color, false
 }
 
-format_name :: proc(format: vk.Format) -> string {
+Format_Info :: struct {
+	name:        string,
+	texel_bytes: int,
+}
+
+format_info :: proc(format: vk.Format) -> Format_Info {
 	#partial switch format {
 	case .R8G8B8A8_SRGB:
-		return "R8G8B8A8_SRGB"
+		return {"R8G8B8A8_SRGB", 4}
 	case .B8G8R8A8_SRGB:
-		return "B8G8R8A8_SRGB"
+		return {"B8G8R8A8_SRGB", 4}
 	case .R8G8B8A8_UNORM:
-		return "R8G8B8A8_UNORM"
+		return {"R8G8B8A8_UNORM", 4}
 	case .B8G8R8A8_UNORM:
-		return "B8G8R8A8_UNORM"
+		return {"B8G8R8A8_UNORM", 4}
 	case .R16G16B16A16_SFLOAT:
-		return "R16G16B16A16_SFLOAT"
+		return {"R16G16B16A16_SFLOAT", 8}
 	case .D32_SFLOAT:
-		return "D32_SFLOAT"
+		return {"D32_SFLOAT", 4}
 	}
-	return "unknown"
+	return {"unknown", 0}
+}
+
+format_name :: proc(format: vk.Format) -> string {
+	return format_info(format).name
 }
 
 texel_bytes :: proc(format: vk.Format) -> int {
-	#partial switch format {
-	case .R8G8B8A8_SRGB, .B8G8R8A8_SRGB, .R8G8B8A8_UNORM, .B8G8R8A8_UNORM:
-		return 4
-	case .R16G16B16A16_SFLOAT:
-		return 8
-	case .D32_SFLOAT:
-		return 4
-	}
-	return 0
+	return format_info(format).texel_bytes
 }
 
 @(private)

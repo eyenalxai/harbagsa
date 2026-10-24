@@ -30,28 +30,18 @@ taa_debug_default :: proc() -> TAA_Debug {
 taa_debug :: proc(r: ^Renderer) -> TAA_Debug {
 	debug := r.taa.debug
 	if !debug.active {
+		debug = taa_debug_default()
 		debug.taa = r.taa.enabled
-		debug.jitter = true
-		debug.history_weight = -1
-		debug.clamp = true
-		debug.force_depth_trust = false
-		debug.freeze_shadow_phase = false
 		debug.shadow_phase = taa_shadow_phase(r)
 	}
 	return debug
 }
 
-// Returns true when a TAA input changed and the history was reset. A new shadow
-// phase is not a TAA input: it changes the next frame, not the accumulated
-// history.
+// Any change to the override struct is a TAA input change: the resolve reads
+// every nonzero field. A new shadow phase therefore resets history too.
 set_taa_debug :: proc(r: ^Renderer, debug: TAA_Debug) -> bool {
 	previous := r.taa.debug
-	changed := previous.active != debug.active ||
-		previous.taa != debug.taa ||
-		previous.jitter != debug.jitter ||
-		previous.history_weight != debug.history_weight ||
-		previous.clamp != debug.clamp ||
-		previous.force_depth_trust != debug.force_depth_trust
+	changed := previous != debug
 	r.taa.debug = debug
 	if debug.active {
 		r.taa.enabled = debug.taa

@@ -139,8 +139,11 @@ backend_clear_debug :: proc(ctx: rawptr) {
 @(private)
 backend_snapshot :: proc(ctx: rawptr) -> Backend_Snapshot {
 	data := cast(^Backend_Data)ctx
-	value, has := renderer.last_render_digest(&data.renderer)
-	return {report = renderer.renderer_report(&data.renderer), digest = value, has_digest = has}
+	return {
+		report = renderer.renderer_report(&data.renderer),
+		digest = data.renderer.render_digest,
+		has_digest = data.renderer.has_render_digest,
+	}
 }
 
 @(private)
@@ -200,7 +203,7 @@ backend_render :: proc(
 	)
 	perf.mark(&session.perf, .Build)
 	data.renderer.recorder = &session.perf.recorder
-	capture_request := renderer.Capture_Request {
+	capture_request := renderer.Frame_Capture {
 		target  = request.target,
 		enabled = request.enabled,
 	}
