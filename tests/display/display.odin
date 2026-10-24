@@ -59,6 +59,16 @@ small_windowed_modes_are_filtered :: proc(t: ^testing.T) {
 }
 
 @(test)
+set_name_keeps_a_whole_code_point :: proc(t: ^testing.T) {
+	info: display.Info
+	display.set_name(&info, "1234567890123456789012345678901é")
+
+	name := display.name(&info)
+	testing.expect_value(t, len(name), 31)
+	testing.expect_value(t, name[30], u8('1'))
+}
+
+@(test)
 display_index_clamps_to_the_list :: proc(t: ^testing.T) {
 	list := display.fallback_list()
 	testing.expect_value(t, list.count, 2)
