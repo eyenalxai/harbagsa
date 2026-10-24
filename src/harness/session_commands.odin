@@ -108,6 +108,9 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 		}
 	case .Sun:
 		session_sun(session, command.sun)
+	case .Crates:
+		command_error = session_crates(session, command.crates)
+		owns_error = true
 	case .Debug_Mode:
 		if session.debug.active != command.debug_mode.active {
 			game.debug_mode_toggle(&session.debug, &session.sim)
@@ -152,6 +155,7 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 	case .Replay:
 		summary, replay_error := session_replay(session, command.replay.path)
 		command_error = replay_error
+		owns_error = true
 		if command_error == "" {
 			reply.replay = new(Replay_Summary, session.allocator)
 			reply.replay^ = summary

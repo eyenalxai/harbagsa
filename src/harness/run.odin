@@ -16,6 +16,7 @@ run_batch :: proc(options: Run_Options) -> int {
 	scenario, load_error := scenario_load(options.scenario, context.allocator)
 	if load_error != "" {
 		print_summary_failure(load_error, EXIT_SCENARIO)
+		delete(load_error, context.allocator)
 		return EXIT_SCENARIO
 	}
 	defer scenario_destroy(&scenario, context.allocator)

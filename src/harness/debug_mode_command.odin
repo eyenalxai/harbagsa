@@ -14,11 +14,11 @@ parse_debug_mode :: proc(object: json.Object) -> (Command, string) {
 	}
 	value, has := json_get(object, "active")
 	if !has {
-		return {}, "debug_mode needs 'active'"
+		return {}, format_error("%s", "debug_mode needs 'active'")
 	}
 	active, ok := json_boolean(value)
 	if !ok {
-		return {}, "'active' must be a boolean"
+		return {}, format_error("%s", "'active' must be a boolean")
 	}
 	return {kind = .Debug_Mode, debug_mode = {active = active}}, ""
 }

@@ -52,4 +52,7 @@ debug_mode_command_is_idempotent :: proc(t: ^testing.T) {
 debug_mode_command_needs_active :: proc(t: ^testing.T) {
 	_, parse_error := harness.command_parse_string(`{"cmd": "debug_mode"}`, context.allocator)
 	testing.expect(t, parse_error != "", "a missing 'active' must fail")
+	if parse_error != "" {
+		delete(parse_error, context.allocator)
+	}
 }

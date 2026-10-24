@@ -14,7 +14,7 @@ parse_look :: proc(object: json.Object) -> (Command, string) {
 	dx, dx_ok := number_field(object, "dx")
 	dy, dy_ok := number_field(object, "dy")
 	if !dx_ok || !dy_ok {
-		return {}, "look needs numeric 'dx' and 'dy'"
+		return {}, format_error("%s", "look needs numeric 'dx' and 'dy'")
 	}
 	return {kind = .Look, look = {dx = f32(dx), dy = f32(dy)}}, ""
 }
@@ -27,7 +27,7 @@ parse_face :: proc(object: json.Object) -> (Command, string) {
 	yaw, yaw_ok := number_field(object, "yaw")
 	pitch, pitch_ok := number_field(object, "pitch")
 	if !yaw_ok || !pitch_ok {
-		return {}, "face needs numeric 'yaw' and 'pitch'"
+		return {}, format_error("%s", "face needs numeric 'yaw' and 'pitch'")
 	}
 	return {kind = .Face, face = {yaw = f32(yaw), pitch = f32(pitch)}}, ""
 }
@@ -48,7 +48,7 @@ parse_input_fields :: proc(object: json.Object) -> (input: Input_Command, error:
 	if value, has := json_get(object, "forward"); has {
 		forward, ok := json_number(value)
 		if !ok || forward < -1 || forward > 1 {
-			return {}, "'forward' must be a number in [-1, 1]"
+			return {}, format_error("%s", "'forward' must be a number in [-1, 1]")
 		}
 		input.forward = f32(forward)
 		input.has_forward = true
@@ -56,7 +56,7 @@ parse_input_fields :: proc(object: json.Object) -> (input: Input_Command, error:
 	if value, has := json_get(object, "right"); has {
 		right, ok := json_number(value)
 		if !ok || right < -1 || right > 1 {
-			return {}, "'right' must be a number in [-1, 1]"
+			return {}, format_error("%s", "'right' must be a number in [-1, 1]")
 		}
 		input.right = f32(right)
 		input.has_right = true
@@ -64,7 +64,7 @@ parse_input_fields :: proc(object: json.Object) -> (input: Input_Command, error:
 	if value, has := json_get(object, "jump"); has {
 		jump, ok := json_boolean(value)
 		if !ok {
-			return {}, "'jump' must be a boolean"
+			return {}, format_error("%s", "'jump' must be a boolean")
 		}
 		input.jump = jump
 		input.has_jump = true
@@ -94,7 +94,7 @@ parse_camera :: proc(object: json.Object) -> (Command, string) {
 	if value, has := json_get(object, "clear"); has {
 		clear, ok := json_boolean(value)
 		if !ok {
-			return {}, "'clear' must be a boolean"
+			return {}, format_error("%s", "'clear' must be a boolean")
 		}
 		command.camera.clear = clear
 	}
@@ -105,7 +105,7 @@ parse_camera :: proc(object: json.Object) -> (Command, string) {
 	yaw, yaw_ok := number_field(object, "yaw")
 	pitch, pitch_ok := number_field(object, "pitch")
 	if !position_ok || !yaw_ok || !pitch_ok {
-		return {}, "camera needs 'position', 'yaw' and 'pitch', or 'clear'"
+		return {}, format_error("%s", "camera needs 'position', 'yaw' and 'pitch', or 'clear'")
 	}
 	command.camera.position = position
 	command.camera.yaw = f32(yaw)
@@ -129,7 +129,7 @@ parse_view_fields :: proc(object: json.Object) -> (view: View_Command, error: st
 	if value, has := json_get(object, "hud"); has {
 		flag, ok := json_boolean(value)
 		if !ok {
-			return {}, "'hud' must be a boolean"
+			return {}, format_error("%s", "'hud' must be a boolean")
 		}
 		view.hud = flag
 		view.has_hud = true
@@ -137,7 +137,7 @@ parse_view_fields :: proc(object: json.Object) -> (view: View_Command, error: st
 	if value, has := json_get(object, "debug"); has {
 		flag, ok := json_boolean(value)
 		if !ok {
-			return {}, "'debug' must be a boolean"
+			return {}, format_error("%s", "'debug' must be a boolean")
 		}
 		view.debug = flag
 		view.has_debug = true
@@ -145,7 +145,7 @@ parse_view_fields :: proc(object: json.Object) -> (view: View_Command, error: st
 	if value, has := json_get(object, "hint"); has {
 		flag, ok := json_boolean(value)
 		if !ok {
-			return {}, "'hint' must be a boolean"
+			return {}, format_error("%s", "'hint' must be a boolean")
 		}
 		view.hint = flag
 		view.has_hint = true
@@ -153,7 +153,7 @@ parse_view_fields :: proc(object: json.Object) -> (view: View_Command, error: st
 	if value, has := json_get(object, "perf"); has {
 		flag, ok := json_boolean(value)
 		if !ok {
-			return {}, "'perf' must be a boolean"
+			return {}, format_error("%s", "'perf' must be a boolean")
 		}
 		view.perf = flag
 		view.has_perf = true
@@ -169,7 +169,7 @@ parse_check :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 	field, field_ok := string_field(object, "field")
 	op_name, op_ok := string_field(object, "op")
 	if !field_ok || !op_ok {
-		return {}, "check needs string 'field' and 'op'"
+		return {}, format_error("%s", "check needs string 'field' and 'op'")
 	}
 	op, parsed_op := check_op_parse(op_name)
 	if !parsed_op {
@@ -179,7 +179,7 @@ parse_check :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 	if warmup_value, has := json_get(object, "warmup"); has {
 		parsed, parsed_ok := json_integer(warmup_value)
 		if !parsed_ok || parsed < 0 {
-			return {}, "'warmup' must be a non-negative integer"
+			return {}, format_error("%s", "'warmup' must be a non-negative integer")
 		}
 		warmup = int(parsed)
 	}
@@ -188,11 +188,11 @@ parse_check :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 		return {}, window_error
 	}
 	if window.has && warmup != 0 {
-		return {}, "a check cannot use both 'warmup' and 'window'"
+		return {}, format_error("%s", "a check cannot use both 'warmup' and 'window'")
 	}
 	value, value_ok := json_get(object, "value")
 	if !value_ok {
-		return {}, "check needs 'value'"
+		return {}, format_error("%s", "check needs 'value'")
 	}
 	check_value, value_error := parse_check_value(value, allocator)
 	if value_error != "" {
@@ -218,7 +218,7 @@ parse_check_window :: proc(object: json.Object) -> (Capture_Window, string) {
 	}
 	fields, fields_ok := json_object(value)
 	if !fields_ok {
-		return {}, "'window' must be an object with 'start' and 'count'"
+		return {}, format_error("%s", "'window' must be an object with 'start' and 'count'")
 	}
 	if key, unknown := json_unknown_key(fields, {"start", "count"}); unknown {
 		return {}, format_error("unknown window key %q", key)
@@ -226,15 +226,15 @@ parse_check_window :: proc(object: json.Object) -> (Capture_Window, string) {
 	start_value, has_start := json_get(fields, "start")
 	count_value, has_count := json_get(fields, "count")
 	if !has_start || !has_count {
-		return {}, "'window' needs 'start' and 'count'"
+		return {}, format_error("%s", "'window' needs 'start' and 'count'")
 	}
 	start, start_ok := json_integer(start_value)
 	count, count_ok := json_integer(count_value)
 	if !start_ok || start < 0 {
-		return {}, "window 'start' must be a non-negative integer"
+		return {}, format_error("%s", "window 'start' must be a non-negative integer")
 	}
 	if !count_ok || count < 1 {
-		return {}, "window 'count' must be a positive integer"
+		return {}, format_error("%s", "window 'count' must be a positive integer")
 	}
 	return {start = int(start), count = int(count), has = true}, ""
 }
@@ -250,7 +250,7 @@ parse_check_value :: proc(value: json.Value, allocator: mem.Allocator) -> (Check
 	if text, ok := json_string(value); ok {
 		return {kind = .String, text = strings.clone(text, allocator)}, ""
 	}
-	return {}, "check 'value' must be a number, boolean, or string"
+	return {}, format_error("%s", "check 'value' must be a number, boolean, or string")
 }
 
 @(private)
@@ -262,7 +262,7 @@ parse_record :: proc(object: json.Object, allocator: mem.Allocator) -> (Command,
 	if value, has := json_get(object, "path"); has {
 		path, ok := json_string(value)
 		if !ok || path == "" {
-			return {}, "'path' must be a non-empty string"
+			return {}, format_error("%s", "'path' must be a non-empty string")
 		}
 		command.record.path = strings.clone(path, allocator)
 		command.record.has_path = true
@@ -277,7 +277,7 @@ parse_replay :: proc(object: json.Object, allocator: mem.Allocator) -> (Command,
 	}
 	path, ok := string_field(object, "path")
 	if !ok || path == "" {
-		return {}, "replay needs a non-empty 'path'"
+		return {}, format_error("%s", "replay needs a non-empty 'path'")
 	}
 	return {kind = .Replay, replay = {path = strings.clone(path, allocator)}}, ""
 }

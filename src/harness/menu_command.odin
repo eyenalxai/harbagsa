@@ -30,7 +30,7 @@ parse_menu :: proc(object: json.Object) -> (Command, string) {
 	if value, has := json_get(object, "open"); has {
 		open, ok := json_boolean(value)
 		if !ok {
-			return {}, "'open' must be a boolean"
+			return {}, format_error("%s", "'open' must be a boolean")
 		}
 		command.menu.open = open
 		command.menu.has_open = true
@@ -38,7 +38,7 @@ parse_menu :: proc(object: json.Object) -> (Command, string) {
 	if value, has := json_get(object, "item"); has {
 		name, ok := json_string(value)
 		if !ok {
-			return {}, "'item' must be a string"
+			return {}, format_error("%s", "'item' must be a string")
 		}
 		item, found := game.menu_item_from_name(name)
 		if !found {
@@ -50,7 +50,7 @@ parse_menu :: proc(object: json.Object) -> (Command, string) {
 	if value, has := json_get(object, "activate"); has {
 		activate, ok := json_boolean(value)
 		if !ok {
-			return {}, "'activate' must be a boolean"
+			return {}, format_error("%s", "'activate' must be a boolean")
 		}
 		command.menu.activate = activate
 		command.menu.has_activate = true
@@ -58,13 +58,13 @@ parse_menu :: proc(object: json.Object) -> (Command, string) {
 	if value, has := json_get(object, "direction"); has {
 		direction, ok := json_integer(value)
 		if !ok || (direction != -1 && direction != 1) {
-			return {}, "'direction' must be -1 or 1"
+			return {}, format_error("%s", "'direction' must be -1 or 1")
 		}
 		command.menu.direction = direction
 		command.menu.has_direction = true
 	}
 	if command.menu.has_direction && !command.menu.activate {
-		return {}, "'direction' needs 'activate'"
+		return {}, format_error("%s", "'direction' needs 'activate'")
 	}
 	if value, has := json_get(object, "set"); has {
 		weight, ok := json_number(value)
@@ -82,7 +82,7 @@ parse_menu :: proc(object: json.Object) -> (Command, string) {
 	   !command.menu.has_item &&
 	   !command.menu.has_activate &&
 	   !command.menu.has_set {
-		return {}, "menu needs 'open', 'item', 'activate', or 'set'"
+		return {}, format_error("%s", "menu needs 'open', 'item', 'activate', or 'set'")
 	}
 	return command, ""
 }
