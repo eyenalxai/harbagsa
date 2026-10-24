@@ -73,14 +73,20 @@ build :: proc(
 		}
 	}
 
-	if options.hud {
+	if options.hud || hud.menu.open {
 		game.hud_state_update(hud, sim, debug, snapshot, options.captured)
 		scene.hud = renderer.HUD_Frame {
-			enabled       = true,
-			status_lines  = hud.status_lines,
-			control_lines = hud.control_lines,
-			capture_hint  = hud.capture_hint,
-			captured      = hud.captured,
+			enabled      = true,
+			status_lines = hud.status.lines[:hud.status.count],
+			capture_hint = hud.capture_hint,
+			captured     = hud.captured,
+			menu = {
+				open     = hud.menu.open,
+				title    = game.MENU_TITLE,
+				lines    = hud.menu.text.lines[:hud.menu.text.count],
+				selected = int(hud.menu.selected),
+				note     = game.MENU_NOTE,
+			},
 		}
 	}
 

@@ -42,10 +42,12 @@ Simulation :: struct {
 	crates:                 [MAX_CRATES]Crate,
 	crate_count:            int,
 	next_crate_color_index: int,
+	settings:               Settings,
 }
 
 simulation_create :: proc() -> Simulation {
 	sim: Simulation
+	sim.settings = settings_default()
 
 	world_def := b3.DefaultWorldDef()
 	world_def.gravity = {0.0, -PLAYER_GRAVITY, 0.0}
@@ -123,8 +125,8 @@ simulation_step :: proc(sim: ^Simulation, input: Input_Snapshot, time_step: f32)
 	_ = try_mantle(sim, input)
 	try_dive(sim, input)
 	_ = try_crouch_slide(sim, input)
-	update_stance_input(&sim.player, input)
-	update_sprint_input(&sim.player, input)
+	update_stance_input(&sim.player, input, sim.settings)
+	update_sprint_input(&sim.player, input, sim.settings.sprint_mode)
 	resolve_stance(sim, input)
 	update_eye_height(&sim.player, time_step)
 

@@ -114,6 +114,16 @@ state_field :: proc(state: State, path: string) -> (Check_Value, string) {
 			return {}, "crates needs an index or 'count'"
 		}
 		return crates_field(state.crates, tail)
+	case "settings":
+		if !has_tail {
+			return {}, "settings needs a field"
+		}
+		return settings_field(state.settings, tail)
+	case "menu":
+		if !has_tail {
+			return {}, "menu needs a field"
+		}
+		return menu_field(state.menu, tail)
 	}
 	return {}, fmt.aprintf("unknown state field %q", path, allocator = context.allocator)
 }
