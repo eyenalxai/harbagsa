@@ -112,6 +112,25 @@ rows_measure :: proc(atlas: ^Text_Atlas, theme: UI_Theme, rows: []ui.Row, option
 	return layout
 }
 
+// The row offset comes from the same walk that draws the rows, so a control
+// that the caller measures outside the draw lands on its drawn row.
+rows_row_y :: proc(theme: UI_Theme, rows: []ui.Row, index: int) -> f32 {
+	offset: f32
+	for row, current in rows {
+		if current > index {
+			break
+		}
+		if current > 0 {
+			offset += row_gap(theme, row.kind)
+		}
+		if current == index {
+			break
+		}
+		offset += row_height(theme, row.kind)
+	}
+	return offset
+}
+
 rows_emit :: proc(
 	o: ^Overlay,
 	theme: UI_Theme,
@@ -120,13 +139,17 @@ rows_emit :: proc(
 	rows: []ui.Row,
 	options: Rows_Options,
 ) {
-	row_y := y
 	for row, index in rows {
-		if index > 0 {
-			row_y += row_gap(theme, row.kind)
-		}
-		rows_emit_row(o, theme, x, row_y, layout, row, index, options)
-		row_y += row_height(theme, row.kind)
+		rows_emit_row(
+			o,
+			theme,
+			x,
+			y + rows_row_y(theme, rows, index),
+			layout,
+			row,
+			index,
+			options,
+		)
 	}
 }
 
@@ -199,55 +222,6 @@ rows_emit_row :: proc(
 	}
 	if row.kind == .Slider {
 		rows_emit_slider(o, theme, y, row, options)
-	}
-}
-
-@(private)
-rows_emit_slider :: proc(
-	o: ^Overlay,
-	theme: UI_Theme,
-	y: f32,
-	row: ui.Row,
-	options: Rows_Options,
-) {
-	if options.frame_width <= 0 {
-		return
-	}
-	knob := theme.spacing.md
-	track_x := options.frame_x
-	track_width := options.frame_width
-	travel := max(track_width - knob, 0)
-	center_y := y + theme.type_body.line_height + theme.spacing.sm + theme.spacing.lg * 0.5
-	thickness := max(theme.hairline * 2, 2)
-	track_y := hud_snap(center_y - thickness * 0.5)
-	ratio := clamp(row.ratio, 0, 1)
-	knob_center := track_x + knob * 0.5 + ratio * travel
-
-	hud_emit_rect(o, track_x, track_y, track_width, thickness, theme.slider_track)
-	hud_emit_rect(o, track_x, track_y, max(knob_center - track_x, 0), thickness, theme.text_secondary)
-	if row.ticks >= 2 {
-		pitch := travel / f32(row.ticks - 1)
-		tick_y := hud_snap(center_y - theme.spacing.sm * 0.5)
-		for tick in 0 ..< row.ticks {
-			tick_center := track_x + knob * 0.5 + f32(tick) * pitch
-			tick_x := hud_snap(tick_center - theme.hairline * 0.5)
-			hud_emit_rect(o, tick_x, tick_y, theme.hairline, theme.spacing.sm, theme.text_tertiary)
-		}
-	}
-	hud_emit_rect(
-		o,
-		hud_snap(knob_center - knob * 0.5),
-		hud_snap(center_y - knob * 0.5),
-		knob,
-		knob,
-		theme.text_primary,
-	)
-	o.menu_slider = {
-		x      = track_x,
-		y      = hud_snap(center_y - theme.spacing.lg * 0.5),
-		width  = track_width,
-		height = theme.spacing.lg,
-		knob   = knob,
 	}
 }
 

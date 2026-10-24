@@ -45,6 +45,8 @@ Overlay :: struct {
 
 	theme: UI_Theme,
 
+	// The rect the last menu draw published. Input measures with
+	// menu_slider_rect so it also has one before the first draw.
 	menu_slider:        ui.Slider_Rect,
 	menu_frozen_width:  f32,
 
@@ -56,10 +58,6 @@ Overlay :: struct {
 	atlas_layout:  vk.DescriptorSetLayout,
 	atlas_pool:    vk.DescriptorPool,
 	atlas_set:     vk.DescriptorSet,
-}
-
-menu_slider_track :: proc(r: ^Renderer) -> ui.Slider_Rect {
-	return r.overlay.menu_slider
 }
 
 init_overlay :: proc(r: ^Renderer) -> Error {

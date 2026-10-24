@@ -29,11 +29,12 @@ close_settings_menu :: proc(
 
 @(private)
 handle_settings_menu_events :: proc(
+	r: ^renderer.Renderer,
 	window: ^platform.Window,
 	menu: ^game.Menu_State,
 	settings: ^game.Settings,
+	debug_active: bool,
 	events: ^platform.Events,
-	slider: ui.Slider_Rect,
 	accumulator: ^f32,
 	recapture: ^bool,
 	latches: ^Input_Latches,
@@ -47,6 +48,9 @@ handle_settings_menu_events :: proc(
 			events.captured = open_settings_menu(window, menu)
 			accumulator^ = game.SIMULATION_STEP
 			clear_latches(latches)
+			// The rows and the track rect normally come from the previous draw.
+			// Neither exists yet, so build them before this frame reads input.
+			game.menu_view(menu, settings^, debug_active)
 		}
 	}
 
@@ -69,12 +73,23 @@ handle_settings_menu_events :: proc(
 		events.captured = close_settings_menu(window, menu, recapture^)
 		accumulator^ = 0
 	}
-	apply_weight_drag(menu, settings, events, slider)
+	game.menu_slider_input(
+		menu,
+		settings,
+		menu_slider_for_window(r, window, menu.view),
+		events.pointer,
+		events.pointer_pressed,
+		events.pointer_down,
+	)
 }
 
 @(private)
-menu_slider_for_window :: proc(r: ^renderer.Renderer, window: ^platform.Window) -> ui.Slider_Rect {
-	slider := renderer.menu_slider_track(r)
+menu_slider_for_window :: proc(
+	r: ^renderer.Renderer,
+	window: ^platform.Window,
+	menu: ui.Menu,
+) -> ui.Slider_Rect {
+	slider := renderer.menu_slider_rect(r, menu)
 	window_width, window_height := platform.window_size(window)
 	if window_width <= 0 || window_height <= 0 {
 		return slider
@@ -88,29 +103,4 @@ menu_slider_for_window :: proc(r: ^renderer.Renderer, window: ^platform.Window) 
 	slider.y *= scale_y
 	slider.height *= scale_y
 	return slider
-}
-
-@(private)
-apply_weight_drag :: proc(
-	menu: ^game.Menu_State,
-	settings: ^game.Settings,
-	events: ^platform.Events,
-	slider: ui.Slider_Rect,
-) {
-	if !menu.open || slider.width <= 0 {
-		return
-	}
-	ratio, inside := ui.slider_hit(slider, {events.pointer.x, events.pointer.y})
-	if events.pointer_pressed && inside {
-		game.menu_select(menu, int(game.Menu_Item.Type_Weight))
-		menu.dragging_weight = true
-	}
-	if !menu.dragging_weight {
-		return
-	}
-	if !events.pointer_down {
-		menu.dragging_weight = false
-		return
-	}
-	_ = game.menu_set_type_weight_ratio(menu, settings, ratio)
 }

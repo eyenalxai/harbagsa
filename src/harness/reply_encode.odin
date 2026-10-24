@@ -45,6 +45,14 @@ encode_reply :: proc(reply: Reply) -> []u8 {
 		append(&out, `,"trace":`)
 		append_json(&out, reply.trace)
 	}
+	if reply.rows != nil {
+		append(&out, `,"rows":`)
+		append_json(&out, reply.rows^)
+	}
+	if reply.displays != nil {
+		append(&out, `,"displays":`)
+		append_json(&out, reply.displays^)
+	}
 	append(&out, "}")
 	return out[:]
 }

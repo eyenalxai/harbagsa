@@ -173,10 +173,12 @@ write_analysis :: proc(
 		}
 	}
 
+	summary := analysis_summary(window)
+	summary.bands = analysis_bands(last_pixels, first_width, first_height)
 	report := Analysis_Report {
 		window = {start = config.start, count = len(window)},
 		pairs = analysis_pairs(window, allocator),
-		summary = analysis_summary(window),
+		summary = summary,
 		worst_pixels = worst_pixels[:],
 	}
 	defer delete(report.pairs, allocator)
