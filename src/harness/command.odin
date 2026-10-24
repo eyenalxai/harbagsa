@@ -15,6 +15,7 @@ Command_Kind :: enum {
 	Capture,
 	Camera,
 	View,
+	Sun,
 	Debug_Mode,
 	Menu,
 	Check,
@@ -65,6 +66,15 @@ Camera_Command :: struct {
 	clear:    bool,
 }
 
+Sun_Command :: struct {
+	azimuth:       f32,
+	elevation:     f32,
+	diameter:      f32,
+	has_azimuth:   bool,
+	has_elevation: bool,
+	has_diameter:  bool,
+}
+
 View_Command :: struct {
 	hud:       bool,
 	debug:     bool,
@@ -113,6 +123,7 @@ Command :: struct {
 	capture: Capture_Command,
 	camera:  Camera_Command,
 	view:       View_Command,
+	sun:        Sun_Command,
 	debug_mode: Debug_Mode_Command,
 	menu:       Menu_Command,
 	check:   Check_Command,
@@ -144,6 +155,8 @@ command_name :: proc(kind: Command_Kind) -> string {
 		return "camera"
 	case .View:
 		return "view"
+	case .Sun:
+		return "sun"
 	case .Debug_Mode:
 		return "debug_mode"
 	case .Menu:
@@ -240,6 +253,8 @@ command_parse :: proc(value: json.Value, allocator := context.allocator) -> (Com
 		return parse_camera(object)
 	case "view":
 		return parse_view(object)
+	case "sun":
+		return parse_sun(object)
 	case "debug_mode":
 		return parse_debug_mode(object)
 	case "menu":

@@ -106,6 +106,8 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 		if command.view.has_perf {
 			session.view.perf = command.view.perf
 		}
+	case .Sun:
+		session_sun(session, command.sun)
 	case .Debug_Mode:
 		if session.debug.active != command.debug_mode.active {
 			game.debug_mode_toggle(&session.debug, &session.sim)

@@ -6,8 +6,8 @@ import "core:math"
 import b3 "libs:box3d"
 
 SUN_DRAG_SENSITIVITY :: 0.005
-SUN_ELEVATION_MIN :: -1.5
-SUN_ELEVATION_MAX :: -0.05
+SUN_ELEVATION_MIN :: 0.05
+SUN_ELEVATION_MAX :: 1.5
 SUN_CLICK_MOTION :: 3.0
 
 debug_edit_sun :: proc(dm: ^Debug_Mode, input: Debug_Input) {
@@ -19,9 +19,7 @@ debug_edit_sun :: proc(dm: ^Debug_Mode, input: Debug_Input) {
 		dm.selection = .Sun
 		dm.selected_crate = -1
 		debug_mode_end_drag(dm)
-		azimuth, elevation := sun_angles_from_direction(dm.sun_direction)
-		dm.sun_azimuth = azimuth
-		dm.sun_elevation = elevation
+		dm.sun_azimuth, dm.sun_elevation = debug_mode_sun_angles(dm)
 	}
 
 	if input.primary_pressed && dm.selection == .Sun && dm.dragging == .None {
@@ -45,7 +43,9 @@ debug_edit_sun :: proc(dm: ^Debug_Mode, input: Debug_Input) {
 			SUN_ELEVATION_MIN,
 			SUN_ELEVATION_MAX,
 		)
-		dm.sun_direction = sun_direction_from_angles(dm.sun_azimuth, dm.sun_elevation)
+		dm.sun_direction = light_direction_from_sun(
+			sun_direction_from_angles(dm.sun_azimuth, dm.sun_elevation),
+		)
 	}
 
 	if input.primary_released {
@@ -58,6 +58,9 @@ debug_edit_sun :: proc(dm: ^Debug_Mode, input: Debug_Input) {
 	}
 }
 
+// Sun angles in the sky: azimuth from +z toward +x, elevation above the
+// horizon. The renderer instead consumes the light travel direction, which
+// points the other way.
 sun_angles_from_direction :: proc(direction: [3]f32) -> (azimuth, elevation: f32) {
 	normalized := b3.Normalize(direction)
 	elevation = math.asin(clamp(normalized.y, -1.0, 1.0))
@@ -73,4 +76,12 @@ sun_direction_from_angles :: proc(azimuth, elevation: f32) -> [3]f32 {
 			math.cos(elevation) * math.cos(azimuth),
 		},
 	)
+}
+
+sun_direction_from_light :: proc(light_direction: [3]f32) -> [3]f32 {
+	return {-light_direction.x, -light_direction.y, -light_direction.z}
+}
+
+light_direction_from_sun :: proc(sun_direction: [3]f32) -> [3]f32 {
+	return sun_direction_from_light(sun_direction)
 }

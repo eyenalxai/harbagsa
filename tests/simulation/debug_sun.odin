@@ -101,14 +101,14 @@ sun_elevation_clamps :: proc(t: ^testing.T) {
 	game.debug_mode_update(&dm, &sim, {primary_pressed = true, captured = true}, DT)
 
 	game.debug_mode_update(&dm, &sim, {look_delta = {0.0, -1000.0}, captured = true}, DT)
-	testing.expect(t, dm.sun_elevation <= -0.05, "elevation rose above the upper clamp")
-	testing.expect(t, dm.sun_elevation >= -1.5, "elevation fell below the lower clamp")
-	expect_near(t, dm.sun_elevation, -0.05, 0.0001, "upper elevation clamp")
+	testing.expect(t, dm.sun_elevation <= game.SUN_ELEVATION_MAX, "elevation rose above the upper clamp")
+	testing.expect(t, dm.sun_elevation >= game.SUN_ELEVATION_MIN, "elevation fell below the lower clamp")
+	expect_near(t, dm.sun_elevation, game.SUN_ELEVATION_MAX, 0.0001, "upper elevation clamp")
 
 	game.debug_mode_update(&dm, &sim, {look_delta = {0.0, 1000.0}, captured = true}, DT)
-	testing.expect(t, dm.sun_elevation <= -0.05, "elevation rose above the upper clamp")
-	testing.expect(t, dm.sun_elevation >= -1.5, "elevation fell below the lower clamp")
-	expect_near(t, dm.sun_elevation, -1.5, 0.0001, "lower elevation clamp")
+	testing.expect(t, dm.sun_elevation <= game.SUN_ELEVATION_MAX, "elevation rose above the upper clamp")
+	testing.expect(t, dm.sun_elevation >= game.SUN_ELEVATION_MIN, "elevation fell below the lower clamp")
+	expect_near(t, dm.sun_elevation, game.SUN_ELEVATION_MIN, 0.0001, "lower elevation clamp")
 }
 
 @(test)
