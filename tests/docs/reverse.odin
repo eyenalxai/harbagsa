@@ -23,7 +23,7 @@ theme_colours_have_a_palette_row :: proc(t: ^testing.T) {
 		}
 		testing.expectf(
 			t,
-			doc_has_token(t, COLOUR_DOC, field.name),
+			doc_has_palette_row(t, field.name),
 			"%s has no palette row for theme.%s",
 			COLOUR_DOC,
 			field.name,
@@ -39,7 +39,7 @@ theme_types_have_a_type_row :: proc(t: ^testing.T) {
 		}
 		testing.expectf(
 			t,
-			doc_has_token(t, TYPE_DOC, field.name),
+			doc_has_cell(t, TYPE_DOC, 1, field.name),
 			"%s has no row for theme.%s",
 			TYPE_DOC,
 			field.name,
@@ -51,7 +51,7 @@ theme_types_have_a_type_row :: proc(t: ^testing.T) {
 theme_spacing_has_a_spacing_row :: proc(t: ^testing.T) {
 	for field in reflect.struct_fields_zipped(renderer.UI_Spacing) {
 		token := strings.concatenate({SPACING_PREFIX, field.name}, context.allocator)
-		found := doc_has_token(t, SPACING_DOC, token)
+		found := doc_has_cell(t, SPACING_DOC, 0, token)
 		delete(token, context.allocator)
 		testing.expectf(
 			t,
@@ -101,7 +101,8 @@ theme_token_counts_match_the_docs :: proc(t: ^testing.T) {
 	)
 }
 
-doc_has_token :: proc(t: ^testing.T, path, token: string) -> bool {
+@(private)
+doc_has_cell :: proc(t: ^testing.T, path: string, column: int, token: string) -> bool {
 	doc, ok := doc_open(t, path)
 	if !ok {
 		return false
@@ -109,10 +110,36 @@ doc_has_token :: proc(t: ^testing.T, path, token: string) -> bool {
 	defer doc_close(&doc)
 	for line in doc.lines {
 		cells, count := split_table_row(line)
-		for cell in cells[:count] {
-			if strip_ticks(cell) == token {
-				return true
-			}
+		if column >= count {
+			continue
+		}
+		if strip_ticks(cells[column]) == token {
+			return true
+		}
+	}
+	return false
+}
+
+// A palette row has the token in the first cell and the hex in the second. The
+// contrast table has the same tokens in its first cell, so the hex is what
+// separates a palette row from a contrast row.
+@(private)
+doc_has_palette_row :: proc(t: ^testing.T, token: string) -> bool {
+	doc, ok := doc_open(t, COLOUR_DOC)
+	if !ok {
+		return false
+	}
+	defer doc_close(&doc)
+	for line in doc.lines {
+		cells, count := split_table_row(line)
+		if count < 7 {
+			continue
+		}
+		if strip_ticks(cells[0]) != token {
+			continue
+		}
+		if strings.has_prefix(strip_ticks(cells[1]), "#") {
+			return true
 		}
 	}
 	return false

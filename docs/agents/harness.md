@@ -203,6 +203,7 @@ The 2D layer is part of the feature, so its captures live next to it.
 | `scenarios/hud-debug.json` | the debug-mode readout, which shares the row renderer |
 | `scenarios/ui.json` | the settings panel with a numeric value selected, then an action row |
 | `scenarios/settings-menu.json` | the settings round trip and the menu digest |
+| `scenarios/blocked-note.json` | the blocked-change note and its clear on a successful change |
 | `scenarios/window-settings.json` | the window rows after a display change |
 | `scenarios/type-weight.json` | the Type weight slider at 400, 900, and 100 |
 
@@ -212,6 +213,7 @@ Read the evidence from a run directory:
 ./bin/harbagsa-agent run scenarios/hud.json --out runs/ui/hud
 ./bin/harbagsa-agent run scenarios/hud-debug.json --out runs/ui/hud-debug
 ./bin/harbagsa-agent run scenarios/settings-menu.json --out runs/ui/menu
+./bin/harbagsa-agent run scenarios/blocked-note.json --out runs/ui/blocked-note
 ./bin/harbagsa-agent run scenarios/window-settings.json --out runs/ui/window
 ./bin/harbagsa-agent run scenarios/type-weight.json --out runs/ui/weight
 ```

@@ -10,8 +10,8 @@ closed. `build_hud` returns after building the menu, so the status panel, the
 capture hint, and the crosshair are all hidden while the menu is open. It draws
 in the top-left margin and never moves.
 
-Use instead when the cursor is not captured and the player needs one instruction:
-the capture hint. Use instead when the game is paused: the settings panel.
+Use instead when the game is paused: the settings panel. The capture hint may
+draw at the same time; it does not replace this panel.
 
 ```odin
 theme := o.theme
@@ -41,8 +41,8 @@ literal that no longer matches the theme.
 Use when the cursor is not captured and the player needs one instruction. It is
 transient: it disappears when capture is set.
 
-Use instead when the player needs live state: the status panel. Do not use the
-capture hint while the cursor is captured.
+Use instead when the game is paused: the settings panel, which hides the hint.
+The status panel may draw at the same time.
 
 ```odin
 box_y := height * 0.5 + hud_crosshair_reach(theme) + theme.spacing.md
@@ -157,8 +157,8 @@ exactly this.
 
 `ui.Row_Kind` is closed. Seven kinds, one meaning each.
 
-Use instead when the fact is read-only: a `Detail` row. When the number is live:
-a `Metric` row. When the value changes: a `Setting` row.
+Use instead when the fact is quiet: a `Detail` row. When it needs emphasis: a
+`Metric` row. When the player changes it: a `Setting` row.
 
 | Kind | Reads as | Selectable |
 | --- | --- | --- |

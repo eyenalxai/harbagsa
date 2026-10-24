@@ -397,8 +397,9 @@ _Avoid_: HSL, HSV
 
 **Neutral ramp**:
 The six cool ink and surface tokens: `text_primary`, `text_secondary`,
-`text_tertiary`, `surface_hud`, `surface_menu`, and `surface_raised`. They
-share one OKLCH hue.
+`text_tertiary`, `surface_hud`, `surface_menu`, and `surface_raised`. They are
+authored at OKLCH hue 253; the 8-bit hex leaves a measured spread of 7.8
+degrees.
 _Avoid_: Grey scale, grey ramp
 
 **WCAG 2**:

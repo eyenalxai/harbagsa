@@ -1,5 +1,8 @@
 # Analytic sky and ray-traced ambient occlusion
 
+> 0015 until 2026-10-24. The ground-speed ADR claimed 0015 first, so this one
+> moved to 0017.
+
 The renderer replaces the flat clear color with an analytic sky gradient. The
 sky draws after the lit pass into the scene color and velocity targets, with a
 depth test of `EQUAL` at the far plane, so it shades only the pixels that no box
