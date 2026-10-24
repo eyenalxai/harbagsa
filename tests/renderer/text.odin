@@ -9,7 +9,7 @@ import "src:renderer"
 
 @(test)
 text_measure_of_empty_text_is_zero :: proc(t: ^testing.T) {
-	atlas, ok := renderer.text_atlas_build(context.allocator)
+	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
 	defer renderer.text_atlas_destroy(&atlas, context.allocator)
 
@@ -19,7 +19,7 @@ text_measure_of_empty_text_is_zero :: proc(t: ^testing.T) {
 
 @(test)
 text_measure_of_one_glyph_is_its_advance :: proc(t: ^testing.T) {
-	atlas, ok := renderer.text_atlas_build(context.allocator)
+	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
 	defer renderer.text_atlas_destroy(&atlas, context.allocator)
 
@@ -27,8 +27,8 @@ text_measure_of_one_glyph_is_its_advance :: proc(t: ^testing.T) {
 	index, found := renderer.text_codepoint_index('M')
 	testing.expect(t, found, "M must exist")
 
-	scale := theme.type_body.size / atlas.base_px
-	expected := atlas.glyphs[int(renderer.Text_Weight.Regular)][index].advance * scale
+	layer := &atlas.layers[renderer.text_layer_index(&atlas, theme.type_body)]
+	expected := layer.glyphs[index].advance
 	testing.expectf(
 		t,
 		math.abs(renderer.text_measure(&atlas, theme.type_body, "M") - expected) < 0.01,
@@ -38,7 +38,7 @@ text_measure_of_one_glyph_is_its_advance :: proc(t: ^testing.T) {
 
 @(test)
 text_tracking_adds_a_gap_between_glyphs_only :: proc(t: ^testing.T) {
-	atlas, ok := renderer.text_atlas_build(context.allocator)
+	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
 	defer renderer.text_atlas_destroy(&atlas, context.allocator)
 
@@ -64,19 +64,18 @@ text_tracking_adds_a_gap_between_glyphs_only :: proc(t: ^testing.T) {
 
 @(test)
 text_kerning_tightens_a_pair :: proc(t: ^testing.T) {
-	atlas, ok := renderer.text_atlas_build(context.allocator)
+	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
 	defer renderer.text_atlas_destroy(&atlas, context.allocator)
 
 	theme := renderer.ui_theme_init(720)
 	style := theme.type_body
-	scale := style.size / atlas.base_px
 	a, a_ok := renderer.text_codepoint_index('A')
 	v, v_ok := renderer.text_codepoint_index('V')
 	testing.expect(t, a_ok && v_ok, "A and V must exist")
 
-	glyphs := atlas.glyphs[int(renderer.Text_Weight.Regular)]
-	advances := (glyphs[a].advance + glyphs[v].advance) * scale
+	layer := &atlas.layers[renderer.text_layer_index(&atlas, style)]
+	advances := layer.glyphs[a].advance + layer.glyphs[v].advance
 	measured := renderer.text_measure(&atlas, style, "AV")
 	testing.expectf(
 		t,
@@ -89,7 +88,7 @@ text_kerning_tightens_a_pair :: proc(t: ^testing.T) {
 
 @(test)
 text_measure_skips_glyphs_outside_the_atlas :: proc(t: ^testing.T) {
-	atlas, ok := renderer.text_atlas_build(context.allocator)
+	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
 	defer renderer.text_atlas_destroy(&atlas, context.allocator)
 
@@ -100,7 +99,7 @@ text_measure_skips_glyphs_outside_the_atlas :: proc(t: ^testing.T) {
 
 @(test)
 text_baseline_sits_inside_the_line_box :: proc(t: ^testing.T) {
-	atlas, ok := renderer.text_atlas_build(context.allocator)
+	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
 	defer renderer.text_atlas_destroy(&atlas, context.allocator)
 
@@ -117,6 +116,73 @@ text_baseline_sits_inside_the_line_box :: proc(t: ^testing.T) {
 			"the baseline %v must sit inside a %v line box",
 			baseline,
 			style.line_height,
+		)
+	}
+}
+
+// The atlas samples one texel per pixel, so a glyph quad that lands on a
+// fraction resamples the coverage and blurs the edge.
+@(test)
+text_quads_land_on_the_pixel_grid :: proc(t: ^testing.T) {
+	atlas, ok := build_test_atlas(t)
+	testing.expect(t, ok, "the atlas did not build")
+	defer renderer.text_atlas_destroy(&atlas, context.allocator)
+
+	theme := renderer.ui_theme_init(720)
+	overlay := renderer.Overlay {
+		atlas = atlas,
+		theme = theme,
+	}
+	overlay.hud_vertices = make([]renderer.HUD_Vertex, 4096, context.allocator)
+	defer delete(overlay.hud_vertices, context.allocator)
+
+	renderer.text_emit(
+		&overlay,
+		12.375,
+		20.75,
+		{type = theme.type_body, color = {1, 1, 1, 1}},
+		"Window mode",
+	)
+	testing.expect(t, overlay.hud_count > 0, "the text did not draw")
+	for vertex in overlay.hud_vertices[:overlay.hud_count] {
+		testing.expectf(
+			t,
+			vertex.position.x == math.floor(vertex.position.x) &&
+			vertex.position.y == math.floor(vertex.position.y),
+			"a glyph corner sits at %v",
+			vertex.position,
+		)
+	}
+}
+
+// The phase quantizes position to a quarter pixel. A fraction near 1 must carry
+// into the origin instead of rounding to phase four and snapping back a pixel.
+@(test)
+text_phase_never_drifts_a_pixel :: proc(t: ^testing.T) {
+	for step in 0 ..= 80 {
+		position := 10.0 + f32(step) / 80.0
+		origin, phase := renderer.text_place(position)
+		testing.expectf(
+			t,
+			origin == math.floor(origin),
+			"the origin %v for %v is not a whole pixel",
+			origin,
+			position,
+		)
+		testing.expectf(
+			t,
+			phase >= 0 && phase < renderer.TEXT_SUBPIXEL_PHASES,
+			"the phase %v for %v is out of range",
+			phase,
+			position,
+		)
+		placed := origin + f32(phase) / f32(renderer.TEXT_SUBPIXEL_PHASES)
+		testing.expectf(
+			t,
+			math.abs(placed - position) <= 0.125,
+			"a glyph at %v landed at %v",
+			position,
+			placed,
 		)
 	}
 }

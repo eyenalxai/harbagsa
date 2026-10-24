@@ -1,5 +1,9 @@
 # SDF text for the 2D layer
 
+Superseded by ADR 0007. The field could not draw a one-pixel stem: at the body
+size the distance inside a stroke never left the antialiasing ramp, so the text
+draw grey and broken. The decision is kept for the record.
+
 The overlay draws text from one signed distance field atlas, rasterized at
 startup from three subset Noto faces. It replaced `stb_easy_font`, a debug font
 of 1 px strokes and one weight that had shipped as product UI.
