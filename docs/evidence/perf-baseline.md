@@ -5,6 +5,10 @@ the perf command, the report, and the trace landed. Machine: AMD Radeon RX 9060
 XT (RADV GFX1200), Mesa 26.2.5, Hyprland on Wayland. Displays: `HDMI-A-1`
 1920x1080 at 60 Hz, `HDMI-A-2` 2560x1440 at 74.97 Hz, VRR off.
 
+> These tables are the pre-optimization baseline. The scene pass changed later
+> on 2026-10-24; the before/after is in
+> [the scene pass evidence](perf-scene-pass.md).
+
 ## Method
 
 `scenarios/perf.json` runs one priming frame, 60 warmup frames, and 120 measured
@@ -92,7 +96,9 @@ Traces from Run A: [75 Hz](perf/present-75hz-trace.jsonl) and
    the display, which adds latency and makes a miss wait for the next vblank.
 3. **GPU cost at higher resolution.** The scene pass grows from 1.46 ms to
    2.50 ms between 1080p and 1440p. It is still far below the budget, but it is
-   the first pass to watch if the target rises.
+   the first pass to watch if the target rises. The scene pass has since been
+   optimized without changing the sample count; see
+   [the scene pass evidence](perf-scene-pass.md).
 4. **The external GPU-load counter.** It is not a saturation signal and must
    not be used as one.
 
@@ -111,3 +117,7 @@ The fixes are separate tickets: a display-targeted present run, a decision on
 the present mode and frames-in-flight policy, and a presentation-time
 measurement as a follow-up. Reducing the 16 sun samples is a quality trade-off,
 not a pacing fix.
+
+The scene pass was later optimized without reducing the sample count. The
+before/after and the two regression probes are in
+[the scene pass evidence](perf-scene-pass.md).

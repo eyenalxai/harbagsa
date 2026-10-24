@@ -25,14 +25,18 @@ set_viewport :: proc(command_buffer: vk.CommandBuffer, width, height: u32) {
 	vk.CmdSetScissor(command_buffer, 0, 1, &scissor)
 }
 
-make_depth_attachment :: proc(view: vk.ImageView, layout: vk.ImageLayout) -> vk.RenderingAttachmentInfo {
+make_depth_attachment :: proc(
+	view: vk.ImageView,
+	layout: vk.ImageLayout,
+	load_op: vk.AttachmentLoadOp = .CLEAR,
+) -> vk.RenderingAttachmentInfo {
 	clear := vk.ClearValue{}
 	clear.depthStencil = {depth = 1.0, stencil = 0}
 	return {
 		sType = .RENDERING_ATTACHMENT_INFO,
 		imageView = view,
 		imageLayout = layout,
-		loadOp = .CLEAR,
+		loadOp = load_op,
 		storeOp = .STORE,
 		clearValue = clear,
 	}
@@ -63,6 +67,23 @@ record_depth_write_barrier :: proc(command_buffer: vk.CommandBuffer, image: vk.I
 	)
 }
 
+// The prepass writes depth and the color pass reads it in a later render pass.
+// The prepass has no fragment shader, so name both depth-test stages: the
+// implementation may place its writes in either one.
+record_depth_read_barrier :: proc(command_buffer: vk.CommandBuffer, image: vk.Image) {
+	image_barrier(
+		command_buffer,
+		image,
+		DEPTH_SUBRESOURCE,
+		.DEPTH_ATTACHMENT_OPTIMAL,
+		.DEPTH_ATTACHMENT_OPTIMAL,
+		{.EARLY_FRAGMENT_TESTS, .LATE_FRAGMENT_TESTS},
+		{.EARLY_FRAGMENT_TESTS},
+		{.DEPTH_STENCIL_ATTACHMENT_WRITE},
+		{.DEPTH_STENCIL_ATTACHMENT_READ},
+	)
+}
+
 box_model_matrix :: proc(box: geometry.Box) -> Mat4 {
 	scale := [3]f32 {
 		box.half_extents.x * 2,
@@ -79,6 +100,7 @@ draw_boxes_indexed :: proc(
 	r: ^Renderer,
 	command_buffer: vk.CommandBuffer,
 	layout: vk.PipelineLayout,
+	stages: vk.ShaderStageFlags,
 	box_count: int,
 ) {
 	vertex_buffer := r.scene.vertex_buffer
@@ -91,7 +113,7 @@ draw_boxes_indexed :: proc(
 		vk.CmdPushConstants(
 			command_buffer,
 			layout,
-			{.VERTEX, .FRAGMENT},
+			stages,
 			0,
 			u32(size_of(Object_Index)),
 			&push,
