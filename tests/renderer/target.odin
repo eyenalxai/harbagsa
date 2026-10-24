@@ -90,6 +90,7 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 		log.info("skipping GPU timestamp assertions: timestamps are unavailable")
 	} else {
 		testing.expect(t, times.frame > 0, "GPU timing has no frame number")
+		testing.expect(t, times.passes[perf.Pass.Sky] >= 0, "the sky pass is missing")
 		total: time.Duration
 		for index in 0 ..< perf.PASS_COUNT {
 			pass := perf.Pass(index)

@@ -12,6 +12,7 @@ Check_Result :: struct {
 	field:    string `json:"field"`,
 	op:       string `json:"op"`,
 	expected: string `json:"value"`,
+	other:    string `json:"other,omitempty"`,
 	actual:   string `json:"actual,omitempty"`,
 	ok:       bool   `json:"ok"`,
 	error:    string `json:"error,omitempty"`,
@@ -20,21 +21,37 @@ Check_Result :: struct {
 check_evaluate :: proc(
 	command: Check_Command,
 	state: State,
-	capture: Capture_Summary,
+	captures: []Capture_Result,
 	analysis: ^Analysis_Summary,
 	allocator: mem.Allocator,
 ) -> Check_Result {
 	result := Check_Result {
 		field = command.field,
 		op = check_op_name(command.op),
-		expected = check_value_display(command.value, allocator),
 	}
-	actual, field_error := check_field(state, capture, analysis, command.field)
+	actual, field_error := check_field(state, captures, analysis, command.field)
 	if field_error != "" {
 		result.error = field_error
 		return result
 	}
 	result.actual = check_value_display(actual, allocator)
+	if command.has_other {
+		result.other = command.other
+		other, other_error := check_field(state, captures, analysis, command.other)
+		if other_error != "" {
+			result.error = other_error
+			return result
+		}
+		result.expected = check_value_display(other, allocator)
+		ok, compare_error := check_compare(actual, command.op, other)
+		if compare_error != "" {
+			result.error = compare_error
+			return result
+		}
+		result.ok = ok
+		return result
+	}
+	result.expected = check_value_display(command.value, allocator)
 	ok, compare_error := check_compare(actual, command.op, command.value)
 	if compare_error != "" {
 		result.error = compare_error
@@ -47,7 +64,7 @@ check_evaluate :: proc(
 @(private)
 check_field :: proc(
 	state: State,
-	capture: Capture_Summary,
+	captures: []Capture_Result,
 	analysis: ^Analysis_Summary,
 	path: string,
 ) -> (
@@ -61,10 +78,10 @@ check_field :: proc(
 		return analysis_field(analysis^, path[len("analysis."):])
 	}
 	if strings.has_prefix(path, "capture.") {
-		if capture.count == 0 {
+		if len(captures) == 0 {
 			return {}, format_error("%s", "no capture has run")
 		}
-		return capture_field(capture, path[len("capture."):])
+		return capture_path_field(captures, path[len("capture."):])
 	}
 	return state_field(state, path)
 }
@@ -124,152 +141,51 @@ compare_number :: proc(actual: f64, op: Check_Op, expected: f64) -> (bool, strin
 	return false, format_error("%s", "unknown check op")
 }
 
-state_field :: proc(state: State, path: string) -> (Check_Value, string) {
-	if path == "frame" {
-		return {kind = .Number, number = f64(state.frame)}, ""
-	}
-	if path == "digest" {
-		return {kind = .String, text = state.digest}, ""
-	}
-	if path == "render_digest" {
-		return {kind = .String, text = state.render_digest}, ""
-	}
-
+// `capture.N.*` names one capture in the check window, so two captures of the
+// same run can be compared without an absolute constant.
+@(private)
+capture_path_field :: proc(captures: []Capture_Result, path: string) -> (Check_Value, string) {
 	head, tail, has_tail := split_field(path)
-	switch head {
-	case "player":
-		if !has_tail {
-			return {}, format_error("%s", "player needs a field")
+	if has_tail {
+		switch head {
+		case "first":
+			return capture_one_field(captures[0], tail)
+		case "last":
+			return capture_one_field(captures[len(captures) - 1], tail)
 		}
-		return player_field(state.player, tail)
-	case "crates":
-		if !has_tail {
-			return {}, format_error("%s", "crates needs an index or 'count'")
+		if index, parse_ok := strconv.parse_int(head); parse_ok {
+			if index < 0 || index >= len(captures) {
+				return {}, fmt.aprintf(
+					"capture index %d is out of range",
+					index,
+					allocator = context.allocator,
+				)
+			}
+			return capture_one_field(captures[index], tail)
 		}
-		return crates_field(state.crates, tail)
-	case "settings":
-		if !has_tail {
-			return {}, format_error("%s", "settings needs a field")
-		}
-		return settings_field(state.settings, tail)
-	case "debug":
-		if !has_tail {
-			return {}, format_error("%s", "debug needs a field")
-		}
-		return debug_field(state.debug, tail)
-	case "sun":
-		if !has_tail {
-			return {}, format_error("%s", "sun needs a field")
-		}
-		return sun_field(state.sun, tail)
-	case "menu":
-		if !has_tail {
-			return {}, format_error("%s", "menu needs a field")
-		}
-		return menu_field(state.menu, tail)
-	case "renderer":
-		if !has_tail {
-			return {}, format_error("%s", "renderer needs a field")
-		}
-		return renderer_field(state.renderer, tail)
 	}
-	return {}, fmt.aprintf("unknown state field %q", path, allocator = context.allocator)
+	return capture_field(capture_summary(captures), path)
 }
 
 @(private)
-player_field :: proc(player: Player_State, path: string) -> (Check_Value, string) {
-	head, tail, has_tail := split_field(path)
-	switch head {
-	case "position":
-		if !has_tail {
-			return {}, format_error("%s", "position needs an axis")
-		}
-		return vec_field(player.position, tail)
-	case "eye":
-		if !has_tail {
-			return {}, format_error("%s", "eye needs an axis")
-		}
-		return vec_field(player.eye, tail)
-	case "velocity":
-		if !has_tail {
-			return {}, format_error("%s", "velocity needs an axis")
-		}
-		return vec_field(player.velocity, tail)
-	case "yaw":
-		return {kind = .Number, number = f64(player.yaw)}, ""
-	case "pitch":
-		return {kind = .Number, number = f64(player.pitch)}, ""
-	case "grounded":
-		return {kind = .Bool, boolean = player.grounded}, ""
+capture_one_field :: proc(capture: Capture_Result, path: string) -> (Check_Value, string) {
+	switch path {
+	case "delta_mean":
+		return {kind = .Number, number = f64(capture.delta_mean)}, ""
+	case "delta_max":
+		return {kind = .Number, number = f64(capture.delta_max)}, ""
+	case "delta_over_16":
+		return {kind = .Number, number = f64(capture.delta_over_16)}, ""
+	case "frame":
+		return {kind = .Number, number = f64(capture.frame)}, ""
+	case "written_width":
+		return {kind = .Number, number = f64(capture.written_width)}, ""
+	case "written_height":
+		return {kind = .Number, number = f64(capture.written_height)}, ""
+	case "render_digest":
+		return {kind = .String, text = capture.render_digest}, ""
 	}
-	return {}, fmt.aprintf("unknown player field %q", path, allocator = context.allocator)
-}
-
-@(private)
-crates_field :: proc(crates: []Crate_State, path: string) -> (Check_Value, string) {
-	head, tail, has_tail := split_field(path)
-	if head == "count" {
-		return {kind = .Number, number = f64(len(crates))}, ""
-	}
-	index, parse_ok := strconv.parse_int(head)
-	if !parse_ok || index < 0 || index >= len(crates) {
-		return {}, fmt.aprintf("crate index %q is out of range", head, allocator = context.allocator)
-	}
-	if !has_tail {
-		return {}, format_error("%s", "crate needs 'position' or 'rotation'")
-	}
-	crate := crates[index]
-	property, axis, has_axis := split_field(tail)
-	switch property {
-	case "position":
-		if !has_axis {
-			return {}, format_error("%s", "crate position needs an axis")
-		}
-		return vec_field(crate.position, axis)
-	case "rotation":
-		if !has_axis {
-			return {}, format_error("%s", "crate rotation needs an axis")
-		}
-		return quat_field(crate.rotation, axis)
-	}
-	return {}, fmt.aprintf("unknown crate field %q", tail, allocator = context.allocator)
-}
-
-@(private)
-vec_field :: proc(value: Vec_State, axis: string) -> (Check_Value, string) {
-	switch axis {
-	case "x":
-		return {kind = .Number, number = f64(value.x)}, ""
-	case "y":
-		return {kind = .Number, number = f64(value.y)}, ""
-	case "z":
-		return {kind = .Number, number = f64(value.z)}, ""
-	}
-	return {}, fmt.aprintf("unknown axis %q", axis, allocator = context.allocator)
-}
-
-@(private)
-quat_field :: proc(value: Quat_State, axis: string) -> (Check_Value, string) {
-	switch axis {
-	case "x":
-		return {kind = .Number, number = f64(value.x)}, ""
-	case "y":
-		return {kind = .Number, number = f64(value.y)}, ""
-	case "z":
-		return {kind = .Number, number = f64(value.z)}, ""
-	case "w":
-		return {kind = .Number, number = f64(value.w)}, ""
-	}
-	return {}, fmt.aprintf("unknown rotation axis %q", axis, allocator = context.allocator)
-}
-
-@(private)
-split_field :: proc(path: string) -> (head, tail: string, has_tail: bool) {
-	index := strings.index_byte(path, '.')
-	if index < 0 {
-		return path, "", false
-	}
-	return path[:index], path[index + 1:], true
+	return capture_field(capture_summary([]Capture_Result{capture}), path)
 }
 
 check_value_display :: proc(value: Check_Value, allocator: mem.Allocator) -> string {
@@ -283,4 +199,3 @@ check_value_display :: proc(value: Check_Value, allocator: mem.Allocator) -> str
 	}
 	return ""
 }
-

@@ -45,6 +45,8 @@ record_scene :: proc(
 	debug := renderer_debug(r)
 	r.render_digest = render_digest(
 		Render_Digest_Input {
+			width = r.target.config.width,
+			height = r.target.config.height,
 			camera = view.camera,
 			light_direction = view.light_direction,
 			sun_angular_diameter = view.sun_angular_diameter,
@@ -76,8 +78,11 @@ record_scene :: proc(
 	write_timing(r, command_buffer, .After_Tlas)
 	record_scene_depth(r, command_buffer, box_count)
 	write_timing(r, command_buffer, .After_Depth)
-	record_scene_color(r, command_buffer, box_count)
-	write_timing(r, command_buffer, .After_Scene)
+	record_scene_lit(r, command_buffer, box_count)
+	write_timing(r, command_buffer, .After_Lit)
+	record_sky_pass(r, command_buffer)
+	write_timing(r, command_buffer, .After_Sky)
+	record_scene_read_barriers(r, command_buffer)
 	record_taa_resolve(r, command_buffer, image_index)
 	write_timing(r, command_buffer, .After_Taa)
 	record_overlay_pass(r, command_buffer, image_index)
@@ -135,7 +140,7 @@ record_scene_depth :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_c
 	record_depth_prepass(r, command_buffer, box_count)
 }
 
-record_scene_color :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_count: int) {
+record_scene_lit :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_count: int) {
 	color := r.taa.scene_color[r.frame_index]
 	velocity := r.taa.velocity[r.frame_index]
 	depth := r.taa.depth[r.frame_index]
@@ -165,7 +170,11 @@ record_scene_color :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_c
 
 	record_depth_read_barrier(command_buffer, depth.image)
 	record_color_pass(r, command_buffer, box_count)
-	record_sky_pass(r, command_buffer)
+}
+
+record_scene_read_barriers :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer) {
+	color := r.taa.scene_color[r.frame_index]
+	velocity := r.taa.velocity[r.frame_index]
 
 	image_barrier(
 		command_buffer,

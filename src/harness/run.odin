@@ -4,8 +4,6 @@ package harness
 import "core:fmt"
 import "core:log"
 import "core:os"
-import "core:path/filepath"
-import "core:strings"
 
 EXIT_OK :: 0
 EXIT_CHECK :: 1
@@ -21,13 +19,29 @@ run_batch :: proc(options: Run_Options) -> int {
 	}
 	defer scenario_destroy(&scenario, context.allocator)
 
-	out_dir := options.out_dir
-	owned_out := false
-	if out_dir == "" {
-		stem := filepath.stem(options.scenario)
-		out_dir = fmt.aprintf("runs/%s", stem, allocator = context.allocator)
-		owned_out = true
+	common := options.common
+	if scenario.has_size {
+		if common.has_size {
+			print_summary_failure(
+				"the scenario declares 'size', so run --size cannot override it",
+				EXIT_SCENARIO,
+			)
+			return EXIT_SCENARIO
+		}
+		common.width = scenario.size[0]
+		common.height = scenario.size[1]
 	}
+	if common.debug_override_count > 0 {
+		command, command_error := build_renderer_debug_command(common, context.allocator)
+		if command_error != "" {
+			print_summary_failure(command_error, EXIT_SCENARIO)
+			delete(command_error, context.allocator)
+			return EXIT_SCENARIO
+		}
+		inject_command(&scenario, command)
+	}
+
+	out_dir, owned_out := run_output_dir(options.scenario, options.out_dir, common.tag, context.allocator)
 	absolute_out, abs_error := absolute_path(out_dir, context.allocator)
 	if abs_error != nil {
 		print_summary_failure("cannot resolve the output directory", EXIT_SCENARIO)
@@ -87,8 +101,8 @@ run_batch :: proc(options: Run_Options) -> int {
 	backend_error := ""
 	if needs_backend {
 		created, create_error := backend_create(
-			options.width,
-			options.height,
+			common.width,
+			common.height,
 			options.present,
 			frames_dir,
 			context.allocator,
@@ -156,11 +170,11 @@ run_batch :: proc(options: Run_Options) -> int {
 	report_path := join_path({staging, "report.json"}, context.allocator)
 	defer delete(report_path, context.allocator)
 	report := Report {
-		scenario    = options.scenario,
+		scenario    = scenario.source,
 		run_dir     = absolute_out,
 		frame       = state.frame,
 		state       = state,
-		setup       = setup_build(options.common, session.view, backend),
+		setup       = setup_build(common, session.view, backend),
 		screenshots = session.captures[:],
 		checks      = session.checks[:],
 		failures    = session.failures[:],
@@ -221,67 +235,4 @@ run_batch :: proc(options: Run_Options) -> int {
 		delete(failure, context.allocator)
 	}
 	return exit_code
-}
-
-@(private)
-execute_commands :: proc(session: ^Session, scenario: Scenario, render_enabled: bool) -> string {
-	for command in scenario.commands {
-		log.infof("harness: %s at frame %d", command_name(command.kind), session.frame)
-		backend_ready := session.backend != nil && session.backend.ready
-		if command.kind == .Capture && (!render_enabled || !backend_ready) {
-			log.warn("harness: capture skipped because rendering is disabled")
-			continue
-		}
-		reply := session_execute(session, command, "")
-		ok := reply.ok
-		error := ""
-		if !ok && command.kind != .Check {
-			error = strings.clone(reply.error, context.allocator)
-		}
-		reply_destroy(&reply, context.allocator)
-		if command.kind == .Check {
-			continue
-		}
-		if !ok || session.quit {
-			return error
-		}
-	}
-	return ""
-}
-
-scenario_has_capture :: proc(scenario: Scenario) -> bool {
-	for command in scenario.commands {
-		if command.kind == .Capture {
-			return true
-		}
-	}
-	return false
-}
-
-@(private)
-scenario_has_perf :: proc(scenario: Scenario) -> bool {
-	for command in scenario.commands {
-		if command.kind == .Perf {
-			return true
-		}
-	}
-	return false
-}
-
-@(private)
-rewrite_capture_paths :: proc(session: ^Session, out_dir: string) {
-	for &capture in session.captures {
-		if capture.path == "" {
-			continue
-		}
-		filename := filepath.base(capture.path)
-		final_path := join_path({out_dir, "frames", filename}, context.allocator)
-		if final_path == "" {
-			continue
-		}
-		if capture.path != "" {
-			delete(capture.path, context.allocator)
-		}
-		capture.path = final_path
-	}
 }

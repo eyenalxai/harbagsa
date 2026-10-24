@@ -2,6 +2,7 @@
 package harness
 
 import "core:fmt"
+import "core:math"
 import "core:strings"
 
 import b3 "libs:box3d"
@@ -22,6 +23,8 @@ Reply :: struct {
 	replay:   ^Replay_Summary `json:"replay,omitempty"`,
 	perf:     ^Perf_Report   `json:"perf,omitempty"`,
 	trace:    string         `json:"trace,omitempty"`,
+	rows:     ^Rows_State    `json:"rows,omitempty"`,
+	displays: ^Displays_State `json:"displays,omitempty"`,
 }
 
 Replay_Summary :: struct {
@@ -43,6 +46,14 @@ reply_destroy :: proc(reply: ^Reply, allocator := context.allocator) {
 	}
 	if reply.replay != nil {
 		free(reply.replay, allocator)
+	}
+	if reply.rows != nil {
+		rows_state_destroy(reply.rows, allocator)
+		free(reply.rows, allocator)
+	}
+	if reply.displays != nil {
+		displays_state_destroy(reply.displays, allocator)
+		free(reply.displays, allocator)
 	}
 	reply^ = {}
 }
@@ -69,7 +80,7 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 		command_error = session_step(session, command.step.frames)
 		owns_error = true
 	case .Settle:
-		command_error = session_settle(session, command.settle.frames)
+		command_error = session_settle(session, command.settle)
 		owns_error = true
 	case .State:
 		reply.state = new(State, session.allocator)
@@ -86,11 +97,15 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 			session.camera_override = {}
 			session.has_camera_override = false
 		} else {
+			fov := frame.PLAYER_FOV_X
+			if command.camera.has_fov {
+				fov = math.to_radians(command.camera.fov)
+			}
 			session.camera_override = {
 				position = command.camera.position,
 				yaw      = command.camera.yaw,
 				pitch    = command.camera.pitch,
-				fov_x    = frame.PLAYER_FOV_X,
+				fov_x    = fov,
 			}
 			session.has_camera_override = true
 		}
@@ -125,7 +140,7 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 		result := check_evaluate(
 			command.check,
 			state,
-			capture_summary(window),
+			window,
 			analysis,
 			session.allocator,
 		)
@@ -170,6 +185,14 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 	case .Renderer_Debug:
 		command_error = session_renderer_debug(session, command.renderer_debug)
 		owns_error = true
+	case .Displays:
+		session_displays(session, command.displays)
+		reply.displays = new(Displays_State, session.allocator)
+		reply.displays^ = displays_state_build(&session.hud.menu.displays, session.allocator)
+	case .Rows:
+		session_refresh_hud(session)
+		reply.rows = new(Rows_State, session.allocator)
+		reply.rows^ = rows_state_build(&session.hud, session.allocator)
 	case .Quit:
 		if session.recording {
 			recorded, _ := session_record_stop(session)
@@ -252,7 +275,7 @@ session_record_command :: proc(session: ^Session, command: Command, raw_line: st
 			allocator = session.allocator,
 		)
 		append(&session.recorded, line)
-	case .Record, .Replay, .Quit, .Perf:
+	case .Record, .Replay, .Quit, .Perf, .Rows:
 		// A perf command measures wall time. Recording it would make a replay
 		// measure again, and the numbers would differ.
 	case:

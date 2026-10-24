@@ -1,0 +1,8 @@
+{
+  "extends": "base.json",
+  "parameters": {"elevation": 70, "name": "high-sun"},
+  "checks": [
+    {"field": "sun.elevation", "op": "gt", "value": 69},
+    {"field": "sun.elevation", "op": "lt", "value": 71}
+  ]
+}

@@ -23,7 +23,9 @@ display_press_is_blocked_with_one_display :: proc(t: ^testing.T) {
 
 	game.menu_view(&menu, sim.settings, false)
 	testing.expect(t, menu.view.rows[1].blocked, "the Display row is not blocked")
-	testing.expect_value(t, menu.status, "")
+	// The note belongs to the blocked press, so the harness can read it after
+	// the frame that drew it.
+	testing.expect_value(t, menu.status, game.MENU_STATUS_ONE_DISPLAY)
 }
 
 @(test)
@@ -126,7 +128,7 @@ weight_press_is_blocked_at_the_axis_limits :: proc(t: ^testing.T) {
 }
 
 @(test)
-blocked_status_lasts_one_rendered_frame :: proc(t: ^testing.T) {
+blocked_status_stays_until_the_next_change :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 	menu: game.Menu_State
@@ -137,8 +139,12 @@ blocked_status_lasts_one_rendered_frame :: proc(t: ^testing.T) {
 	_ = game.menu_change_setting(&menu, &sim.settings, 1)
 	game.menu_view(&menu, sim.settings, false)
 	testing.expect_value(t, menu.view.note, game.MENU_STATUS_MAX_WEIGHT)
-	testing.expect_value(t, menu.status, "")
+	testing.expect_value(t, menu.status, game.MENU_STATUS_MAX_WEIGHT)
 
+	game.menu_view(&menu, sim.settings, false)
+	testing.expect_value(t, menu.view.note, game.MENU_STATUS_MAX_WEIGHT)
+
+	_ = game.menu_change_setting(&menu, &sim.settings, -1)
 	game.menu_view(&menu, sim.settings, false)
 	testing.expect_value(t, menu.view.note, game.MENU_NOTE)
 }

@@ -1,7 +1,11 @@
 #+vet explicit-allocators
 package harness
 
+import "core:math"
+
 import "src:digest"
+import "src:frame"
+import "src:game"
 import "src:renderer"
 
 @(private)
@@ -37,6 +41,8 @@ session_state :: proc(session: ^Session) -> State {
 		last_reset         = renderer.reset_reason_name(report.last_reset),
 		shadow_phase       = report.shadow_phase,
 		atlas_weight       = report.atlas_weight,
+		text_truncated_runs = report.text_truncated_runs,
+		text_font_drops     = report.text_font_drops,
 		debug = {
 			active              = report.debug.active,
 			taa                 = report.debug.taa,
@@ -53,10 +59,33 @@ session_state :: proc(session: ^Session) -> State {
 	return state_build(
 		&session.sim,
 		session.frame,
-		&session.hud.menu,
+		&session.hud,
 		&session.debug,
+		session_camera(session),
 		renderer_state,
 		session.render_digest_text,
+		{ frames = session.settle_frames, converged = session.settle_converged },
 		session.allocator,
 	)
+}
+
+@(private)
+session_camera :: proc(session: ^Session) -> Camera_State {
+	if session.has_camera_override {
+		camera := session.camera_override
+		return {
+			position = vec_state(camera.position),
+			yaw = camera.yaw,
+			pitch = camera.pitch,
+			fov = math.to_degrees(camera.fov_x),
+			overridden = true,
+		}
+	}
+	snapshot := game.simulation_snapshot(&session.sim)
+	return {
+		position = vec_state(snapshot.eye_position),
+		yaw = snapshot.yaw,
+		pitch = snapshot.pitch,
+		fov = math.to_degrees(frame.PLAYER_FOV_X),
+	}
 }

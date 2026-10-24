@@ -6,6 +6,7 @@ import "core:fmt"
 import "src:perf"
 
 MAX_STEP_FRAMES :: 1_000_000
+MAX_SETTLE_FRAMES :: 1024
 MAX_SESSION_LINE :: 1 << 20
 
 MAX_PERF_FRAMES :: perf.RING_CAPACITY

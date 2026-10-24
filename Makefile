@@ -11,10 +11,21 @@ AGENT := cmd/harbagsa-agent
 HARNESS_REVISION := $(shell git rev-parse --short HEAD 2>/dev/null || printf unknown)
 HARNESS_DIRTY := $(shell if git rev-parse --git-dir >/dev/null 2>&1 && git diff --quiet 2>/dev/null; then printf false; else printf true; fi)
 AGENT_DEFINES := -define:HARNESS_REVISION=$(HARNESS_REVISION) -define:HARNESS_DIRTY=$(HARNESS_DIRTY)
+AGENT_BUILD := $(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) $(AGENT_DEFINES) -out:$(AGENT_BIN)
 VALIDATE_AGENT_BIN := bin/harbagsa-agent-validate
-VALIDATE_SCENARIO := scenarios/smoke.json
-VALIDATE_OFFSCREEN_SCENARIOS := smoke type-weight settings-menu ui shadow-angle perf-crates
+VALIDATE_SCENARIO ?= scenarios/smoke.json
+VALIDATE_OFFSCREEN_SCENARIOS ?= smoke type-weight settings-menu ui shadow-angle perf-crates
 VALIDATE_OUT := build/validate
+AGENT_FLAGS ?=
+SCENARIO ?=
+OUT ?=
+JQ ?= jq
+
+# A selector without a slash or a .json suffix names a file in scenarios/.
+scenario_path = $(if $(or $(findstring /,$(1)),$(filter %.json,$(1))),$(1),scenarios/$(1).json)
+scenario_paths = $(foreach selector,$(1),$(call scenario_path,$(selector)))
+validation_scenarios = $(if $(strip $(SCENARIO)),$(SCENARIO),$(VALIDATE_SCENARIO))
+offscreen_scenarios = $(if $(strip $(SCENARIO)),$(SCENARIO),$(VALIDATE_OFFSCREEN_SCENARIOS))
 
 GLSLC ?= glslc
 SPIRV_VAL ?= spirv-val
@@ -71,7 +82,7 @@ VULKAN_LAYER_DIRS ?= \
 	/usr/share/vulkan/explicit_layer.d
 VALIDATION_LAYER := VK_LAYER_KHRONOS_validation
 
-.PHONY: all build check check-spirv check-lines test run shaders validate validate-offscreen validate-demo check-validation-layer clean
+.PHONY: all build agent check check-spirv check-lines test run shaders validate validate-offscreen validate-demo check-validation-layer shot smoke ui clean
 
 all: build
 
@@ -136,10 +147,14 @@ check-spirv: shaders
 		exit $$status; \
 	fi
 
+agent: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
+	@mkdir -p $(dir $(AGENT_BIN))
+	$(AGENT_BUILD)
+
 build: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	mkdir -p bin
 	$(ODIN) build . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -out:$(BIN)
-	$(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) $(AGENT_DEFINES) -out:$(AGENT_BIN)
+	$(AGENT_BUILD)
 
 check: check-lines check-spirv $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) check . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
@@ -202,12 +217,30 @@ validate: check-validation-layer $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) sh
 	@mkdir -p $(dir $(VALIDATE_AGENT_BIN))
 	$(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) \
 		$(AGENT_DEFINES) -define:ENABLE_VALIDATION_LAYERS=true -out:$(VALIDATE_AGENT_BIN)
-	$(VALIDATE_AGENT_BIN) run $(VALIDATE_SCENARIO) --out $(VALIDATE_OUT)/offscreen
-	@if [ -n "$${WAYLAND_DISPLAY:-}$${DISPLAY:-}" ]; then \
-		$(VALIDATE_AGENT_BIN) run $(VALIDATE_SCENARIO) --present --out $(VALIDATE_OUT)/present; \
-	else \
+	@status=0; \
+	scenarios='$(call scenario_paths,$(validation_scenarios))'; \
+	for selector in $$scenarios; do \
+		stem=$$(basename "$$selector" .json); \
+		printf '%s\n' "validate: $$selector"; \
+		if ! $(VALIDATE_AGENT_BIN) run "$$selector" $(AGENT_FLAGS) --out $(VALIDATE_OUT)/offscreen/$$stem; then \
+			status=1; \
+			break; \
+		fi; \
+	done; \
+	if [ $$status -eq 0 ] && [ -n "$${WAYLAND_DISPLAY:-}$${DISPLAY:-}" ]; then \
+		for selector in $$scenarios; do \
+			stem=$$(basename "$$selector" .json); \
+			printf '%s\n' "validate --present: $$selector"; \
+			if ! $(VALIDATE_AGENT_BIN) run "$$selector" $(AGENT_FLAGS) --present --out $(VALIDATE_OUT)/present/$$stem; then \
+				status=1; \
+				break; \
+			fi; \
+		done; \
+	fi; \
+	if [ $$status -eq 0 ] && [ -z "$${WAYLAND_DISPLAY:-}$${DISPLAY:-}" ]; then \
 		printf '%s\n' 'make validate: no display, skipping the present run'; \
-	fi
+	fi; \
+	exit $$status
 
 # The offscreen loop never opens a window, so it is the validation target an
 # agent can run. Each scenario owns its output directory and the loop stops on
@@ -217,9 +250,59 @@ validate-offscreen: check-validation-layer $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBU
 	$(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) \
 		$(AGENT_DEFINES) -define:ENABLE_VALIDATION_LAYERS=true -out:$(VALIDATE_AGENT_BIN)
 	@status=0; \
-	for scenario in $(VALIDATE_OFFSCREEN_SCENARIOS); do \
-		printf '%s\n' "validate-offscreen: $$scenario"; \
-		if ! $(VALIDATE_AGENT_BIN) run scenarios/$$scenario.json --out $(VALIDATE_OUT)/offscreen/$$scenario; then \
+	for selector in $(call scenario_paths,$(offscreen_scenarios)); do \
+		stem=$$(basename "$$selector" .json); \
+		printf '%s\n' "validate-offscreen: $$selector"; \
+		if ! $(VALIDATE_AGENT_BIN) run "$$selector" $(AGENT_FLAGS) --out $(VALIDATE_OUT)/offscreen/$$stem; then \
+			status=1; \
+			break; \
+		fi; \
+	done; \
+	exit $$status
+
+# Evidence targets run the normal agent, never the validation build. They share
+# bin/harbagsa-agent so a capture always comes from the same code path.
+shot: agent
+	@if [ -z '$(strip $(SCENARIO))' ]; then \
+		printf '%s\n' 'make shot: set SCENARIO=<name> or SCENARIO=scenarios/<name>.json' >&2; \
+		exit 2; \
+	fi
+	@if ! command -v $(JQ) >/dev/null 2>&1; then \
+		printf '%s\n' 'make shot: jq is required to read report.json' >&2; \
+		exit 1; \
+	fi
+	@selector=$(call scenario_path,$(firstword $(SCENARIO))); \
+	stem=$$(basename "$$selector" .json); \
+	out=$(if $(strip $(OUT)),$(OUT),runs/$$stem); \
+	report="$$out/report.json"; \
+	printf '%s\n' "make shot: $$selector -> $$out"; \
+	$(AGENT_BIN) run "$$selector" --out "$$out" || exit $$?; \
+	if [ ! -f "$$report" ]; then \
+		printf 'make shot: no report at %s\n' "$$report" >&2; \
+		exit 1; \
+	fi; \
+	paths=$$($(JQ) -r '.screenshots[].path // empty' "$$report") || { \
+		printf 'make shot: cannot read captures from %s\n' "$$report" >&2; \
+		exit 1; \
+	}; \
+	if [ -z "$$paths" ]; then \
+		printf 'make shot: %s recorded no captures\n' "$$report" >&2; \
+		exit 1; \
+	fi; \
+	printf '%s\n' "$$paths"
+
+smoke: agent
+	@out=$(if $(strip $(OUT)),$(OUT),runs/smoke-make); \
+	printf '%s\n' "make smoke: scenarios/smoke.json -> $$out"; \
+	$(AGENT_BIN) run scenarios/smoke.json --out "$$out"
+
+ui: agent
+	@status=0; \
+	for selector in scenarios/ui.json scenarios/settings-menu.json scenarios/type-weight.json scenarios/hud.json; do \
+		stem=$$(basename "$$selector" .json); \
+		out=runs/ui-$$stem; \
+		printf '%s\n' "make ui: $$selector -> $$out"; \
+		if ! $(AGENT_BIN) run "$$selector" --out "$$out"; then \
 			status=1; \
 			break; \
 		fi; \
