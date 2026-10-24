@@ -36,6 +36,10 @@ Events :: struct {
 	prone_pressed:       bool,
 	look_delta:          [2]f32,
 	wheel_delta:         f32,
+	pointer:             [2]f32,
+	pointer_down:        bool,
+	pointer_pressed:     bool,
+	pointer_released:    bool,
 	jump_pressed:        bool,
 	jump_held:           bool,
 	reset_pressed:       bool,
@@ -60,9 +64,6 @@ Events :: struct {
 	captured:            bool,
 }
 
-sync_window :: proc(window: ^Window) {
-	sdl3.SyncWindow(window.handle)
-}
 
 init :: proc(title: cstring, width, height: i32, fullscreen := false) -> (window: Window, err: Error) {
 	if !sdl3.Init({.VIDEO}) {
@@ -138,6 +139,10 @@ wait_events :: proc(window: ^Window, timeout_ms: i32) -> (events: Events) {
 
 drain_events :: proc(window: ^Window, first: ^sdl3.Event) -> (events: Events) {
 	events.captured = sdl3.GetWindowRelativeMouseMode(window.handle)
+	mouse_x, mouse_y: f32
+	buttons := sdl3.GetMouseState(&mouse_x, &mouse_y)
+	events.pointer = {mouse_x, mouse_y}
+	events.pointer_down = sdl3.MouseButtonFlag.LEFT in buttons
 	if first != nil {
 		apply_event(&events, first, window)
 	}
@@ -184,21 +189,8 @@ read_movement :: proc(events: ^Events) {
 	}
 }
 
-is_minimized :: proc(window: ^Window) -> bool {
-	return .MINIMIZED in sdl3.GetWindowFlags(window.handle)
-}
 
-pixel_size :: proc(window: ^Window) -> (width, height: u32) {
-	w, h: c.int
-	if !sdl3.GetWindowSizeInPixels(window.handle, &w, &h) {
-		log.errorf("platform: SDL_GetWindowSizeInPixels failed: %v", sdl3.GetError())
-		return 0, 0
-	}
-	if w <= 0 || h <= 0 {
-		return 0, 0
-	}
-	return u32(w), u32(h)
-}
+
 
 apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 	#partial switch event.type {
@@ -208,6 +200,8 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 		events.resized = true
 	case .MOUSE_BUTTON_DOWN:
 		if event.button.button == sdl3.BUTTON_LEFT {
+			events.pointer_down = true
+			events.pointer_pressed = true
 			if events.captured {
 				events.primary_pressed = true
 			} else if window.capture_on_click {
@@ -216,6 +210,8 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 		}
 	case .MOUSE_BUTTON_UP:
 		if event.button.button == sdl3.BUTTON_LEFT {
+			events.pointer_down = false
+			events.pointer_released = true
 			events.primary_released = true
 		}
 	case .MOUSE_WHEEL:
@@ -269,20 +265,10 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 			events.sun_pressed = true
 		}
 	case .MOUSE_MOTION:
+		events.pointer = {event.motion.x, event.motion.y}
 		if events.captured {
 			events.look_delta.x += event.motion.xrel
 			events.look_delta.y += event.motion.yrel
 		}
 	}
-}
-
-set_cursor_capture :: proc(window: ^Window, enabled: bool) -> bool {
-	if !sdl3.SetWindowRelativeMouseMode(window.handle, enabled) {
-		log.errorf("platform: SDL_SetWindowRelativeMouseMode failed: %v", sdl3.GetError())
-	}
-	return sdl3.GetWindowRelativeMouseMode(window.handle)
-}
-
-set_click_capture :: proc(window: ^Window, allowed: bool) {
-	window.capture_on_click = allowed
 }

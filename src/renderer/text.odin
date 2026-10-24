@@ -2,7 +2,6 @@
 package renderer
 
 import "core:math"
-import "core:unicode/utf8"
 
 // Rects carry this uv so the fragment shader skips the atlas sample. A negative
 // coordinate cannot collide with a real glyph, whose uv is always in [0, 1].
@@ -23,29 +22,33 @@ text_layer_px :: proc(type: Text_Type) -> u32 {
 	return u32(max(math.round(type.size), 1))
 }
 
-// Falls back to the nearest pixel size of the same face. A style that names a
-// size the atlas was not built for still draws, at the closest size it has.
+// Falls back to the nearest weight of the same face, then the nearest size. A
+// style that names a layer the atlas does not have still draws in its own face.
 text_layer_index :: proc(atlas: ^Text_Atlas, type: Text_Type) -> int {
 	px := text_layer_px(type)
-	best := 0
+	weight := text_style_weight(type)
+	best := -1
 	best_distance := max(f32)
 	for layer, index in atlas.layers[:atlas.count] {
-		if layer.key.weight == type.weight {
-			if layer.key.px == px {
-				return index
-			}
-			distance := abs(f32(layer.key.px) - f32(px))
-			if distance < best_distance {
-				best_distance = distance
-				best = index
-			}
+		if layer.key.face != type.face {
+			continue
+		}
+		if layer.key.weight == weight && layer.key.px == px {
+			return index
+		}
+		distance :=
+			abs(f32(layer.key.weight) - f32(weight)) * 1000.0 +
+			abs(f32(layer.key.px) - f32(px))
+		if distance < best_distance {
+			best_distance = distance
+			best = index
 		}
 	}
 	return best
 }
 
-// Every face and pixel size a theme can draw, sorted so two builds from the same
-// theme compare equal.
+// Every face, weight, and pixel size a theme can draw, sorted so two builds from
+// the same theme compare equal.
 text_theme_layer_set :: proc(theme: UI_Theme) -> Text_Layer_Set {
 	set: Text_Layer_Set
 	styles := [5]Text_Type {
@@ -56,9 +59,20 @@ text_theme_layer_set :: proc(theme: UI_Theme) -> Text_Layer_Set {
 		theme.type_caption_caps,
 	}
 	for style in styles {
-		text_layer_set_add(&set, {weight = style.weight, px = text_layer_px(style)})
+		text_layer_set_add(
+			&set,
+			{face = style.face, weight = text_style_weight(style), px = text_layer_px(style)},
+		)
 	}
-	text_layer_set_add(&set, {weight = .Mono, px = text_layer_px(theme.type_body)})
+	mono_weight := text_mono_weight(theme.type_body.weight)
+	text_layer_set_add(
+		&set,
+		{face = .Mono, weight = mono_weight, px = text_layer_px(theme.type_body)},
+	)
+	text_layer_set_add(
+		&set,
+		{face = .Mono, weight = mono_weight, px = text_layer_px(theme.type_caption)},
+	)
 	return set
 }
 
@@ -75,11 +89,19 @@ text_atlas_covers :: proc(atlas: ^Text_Atlas, set: Text_Layer_Set) -> bool {
 }
 
 text_ascent :: proc(atlas: ^Text_Atlas, style: Text_Type) -> f32 {
-	return atlas.layers[text_layer_index(atlas, style)].ascent
+	index := text_layer_index(atlas, style)
+	if index < 0 {
+		return 0
+	}
+	return atlas.layers[index].ascent
 }
 
 text_descent :: proc(atlas: ^Text_Atlas, style: Text_Type) -> f32 {
-	return atlas.layers[text_layer_index(atlas, style)].descent
+	index := text_layer_index(atlas, style)
+	if index < 0 {
+		return 0
+	}
+	return atlas.layers[index].descent
 }
 
 // Distance from the top of a line box to the baseline, with the ascent and
@@ -90,75 +112,15 @@ text_baseline :: proc(atlas: ^Text_Atlas, style: Text_Type) -> f32 {
 	return (style.line_height - (ascent - descent)) * 0.5 + ascent
 }
 
-Text_Cursor :: struct {
-	atlas:   ^Text_Atlas,
-	layer:   int,
-	style:   Text_Type,
-	text:    string,
-	byte:    int,
-	pen:     f32,
-	prev:    int,
-	emitted: int,
-}
-
-text_cursor_init :: proc(cursor: ^Text_Cursor, atlas: ^Text_Atlas, style: Text_Type, text: string) {
-	cursor.atlas = atlas
-	cursor.layer = text_layer_index(atlas, style)
-	cursor.style = style
-	cursor.text = text
-	cursor.byte = 0
-	cursor.pen = 0
-	cursor.prev = -1
-	cursor.emitted = 0
-}
-
-// Yields one placeable glyph at a time so measuring and drawing cannot drift
-// apart: both walk exactly this loop.
-text_cursor_next :: proc(cursor: ^Text_Cursor) -> (glyph: Text_Glyph, x: f32, ok: bool) {
-	layer := &cursor.atlas.layers[cursor.layer]
-	for cursor.byte < len(cursor.text) {
-		r, width := utf8.decode_rune_in_string(cursor.text[cursor.byte:])
-		cursor.byte += width
-		if cursor.style.caps && r >= 'a' && r <= 'z' {
-			r -= 'a' - 'A'
-		}
-
-		index, found := text_codepoint_index(r)
-		if !found {
-			continue
-		}
-		if cursor.prev >= 0 {
-			cursor.pen += layer.kern[cursor.prev * TEXT_CODEPOINT_COUNT + index]
-		}
-
-		glyph = layer.glyphs[index]
-		x = cursor.pen
-		cursor.pen += glyph.advance
-		if cursor.style.tracking != 0 {
-			cursor.pen += cursor.style.tracking * cursor.style.size
-		}
-		cursor.prev = index
-		cursor.emitted += 1
-		return glyph, x, true
-	}
-	return {}, 0, false
-}
-
 text_measure :: proc(atlas: ^Text_Atlas, style: Text_Type, text: string) -> f32 {
-	cursor: Text_Cursor
-	text_cursor_init(&cursor, atlas, style, text)
-	for {
-		_, _, ok := text_cursor_next(&cursor)
-		if !ok {
-			break
-		}
+	if text_layer_index(atlas, style) < 0 {
+		return 0
 	}
-	// Tracking is a gap between glyphs; the last one must not carry a trailing
-	// gap or every centred string sits half a tracking unit off centre.
-	if cursor.style.tracking != 0 && cursor.emitted > 0 {
-		cursor.pen -= cursor.style.tracking * cursor.style.size
+	run: Text_Run
+	if !text_shape(atlas, style, text, &run) {
+		return 0
 	}
-	return cursor.pen
+	return run.width
 }
 
 // Splits a pen position into a whole-pixel origin and a sub-pixel phase. The
@@ -171,21 +133,29 @@ text_place :: proc(position: f32) -> (origin: f32, phase: int) {
 }
 
 text_emit :: proc(o: ^Overlay, x, baseline: f32, style: Text_Style, text: string) {
-	cursor: Text_Cursor
-	text_cursor_init(&cursor, &o.atlas, style.type, text)
+	layer_index := text_layer_index(&o.atlas, style.type)
+	if layer_index < 0 {
+		return
+	}
+	layer := &o.atlas.layers[layer_index]
+	run: Text_Run
+	if !text_shape(&o.atlas, style.type, text, &run) {
+		return
+	}
 	// A coverage atlas is only exact on the pixel grid, so the line snaps
 	// vertically and each glyph snaps horizontally. Its sub-pixel offset moves
 	// into the phase, which keeps the advance fractional.
 	row := math.round(baseline)
-	for {
-		glyph, pen_x, ok := text_cursor_next(&cursor)
-		if !ok {
-			break
+	for index in 0 ..< run.count {
+		glyph_index := run.glyphs[index]
+		if glyph_index < 0 || glyph_index >= len(layer.glyphs) {
+			continue
 		}
+		glyph := layer.glyphs[glyph_index]
 		if !glyph.present {
 			continue
 		}
-		origin, phase := text_place(x + pen_x)
+		origin, phase := text_place(x + run.x[index])
 		placed := glyph.phases[phase]
 		left := origin + placed.offset.x
 		top := row + placed.offset.y

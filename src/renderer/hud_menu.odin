@@ -15,6 +15,8 @@ Hint_Grid :: struct {
 	row_height:   f32,
 }
 
+MENU_WEIGHT_HEADROOM :: f32(1.05)
+
 build_menu :: proc(o: ^Overlay, width, height: f32, menu: ui.Menu) {
 	theme := o.theme
 	padding := theme.spacing.xl
@@ -32,6 +34,10 @@ build_menu :: proc(o: ^Overlay, width, height: f32, menu: ui.Menu) {
 	content_width = max(content_width, title_width)
 	content_width = max(content_width, note_width)
 	content_width = max(content_width, theme.menu_min_width)
+	if o.menu_frozen_width == 0 {
+		o.menu_frozen_width = content_width * MENU_WEIGHT_HEADROOM
+	}
+	content_width = max(content_width, o.menu_frozen_width)
 
 	title_height := theme.type_title.line_height
 	note_height := theme.type_caption.line_height

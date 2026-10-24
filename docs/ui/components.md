@@ -82,13 +82,13 @@ turns grey instead of a hairline.
 
 ## Selection band
 
-Use on a `Setting` or `Action` row only. Two signals together: the row lifts to
+Use on a `Setting`, `Action`, or `Slider` row only. Two signals together: the row lifts to
 `surface_raised`, and a two-pixel `accent` bar sits on its leading edge.
 
 ```odin
-if options.band_width > 0 && index == options.selected && selectable {
-	hud_emit_rect(o, options.band_x, y - pad, options.band_width, height + pad * 2, theme.surface_raised)
-	hud_emit_rect(o, options.band_x, y - pad, max(theme.hairline * 2, 2), height + pad * 2, theme.accent)
+if options.frame_width > 0 && index == options.selected && selectable {
+	hud_emit_rect(o, options.frame_x, y - pad, options.frame_width, height + pad * 2, theme.surface_raised)
+	hud_emit_rect(o, options.frame_x, y - pad, max(theme.hairline * 2, 2), height + pad * 2, theme.accent)
 	row_style.color = theme.text_primary
 }
 ```
@@ -132,6 +132,7 @@ up; the original panel shipped exactly this.
 | `Action` | label only, runs on activate | yes |
 | `Metric` | label and value in body size | no |
 | `Detail` | label and value in caption, dimmed | no |
+| `Slider` | label and number, full-width ticked track below | yes |
 | `Header` | tracked capitals, starts a section | no |
 | `Divider` | one separator line | no |
 | `Spacer` | a gap, for rhythm only | no |
@@ -139,4 +140,26 @@ up; the original panel shipped exactly this.
 An unlisted kind does not exist. If a surface needs one, extend `Row_Kind` and all
 four of `row_label_style`, `row_value_style`, `row_gap`, and `row_height` in the
 same change. A kind that only two of the four know about draws at the wrong
-height.
+height. A kind that draws a control also needs its emitter: the `Slider` adds
+`rows_emit_slider` and publishes its travel rect for the pointer.
+
+## Slider row
+
+Use for one continuous value with named stops. The settings menu uses it for the
+Type weight. At density 1:
+
+- Line one is 22.5 px tall. The label sits at the left in `type_body_strong`,
+  the value right-aligned at the inner edge in `type_body`, numeric.
+- A 6 px gap, then a 12 px track zone: a 2 px track, nine 1x6 ticks, and an 8x8
+  knob. The row is 40.5 px tall.
+- The track spans the panel inner width. The knob travel is `inner_width - knob`;
+  stop `i` centres at `inner_x + knob / 2 + i * travel / 8`. The fill runs from
+  the inner edge to the knob centre.
+- The track uses `line_separator`; the ticks use `text_tertiary`; the fill uses
+  `text_secondary`; the knob uses `text_primary`. `accent` stays the selection
+  bar.
+- The selection band grows to 44.5 px and still carries the 2 px accent bar.
+
+Incorrect: drawing the fill in `accent`, or sizing the track from the value
+column. The track is the inner width, and a selected row already has the accent
+bar.

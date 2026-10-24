@@ -39,7 +39,8 @@ UI_MENU_MIN_WIDTH :: 200.0
 Text_Type :: struct {
 	size:        f32,
 	line_height: f32,
-	weight:      Text_Weight,
+	face:        Text_Face,
+	weight:      f32,
 	tracking:    f32,
 	caps:        bool,
 }
@@ -82,8 +83,10 @@ UI_Theme :: struct {
 	crosshair_edge: [4]f32,
 }
 
-ui_theme_init :: proc(render_height: u32) -> UI_Theme {
+ui_theme_init :: proc(render_height: u32, base_weight: f32 = BASE_WEIGHT) -> UI_Theme {
 	density := clamp(f32(render_height) / UI_REFERENCE_HEIGHT, 1.0, 2.0)
+	weight := clamp(math.round(base_weight), MIN_WEIGHT, MAX_WEIGHT)
+	strong := clamp(weight + 100, MIN_WEIGHT, MAX_WEIGHT)
 	theme: UI_Theme
 	theme.density = density
 	// One device pixel, never a fraction of one: a half-pixel hairline resolves
@@ -104,14 +107,15 @@ ui_theme_init :: proc(render_height: u32) -> UI_Theme {
 		xxl = 24.0 * density,
 	}
 
-	theme.type_title = text_type(UI_TEXT_SIZE_TITLE, UI_LEADING_TITLE, .Medium, UI_TRACKING_TITLE, density)
-	theme.type_body = text_type(UI_TEXT_SIZE_BODY, UI_LEADING_BODY, .Regular, 0, density)
-	theme.type_body_strong = text_type(UI_TEXT_SIZE_BODY, UI_LEADING_BODY, .Medium, 0, density)
-	theme.type_caption = text_type(UI_TEXT_SIZE_CAPTION, UI_LEADING_CAPTION, .Regular, 0, density)
+	theme.type_title = text_type(UI_TEXT_SIZE_TITLE, UI_LEADING_TITLE, .Sans, strong, UI_TRACKING_TITLE, density)
+	theme.type_body = text_type(UI_TEXT_SIZE_BODY, UI_LEADING_BODY, .Sans, weight, 0, density)
+	theme.type_body_strong = text_type(UI_TEXT_SIZE_BODY, UI_LEADING_BODY, .Sans, strong, 0, density)
+	theme.type_caption = text_type(UI_TEXT_SIZE_CAPTION, UI_LEADING_CAPTION, .Sans, weight, 0, density)
 	theme.type_caption_caps = text_type(
 		UI_TEXT_SIZE_CAPTION,
 		UI_LEADING_CAPTION,
-		.Medium,
+		.Sans,
+		strong,
 		UI_TRACKING_CAPS,
 		density,
 	)
@@ -135,9 +139,20 @@ ui_theme_init :: proc(render_height: u32) -> UI_Theme {
 // A text size is an em in device pixels, rounded so it keys the rasterization
 // atlas exactly. Leading multiplies the rounded size, so the line box and the
 // glyphs share one unit.
-text_type :: proc(size, leading: f32, weight: Text_Weight, tracking, density: f32) -> Text_Type {
+text_type :: proc(
+	size, leading: f32,
+	face: Text_Face,
+	weight: f32,
+	tracking, density: f32,
+) -> Text_Type {
 	pixels := max(math.round(size * density), 1)
-	return {size = pixels, line_height = pixels * leading, weight = weight, tracking = tracking}
+	return {
+		size = pixels,
+		line_height = pixels * leading,
+		face = face,
+		weight = weight,
+		tracking = tracking,
+	}
 }
 
 ui_color :: proc(hex: u32, alpha: f32) -> [4]f32 {

@@ -1,6 +1,8 @@
 bin/
 build/
 vendor/box3d/lib/
+vendor/freetype/lib/
+vendor/harfbuzz/lib/
 .make/
 runs/
 /harbagsa

@@ -46,6 +46,7 @@ Settings_State :: struct {
 	sprint_mode:       string `json:"sprint_mode"`,
 	crouch_mode:       string `json:"crouch_mode"`,
 	prone_mode:        string `json:"prone_mode"`,
+	type_weight:       f32    `json:"type_weight"`,
 }
 
 Debug_State :: struct {
@@ -143,6 +144,7 @@ state_build :: proc(
 			sprint_mode = game.input_mode_name(sim.settings.sprint_mode),
 			crouch_mode = game.input_mode_name(sim.settings.crouch_mode),
 			prone_mode = game.input_mode_name(sim.settings.prone_mode),
+			type_weight = sim.settings.type_weight,
 		},
 		debug = {
 			active = debug.active,
@@ -216,6 +218,7 @@ state_digest :: proc(state: State, allocator: mem.Allocator) -> string {
 	digest.write_string(&hash, state.settings.sprint_mode)
 	digest.write_string(&hash, state.settings.crouch_mode)
 	digest.write_string(&hash, state.settings.prone_mode)
+	digest.write_f32(&hash, state.settings.type_weight)
 	digest.write_bool(&hash, state.menu.open)
 	digest.write_i64(&hash, i64(state.menu.selected))
 	digest.write_i64(&hash, i64(len(state.crates)))

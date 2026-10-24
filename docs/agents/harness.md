@@ -92,7 +92,7 @@ Rules:
   default. `"capture": []` opts out of rendering for that scenario.
 - A check uses the `state.json` shape. Operators: `eq`, `ne`, `lt`, `le`, `gt`,
   `ge`. Examples: `player.position.y`, `crates.count`, `settings.window_mode`,
-  `settings.resolution`, `settings.sprint_mode`, `menu.open`.
+  `settings.resolution`, `settings.sprint_mode`, `settings.type_weight`, `menu.open`.
 - A capture check reads the capture summary. Fields: `capture.count`,
   `capture.worst_mean_delta`, `capture.worst_max_delta`,
   `capture.worst_over_16`, and `capture.worst_over_16_fraction`. The fraction
@@ -135,6 +135,7 @@ Rules:
 - `{"cmd": "view", "hud": true, "debug": false, "hint": false, "perf": false}`
 - `{"cmd": "debug_mode", "active": true}`
 - `{"cmd": "menu", "open": true, "select": 1, "activate": true, "direction": -1}`
+- `{"cmd": "menu", "set": 900}`
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`
 - `{"cmd": "perf", "frames": 120, "warmup": 60}`
 - `{"cmd": "renderer_debug", "jitter": false, "shadow_phase": 12}`
@@ -147,9 +148,11 @@ A past capture frame is an error. A future capture frame queues. Unknown keys,
 wrong types, and out-of-range values are per-command errors; the session stays
 usable. A `step` or `settle` while the menu is open is an error, because the
 game pauses. A settle renders every frame and writes no screenshot. An open menu renders even when the `view` HUD flag is off. `select` is zero-based.
-`select` and `activate` need an open menu. `direction` is `-1` or `1` (default
-`1`) and needs `activate`. The rows are Window mode, Display, Resolution, Sprint
-mode, Crouch mode, Prone mode, and Resume.
+`select`, `activate`, and `set` need an open menu. `direction` is `-1` or `1`
+(default `1`) and needs `activate`. `set` is a number in 100..900 and sets the
+Type weight directly, without the ten-unit step. The rows are Window mode,
+Display, Resolution, Type weight, Sprint mode, Crouch mode, Prone mode, and
+Resume.
 
 A capture names its target and format. See **Capture targets**.
 
@@ -171,29 +174,25 @@ The 2D layer is part of the feature, so its captures live next to it.
 | `scenarios/ui.json` | the settings panel with a numeric value selected, then an action row |
 | `scenarios/settings-menu.json` | the settings round trip and the menu digest |
 | `scenarios/window-settings.json` | the window rows after a display change |
+| `scenarios/type-weight.json` | the Type weight slider at 400, 900, and 100 |
 
-Regenerate the evidence in `docs/evidence/` with:
-
-```sh
-./bin/harbagsa-agent run scenarios/hud.json --out /tmp/hud
-./bin/harbagsa-agent run scenarios/hud-debug.json --out /tmp/hud-debug
-./bin/harbagsa-agent run scenarios/settings-menu.json --out /tmp/menu
-./bin/harbagsa-agent run scenarios/window-settings.json --out /tmp/window
-cp /tmp/hud/frames/hud-arena.png docs/evidence/hud.png
-cp /tmp/hud-debug/frames/hud-debug.png docs/evidence/hud-debug.png
-cp /tmp/menu/frames/settings-menu.png docs/evidence/settings-menu.png
-cp /tmp/window/frames/window-settings.png docs/evidence/window-settings.png
-```
-
-The menu crop is the panel region scaled 2x with nearest-neighbour, so a reader
-sees the pixels the rasterizer produced:
+Read the evidence from a run directory:
 
 ```sh
-python3 -c "from PIL import Image; im = Image.open('docs/evidence/settings-menu.png'); im.crop((361,129,918,590)).resize((1114,922), Image.NEAREST).save('docs/evidence/settings-menu-crop.png')"
+./bin/harbagsa-agent run scenarios/hud.json --out runs/ui/hud
+./bin/harbagsa-agent run scenarios/hud-debug.json --out runs/ui/hud-debug
+./bin/harbagsa-agent run scenarios/settings-menu.json --out runs/ui/menu
+./bin/harbagsa-agent run scenarios/window-settings.json --out runs/ui/window
+./bin/harbagsa-agent run scenarios/type-weight.json --out runs/ui/weight
 ```
 
-Text is rasterized at the device pixel size and the atlas repacks when the
-density changes, so a capture at another size exercises that path:
+The PNGs live under `frames/`. Screenshots stay out of the repository; point at
+the run directory instead of copying them into `docs/evidence/`.
+
+Text is rasterized at the device pixel size and the atlas rebuilds on a worker
+when the weight or the density changes. A capture waits for the pending build,
+so the image and the text theme always agree. A capture at another size exercises
+the density path:
 
 ```sh
 ./bin/harbagsa-agent run scenarios/settings-menu.json --size 2560x1440 --out /tmp/menu-2x

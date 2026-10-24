@@ -19,6 +19,7 @@ settings_start_with_the_documented_defaults :: proc(t: ^testing.T) {
 	testing.expect_value(t, sim.settings.sprint_mode, game.Input_Mode.Hold)
 	testing.expect_value(t, sim.settings.crouch_mode, game.Input_Mode.Toggle)
 	testing.expect_value(t, sim.settings.prone_mode, game.Input_Mode.Toggle)
+	testing.expect_value(t, sim.settings.type_weight, 400)
 	testing.expect_value(t, game.input_mode_name(.Hold), "Hold")
 	testing.expect_value(t, game.input_mode_name(.Toggle), "Toggle")
 	testing.expect_value(t, game.window_mode_name(.Borderless), "Borderless")
@@ -61,7 +62,7 @@ menu_opens_moves_and_closes :: proc(t: ^testing.T) {
 	game.menu_select(&menu, 2)
 	testing.expect_value(t, menu.selected, game.Menu_Item.Resolution)
 	testing.expect_value(t, game.menu_selected_name(&menu), "Resolution")
-	game.menu_select(&menu, 5)
+	game.menu_select(&menu, 6)
 	testing.expect_value(t, menu.selected, game.Menu_Item.Prone)
 	testing.expect_value(t, game.menu_selected_name(&menu), "Prone mode")
 
@@ -76,19 +77,19 @@ menu_activation_changes_the_input_modes :: proc(t: ^testing.T) {
 	menu: game.Menu_State
 	game.menu_open(&menu)
 
-	game.menu_select(&menu, 3)
+	game.menu_select(&menu, 4)
 	testing.expect(t, !game.menu_activate(&menu, &sim.settings), "a setting closed the menu")
 	testing.expect_value(t, sim.settings.sprint_mode, game.Input_Mode.Toggle)
 
-	game.menu_select(&menu, 4)
+	game.menu_select(&menu, 5)
 	testing.expect(t, !game.menu_activate(&menu, &sim.settings), "a setting closed the menu")
 	testing.expect_value(t, sim.settings.crouch_mode, game.Input_Mode.Hold)
 
-	game.menu_select(&menu, 5)
+	game.menu_select(&menu, 6)
 	_ = game.menu_change_setting(&menu, &sim.settings, 1)
 	testing.expect_value(t, sim.settings.prone_mode, game.Input_Mode.Hold)
 
-	game.menu_select(&menu, 6)
+	game.menu_select(&menu, 7)
 	testing.expect(t, game.menu_activate(&menu, &sim.settings), "Resume did not close the menu")
 	testing.expect(t, !menu.open, "Resume left the menu open")
 }
@@ -227,9 +228,15 @@ menu_view_lists_the_settings_and_controls :: proc(t: ^testing.T) {
 	testing.expect_value(t, rows[1].value, "Display 1")
 	testing.expect_value(t, rows[2].value, "1920×1080")
 	testing.expect(t, rows[2].numeric, "the resolution is a number")
-	testing.expect_value(t, rows[3].value, "Hold")
-	testing.expect_value(t, rows[4].value, "Toggle")
+	testing.expect_value(t, rows[3].kind, ui.Row_Kind.Slider)
+	testing.expect_value(t, rows[3].label, "Type weight")
+	testing.expect_value(t, rows[3].value, "400")
+	testing.expect(t, rows[3].numeric, "the weight is a number")
+	testing.expect_value(t, rows[3].ticks, 9)
+	testing.expect(t, rows[3].ratio > 0.37 && rows[3].ratio < 0.38, "400 must sit at 3/8")
+	testing.expect_value(t, rows[4].value, "Hold")
 	testing.expect_value(t, rows[5].value, "Toggle")
+	testing.expect_value(t, rows[6].value, "Toggle")
 	testing.expect_value(t, rows[game.MENU_ROW_DIVIDER].kind, ui.Row_Kind.Divider)
 	testing.expect_value(t, rows[game.MENU_ROW_RESUME].kind, ui.Row_Kind.Action)
 	testing.expect_value(t, rows[game.MENU_ROW_RESUME].label, "Resume")
@@ -245,4 +252,33 @@ menu_view_lists_the_settings_and_controls :: proc(t: ^testing.T) {
 	game.menu_view(&menu, sim.settings, true)
 	testing.expect_value(t, menu.view.hints[0].keys, "WASD")
 	testing.expect_value(t, menu.view.hints[0].action, "fly")
+}
+
+@(test)
+menu_type_weight_steps_and_clamps :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+	menu: game.Menu_State
+	game.menu_open(&menu)
+	game.menu_select(&menu, 3)
+
+	_ = game.menu_change_setting(&menu, &sim.settings, 1)
+	testing.expect_value(t, sim.settings.type_weight, 410)
+	_ = game.menu_change_setting(&menu, &sim.settings, -1)
+	testing.expect_value(t, sim.settings.type_weight, 400)
+
+	_ = game.menu_set_type_weight(&menu, &sim.settings, 900)
+	testing.expect_value(t, sim.settings.type_weight, 900)
+	_ = game.menu_change_setting(&menu, &sim.settings, 1)
+	testing.expect_value(t, sim.settings.type_weight, 900)
+	_ = game.menu_set_type_weight(&menu, &sim.settings, 100)
+	_ = game.menu_change_setting(&menu, &sim.settings, -1)
+	testing.expect_value(t, sim.settings.type_weight, 100)
+
+	_ = game.menu_set_type_weight_ratio(&menu, &sim.settings, 0.5)
+	testing.expect_value(t, sim.settings.type_weight, 500)
+	_ = game.menu_set_type_weight_ratio(&menu, &sim.settings, -1)
+	testing.expect_value(t, sim.settings.type_weight, 100)
+	_ = game.menu_set_type_weight_ratio(&menu, &sim.settings, 2)
+	testing.expect_value(t, sim.settings.type_weight, 900)
 }

@@ -14,7 +14,7 @@ shadows from the walls and crates.
 - A GPU with `VK_KHR_acceleration_structure` and `VK_KHR_ray_query`
 - `glslc` from shaderc to compile the GLSL shaders
 - `spirv-val` from SPIRV-Tools to validate the compiled shaders (optional)
-- A C compiler for the vendored Box3D library
+- A C and C++ compiler for the vendored Box3D, FreeType, and HarfBuzz libraries
 - `make` (optional)
 
 ## Run
@@ -23,9 +23,10 @@ shadows from the walls and crates.
 make run
 ```
 
-`make run` builds the Box3D archive, compiles every shader with `glslc`, builds
-the demo, and starts it. The SPIR-V lives in `build/shaders/` and is embedded
-into the binary.
+`make run` builds the Box3D, FreeType, and HarfBuzz archives, compiles every
+shader with `glslc`, builds the demo, and starts it. The first build compiles the
+vendored font libraries and takes about a minute; later builds reuse them. The
+SPIR-V lives in `build/shaders/` and is embedded into the binary.
 
 ## Controls
 
@@ -55,8 +56,8 @@ into the binary.
 the window mode, the display, the resolution, and the sprint, crouch, and prone
 input modes, and below them it lists the active controls as a key legend.
 
-The first six rows are settings: the label sits on the left, the current value is
-right-aligned on the panel edge. `Resume` is an action, not a setting, and sits
+The first seven rows are settings: the label sits on the left, the current value
+is right-aligned on the panel edge. `Resume` is an action, not a setting, and sits
 below a divider. The selected row always carries an amber bar on its leading
 edge, so selection never depends on a colour change alone.
 
@@ -64,6 +65,8 @@ edge, so selection never depends on a colour change alone.
 - `Left` / `Right`: change the selected row in that direction.
 - `Enter`: change the selected row. `Resume` closes the menu.
 - `Esc`: close the menu.
+- Drag the `Type weight` track: set the weight directly. It is the only row with
+  a continuous track.
 
 `Window mode` is `Borderless` or `Windowed`. Borderless fills the selected
 display at its desktop size. Windowed uses the chosen resolution and a normal
@@ -81,6 +84,12 @@ Changing it in Borderless switches to Windowed, because Borderless has only the
 desktop size. The row shows the desktop size in Borderless and the chosen size
 in Windowed. Modes smaller than 800x600 are left out so the settings menu stays
 fully visible; the display's desktop mode is always kept.
+
+`Type weight` sets the UI text weight on the variable axis from 100 to 900. The
+number is the weight; the nine ticks mark Thin 100 through Black 900. Left and
+Right step by 10, and the track above the scale can be dragged for any value. The
+weight applies to the menu and the HUD. Roboto Mono stops at 700, so numbers stop
+gaining weight above 700 while the prose continues to Black.
 
 The display list and its modes come from SDL at startup. The choices last for
 the current run. A new run starts Borderless, with 1280x720 as the Windowed
@@ -276,11 +285,12 @@ The batch runner and the live session share one command set:
 - `{"cmd": "debug_mode", "active": true}`: enter or leave the `F2` debug mode.
   Entering swaps the player for the free-fly camera; leaving restores the player.
   Repeating the same value is a no-op.
-- `{"cmd": "menu", "open": true, "select": 1, "activate": true, "direction": -1}`:
-  open or close the settings menu, select a row, and activate the selected row.
-  `select` is zero-based and needs an open menu. `activate` also needs an open
-  menu. `direction` is `-1` or `1` (default `1`) and needs `activate`. Omitted
-  fields keep the state. An open menu renders even when `hud` is off.
+- `{"cmd": "menu", "open": true, "select": 1, "activate": true, "direction": -1, "set": 900}`:
+  open or close the settings menu, select a row, activate the selected row, or
+  set the Type weight. `select` is zero-based and needs an open menu. `activate`
+  and `set` also need an open menu. `direction` is `-1` or `1` (default `1`) and
+  needs `activate`; `set` is a weight in 100..900. Omitted fields keep the state.
+  An open menu renders even when `hud` is off.
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`:
   evaluate a predicate now.
 - `{"cmd": "perf", "frames": 120, "warmup": 60, "trace": "trace.jsonl"}`:
@@ -385,6 +395,9 @@ motion. Use `--size 800x600` to reproduce the reported stretched-window case.
 `scenarios/settings-menu.json` opens the settings menu, captures it, changes the
 crouch input mode, closes the menu, and checks the saved state.
 
+`scenarios/type-weight.json` opens the menu, selects Type weight, captures 400,
+sets 900 and 100, captures both, and checks the stored value.
+
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window
 settings.
@@ -473,11 +486,20 @@ missing, they print the install command and exit without starting anything.
 They never install anything. `make check` and `make test` never enable
 validation.
 
-To run Odin directly instead:
+To run Odin directly instead, build the vendored archives once with `make build`
+first; they are build products and are not committed:
 
 ```sh
 odin run . -collection:src=src -collection:libs=vendor -define:ENABLE_VALIDATION_LAYERS=true
 ```
+
+## Vendored libraries
+
+Box3D, FreeType, and HarfBuzz are built from `vendor/` by `make`. Their licences
+ship beside each tree; see `vendor/*/PROVENANCE.md`.
+
+Portions of this software are copyright © 2026 The FreeType Project
+(https://freetype.org). All rights reserved.
 
 ## Clean
 
