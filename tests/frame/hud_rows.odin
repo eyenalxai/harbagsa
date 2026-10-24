@@ -14,11 +14,10 @@ status_panel_width_survives_a_full_sweep :: proc(t: ^testing.T) {
 	sim, debug, hud, _ := create_state(t)
 	defer game.simulation_destroy(&sim)
 
-	atlas, built := renderer.text_atlas_build(context.allocator)
+	theme := renderer.ui_theme_init(720)
+	atlas, built := build_atlas(t, theme)
 	testing.expect(t, built, "the atlas did not build")
 	defer renderer.text_atlas_destroy(&atlas, context.allocator)
-
-	theme := renderer.ui_theme_init(720)
 	positions := [5][3]f32{{0, 0, 14}, {-19.9, 0.1, -19.9}, {19.9, 0, 0}, {-0.1, 0, 0.1}, {9.9, 9.9, 9.9}}
 	expected := measure_status_panel(t, &sim, &debug, &hud, &atlas, theme, positions[0])
 
@@ -85,11 +84,10 @@ menu_dividers_and_band_share_the_panel_inner_edge :: proc(t: ^testing.T) {
 
 @(test)
 capture_hint_clears_the_crosshair :: proc(t: ^testing.T) {
-	atlas, built := renderer.text_atlas_build(context.allocator)
+	theme := renderer.ui_theme_init(720)
+	atlas, built := build_atlas(t, theme)
 	testing.expect(t, built, "the atlas did not build")
 	defer renderer.text_atlas_destroy(&atlas, context.allocator)
-
-	theme := renderer.ui_theme_init(720)
 	overlay := renderer.Overlay {
 		atlas = atlas,
 		theme = theme,
@@ -134,6 +132,12 @@ every_menu_item_selects_a_selectable_row :: proc(t: ^testing.T) {
 	}
 }
 
+@(private)
+build_atlas :: proc(t: ^testing.T, theme: renderer.UI_Theme) -> (renderer.Text_Atlas, bool) {
+	set := renderer.text_theme_layer_set(theme)
+	return renderer.text_atlas_build(context.allocator, &set)
+}
+
 Rect :: struct {
 	x, y, width, height: f32,
 }
@@ -163,13 +167,13 @@ measure_status_panel :: proc(
 
 @(private)
 build_menu_overlay :: proc(t: ^testing.T, menu: ui.Menu) -> (overlay: renderer.Overlay, ok: bool) {
-	atlas, built := renderer.text_atlas_build(context.allocator)
+	overlay.theme = renderer.ui_theme_init(720)
+	atlas, built := build_atlas(t, overlay.theme)
 	testing.expect(t, built, "the atlas did not build")
 	if !built {
 		return {}, false
 	}
 	overlay.atlas = atlas
-	overlay.theme = renderer.ui_theme_init(720)
 	overlay.hud_vertices = make([]renderer.HUD_Vertex, 24576, context.allocator)
 	renderer.build_menu(&overlay, 1280, 720, menu)
 	return overlay, true

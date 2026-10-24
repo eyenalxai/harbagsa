@@ -13,9 +13,12 @@ crosshair, and the settings panel. These captures come from
 
 What changed:
 
-- Text is Noto Sans drawn from a signed distance field atlas, so it is
-  antialiased at every window size instead of a 1 px bitmap scaled by a
-  fraction.
+- Text is Noto Sans drawn from a coverage atlas rasterized at the device pixel
+  size, so a texel is already the fraction of its pixel the glyph covers. The
+  earlier distance field could not draw a one-pixel stem and left the text grey
+  and broken; ADR 0007 has the measurement.
+- A type size now means an em in device pixels. The old atlas keyed its scale to
+  the font's ascent–descent span, so the 15 px body actually drew an 11 px em.
 - Values sit on one column at the panel's inner edge. The old layout padded with
   `%-12s`, which spread the value column over a 16 px range because the font is
   proportional.

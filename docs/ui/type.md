@@ -4,14 +4,18 @@ Five roles, three faces, one family. The faces are Noto Sans Regular, Noto Sans
 Medium, and Noto Sans Mono Regular, subset to ASCII plus `·` and `×`. All three
 are SIL OFL 1.1; `src/renderer/fonts/PROVENANCE.md` records how they were cut.
 
-Text is drawn from one 1024x512 signed distance field atlas, rasterized at a
-40 px em. The field carries the glyph's distance to its outline, so a fragment
-shader reconstructs a crisp edge at any size. One texture, one draw call.
+Text is drawn from a coverage atlas rasterized at the device pixel size. A texel
+holds the fraction of the pixel the glyph covers, so the shader passes it
+straight to alpha. One texture, one draw call.
+
+A distance field was used until ADR 0007. It cannot draw a stem thinner than its
+reconstruction footprint, and at these sizes every stem is thin. Do not bring it
+back.
 
 ## The scale
 
-Sizes are pixels at density 1 and multiply by density. Tokens are in
-`src/renderer/ui_theme.odin`.
+A size is an em in device pixels, rounded to an integer, and multiplied by
+density. Tokens are in `src/renderer/ui_theme.odin`.
 
 | Role | Token | Size | Leading | Weight | Tracking |
 | --- | --- | --- | --- | --- | --- |
@@ -27,6 +31,22 @@ rationale, and a line here.
 `type_caption_caps` also sets `caps = true`. That flag uppercases `a` to `z` at
 draw time, so the source string stays in sentence case and a redesign changes one
 boolean instead of every literal.
+
+The atlas holds one layer per face and pixel size the theme can draw, so a new
+token adds a layer. `TEXT_LAYER_MAX` bounds how many fit; six are in use.
+
+## Pixels and phases
+
+The atlas is only exact on the pixel grid, so drawing snaps to it:
+
+- The baseline rounds to a whole pixel. A row moves by at most half a pixel, rows
+  are 20 px apart, and the alternative is resampling every edge.
+- Each glyph snaps horizontally and takes its sub-pixel offset from one of four
+  phases, rasterized into the atlas. The advance stays fractional, so the phases
+  absorb the fraction and the line's measured width is unchanged.
+
+Do not draw text at a fractional baseline or bypass the phase. Either one
+resamples the coverage across two texels and blurs the whole line.
 
 ## Leading and tracking
 
@@ -78,7 +98,10 @@ grow a character makes the whole panel jump as the player walks.
   here.
 - No weight change on interaction. There is no hover state in this UI, and a
   weight swap reflows the row.
-- No text under 14 px at density 1. Below that a lowercase `l` is a single hairline
-  with more space around it than its own width, and the word reads with a gap in
-  it. That is a legibility floor, not a preference.
+- No text under 14 px at density 1. The em is the em: a 14 px token draws a 14 px
+  em. Smaller than that, a stem is under a pixel and the coverage has to spread
+  it over two, which reads as a grey line.
 - No truncation. A row that does not fit is a layout bug, not an ellipsis.
+- No hinting and no stem darkening. The faces rasterize at their true
+  proportions. Forcing a stem to a whole pixel would even the weight and distort
+  the letterforms; this UI does not need the trade.
