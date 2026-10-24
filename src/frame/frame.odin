@@ -27,6 +27,7 @@ Scene :: struct {
 	boxes:         []geometry.Box,
 	debug_lines:   []geometry.Line,
 	hud:           renderer.HUD_Frame,
+	view_flags:    renderer.View_Flags,
 }
 
 build :: proc(
@@ -84,6 +85,21 @@ build :: proc(
 			menu         = hud.menu.view,
 		}
 	}
+	if scene.hud.enabled {
+		scene.view_flags |= {.HUD}
+		if hud.perf.visible {
+			scene.view_flags |= {.Perf}
+		}
+		if !scene.hud.captured && scene.hud.capture_hint != "" {
+			scene.view_flags |= {.Capture_Hint}
+		}
+	}
+	if scene.hud.menu_open {
+		scene.view_flags |= {.Menu}
+	}
+	if options.debug_view {
+		scene.view_flags |= {.Debug_Draw}
+	}
 
 	return scene
 }
@@ -101,6 +117,7 @@ draw :: proc(
 			boxes           = scene.boxes,
 			debug_lines     = scene.debug_lines,
 			hud             = scene.hud,
+			view_flags      = scene.view_flags,
 		},
 		capture,
 	)

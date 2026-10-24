@@ -190,7 +190,7 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	}
 
 	if r.target.config.width != old_extent.width || r.target.config.height != old_extent.height {
-		if !create_taa_targets(r) {
+		if !create_taa_targets(r, .Extent) {
 			log.error("renderer: could not recreate the TAA targets")
 			return .Fatal
 		}
@@ -199,7 +199,7 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 			return .Fatal
 		}
 	} else if r.target.config.format != old_format {
-		reset_history(r)
+		reset_history(r, .Extent)
 	}
 
 	if r.taa.pipeline_format != r.target.config.format {

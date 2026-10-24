@@ -28,12 +28,23 @@ record_scene :: proc(
 		log.error("renderer: overlay vertex upload failed")
 		return false
 	}
-	if box_count != r.taa.prev_model_count {
-		reset_history(r)
+	if r.taa.has_prev_models && box_count != r.taa.prev_model_count {
+		reset_history(r, .Scene_Change)
 	}
 	if !update_camera(r, view.camera, view.light_direction) {
 		return false
 	}
+	r.render_digest = render_digest(
+		Render_Digest_Input {
+			camera = view.camera,
+			light_direction = view.light_direction,
+			boxes = view.boxes,
+			jitter = r.taa.current_jitter,
+			shadow_phase = r.taa.shadow_phase,
+			view_flags = view.view_flags,
+		},
+	)
+	r.has_render_digest = true
 	if !write_object_data(r, view.boxes) {
 		return false
 	}
@@ -69,6 +80,7 @@ record_scene :: proc(
 
 	r.taa.history_read = (r.taa.history_read + 1) % TAA_HISTORY_IMAGES
 	r.taa.history_valid = true
+	r.taa.convergence_frames = min(r.taa.convergence_frames + 1, TAA_MAX_SAMPLES)
 	return true
 }
 
@@ -97,6 +109,7 @@ write_object_data :: proc(r: ^Renderer, boxes: []geometry.Box) -> bool {
 		taa.prev_models[index] = models[index]
 	}
 	taa.prev_model_count = len(boxes)
+	taa.has_prev_models = true
 	return true
 }
 

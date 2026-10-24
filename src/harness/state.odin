@@ -6,6 +6,7 @@ import "core:mem"
 import "core:strings"
 
 import b3 "libs:box3d"
+import "src:digest"
 import "src:display"
 import "src:game"
 
@@ -57,14 +58,30 @@ Menu_State :: struct {
 	item:     string `json:"item"`,
 }
 
+Renderer_State :: struct {
+	active:             bool   `json:"active"`,
+	frame_count:        u32    `json:"frame_count"`,
+	taa_enabled:        bool   `json:"taa_enabled"`,
+	jitter_index:       int    `json:"jitter_index"`,
+	history_valid:      bool   `json:"history_valid"`,
+	convergence_frames: int    `json:"convergence_frames"`,
+	history_read:       int    `json:"history_read"`,
+	history_weight:     f32    `json:"history_weight"`,
+	reset_count:        int    `json:"reset_count"`,
+	last_reset:         string `json:"last_reset"`,
+	shadow_phase:       u32    `json:"shadow_phase"`,
+}
+
 State :: struct {
-	frame:    int            `json:"frame"`,
-	player:   Player_State   `json:"player"`,
-	crates:   []Crate_State  `json:"crates"`,
-	settings: Settings_State `json:"settings"`,
-	debug:    Debug_State    `json:"debug"`,
-	menu:     Menu_State     `json:"menu"`,
-	digest:   string         `json:"digest"`,
+	frame:         int            `json:"frame"`,
+	player:        Player_State   `json:"player"`,
+	crates:        []Crate_State  `json:"crates"`,
+	settings:      Settings_State `json:"settings"`,
+	debug:         Debug_State    `json:"debug"`,
+	menu:          Menu_State     `json:"menu"`,
+	renderer:      Renderer_State `json:"renderer"`,
+	render_digest: string         `json:"render_digest"`,
+	digest:        string         `json:"digest"`,
 }
 
 state_build :: proc(
@@ -72,6 +89,8 @@ state_build :: proc(
 	frame: int,
 	menu: ^game.Menu_State,
 	debug: ^game.Debug_Mode,
+	renderer_state: Renderer_State,
+	render_digest: string,
 	allocator: mem.Allocator,
 ) -> State {
 	snapshot := game.simulation_snapshot(sim)
@@ -121,6 +140,8 @@ state_build :: proc(
 			selected = int(menu.selected),
 			item = game.menu_selected_name(menu),
 		},
+		renderer = renderer_state,
+		render_digest = render_digest == "" ? "" : strings.clone(render_digest, allocator),
 	}
 	crate_count := game.simulation_crate_count(sim)
 	state.crates = make([]Crate_State, crate_count, allocator)
@@ -148,6 +169,7 @@ state_destroy :: proc(state: ^State, allocator: mem.Allocator) {
 	free_string(&state.settings.display, allocator)
 	free_string(&state.settings.resolution, allocator)
 	free_string(&state.settings.window_resolution, allocator)
+	free_string(&state.render_digest, allocator)
 	free_string(&state.digest, allocator)
 }
 
@@ -160,66 +182,41 @@ free_string :: proc(text: ^string, allocator: mem.Allocator) {
 }
 
 state_digest :: proc(state: State, allocator: mem.Allocator) -> string {
-	hash: u64 = 0xcbf29ce484222325
-	hash = digest_u64(hash, u64(state.frame))
-	hash = digest_f32(hash, state.player.position.x)
-	hash = digest_f32(hash, state.player.position.y)
-	hash = digest_f32(hash, state.player.position.z)
-	hash = digest_f32(hash, state.player.eye.x)
-	hash = digest_f32(hash, state.player.eye.y)
-	hash = digest_f32(hash, state.player.eye.z)
-	hash = digest_f32(hash, state.player.velocity.x)
-	hash = digest_f32(hash, state.player.velocity.y)
-	hash = digest_f32(hash, state.player.velocity.z)
-	hash = digest_f32(hash, state.player.yaw)
-	hash = digest_f32(hash, state.player.pitch)
-	hash = digest_u64(hash, state.player.grounded ? 1 : 0)
-	hash = digest_string(hash, state.settings.window_mode)
-	hash = digest_string(hash, state.settings.display)
-	hash = digest_u64(hash, u64(state.settings.display_index))
-	hash = digest_string(hash, state.settings.resolution)
-	hash = digest_string(hash, state.settings.window_resolution)
-	hash = digest_string(hash, state.settings.sprint_mode)
-	hash = digest_string(hash, state.settings.crouch_mode)
-	hash = digest_string(hash, state.settings.prone_mode)
-	hash = digest_u64(hash, state.menu.open ? 1 : 0)
-	hash = digest_u64(hash, u64(state.menu.selected))
-	hash = digest_u64(hash, u64(len(state.crates)))
+	hash := digest.fnv()
+	digest.write_i64(&hash, i64(state.frame))
+	digest.write_f32(&hash, state.player.position.x)
+	digest.write_f32(&hash, state.player.position.y)
+	digest.write_f32(&hash, state.player.position.z)
+	digest.write_f32(&hash, state.player.eye.x)
+	digest.write_f32(&hash, state.player.eye.y)
+	digest.write_f32(&hash, state.player.eye.z)
+	digest.write_f32(&hash, state.player.velocity.x)
+	digest.write_f32(&hash, state.player.velocity.y)
+	digest.write_f32(&hash, state.player.velocity.z)
+	digest.write_f32(&hash, state.player.yaw)
+	digest.write_f32(&hash, state.player.pitch)
+	digest.write_bool(&hash, state.player.grounded)
+	digest.write_string(&hash, state.settings.window_mode)
+	digest.write_string(&hash, state.settings.display)
+	digest.write_i64(&hash, i64(state.settings.display_index))
+	digest.write_string(&hash, state.settings.resolution)
+	digest.write_string(&hash, state.settings.window_resolution)
+	digest.write_string(&hash, state.settings.sprint_mode)
+	digest.write_string(&hash, state.settings.crouch_mode)
+	digest.write_string(&hash, state.settings.prone_mode)
+	digest.write_bool(&hash, state.menu.open)
+	digest.write_i64(&hash, i64(state.menu.selected))
+	digest.write_i64(&hash, i64(len(state.crates)))
 	for crate in state.crates {
-		hash = digest_f32(hash, crate.position.x)
-		hash = digest_f32(hash, crate.position.y)
-		hash = digest_f32(hash, crate.position.z)
-		hash = digest_f32(hash, crate.rotation.x)
-		hash = digest_f32(hash, crate.rotation.y)
-		hash = digest_f32(hash, crate.rotation.z)
-		hash = digest_f32(hash, crate.rotation.w)
+		digest.write_f32(&hash, crate.position.x)
+		digest.write_f32(&hash, crate.position.y)
+		digest.write_f32(&hash, crate.position.z)
+		digest.write_f32(&hash, crate.rotation.x)
+		digest.write_f32(&hash, crate.rotation.y)
+		digest.write_f32(&hash, crate.rotation.z)
+		digest.write_f32(&hash, crate.rotation.w)
 	}
-	return fmt.aprintf("%016x", hash, allocator = allocator)
-}
-
-@(private)
-digest_u64 :: proc(hash: u64, value: u64) -> u64 {
-	result := hash
-	shift: u64
-	for shift < 8 {
-		result = (result ~ (value >> (shift * 8))) * 0x100000001b3
-		shift += 1
-	}
-	return result
-}
-
-@(private)
-digest_string :: proc(hash: u64, text: string) -> u64 {
-	result := hash
-	for byte in text {
-		result = (result ~ u64(byte)) * 0x100000001b3
-	}
-	return result
-}
-
-@(private)
-digest_f32 :: proc(hash: u64, value: f32) -> u64 {
-	return digest_u64(hash, u64(transmute(u32)value))
+	return digest.hex(hash, allocator)
 }
 
 @(private)

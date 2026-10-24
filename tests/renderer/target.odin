@@ -161,11 +161,11 @@ offscreen_target_keeps_one_frame_in_flight :: proc(t: ^testing.T) {
 
 @(test)
 offscreen_capture_free_sequence_is_deterministic :: proc(t: ^testing.T) {
-	first, first_ok, first_attempted := render_offscreen_sequence()
+	first, first_digest, first_ok, first_attempted := render_offscreen_sequence()
 	defer if first != nil {
 		delete(first, context.allocator)
 	}
-	second, second_ok, second_attempted := render_offscreen_sequence()
+	second, second_digest, second_ok, second_attempted := render_offscreen_sequence()
 	defer if second != nil {
 		delete(second, context.allocator)
 	}
@@ -186,15 +186,21 @@ offscreen_capture_free_sequence_is_deterministic :: proc(t: ^testing.T) {
 		}
 	}
 	testing.expect(t, !different, "two capture-free offscreen runs produced different pixels")
+	testing.expect_value(t, first_digest, second_digest)
 }
 
 // The sequence draws without a capture first, so the second slot would write the
 // single offscreen image while the first frame still reads it.
 @(private)
-render_offscreen_sequence :: proc() -> (pixels: []u8, ok: bool, attempted: bool) {
+render_offscreen_sequence :: proc() -> (
+	pixels: []u8,
+	render_digest: u64,
+	ok: bool,
+	attempted: bool,
+) {
 	headless: platform.Headless
 	if !platform.headless_init(&headless, TEST_WIDTH, TEST_HEIGHT) {
-		return nil, false, false
+		return nil, 0, false, false
 	}
 	defer platform.headless_deinit(&headless)
 
@@ -208,13 +214,13 @@ render_offscreen_sequence :: proc() -> (pixels: []u8, ok: bool, attempted: bool)
 		context.allocator,
 	)
 	if init_error != .None {
-		return nil, false, false
+		return nil, 0, false, false
 	}
 	defer renderer.deinit(&state)
 
 	sim := game.simulation_create()
 	if !game.simulation_is_valid(&sim) {
-		return nil, false, true
+		return nil, 0, false, true
 	}
 	defer game.simulation_destroy(&sim)
 	debug := game.debug_mode_create()
@@ -223,17 +229,18 @@ render_offscreen_sequence :: proc() -> (pixels: []u8, ok: bool, attempted: bool)
 	scene := frame.build(&sim, &debug, {alpha = 1.0, captured = true}, nil, &hud, &scratch)
 	for _ in 0 ..< 12 {
 		if frame.draw(&state, scene, false) != .Ok {
-			return nil, false, true
+			return nil, 0, false, true
 		}
 	}
 	if frame.draw(&state, scene, true) != .Ok {
-		return nil, false, true
+		return nil, 0, false, true
 	}
 	data, _, _, read_ok := renderer.read_capture(&state)
 	if !read_ok {
-		return nil, false, true
+		return nil, 0, false, true
 	}
+	value, has_digest := renderer.last_render_digest(&state)
 	pixels = make([]u8, len(data), context.allocator)
 	copy(pixels, data)
-	return pixels, true, true
+	return pixels, has_digest ? value.value : 0, true, true
 }

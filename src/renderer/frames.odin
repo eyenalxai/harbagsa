@@ -13,6 +13,7 @@ Frame_View :: struct {
 	boxes:           []geometry.Box,
 	debug_lines:     []geometry.Line,
 	hud:             HUD_Frame,
+	view_flags:      View_Flags,
 }
 
 create_semaphore :: proc(r: ^Renderer, semaphore: ^vk.Semaphore) -> bool {

@@ -25,8 +25,18 @@ TAA :: struct {
 	enabled:      bool,
 	jitter_index: int,
 
+	// The values the last recorded frame used, so the renderer report names the
+	// frame the state describes rather than the next one.
+	applied_jitter_index: int,
+	shadow_phase:         u32,
+	current_jitter:       [2]f32,
+	convergence_frames:   int,
+	reset_count:          int,
+	last_reset:           History_Reset_Reason,
+
 	prev_models:              [MAX_SCENE_BOXES]Mat4,
 	prev_model_count:         int,
+	has_prev_models:          bool,
 	prev_view_projection:     Mat4,
 	has_prev_view_projection: bool,
 
@@ -59,7 +69,7 @@ init_taa :: proc(r: ^Renderer) -> Error {
 	if !check_taa_formats(r) {
 		return .Create_TAA
 	}
-	if !create_taa_targets(r) {
+	if !create_taa_targets(r, .Create) {
 		return .Create_TAA
 	}
 	if !create_taa_sampler(r) {
@@ -124,7 +134,7 @@ create_taa_color_target :: proc(r: ^Renderer, extent: vk.Extent2D, format: vk.Fo
 	return image, ok
 }
 
-create_taa_targets :: proc(r: ^Renderer) -> bool {
+create_taa_targets :: proc(r: ^Renderer, reason: History_Reset_Reason) -> bool {
 	destroy_taa_targets(r)
 
 	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
@@ -175,18 +185,22 @@ create_taa_targets :: proc(r: ^Renderer) -> bool {
 		r.taa.counts[i] = count
 	}
 
-	reset_history(r)
+	reset_history(r, reason)
 	r.taa.history_read = 0
 	r.taa.history_layouts = {.UNDEFINED, .UNDEFINED}
 	r.taa.count_layouts = {.UNDEFINED, .UNDEFINED}
 	return true
 }
 
-reset_history :: proc(r: ^Renderer) {
+reset_history :: proc(r: ^Renderer, reason: History_Reset_Reason) {
 	r.taa.history_valid = false
 	r.taa.jitter_index = 0
 	r.taa.has_prev_view_projection = false
 	r.taa.prev_model_count = 0
+	r.taa.has_prev_models = false
+	r.taa.convergence_frames = 0
+	r.taa.reset_count += 1
+	r.taa.last_reset = reason
 }
 
 taa_note_camera :: proc(r: ^Renderer, camera: Camera) {
@@ -204,7 +218,7 @@ taa_note_camera :: proc(r: ^Renderer, camera: Camera) {
 		turned := yaw_delta > TAA_TELEPORT_ANGLE ||
 			math.abs(camera.pitch - previous.pitch) > TAA_TELEPORT_ANGLE
 		if moved > TAA_TELEPORT_DISTANCE || turned {
-			reset_history(r)
+			reset_history(r, .Teleport)
 		}
 	}
 	r.taa.prev_camera = camera
@@ -213,7 +227,7 @@ taa_note_camera :: proc(r: ^Renderer, camera: Camera) {
 
 toggle_taa :: proc(r: ^Renderer) {
 	r.taa.enabled = !r.taa.enabled
-	reset_history(r)
+	reset_history(r, .Toggle)
 	log.infof("renderer: TAA %s", r.taa.enabled ? "on" : "off")
 }
 
