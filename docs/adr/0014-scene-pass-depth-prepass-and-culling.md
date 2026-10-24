@@ -35,9 +35,11 @@ the sun rays.
 
 ## Consequences
 
-- The scene pass is two render scopes: a depth-only scope that clears depth,
-  then a color scope that loads depth and clears color and velocity.
-- The depth image is shared by both scopes. A late-fragment-test to
+- The scene pass is two render scopes at this point: a depth-only scope that
+  clears depth, then a color scope that loads depth and clears color and
+  velocity. `docs/adr/0015-sky-ambient-and-ray-traced-ambient-occlusion.md` adds
+  a third, the sky scope, after the lit scope.
+- The depth image is shared by every scope. A late-fragment-test to
   early-fragment-test barrier orders the prepass writes before the lit reads.
 - The lit pipeline writes no depth and compares `LESS_OR_EQUAL`. Coplanar
   surfaces resolve to the last draw, so a few edge pixels differ from the old

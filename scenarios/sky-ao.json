@@ -1,0 +1,30 @@
+{
+  "commands": [
+    {"cmd": "view", "hud": false, "debug": false, "hint": false, "perf": false},
+    {"cmd": "camera", "position": [0, 1.7, 0], "yaw": 0, "pitch": 1.2},
+    {"cmd": "settle", "frames": 60},
+    {"cmd": "capture", "name": "sky-zenith", "target": "color", "format": "stats"},
+    {"cmd": "camera", "position": [0, 1.7, 0], "yaw": 0, "pitch": -0.02},
+    {"cmd": "settle", "frames": 60},
+    {"cmd": "capture", "name": "sky-horizon", "target": "color", "format": "stats"},
+    {"cmd": "renderer_debug", "ao": false},
+    {"cmd": "camera", "position": [18.8, 0.9, 18.8], "yaw": 3.927, "pitch": -0.15},
+    {"cmd": "settle", "frames": 60},
+    {"cmd": "capture", "name": "corner-off", "target": "color", "format": "stats"},
+    {"cmd": "renderer_debug", "ao": true},
+    {"cmd": "settle", "frames": 60},
+    {"cmd": "capture", "name": "corner-on", "target": "color", "format": "stats"},
+    {"cmd": "renderer_debug", "sky": false},
+    {"cmd": "camera", "position": [0, 1.7, 0], "yaw": 0, "pitch": 1.2},
+    {"cmd": "settle", "frames": 60},
+    {"cmd": "capture", "name": "flat-zenith", "target": "color", "format": "stats"}
+  ],
+  "checks": [
+    {"field": "capture.count", "op": "eq", "value": 5},
+    {"field": "capture.stats.mean.y", "op": "le", "value": 140, "window": {"start": 0, "count": 1}},
+    {"field": "capture.stats.mean.y", "op": "ge", "value": 150, "window": {"start": 1, "count": 1}},
+    {"field": "capture.stats.mean.y", "op": "ge", "value": 64, "window": {"start": 2, "count": 1}},
+    {"field": "capture.stats.mean.y", "op": "le", "value": 58, "window": {"start": 3, "count": 1}},
+    {"field": "capture.stats.mean.y", "op": "ge", "value": 170, "window": {"start": 4, "count": 1}}
+  ]
+}

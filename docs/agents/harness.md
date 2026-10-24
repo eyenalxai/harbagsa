@@ -28,11 +28,12 @@ serializes Make with `flock`.
 | read velocity, history, depth, or scene color | **Capture targets** |
 | read numeric image statistics | **Capture targets** (`stats`) |
 | read renderer state or the render digest | **Renderer state** |
-| change a TAA input for a diagnosis | **Renderer debug overrides** |
+| change a renderer input for a diagnosis | **Renderer debug overrides** |
+| check the sky and the ambient occlusion | **Sky and ambient occlusion** |
 | measure image stability or the period | **Analysis** |
 | measure frame time | **Performance** |
 | prove a capture-free sequence is deterministic | **Screenshots** and `scenarios/capture-free.json` |
-| understand a design choice | `docs/adr/0009` to `docs/adr/0013` |
+| understand a design choice | `docs/adr/0009` to `docs/adr/0015` |
 
 ## What one run writes
 
@@ -390,28 +391,32 @@ default sun reads about 52 degrees of azimuth and 60 degrees of elevation.
 
 The reset reasons are `none`, `create`, `extent`, `toggle`, `teleport`,
 `scene_change`, `debug_override`, `player_reset`, and `scene_reset`. A change to
-the sun direction or the sun angular diameter is a `scene_change`.
+the sun direction or the sun angular diameter is a `scene_change`. A state
+check reads the override values as `renderer.debug.*`, for example
+`renderer.debug.sky` and `renderer.debug.ao`.
 
 The render digest is FNV-1a over the effective camera, the sun direction and
-angular diameter, every box, the jitter, the shadow phase, and the view flags.
-It changes when any of those change and stays the same when they do not. It is
+angular diameter, every box, the jitter, the shadow phase, the sky and AO
+flags, and the view flags. It changes when any of those change and stays the
+same when they do not. It is
 separate from the simulation digest: read `render_digest` for the render inputs
 and `digest` for the simulation.
 
 `report.json` carries a `setup` block: the target kind (`offscreen`,
 `swapchain`, or `none`), the extent, the view flags, the device name, the frame
-count in flight, the TAA state, and the jitter, history, and sample caps. Use it
-to compare two runs before you compare their pixels.
+count in flight, the TAA state, the jitter, history, and sample caps, and the AO
+sample count and radius. Use it to compare two runs before you compare their
+pixels.
 
 `scenarios/renderer-state.json` checks the steady state. `scenarios/renderer-reset.json`
 checks a teleport reset.
 
 ## Renderer debug overrides
 
-`{"cmd": "renderer_debug", ...}` changes TAA inputs without editing source. It is
-diagnostic and gated. A build with `-define:ENABLE_RENDERER_DEBUG=true`, or a run
-with `--debug-renderer`, accepts it. Any other build rejects it with a clear
-error.
+`{"cmd": "renderer_debug", ...}` changes renderer inputs without editing source.
+It is diagnostic and gated. A build with `-define:ENABLE_RENDERER_DEBUG=true`,
+or a run with `--debug-renderer`, accepts it. Any other build rejects it with a
+clear error.
 
 | Field | Effect |
 | --- | --- |
@@ -422,7 +427,9 @@ error.
 | `depth_trust` | force the depth test to trust the history |
 | `freeze_shadow_phase` | freeze the sun sample phase |
 | `shadow_phase` | set a phase in [0, 63] and freeze it |
-| `clear` | reset every override and turn TAA on |
+| `sky` | draw the sky pass, and use the sky ambient in the lit pass |
+| `ao` | trace the ambient occlusion rays |
+| `clear` | reset every override and turn TAA, the sky, and the AO on |
 
 An override starts from the current state. A scenario can put the same fields in
 a top-level `renderer_debug` object; it compiles to the command before the steps.
@@ -434,6 +441,26 @@ including a new shadow phase.
 `scenarios/renderer-debug-converge.json` turns jitter off and freezes the phase,
 so the image converges. `scenarios/renderer-debug-jitter.json` freezes the phase
 and lets jitter cycle, so the analysis can find the period.
+
+## Sky and ambient occlusion
+
+The sky is an analytic gradient. It draws after the lit pass and shades only the
+background pixels. The lit pass traces eight ambient occlusion rays per fragment
+and scales the ambient term by the visible fraction. Both features are on by
+default. The design is in
+`docs/adr/0015-sky-ambient-and-ray-traced-ambient-occlusion.md`.
+
+`scenarios/sky-ao.json` settles the camera at the zenith and at the horizon,
+then captures one arena corner with the AO override off and on, and finally the
+zenith again with the sky off. It checks the mean green channel for each
+capture. It needs `--debug-renderer`, because it changes the `ao` and `sky`
+overrides:
+
+```sh
+./bin/harbagsa-agent run scenarios/sky-ao.json --debug-renderer
+```
+
+Without the flag, the session rejects the command.
 
 ## Performance
 
@@ -459,7 +486,7 @@ What the numbers mean:
 - The frame interval is wall clock. A capture outside a perf run has no interval.
 - The GPU pass times come from Vulkan timestamps. They belong to the last
   completed frame, two frames behind the recording frame. The scene pass time
-  includes the depth prepass.
+  covers the depth prepass, the lit pass, and the sky pass.
 - A device without timestamp support, a failed query pool, or a run without a
   device reports the CPU numbers and leaves the GPU fields empty.
 - Perf data never enters `State`, the state digest, or the pixel hash. A perf
@@ -516,6 +543,7 @@ same size on two builds to compare. The before/after is in
 - `src/renderer/debug.odin`: the debug gate, overrides, and shadow phase.
 - `src/renderer/state.odin`: the renderer report and setup.
 - `src/renderer/render_digest.odin`: the render digest.
+- `src/renderer/sky_draw.odin`: the sky pass, after the lit pass.
 - `src/renderer/capture.odin`: the target copy and RGBA f32 decode.
 - `src/frame/`: shared scene assembly and draw for the game and the harness.
 - `src/game/menu.odin`: the menu rows, settings text, and control list.
@@ -534,8 +562,8 @@ same size on two builds to compare. The before/after is in
   `scenarios/window-settings.json`, `scenarios/renderer-state.json`,
   `scenarios/renderer-reset.json`, `scenarios/capture-targets.json`,
   `scenarios/renderer-debug.json`, `scenarios/renderer-debug-converge.json`,
-  `scenarios/renderer-debug-jitter.json`, `scenarios/capture-free.json`,
-  `scenarios/shadow-angle.json`.
+  `scenarios/renderer-debug-jitter.json`, `scenarios/sky-ao.json`,
+  `scenarios/capture-free.json`, `scenarios/shadow-angle.json`.
 
 ## Adding a command
 
@@ -598,10 +626,10 @@ harness in the same change. Do not leave the automation behind the game.
 - New analysis field: add it to the `Analysis_*` types, `analysis_field`, the
   analysis report, the docs, and a unit test. A check must read the same value
   the file records.
-- New renderer debug override: add it to `TAA_Debug`, `set_taa_debug`, the
-  resolve push constants and shader, `renderer_debug_fields`, the renderer
-  state, the docs, and the gate test. Do not make it reachable without the
-  gate.
+- New renderer debug override: add it to `Renderer_Debug`,
+  `set_renderer_debug`, the camera uniform or the resolve push constants and
+  shader, `renderer_debug_fields`, the renderer state, the render digest, the
+  docs, and the gate test. Do not make it reachable without the gate.
 - New scenario key or run option: add it to `scenario_parse` and its allowed
   key set, the CLI parser, the README, this page, and a parser test.
 - Render state is not simulation state: render fields do not go into

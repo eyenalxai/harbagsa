@@ -13,6 +13,8 @@ RENDERER_DEBUG_KEYS :: []string {
 	"depth_trust",
 	"freeze_shadow_phase",
 	"shadow_phase",
+	"sky",
+	"ao",
 }
 
 RENDERER_DEBUG_BLOCK_KEYS :: []string {
@@ -24,6 +26,8 @@ RENDERER_DEBUG_BLOCK_KEYS :: []string {
 	"depth_trust",
 	"freeze_shadow_phase",
 	"shadow_phase",
+	"sky",
+	"ao",
 }
 
 @(private)
@@ -103,6 +107,22 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 		command.shadow_phase = int(phase)
 		command.has_shadow_phase = true
 	}
+	if value, has := json_get(object, "sky"); has {
+		flag, ok := json_boolean(value)
+		if !ok {
+			return {}, "'sky' must be a boolean"
+		}
+		command.sky = flag
+		command.has_sky = true
+	}
+	if value, has := json_get(object, "ao"); has {
+		flag, ok := json_boolean(value)
+		if !ok {
+			return {}, "'ao' must be a boolean"
+		}
+		command.ao = flag
+		command.has_ao = true
+	}
 	if command.clear {
 		if command.has_taa ||
 		   command.has_jitter ||
@@ -110,7 +130,9 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 		   command.has_clamp ||
 		   command.has_depth_trust ||
 		   command.has_freeze_shadow_phase ||
-		   command.has_shadow_phase {
+		   command.has_shadow_phase ||
+		   command.has_sky ||
+		   command.has_ao {
 			return {}, "'clear' cannot be combined with overrides"
 		}
 	}

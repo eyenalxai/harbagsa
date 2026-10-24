@@ -1,9 +1,10 @@
 # Gated renderer debug overrides
 
-The harness can change six TAA inputs: TAA on or off, jitter, history weight,
-clamp, depth trust, and the shadow phase. The command is diagnostic. A build
-with `ENABLE_RENDERER_DEBUG=true`, or a run with `--debug-renderer`, accepts it.
-Every other build rejects it with an error that names both gates.
+The harness can change renderer inputs: TAA on or off, jitter, history weight,
+clamp, depth trust, the shadow phase, the sky, and ambient occlusion. The
+command is diagnostic. A build with `ENABLE_RENDERER_DEBUG=true`, or a run with
+`--debug-renderer`, accepts it. Every other build rejects it with an error that
+names both gates.
 
 ## Why
 
@@ -19,8 +20,8 @@ without a second build.
 
 ## Decisions
 
-- `TAA_Debug` holds the override values. `active` is false by default, so the
-  renderer ignores every field until the command sets it.
+- `Renderer_Debug` holds the override values. `active` is false by default, so
+  the renderer ignores every field until the command sets it.
 - A first command copies the current effective state into the struct, so an
   omitted field keeps its value.
 - A change to the override resets the history with reason `debug_override`. The

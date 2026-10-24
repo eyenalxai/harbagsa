@@ -33,7 +33,7 @@ TAA :: struct {
 	convergence_frames:   int,
 	reset_count:          int,
 	last_reset:           History_Reset_Reason,
-	debug:                TAA_Debug,
+	debug:                Renderer_Debug,
 
 	prev_models:              [MAX_SCENE_BOXES]Mat4,
 	prev_model_count:         int,
@@ -72,7 +72,7 @@ TAA :: struct {
 
 init_taa :: proc(r: ^Renderer) -> Error {
 	r.taa.enabled = true
-	r.taa.debug = taa_debug_default()
+	r.taa.debug = renderer_debug_default()
 	if !check_taa_formats(r) {
 		return .Create_TAA
 	}

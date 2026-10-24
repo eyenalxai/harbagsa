@@ -8,7 +8,8 @@ MAX_SCENE_BOXES :: 256
 // The uniform block mirrors camera.glsl. Mat4 is column-major, so the
 // matrices upload directly. screen carries the gamma flag in .x, the render
 // extent in .y and .z, and the TAA sample phase in .w. sun.x is the tangent
-// of the sun angular radius.
+// of the sun angular radius and sun.y is the camera far plane, so the sky
+// pass writes the same depth as the velocity clear.
 Camera_Uniform :: struct {
 	view:                 Mat4,
 	projection:           Mat4,
@@ -18,6 +19,9 @@ Camera_Uniform :: struct {
 	screen:               [4]f32,
 	sun:                  [4]f32,
 	jitter:               [4]f32,
+	// x is the AO radius in metres, y the AO strength, z the AO flag, and w
+	// the sky flag. Both flags are 0 or 1 so the shader branch is uniform.
+	lighting:             [4]f32,
 }
 
 Object_Data :: struct {
@@ -39,7 +43,7 @@ TAA_Params :: struct {
 	force_trust:    f32,
 }
 
-#assert(size_of(Camera_Uniform) == 272)
+#assert(size_of(Camera_Uniform) == 288)
 #assert(size_of(Object_Data) == 144)
 #assert(size_of(Object_Index) == 4)
 #assert(size_of(TAA_Params) == 24)

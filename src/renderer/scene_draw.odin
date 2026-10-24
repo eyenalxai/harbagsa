@@ -42,6 +42,7 @@ record_scene :: proc(
 	if !update_camera(r, view.camera, view.light_direction, view.sun_angular_diameter) {
 		return false
 	}
+	debug := renderer_debug(r)
 	r.render_digest = render_digest(
 		Render_Digest_Input {
 			camera = view.camera,
@@ -50,6 +51,8 @@ record_scene :: proc(
 			boxes = view.boxes,
 			jitter = r.taa.current_jitter,
 			shadow_phase = r.taa.shadow_phase,
+			sky = debug.sky,
+			ao = debug.ao,
 			view_flags = view.view_flags,
 		},
 	)
@@ -157,6 +160,7 @@ record_scene_pass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_co
 	record_depth_prepass(r, command_buffer, box_count)
 	record_depth_read_barrier(command_buffer, depth.image)
 	record_color_pass(r, command_buffer, box_count)
+	record_sky_pass(r, command_buffer)
 
 	image_barrier(
 		command_buffer,
