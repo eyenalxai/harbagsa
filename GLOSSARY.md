@@ -53,6 +53,11 @@ _Avoid_: Prone walk
 The ground movement mode: Walk or Sprint. Sprint applies only while Standing.
 _Avoid_: Run mode
 
+**Input mode**:
+The way a key engages a setting: Hold while the key is down, or Toggle on each
+press. The settings menu changes the sprint, crouch, and prone input modes.
+_Avoid_: Key mode
+
 **Sprint**:
 The 8.0 m/s ground speed. The horizontal component is lower on a climb.
 _Avoid_: Run
@@ -158,12 +163,19 @@ The point where the player starts and returns after a reset.
 _Avoid_: Start, origin
 
 **Simulation**:
-The headless fixed-step update that owns the world and the player state.
+The headless fixed-step update that owns the world, the player state, and the
+settings.
 _Avoid_: Game loop, engine
 
 **Input snapshot**:
 One frame of player intent: movement axes, sprint, crouch, prone, jump, and reset. Look is a separate frame call.
 _Avoid_: Input state, controls
+
+**Settings**:
+The runtime input-mode choices for sprint, crouch, and prone. A new simulation
+starts with sprint Hold, crouch Toggle, and prone Toggle. A player reset keeps
+the current settings.
+_Avoid_: Options, preferences
 
 **Render snapshot**:
 The interpolatable view of the player after a simulation step.
@@ -197,7 +209,8 @@ The render target that acquires and presents swapchain images for the window.
 _Avoid_: Window target
 
 **Cursor capture**:
-The state where the mouse controls the camera and the pointer is hidden.
+The state where the mouse controls the camera and the pointer is hidden. The
+settings menu releases the capture while it is open.
 _Avoid_: Mouse lock
 
 **Debug draw**:
@@ -209,8 +222,20 @@ The screen-space pass that draws the debug draw and the HUD over the scene. It d
 _Avoid_: UI layer
 
 **HUD**:
-The 2D part of the overlay: crosshair, controls hint, and player state.
+The 2D part of the overlay: crosshair and player state. It does not show the
+control list.
 _Avoid_: UI
+
+**Settings menu**:
+The paused overlay opened with `Esc`. It lists the active control set and changes
+the three input modes. The harness opens it with the `menu` command and reports
+`settings.*` and `menu.*` in the state.
+_Avoid_: Options screen, pause menu
+
+**Pause**:
+The state while the settings menu is open. The simulation and debug camera do
+not update.
+_Avoid_: Freeze
 
 **Temporal anti-aliasing (TAA)**:
 The render path that jitters the camera and averages frames through a history buffer to smooth edges.

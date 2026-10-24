@@ -28,9 +28,9 @@ Input_Mode :: enum {
 	Toggle,
 }
 
-SPRINT_INPUT_MODE :: Input_Mode.Hold
-CROUCH_INPUT_MODE :: Input_Mode.Toggle
-PRONE_INPUT_MODE :: Input_Mode.Toggle
+DEFAULT_SPRINT_INPUT_MODE :: Input_Mode.Hold
+DEFAULT_CROUCH_INPUT_MODE :: Input_Mode.Toggle
+DEFAULT_PRONE_INPUT_MODE :: Input_Mode.Toggle
 
 PLAYER_RADIUS :: 0.35
 PLAYER_STANDING_HEIGHT :: 1.80
