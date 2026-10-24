@@ -9,7 +9,7 @@ GFX1200). All runs are offscreen through `bin/harbagsa-agent`.
 The flat clear colour became an analytic sky gradient. The constant ambient
 became a sky ramp on the surface normal, and eight ray-traced ambient occlusion
 rays per fragment scale it. The design is in
-`docs/adr/0015-sky-ambient-and-ray-traced-ambient-occlusion.md`.
+`docs/adr/0017-sky-ambient-and-ray-traced-ambient-occlusion.md`.
 
 ## Performance
 
