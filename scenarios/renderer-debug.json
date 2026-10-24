@@ -5,7 +5,9 @@
     "history_weight": 1.0,
     "clamp": false,
     "depth_trust": true,
-    "shadow_phase": 12
+    "shadow_phase": 12,
+    "sky": false,
+    "ao": false
   },
   "commands": [
     {"cmd": "camera", "position": [-12, 1.7, 6.0], "yaw": 0, "pitch": -0.22},
@@ -16,6 +18,8 @@
     {"cmd": "check", "field": "renderer.debug.depth_trust", "op": "eq", "value": true},
     {"cmd": "check", "field": "renderer.debug.shadow_phase_frozen", "op": "eq", "value": true},
     {"cmd": "check", "field": "renderer.debug.shadow_phase", "op": "eq", "value": 12},
+    {"cmd": "check", "field": "renderer.debug.sky", "op": "eq", "value": false},
+    {"cmd": "check", "field": "renderer.debug.ao", "op": "eq", "value": false},
     {"cmd": "settle", "frames": 8},
     {"cmd": "check", "field": "renderer.shadow_phase", "op": "eq", "value": 12},
     {"cmd": "check", "field": "renderer.jitter_index", "op": "eq", "value": 0},
@@ -25,6 +29,8 @@
     {"cmd": "renderer_debug", "clear": true},
     {"cmd": "check", "field": "renderer.debug.active", "op": "eq", "value": false},
     {"cmd": "check", "field": "renderer.debug.jitter", "op": "eq", "value": true},
+    {"cmd": "check", "field": "renderer.debug.sky", "op": "eq", "value": true},
+    {"cmd": "check", "field": "renderer.debug.ao", "op": "eq", "value": true},
     {"cmd": "check", "field": "renderer.last_reset", "op": "eq", "value": "debug_override"},
     {"cmd": "settle", "frames": 1},
     {"cmd": "check", "field": "renderer.shadow_phase", "op": "eq", "value": 10},

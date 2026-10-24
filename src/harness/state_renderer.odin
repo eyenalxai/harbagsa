@@ -57,6 +57,10 @@ renderer_debug_field :: proc(debug: Renderer_Debug_State, path: string) -> (Chec
 		return {kind = .Bool, boolean = debug.shadow_phase_frozen}, ""
 	case "shadow_phase":
 		return {kind = .Number, number = f64(debug.shadow_phase)}, ""
+	case "sky":
+		return {kind = .Bool, boolean = debug.sky}, ""
+	case "ao":
+		return {kind = .Bool, boolean = debug.ao}, ""
 	}
 	return {}, fmt.aprintf("unknown renderer debug field %q", path, allocator = context.allocator)
 }

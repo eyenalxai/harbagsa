@@ -46,6 +46,8 @@ session_state :: proc(session: ^Session) -> State {
 			depth_trust         = report.debug.depth_trust,
 			shadow_phase_frozen = report.debug.shadow_phase_frozen,
 			shadow_phase        = report.debug.shadow_phase,
+			sky                 = report.debug.sky,
+			ao                  = report.debug.ao,
 		},
 	}
 	return state_build(

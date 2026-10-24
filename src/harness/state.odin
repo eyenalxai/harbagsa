@@ -75,6 +75,8 @@ Renderer_Debug_State :: struct {
 	depth_trust:         bool   `json:"depth_trust"`,
 	shadow_phase_frozen: bool   `json:"shadow_phase_frozen"`,
 	shadow_phase:        u32    `json:"shadow_phase"`,
+	sky:                 bool   `json:"sky"`,
+	ao:                  bool   `json:"ao"`,
 }
 
 Renderer_State :: struct {

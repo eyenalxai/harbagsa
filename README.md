@@ -5,7 +5,9 @@ jumps, dives, slides, and mantles in a fixed arena with stairs, ramps, tunnels,
 mantle walls, a dive platform, and pushable crates. SDL3 provides the window and
 input, raw Vulkan 1.3 with ray-query shadows draws the scene, and Box3D runs the
 physics. A directional sun casts hard contact shadows and softer distant
-shadows from the walls and crates.
+shadows from the walls and crates. An analytic sky gradient fills the
+background. Ray-traced ambient occlusion uses the same scene acceleration
+structure to darken the ambient light in corners and tunnels.
 
 ## Requirements
 
@@ -134,7 +136,7 @@ The summary row holds frames per second, the frame interval, the CPU frame
 time, the p95 interval, the spike count, and the GPU total with the costliest
 pass. The pass row holds the last completed frame's GPU pass times: the TLAS
 build, the depth prepass, the lit scene pass, the TAA resolve, and the overlay
-pass.
+pass. The sky runs inside the scene pass.
 
 The GPU numbers belong to the last completed frame, so they are two frames
 behind the frame being recorded. A device without timestamp support shows the
@@ -267,10 +269,10 @@ The batch runner and the live session share one command set:
   digest, frame, and simulation digest. The sun object reports azimuth,
   elevation, and angular diameter in degrees. The renderer object reports the
   frame count, TAA state, jitter index, history validity, convergence frames,
-  history read index and weight, reset count and reason, shadow phase, and the
-  applied atlas weight. `render_digest` covers the effective camera, the sun
-  direction and angular diameter, boxes, jitter, shadow phase, applied atlas
-  weight, and view flags.
+  history read index and weight, reset count and reason, shadow phase, the
+  applied atlas weight, and the debug override values. `render_digest` covers
+  the effective camera, the sun direction and angular diameter, boxes, jitter,
+  shadow phase, applied atlas weight, the sky and AO flags, and view flags.
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`: write a PNG.
   `frame` is optional. A past frame is an error; a future frame queues. Add
   `"target": "velocity"`, `"history"`, `"depth"`, or `"scene_color"` to read an
@@ -311,10 +313,11 @@ The batch runner and the live session share one command set:
   measured frame; a relative path resolves against the run directory and a run
   holds one trace. Offscreen measures throughput; with `--present` it measures
   pacing. A run without a device reports CPU numbers only.
-- `{"cmd": "renderer_debug", "jitter": false, "shadow_phase": 12}`: change TAA
-  inputs. It needs `--debug-renderer` or a build with
-  `-define:ENABLE_RENDERER_DEBUG=true`. `clear` resets every override. Changing
-  a TAA input resets history.
+- `{"cmd": "renderer_debug", "jitter": false, "shadow_phase": 12}`: change
+  renderer inputs. It needs `--debug-renderer` or a build with
+  `-define:ENABLE_RENDERER_DEBUG=true`. `sky` and `ao` turn the sky and the
+  ambient occlusion off. `clear` resets every override. Changing an input resets
+  history.
 - `{"cmd": "record", "path": "scenarios/walk.json"}`: start recording. Send
   `{"cmd": "record"}` to stop and write the scenario.
 - `{"cmd": "replay", "path": "scenarios/walk.json"}`: reset and run a scenario.
@@ -457,17 +460,29 @@ screen motion in texels. `"format": "float"` writes a `.f32` file and `"raw"`
 writes the exact texel bytes. A PNG capture is color only.
 `scenarios/capture-targets.json` covers every target.
 
-`renderer_debug` changes TAA inputs for a diagnosis: TAA, jitter, history weight,
-clamp, depth trust, and the shadow phase. Every build rejects it unless
-`--debug-renderer` is passed or the build used the `ENABLE_RENDERER_DEBUG`
-define. Changing an input resets history and records the `debug_override`
-reason.
+`renderer_debug` changes renderer inputs for a diagnosis: TAA, jitter, history
+weight, clamp, depth trust, the shadow phase, the sky, and the ambient
+occlusion. Every build rejects it unless `--debug-renderer` is passed or the
+build used the `ENABLE_RENDERER_DEBUG` define. Changing an input resets history
+and records the `debug_override` reason.
 `scenarios/renderer-debug.json` covers the overrides, and
 `scenarios/renderer-debug-converge.json` shows the image converging with jitter
-off. `scenarios/renderer-debug-jitter.json` freezes the phase, lets jitter cycle,
-and writes the analysis maps. `scenarios/capture-free.json` settles without
-captures and then captures; run it twice and compare the digests and PNG hashes
-to prove the offscreen sequence is deterministic.
+off. `scenarios/renderer-debug-jitter.json` freezes the phase, lets jitter
+cycle, and writes the analysis maps. `scenarios/capture-free.json` settles
+without captures and then captures; run it twice and compare the digests and PNG
+hashes to prove the offscreen sequence is deterministic.
+
+`scenarios/sky-ao.json` captures the sky gradient and one arena corner with
+ambient occlusion off and on, then the zenith with the sky off, and checks the
+mean green channel. It needs `--debug-renderer`, because it changes the `ao`
+and `sky` overrides:
+
+```sh
+./bin/harbagsa-agent run scenarios/sky-ao.json --debug-renderer
+```
+
+The zenith gate fails when the sky is off, the corner gates fail when the AO is
+never re-enabled, and the flat-zenith gate fails when the sky never turns off.
 
 ### Compare two runs
 

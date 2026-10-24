@@ -27,8 +27,8 @@ Backend :: struct {
 	gpu_times: proc(ctx: rawptr) -> perf.Gpu_Times,
 	snapshot:  proc(ctx: rawptr) -> Backend_Snapshot,
 	setup:     proc(ctx: rawptr) -> renderer.Setup_Report,
-	set_debug: proc(ctx: rawptr, debug: renderer.TAA_Debug) -> bool,
-	get_debug: proc(ctx: rawptr) -> renderer.TAA_Debug,
+	set_debug: proc(ctx: rawptr, debug: renderer.Renderer_Debug) -> bool,
+	get_debug: proc(ctx: rawptr) -> renderer.Renderer_Debug,
 	clear_debug: proc(ctx: rawptr),
 	shutdown:  proc(ctx: rawptr),
 }
@@ -119,21 +119,21 @@ backend_create :: proc(
 }
 
 @(private)
-backend_set_debug :: proc(ctx: rawptr, debug: renderer.TAA_Debug) -> bool {
+backend_set_debug :: proc(ctx: rawptr, debug: renderer.Renderer_Debug) -> bool {
 	data := cast(^Backend_Data)ctx
-	return renderer.set_taa_debug(&data.renderer, debug)
+	return renderer.set_renderer_debug(&data.renderer, debug)
 }
 
 @(private)
-backend_get_debug :: proc(ctx: rawptr) -> renderer.TAA_Debug {
+backend_get_debug :: proc(ctx: rawptr) -> renderer.Renderer_Debug {
 	data := cast(^Backend_Data)ctx
-	return renderer.taa_debug(&data.renderer)
+	return renderer.renderer_debug(&data.renderer)
 }
 
 @(private)
 backend_clear_debug :: proc(ctx: rawptr) {
 	data := cast(^Backend_Data)ctx
-	renderer.clear_taa_debug(&data.renderer)
+	renderer.clear_renderer_debug(&data.renderer)
 }
 
 @(private)

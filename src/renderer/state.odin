@@ -63,6 +63,8 @@ Debug_Report :: struct {
 	depth_trust:          bool,
 	shadow_phase_frozen:  bool,
 	shadow_phase:         u32,
+	sky:                  bool,
+	ao:                   bool,
 }
 
 Setup_Report :: struct {
@@ -75,9 +77,12 @@ Setup_Report :: struct {
 	jitter_samples:  int,
 	history_images:  int,
 	max_samples:     int,
+	ao_samples:      int,
+	ao_radius:       f32,
 }
 
 renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
+	debug_effective := renderer_debug(r)
 	report := Renderer_Report {
 		active             = r.device != nil,
 		frame_count        = r.frame_count,
@@ -99,6 +104,8 @@ renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
 			depth_trust = r.taa.debug.active && r.taa.debug.force_depth_trust,
 			shadow_phase_frozen = r.taa.debug.active && r.taa.debug.freeze_shadow_phase,
 			shadow_phase = r.taa.debug.shadow_phase,
+			sky = debug_effective.sky,
+			ao = debug_effective.ao,
 		},
 	}
 	if r.taa.debug.active && r.taa.debug.history_weight >= 0 {
@@ -121,5 +128,7 @@ setup_report :: proc(r: ^Renderer) -> Setup_Report {
 		jitter_samples = TAA_JITTER_SAMPLES,
 		history_images = TAA_HISTORY_IMAGES,
 		max_samples = TAA_MAX_SAMPLES,
+		ao_samples = AO_SAMPLES,
+		ao_radius = AO_RADIUS,
 	}
 }

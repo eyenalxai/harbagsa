@@ -17,6 +17,8 @@ Renderer_Config_State :: struct {
 	jitter_samples:   int    `json:"jitter_samples"`,
 	history_images:   int    `json:"history_images"`,
 	max_samples:      int    `json:"max_samples"`,
+	ao_samples:       int    `json:"ao_samples"`,
+	ao_radius:        f32    `json:"ao_radius"`,
 }
 
 Setup_State :: struct {
@@ -42,6 +44,8 @@ setup_build :: proc(options: Common_Options, view: View, backend: Backend) -> Se
 			jitter_samples = renderer.TAA_JITTER_SAMPLES,
 			history_images = renderer.TAA_HISTORY_IMAGES,
 			max_samples = renderer.TAA_MAX_SAMPLES,
+			ao_samples = renderer.AO_SAMPLES,
+			ao_radius = renderer.AO_RADIUS,
 		},
 	}
 	if !backend.ready || backend.setup == nil {
@@ -58,6 +62,8 @@ setup_build :: proc(options: Common_Options, view: View, backend: Backend) -> Se
 		jitter_samples = report.jitter_samples,
 		history_images = report.history_images,
 		max_samples = report.max_samples,
+		ao_samples = report.ao_samples,
+		ao_radius = report.ao_radius,
 	}
 	return setup
 }

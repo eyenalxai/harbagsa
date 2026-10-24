@@ -25,6 +25,8 @@ Render_Digest_Input :: struct {
 	jitter:               [2]f32,
 	shadow_phase:         u32,
 	atlas_weight:         f32,
+	sky:                  bool,
+	ao:                   bool,
 	view_flags:           View_Flags,
 }
 
@@ -64,6 +66,8 @@ render_digest :: proc(input: Render_Digest_Input) -> digest.FNV {
 	// The applied atlas weight changes the text pixels, so it belongs to the
 	// render digest, not the simulation digest.
 	digest.write_f32(&hash, input.atlas_weight)
+	digest.write_bool(&hash, input.sky)
+	digest.write_bool(&hash, input.ao)
 	digest.write_u32(&hash, u32(transmute(u8)input.view_flags))
 	return hash
 }
