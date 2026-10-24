@@ -2,6 +2,7 @@
 package harness
 
 import "core:fmt"
+import "core:math"
 import "core:mem"
 import "core:strings"
 
@@ -125,6 +126,7 @@ state_build :: proc(
 	snapshot := game.simulation_snapshot(sim)
 	resolution := game.settings_effective_resolution(sim.settings, &menu.displays)
 	window_resolution := sim.settings.window.resolution
+	sun_azimuth, sun_elevation := game.debug_mode_sun_angles(debug)
 	state := State {
 		frame = frame,
 		player = {
@@ -179,6 +181,12 @@ state_build :: proc(
 				height = debug.placement.height,
 				yaw = debug.placement.yaw_degrees,
 				snap = debug.placement.snap,
+			},
+			sun = {
+				active = debug.sun.active,
+				position = vec_state(debug.sun.position),
+				azimuth = sun_azimuth * 180.0 / math.PI,
+				elevation = sun_elevation * 180.0 / math.PI,
 			},
 		},
 		sun = sun_state(debug),
@@ -248,6 +256,9 @@ state_digest :: proc(state: State, allocator: mem.Allocator) -> string {
 	digest.write_f32(&hash, state.player.yaw)
 	digest.write_f32(&hash, state.player.pitch)
 	digest.write_bool(&hash, state.player.grounded)
+	digest.write_f32(&hash, state.debug.sun.position.x)
+	digest.write_f32(&hash, state.debug.sun.position.y)
+	digest.write_f32(&hash, state.debug.sun.position.z)
 	digest.write_string(&hash, state.settings.window_mode)
 	digest.write_string(&hash, state.settings.display)
 	digest.write_i64(&hash, i64(state.settings.display_index))

@@ -8,8 +8,6 @@ debug_selection_name :: proc(selection: Debug_Selection) -> string {
 		return "none"
 	case .Object:
 		return "object"
-	case .Sun:
-		return "sun"
 	}
 	return "none"
 }

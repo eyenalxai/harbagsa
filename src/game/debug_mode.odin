@@ -5,22 +5,16 @@ import "core:math"
 
 import b3 "libs:box3d"
 
-DEFAULT_SUN_DIRECTION :: [3]f32{-0.45, -1.0, -0.35}
-// The real sun subtends about 0.53 degrees. A wider disk softens every shadow
-// by the same factor and smears a wall shadow when the sun sits low.
-SUN_ANGULAR_DIAMETER :: 0.53 * math.PI / 180.0
 DEBUG_FLY_SPEED :: 10.0
 
 Debug_Selection :: enum {
 	None,
 	Object,
-	Sun,
 }
 
 Debug_Drag :: enum {
 	None,
 	Object,
-	Sun,
 }
 
 Debug_Camera :: struct {
@@ -35,43 +29,45 @@ Saved_Player :: struct {
 	pitch:    f32,
 }
 
+Sun_Placement :: struct {
+	active:         bool,
+	saved_position: [3]f32,
+	position:       [3]f32,
+}
+
 Debug_Mode :: struct {
 	active:             bool,
 	camera:             Debug_Camera,
 	saved_player:       Saved_Player,
-	sun_direction:      [3]f32,
+	sun:                Sun_Placement,
 	selection:          Debug_Selection,
 	selected_object_id: Object_Id,
 	dragging:           Debug_Drag,
 	drag_position:      b3.Vec3,
-	sun_azimuth:        f32,
-	sun_elevation:      f32,
-	sun_drag_dx:        f32,
-	sun_drag_dy:        f32,
 	palette:            Palette,
 	placement:          Placement,
 }
 
 Debug_Input :: struct {
-	move_forward:      f32,
-	move_right:        f32,
-	move_up:           f32,
-	look_delta:        [2]f32,
-	wheel_delta:       f32,
-	primary_pressed:   bool,
-	primary_released:  bool,
-	secondary_pressed: bool,
-	delete_pressed:    bool,
-	rotate_left:       bool,
-	rotate_right:      bool,
-	large_step:        bool,
-	sun_pressed:       bool,
-	captured:          bool,
+	move_forward:           f32,
+	move_right:            f32,
+	move_up:               f32,
+	look_delta:            [2]f32,
+	wheel_delta:           f32,
+	primary_pressed:       bool,
+	primary_released:      bool,
+	secondary_pressed:     bool,
+	delete_pressed:        bool,
+	rotate_left:           bool,
+	rotate_right:          bool,
+	large_step:            bool,
+	sun_placement_pressed: bool,
+	captured:              bool,
 }
 
 debug_mode_create :: proc() -> Debug_Mode {
 	return {
-		sun_direction = DEFAULT_SUN_DIRECTION,
+		sun = {position = DEFAULT_SUN_POSITION},
 		palette = {
 			selected = 0,
 			body_mode = prefab(.Crate).body_mode,
@@ -91,19 +87,11 @@ debug_mode_toggle :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 }
 
 debug_mode_sun_direction :: proc(dm: ^Debug_Mode) -> [3]f32 {
-	length := math.sqrt(
-		dm.sun_direction.x * dm.sun_direction.x +
-		dm.sun_direction.y * dm.sun_direction.y +
-		dm.sun_direction.z * dm.sun_direction.z,
-	)
-	if length <= 0.0 {
-		return DEFAULT_SUN_DIRECTION
-	}
-	return dm.sun_direction * (1.0 / length)
+	return sun_direction_from_position(dm.sun.position)
 }
 
 debug_mode_sun_angles :: proc(dm: ^Debug_Mode) -> (azimuth, elevation: f32) {
-	return sun_angles_from_direction(sun_direction_from_light(debug_mode_sun_direction(dm)))
+	return sun_angles_from_direction(debug_mode_sun_direction(dm))
 }
 
 debug_mode_clear_selection :: proc(dm: ^Debug_Mode) {
@@ -114,8 +102,6 @@ debug_mode_clear_selection :: proc(dm: ^Debug_Mode) {
 
 debug_mode_end_drag :: proc(dm: ^Debug_Mode) {
 	dm.dragging = .None
-	dm.sun_drag_dx = 0.0
-	dm.sun_drag_dy = 0.0
 }
 
 debug_selected_object_id :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> (Object_Id, bool) {
@@ -153,8 +139,7 @@ debug_mode_reset_player :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 
 debug_mode_reset_scene :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	simulation_reset_scene(sim)
-	dm.sun_direction = DEFAULT_SUN_DIRECTION
-	dm.sun_angular_diameter = SUN_ANGULAR_DIAMETER
+	debug_sun_reset(dm)
 	debug_mode_clear_selection(dm)
 	save_player_and_sync_camera(dm, sim)
 }
@@ -177,17 +162,21 @@ debug_mode_update :: proc(dm: ^Debug_Mode, sim: ^Simulation, input: Debug_Input,
 	}
 
 	debug_fly(dm, input, delta)
-	debug_edit_objects(dm, sim, input)
-	debug_edit_sun(dm, input)
+	// The sun mode owns the click that leaves it, so the same click cannot also
+	// select a placed object.
+	if !debug_edit_sun(dm, sim, input) {
+		debug_edit_objects(dm, sim, input)
+	}
 	debug_placement_refresh(dm, sim)
 }
 
-// The palette and the placement tool are mutually exclusive, and the settings
-// menu owns the input while it is open.
+// The palette, the placement tool, and the sun placement are mutually
+// exclusive, and the settings menu owns the input while it is open.
 debug_mode_cancel_editing :: proc(dm: ^Debug_Mode) {
 	debug_mode_end_drag(dm)
 	palette_close(&dm.palette)
 	debug_placement_cancel(dm)
+	debug_sun_cancel(dm)
 }
 
 @(private)

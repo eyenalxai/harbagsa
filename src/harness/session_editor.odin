@@ -61,5 +61,23 @@ session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 			},
 		)
 	}
+	if command.has_sun {
+		if command.sun.has_active {
+			if command.sun.active {
+				game.debug_sun_enter(&session.debug, &session.sim)
+			} else {
+				game.debug_sun_exit(&session.debug)
+			}
+		}
+		if command.sun.has_position {
+			game.debug_sun_set_position(&session.debug, command.sun.position)
+		}
+		if command.sun.place {
+			game.debug_sun_exit(&session.debug)
+		}
+		if command.sun.cancel {
+			game.debug_sun_cancel(&session.debug)
+		}
+	}
 	return ""
 }

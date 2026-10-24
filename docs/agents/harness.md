@@ -72,6 +72,7 @@ serializes Make with `flock`.
 | --- | --- |
 | drive the simulation | **Scenario format** and **Commands** |
 | drive the object palette and placement tool | **Editor** |
+| drive the sun placement | **Editor** |
 | capture the final image | **Capture targets** (`color` + `png`) |
 | read velocity, history, depth, or scene color | **Capture targets** |
 | read numeric image statistics | **Capture targets** (`stats`) |
@@ -102,9 +103,9 @@ serializes Make with `flock`.
   for a trace. A scenario with more than one traced perf command writes one file
   per command; `report.trace` names the last.
 - `state.json`: the final state alone. It holds the player, placed objects,
-  window and input settings, menu, debug palette and placement, frame, renderer,
-  render digest, and simulation digest. Each object carries `id`, `prefab`,
-  `body`, `position`, `rotation`, `scale`, and `spawn_age`.
+  window and input settings, menu, debug palette, placement and sun, frame,
+  renderer, render digest, and simulation digest. Each object carries `id`,
+  `prefab`, `body`, `position`, `rotation`, `scale`, and `spawn_age`.
 - `frames/<name>.png`, `.f32`, or `.bin`: captures. A color capture is a PNG;
   `float` and `raw` write the intermediate target.
 - Each screenshot entry carries `delta_mean`, `delta_max`, and `delta_over_16`
@@ -160,8 +161,8 @@ Rules:
 - A check uses the `state.json` shape. Operators: `eq`, `ne`, `lt`, `le`, `gt`,
   `ge`. Examples: `player.position.y`, `objects.count`, `settings.window_mode`,
   `settings.resolution`, `settings.sprint_mode`, `menu.open`, `debug.active`,
-  `debug.palette.open`, `debug.placement.armed`, and
-  `debug.placement.prefab`.
+  `debug.palette.open`, `debug.placement.armed`, `debug.placement.prefab`, and
+  `debug.sun.active`.
 - An object check addresses a placed object by id: `objects.7.position.z`,
   `objects.7.rotation.w`, `objects.7.prefab`, `objects.7.body`,
   `objects.7.scale`, and `objects.7.spawn_age`. The id is stable while the object
@@ -234,6 +235,9 @@ Rules:
 - `{"cmd": "editor", "open": true, "select": 4, "pick": true, "height": 0.5}`
 - `{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw": 0, "pitch": -0.6}}`
 - `{"cmd": "editor", "place": {"prefab": "Block", "position": [0, 0.5, 10], "body": "static"}}`
+- `{"cmd": "editor", "sun": {"active": true, "position": [0, 40, -30]}}`
+- `{"cmd": "editor", "sun": {"place": true}}`
+- `{"cmd": "editor", "sun": {"cancel": true}}`
 - `{"cmd": "menu", "open": true, "select": 1, "activate": true, "direction": -1}`
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`
 - `{"cmd": "check", "field": "capture.1.stats.mean.y", "op": "gt", "other": "capture.0.stats.mean.y"}`
@@ -266,7 +270,7 @@ the Resolution row. `clear` restores the fallback list.
 A past capture frame is an error. A future capture frame queues. Unknown keys,
 wrong types, and out-of-range values are per-command errors; the session stays
 usable. A `step` or `settle` while the menu is open is an error, because the
-game pauses. A settle renders every frame and writes no screenshot. An open menu renders even when the `view` HUD flag is off. Opening the menu closes the object palette and cancels placement. `select` is zero-based.
+game pauses. A settle renders every frame and writes no screenshot. An open menu renders even when the `view` HUD flag is off. Opening the menu closes the object palette and cancels placement and sun placement. `select` is zero-based.
 `select` and `activate` need an open menu. `direction` is `-1` or `1` (default
 `1`) and needs `activate`. The rows are Window mode, Display, Resolution, Sprint
 mode, Crouch mode, Prone mode, and Resume.
@@ -300,10 +304,11 @@ Changing the sun resets TAA history with the `scene_change` reason.
 
 ## Editor
 
-The `editor` command drives the debug placement tool. It needs debug mode; send
-`{"cmd": "debug_mode", "active": true}` first. Every field is optional, and one
-command may combine fields. They apply in this order: `camera`, `open`,
-`select`, `body`, `height`, `yaw`, `snap`, `pick`, `cancel`, `place`.
+The `editor` command drives the debug placement tool and the sun placement. It
+needs debug mode; send `{"cmd": "debug_mode", "active": true}` first. Every field
+is optional, and one command may combine fields. They apply in this order:
+`camera`, `open`, `select`, `body`, `height`, `yaw`, `snap`, `pick`, `cancel`,
+`place`, `sun`.
 
 | Field | Meaning |
 | --- | --- |
@@ -317,6 +322,7 @@ command may combine fields. They apply in this order: `camera`, `open`,
 | `cancel` | clear the armed tool without placing |
 | `camera` | `{"position", "yaw", "pitch"}` for the debug camera; yaw and pitch are radians |
 | `place` | `{"prefab", "position", "yaw", "body"}` creates at an exact transform |
+| `sun` | `{"active", "position", "place", "cancel"}` drives sun placement |
 
 `select` follows the catalog order: Crate, Small crate, Wide crate, Block,
 Platform, Ramp, Pillar, Wall. A pick casts a 100 m ray from the debug camera. A
@@ -327,19 +333,33 @@ the camera. The state reports the ghost centre as `debug.placement.position`.
 to the prefab default. It bypasses the ray and leaves the armed tool unchanged.
 At the 128-object cap it creates nothing.
 
-The state carries `debug.palette` (`open`, `selected`, `body`) and
-`debug.placement` (`armed`, `prefab`, `position`, `height`, `yaw`, `snap`).
-`debug.selection` is `none`, `object`, or `sun`, and `debug.selected_id` is the
+The `sun` fields apply in this order: `active`, `position`, `place`, `cancel`.
+`active: true` enters the mode and saves the current sun for a cancel; it also
+closes the palette and cancels the object placement. `position` sets the sun
+directly, so a capture is deterministic; the light direction follows the new
+position. `place` commits and leaves the mode. `cancel` restores the sun from
+before the mode. `active: false` leaves the mode and keeps the current sun.
+
+The state carries `debug.palette` (`open`, `selected`, `body`),
+`debug.placement` (`armed`, `prefab`, `position`, `height`, `yaw`, `snap`), and
+`debug.sun` (`active`, `position`, `azimuth`, `elevation`). The sun angles are
+degrees. `debug.selection` is `none` or `object`, and `debug.selected_id` is the
 selected placed object's id or 0. `debug.placement.height` is metres,
 `debug.placement.yaw` is degrees, and `debug.placement.position` is the ghost
 centre (zero when not armed). The ghost is drawn as debug lines while armed: the
 oriented box, the footprint on the surface, and the height guide.
 
+The sun gizmo is debug lines too: a ring, a cross, and a dashed line to the
+arena centre. It is bright amber while the placement mode is active and dimmer
+amber while idle. The palette, the object placement, and the sun placement are
+mutually exclusive. The settings menu cancels the sun placement when it opens.
+
 `scenarios/editor-ghost.json` captures the armed ghost on the floor and raised,
 then places a block at an exact transform. `scenarios/debug-palette.json` opens
 the palette, captures the Platform preview, selects the Ramp, and captures its
 pitched preview. Run it with `--size 800x600` to check the dock fits the smallest
-supported window.
+supported window. `scenarios/editor-sun.json` captures the default light, the
+sun gizmo on the sky dome, and the committed lighting.
 
 The harness has no real cursor. Frame tests cover the card hit test, platform
 tests cover the normalized pointer math and the key map, and a manual run covers
@@ -384,6 +404,7 @@ The 2D layer is part of the feature, so its captures live next to it.
 | `scenarios/hud.json` | the status panel at spawn, mid-walk, and facing the arena |
 | `scenarios/hud-debug.json` | the debug-mode readout, which shares the row renderer |
 | `scenarios/editor-ghost.json` | the armed placement HUD, the ghost, and an exact place |
+| `scenarios/editor-sun.json` | the default light, the sun gizmo, and the committed sun |
 | `scenarios/debug-palette.json` | the open palette, its selection, and the cube and ramp previews |
 | `scenarios/debug-pop.json` | the spawn pop at the start, overshoot, and settled frames |
 | `scenarios/ui.json` | the settings panel with a numeric value selected, then an action row |
@@ -853,17 +874,17 @@ and the second `perf` measures again. Both traces stay in the run directory:
 - A perf command is the one wall-clock exception. It never writes the state,
   the digest, or the pixel hash.
 - `reset` creates a fresh `Simulation`. Placed objects return to spawn, the
-  settings return to their defaults, the menu closes, and the debug palette and
-  placement return to their defaults.
+  settings return to their defaults, the menu closes, and the debug palette,
+  placement, and sun return to their defaults.
 - `look` uses the game sensitivity and pitch clamp. `face` sets yaw and pitch
   directly.
 - Capture alpha defaults to 1.0 (post-step), so a capture matches `state` at the
   same frame.
-- The digest is FNV-1a over frame, player, the placed objects (id, prefab, body,
-  and the physical transform), the window and input settings, and menu state.
-  Scale and spawn age are animation output, so they stay out of the digest. The
-  visual pop box is not digest input. Use the digest in reports and regression
-  checks.
+- The digest is FNV-1a over frame, player, the sun position, the placed objects
+  (id, prefab, body, and the physical transform), the window and input settings,
+  and menu state. Scale and spawn age are animation output, so they stay out of
+  the digest. The visual pop box is not digest input. Use the digest in reports
+  and regression checks.
 
 ## Where the code lives
 
@@ -930,6 +951,10 @@ and the second `perf` measures again. Both traces stay in the run directory:
   extents.
 - `src/game/debug_draw_ghost.odin`: the ghost outline, footprint, and height
   guide lines.
+- `src/game/debug_sun.odin`: the sun placement mode, the sky dome projection,
+  the direction from the position, and the default sun.
+- `src/game/debug_draw_sun.odin`: the sun ring, cross, and dashed line.
+- `src/game/debug_ray.odin`: the shared debug aim ray and its fallback point.
 - `src/game/box_body.odin`: the one Box3D box-body creation path for the static
   arena and the placed objects.
 - `src/game/menu.odin`: the menu rows, settings text, and control list.
@@ -951,8 +976,8 @@ and the second `perf` measures again. Both traces stay in the run directory:
   `scenarios/renderer-reset.json`, `scenarios/capture-targets.json`,
   `scenarios/renderer-debug.json`, `scenarios/renderer-debug-converge.json`,
   `scenarios/renderer-debug-jitter.json`, `scenarios/capture-free.json`,
-  `scenarios/editor-ghost.json`, `scenarios/debug-pop.json`, and
-  `scenarios/perf-lamps.json`.
+  `scenarios/editor-ghost.json`, `scenarios/editor-sun.json`,
+  `scenarios/debug-pop.json`, and `scenarios/perf-lamps.json`.
 
 ## Adding a command
 

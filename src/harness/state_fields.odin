@@ -128,6 +128,11 @@ debug_field :: proc(debug: Debug_State, path: string) -> (Check_Value, string) {
 			return {}, "debug.placement needs a field"
 		}
 		return placement_field(debug.placement, tail)
+	case "sun":
+		if !has_tail {
+			return {}, "debug.sun needs a field"
+		}
+		return sun_field(debug.sun, tail)
 	}
 	return {}, fmt.aprintf("unknown settle field %q", path, allocator = context.allocator)
 }
@@ -166,6 +171,25 @@ placement_field :: proc(placement: Placement_State, path: string) -> (Check_Valu
 		return vec_field(placement.position, tail)
 	}
 	return {}, fmt.aprintf("unknown debug.placement field %q", path, allocator = context.allocator)
+}
+
+@(private)
+sun_field :: proc(sun: Sun_State, path: string) -> (Check_Value, string) {
+	head, tail, has_tail := split_field(path)
+	switch head {
+	case "active":
+		return {kind = .Bool, boolean = sun.active}, ""
+	case "azimuth":
+		return {kind = .Number, number = f64(sun.azimuth)}, ""
+	case "elevation":
+		return {kind = .Number, number = f64(sun.elevation)}, ""
+	case "position":
+		if !has_tail {
+			return {}, "debug.sun.position needs an axis"
+		}
+		return vec_field(sun.position, tail)
+	}
+	return {}, fmt.aprintf("unknown debug.sun field %q", path, allocator = context.allocator)
 }
 
 @(private)
