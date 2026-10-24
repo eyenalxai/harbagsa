@@ -119,6 +119,11 @@ state_field :: proc(state: State, path: string) -> (Check_Value, string) {
 			return {}, "settings needs a field"
 		}
 		return settings_field(state.settings, tail)
+	case "debug":
+		if !has_tail {
+			return {}, "debug needs a field"
+		}
+		return debug_field(state.debug, tail)
 	case "menu":
 		if !has_tail {
 			return {}, "menu needs a field"
