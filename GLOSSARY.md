@@ -369,6 +369,22 @@ _Avoid_: Clear, flush
 The frames after a history reset while the sample count grows from 1 to 512. The first frames change the image quickly; later frames add small corrections.
 _Avoid_: Warmup
 
+**Renderer state**:
+The harness state block that describes the last rendered frame: frame count, TAA state, jitter index, history validity, convergence frames, history read index and weight, reset count and reason, and shadow phase.
+_Avoid_: Render stats, GPU state
+
+**Render digest**:
+The FNV-1a hash of the effective render inputs: camera, sun, boxes, jitter, shadow phase, and view flags. It is separate from the simulation digest.
+_Avoid_: Frame hash, image hash
+
+**History reset reason**:
+The cause recorded at each TAA history reset: create, extent, toggle, teleport, scene change, debug override, player reset, or scene reset.
+_Avoid_: Reset flag
+
+**View flags**:
+The toggles that change the overlay: HUD, menu, debug draw, capture hint, and perf. The render digest covers them because they change the image.
+_Avoid_: Draw flags
+
 **TAA toggle**:
 The `F3` control that enables or disables temporal anti-aliasing.
 _Avoid_: AA switch
