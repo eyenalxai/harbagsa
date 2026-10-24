@@ -13,7 +13,8 @@ renderer_debug_parses_every_override :: proc(t: ^testing.T) {
 	command, error := harness.command_parse_string(
 		`{"cmd": "renderer_debug", "taa": false, "jitter": false, "history_weight": 0.25,
 		  "clamp": false, "depth_trust": true, "freeze_shadow_phase": true,
-		  "shadow_phase": 9, "light_shadows": false, "synthetic_lights": 8}`,
+		  "shadow_phase": 9, "light_shadows": false, "synthetic_lights": 8,
+		  "sky": false, "ao": false}`,
 		context.allocator,
 	)
 	defer harness.command_destroy(&command, context.allocator)
@@ -32,6 +33,8 @@ renderer_debug_parses_every_override :: proc(t: ^testing.T) {
 	testing.expect(t, debug.has_shadow_phase && debug.shadow_phase == 9, "phase was not parsed")
 	testing.expect(t, debug.has_light_shadows && !debug.light_shadows, "light shadows were not parsed")
 	testing.expect(t, debug.has_synthetic_lights && debug.synthetic_lights == 8, "synthetic lights were not parsed")
+	testing.expect(t, debug.has_sky && !debug.sky, "sky was not parsed")
+	testing.expect(t, debug.has_ao && !debug.ao, "ao was not parsed")
 }
 
 @(test)
@@ -57,7 +60,8 @@ renderer_debug_rejects_bad_fields :: proc(t: ^testing.T) {
 @(test)
 scenario_compiles_a_renderer_debug_block :: proc(t: ^testing.T) {
 	scenario, error := harness.scenario_parse(
-		`{"renderer_debug": {"jitter": false, "shadow_phase": 2}, "commands": [{"cmd": "step", "frames": 1}]}`,
+		`{"renderer_debug": {"jitter": false, "shadow_phase": 2, "sky": false, "ao": false},
+		  "commands": [{"cmd": "step", "frames": 1}]}`,
 		context.allocator,
 	)
 	defer harness.scenario_destroy(&scenario, context.allocator)
@@ -73,6 +77,8 @@ scenario_compiles_a_renderer_debug_block :: proc(t: ^testing.T) {
 	testing.expect(t, first.kind == .Renderer_Debug, "debug block is not the first command")
 	testing.expect(t, first.renderer_debug.has_jitter && !first.renderer_debug.jitter, "jitter was dropped")
 	testing.expect(t, first.renderer_debug.shadow_phase == 2, "shadow phase was dropped")
+	testing.expect(t, first.renderer_debug.has_sky && !first.renderer_debug.sky, "sky was dropped")
+	testing.expect(t, first.renderer_debug.has_ao && !first.renderer_debug.ao, "ao was dropped")
 }
 
 @(test)

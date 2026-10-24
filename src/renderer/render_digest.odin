@@ -16,13 +16,19 @@ View_Flag :: enum {
 View_Flags :: bit_set[View_Flag]
 
 Render_Digest_Input :: struct {
-	camera:          Camera,
-	light_direction: [3]f32,
-	boxes:           []geometry.Box,
-	lights:          []Light,
-	jitter:          [2]f32,
-	shadow_phase:    u32,
-	view_flags:      View_Flags,
+	width:                u32,
+	height:               u32,
+	camera:               Camera,
+	light_direction:      [3]f32,
+	sun_angular_diameter: f32,
+	boxes:                []geometry.Box,
+	lights:               []Light,
+	jitter:               [2]f32,
+	shadow_phase:         u32,
+	atlas_weight:         f32,
+	sky:                  bool,
+	ao:                   bool,
+	view_flags:           View_Flags,
 }
 
 // The digest names the effective render inputs, not the game state. Two frames

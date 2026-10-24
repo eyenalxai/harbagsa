@@ -77,15 +77,15 @@ sun_clear_restores_the_default_light :: proc(t: ^testing.T) {
 	)
 	testing.expectf(
 		t,
-		abs(state.sun.azimuth - f32(math.to_degrees(default_azimuth))) < 0.001,
+		abs(state.debug.sun.azimuth - f32(math.to_degrees(default_azimuth))) < 0.001,
 		"azimuth is %v",
-		state.sun.azimuth,
+		state.debug.sun.azimuth,
 	)
 	testing.expectf(
 		t,
-		abs(state.sun.angular_diameter - f32(math.to_degrees(game.SUN_ANGULAR_DIAMETER))) < 0.0001,
+		abs(state.debug.sun.angular_diameter - f32(math.to_degrees(game.SUN_ANGULAR_DIAMETER))) < 0.0001,
 		"diameter is %v",
-		state.sun.angular_diameter,
+		state.debug.sun.angular_diameter,
 	)
 }
 

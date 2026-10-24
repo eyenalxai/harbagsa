@@ -51,6 +51,9 @@ Renderer_Report :: struct {
 	last_reset:         History_Reset_Reason,
 	shadow_phase:       u32,
 	light_count:        int,
+	atlas_weight:       f32,
+	text_truncated_runs: int,
+	text_font_drops:     int,
 	debug:              Debug_Report,
 }
 
@@ -65,6 +68,8 @@ Debug_Report :: struct {
 	shadow_phase:         u32,
 	light_shadows:        bool,
 	synthetic_lights:     int,
+	sky:                  bool,
+	ao:                   bool,
 }
 
 Setup_Report :: struct {
@@ -95,6 +100,9 @@ renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
 		last_reset         = r.taa.last_reset,
 		shadow_phase       = r.taa.shadow_phase,
 		light_count        = r.light_count,
+		atlas_weight       = text_atlas_applied_weight(r),
+		text_truncated_runs = r.overlay.atlas.caps.truncated_runs,
+		text_font_drops     = r.overlay.atlas.caps.dropped_fonts,
 		debug = {
 			active = r.taa.debug.active,
 			taa = r.taa.enabled,
@@ -106,6 +114,8 @@ renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
 			shadow_phase = r.taa.debug.shadow_phase,
 			light_shadows = r.taa.debug.active ? r.taa.debug.light_shadows : true,
 			synthetic_lights = r.taa.debug.active ? r.taa.debug.synthetic_lights : 0,
+			sky = debug_effective.sky,
+			ao = debug_effective.ao,
 		},
 	}
 	if r.taa.debug.active && r.taa.debug.history_weight >= 0 {

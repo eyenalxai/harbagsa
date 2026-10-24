@@ -18,7 +18,7 @@ inspector_width :: proc(
 	theme: renderer.UI_Theme,
 ) -> (width: f32, values: [game.HUD_INSPECTOR_ROW_COUNT]string) {
 	snapshot := game.simulation_snapshot(sim)
-	game.hud_state_update(hud, sim, debug, snapshot, true)
+	game.hud_state_update(hud, sim, debug, snapshot, true, 0)
 	testing.expect_value(t, len(hud.view.rows), game.HUD_INSPECTOR_ROW_COUNT)
 	layout := renderer.rows_measure(atlas, theme, hud.view.rows, {value_align = .Left})
 	values = {}
@@ -52,7 +52,7 @@ debug_inspector_width_survives_every_selection :: proc(t: ^testing.T) {
 	theme := renderer.ui_theme_init(720)
 	atlas, built := build_atlas(t, theme)
 	testing.expect(t, built, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas, context.allocator)
+	defer renderer.text_atlas_destroy(&atlas)
 
 	expected, _ := inspector_width(t, &sim, &debug, &hud, &atlas, theme)
 	for id in ids {
@@ -84,7 +84,7 @@ debug_inspector_shows_the_lamp_light_and_budget :: proc(t: ^testing.T) {
 	)
 	testing.expect(t, game.debug_select_object(&debug, &sim, id), "select failed")
 	snapshot := game.simulation_snapshot(&sim)
-	game.hud_state_update(&hud, &sim, &debug, snapshot, true)
+	game.hud_state_update(&hud, &sim, &debug, snapshot, true, 0)
 	rows := hud.view.rows
 	testing.expect(
 		t,
@@ -108,7 +108,7 @@ debug_inspector_shows_the_lamp_light_and_budget :: proc(t: ^testing.T) {
 	)
 
 	testing.expect(t, game.debug_placement_arm(&debug, &sim, .Beacon), "arm failed")
-	game.hud_state_update(&hud, &sim, &debug, snapshot, true)
+	game.hud_state_update(&hud, &sim, &debug, snapshot, true, 0)
 	testing.expect(
 		t,
 		strings.contains(hud.view.rows[game.HUD_PLACEMENT_ROW_COUNT - 1].value, "red"),

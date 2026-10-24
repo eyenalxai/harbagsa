@@ -30,14 +30,22 @@ Player_State :: struct {
 	grounded: bool      `json:"grounded"`,
 }
 
+Camera_State :: struct {
+	position:   Vec_State `json:"position"`,
+	yaw:        f32       `json:"yaw"`,
+	pitch:      f32       `json:"pitch"`,
+	fov:        f32       `json:"fov"`,
+	overridden: bool      `json:"overridden"`,
+}
+
 Object_State :: struct {
-	id:        u32        `json:"id"`,
-	prefab:    string     `json:"prefab"`,
-	body:      string     `json:"body"`,
-	position:  Vec_State  `json:"position"`,
-	rotation:  Quat_State `json:"rotation"`,
-	scale:     f32        `json:"scale"`,
-	spawn_age: f32        `json:"spawn_age"`,
+	id:        u32         `json:"id"`,
+	prefab:    string      `json:"prefab"`,
+	body:      string      `json:"body"`,
+	position:  Vec_State   `json:"position"`,
+	rotation:  Quat_State  `json:"rotation"`,
+	scale:     f32         `json:"scale"`,
+	spawn_age: f32         `json:"spawn_age"`,
 	light:     Light_State `json:"light"`,
 }
 
@@ -77,27 +85,33 @@ Renderer_Debug_State :: struct {
 	shadow_phase:        u32    `json:"shadow_phase"`,
 	light_shadows:       bool   `json:"light_shadows"`,
 	synthetic_lights:    int    `json:"synthetic_lights"`,
+	sky:                 bool   `json:"sky"`,
+	ao:                  bool   `json:"ao"`,
 }
 
 Renderer_State :: struct {
-	active:             bool                 `json:"active"`,
-	frame_count:        u32                  `json:"frame_count"`,
-	taa_enabled:        bool                 `json:"taa_enabled"`,
-	jitter_index:       int                  `json:"jitter_index"`,
-	history_valid:      bool                 `json:"history_valid"`,
-	convergence_frames: int                  `json:"convergence_frames"`,
-	history_read:       int                  `json:"history_read"`,
-	history_weight:     f32                  `json:"history_weight"`,
-	reset_count:        int                  `json:"reset_count"`,
-	last_reset:         string               `json:"last_reset"`,
-	shadow_phase:       u32                  `json:"shadow_phase"`,
-	light_count:        int                  `json:"light_count"`,
-	debug:              Renderer_Debug_State `json:"debug"`,
+	active:              bool                 `json:"active"`,
+	frame_count:         u32                  `json:"frame_count"`,
+	taa_enabled:         bool                 `json:"taa_enabled"`,
+	jitter_index:        int                  `json:"jitter_index"`,
+	history_valid:       bool                 `json:"history_valid"`,
+	convergence_frames:  int                  `json:"convergence_frames"`,
+	history_read:        int                  `json:"history_read"`,
+	history_weight:      f32                  `json:"history_weight"`,
+	reset_count:         int                  `json:"reset_count"`,
+	last_reset:          string               `json:"last_reset"`,
+	shadow_phase:        u32                  `json:"shadow_phase"`,
+	light_count:         int                  `json:"light_count"`,
+	atlas_weight:        f32                  `json:"atlas_weight"`,
+	text_truncated_runs: int                  `json:"text_truncated_runs"`,
+	text_font_drops:     int                  `json:"text_font_drops"`,
+	debug:               Renderer_Debug_State `json:"debug"`,
 }
 
 State :: struct {
 	frame:         int            `json:"frame"`,
 	player:        Player_State   `json:"player"`,
+	camera:        Camera_State   `json:"camera"`,
 	objects:       []Object_State `json:"objects"`,
 	settings:      Settings_State `json:"settings"`,
 	debug:         Debug_State    `json:"debug"`,
@@ -165,6 +179,7 @@ state_build :: proc(
 			type_weight = sim.settings.type_weight,
 		},
 		debug = debug_state_build(debug, sim),
+		sun = sun_state(debug),
 		menu = {
 			open = menu.open,
 			selected = int(menu.selected),
@@ -215,62 +230,4 @@ free_string :: proc(text: ^string, allocator: mem.Allocator) {
 		delete(text^, allocator)
 		text^ = ""
 	}
-}
-
-state_digest :: proc(state: State, allocator: mem.Allocator) -> string {
-	hash := digest.fnv()
-	digest.write_i64(&hash, i64(state.frame))
-	digest.write_f32(&hash, state.player.position.x)
-	digest.write_f32(&hash, state.player.position.y)
-	digest.write_f32(&hash, state.player.position.z)
-	digest.write_f32(&hash, state.player.eye.x)
-	digest.write_f32(&hash, state.player.eye.y)
-	digest.write_f32(&hash, state.player.eye.z)
-	digest.write_f32(&hash, state.player.velocity.x)
-	digest.write_f32(&hash, state.player.velocity.y)
-	digest.write_f32(&hash, state.player.velocity.z)
-	digest.write_f32(&hash, state.player.yaw)
-	digest.write_f32(&hash, state.player.pitch)
-	digest.write_bool(&hash, state.player.grounded)
-	digest.write_f32(&hash, state.debug.sun.position.x)
-	digest.write_f32(&hash, state.debug.sun.position.y)
-	digest.write_f32(&hash, state.debug.sun.position.z)
-	digest.write_string(&hash, state.settings.window_mode)
-	digest.write_string(&hash, state.settings.display)
-	digest.write_i64(&hash, i64(state.settings.display_index))
-	digest.write_string(&hash, state.settings.resolution)
-	digest.write_string(&hash, state.settings.window_resolution)
-	digest.write_string(&hash, state.settings.sprint_mode)
-	digest.write_string(&hash, state.settings.crouch_mode)
-	digest.write_string(&hash, state.settings.prone_mode)
-	digest.write_bool(&hash, state.menu.open)
-	digest.write_i64(&hash, i64(state.menu.selected))
-	digest.write_i64(&hash, i64(len(state.objects)))
-	for object in state.objects {
-		digest.write_i64(&hash, i64(object.id))
-		digest.write_string(&hash, object.prefab)
-		digest.write_string(&hash, object.body)
-		digest.write_f32(&hash, object.position.x)
-		digest.write_f32(&hash, object.position.y)
-		digest.write_f32(&hash, object.position.z)
-		digest.write_f32(&hash, object.rotation.x)
-		digest.write_f32(&hash, object.rotation.y)
-		digest.write_f32(&hash, object.rotation.z)
-		digest.write_f32(&hash, object.rotation.w)
-		digest.write_bool(&hash, object.light.active)
-		digest.write_string(&hash, object.light.color)
-		digest.write_f32(&hash, object.light.intensity)
-		digest.write_f32(&hash, object.light.range)
-	}
-	return digest.hex(hash, allocator)
-}
-
-@(private)
-vec_state :: proc(value: b3.Vec3) -> Vec_State {
-	return {x = value.x, y = value.y, z = value.z}
-}
-
-@(private)
-quat_state :: proc(value: [4]f32) -> Quat_State {
-	return {x = value[0], y = value[1], z = value[2], w = value[3]}
 }

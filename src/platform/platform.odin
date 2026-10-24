@@ -1,7 +1,6 @@
 #+vet explicit-allocators
 package platform
 
-import "core:c"
 import "core:log"
 import "core:strings"
 import "vendor:sdl3"
@@ -18,10 +17,6 @@ Error :: enum {
 Window :: struct {
 	handle:           ^sdl3.Window,
 	capture_on_click: bool,
-}
-
-sync_window :: proc(window: ^Window) {
-	sdl3.SyncWindow(window.handle)
 }
 
 init :: proc(title: cstring, width, height: i32, fullscreen := false) -> (window: Window, err: Error) {
@@ -82,20 +77,4 @@ create_vulkan_surface :: proc(window: ^Window, instance: vk.Instance) -> (surfac
 
 destroy_vulkan_surface :: proc(instance: vk.Instance, surface: vk.SurfaceKHR) {
 	sdl3.Vulkan_DestroySurface(instance, surface, nil)
-}
-
-is_minimized :: proc(window: ^Window) -> bool {
-	return .MINIMIZED in sdl3.GetWindowFlags(window.handle)
-}
-
-pixel_size :: proc(window: ^Window) -> (width, height: u32) {
-	w, h: c.int
-	if !sdl3.GetWindowSizeInPixels(window.handle, &w, &h) {
-		log.errorf("platform: SDL_GetWindowSizeInPixels failed: %v", sdl3.GetError())
-		return 0, 0
-	}
-	if w <= 0 || h <= 0 {
-		return 0, 0
-	}
-	return u32(w), u32(h)
 }

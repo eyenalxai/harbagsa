@@ -5,9 +5,10 @@ import "core:math"
 
 import "src:game"
 
+// The command names the sun in the sky; the debug mode stores a dome position.
 session_sun :: proc(session: ^Session, command: Sun_Command) {
 	if command.clear {
-		session.debug.sun_direction = game.DEFAULT_SUN_DIRECTION
+		game.debug_sun_reset(&session.debug)
 		session.debug.sun_angular_diameter = game.SUN_ANGULAR_DIAMETER
 		return
 	}
@@ -19,9 +20,8 @@ session_sun :: proc(session: ^Session, command: Sun_Command) {
 		elevation = math.to_radians(command.elevation)
 	}
 	if command.has_azimuth || command.has_elevation {
-		session.debug.sun_direction = game.light_direction_from_sun(
-			game.sun_direction_from_angles(azimuth, elevation),
-		)
+		direction := game.sun_direction_from_angles(azimuth, elevation)
+		session.debug.sun.position = direction * f32(game.SUN_DOME_RADIUS)
 	}
 	if command.has_diameter {
 		session.debug.sun_angular_diameter = math.to_radians(command.diameter)

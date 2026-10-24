@@ -41,8 +41,9 @@ Menu :: struct {
 	title:    string,
 	rows:     []Row,
 	selected: int,
-	hints:    []Hint_Cell,
-	note:     string,
+	hints:        []Hint_Cell,
+	hint_columns: int,
+	note:         string,
 }
 
 PALETTE_MAX_ITEMS :: 12

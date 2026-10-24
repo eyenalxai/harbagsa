@@ -7,6 +7,10 @@ import "core:mem"
 
 import b3 "libs:box3d"
 
+// The real sun subtends about 0.53 degrees. A wider disk softens every shadow
+// by the same factor and smears a wall shadow when the sun sits low.
+SUN_ANGULAR_DIAMETER :: 0.53 * math.PI / 180.0
+
 DEBUG_FLY_SPEED :: 10.0
 
 Debug_Selection :: enum {
@@ -51,6 +55,7 @@ Debug_Mode :: struct {
 	history_allocator:  mem.Allocator,
 	palette:            Palette,
 	placement:          Placement,
+	sun_angular_diameter: f32,
 }
 
 Debug_Input :: struct {
@@ -89,6 +94,7 @@ debug_mode_create :: proc(allocator: mem.Allocator) -> Debug_Mode {
 		placement = {
 			prefab = .Crate,
 		},
+		sun_angular_diameter = SUN_ANGULAR_DIAMETER,
 	}
 }
 
@@ -125,7 +131,7 @@ debug_mode_sun_direction :: proc(dm: ^Debug_Mode) -> [3]f32 {
 }
 
 debug_mode_sun_angles :: proc(dm: ^Debug_Mode) -> (azimuth, elevation: f32) {
-	return sun_angles_from_direction(debug_mode_sun_direction(dm))
+	return sun_angles_from_direction(sun_direction_from_light(debug_mode_sun_direction(dm)))
 }
 
 debug_mode_clear_selection :: proc(dm: ^Debug_Mode) {
@@ -192,6 +198,7 @@ debug_mode_reset_scene :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 		object_history_clear(dm.history)
 	}
 	debug_sun_reset(dm)
+	dm.sun_angular_diameter = SUN_ANGULAR_DIAMETER
 	debug_mode_clear_selection(dm)
 	save_player_and_sync_camera(dm, sim)
 }
@@ -284,7 +291,6 @@ debug_fly :: proc(dm: ^Debug_Mode, input: Debug_Input, delta: f32) {
 	right := debug_camera_right(dm.camera)
 	move := forward * input.move_forward + right * input.move_right
 	move.y = input.move_up
-
 	length := b3.Length(move)
 	if length > 1.0 {
 		move = move * (1.0 / length)

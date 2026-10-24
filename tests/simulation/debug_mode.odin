@@ -100,7 +100,8 @@ debug_mode_sun_direction_is_normalized :: proc(t: ^testing.T) {
 debug_mode_sun_angles_follow_direction :: proc(t: ^testing.T) {
 	dm := game.debug_mode_create(context.allocator)
 	defer game.debug_mode_destroy(&dm)
-	dm.sun.position = {0.0, 50.0, 0.0}
+	dm.sun.position = {0.0, 50.0, 5.0}
+	dm.sun_angular_diameter = 0.2
 
 	azimuth, elevation := game.debug_mode_sun_angles(&dm)
 	expect_near(t, azimuth, 0.0, 0.0001, "azimuth")
@@ -109,7 +110,8 @@ debug_mode_sun_angles_follow_direction :: proc(t: ^testing.T) {
 
 @(test)
 debug_mode_sun_angles_are_positive_above_the_horizon :: proc(t: ^testing.T) {
-	dm := game.debug_mode_create()
+	dm := game.debug_mode_create(context.allocator)
+	defer game.debug_mode_destroy(&dm)
 	azimuth, elevation := game.debug_mode_sun_angles(&dm)
 	testing.expectf(t, elevation > 0, "the default sun reads below the horizon: %v", elevation)
 
@@ -163,6 +165,7 @@ reset_scene_restores_objects_sun_and_player :: proc(t: ^testing.T) {
 
 	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT)
 	testing.expect_value(t, dm.sun.position, game.DEFAULT_SUN_POSITION)
+	testing.expect_value(t, dm.sun_angular_diameter, game.SUN_ANGULAR_DIAMETER)
 	testing.expect(t, !dm.sun.active, "scene reset left sun placement active")
 	testing.expect_value(t, dm.selection, game.Debug_Selection.None)
 	testing.expect_value(t, dm.selected_object_id, game.INVALID_OBJECT_ID)

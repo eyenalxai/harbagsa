@@ -38,6 +38,7 @@ renderer_state_reaches_the_state_and_checks :: proc(t: ^testing.T) {
 		shadow_phase       = 12,
 		light_count        = 3,
 		debug              = {light_shadows = true},
+		atlas_weight       = 900,
 	}
 	state := harness.session_state(&session)
 	defer harness.state_destroy(&state, context.allocator)
@@ -47,6 +48,7 @@ renderer_state_reaches_the_state_and_checks :: proc(t: ^testing.T) {
 	testing.expect(t, state.renderer.taa_enabled, "TAA flag was dropped")
 	testing.expect_value(t, state.renderer.light_count, 3)
 	testing.expect(t, state.renderer.debug.light_shadows, "light shadow default was dropped")
+	testing.expect_value(t, state.renderer.atlas_weight, f32(900))
 
 	command := harness.Check_Command {
 		field = "renderer.atlas_weight",

@@ -24,13 +24,14 @@ Scratch :: struct {
 }
 
 Scene :: struct {
-	camera:        renderer.Camera,
-	sun_direction: [3]f32,
-	boxes:         []geometry.Box,
-	lights:        []renderer.Light,
-	debug_lines:   []geometry.Line,
-	hud:           renderer.HUD_Frame,
-	view_flags:    renderer.View_Flags,
+	camera:               renderer.Camera,
+	sun_direction:        [3]f32,
+	sun_angular_diameter: f32,
+	boxes:                []geometry.Box,
+	lights:               []renderer.Light,
+	debug_lines:          []geometry.Line,
+	hud:                  renderer.HUD_Frame,
+	view_flags:           renderer.View_Flags,
 }
 
 build :: proc(
@@ -94,7 +95,14 @@ build :: proc(
 	scene.debug_lines = scratch.debug_lines.lines[:scratch.debug_lines.count]
 
 	if options.hud || hud.menu.open {
-		game.hud_state_update(hud, sim, debug, snapshot, options.captured)
+		game.hud_state_update(
+			hud,
+			sim,
+			debug,
+			snapshot,
+			options.captured,
+			options.delta_seconds,
+		)
 		palette := game.debug_palette_view(sim, debug)
 		if hud.menu.open {
 			palette.open = false
@@ -107,6 +115,7 @@ build :: proc(
 			captured     = hud.captured,
 			menu         = hud.menu.view,
 			palette      = palette,
+			weight       = sim.settings.type_weight,
 		}
 	}
 	if scene.hud.enabled {
@@ -145,13 +154,14 @@ draw :: proc(
 
 frame_view :: proc(scene: Scene) -> renderer.Frame_View {
 	return {
-		camera          = scene.camera,
-		light_direction = scene.sun_direction,
-		boxes           = scene.boxes,
-		lights          = scene.lights,
-		debug_lines     = scene.debug_lines,
-		hud             = scene.hud,
-		view_flags      = scene.view_flags,
+		camera               = scene.camera,
+		light_direction      = scene.sun_direction,
+		sun_angular_diameter = scene.sun_angular_diameter,
+		boxes                = scene.boxes,
+		lights               = scene.lights,
+		debug_lines          = scene.debug_lines,
+		hud                  = scene.hud,
+		view_flags           = scene.view_flags,
 	}
 }
 

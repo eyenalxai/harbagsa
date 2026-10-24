@@ -22,7 +22,7 @@ verbose_summary_lists_captures_checks_failures_and_perf :: proc(t: ^testing.T) {
 			{name = "frame_0090", frame = 90, width = 1280, height = 720, path = "/tmp/frame_0090.png"},
 		},
 		checks = []harness.Check_Result {
-			{field = "crates.0.position.z", op = "lt", expected = "7.5", actual = "3.2", ok = true},
+			{field = "objects.1.position.z", op = "lt", expected = "7.5", actual = "3.2", ok = true},
 		},
 		failures = []string{"the backend failed"},
 		perf = []harness.Perf_Report {
@@ -44,7 +44,7 @@ verbose_summary_lists_captures_checks_failures_and_perf :: proc(t: ^testing.T) {
 		"revision abc1234",
 		"dirty true",
 		"frame_0090",
-		"PASS crates.0.position.z",
+		"PASS objects.1.position.z",
 		"the backend failed",
 		"arena measured 120",
 	}

@@ -128,8 +128,18 @@ between the two tables.
 _Avoid_: Scene colours, 3D palette
 
 **Sun**:
-The directional light that lights the arena and casts the sun shadows. Debug mode places it.
+The directional light that lights the arena and casts the sun shadows. Debug mode places it on the sky dome.
 _Avoid_: Light source
+
+**Sun direction**:
+The unit vector from a point in the world toward the sun. The sky angles describe
+it: azimuth from `+z` toward `+x`, and elevation above the horizon.
+_Avoid_: Sun vector, light vector
+
+**Light direction**:
+The direction the sun's light travels. It is the opposite of the sun direction.
+The renderer shades with it.
+_Avoid_: Sun direction
 
 **Sun placement**:
 The debug mode that aims the sun on the sky dome. `L` toggles it, a click
@@ -168,18 +178,9 @@ The TLAS instance mask that decides which acceleration-structure ray queries see
 _Avoid_: Layer mask, collision mask
 
 **Synthetic light**:
-A fixed test light that the renderer debug override injects, so a perf run can measure the light budget before the game has lamp prefabs.
+A fixed test light that the renderer debug override injects, so a perf run can
+fill the light budget without placing lamps.
 _Avoid_: Fake light
-
-**Sun direction**:
-The unit vector from a point in the world toward the sun. The sky angles describe
-it: azimuth from `+z` toward `+x`, and elevation above the horizon.
-_Avoid_: Sun vector, light vector
-
-**Light direction**:
-The direction the sun's light travels. It is the opposite of the sun direction.
-The renderer shades with it.
-_Avoid_: Sun direction
 
 **Sun angular diameter**:
 The angle the sun disk subtends. It sets the penumbra width and it is the same
@@ -341,19 +342,8 @@ The `harbagsa-agent` program that drives the simulation, runs checks, and writes
 screenshots without the game loop.
 _Avoid_: Bot, driver
 
-**Build revision**:
-The short HEAD and dirty flag the agent build injects into `setup`. A direct
-`odin run` or a test build reports `unknown` and `false`.
-_Avoid_: Version, commit
-
-**Offscreen validation**:
-The `make validate-offscreen` target. It builds the validation agent and runs the
-smoke and UI scenarios without a window.
-_Avoid_: Headless validate
-
 **Scenario**:
-A JSON document with one `commands` list for the harness. It runs verbatim, and
-only a `capture` command captures.
+A JSON document that compiles to one command list for the harness.
 _Avoid_: Script, test case
 
 **Capture**:
@@ -421,11 +411,6 @@ _Avoid_: Debug view, wireframe
 The screen-space pass that draws the debug draw and the HUD over the scene. It does not write depth.
 _Avoid_: UI layer
 
-**Overlay budget**:
-The fixed cost of the 2D layer: one coverage atlas, 24576 HUD vertices, and 32768
-debug vertices. A change that needs more is a design change.
-_Avoid_: UI budget, draw budget
-
 **Scene pass**:
 The scopes that draw the scene into the depth, color, and velocity targets: the
 depth prepass, the lit pass, and the sky pass. The perf report times the depth
@@ -434,8 +419,7 @@ _Avoid_: Main pass
 
 **Depth prepass**:
 The depth-only scope of the scene pass. It writes the nearest box surface before
-the lit pass, so the sun rays run for the surface that reaches the frame. It is
-its own GPU pass in the perf report.
+the lit pass, so the sun rays run for the surface that reaches the frame.
 _Avoid_: Z prepass
 
 **Lit pass**:
@@ -456,7 +440,7 @@ _Avoid_: Overdrawing
 
 **Render scope**:
 One `vkCmdBeginRendering` to `vkCmdEndRendering` block. The scene pass uses one
-for the depth prepass, one for the lit pass, and one for the sky pass.
+for the depth prepass and one for the lit pass.
 _Avoid_: Render pass (that word belongs to the Vulkan object)
 
 **HUD**:
@@ -466,7 +450,7 @@ _Avoid_: UI
 
 **Settings menu**:
 The paused overlay opened with `Esc`. It lists the active control set and changes
-the window mode, display, resolution, and three input modes. The harness opens
+the window mode, display, resolution, type weight, and three input modes. The harness opens
 it with the `menu` command and reports `settings.*` and `menu.*` in the state.
 _Avoid_: Options screen, pause menu
 
@@ -506,47 +490,22 @@ _Avoid_: Contrast ratio
 
 **Type scale**:
 The five type roles the overlay uses: title, body, label, detail, and section
-header. Each role fixes an em size, leading, and tracking, and derives its weight
-from the base axis position. A size is the em in device pixels, so a 15 px role
-draws a 15 px em. See `docs/ui/type.md`.
+header. Each role fixes an em size, leading, weight, and tracking. A size is the
+em in device pixels, so a 15 px role draws a 15 px em. See `docs/ui/type.md`.
 _Avoid_: Font sizes, text styles
-
-**Weight axis**:
-The `wght` variation coordinate of a variable face. Roboto Condensed runs from
-100 to 900; Roboto Mono runs from 100 to 700. The base weight is a settings value,
-not a state. Body and detail use the base, title and labels use base + 100, and
-mono clamps at 700.
-_Avoid_: Font weight, boldness, thickness
-
-**Named instance**:
-A labelled stop on a weight axis: Thin 100, ExtraLight 200, Light 300, Regular
-400, Medium 500, SemiBold 600, Bold 700, ExtraBold 800, Black 900. The slider
-marks all nine, but it can land on any whole unit between them.
-_Avoid_: Variant, preset, style
-
-**Shaped run**:
-The glyph IDs, x offsets, and advances HarfBuzz returns for one string. Measuring
-and drawing walk the same run, so they cannot drift apart. The atlas is keyed by
-glyph ID, not by character.
-_Avoid_: Text layout, glyph list
-
-**Slider row**:
-A two-line settings row for one continuous value. Line one holds the label and the
-number; line two holds a full-width track with named-instance ticks. It is
-selectable, and a drag maps the cursor onto the track.
-_Avoid_: Seek bar, range, gauge
 
 **Coverage atlas**:
 The one texture that holds every glyph as the fraction of each pixel the glyph
-covers, rasterized at the device pixel size from the two subset Roboto variable
-faces. A layer is keyed by face, weight, and pixel size. The first build is
-synchronous at startup; later weight or density changes repack on a worker.
+covers, rasterized at the device pixel size from the subset Roboto Condensed and
+Roboto Mono faces. It holds one layer per face, weight, and pixel size the theme
+can draw, and it is repacked when the density or the type weight changes.
 _Avoid_: SDF atlas, font texture, bitmap font, glyph sheet
 
-**Applied atlas weight**:
-The weight the active coverage atlas holds. The renderer reports it as
-`renderer.atlas_weight`; `settings.type_weight` is only the request.
-_Avoid_: Requested weight, font weight
+**Type weight**:
+The variable-font weight the 2D layer draws at, from 100 to 900. The settings
+menu and the `menu` command set it, every type role derives from it, and the
+coverage atlas rebuilds on a worker when it changes. Mono stops at 700.
+_Avoid_: Font weight, boldness
 
 **Sub-pixel phase**:
 One of four horizontal offsets a glyph is rasterized at, so text placed on a
@@ -555,16 +514,15 @@ advance; the phase absorbs the fraction.
 _Avoid_: Sub-pixel offset, hinting
 
 **Glyph**:
-One drawable letter in the coverage atlas: a uv rectangle and an offset from the
-pen for each sub-pixel phase. HarfBuzz supplies the advance at draw time. The HUD
-never draws a character directly; it draws glyphs.
+One drawable letter in the coverage atlas: a uv rectangle per sub-pixel phase, an
+offset from the pen, and an advance. The HUD never draws a character directly; it
+draws glyphs.
 _Avoid_: Character, letter
 
 **Row**:
-One line of the overlay: a kind, a label, a value, whether the value is numeric,
-and whether the value is blocked. A slider row also carries a ratio and a tick
-count. The game fills rows; the renderer lays them out. The kind set is closed:
-setting, action, metric, detail, slider, header, divider.
+One line of the overlay: a kind, a label, a value, and whether the value is
+numeric. The game fills rows; the renderer lays them out. The kind set is closed:
+setting, action, metric, detail, header, divider, spacer.
 _Avoid_: Line, item, entry
 
 **Blocked row**:
@@ -593,8 +551,7 @@ _Avoid_: Control list, key list
 
 **Selection band**:
 The two signals that mark the selected menu row: the raised surface and the
-accent bar on the leading edge. Neither alone is enough. It applies to a setting,
-an action, or a slider row.
+accent bar on the leading edge. Neither alone is enough.
 _Avoid_: Highlight, hover, cursor
 
 **Pause**:
@@ -745,26 +702,19 @@ the wall clock, so its numbers are not deterministic.
 _Avoid_: Benchmark, stress test
 
 **Perf report**:
-The `perf` list in `report.json` and the `perf` object in a harness reply. Each
-named report holds the interval distribution, the `p50`/`p95`/`mean` of every CPU
-phase and GPU pass, and the prime fields. The session reply keeps the last one.
+The `perf` object in a harness reply and in `report.json` that holds the
+percentiles and per-pass means of a perf run.
 _Avoid_: Benchmark result, profile
 
 **Perf trace**:
 The opt-in per-frame file from a perf run. It holds one JSON object per perf
-sample. A run holds one trace.
+sample.
 _Avoid_: Log, dump
 
 **Perf warmup**:
 The frames a perf run measures but does not count, so shader and swapchain
-warmup does not pollute the numbers. The perf prime runs before it, and one
-priming frame always runs first.
+warmup does not pollute the numbers. One priming frame always runs before it.
 _Avoid_: Warmup (that word belongs to convergence)
-
-**Perf prime**:
-The wall-clock warm-up before the perf warmup frames. It lets the GPU clock and
-the shader cache settle; its frames never enter the trace or the statistics.
-_Avoid_: Warmup (see convergence and perf warmup)
 
 **Spike**:
 A frame interval above 1.5 times the median interval of the measured window.

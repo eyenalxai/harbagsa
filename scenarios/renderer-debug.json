@@ -7,7 +7,9 @@
     "depth_trust": true,
     "shadow_phase": 12,
     "light_shadows": false,
-    "synthetic_lights": 4
+    "synthetic_lights": 4,
+    "sky": false,
+    "ao": false
   },
   "commands": [
     {"cmd": "camera", "position": [-12, 1.7, 6.0], "yaw": 0, "pitch": -0.22},
@@ -20,6 +22,8 @@
     {"cmd": "check", "field": "renderer.debug.shadow_phase", "op": "eq", "value": 12},
     {"cmd": "check", "field": "renderer.debug.light_shadows", "op": "eq", "value": false},
     {"cmd": "check", "field": "renderer.debug.synthetic_lights", "op": "eq", "value": 4},
+    {"cmd": "check", "field": "renderer.debug.sky", "op": "eq", "value": false},
+    {"cmd": "check", "field": "renderer.debug.ao", "op": "eq", "value": false},
     {"cmd": "settle", "frames": 8},
     {"cmd": "check", "field": "renderer.shadow_phase", "op": "eq", "value": 12},
     {"cmd": "check", "field": "renderer.light_count", "op": "eq", "value": 4},
@@ -32,6 +36,8 @@
     {"cmd": "check", "field": "renderer.debug.jitter", "op": "eq", "value": true},
     {"cmd": "check", "field": "renderer.debug.light_shadows", "op": "eq", "value": true},
     {"cmd": "check", "field": "renderer.debug.synthetic_lights", "op": "eq", "value": 0},
+    {"cmd": "check", "field": "renderer.debug.sky", "op": "eq", "value": true},
+    {"cmd": "check", "field": "renderer.debug.ao", "op": "eq", "value": true},
     {"cmd": "check", "field": "renderer.last_reset", "op": "eq", "value": "debug_override"},
     {"cmd": "settle", "frames": 1},
     {"cmd": "check", "field": "renderer.light_count", "op": "eq", "value": 0},
