@@ -3,7 +3,6 @@ package renderer
 
 import "src:ui"
 
-HUD_MENU_MIN_WIDTH :: 200.0
 HUD_MENU_MAX_HINT_COLUMNS :: 8
 
 Hint_Grid :: struct {
@@ -32,7 +31,7 @@ build_menu :: proc(o: ^Overlay, width, height: f32, menu: ui.Menu) {
 	content_width := max(rows_layout.width, grid.width)
 	content_width = max(content_width, title_width)
 	content_width = max(content_width, note_width)
-	content_width = max(content_width, HUD_MENU_MIN_WIDTH * theme.density)
+	content_width = max(content_width, theme.menu_min_width)
 
 	title_height := theme.type_title.line_height
 	note_height := theme.type_caption.line_height
