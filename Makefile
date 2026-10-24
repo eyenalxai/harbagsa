@@ -13,6 +13,7 @@ HARNESS_DIRTY := $(shell if git rev-parse --git-dir >/dev/null 2>&1 && git diff 
 AGENT_DEFINES := -define:HARNESS_REVISION=$(HARNESS_REVISION) -define:HARNESS_DIRTY=$(HARNESS_DIRTY)
 VALIDATE_AGENT_BIN := bin/harbagsa-agent-validate
 VALIDATE_SCENARIO := scenarios/smoke.json
+VALIDATE_OFFSCREEN_SCENARIOS := smoke type-weight settings-menu ui shadow-angle perf-crates
 VALIDATE_OUT := build/validate
 
 GLSLC ?= glslc
@@ -69,7 +70,7 @@ VULKAN_LAYER_DIRS ?= \
 	/usr/share/vulkan/explicit_layer.d
 VALIDATION_LAYER := VK_LAYER_KHRONOS_validation
 
-.PHONY: all build check check-spirv check-lines test run shaders validate validate-demo check-validation-layer clean
+.PHONY: all build check check-spirv check-lines test run shaders validate validate-offscreen validate-demo check-validation-layer clean
 
 all: build
 
@@ -205,6 +206,23 @@ validate: check-validation-layer $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) sh
 	else \
 		printf '%s\n' 'make validate: no display, skipping the present run'; \
 	fi
+
+# The offscreen loop never opens a window, so it is the validation target an
+# agent can run. Each scenario owns its output directory and the loop stops on
+# the first failure.
+validate-offscreen: check-validation-layer $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
+	@mkdir -p $(dir $(VALIDATE_AGENT_BIN))
+	$(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) \
+		$(AGENT_DEFINES) -define:ENABLE_VALIDATION_LAYERS=true -out:$(VALIDATE_AGENT_BIN)
+	@status=0; \
+	for scenario in $(VALIDATE_OFFSCREEN_SCENARIOS); do \
+		printf '%s\n' "validate-offscreen: $$scenario"; \
+		if ! $(VALIDATE_AGENT_BIN) run scenarios/$$scenario.json --out $(VALIDATE_OUT)/offscreen/$$scenario; then \
+			status=1; \
+			break; \
+		fi; \
+	done; \
+	exit $$status
 
 validate-demo: check-validation-layer $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ENABLE_VALIDATION_LAYERS=true
