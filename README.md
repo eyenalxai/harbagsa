@@ -49,9 +49,14 @@ into the binary.
 
 ### Settings menu
 
-`Esc` opens a centered settings menu. The menu pauses the simulation and shows
-the active control list. It changes the window mode, the display, the
-resolution, and the sprint, crouch, and prone input modes.
+`Esc` opens a centered settings menu. The menu pauses the simulation. It changes
+the window mode, the display, the resolution, and the sprint, crouch, and prone
+input modes, and below them it lists the active controls as a key legend.
+
+The first six rows are settings: the label sits on the left, the current value is
+right-aligned on the panel edge. `Resume` is an action, not a setting, and sits
+below a divider. The selected row always carries an amber bar on its leading
+edge, so selection never depends on a colour change alone.
 
 - `Up` / `Down`: select a row.
 - `Left` / `Right`: change the selected row in that direction.
@@ -178,7 +183,8 @@ step. `forward`, `right`, and `jump` persist; `jump` is an edge on the first
 frame of its block. Capture frames are zero-based frame numbers. Check operators
 are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. Check fields use the `state.json`
 shape, for example `player.position.y`, `player.grounded`, `crates.0.position.z`,
-`crates.count`, `settings.window_mode`, `settings.resolution`, or `menu.open`.
+`crates.count`, `settings.window_mode`, `settings.resolution`, `menu.open`, or
+`debug.active`.
 
 A scenario may use `commands` instead of `steps`:
 
@@ -210,7 +216,7 @@ The batch runner and the live session share one command set:
 - `{"cmd": "step", "frames": 60}`: fixed steps with no wall clock. A step is an
   error while the menu is open.
 - `{"cmd": "state"}`: player, eye, velocity, yaw, pitch, grounded, crates,
-  window and input settings, menu, frame, and digest.
+  window and input settings, debug mode, menu, frame, and digest.
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`: write a PNG.
   `frame` is optional. A past frame is an error; a future frame queues.
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw": 0, "pitch": 0}`: inspection
@@ -218,6 +224,9 @@ The batch runner and the live session share one command set:
   the override.
 - `{"cmd": "view", "hud": true, "debug": false, "hint": false}`: toggle the HUD,
   the debug draw, and the capture hint.
+- `{"cmd": "debug_mode", "active": true}`: enter or leave the `F2` debug mode.
+  Entering swaps the player for the free-fly camera; leaving restores the player.
+  Repeating the same value is a no-op.
 - `{"cmd": "menu", "open": true, "select": 1, "activate": true, "direction": -1}`:
   open or close the settings menu, select a row, and activate the selected row.
   `select` is zero-based and needs an open menu. `activate` also needs an open

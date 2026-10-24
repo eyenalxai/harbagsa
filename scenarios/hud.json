@@ -1,0 +1,17 @@
+{
+  "view": {"hud": true, "debug": false, "hint": true},
+  "commands": [
+    {"cmd": "face", "yaw": 0, "pitch": 0},
+    {"cmd": "step", "frames": 5},
+    {"cmd": "capture", "name": "hud-spawn"},
+    {"cmd": "input", "forward": 1, "right": 0},
+    {"cmd": "step", "frames": 40},
+    {"cmd": "capture", "name": "hud-walk"},
+    {"cmd": "face", "yaw": 2.2, "pitch": -0.05},
+    {"cmd": "step", "frames": 5},
+    {"cmd": "capture", "name": "hud-arena"}
+  ],
+  "checks": [
+    {"field": "menu.open", "op": "eq", "value": false}
+  ]
+}

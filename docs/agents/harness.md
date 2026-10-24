@@ -92,6 +92,7 @@ Rules:
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw": 0, "pitch": 0}`
 - `{"cmd": "camera", "clear": true}`
 - `{"cmd": "view", "hud": true, "debug": false, "hint": false}`
+- `{"cmd": "debug_mode", "active": true}`
 - `{"cmd": "menu", "open": true, "select": 1, "activate": true, "direction": -1}`
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`
 - `{"cmd": "record", "path": "scenarios/walk.json"}`
@@ -113,6 +114,35 @@ The harness has no compositor, so the menu uses a fixed two-display list:
 zero-based index, `settings.resolution` is the effective size, and
 `settings.window_resolution` is the stored Windowed size. In Borderless the
 effective size is the display's desktop mode.
+
+## UI scenarios
+
+The 2D layer is part of the feature, so its captures live next to it.
+
+| Scenario | Proves |
+| --- | --- |
+| `scenarios/hud.json` | the status panel at spawn, mid-walk, and facing the arena |
+| `scenarios/hud-debug.json` | the debug-mode readout, which shares the row renderer |
+| `scenarios/ui.json` | the settings panel with a numeric value selected, then an action row |
+| `scenarios/settings-menu.json` | the settings round trip and the menu digest |
+| `scenarios/window-settings.json` | the window rows after a display change |
+
+Regenerate the evidence in `docs/evidence/` with:
+
+```sh
+./bin/harbagsa-agent run scenarios/hud.json --out /tmp/hud
+./bin/harbagsa-agent run scenarios/hud-debug.json --out /tmp/hud-debug
+./bin/harbagsa-agent run scenarios/ui.json --out /tmp/ui
+cp /tmp/hud/frames/hud-spawn.png docs/evidence/hud.png
+cp /tmp/hud-debug/frames/hud-debug.png docs/evidence/hud-debug.png
+cp /tmp/ui/frames/menu-number.png docs/evidence/settings-menu.png
+```
+
+The menu crop is the panel region scaled 2x with nearest-neighbour:
+
+```sh
+python3 -c "from PIL import Image; im = Image.open('docs/evidence/settings-menu.png'); im.crop((440,140,840,560)).resize((800,840), Image.NEAREST).save('docs/evidence/settings-menu-crop.png')"
+```
 
 ## Live session
 

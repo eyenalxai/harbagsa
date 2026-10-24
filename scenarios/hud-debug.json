@@ -1,0 +1,13 @@
+{
+  "view": {"hud": true, "debug": false, "hint": false},
+  "commands": [
+    {"cmd": "step", "frames": 5},
+    {"cmd": "debug_mode", "active": true},
+    {"cmd": "capture", "name": "hud-debug"},
+    {"cmd": "debug_mode", "active": false},
+    {"cmd": "step", "frames": 5}
+  ],
+  "checks": [
+    {"field": "debug.active", "op": "eq", "value": false}
+  ]
+}
