@@ -355,6 +355,16 @@ The scene-pass before/after is in
 faces away from the sun. Both are regression probes for the scene pass; run
 them at the same size to compare two builds.
 
+### Movement checks
+
+`scenarios/step-angle.json` walks from spawn to the 0.35 m step, turns, and
+climbs it at 60 degrees. It gates that an angled approach takes the step instead
+of sliding along the riser. The scenario needs no renderer:
+
+```sh
+./bin/harbagsa-agent run scenarios/step-angle.json --no-render
+```
+
 ### Screenshot workflow
 
 ```sh

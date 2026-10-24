@@ -23,6 +23,20 @@ Ground_Probe :: struct {
 	shape_id: b3.ShapeId,
 }
 
+@(private)
+collide_mover :: proc(sim: ^Simulation, point: b3.Vec3, capsule: b3.Capsule) -> Solver_Context {
+	contacts: Solver_Context
+	b3.World_CollideMover(
+		sim.world_id,
+		point,
+		capsule,
+		b3.DefaultQueryFilter(),
+		collect_planes,
+		&contacts,
+	)
+	return contacts
+}
+
 // A short downward capsule cast finds the surface under the feet. The cast end
 // is collided to recover the surface normal. A capsule bottom rests above a
 // slope by its radius, so callers compare the gap to the slope clearance.
@@ -44,15 +58,7 @@ probe_ground_at :: proc(sim: ^Simulation, feet: b3.Vec3, length: f32) -> Ground_
 	}
 
 	end := origin + b3.Vec3{0.0, -length * fraction, 0.0}
-	contacts: Solver_Context
-	b3.World_CollideMover(
-		sim.world_id,
-		end,
-		capsule,
-		b3.DefaultQueryFilter(),
-		collect_planes,
-		&contacts,
-	)
+	contacts := collide_mover(sim, end, capsule)
 
 	best: Ground_Probe
 	for index in 0 ..< contacts.count {
@@ -114,18 +120,9 @@ move_player :: proc(sim: ^Simulation, time_step: f32) {
 	contacts: Solver_Context
 
 	for _ in 0 ..< MOVE_ITERATIONS {
-		contacts = {}
-
 		capsule := player_capsule(sim.player.stance)
 		origin := sim.player.position
-		b3.World_CollideMover(
-			sim.world_id,
-			origin,
-			capsule,
-			b3.DefaultQueryFilter(),
-			collect_planes,
-			&contacts,
-		)
+		contacts = collide_mover(sim, origin, capsule)
 
 		target_delta := target - sim.player.position
 		solved := b3.SolvePlanes(

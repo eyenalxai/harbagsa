@@ -10,6 +10,39 @@ Step_Probe :: struct {
 	normal: b3.Vec3,
 }
 
+// Points from the blocker toward the player, so the probe crosses the riser by
+// subtracting it.
+@(private)
+blocking_normal :: proc(
+	sim: ^Simulation,
+	capsule: b3.Capsule,
+	point, direction: b3.Vec3,
+) -> (b3.Vec3, bool) {
+	contacts := collide_mover(sim, point, capsule)
+
+	best: b3.Vec3
+	best_opposition: f32 = 0.0
+	for index in 0 ..< contacts.count {
+		normal := contacts.planes[index].plane.normal
+		if normal.y >= STEP_FLAT_NORMAL {
+			continue
+		}
+		horizontal := b3.Vec3{normal.x, 0.0, normal.z}
+		length := b3.Length(horizontal)
+		if length <= 0.0 {
+			continue
+		}
+		horizontal /= length
+		opposition := -b3.Dot(horizontal, direction)
+		if opposition <= best_opposition {
+			continue
+		}
+		best = horizontal
+		best_opposition = opposition
+	}
+	return best, best_opposition > 0.0
+}
+
 // A step is a near-vertical riser with a near-flat top. A walkable ramp has a
 // sloped top, so it must be walked, not stepped onto.
 @(private)
@@ -51,7 +84,19 @@ probe_step :: proc(
 	}
 
 	contact := start + direction * (forward_distance * forward_fraction)
-	probe_point := contact + direction * (PLAYER_RADIUS + STEP_SKIN)
+	// Aim past the riser along its own normal. A fixed offset along the velocity
+	// stays in front of the tread at a shallow angle, so the down ray would land
+	// back on the current step.
+	surface_normal, found := blocking_normal(
+		sim,
+		capsule,
+		contact + direction * STEP_SKIN,
+		direction,
+	)
+	if !found {
+		return {}
+	}
+	probe_point := contact - surface_normal * (PLAYER_RADIUS + STEP_SKIN)
 	ray_origin := b3.Pos {
 		probe_point.x,
 		start.y + STEP_HEIGHT + STEP_PROBE_LIFT,

@@ -2,6 +2,7 @@
 #+vet !unused-procedures // @(test) procs are called by the test runner, not by name
 package simulation
 
+import "core:math"
 import "core:testing"
 import game "src:game"
 
@@ -54,6 +55,41 @@ stair_camera_y_is_smoothed :: proc(t: ^testing.T) {
 		"player slowed on the stairs: %v",
 		game.horizontal_speed(sim.player.velocity),
 	)
+}
+
+@(test)
+step_up_climbs_at_an_angle :: proc(t: ^testing.T) {
+	// A diagonal approach used to land the probe ray back on the current tread,
+	// so the player slid along each riser instead of climbing it.
+	angles := [4]f32{-60, -45, 45, 60}
+	frames := 20
+	for degrees in angles {
+		sim := create(t)
+		defer game.simulation_destroy(&sim)
+
+		angle := degrees * math.PI / 180.0
+		drift :=
+			math.sin(angle) * game.PLAYER_WALK_SPEED * f32(frames) * game.SIMULATION_STEP
+		// Center the diagonal path on the tread so it stays on the staircase.
+		sim.player.position = {
+			game.ARENA_STAIR_X + drift * 0.5,
+			game.ARENA_STAIR_RISE + game.GROUND_OFFSET,
+			game.ARENA_STAIR_START_Z - 0.1,
+		}
+		sim.player.velocity = {}
+		sim.player.yaw = angle
+		step(&sim, {}, 2)
+		step(&sim, game.Input_Snapshot{move_forward = 1.0}, frames)
+
+		testing.expectf(
+			t,
+			sim.player.position.y > game.ARENA_STAIR_RISE * 1.5,
+			"did not climb a step at %v degrees: y=%v",
+			degrees,
+			sim.player.position.y,
+		)
+		testing.expect(t, sim.player.grounded, "player is not grounded on the angled climb")
+	}
 }
 
 @(test)
