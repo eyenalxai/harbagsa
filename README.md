@@ -195,37 +195,43 @@ Options:
 - `--no-analysis`: skip `analysis.json` and the analysis maps.
 
 The harness view starts with the HUD off, the debug draw off, and the capture
-hint off. A scenario captures the final frame by default. `capture` adds more
-frames, and `"capture": []` turns rendering off for that scenario.
+hint off. Only a `capture` command writes a PNG. A scenario with no capture and
+no perf run never creates a Vulkan device unless `--present` asks for the window.
 
 ### Scenario format
 
 ```json
 {
   "view": {"hud": false, "debug": false, "hint": false, "perf": false},
-  "steps": [
-    {"frames": 90, "forward": 1, "look": [220, 0]},
-    {"frames": 1, "jump": true},
-    {"frames": 30, "forward": 1}
+  "commands": [
+    {"cmd": "look", "dx": 220, "dy": 0},
+    {"cmd": "input", "forward": 1},
+    {"cmd": "step", "frames": 90},
+    {"cmd": "input", "jump": true},
+    {"cmd": "step", "frames": 1},
+    {"cmd": "capture", "name": "after-jump"}
   ],
-  "capture": [0, 90, 121],
   "checks": [
     {"field": "crates.0.position.z", "op": "lt", "value": 7.5}
   ]
 }
 ```
 
-One step means one fixed `SIMULATION_STEP`. `look` applies once before the
-step. `forward`, `right`, and `jump` persist; `jump` is an edge on the first
-frame of its block. Capture frames are zero-based frame numbers. Check operators
-are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. Check fields use the `state.json`
-shape, for example `player.position.y`, `player.grounded`, `crates.0.position.z`,
-`crates.count`, `settings.window_mode`, `settings.resolution`, `menu.open`,
-`debug.active`, `sun.elevation`, `sun.angular_diameter`,
-`renderer.taa_enabled`, or `render_digest`. A capture check can
-also read `capture.target`, `capture.format`, and `capture.stats.*` for the last
-capture in its window. Add `"window": {"start": 2, "count": 8}` to aggregate over
-part of the captures; `warmup` stays the shorthand for skipping the first N.
+The `commands` array runs verbatim, and `record` writes this form. Only a
+`capture` command writes a PNG; a scenario without one renders nothing unless
+`settle` or `--present` needs a frame. `step` advances one fixed
+`SIMULATION_STEP` per frame. `look` applies once. `input` persists until the
+next `input`; `jump` is an edge on the next step.
+
+Check operators are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. Check fields use
+the `state.json` shape, for example `player.position.y`, `player.grounded`,
+`crates.0.position.z`, `crates.count`, `settings.window_mode`,
+`settings.resolution`, `menu.open`, `debug.active`, `sun.elevation`,
+`sun.angular_diameter`, `renderer.taa_enabled`, or `render_digest`. A capture
+check can also read `capture.target`, `capture.format`, and `capture.stats.*`
+for the last capture in its window. Add `"window": {"start": 2, "count": 8}` to
+aggregate over part of the captures; `warmup` stays the shorthand for skipping
+the first N.
 
 A run with captures writes `analysis.json`. It holds per-pair deltas, a
 summary, the dominant period, the worst unstable pixels' series, and optional
@@ -234,22 +240,6 @@ with only intermediate captures writes an empty summary. Checks read `analysis.p
 `analysis.period.correlation`, and the `analysis.worst_*` fields. Disable it with
 `"analysis": false` or `--no-analysis`; select a window and maps with
 `"analysis": {"start": 2, "count": 8, "maps": true}`.
-
-A scenario may use `commands` instead of `steps`:
-
-```json
-{
-  "commands": [
-    {"cmd": "view", "hud": false},
-    {"cmd": "input", "forward": 1},
-    {"cmd": "step", "frames": 90},
-    {"cmd": "capture", "name": "after-walk"}
-  ]
-}
-```
-
-A `commands` scenario runs verbatim. It does not add a default capture, so
-include a `capture` command when you want a PNG.
 
 ### Commands
 
@@ -291,6 +281,11 @@ The batch runner and the live session share one command set:
   is degrees above the horizon, and `diameter` is the angle the sun disk
   subtends in degrees. Omitted fields keep the value. A change resets TAA
   history, like a scene change.
+- `{"cmd": "crates", "clear": true}`: edit the dynamic crates. `reset` restores
+  the starting three, `clear` removes every crate, `add` creates one crate or a
+  row-major grid, and `remove` drops one by index. A grid add steps `columns`
+  along x and then the next row along z. An add that would exceed the 64-crate
+  limit is rejected as a whole.
 - `{"cmd": "debug_mode", "active": true}`: enter or leave the `F2` debug mode.
   Entering swaps the player for the free-fly camera; leaving restores the player.
   Repeating the same value is a no-op.
@@ -377,7 +372,11 @@ The scene-pass before/after is in
 `scenarios/perf-arena.json` measures the whole arena from above, and
 `scenarios/perf-backface.json` measures the near wall where every covered pixel
 faces away from the sun. Both are regression probes for the scene pass; run
-them at the same size to compare two builds.
+them at the same size to compare two builds. `scenarios/perf-crates.json` adds
+60 crates in a grid and measures them.
+
+To compare two builds, use
+[the benchmark recipe](docs/agents/harness.md#benchmark-two-builds).
 
 ### Movement checks
 
@@ -517,10 +516,17 @@ them.
 `scenarios/smoke.json` offscreen, then again with `--present` when a display is
 available. Both runs exit on their own, and a validation error fails the target.
 
+`make validate-offscreen` is the headless target. It builds the validation agent
+and runs `smoke`, `type-weight`, `settings-menu`, `ui`, `shadow-angle`, and
+`perf-crates` offscreen, each into its own directory under
+`build/validate/offscreen/`. It never opens a window, stops on the first
+failure, and is the target an agent runs. The `sun` scenario joins the list when
+it exists.
+
 `make validate-demo` runs the demo with validation enabled for a manual
 session. It returns when you close the window.
 
-Both targets check for `VK_LAYER_KHRONOS_validation` first. If the layer is
+All three targets check for `VK_LAYER_KHRONOS_validation` first. If the layer is
 missing, they print the install command and exit without starting anything.
 They never install anything. `make check` and `make test` never enable
 validation.
