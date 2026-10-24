@@ -12,8 +12,8 @@ Values are pixels at density 1 and multiply by density. Tokens are in
 | --- | --- | --- | --- |
 | `spacing.xxs` | 2 | 3 | band padding above and below a selected row |
 | `spacing.xs` | 4 | 6 | gap between rows in a group, key to action |
-| `spacing.sm` | 6 | 9 | panel padding on the status panel, legend row pitch |
-| `spacing.md` | 8 | 12 | status panel margin, capture hint padding, gap above a divider |
+| `spacing.sm` | 6 | 9 | gap above a divider, column gap inside a row group |
+| `spacing.md` | 8 | 12 | status panel margin, capture hint padding, gap above a section header |
 | `spacing.lg` | 12 | 18 | status panel padding, gap above a section header, note gap |
 | `spacing.xl` | 16 | 24 | settings panel padding, label-to-value gutter, legend column gap |
 | `spacing.xxl` | 24 | 36 | reserved for a future full-bleed split |
@@ -61,7 +61,12 @@ Rules that follow from the drawing:
 - The label column is the widest label plus `spacing.xl`. It is measured, never
   guessed, and it never shrinks below the widest row.
 - One gap, one owner: the row layout adds the gap above a row, so no row carries
-  its own margin and the last row leaves no trailing gap.
+  its own margin and the last row leaves no trailing gap. A row gets `spacing.xs`
+  above it, a `Setting` or `Action` row `spacing.sm`, a divider `spacing.sm`, and a
+  section header `spacing.lg`.
+- A divider and the selection band both span `frame_x .. frame_x + frame_width`,
+  the panel's inner rectangle. They share one edge with each other. The legend
+  grid has its own pitch: caption line height plus `spacing.xxs`.
 - The status panel uses the same row layout with `value_align = .Left`, because a
   readout reads label-then-value, while a settings list reads label-then-edge.
 
@@ -85,6 +90,7 @@ No shadow, no gradient, no radius token. `docs/ui/README.md` explains why.
 - No `width: auto` equivalent: every panel width traces to a measured row plus
   padding.
 - No nested panels. A row is not a card.
-- No clipping. The settings panel is 397 px tall at 720p; the smallest supported
-  window is 800x600, so it always fits. A new surface must say what happens when
-  it does not.
+- No clipping. The settings panel is 446 px tall and 422 px wide at 720p; the
+  smallest supported window is 800x600, so it always fits. The panel still clamps
+  its top to `spacing.md`, so an offscreen target of any size keeps the header on
+  screen. A new surface must say what happens when it does not fit.

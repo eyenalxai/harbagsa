@@ -59,7 +59,7 @@ hud_state_update :: proc(
 	hud.rows[5] = {
 		kind    = .Detail,
 		label   = "Position",
-		value   = hud_position(&hud.storage, 2, snapshot.position, 5),
+		value   = hud_arena_position(&hud.storage, 2, snapshot.position),
 		numeric = true,
 	}
 	hud.view.rows = hud.rows[:]
@@ -94,7 +94,7 @@ hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_
 	hud.rows[4] = {
 		kind    = .Detail,
 		label   = "Position",
-		value   = hud_position(&hud.storage, 1, camera, 7),
+		value   = hud_camera_position(&hud.storage, 1, camera),
 		numeric = true,
 	}
 	hud.rows[5] = {
@@ -113,29 +113,30 @@ hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_
 }
 
 // Every number that changes while the player moves is formatted into a fixed
-// field, so the row width never changes and the panel never resizes.
+// field, so the row width never changes and the panel never resizes. The arena
+// spans 40 m; the debug camera is unclamped and gets two more columns.
 @(private)
-hud_position :: proc(buffer: ^Line_Buffer, slot: int, position: [3]f32, field: int) -> string {
-	switch field {
-	case 5:
-		return line_format(
-			buffer,
-			slot,
-			"X % 5.1f  Y % 5.1f  Z % 5.1f",
-			snap_near_zero(position.x),
-			snap_near_zero(position.y),
-			snap_near_zero(position.z),
-		)
-	case:
-		return line_format(
-			buffer,
-			slot,
-			"X % 7.1f  Y % 7.1f  Z % 7.1f",
-			position.x,
-			position.y,
-			position.z,
-		)
-	}
+hud_arena_position :: proc(buffer: ^Line_Buffer, slot: int, position: [3]f32) -> string {
+	return line_format(
+		buffer,
+		slot,
+		"X % 5.1f  Y % 5.1f  Z % 5.1f",
+		snap_near_zero(position.x),
+		snap_near_zero(position.y),
+		snap_near_zero(position.z),
+	)
+}
+
+@(private)
+hud_camera_position :: proc(buffer: ^Line_Buffer, slot: int, position: [3]f32) -> string {
+	return line_format(
+		buffer,
+		slot,
+		"X % 7.1f  Y % 7.1f  Z % 7.1f",
+		position.x,
+		position.y,
+		position.z,
+	)
 }
 
 @(private)
