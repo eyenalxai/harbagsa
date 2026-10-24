@@ -61,23 +61,6 @@ check_field :: proc(
 	return state_field(state, path)
 }
 
-@(private)
-capture_field :: proc(capture: Capture_Summary, path: string) -> (Check_Value, string) {
-	switch path {
-	case "count":
-		return {kind = .Number, number = f64(capture.count)}, ""
-	case "worst_mean_delta":
-		return {kind = .Number, number = f64(capture.worst_mean_delta)}, ""
-	case "worst_max_delta":
-		return {kind = .Number, number = f64(capture.worst_max_delta)}, ""
-	case "worst_over_16":
-		return {kind = .Number, number = f64(capture.worst_over_16)}, ""
-	case "worst_over_16_fraction":
-		return {kind = .Number, number = f64(capture.worst_over_16_fraction)}, ""
-	}
-	return {}, fmt.aprintf("unknown capture field %q", path, allocator = context.allocator)
-}
-
 check_result_destroy :: proc(result: ^Check_Result, allocator: mem.Allocator) {
 	if result.expected != "" {
 		delete(result.expected, allocator)

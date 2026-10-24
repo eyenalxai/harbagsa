@@ -53,6 +53,8 @@ Capture_Command :: struct {
 	has_frame: bool,
 	alpha:     f32,
 	has_alpha: bool,
+	target:    Capture_Target,
+	format:    Capture_Format,
 }
 
 Camera_Command :: struct {

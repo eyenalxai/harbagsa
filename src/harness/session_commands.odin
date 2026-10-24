@@ -8,6 +8,7 @@ import b3 "libs:box3d"
 
 import "src:frame"
 import "src:game"
+import "src:renderer"
 
 Reply :: struct {
 	ok:       bool           `json:"ok"`,
@@ -213,11 +214,29 @@ session_record_command :: proc(session: ^Session, command: Command, raw_line: st
 				allocator = context.temp_allocator,
 			)
 		}
+		target_part := ""
+		if command.capture.target != .Color {
+			target_part = fmt.aprintf(
+				`, "target": %q`,
+				renderer.capture_target_name(command.capture.target),
+				allocator = context.temp_allocator,
+			)
+		}
+		format_part := ""
+		if command.capture.format != .Png {
+			format_part = fmt.aprintf(
+				`, "format": %q`,
+				capture_format_name(command.capture.format),
+				allocator = context.temp_allocator,
+			)
+		}
 		line := fmt.aprintf(
-			`{{"cmd": "capture", "name": %q, "frame": %d%s}}`,
+			`{{"cmd": "capture", "name": %q, "frame": %d%s%s%s}}`,
 			name,
 			frame,
 			alpha_part,
+			target_part,
+			format_part,
 			allocator = session.allocator,
 		)
 		append(&session.recorded, line)
