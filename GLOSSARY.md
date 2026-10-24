@@ -142,6 +142,22 @@ _Avoid_: Soft shadow falloff
 The partly lit band between the umbra and the fully lit area. Its width grows with the blocker distance and the sun angular diameter.
 _Avoid_: Soft edge, blur
 
+**Ambient occlusion**:
+The cosine-weighted fraction of the hemisphere at a surface point that visible geometry does not block. It scales ambient light. It is not global illumination, because it adds no bounce light.
+_Avoid_: SSAO (that is one estimator), GI (that adds bounce light)
+
+**Sky**:
+The analytic gradient that fills the background: a horizon-to-zenith ramp, a darker ground color below the horizon, and a sun disk with a glow. It draws after the lit pass and shades only the pixels that no box covers.
+_Avoid_: Skybox, cubemap, backdrop
+
+**Sky ambient**:
+A two-colour hemisphere ramp on the surface normal, scaled to the scene exposure. The lit pass uses it as the ambient term, and ambient occlusion scales it. It is not the integral of the visible sky.
+_Avoid_: IBL, environment light, ambient probe
+
+**AO radius**:
+The maximum distance an ambient occlusion ray travels: 1.5 m. A surface beyond that distance does not count as an occluder.
+_Avoid_: AO distance, occlusion range
+
 **Top-level acceleration structure (TLAS)**:
 The acceleration structure that holds the box instances for ray queries. The renderer rebuilds it each frame from the box transforms.
 _Avoid_: Scene BVH
@@ -291,8 +307,8 @@ The screen-space pass that draws the debug draw and the HUD over the scene. It d
 _Avoid_: UI layer
 
 **Scene pass**:
-The pair of scopes that draw the scene boxes into the depth, color, and velocity
-targets: the depth prepass, then the lit pass.
+The scopes that draw the scene into the depth, color, and velocity targets: the
+depth prepass, the lit pass, and the sky pass.
 _Avoid_: Main pass
 
 **Depth prepass**:
@@ -317,7 +333,7 @@ _Avoid_: Overdrawing
 
 **Render scope**:
 One `vkCmdBeginRendering` to `vkCmdEndRendering` block. The scene pass uses one
-for the depth prepass and one for the lit pass.
+for the depth prepass, one for the lit pass, and one for the sky pass.
 _Avoid_: Render pass (that word belongs to the Vulkan object)
 
 **HUD**:
@@ -480,7 +496,7 @@ The cause recorded at each TAA history reset: create, extent, toggle, teleport, 
 _Avoid_: Reset flag
 
 **Renderer debug override**:
-A gated change to a TAA input for diagnosis: TAA, jitter, history weight, clamp, depth trust, or shadow phase. Every change resets history.
+A gated change to a renderer input for diagnosis: TAA, jitter, history weight, clamp, depth trust, shadow phase, sky, or ambient occlusion. Every change resets history.
 _Avoid_: Debug flag
 
 **Debug override gate**:

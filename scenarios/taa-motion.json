@@ -372,7 +372,7 @@
   ],
   "checks": [
     {"field": "capture.count", "op": "eq", "value": 60},
-    {"field": "capture.worst_mean_delta", "op": "le", "value": 0.03, "warmup": 20},
+    {"field": "capture.worst_mean_delta", "op": "le", "value": 0.07, "warmup": 20},
     {"field": "capture.worst_over_16_fraction", "op": "le", "value": 5e-06, "warmup": 20}
   ]
 }

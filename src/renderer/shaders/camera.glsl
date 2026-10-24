@@ -7,4 +7,5 @@ layout(set = 0, binding = 0) uniform Camera {
     vec4 screen;
     vec4 sun;
     vec4 jitter;
+    vec4 lighting;
 } camera;
