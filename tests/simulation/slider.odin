@@ -5,6 +5,8 @@ package simulation
 import "core:math"
 import "core:testing"
 
+import "src:display"
+import game "src:game"
 import "src:ui"
 
 @(test)
@@ -66,4 +68,134 @@ slider_hit_clamps_the_ratio_outside_the_travel :: proc(t: ^testing.T) {
 
 	right, _ := ui.slider_hit(rect, {200, 26})
 	testing.expect_value(t, right, f32(1))
+}
+
+@(private)
+slider_test_rect :: proc() -> ui.Slider_Rect {
+	return {x = 20, y = 40, width = 200, height = 12, knob = 8}
+}
+
+// The point at a ratio sits on the knob centre, which is what the draw uses.
+@(private)
+slider_test_point :: proc(rect: ui.Slider_Rect, ratio: f32) -> [2]f32 {
+	travel := rect.width - rect.knob
+	return {rect.x + rect.knob * 0.5 + ratio * travel, rect.y + rect.height * 0.5}
+}
+
+@(test)
+menu_slider_press_at_the_left_knob_sets_the_minimum :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+	menu: game.Menu_State
+	game.menu_open(&menu)
+	rect := slider_test_rect()
+
+	game.menu_weight_input(
+		&menu,
+		&sim.settings,
+		rect,
+		{rect.x, rect.y + rect.height * 0.5},
+		true,
+		true,
+	)
+
+	testing.expect(t, menu.dragging_weight, "the left knob edge did not start a drag")
+	testing.expect_value(t, menu.selected, game.Menu_Item.Type_Weight)
+	testing.expect_value(t, sim.settings.type_weight, f32(ui.TYPE_WEIGHT_MIN))
+}
+
+@(test)
+menu_slider_press_at_the_right_knob_sets_the_maximum :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+	menu: game.Menu_State
+	game.menu_open(&menu)
+	rect := slider_test_rect()
+
+	game.menu_weight_input(
+		&menu,
+		&sim.settings,
+		rect,
+		{rect.x + rect.width, rect.y + rect.height * 0.5},
+		true,
+		true,
+	)
+
+	testing.expect(t, menu.dragging_weight, "the right knob edge did not start a drag")
+	testing.expect_value(t, menu.selected, game.Menu_Item.Type_Weight)
+	testing.expect_value(t, sim.settings.type_weight, f32(ui.TYPE_WEIGHT_MAX))
+}
+
+@(test)
+menu_slider_drag_updates_the_weight :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+	menu: game.Menu_State
+	game.menu_open(&menu)
+	rect := slider_test_rect()
+
+	game.menu_weight_input(&menu, &sim.settings, rect, slider_test_point(rect, 0.5), true, true)
+	testing.expect_value(t, sim.settings.type_weight, f32(500))
+
+	game.menu_weight_input(&menu, &sim.settings, rect, slider_test_point(rect, 0.75), false, true)
+	testing.expect_value(t, sim.settings.type_weight, f32(700))
+	testing.expect(t, menu.dragging_weight, "the drag ended while the pointer was down")
+}
+
+@(test)
+menu_slider_release_ends_the_drag :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+	menu: game.Menu_State
+	game.menu_open(&menu)
+	rect := slider_test_rect()
+
+	game.menu_weight_input(&menu, &sim.settings, rect, slider_test_point(rect, 0.5), true, true)
+	game.menu_weight_input(&menu, &sim.settings, rect, slider_test_point(rect, 1), false, false)
+
+	testing.expect(t, !menu.dragging_weight, "the release left the drag on")
+	testing.expect_value(t, sim.settings.type_weight, f32(500))
+
+	game.menu_weight_input(&menu, &sim.settings, rect, slider_test_point(rect, 1), false, true)
+	testing.expect_value(t, sim.settings.type_weight, f32(500))
+}
+
+@(test)
+menu_slider_ignores_a_press_off_the_track_or_closed_menu :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+	menu: game.Menu_State
+	rect := slider_test_rect()
+
+	game.menu_weight_input(&menu, &sim.settings, rect, slider_test_point(rect, 0), true, true)
+	testing.expect(t, !menu.dragging_weight, "a closed menu started a drag")
+
+	game.menu_open(&menu)
+	game.menu_weight_input(&menu, &sim.settings, rect, {rect.x, rect.y - 1}, true, true)
+	testing.expect(t, !menu.dragging_weight, "a press above the track started a drag")
+	testing.expect_value(t, sim.settings.type_weight, f32(400))
+}
+
+@(test)
+menu_slider_press_on_the_opening_frame_starts_the_drag :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+	menu: game.Menu_State
+	menu.displays = display.fallback_list()
+	game.menu_open(&menu)
+	// The opening frame has no published rect, so the caller refreshes the view
+	// and measures the Type weight row before it reads the pointer.
+	game.menu_view(&menu, sim.settings, false, 0)
+
+	row_index := game.MENU_ITEM_ROWS[game.Menu_Item.Type_Weight]
+	row := menu.view.rows[row_index]
+	testing.expect_value(t, row.kind, ui.Row_Kind.Slider)
+
+	rect := slider_test_rect()
+	knob := slider_test_point(rect, row.ratio)
+	game.menu_weight_input(&menu, &sim.settings, rect, knob, true, true)
+
+	testing.expect(t, menu.dragging_weight, "the opening-frame press did not start a drag")
+	testing.expect_value(t, menu.selected, game.Menu_Item.Type_Weight)
+	testing.expect_value(t, sim.settings.type_weight, f32(400))
 }

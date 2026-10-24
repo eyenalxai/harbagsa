@@ -15,45 +15,59 @@ Capture_Stats :: struct {
 	velocity_median_texels: Maybe(f32) `json:"velocity_median_texels,omitempty"`,
 }
 
+// A region limits the statistics to a rectangle; the whole image stays the
+// default. The caller validates the bounds against the capture extent.
 capture_stats :: proc(
 	values: []f32,
 	width, height: u32,
 	target: Capture_Target,
+	region: Maybe(Capture_Region),
 	allocator: mem.Allocator,
 ) -> Capture_Stats {
 	stats := Capture_Stats {
 		min = {1e30, 1e30, 1e30, 1e30},
 		max = {-1e30, -1e30, -1e30, -1e30},
 	}
-	pixels := len(values) / 4
-	if pixels == 0 {
+	x0, y0, x1, y1 := 0, 0, int(width), int(height)
+	if bounds, has_region := region.?; has_region {
+		x0, y0 = bounds.x, bounds.y
+		x1, y1 = bounds.x + bounds.w, bounds.y + bounds.h
+	}
+	count := (x1 - x0) * (y1 - y0)
+	if count <= 0 {
 		return stats
 	}
 	sums: [4]f64
-	for pixel in 0 ..< pixels {
-		for channel in 0 ..< 4 {
-			value := values[pixel * 4 + channel]
-			stats.min[channel] = min(stats.min[channel], value)
-			stats.max[channel] = max(stats.max[channel], value)
-			sums[channel] += f64(value)
+	for y in y0 ..< y1 {
+		for x in x0 ..< x1 {
+			base := (y * int(width) + x) * 4
+			for channel in 0 ..< 4 {
+				value := values[base + channel]
+				stats.min[channel] = min(stats.min[channel], value)
+				stats.max[channel] = max(stats.max[channel], value)
+				sums[channel] += f64(value)
+			}
 		}
 	}
 	for channel in 0 ..< 4 {
-		stats.mean[channel] = f32(sums[channel] / f64(pixels))
+		stats.mean[channel] = f32(sums[channel] / f64(count))
 	}
 	if target == .Velocity {
-		lengths := make([]f32, pixels, allocator)
+		lengths := make([]f32, count, allocator)
 		defer delete(lengths, allocator)
 		covered := 0
-		for pixel in 0 ..< pixels {
-			depth := values[pixel * 4 + 2]
-			if depth <= 0 || depth >= renderer.CAMERA_FAR {
-				continue
+		for y in y0 ..< y1 {
+			for x in x0 ..< x1 {
+				base := (y * int(width) + x) * 4
+				depth := values[base + 2]
+				if depth <= 0 || depth >= renderer.CAMERA_FAR {
+					continue
+				}
+				dx := values[base + 0] * f32(width)
+				dy := values[base + 1] * f32(height)
+				lengths[covered] = math.sqrt(dx * dx + dy * dy)
+				covered += 1
 			}
-			x := values[pixel * 4 + 0] * f32(width)
-			y := values[pixel * 4 + 1] * f32(height)
-			lengths[covered] = math.sqrt(x * x + y * y)
-			covered += 1
 		}
 		if covered > 0 {
 			slice.sort(lengths[:covered])

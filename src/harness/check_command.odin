@@ -30,11 +30,13 @@ Capture_Window :: struct {
 }
 
 Check_Command :: struct {
-	field:  string,
-	op:     Check_Op,
-	value:  Check_Value,
-	warmup: int,
-	window: Capture_Window,
+	field:     string,
+	op:        Check_Op,
+	value:     Check_Value,
+	other:     string,
+	has_other: bool,
+	warmup:    int,
+	window:    Capture_Window,
 }
 
 check_op_name :: proc(op: Check_Op) -> string {

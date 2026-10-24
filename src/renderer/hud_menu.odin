@@ -18,83 +18,150 @@ Hint_Grid :: struct {
 
 MENU_WEIGHT_HEADROOM :: f32(1.05)
 
-build_menu :: proc(o: ^Overlay, width, height: f32, menu: ui.Menu) {
+Menu_Layout :: struct {
+	panel_x:      f32,
+	panel_y:      f32,
+	panel_width:  f32,
+	panel_height: f32,
+	inner_x:      f32,
+	inner_width:  f32,
+	separator_y:  f32,
+	rows_y:       f32,
+	rows_layout:  Rows_Layout,
+	grid:         Hint_Grid,
+	frozen_width: f32,
+}
+
+menu_layout :: proc(o: ^Overlay, width, height: f32, menu: ui.Menu) -> Menu_Layout {
 	theme := o.theme
 	padding := theme.spacing.xl
 	gutter := theme.spacing.sm
 	note_gap := theme.spacing.lg
 	separator_gap := theme.spacing.sm
 
-	row_options := Rows_Options{value_align = .Right}
-	rows_layout := rows_measure(&o.atlas, theme, menu.rows, row_options)
-	grid := hint_grid_measure(o, theme, menu)
+	layout: Menu_Layout
+	layout.rows_layout = rows_measure(&o.atlas, theme, menu.rows, {value_align = .Right})
+	layout.grid = hint_grid_measure(o, theme, menu)
 
 	title_width := text_measure(&o.atlas, theme.type_title, menu.title)
 	note_width := text_measure(&o.atlas, theme.type_caption, menu.note)
-	content_width := max(rows_layout.width, grid.width)
+	content_width := max(layout.rows_layout.width, layout.grid.width)
 	content_width = max(content_width, title_width)
 	content_width = max(content_width, note_width)
 	content_width = max(content_width, theme.menu_min_width)
-	if o.menu_frozen_width == 0 {
-		o.menu_frozen_width = content_width * MENU_WEIGHT_HEADROOM
+	layout.frozen_width = o.menu_frozen_width
+	if layout.frozen_width == 0 {
+		layout.frozen_width = content_width * MENU_WEIGHT_HEADROOM
 	}
-	content_width = max(content_width, o.menu_frozen_width)
+	content_width = max(content_width, layout.frozen_width)
 
 	title_height := theme.type_title.line_height
 	note_height := theme.type_caption.line_height
-	panel_width := content_width + padding * 2
-	panel_height := padding * 2 +
+	layout.panel_width = content_width + padding * 2
+	layout.panel_height = padding * 2 +
 		title_height +
 		separator_gap * 2 +
 		theme.hairline +
-		rows_layout.height +
-		grid.height +
+		layout.rows_layout.height +
+		layout.grid.height +
 		note_gap +
 		note_height
-	panel_x := (width - panel_width) * 0.5
+	layout.panel_x = (width - layout.panel_width) * 0.5
 	// The smallest supported window is 800x600 and this panel is shorter than
 	// that, but an offscreen target can be any size; keep the top on screen.
-	panel_y := max((height - panel_height) * 0.5, theme.spacing.md)
+	layout.panel_y = max((height - layout.panel_height) * 0.5, theme.spacing.md)
+	layout.inner_x = layout.panel_x + padding
+	layout.inner_width = layout.panel_width - padding * 2
+	layout.separator_y = layout.panel_y + padding + title_height + separator_gap
+	layout.rows_y = layout.separator_y + theme.hairline + separator_gap
+
+	// Values sit on the panel's inner right edge, so the settings read as one
+	// label column and one value column no matter how wide the legend below is.
+	layout.rows_layout.value_width = max(
+		layout.rows_layout.value_width,
+		content_width - gutter - layout.rows_layout.label_column - theme.spacing.xl,
+	)
+	layout.rows_layout.width = content_width
+	return layout
+}
+
+build_menu :: proc(o: ^Overlay, width, height: f32, menu: ui.Menu) {
+	theme := o.theme
+	padding := theme.spacing.xl
+	gutter := theme.spacing.sm
+	note_gap := theme.spacing.lg
+
+	layout := menu_layout(o, width, height, menu)
+	o.menu_frozen_width = layout.frozen_width
+	o.menu_slider = menu_slider_in(theme, layout, menu.rows)
 
 	hud_emit_rect(o, 0, 0, width, height, theme.scrim)
-	hud_emit_rect(o, panel_x, panel_y, panel_width, panel_height, theme.surface_menu)
-	hud_emit_frame(o, panel_x, panel_y, panel_width, panel_height, theme.hairline, theme.line_hairline)
+	hud_emit_rect(
+		o,
+		layout.panel_x,
+		layout.panel_y,
+		layout.panel_width,
+		layout.panel_height,
+		theme.surface_menu,
+	)
+	hud_emit_frame(
+		o,
+		layout.panel_x,
+		layout.panel_y,
+		layout.panel_width,
+		layout.panel_height,
+		theme.hairline,
+		theme.line_hairline,
+	)
 
-	title_baseline := panel_y + padding + text_baseline(&o.atlas, theme.type_title)
+	title_baseline := layout.panel_y + padding + text_baseline(&o.atlas, theme.type_title)
 	text_emit_aligned(
 		o,
-		panel_x + panel_width * 0.5,
+		layout.panel_x + layout.panel_width * 0.5,
 		title_baseline,
 		{type = theme.type_title, color = theme.text_primary},
 		menu.title,
 		.Center,
 	)
 
-	inner_x := panel_x + padding
-	inner_width := panel_width - padding * 2
-	separator_y := panel_y + padding + title_height + separator_gap
-	hud_emit_rect(o, inner_x, separator_y, inner_width, theme.hairline, theme.line_separator)
-
-	// Values sit on the panel's inner right edge, so the settings read as one
-	// label column and one value column no matter how wide the legend below is.
-	rows_layout.value_width = max(
-		rows_layout.value_width,
-		content_width - gutter - rows_layout.label_column - theme.spacing.xl,
+	hud_emit_rect(
+		o,
+		layout.inner_x,
+		layout.separator_y,
+		layout.inner_width,
+		theme.hairline,
+		theme.line_separator,
 	)
-	rows_layout.width = content_width
 
-	rows_y := separator_y + theme.hairline + separator_gap
-	row_options.frame_x = inner_x
-	row_options.frame_width = inner_width
-	row_options.selected = menu.selected
-	rows_emit(o, theme, inner_x + gutter, rows_y, rows_layout, menu.rows, row_options)
+	row_options := Rows_Options {
+		value_align = .Right,
+		frame_x     = layout.inner_x,
+		frame_width = layout.inner_width,
+		selected    = menu.selected,
+	}
+	rows_emit(
+		o,
+		theme,
+		layout.inner_x + gutter,
+		layout.rows_y,
+		layout.rows_layout,
+		menu.rows,
+		row_options,
+	)
 
-	hint_grid_emit(o, theme, inner_x, rows_y + rows_layout.height, grid, menu)
+	hint_grid_emit(
+		o,
+		theme,
+		layout.inner_x,
+		layout.rows_y + layout.rows_layout.height,
+		layout.grid,
+		menu,
+	)
 
 	text_emit_aligned(
 		o,
-		panel_x + panel_width * 0.5,
-		rows_y + rows_layout.height + grid.height + note_gap +
+		layout.panel_x + layout.panel_width * 0.5,
+		layout.rows_y + layout.rows_layout.height + layout.grid.height + note_gap +
 		text_baseline(&o.atlas, theme.type_caption),
 		{type = theme.type_caption, color = theme.text_tertiary},
 		menu.note,

@@ -68,6 +68,14 @@ Text_Layer_Set :: struct {
 	count: int,
 }
 
+// A silent cap turns a text bug into a layout bug, so the atlas counts the
+// truncations and the dropped fonts it had to make and the harness reads them.
+Text_Caps :: struct {
+	truncated_runs: int,
+	dropped_fonts:  int,
+	warned:         bool,
+}
+
 Text_Atlas :: struct {
 	width:  u32,
 	height: u32,
@@ -75,6 +83,7 @@ Text_Atlas :: struct {
 	layers: [TEXT_LAYER_MAX]Text_Layer,
 	count:  int,
 	shaper: Text_Shaper,
+	caps:   Text_Caps,
 	allocator: mem.Allocator,
 }
 

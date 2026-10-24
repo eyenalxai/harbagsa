@@ -55,9 +55,9 @@ The order is the triage order. A broken interaction outranks a weak colour.
 4. **Fixed fields.** Every number that changes during play is in a fixed-width
    field and drawn in mono. The panel width must not move.
 5. **Token only.** No literal colour and no bare pixel size in
-   `src/renderer/hud.odin`, `src/renderer/hud_menu.odin`, or
-   `src/renderer/hud_rows.odin`. The one exception is the documented 2 px
-   accent-bar floor. Every other value belongs in
+   `src/renderer/hud.odin`, `src/renderer/hud_menu.odin`,
+   `src/renderer/hud_rows.odin`, or `src/renderer/hud_slider.odin`. The one
+   exception is the documented 2 px accent-bar floor. Every other value belongs in
    `src/renderer/ui_theme.odin`.
 6. **One of the documented components.** A new panel is a status panel, a capture
    hint, a crosshair, or the settings panel; the selection band, legend, rows,
