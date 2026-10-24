@@ -20,6 +20,7 @@ Check_Result :: struct {
 check_evaluate :: proc(
 	command: Check_Command,
 	state: State,
+	capture: Capture_Summary,
 	allocator: mem.Allocator,
 ) -> Check_Result {
 	result := Check_Result {
@@ -27,7 +28,7 @@ check_evaluate :: proc(
 		op = check_op_name(command.op),
 		expected = check_value_display(command.value, allocator),
 	}
-	actual, field_error := state_field(state, command.field)
+	actual, field_error := check_field(state, capture, command.field)
 	if field_error != "" {
 		result.error = field_error
 		return result
@@ -40,6 +41,41 @@ check_evaluate :: proc(
 	}
 	result.ok = ok
 	return result
+}
+
+@(private)
+check_field :: proc(
+	state: State,
+	capture: Capture_Summary,
+	path: string,
+) -> (
+	Check_Value,
+	string,
+) {
+	if strings.has_prefix(path, "capture.") {
+		if capture.count == 0 {
+			return {}, "no capture has run"
+		}
+		return capture_field(capture, path[len("capture."):])
+	}
+	return state_field(state, path)
+}
+
+@(private)
+capture_field :: proc(capture: Capture_Summary, path: string) -> (Check_Value, string) {
+	switch path {
+	case "count":
+		return {kind = .Number, number = f64(capture.count)}, ""
+	case "worst_mean_delta":
+		return {kind = .Number, number = f64(capture.worst_mean_delta)}, ""
+	case "worst_max_delta":
+		return {kind = .Number, number = f64(capture.worst_max_delta)}, ""
+	case "worst_over_16":
+		return {kind = .Number, number = f64(capture.worst_over_16)}, ""
+	case "worst_over_16_fraction":
+		return {kind = .Number, number = f64(capture.worst_over_16_fraction)}, ""
+	}
+	return {}, fmt.aprintf("unknown capture field %q", path, allocator = context.allocator)
 }
 
 check_result_destroy :: proc(result: ^Check_Result, allocator: mem.Allocator) {
