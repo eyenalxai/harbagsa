@@ -118,8 +118,20 @@ _Avoid_: Map, level
 The directional light that lights the arena and casts the sun shadows. Debug mode rotates it.
 _Avoid_: Lamp, light source
 
+**Sun direction**:
+The unit vector from a point in the world toward the sun. The sky angles describe
+it: azimuth from `+z` toward `+x`, and elevation above the horizon.
+_Avoid_: Sun vector, light vector
+
+**Light direction**:
+The direction the sun's light travels. It is the opposite of the sun direction.
+The renderer shades with it.
+_Avoid_: Sun direction
+
 **Sun angular diameter**:
-The angle the sun disk subtends. It sets the penumbra width. The demo uses 3°; the real sun is about 0.53°. The wider disk makes the contact-hardening cue visible over the arena's short shadows.
+The angle the sun disk subtends. It sets the penumbra width and it is the same
+for every shadow. The demo uses the real 0.53°. A wider disk softens every
+shadow by the same factor, and a wall shadow smears when the sun sits low.
 _Avoid_: Light size
 
 **Contact hardening**:

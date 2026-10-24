@@ -8,12 +8,13 @@ import "src:perf"
 import vk "vendor:vulkan"
 
 Frame_View :: struct {
-	camera:          Camera,
-	light_direction: [3]f32,
-	boxes:           []geometry.Box,
-	debug_lines:     []geometry.Line,
-	hud:             HUD_Frame,
-	view_flags:      View_Flags,
+	camera:               Camera,
+	light_direction:      [3]f32,
+	sun_angular_diameter: f32,
+	boxes:                []geometry.Box,
+	debug_lines:          []geometry.Line,
+	hud:                  HUD_Frame,
+	view_flags:           View_Flags,
 }
 
 create_semaphore :: proc(r: ^Renderer, semaphore: ^vk.Semaphore) -> bool {

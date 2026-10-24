@@ -154,6 +154,11 @@ state_field :: proc(state: State, path: string) -> (Check_Value, string) {
 			return {}, "debug needs a field"
 		}
 		return debug_field(state.debug, tail)
+	case "sun":
+		if !has_tail {
+			return {}, "sun needs a field"
+		}
+		return sun_field(state.sun, tail)
 	case "menu":
 		if !has_tail {
 			return {}, "menu needs a field"

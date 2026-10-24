@@ -40,7 +40,11 @@ There is no shadow map, depth bias, normal offset, PCF, or cascade.
   separated by an acceleration-structure barrier.
 - The lit pass costs 16 ray queries per pixel. TAA can average the sample
   pattern; without TAA the penumbra is slightly dithered.
-- The sun angular diameter is an art constant. Raising it softens every shadow;
-  lowering it sharpens them.
+- The sun angular diameter is a scene input, not a renderer constant. It sets
+  the penumbra width directly: a wider disk softens every shadow. The demo uses
+  the real 0.53°; a 3° disk softened a 4 m wall shadow by 3 m at a 15° sun,
+  which read as a blur instead of a shadow. The harness can change the value
+  with the `sun` command, so a scenario can compare two disks without a
+  rebuild.
 - A future light shape only needs a new sample-point function. The TLAS, ray
   query, and barrier stay the same.

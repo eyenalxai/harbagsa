@@ -221,7 +221,8 @@ frame of its block. Capture frames are zero-based frame numbers. Check operators
 are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. Check fields use the `state.json`
 shape, for example `player.position.y`, `player.grounded`, `crates.0.position.z`,
 `crates.count`, `settings.window_mode`, `settings.resolution`, `menu.open`,
-`debug.active`, `renderer.taa_enabled`, or `render_digest`. A capture check can
+`debug.active`, `sun.elevation`, `sun.angular_diameter`,
+`renderer.taa_enabled`, or `render_digest`. A capture check can
 also read `capture.target`, `capture.format`, and `capture.stats.*` for the last
 capture in its window. Add `"window": {"start": 2, "count": 8}` to aggregate over
 part of the captures; `warmup` stays the shorthand for skipping the first N.
@@ -255,7 +256,7 @@ include a `capture` command when you want a PNG.
 The batch runner and the live session share one command set:
 
 - `{"cmd": "reset"}`: fresh simulation. Crates return to spawn, the settings
-  return to their defaults, and the menu closes.
+  return to their defaults, the sun returns to its default, and the menu closes.
 - `{"cmd": "look", "dx": 220, "dy": 0}`: pixel look delta through the game
   sensitivity and pitch clamp.
 - `{"cmd": "face", "yaw": 0, "pitch": 0}`: set the player view directly.
@@ -268,11 +269,13 @@ The batch runner and the live session share one command set:
   settle is an error while the menu is open. Under `--no-render`, or in a
   scenario with no captures, it is a plain step.
 - `{"cmd": "state"}`: player, eye, velocity, yaw, pitch, grounded, crates,
-  window and input settings, debug mode, menu, renderer state, render digest,
-  frame, and simulation digest. The renderer object reports the frame count,
-  TAA state, jitter index, history validity, convergence frames, history read
-  index and weight, reset count and reason, and shadow phase. `render_digest`
-  covers the effective camera, sun, boxes, jitter, shadow phase, and view flags.
+  window and input settings, debug mode, sun, menu, renderer state, render
+  digest, frame, and simulation digest. The sun object reports azimuth,
+  elevation, and angular diameter in degrees. The renderer object reports the
+  frame count, TAA state, jitter index, history validity, convergence frames,
+  history read index and weight, reset count and reason, and shadow phase.
+  `render_digest` covers the effective camera, sun, boxes, jitter, shadow phase,
+  and view flags.
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`: write a PNG.
   `frame` is optional. A past frame is an error; a future frame queues. Add
   `"target": "velocity"`, `"history"`, `"depth"`, or `"scene_color"` to read an
@@ -283,6 +286,11 @@ The batch runner and the live session share one command set:
   the override.
 - `{"cmd": "view", "hud": true, "debug": false, "hint": false, "perf": false}`:
   toggle the HUD, the debug draw, the capture hint, and the perf overlay.
+- `{"cmd": "sun", "azimuth": 52.1, "elevation": 15, "diameter": 0.53}`: move the
+  sun or resize its disk. `azimuth` is degrees from `+z` toward `+x`, `elevation`
+  is degrees above the horizon, and `diameter` is the angle the sun disk
+  subtends in degrees. Omitted fields keep the value. A change resets TAA
+  history, like a scene change.
 - `{"cmd": "debug_mode", "active": true}`: enter or leave the `F2` debug mode.
   Entering swaps the player for the free-fly camera; leaving restores the player.
   Repeating the same value is a no-op.
@@ -425,6 +433,13 @@ the renderer state and render digest. `scenarios/renderer-reset.json` teleports
 the camera and checks that the history reset names the teleport. `report.json`
 also carries a `setup` block: target kind, extent, view flags, and renderer
 config, so a run is reproducible.
+
+`scenarios/shadow-angle.json` puts the sun 15 degrees above the horizon and
+captures a wall shadow twice: once with a 3-degree sun disk, then with the
+0.53-degree disk the build uses. It also captures a top-down view of the same
+edge, where the penumbra is measurable in pixels. Use it to compare a sun
+angular diameter change. The penumbra width follows the diameter, so the small
+disk gives a shadow edge about 5.7 times narrower.
 
 A capture can read an intermediate target. `"target": "velocity"` with
 `"format": "stats"` reports per-channel min, max, and mean plus the median

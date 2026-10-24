@@ -6,6 +6,9 @@ import "core:math"
 import b3 "libs:box3d"
 
 DEFAULT_SUN_DIRECTION :: [3]f32{-0.45, -1.0, -0.35}
+// The real sun subtends about 0.53 degrees. A wider disk softens every shadow
+// by the same factor and smears a wall shadow when the sun sits low.
+SUN_ANGULAR_DIAMETER :: 0.53 * math.PI / 180.0
 DEBUG_FLY_SPEED :: 10.0
 
 Debug_Selection :: enum {
@@ -33,18 +36,19 @@ Saved_Player :: struct {
 }
 
 Debug_Mode :: struct {
-	active:            bool,
-	camera:            Debug_Camera,
-	saved_player:      Saved_Player,
-	sun_direction:     [3]f32,
-	selection:         Debug_Selection,
-	selected_crate:    int,
-	dragging:          Debug_Drag,
-	drag_position:     b3.Vec3,
-	sun_azimuth:       f32,
-	sun_elevation:     f32,
-	sun_drag_dx:       f32,
-	sun_drag_dy:       f32,
+	active:               bool,
+	camera:               Debug_Camera,
+	saved_player:         Saved_Player,
+	sun_direction:        [3]f32,
+	sun_angular_diameter: f32,
+	selection:            Debug_Selection,
+	selected_crate:       int,
+	dragging:             Debug_Drag,
+	drag_position:        b3.Vec3,
+	sun_azimuth:          f32,
+	sun_elevation:        f32,
+	sun_drag_dx:          f32,
+	sun_drag_dy:          f32,
 }
 
 Debug_Input :: struct {
@@ -64,6 +68,7 @@ Debug_Input :: struct {
 debug_mode_create :: proc() -> Debug_Mode {
 	return {
 		sun_direction = DEFAULT_SUN_DIRECTION,
+		sun_angular_diameter = SUN_ANGULAR_DIAMETER,
 		selected_crate = -1,
 	}
 }
@@ -89,7 +94,7 @@ debug_mode_sun_direction :: proc(dm: ^Debug_Mode) -> [3]f32 {
 }
 
 debug_mode_sun_angles :: proc(dm: ^Debug_Mode) -> (azimuth, elevation: f32) {
-	return sun_angles_from_direction(dm.sun_direction)
+	return sun_angles_from_direction(sun_direction_from_light(debug_mode_sun_direction(dm)))
 }
 
 debug_mode_clear_selection :: proc(dm: ^Debug_Mode) {
@@ -139,6 +144,7 @@ debug_mode_reset_player :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 debug_mode_reset_scene :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	simulation_reset_scene(sim)
 	dm.sun_direction = DEFAULT_SUN_DIRECTION
+	dm.sun_angular_diameter = SUN_ANGULAR_DIAMETER
 	debug_mode_clear_selection(dm)
 	save_player_and_sync_camera(dm, sim)
 }

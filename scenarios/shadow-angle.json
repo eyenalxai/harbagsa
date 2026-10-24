@@ -1,0 +1,27 @@
+{
+  "commands": [
+    {"cmd": "view", "hud": false, "debug": false, "hint": false, "perf": false},
+    {"cmd": "camera", "position": [0, 1.7, -1], "yaw": 3.14159265, "pitch": -0.18},
+    {"cmd": "sun", "azimuth": 52.1, "elevation": 15, "diameter": 3},
+    {"cmd": "settle", "frames": 60},
+    {"cmd": "capture", "name": "wall-wide-sun"},
+    {"cmd": "sun", "diameter": 0.53},
+    {"cmd": "settle", "frames": 60},
+    {"cmd": "capture", "name": "wall-real-sun"},
+    {"cmd": "camera", "position": [0, 20, 5], "yaw": 0, "pitch": -1.5},
+    {"cmd": "sun", "azimuth": 0, "diameter": 3},
+    {"cmd": "settle", "frames": 60},
+    {"cmd": "capture", "name": "penumbra-wide-sun"},
+    {"cmd": "sun", "diameter": 0.53},
+    {"cmd": "settle", "frames": 60},
+    {"cmd": "capture", "name": "penumbra-real-sun"}
+  ],
+  "checks": [
+    {"field": "sun.azimuth", "op": "gt", "value": -0.2},
+    {"field": "sun.azimuth", "op": "lt", "value": 0.2},
+    {"field": "sun.elevation", "op": "gt", "value": 14.99},
+    {"field": "sun.elevation", "op": "lt", "value": 15.01},
+    {"field": "sun.angular_diameter", "op": "gt", "value": 0.52},
+    {"field": "sun.angular_diameter", "op": "lt", "value": 0.54}
+  ]
+}

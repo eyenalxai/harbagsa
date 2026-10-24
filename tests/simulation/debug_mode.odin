@@ -94,11 +94,24 @@ debug_mode_sun_direction_is_normalized :: proc(t: ^testing.T) {
 @(test)
 debug_mode_sun_angles_follow_direction :: proc(t: ^testing.T) {
 	dm := game.debug_mode_create()
-	dm.sun_direction = {0.0, -1.0, 0.0}
+	// The stored direction is the light travel direction: straight down means
+	// the sun stands overhead. The slight tilt keeps the azimuth defined.
+	dm.sun_direction = {0.0, -1.0, -0.1}
 
 	azimuth, elevation := game.debug_mode_sun_angles(&dm)
 	expect_near(t, azimuth, 0.0, 0.0001, "azimuth")
-	expect_near(t, elevation, -math.PI / 2.0, 0.0001, "elevation")
+	expect_near(t, elevation, f32(math.atan2(1.0, 0.1)), 0.0001, "elevation")
+}
+
+@(test)
+debug_mode_sun_angles_are_positive_above_the_horizon :: proc(t: ^testing.T) {
+	dm := game.debug_mode_create()
+	azimuth, elevation := game.debug_mode_sun_angles(&dm)
+	testing.expectf(t, elevation > 0, "the default sun reads below the horizon: %v", elevation)
+
+	round_trip := game.sun_direction_from_angles(azimuth, elevation)
+	expected := b3.Normalize(game.sun_direction_from_light(game.DEFAULT_SUN_DIRECTION))
+	expect_direction_near(t, round_trip, expected, 0.001)
 }
 
 @(test)
@@ -128,6 +141,7 @@ reset_scene_restores_crates_sun_and_player :: proc(t: ^testing.T) {
 	_ = game.simulation_remove_crate(&sim, 0)
 	_ = game.simulation_add_default_crate(&sim, {5, 5, 5})
 	dm.sun_direction = {0.0, -1.0, 0.0}
+	dm.sun_angular_diameter = 0.2
 	dm.selection = .Crate
 	dm.selected_crate = 0
 	dm.dragging = .Crate
@@ -137,6 +151,7 @@ reset_scene_restores_crates_sun_and_player :: proc(t: ^testing.T) {
 
 	testing.expect_value(t, game.simulation_crate_count(&sim), game.INITIAL_CRATE_COUNT)
 	testing.expect_value(t, dm.sun_direction, game.DEFAULT_SUN_DIRECTION)
+	testing.expect_value(t, dm.sun_angular_diameter, game.SUN_ANGULAR_DIAMETER)
 	testing.expect_value(t, dm.selection, game.Debug_Selection.None)
 	testing.expect_value(t, dm.selected_crate, -1)
 	testing.expect_value(t, dm.dragging, game.Debug_Drag.None)
