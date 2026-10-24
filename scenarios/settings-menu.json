@@ -1,7 +1,7 @@
 {
   "commands": [
     {"cmd": "step", "frames": 5},
-    {"cmd": "menu", "open": true, "select": 4},
+    {"cmd": "menu", "open": true, "select": 5},
     {"cmd": "capture", "name": "settings-menu"},
     {"cmd": "menu", "activate": true},
     {"cmd": "menu", "open": false},

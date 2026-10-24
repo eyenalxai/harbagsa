@@ -1,0 +1,10 @@
+#ifndef HARBAGSA_FTOPTION_H_
+#define HARBAGSA_FTOPTION_H_
+
+#include <freetype/config/ftoption.h>
+
+#undef TT_CONFIG_OPTION_BYTECODE_INTERPRETER
+#undef TT_CONFIG_OPTION_SUBPIXEL_HINTING
+#undef FT_CONFIG_OPTION_USE_ZLIB
+
+#endif

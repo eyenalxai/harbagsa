@@ -12,9 +12,9 @@ Values are pixels at density 1 and multiply by density. Tokens are in
 | --- | --- | --- | --- |
 | `spacing.xxs` | 2 | 3 | band padding above and below a selected row |
 | `spacing.xs` | 4 | 6 | gap between rows in a group, key to action |
-| `spacing.sm` | 6 | 9 | gap above a divider, column gap inside a row group |
-| `spacing.md` | 8 | 12 | status panel margin, capture hint padding, gap above a section header |
-| `spacing.lg` | 12 | 18 | status panel padding, gap above a section header, note gap |
+| `spacing.sm` | 6 | 9 | gap above a divider, column gap inside a row group, slider tick height and track gap |
+| `spacing.md` | 8 | 12 | status panel margin, capture hint padding, gap above a section header, slider knob |
+| `spacing.lg` | 12 | 18 | status panel padding, gap above a section header, note gap, slider track zone |
 | `spacing.xl` | 16 | 24 | settings panel padding, label-to-value gutter, legend column gap |
 | `spacing.xxl` | 24 | 36 | reserved for a future full-bleed split |
 
@@ -43,7 +43,8 @@ fraction: a 1.5 px line resolves to a two-pixel grey smear.
 │  ──────────────────────────────────────  │  ← separator, inner width
 │  padding.sm                              │
 │  Label            value                  │  ← label type_body_strong
-│  Label            value                  │  ← value type_body, right edge
+│  Type weight          400                │  ← Slider, line one
+│  ─────●─────────────                    │  ← Slider track, ticks, knob
 │  ──────────────────────────────────────  │
 │  Action                                  │
 │                                          │
@@ -62,8 +63,15 @@ Rules that follow from the drawing:
   guessed, and it never shrinks below the widest row.
 - One gap, one owner: the row layout adds the gap above a row, so no row carries
   its own margin and the last row leaves no trailing gap. A row gets `spacing.xs`
-  above it, a `Setting` or `Action` row `spacing.sm`, a divider `spacing.sm`, and a
-  section header `spacing.lg`.
+  above it, a `Setting`, `Action`, or `Slider` row `spacing.sm`, a divider
+  `spacing.sm`, and a section header `spacing.lg`.
+- A `Slider` row is `type_body.line_height + spacing.sm + spacing.lg`, which is
+  40.5 px at density 1. The track spans `frame_x .. frame_x + frame_width`; the
+  knob travel is the inner width minus `spacing.md`, so the ticks and the knob
+  stay inside the panel.
+- The settings content width freezes when the menu opens, with 5 % headroom for
+  the weight axis. The track must not move under the cursor while the value
+  changes.
 - A divider and the selection band both span `frame_x .. frame_x + frame_width`,
   the panel's inner rectangle. They share one edge with each other. The legend
   grid has its own pitch: caption line height plus `spacing.xxs`.
@@ -90,7 +98,7 @@ No shadow, no gradient, no radius token. `docs/ui/README.md` explains why.
 - No `width: auto` equivalent: every panel width traces to a measured row plus
   padding.
 - No nested panels. A row is not a card.
-- No clipping. The settings panel is 446 px tall and 542 px wide at 720p; the
-  smallest supported window is 800x600, so it always fits. The panel still clamps
-  its top to `spacing.md`, so an offscreen target of any size keeps the header on
-  screen. A new surface must say what happens when it does not fit.
+- No clipping. The settings panel is 494 px wide and 517 px tall at 720p at the
+  default weight; the smallest supported window is 800x600, so it fits. The panel
+  still clamps its top to `spacing.md`, so an offscreen target of any size keeps
+  the header on screen. A new surface must say what happens when it does not fit.

@@ -13,9 +13,9 @@ value and never converts one.
 
 | Token | sRGB | Alpha | Role |
 | --- | --- | --- | --- |
-| `text_primary` | `#EEF2F6` | 1.0 | a value, a panel title, the selected label |
-| `text_secondary` | `#A7B2BF` | 1.0 | a row label, a legend key |
-| `text_tertiary` | `#808C99` | 1.0 | a detail value, a section header, a legend action |
+| `text_primary` | `#EEF2F6` | 1.0 | a value, a panel title, the selected label, the slider knob |
+| `text_secondary` | `#A7B2BF` | 1.0 | a row label, a legend key, the slider fill |
+| `text_tertiary` | `#808C99` | 1.0 | a detail value, a section header, a legend action, the slider ticks |
 | `accent` | `#E6AF3A` | 1.0 | the selection bar, and nothing else |
 | `surface_hud` | `#10141A` | 0.94 | the status panel, the capture hint |
 | `surface_menu` | `#161B23` | 1.0 | the settings panel |
@@ -40,10 +40,12 @@ Measured on the authored sRGB values, the WCAG 2 way.
 The floor is 4.5:1 for text and 3:1 for a non-text element such as the accent bar.
 `tests/renderer/text.odin` holds the theme to it, including the selected row.
 
-`text_tertiary` passes on the menu but not on the raised surface. That is safe by
-construction: only `Setting` and `Action` rows are selectable, and those draw in
-`text_secondary` or `text_primary`. A `Detail` or `Header` row must never become
-selectable without moving it to `text_secondary`.
+`text_tertiary` passes on the menu but not the text floor on the raised surface.
+That is safe by construction for text: `Setting`, `Action`, and `Slider` labels
+draw in `text_secondary` or `text_primary`. A `Detail` or `Header` row must never
+become selectable without moving it to `text_secondary`. A Slider is selectable;
+its fill and knob carry the value and meet the 3:1 non-text floor, and its ticks
+clear 3:1 on the raised surface. The track is a divider-weight line.
 
 ## Choosing a text colour
 
@@ -58,7 +60,9 @@ Is it the row's value, or a panel title?
 ```
 
 Anything that is not text: `accent` for the selection bar, `line_hairline` for a
-panel ring, `line_separator` for a divider. Nothing else.
+panel ring, `line_separator` for a divider and the slider track, `text_primary`
+for a slider knob, `text_secondary` for a slider fill, and `text_tertiary` for a
+slider tick. Nothing else.
 
 ## Alpha
 

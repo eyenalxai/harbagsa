@@ -23,7 +23,7 @@ Rows_Layout :: struct {
 
 row_label_style :: proc(theme: UI_Theme, kind: ui.Row_Kind) -> Text_Style {
 	switch kind {
-	case .Setting, .Action:
+	case .Setting, .Action, .Slider:
 		return {type = theme.type_body_strong, color = theme.text_secondary}
 	case .Metric:
 		return {type = theme.type_body, color = theme.text_secondary}
@@ -43,12 +43,13 @@ row_value_style :: proc(theme: UI_Theme, row: ui.Row) -> Text_Style {
 	case .Detail:
 		style = theme.type_caption
 		color = theme.text_tertiary
-	case .Setting, .Action, .Metric:
+	case .Setting, .Action, .Metric, .Slider:
 	case .Divider, .Spacer, .Header:
 		return {type = theme.type_body, color = color}
 	}
 	if row.numeric {
-		style.weight = .Mono
+		style.face = .Mono
+		style.weight = min(style.weight, MONO_MAX_WEIGHT)
 	}
 	return {type = style, color = color}
 }
@@ -61,7 +62,7 @@ row_gap :: proc(theme: UI_Theme, kind: ui.Row_Kind) -> f32 {
 		return theme.spacing.sm
 	case .Spacer:
 		return 0
-	case .Setting, .Action:
+	case .Setting, .Action, .Slider:
 		return theme.spacing.sm
 	case .Metric, .Detail:
 	}
@@ -76,6 +77,8 @@ row_height :: proc(theme: UI_Theme, kind: ui.Row_Kind) -> f32 {
 		return theme.hairline
 	case .Spacer:
 		return theme.spacing.sm
+	case .Slider:
+		return theme.type_body.line_height + theme.spacing.sm + theme.spacing.lg
 	case .Setting, .Action, .Metric:
 	}
 	return theme.type_body.line_height
@@ -136,7 +139,7 @@ rows_emit_row :: proc(
 ) {
 	atlas := &o.atlas
 	row_style := row_label_style(theme, row.kind)
-	selectable := row.kind == .Setting || row.kind == .Action
+	selectable := row.kind == .Setting || row.kind == .Action || row.kind == .Slider
 	selected := options.frame_width > 0 && index == options.selected && selectable
 	if selected {
 		row_style.color = theme.text_primary
@@ -153,7 +156,7 @@ rows_emit_row :: proc(
 	case .Header:
 		text_emit(o, x, baseline, row_style, row.label)
 		return
-	case .Setting, .Action, .Metric, .Detail:
+	case .Setting, .Action, .Metric, .Detail, .Slider:
 	}
 
 	if selected {
@@ -201,6 +204,57 @@ rows_emit_row :: proc(
 			row.value,
 			.Right,
 		)
+	}
+	if row.kind == .Slider {
+		rows_emit_slider(o, theme, y, row, options)
+	}
+}
+
+@(private)
+rows_emit_slider :: proc(
+	o: ^Overlay,
+	theme: UI_Theme,
+	y: f32,
+	row: ui.Row,
+	options: Rows_Options,
+) {
+	if options.frame_width <= 0 {
+		return
+	}
+	knob := theme.spacing.md
+	track_x := options.frame_x
+	track_width := options.frame_width
+	travel := max(track_width - knob, 0)
+	center_y := y + theme.type_body.line_height + theme.spacing.sm + theme.spacing.lg * 0.5
+	thickness := max(theme.hairline * 2, 2)
+	track_y := hud_snap(center_y - thickness * 0.5)
+	ratio := clamp(row.ratio, 0, 1)
+	knob_center := track_x + knob * 0.5 + ratio * travel
+
+	hud_emit_rect(o, track_x, track_y, track_width, thickness, theme.line_separator)
+	hud_emit_rect(o, track_x, track_y, max(knob_center - track_x, 0), thickness, theme.text_secondary)
+	if row.ticks >= 2 {
+		pitch := travel / f32(row.ticks - 1)
+		tick_y := hud_snap(center_y - theme.spacing.sm * 0.5)
+		for tick in 0 ..< row.ticks {
+			tick_center := track_x + knob * 0.5 + f32(tick) * pitch
+			tick_x := hud_snap(tick_center - theme.hairline * 0.5)
+			hud_emit_rect(o, tick_x, tick_y, theme.hairline, theme.spacing.sm, theme.text_tertiary)
+		}
+	}
+	hud_emit_rect(
+		o,
+		hud_snap(knob_center - knob * 0.5),
+		hud_snap(center_y - knob * 0.5),
+		knob,
+		knob,
+		theme.text_primary,
+	)
+	o.menu_slider = {
+		x      = track_x + knob * 0.5,
+		y      = hud_snap(center_y - theme.spacing.lg * 0.5),
+		width  = travel,
+		height = theme.spacing.lg,
 	}
 }
 

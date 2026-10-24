@@ -1,5 +1,9 @@
 # Coverage atlas for the 2D layer
 
+> Updated by ADR 0014. The faces are now variable Roboto Condensed and Roboto
+> Mono; the layer key carries the face and weight, and the mono set has a 14 px
+> layer. The Noto role list below is the state at the time of this decision.
+
 The overlay draws text from a coverage atlas rasterized at the device pixel
 size. It replaces the signed distance field atlas of ADR 0006, which could not
 draw a one-pixel stem.
