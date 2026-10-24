@@ -133,12 +133,12 @@ open.
 The summary row holds frames per second, the frame interval, the CPU frame
 time, the p95 interval, the spike count, and the GPU total with the costliest
 pass. The pass row holds the last completed frame's GPU pass times: the TLAS
-build, the scene pass, the TAA resolve, and the overlay pass. The scene pass
-time includes the depth prepass.
+build, the depth prepass, the lit scene pass, the TAA resolve, and the overlay
+pass.
 
 The GPU numbers belong to the last completed frame, so they are two frames
 behind the frame being recorded. A device without timestamp support shows the
-CPU numbers only. The overlay adds five timestamp writes per frame.
+CPU numbers only. The overlay adds six timestamp writes per frame.
 
 ## Agent harness
 

@@ -70,7 +70,9 @@ record_scene :: proc(
 	write_timing(r, command_buffer, .Start)
 	record_acceleration(r, command_buffer, view.boxes)
 	write_timing(r, command_buffer, .After_Tlas)
-	record_scene_pass(r, command_buffer, box_count)
+	record_scene_depth(r, command_buffer, box_count)
+	write_timing(r, command_buffer, .After_Depth)
+	record_scene_color(r, command_buffer, box_count)
 	write_timing(r, command_buffer, .After_Scene)
 	record_taa_resolve(r, command_buffer, image_index)
 	write_timing(r, command_buffer, .After_Taa)
@@ -123,12 +125,16 @@ write_object_data :: proc(r: ^Renderer, boxes: []geometry.Box) -> bool {
 	return true
 }
 
-record_scene_pass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_count: int) {
-	taa := &r.taa
-	frame := r.frame_index
-	color := taa.scene_color[frame]
-	velocity := taa.velocity[frame]
-	depth := taa.depth[frame]
+record_scene_depth :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_count: int) {
+	depth := r.taa.depth[r.frame_index]
+	record_depth_write_barrier(command_buffer, depth.image)
+	record_depth_prepass(r, command_buffer, box_count)
+}
+
+record_scene_color :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_count: int) {
+	color := r.taa.scene_color[r.frame_index]
+	velocity := r.taa.velocity[r.frame_index]
+	depth := r.taa.depth[r.frame_index]
 
 	image_barrier(
 		command_buffer,
@@ -152,9 +158,7 @@ record_scene_pass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_co
 		{},
 		{.COLOR_ATTACHMENT_WRITE},
 	)
-	record_depth_write_barrier(command_buffer, depth.image)
 
-	record_depth_prepass(r, command_buffer, box_count)
 	record_depth_read_barrier(command_buffer, depth.image)
 	record_color_pass(r, command_buffer, box_count)
 

@@ -438,7 +438,7 @@ and lets jitter cycle, so the analysis can find the period.
 ## Performance
 
 The renderer records a perf sample every frame: the frame interval, five CPU
-phases, and four GPU pass times. The game shows it on `F4`. A scenario can show
+phases, and five GPU pass times. The game shows it on `F4`. A scenario can show
 the same panel with `{"cmd": "view", "perf": true}`.
 
 `{"cmd": "perf", "frames": N, "warmup": M}` runs one priming frame, `M` warmup
@@ -458,8 +458,8 @@ What the numbers mean:
 
 - The frame interval is wall clock. A capture outside a perf run has no interval.
 - The GPU pass times come from Vulkan timestamps. They belong to the last
-  completed frame, two frames behind the recording frame. The scene pass time
-  includes the depth prepass.
+  completed frame, two frames behind the recording frame. The depth prepass and
+  the lit scene pass are separate passes.
 - A device without timestamp support, a failed query pool, or a run without a
   device reports the CPU numbers and leaves the GPU fields empty.
 - Perf data never enters `State`, the state digest, or the pixel hash. A perf

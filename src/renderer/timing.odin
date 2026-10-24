@@ -10,6 +10,7 @@ import vk "vendor:vulkan"
 Timing_Boundary :: enum u32 {
 	Start,
 	After_Tlas,
+	After_Depth,
 	After_Scene,
 	After_Taa,
 	After_Overlay,
@@ -119,8 +120,14 @@ read_timing :: proc(r: ^Renderer) {
 		period,
 		mask,
 	)
-	times.passes[.Scene] = ticks_duration(
+	times.passes[.Depth] = ticks_duration(
 		values[Timing_Boundary.After_Tlas],
+		values[Timing_Boundary.After_Depth],
+		period,
+		mask,
+	)
+	times.passes[.Scene] = ticks_duration(
+		values[Timing_Boundary.After_Depth],
 		values[Timing_Boundary.After_Scene],
 		period,
 		mask,
