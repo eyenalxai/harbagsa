@@ -147,6 +147,18 @@ _Avoid_: Skybox, sun orbit
 A light with a position, colour, intensity, and range. The renderer holds up to 8 per frame, and each costs one hard shadow ray per fragment. A lamp prefab owns one.
 _Avoid_: Lamp (the prefab), bulb
 
+**Lamp prefab**:
+A prefab with an active point light and an emissive box. The catalog has the Lamp, the Light panel, and the Beacon. A lamp is placed like any other object and can be static or dynamic.
+_Avoid_: Light object, bulb
+
+**Light budget**:
+The eight nearest lamps to the camera that upload as point lights. Lamps outside the budget stay emissive but add no light. The inspector shows the active count against the lamp count.
+_Avoid_: Light cap, light count (that is the reported number)
+
+**Lamp shadow**:
+The hard point-light shadow. One ray runs from the shaded point to each active lamp per fragment, so the edge is sharp and the cost follows the covered pixels and the active light count.
+_Avoid_: Point shadow map, soft lamp shadow
+
 **Emissive box**:
 A box whose colour adds to its shaded colour after the sun and point lights. It carries an emissive strength in the box data. Lamps are emissive so they glow even when their light is not in the active eight.
 _Avoid_: Glow shader, unlit material
