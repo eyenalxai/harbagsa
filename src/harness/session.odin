@@ -64,6 +64,9 @@ Session :: struct {
 	analysis_config: Analysis_Config,
 	analysis:        Analysis_Summary,
 	has_analysis:    bool,
+
+	settle_frames:     int,
+	settle_converged:  bool,
 }
 
 session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
@@ -150,6 +153,8 @@ session_reset :: proc(session: ^Session) -> string {
 	session.input = {}
 	session.camera_override = {}
 	session.has_camera_override = false
+	session.settle_frames = 0
+	session.settle_converged = false
 	// The debug mode holds a saved player from the world that just went away.
 	session.debug = game.debug_mode_create()
 	return ""
@@ -211,14 +216,6 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 	return ""
 }
 
-// Settle renders every step without writing a screenshot, so a scenario can
-// reach a steady temporal state before it starts capturing.
-session_settle :: proc(session: ^Session, frames: int) -> string {
-	session.render_every_step = true
-	defer session.render_every_step = false
-	return session_step(session, frames)
-}
-
 @(private)
 session_finish_frame :: proc(session: ^Session) -> string {
 	due := make([dynamic]int, 0, 4, context.temp_allocator)
@@ -235,11 +232,15 @@ session_finish_frame :: proc(session: ^Session) -> string {
 	for index in due {
 		pending := session.pending[index]
 		request := Capture_Request {
-			name    = pending.name,
-			alpha   = pending.alpha,
-			target  = pending.target,
-			format  = pending.format,
-			enabled = true,
+			name      = pending.name,
+			alpha     = pending.alpha,
+			target    = pending.target,
+			format    = pending.format,
+			enabled   = true,
+			region    = pending.region,
+			profile   = pending.profile,
+			crop      = pending.crop,
+			histogram = pending.histogram,
 		}
 		error := session_draw(session, request)
 		if error != "" && render_error == "" {
@@ -269,6 +270,10 @@ session_draw :: proc(session: ^Session, request: Capture_Request) -> string {
 		return error
 	}
 	if request.enabled {
+		// The digest names the frame this capture just wrote, so refresh the
+		// renderer snapshot before the capture joins the list.
+		session_refresh_renderer(session)
+		result.render_digest = strings.clone(session.render_digest_text, session.allocator)
 		append(&session.captures, result)
 		session_refresh_analysis(session)
 	}

@@ -22,10 +22,10 @@ scene.
   convergence frames, history read index, history weight, reset count, last
   reset reason, shadow phase, and the applied atlas weight. The values describe
   the last frame the renderer recorded, not the next one.
-- `render_digest` is FNV-1a over the effective camera, the sun direction and
-  angular diameter, every box, the jitter, the shadow phase, the applied atlas
-  weight, and the view flags. If a frame has the same digest, its render inputs
-  match.
+- `render_digest` is FNV-1a over the target extent, the effective camera, the
+  sun direction and angular diameter, every box, the jitter, the shadow phase,
+  the applied atlas weight, and the view flags. If a frame has the same digest,
+  its render inputs and its projection match.
 - `history_weight` is the weight the next resolve would give the history,
   `count / (count + 1)`, from the renderer's convergence counter. A per-pixel
   count would need a readback; the scalar is enough to tell convergence from a
@@ -41,10 +41,10 @@ scene.
   render inputs without a capture.
 - A capture-free run with no renderer reports `renderer.active = false` and an
   empty `render_digest`. The object keeps its shape.
-- The digest changes when the jitter, the shadow phase, the sun diameter, or the
-  applied atlas weight changes, so a static scene has a digest period of 64
-  frames, the larger of the two phases.
-- The digest does not include the target extent or aspect. Two sizes with the
-  same camera share a digest but not an image; #198 tracks the fix.
+- The digest changes when the jitter, the shadow phase, the sun diameter, the
+  applied atlas weight, or the extent changes, so a static scene has a digest
+  period of 64 frames, the larger of the two phases.
+- The digest includes the target extent and aspect. Two sizes with the same
+  camera do not share a digest, because the projection differs.
 - Reset reasons make a history reset attributable. The enum is closed; a new
   reset source adds a reason instead of reusing one.

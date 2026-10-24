@@ -28,6 +28,7 @@ Pass :: enum u8 {
 	Tlas,
 	Depth,
 	Scene,
+	Sky,
 	Taa,
 	Overlay,
 }
