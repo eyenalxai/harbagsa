@@ -140,14 +140,20 @@ text_atlas_advance_is_proportional_to_the_size :: proc(t: ^testing.T) {
 	testing.expect(t, ok, "the atlas did not build")
 	defer renderer.text_atlas_destroy(&atlas, context.allocator)
 
-	index, found := renderer.text_codepoint_index('M')
-	testing.expect(t, found, "M must exist")
-	base := atlas.glyphs[int(renderer.Text_Weight.Regular)][index].advance
-	scaled := base * (36.0 / atlas.base_px)
-	testing.expect(t, base > 0, "the advance must be positive")
+	theme := renderer.ui_theme_init(720)
+	small := theme.type_body
+	small.size = 20
+	large := small
+	large.size = 40
+
+	small_width := renderer.text_measure(&atlas, small, "Standing")
+	large_width := renderer.text_measure(&atlas, large, "Standing")
+	testing.expect(t, small_width > 0, "the advance must be positive")
 	testing.expectf(
 		t,
-		math.abs(scaled - base * 0.75) < 0.001,
-		"the advance must scale linearly with the requested size",
+		math.abs(large_width - small_width * 2) < 0.05,
+		"doubling the size must double the width: %v against %v",
+		large_width,
+		small_width * 2,
 	)
 }

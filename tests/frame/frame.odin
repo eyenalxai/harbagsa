@@ -7,6 +7,7 @@ import "core:testing"
 import b3 "libs:box3d"
 import "src:frame"
 import "src:game"
+import "src:ui"
 import "src:renderer"
 
 create_state :: proc(t: ^testing.T) -> (game.Simulation, game.Debug_Mode, game.HUD_State, frame.Scratch) {
@@ -39,7 +40,9 @@ hud_can_be_enabled :: proc(t: ^testing.T) {
 		&scratch,
 	)
 	testing.expect(t, scene.hud.enabled, "HUD flag was dropped")
-	testing.expect_value(t, len(scene.hud.status_lines), game.HUD_STATUS_LINE_COUNT)
+	testing.expect_value(t, len(scene.hud.view.rows), game.HUD_ROW_COUNT)
+	testing.expect_value(t, scene.hud.view.rows[0].kind, ui.Row_Kind.Header)
+	testing.expect_value(t, scene.hud.view.rows[0].label, "Standing · Walk")
 }
 
 @(test)

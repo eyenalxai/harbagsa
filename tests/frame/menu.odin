@@ -24,13 +24,14 @@ menu_maps_to_the_hud :: proc(t: ^testing.T) {
 		&scratch,
 	)
 	testing.expect(t, scene.hud.enabled, "menu did not enable the HUD")
-	testing.expect(t, scene.hud.menu.open, "menu flag was dropped")
+	testing.expect(t, scene.hud.menu_open, "menu flag was dropped")
 	testing.expect_value(t, scene.hud.menu.title, game.MENU_TITLE)
 	testing.expect_value(t, scene.hud.menu.note, game.MENU_NOTE)
-	testing.expect_value(t, len(scene.hud.menu.lines), 14)
-	testing.expect_value(t, scene.hud.menu.lines[1], "Display      Display 1")
-	testing.expect_value(t, scene.hud.menu.lines[2], "Resolution   1920x1080")
-	testing.expect_value(t, scene.hud.menu.selected, 0)
+	testing.expect_value(t, len(scene.hud.menu.rows), game.MENU_ROW_COUNT)
+	testing.expect_value(t, scene.hud.menu.rows[1].label, "Display")
+	testing.expect_value(t, scene.hud.menu.rows[1].value, "Display 1")
+	testing.expect_value(t, scene.hud.menu.rows[2].value, "1920×1080")
+	testing.expect_value(t, scene.hud.menu.selected, game.MENU_ITEM_ROWS[0])
 }
 
 @(test)
@@ -49,5 +50,5 @@ menu_renders_without_the_hud_flag :: proc(t: ^testing.T) {
 		&scratch,
 	)
 	testing.expect(t, scene.hud.enabled, "menu needs the HUD overlay")
-	testing.expect(t, scene.hud.menu.open, "menu flag was dropped")
+	testing.expect(t, scene.hud.menu_open, "menu flag was dropped")
 }
