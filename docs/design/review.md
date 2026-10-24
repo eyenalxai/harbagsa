@@ -27,13 +27,17 @@ repeats a label.
 
 ## Flag on sight
 
-- A literal hex outside `src/renderer/ui_theme.odin`.
-- A bare pixel size in `hud.odin`, `hud_menu.odin`, or `hud_rows.odin`.
+This is the short form of the order below. Use it for a fast pass; use the
+order for the full review.
+
+- A literal colour outside `src/renderer/ui_theme.odin`.
+- A bare pixel size in `src/renderer/hud.odin`, `src/renderer/hud_menu.odin`,
+  or `src/renderer/hud_rows.odin`.
 - `accent` on anything but the selection bar.
-- `text_tertiary` on a selectable row.
+- `text_tertiary` as the label or value of a selectable row.
 - Any fade, slide, or scale on the overlay.
 - A new `Row_Kind` without the five touch points.
-- A second hue.
+- A third hue.
 - A value column that moves.
 
 ## Order
@@ -50,9 +54,10 @@ The order is the triage order. A broken interaction outranks a weak colour.
    [colour.md](../ui/colour.md).
 4. **Fixed fields.** Every number that changes during play is in a fixed-width
    field and drawn in mono. The panel width must not move.
-5. **Token only.** No literal colour and no bare pixel size in `hud.odin`,
-   `hud_menu.odin`, or `hud_rows.odin`. The one exception is the documented
-   2 px accent-bar floor. Every other value belongs in
+5. **Token only.** No literal colour and no bare pixel size in
+   `src/renderer/hud.odin`, `src/renderer/hud_menu.odin`, or
+   `src/renderer/hud_rows.odin`. The one exception is the documented 2 px
+   accent-bar floor. Every other value belongs in
    `src/renderer/ui_theme.odin`.
 6. **One of the documented components.** A new panel is a status panel, a capture
    hint, a crosshair, or the settings panel; the selection band, legend, rows,
