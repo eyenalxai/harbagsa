@@ -6,6 +6,16 @@ import "core:fmt"
 @(private)
 settings_field :: proc(settings: Settings_State, path: string) -> (Check_Value, string) {
 	switch path {
+	case "window_mode":
+		return {kind = .String, text = settings.window_mode}, ""
+	case "display":
+		return {kind = .String, text = settings.display}, ""
+	case "display_index":
+		return {kind = .Number, number = f64(settings.display_index)}, ""
+	case "resolution":
+		return {kind = .String, text = settings.resolution}, ""
+	case "window_resolution":
+		return {kind = .String, text = settings.window_resolution}, ""
 	case "sprint_mode":
 		return {kind = .String, text = settings.sprint_mode}, ""
 	case "crouch_mode":

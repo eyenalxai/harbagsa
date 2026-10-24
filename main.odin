@@ -36,7 +36,13 @@ main :: proc() {
 }
 
 run :: proc() -> bool {
-	window, platform_error := platform.init("harbagsa", 1280, 720, true)
+	initial := game.settings_default()
+	window, platform_error := platform.init(
+		"harbagsa",
+		i32(initial.window.resolution.width),
+		i32(initial.window.resolution.height),
+		initial.window.mode == .Borderless,
+	)
 	if platform_error != .None {
 		log.errorf("harbagsa: platform init failed: %v", platform_error)
 		return false
@@ -80,6 +86,18 @@ run :: proc() -> bool {
 	menu_recapture := false
 	last_time := time.now()
 
+	displays := platform.query_displays()
+	if displays.list.count == 0 {
+		log.warn("harbagsa: SDL reported no displays; keeping the created window")
+	}
+	hud.menu.displays = displays.list
+	sim.settings.window.display = platform.display_index_for_window(&window, &displays)
+	applied_window := sim.settings.window
+	if !platform.apply_window_state(&window, &displays, applied_window) {
+		log.warn("harbagsa: the initial window settings were not applied")
+	}
+	renderer.notify_resize(&state)
+
 	for {
 		events := platform.poll_events(&window)
 		if events.quit {
@@ -109,10 +127,10 @@ run :: proc() -> bool {
 				game.menu_move(&hud.menu, 1)
 			}
 			if events.menu_left_pressed {
-				_ = game.menu_toggle_setting(&hud.menu, &sim.settings)
+				_ = game.menu_change_setting(&hud.menu, &sim.settings, -1)
 			}
 			if events.menu_right_pressed {
-				_ = game.menu_toggle_setting(&hud.menu, &sim.settings)
+				_ = game.menu_change_setting(&hud.menu, &sim.settings, 1)
 			}
 			if events.menu_confirm_pressed && game.menu_activate(&hud.menu, &sim.settings) {
 				events.captured = close_settings_menu(&window, &hud.menu, menu_recapture)
@@ -138,6 +156,14 @@ run :: proc() -> bool {
 				renderer.reset_history(&state)
 				clear_latches(&latches)
 			}
+		}
+
+		if sim.settings.window != applied_window {
+			if !platform.apply_window_state(&window, &displays, sim.settings.window) {
+				log.warn("harbagsa: the window settings were not applied")
+			}
+			applied_window = sim.settings.window
+			renderer.notify_resize(&state)
 		}
 
 		width, height := platform.pixel_size(&window)
@@ -267,25 +293,4 @@ run :: proc() -> bool {
 			return false
 		}
 	}
-}
-
-@(private)
-open_settings_menu :: proc(window: ^platform.Window, menu: ^game.Menu_State) -> bool {
-	game.menu_open(menu)
-	platform.set_click_capture(window, false)
-	return platform.set_cursor_capture(window, false)
-}
-
-@(private)
-close_settings_menu :: proc(
-	window: ^platform.Window,
-	menu: ^game.Menu_State,
-	recapture: bool,
-) -> bool {
-	game.menu_close(menu)
-	platform.set_click_capture(window, true)
-	if recapture {
-		return platform.set_cursor_capture(window, true)
-	}
-	return false
 }

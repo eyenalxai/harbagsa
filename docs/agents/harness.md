@@ -25,8 +25,8 @@ serializes Make with `flock`.
 
 - `report.json`: `ok`, `exit_code`, `frame`, `state`, `screenshots`, `checks`,
   `failures`, `digest`, and `error`.
-- `state.json`: the final state alone. It holds the player, crates, settings,
-  menu, frame, and digest.
+- `state.json`: the final state alone. It holds the player, crates, window and
+  input settings, menu, frame, and digest.
 - `frames/frame_NNNN.png`: zero-padded captures.
 - `run.log`: log lines from the renderer, the session, and the runner.
 
@@ -66,8 +66,8 @@ Rules:
 - A capture frame is a zero-based frame number. The final frame is captured by
   default. `"capture": []` opts out of rendering for that scenario.
 - A check uses the `state.json` shape. Operators: `eq`, `ne`, `lt`, `le`, `gt`,
-  `ge`. Examples: `player.position.y`, `crates.count`, `settings.sprint_mode`,
-  `menu.open`.
+  `ge`. Examples: `player.position.y`, `crates.count`, `settings.window_mode`,
+  `settings.resolution`, `settings.sprint_mode`, `menu.open`.
 - A `commands` array runs verbatim. It is the form that `record` writes. It does
   not add a default capture.
 
@@ -94,7 +94,15 @@ A past capture frame is an error. A future capture frame queues. Unknown keys,
 wrong types, and out-of-range values are per-command errors; the session stays
 usable. A `step` while the menu is open is an error, because the game pauses.
 An open menu renders even when the `view` HUD flag is off. `select` is zero-based.
-`select` and `activate` need an open menu.
+`select` and `activate` need an open menu. The rows are Window mode, Display,
+Resolution, Sprint mode, Crouch mode, Prone mode, and Resume.
+
+The harness has no compositor, so the menu uses a fixed two-display list:
+`Display 1` (1920x1080) and `Display 2` (2560x1440). Each lists smaller modes.
+`settings.display` is the short display name, `settings.display_index` is the
+zero-based index, `settings.resolution` is the effective size, and
+`settings.window_resolution` is the stored Windowed size. In Borderless the
+effective size is the display's desktop mode.
 
 ## Live session
 
@@ -130,6 +138,8 @@ scenario.
   stability. The first frames converge; compare later frames.
 - `scenarios/settings-menu.json` captures the settings menu and checks a changed
   input mode.
+- `scenarios/window-settings.json` captures the Windowed mode with Display 2 and
+  a changed resolution, then checks the window settings.
 - `--no-render` and capture-free scenarios never create a Vulkan device.
 
 Use `capture` or `--present`. Do not use `grim` for automated screenshots.
@@ -143,20 +153,23 @@ Use `capture` or `--present`. Do not use `grim` for automated screenshots.
   directly.
 - Capture alpha defaults to 1.0 (post-step), so a capture matches `state` at the
   same frame.
-- The digest is FNV-1a over frame, player, crates, settings, and menu state. Use
-  it in reports and regression checks.
+- The digest is FNV-1a over frame, player, crates, the window and input
+  settings, and menu state. Use it in reports and regression checks.
 
 ## Where the code lives
 
 - `src/harness/`: CLI, scenario compiler, commands, session, runner, socket, PNG.
 - `src/frame/`: shared scene assembly and draw for the game and the harness.
 - `src/game/menu.odin`: the menu rows, settings text, and control list.
-- `src/game/settings.odin`: the runtime input-mode settings.
+- `src/game/settings.odin`: the runtime window and input-mode settings.
+- `src/display/`: the display list, mode ordering, and window settings types.
 - `src/renderer/`: `Target` and `Platform` ports, swapchain/offscreen targets,
   TAA, capture readback, HUD and menu overlay.
-- `src/platform/`: SDL and headless adapters.
+- `src/platform/`: SDL and headless adapters. `display.odin` queries displays and
+  applies the window state.
 - `tests/harness/`, `tests/frame/`, `tests/renderer/target.odin`.
-- `scenarios/smoke.json`, `scenarios/settings-menu.json`.
+- `scenarios/smoke.json`, `scenarios/settings-menu.json`,
+  `scenarios/window-settings.json`.
 
 ## Adding a command
 
@@ -194,9 +207,11 @@ harness in the same change. Do not leave the automation behind the game.
 - New state field: add it to `State`, `state_build`, `state_digest`,
   `state_field`, the report schema, and the docs.
 - New setting or menu row: add it to `Settings` and `DEFAULT_SETTINGS`, then
-  `Menu_Item`, `MENU_ITEM_COUNT`, `MENU_ITEM_NAMES`, `menu_view`, `menu_mode`,
-  and `menu_set_mode`. Add it to `Settings_State` or `Menu_State`, the digest,
+  `Menu_Item`, `MENU_ITEM_COUNT`, `MENU_ITEM_NAMES`, `menu_view`, and
+  `menu_change_setting`. Add it to `Settings_State` or `Menu_State`, the digest,
   and the docs.
+- New window setting: add it to `display.Window_Settings` and apply it in
+  `platform.apply_window_state`.
 - New view toggle: add it to the `view` command, `frame.Options`, the README, and
   this page.
 - New command: follow **Adding a command**, add a JSONL test, and add a scenario

@@ -1,0 +1,17 @@
+{
+  "commands": [
+    {"cmd": "menu", "open": true},
+    {"cmd": "menu", "select": 1, "activate": true},
+    {"cmd": "menu", "select": 2, "activate": true},
+    {"cmd": "capture", "name": "window-settings"},
+    {"cmd": "menu", "open": false},
+    {"cmd": "state"}
+  ],
+  "checks": [
+    {"field": "settings.window_mode", "op": "eq", "value": "Windowed"},
+    {"field": "settings.display", "op": "eq", "value": "Display 2"},
+    {"field": "settings.display_index", "op": "eq", "value": 1},
+    {"field": "settings.resolution", "op": "eq", "value": "1920x1080"},
+    {"field": "settings.window_resolution", "op": "eq", "value": "1920x1080"}
+  ]
+}
