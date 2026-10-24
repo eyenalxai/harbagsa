@@ -24,6 +24,8 @@ Render_Digest_Input :: struct {
 	boxes:                []geometry.Box,
 	jitter:               [2]f32,
 	shadow_phase:         u32,
+	sky:                  bool,
+	ao:                   bool,
 	view_flags:           View_Flags,
 }
 
@@ -60,6 +62,8 @@ render_digest :: proc(input: Render_Digest_Input) -> digest.FNV {
 	digest.write_f32(&hash, input.jitter.x)
 	digest.write_f32(&hash, input.jitter.y)
 	digest.write_u32(&hash, input.shadow_phase)
+	digest.write_bool(&hash, input.sky)
+	digest.write_bool(&hash, input.ao)
 	digest.write_u32(&hash, u32(transmute(u8)input.view_flags))
 	return hash
 }
