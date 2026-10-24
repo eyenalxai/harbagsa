@@ -40,6 +40,7 @@
   "checks": [
     {"field": "capture.count", "op": "eq", "value": 16},
     {"field": "capture.worst_mean_delta", "op": "le", "value": 0.001},
-    {"field": "capture.worst_over_16_fraction", "op": "eq", "value": 0}
+    {"field": "capture.worst_over_16_fraction", "op": "eq", "value": 0},
+    {"field": "capture.worst_mean_delta", "op": "le", "value": 0.001, "window": {"start": 1, "count": 8}}
   ]
 }

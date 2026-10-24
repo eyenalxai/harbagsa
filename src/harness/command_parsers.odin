@@ -163,7 +163,7 @@ parse_view_fields :: proc(object: json.Object) -> (view: View_Command, error: st
 
 @(private)
 parse_check :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "field", "op", "value", "warmup"}); unknown {
+	if key, unknown := json_unknown_key(object, {"cmd", "field", "op", "value", "warmup", "window"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 	field, field_ok := string_field(object, "field")
@@ -191,6 +191,13 @@ parse_check :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 		}
 		warmup = int(parsed)
 	}
+	window, window_error := parse_check_window(object)
+	if window_error != "" {
+		return {}, window_error
+	}
+	if window.has && warmup != 0 {
+		return {}, "a check cannot use both 'warmup' and 'window'"
+	}
 	return {
 		kind = .Check,
 		check = {
@@ -198,8 +205,38 @@ parse_check :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 			op = op,
 			value = check_value,
 			warmup = warmup,
+			window = window,
 		},
 	}, ""
+}
+
+@(private)
+parse_check_window :: proc(object: json.Object) -> (Capture_Window, string) {
+	value, has := json_get(object, "window")
+	if !has {
+		return {}, ""
+	}
+	fields, fields_ok := json_object(value)
+	if !fields_ok {
+		return {}, "'window' must be an object with 'start' and 'count'"
+	}
+	if key, unknown := json_unknown_key(fields, {"start", "count"}); unknown {
+		return {}, format_error("unknown window key %q", key)
+	}
+	start_value, has_start := json_get(fields, "start")
+	count_value, has_count := json_get(fields, "count")
+	if !has_start || !has_count {
+		return {}, "'window' needs 'start' and 'count'"
+	}
+	start, start_ok := json_integer(start_value)
+	count, count_ok := json_integer(count_value)
+	if !start_ok || start < 0 {
+		return {}, "window 'start' must be a non-negative integer"
+	}
+	if !count_ok || count < 1 {
+		return {}, "window 'count' must be a positive integer"
+	}
+	return {start = int(start), count = int(count), has = true}, ""
 }
 
 @(private)
