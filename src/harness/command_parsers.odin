@@ -193,7 +193,7 @@ parse_view_fields :: proc(object: json.Object) -> (view: View_Command, error: st
 
 @(private)
 parse_check :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "field", "op", "value"}); unknown {
+	if key, unknown := json_unknown_key(object, {"cmd", "field", "op", "value", "warmup"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 	field, field_ok := string_field(object, "field")
@@ -213,12 +213,21 @@ parse_check :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 	if value_error != "" {
 		return {}, value_error
 	}
+	warmup := 0
+	if warmup_value, has := json_get(object, "warmup"); has {
+		parsed, parsed_ok := json_integer(warmup_value)
+		if !parsed_ok || parsed < 0 {
+			return {}, "'warmup' must be a non-negative integer"
+		}
+		warmup = int(parsed)
+	}
 	return {
 		kind = .Check,
 		check = {
 			field = strings.clone(field, allocator),
 			op = op,
 			value = check_value,
+			warmup = warmup,
 		},
 	}, ""
 }

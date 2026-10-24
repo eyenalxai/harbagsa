@@ -9,12 +9,15 @@ import "src:platform"
 import "src:renderer"
 
 Backend_Data :: struct {
-	window:    platform.Window,
-	headless:  platform.Headless,
-	renderer:  renderer.Renderer,
-	present:   bool,
-	frames_dir: string,
-	allocator: mem.Allocator,
+	window:          platform.Window,
+	headless:        platform.Headless,
+	renderer:        renderer.Renderer,
+	present:         bool,
+	frames_dir:      string,
+	allocator:       mem.Allocator,
+	previous_pixels: []u8,
+	previous_width:  u32,
+	previous_height: u32,
 }
 
 backend_create :: proc(
@@ -150,6 +153,13 @@ backend_render :: proc(
 	if !ok {
 		return {}, "capture readback failed"
 	}
+	delta: Capture_Delta
+	if data.previous_pixels != nil &&
+	   data.previous_width == width &&
+	   data.previous_height == height &&
+	   len(data.previous_pixels) == len(pixels) {
+		delta = capture_delta(data.previous_pixels, pixels)
+	}
 	result, write_error := capture_write_png(
 		data.frames_dir,
 		name,
@@ -162,6 +172,16 @@ backend_render :: proc(
 	if write_error != "" {
 		return {}, write_error
 	}
+	result.delta_mean = delta.mean
+	result.delta_max = delta.max
+	result.delta_over_16 = delta.over_16
+	if len(data.previous_pixels) != len(pixels) {
+		delete(data.previous_pixels, data.allocator)
+		data.previous_pixels = make([]u8, len(pixels), data.allocator)
+	}
+	copy(data.previous_pixels, pixels)
+	data.previous_width = width
+	data.previous_height = height
 	return result, ""
 }
 
@@ -174,6 +194,7 @@ backend_shutdown :: proc(ctx: rawptr) {
 	} else {
 		platform.headless_deinit(&data.headless)
 	}
+	delete(data.previous_pixels, data.allocator)
 	delete(data.frames_dir, data.allocator)
 	free(data, data.allocator)
 }

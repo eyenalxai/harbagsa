@@ -272,6 +272,11 @@ _Avoid_: Shake, offset
 The previous resolved frame, with linear color and depth, that TAA blends into the current frame.
 _Avoid_: Accumulation buffer, cache
 
+**Screen motion**:
+The screen-space movement of a surface point from the previous frame to the
+current frame, measured in unjittered UV space.
+_Avoid_: Motion vector, optical flow
+
 **Velocity target**:
 The offscreen image that stores each pixel's previous-to-current screen motion and linear view depth.
 _Avoid_: Motion buffer, motion vectors
