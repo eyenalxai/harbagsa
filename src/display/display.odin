@@ -6,6 +6,9 @@ MAX_DISPLAYS :: 8
 MAX_MODES :: 64
 NAME_MAX :: 32
 
+MIN_WINDOWED_WIDTH :: 800
+MIN_WINDOWED_HEIGHT :: 600
+
 // The settings menu owns a snapshot of this list, so the text stays stable while
 // the menu is open.
 Mode :: struct {
@@ -43,8 +46,18 @@ name :: proc(info: ^Info) -> string {
 
 set_name :: proc(info: ^Info, text: string) {
 	count := min(len(text), NAME_MAX)
+	// Keep the UTF-8 sequence whole when the cut lands inside a code point.
+	for count > 0 && count < len(text) && (text[count] & 0xc0) == 0x80 {
+		count -= 1
+	}
 	copy(info.name[:], text[:count])
 	info.name_count = count
+}
+
+// The settings menu needs 800x600 to show every row. The desktop mode is added
+// separately, so a smaller desktop still has a Borderless entry.
+keep_windowed_mode :: proc(mode: Mode) -> bool {
+	return mode.width >= MIN_WINDOWED_WIDTH && mode.height >= MIN_WINDOWED_HEIGHT
 }
 
 set_desktop :: proc(info: ^Info, mode: Mode) {
@@ -127,10 +140,12 @@ cycle_mode :: proc(info: ^Info, mode: Mode, direction: int) -> Mode {
 	}
 	index := find_mode(info, mode)
 	if index < 0 {
-		index = 0
-	} else {
-		index = (index + direction + info.mode_count) % info.mode_count
+		if direction < 0 {
+			return info.modes[info.mode_count - 1]
+		}
+		return info.modes[0]
 	}
+	index = (index + direction + info.mode_count) % info.mode_count
 	return info.modes[index]
 }
 

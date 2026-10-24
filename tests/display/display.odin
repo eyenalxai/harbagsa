@@ -46,6 +46,16 @@ cycle_mode_moves_in_both_directions_and_wraps :: proc(t: ^testing.T) {
 	testing.expect_value(t, display.cycle_mode(&info, {1920, 1080}, 1), display.Mode{1600, 900})
 	testing.expect_value(t, display.cycle_mode(&info, {1920, 1080}, -1), display.Mode{1280, 720})
 	testing.expect_value(t, display.cycle_mode(&info, {1280, 720}, 1), display.Mode{1920, 1080})
+	testing.expect_value(t, display.cycle_mode(&info, {1366, 768}, 1), display.Mode{1920, 1080})
+	testing.expect_value(t, display.cycle_mode(&info, {1366, 768}, -1), display.Mode{1280, 720})
+}
+
+@(test)
+small_windowed_modes_are_filtered :: proc(t: ^testing.T) {
+	testing.expect(t, display.keep_windowed_mode({800, 600}), "800x600 was rejected")
+	testing.expect(t, display.keep_windowed_mode({1024, 768}), "1024x768 was rejected")
+	testing.expect(t, !display.keep_windowed_mode({800, 480}), "800x480 was kept")
+	testing.expect(t, !display.keep_windowed_mode({640, 480}), "640x480 was kept")
 }
 
 @(test)
