@@ -1,15 +1,19 @@
 #+vet explicit-allocators
 package harness
 
+import "core:math"
+
 import "src:game"
 
 Debug_State :: struct {
-	active:      bool            `json:"active"`,
-	selection:   string          `json:"selection"`,
-	selected_id: u32             `json:"selected_id"`,
-	palette:     Palette_State   `json:"palette"`,
-	placement:   Placement_State `json:"placement"`,
-	sun:         Sun_State       `json:"sun"`,
+	active:      bool             `json:"active"`,
+	selection:   string           `json:"selection"`,
+	selected_id: u32              `json:"selected_id"`,
+	palette:     Palette_State    `json:"palette"`,
+	placement:   Placement_State  `json:"placement"`,
+	sun:         Sun_State        `json:"sun"`,
+	inspector:   Inspector_State  `json:"inspector"`,
+	history:     History_State    `json:"history"`,
 }
 
 Palette_State :: struct {
@@ -32,6 +36,78 @@ Sun_State :: struct {
 	position:  Vec_State `json:"position"`,
 	azimuth:   f32       `json:"azimuth"`,
 	elevation: f32       `json:"elevation"`,
+}
+
+// The selected-object half of the debug inspector. Every number is in metres
+// or degrees, and snap is the placement grid flag the inspector shows.
+Inspector_State :: struct {
+	prefab:   string    `json:"prefab"`,
+	body:     string    `json:"body"`,
+	size:     Vec_State `json:"size"`,
+	position: Vec_State `json:"position"`,
+	yaw:      f32       `json:"yaw"`,
+	snap:     bool      `json:"snap"`,
+}
+
+History_State :: struct {
+	depth: int `json:"depth"`,
+	redo:  int `json:"redo"`,
+}
+
+debug_state_build :: proc(debug: ^game.Debug_Mode, sim: ^game.Simulation) -> Debug_State {
+	azimuth, elevation := game.debug_mode_sun_angles(debug)
+	state := Debug_State {
+		active = debug.active,
+		selection = game.debug_selection_name(debug.selection),
+		selected_id = selected_object_id(debug, sim),
+		palette = {
+			open = debug.palette.open,
+			selected = debug.palette.selected,
+			body = game.body_mode_name(debug.palette.body_mode),
+		},
+		placement = {
+			armed = debug.placement.armed,
+			prefab = game.prefab_name(debug.placement.prefab),
+			position = debug_placement_position(debug),
+			height = debug.placement.height,
+			yaw = debug.placement.yaw_degrees,
+			snap = debug.placement.snap,
+		},
+		sun = {
+			active = debug.sun.active,
+			position = vec_state(debug.sun.position),
+			azimuth = azimuth * 180.0 / math.PI,
+			elevation = elevation * 180.0 / math.PI,
+		},
+		history = {
+			depth = game.debug_history_depth(debug),
+			redo = game.debug_history_redo_depth(debug),
+		},
+	}
+	state.inspector = inspector_state(debug, sim)
+	return state
+}
+
+@(private)
+inspector_state :: proc(debug: ^game.Debug_Mode, sim: ^game.Simulation) -> Inspector_State {
+	state := Inspector_State {
+		snap = debug.placement.snap,
+	}
+	id, ok := game.debug_selected_object_id(debug, sim)
+	if !ok {
+		return state
+	}
+	object, found := game.simulation_object_find(sim, id)
+	if !found {
+		return state
+	}
+	box := game.simulation_object_box(sim, id)
+	state.prefab = game.prefab_name(object.prefab)
+	state.body = game.body_mode_name(object.body_mode)
+	state.size = vec_state(box.half_extents * 2.0)
+	state.position = vec_state(box.center)
+	state.yaw = game.simulation_object_yaw(sim, id) * 180.0 / math.PI
+	return state
 }
 
 @(private)

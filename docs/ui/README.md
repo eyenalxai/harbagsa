@@ -82,6 +82,19 @@ The capture hint is suppressed while the palette is open. The draw and the card
 hit test read the same `palette_layout`; a normalized pointer maps to a card
 index or `-1`, including the empty cells.
 
+## The debug inspector
+
+The debug inspector is the existing top-left status panel with object rows. It
+shows the selection as `prefab # id`, the object count and capacity, and the
+selected object's body, size, position, yaw, and snap. The placement rows
+replace it while the placement tool is armed.
+
+Every changing number uses `Row.numeric` and a fixed field, exactly as the
+player rows do. The panel width must not move when the selection changes, so
+the selection name is padded to a fixed column and the position uses the debug
+camera's two extra columns. `tests/frame/hud_debug.odin` measures the panel
+across every prefab and the empty selection.
+
 ## Adding a surface
 
 1. Decide the rows. Each row is a `ui.Row` with a `kind`: `Setting`, `Action`,

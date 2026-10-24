@@ -78,7 +78,7 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 	session := Session {
 		allocator = allocator,
 		alpha = 1.0,
-		debug = game.debug_mode_create(),
+		debug = game.debug_mode_create(allocator),
 		analysis_config = analysis_config_default(),
 	}
 	session.hud.menu.displays = display.fallback_list()
@@ -96,6 +96,7 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 }
 
 session_destroy :: proc(session: ^Session) {
+	game.debug_mode_destroy(&session.debug)
 	if game.simulation_is_valid(&session.sim) {
 		game.simulation_destroy(&session.sim)
 	}
@@ -160,7 +161,8 @@ session_reset :: proc(session: ^Session) -> string {
 	session.settle_frames = 0
 	session.settle_converged = false
 	// The debug mode holds a saved player from the world that just went away.
-	session.debug = game.debug_mode_create()
+	game.debug_mode_destroy(&session.debug)
+	session.debug = game.debug_mode_create(session.allocator)
 	return ""
 }
 

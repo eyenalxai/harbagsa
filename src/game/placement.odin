@@ -165,6 +165,10 @@ debug_place_object :: proc(
 	sim: ^Simulation,
 	spawn: Object_Spawn,
 ) -> Object_Id {
+	if simulation_object_count(sim) >= MAX_PLACED_OBJECTS {
+		return INVALID_OBJECT_ID
+	}
+	object_history_record(debug_history(dm), sim)
 	id := simulation_create_object(sim, spawn)
 	if id == INVALID_OBJECT_ID {
 		return id
