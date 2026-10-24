@@ -56,6 +56,32 @@ startup; later changes use the worker. See [type.md](type.md).
 - [states.md](states.md): the six row inputs, the six drawn states, blocked
   rows, and the status note.
 
+## The object palette
+
+The debug object palette is a bottom dock, not a menu: the scene, the status
+panel, and the crosshair stay visible. It is a 6x2 grid of 72 px cards with a
+preview pane on the right and a footer of key hints. At density 1 the panel is
+678 x 226, centred, with `spacing.xl` below it. At 800x600 it sits from y 358 to
+584, below the crosshair box that ends at y 315. On a shorter target the top
+clamps to `spacing.md`; the palette never clips at a supported size.
+
+Twelve cells are laid out. The catalog fills the first cells; the rest draw only
+a hairline frame, return no hit, and read as empty. A filled cell is a card: an
+isometric thumbnail, the short name, and the number key. The selected card is
+`surface_raised` plus a two-pixel `accent` bar on its leading edge, the same
+signal as a selected menu row.
+
+The preview is a larger isometric box, the full name, the size in `W × H × D m`,
+the body, the optional light line, and the object count. The isometric box is
+three HUD quads from one pure projection helper; it is not a render pass or an
+image. Object colour is content, the chrome uses the theme tokens, and the ramp
+pitch tilts the box so its true proportions show. See
+[components.md](components.md#object-palette).
+
+The capture hint is suppressed while the palette is open. The draw and the card
+hit test read the same `palette_layout`; a normalized pointer maps to a card
+index or `-1`, including the empty cells.
+
 ## Adding a surface
 
 1. Decide the rows. Each row is a `ui.Row` with a `kind`: `Setting`, `Action`,

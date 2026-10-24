@@ -82,7 +82,11 @@ build :: proc(
 	}
 
 	if options.hud || hud.menu.open {
-		game.hud_state_update(hud, sim, debug, snapshot, options.captured, options.delta_seconds)
+		game.hud_state_update(hud, sim, debug, snapshot, options.captured)
+		palette := game.debug_palette_view(sim, debug)
+		if hud.menu.open {
+			palette.open = false
+		}
 		scene.hud = renderer.HUD_Frame {
 			enabled      = true,
 			menu_open    = hud.menu.open,
@@ -90,7 +94,7 @@ build :: proc(
 			capture_hint = hud.capture_hint,
 			captured     = hud.captured,
 			menu         = hud.menu.view,
-			weight       = sim.settings.type_weight,
+			palette      = palette,
 		}
 	}
 	if scene.hud.enabled {
@@ -98,7 +102,10 @@ build :: proc(
 		if hud.perf.visible {
 			scene.view_flags |= {.Perf}
 		}
-		if !scene.hud.captured && scene.hud.capture_hint != "" {
+		if scene.hud.palette.open && !scene.hud.menu_open {
+			scene.view_flags |= {.Palette}
+		}
+		if !scene.hud.captured && scene.hud.capture_hint != "" && !scene.hud.palette.open {
 			scene.view_flags |= {.Capture_Hint}
 		}
 	}

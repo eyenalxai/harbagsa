@@ -45,6 +45,38 @@ Menu :: struct {
 	note:     string,
 }
 
+PALETTE_MAX_ITEMS :: 12
+PALETTE_MAX_HINTS :: 8
+PALETTE_TEXT_BYTES :: 40
+
+Palette_Item :: struct {
+	name:         string,
+	short_name:   string,
+	half_extents: [3]f32,
+	color:        [4]f32,
+	base_pitch:   f32,
+	body:         string,
+	key:          string,
+	light_line:   string,
+}
+
+// A palette travels by value through HUD_Frame, so the items, hints, and
+// formatted text live inside the struct; a slice would point at the old copy.
+Palette :: struct {
+	open:         bool,
+	title:        string,
+	items:        [PALETTE_MAX_ITEMS]Palette_Item,
+	item_count:   int,
+	selected:     int,
+	body:         string,
+	size:         [PALETTE_TEXT_BYTES]u8,
+	size_length:  int,
+	count:        [PALETTE_TEXT_BYTES]u8,
+	count_length: int,
+	hints:        [PALETTE_MAX_HINTS]Hint_Cell,
+	hint_count:   int,
+}
+
 Hud :: struct {
 	rows: []Row,
 }

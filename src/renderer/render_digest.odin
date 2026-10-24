@@ -7,6 +7,7 @@ import "src:geometry"
 View_Flag :: enum {
 	HUD,
 	Menu,
+	Palette,
 	Debug_Draw,
 	Capture_Hint,
 	Perf,
