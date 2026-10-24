@@ -1,0 +1,14 @@
+{
+  "commands": [
+    {"cmd": "step", "frames": 5},
+    {"cmd": "menu", "open": true, "select": 2},
+    {"cmd": "capture", "name": "menu-number"},
+    {"cmd": "menu", "select": 6},
+    {"cmd": "capture", "name": "menu-action"},
+    {"cmd": "menu", "open": false}
+  ],
+  "checks": [
+    {"field": "menu.open", "op": "eq", "value": false},
+    {"field": "settings.crouch_mode", "op": "eq", "value": "Toggle"}
+  ]
+}

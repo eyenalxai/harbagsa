@@ -27,6 +27,12 @@ session_record_start :: proc(session: ^Session, path: string) -> string {
 		allocator = session.allocator,
 	)
 	append(&session.recorded, view_line)
+	if session.debug.active {
+		append(
+			&session.recorded,
+			strings.clone(`{"cmd": "debug_mode", "active": true}`, session.allocator),
+		)
+	}
 	if session.input.move_forward != 0 || session.input.move_right != 0 || session.input.jump_pressed {
 		input_line := fmt.aprintf(
 			`{{"cmd": "input", "forward": %g, "right": %g, "jump": %v}}`,

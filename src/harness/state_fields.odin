@@ -27,6 +27,15 @@ settings_field :: proc(settings: Settings_State, path: string) -> (Check_Value, 
 }
 
 @(private)
+debug_field :: proc(debug: Debug_State, path: string) -> (Check_Value, string) {
+	switch path {
+	case "active":
+		return {kind = .Bool, boolean = debug.active}, ""
+	}
+	return {}, fmt.aprintf("unknown debug field %q", path, allocator = context.allocator)
+}
+
+@(private)
 menu_field :: proc(menu: Menu_State, path: string) -> (Check_Value, string) {
 	switch path {
 	case "open":
