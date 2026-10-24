@@ -59,10 +59,11 @@ perf_pass_line_joins_the_hud :: proc(t: ^testing.T) {
 	}
 	stats.gpu.available = true
 	stats.gpu.passes[.Tlas] = perf.Distribution{mean = 0.08}
+	stats.gpu.passes[.Depth] = perf.Distribution{mean = 0.42}
 	stats.gpu.passes[.Scene] = perf.Distribution{mean = 2.70}
 	stats.gpu.passes[.Taa] = perf.Distribution{mean = 0.22}
 	stats.gpu.passes[.Overlay] = perf.Distribution{mean = 0.10}
-	stats.gpu.total = perf.Distribution{mean = 3.10}
+	stats.gpu.total = perf.Distribution{mean = 3.52}
 	stats.gpu.top = .Scene
 	hud.perf.stats = stats
 	scene := frame.build(

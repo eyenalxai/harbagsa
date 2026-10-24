@@ -56,7 +56,7 @@ renderer_debug_rejects_bad_fields :: proc(t: ^testing.T) {
 @(test)
 scenario_compiles_a_renderer_debug_block :: proc(t: ^testing.T) {
 	scenario, error := harness.scenario_parse(
-		`{"renderer_debug": {"jitter": false, "shadow_phase": 2}, "steps": [{"frames": 1}], "capture": []}`,
+		`{"renderer_debug": {"jitter": false, "shadow_phase": 2}, "commands": [{"cmd": "step", "frames": 1}]}`,
 		context.allocator,
 	)
 	defer harness.scenario_destroy(&scenario, context.allocator)

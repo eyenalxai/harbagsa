@@ -1,13 +1,13 @@
 # Performance instrumentation
 
 The demo measures its own frame. One perf sample holds the frame interval, five
-CPU phase durations from six ordered marks, and four GPU pass times from five
-timestamps. The passes are the TLAS build, the scene pass, the TAA resolve, and
-the overlay pass. One timestamp query pool per frame in flight serves the GPU
-timestamps, and the existing fence wait retires a slot before the results are
-read. The renderer publishes the completed sample through one procedure. The
-game loop and the harness perf run read the same numbers. `F4` shows a summary
-line and a pass line.
+CPU phase durations from six ordered marks, and five GPU pass times from six
+timestamps. The passes are the TLAS build, the depth prepass, the lit scene
+pass, the TAA resolve, and the overlay pass. One timestamp query pool per frame
+in flight serves the GPU timestamps, and the existing fence wait retires a slot
+before the results are read. The renderer publishes the completed sample
+through one procedure. The game loop and the harness perf run read the same
+numbers. `F4` shows a summary line and a pass line.
 
 ## Why
 
@@ -16,7 +16,7 @@ line and a pass line.
   shader work. Neither can name the pass or the CPU stage that owns the time.
 - The renderer owns the command buffer and the frame-in-flight bookkeeping, so
   it is the only place that can place accurate pass boundaries.
-- Five timestamp writes per frame need no new synchronization. The fence wait
+- Six timestamp writes per frame need no new synchronization. The fence wait
   at `begin_frame` already guarantees that a slot's previous submission is
   complete before the pool is reset and read.
 - The CPU marks are clock reads in the existing loop. They add no allocation,
@@ -32,7 +32,7 @@ line and a pass line.
 - **Build-time-only instrumentation**: keeps release builds clean, but the
   numbers would be missing exactly when a release build is measured, and the
   harness would carry a second code path.
-- **One timestamp pair per frame**: cheaper by eight timestamp writes, but it
+- **One timestamp pair per frame**: cheaper by four timestamp writes, but it
   cannot say which pass owns the time, which is the question that started the
   work.
 - **Present wait and present IDs**: exact presentation timing, but the wait
@@ -46,6 +46,12 @@ line and a pass line.
 - A slot reports the frame it measured, which is two frames older than the
   frame being recorded. The overlay and the report describe it as the last
   completed sample.
+- A perf run primes the device for a wall-clock duration before the warmup, so a
+  cold clock and an empty shader cache do not pollute the measured window. The
+  prime frames stay out of the trace and the statistics.
+- A run keeps every named perf result in `report.json`; the session reply keeps
+  the last one. The report carries `p50`, `p95`, and `mean` for every CPU phase
+  and GPU pass, not only a mean.
 - A device with no timestamp support, a failed query pool, or a run with no
   device reports the CPU numbers and marks the GPU fields unavailable. Nothing
   fails.

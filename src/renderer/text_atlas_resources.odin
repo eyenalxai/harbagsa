@@ -159,6 +159,10 @@ text_atlas_mark_failed :: proc(worker: ^Text_Atlas_Worker) {
 	sync.unlock(&worker.mutex)
 }
 
+text_atlas_applied_weight :: proc(r: ^Renderer) -> f32 {
+	return r.overlay.atlas_applied_weight
+}
+
 text_atlas_sync :: proc(r: ^Renderer, requested_weight: f32) -> bool {
 	o := &r.overlay
 	if o.atlas_worker.thread == nil && !text_atlas_worker_start(o) {

@@ -52,6 +52,7 @@ Session :: struct {
 
 	perf:            perf_pkg.State,
 	perf_report:     Perf_Report,
+	perf_reports:    [dynamic]Perf_Report,
 	has_perf_report: bool,
 	trace_name:      string,
 	trace_samples:   [dynamic]perf_pkg.Sample,
@@ -82,6 +83,7 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 	session.checks = make([dynamic]Check_Result, 0, 8, allocator)
 	session.failures = make([dynamic]string, 0, 8, allocator)
 	session.recorded = make([dynamic]string, 0, 16, allocator)
+	session.perf_reports = make([dynamic]Perf_Report, 0, 4, allocator)
 	return session, ""
 }
 
@@ -121,6 +123,12 @@ session_destroy :: proc(session: ^Session) {
 	if session.render_digest_text != "" {
 		delete(session.render_digest_text, session.allocator)
 	}
+	for &report in session.perf_reports {
+		if report.name != "" {
+			delete(report.name, session.allocator)
+		}
+	}
+	delete(session.perf_reports)
 	delete(session.trace_samples)
 	session^ = {}
 }
@@ -137,7 +145,7 @@ session_reset :: proc(session: ^Session) -> string {
 	}
 	session.sim = game.simulation_create()
 	if !game.simulation_is_valid(&session.sim) {
-		return "simulation init failed"
+		return format_error("%s", "simulation init failed")
 	}
 	session.input = {}
 	session.camera_override = {}

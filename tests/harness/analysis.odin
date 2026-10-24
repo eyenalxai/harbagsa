@@ -109,7 +109,7 @@ check_window_parses_and_rejects_bad_ranges :: proc(t: ^testing.T) {
 @(test)
 scenario_analysis_parses_a_window_and_maps :: proc(t: ^testing.T) {
 	scenario, error := harness.scenario_parse(
-		`{"analysis": {"start": 4, "count": 8, "maps": true}, "steps": [{"frames": 1}]}`,
+		`{"analysis": {"start": 4, "count": 8, "maps": true}, "commands": [{"cmd": "step", "frames": 1}]}`,
 		context.allocator,
 	)
 	defer harness.scenario_destroy(&scenario, context.allocator)
@@ -123,7 +123,7 @@ scenario_analysis_parses_a_window_and_maps :: proc(t: ^testing.T) {
 	}
 
 	disabled, disabled_error := harness.scenario_parse(
-		`{"analysis": false, "steps": [{"frames": 1}]}`,
+		`{"analysis": false, "commands": [{"cmd": "step", "frames": 1}]}`,
 		context.allocator,
 	)
 	defer harness.scenario_destroy(&disabled, context.allocator)

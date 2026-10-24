@@ -135,18 +135,19 @@ open.
 The summary row holds frames per second, the frame interval, the CPU frame
 time, the p95 interval, the spike count, and the GPU total with the costliest
 pass. The pass row holds the last completed frame's GPU pass times: the TLAS
-build, the scene pass, the TAA resolve, and the overlay pass. The scene pass
-time covers the depth prepass, the lit pass, and the sky pass.
+build, the depth prepass, the lit scene pass, the TAA resolve, and the overlay
+pass. The sky runs inside the scene pass.
 
 The GPU numbers belong to the last completed frame, so they are two frames
 behind the frame being recorded. A device without timestamp support shows the
-CPU numbers only. The overlay adds five timestamp writes per frame.
+CPU numbers only. The overlay adds six timestamp writes per frame.
 
 ## Agent harness
 
 `bin/harbagsa-agent` drives the simulation and writes screenshots without a
 window or compositor. `make build` builds it next to the game. Agent-specific
-operational notes are in `docs/agents/harness.md`.
+operational notes are in `docs/agents/harness.md`. Run
+`./bin/harbagsa-agent --help` (or `-h`) for the command and option list.
 
 ### Run a scenario
 
@@ -172,8 +173,8 @@ true}` the frames directory also holds `analysis-diff.png` and
 `analysis-variance.png`.
 
 `report.json` holds the pass/fail result, the final state, the setup block,
-absolute screenshot paths, checks, the state digest, and the perf report when a
-perf run happened. `state.json` holds the final state alone.
+absolute screenshot paths, checks, the state digest, and the named perf reports
+when perf ran. `state.json` holds the final state alone.
 `analysis.json` holds the per-run image analysis when the run captured frames.
 The pair and pixel analysis uses color captures. `run.log` holds the log lines.
 Standard output is one JSON summary.
@@ -195,39 +196,48 @@ Options:
 - `--debug-renderer`: accept the renderer debug command. A build with
   `-define:ENABLE_RENDERER_DEBUG=true` always accepts it.
 - `--no-analysis`: skip `analysis.json` and the analysis maps.
+- `--verbose` (or `--summary`): write the setup revision and dirty flag, every
+  capture, every check result, every failure, and every named perf result to
+  standard error. Standard output stays one JSON line.
 
 The harness view starts with the HUD off, the debug draw off, and the capture
-hint off. A scenario captures the final frame by default. `capture` adds more
-frames, and `"capture": []` turns rendering off for that scenario.
+hint off. Only a `capture` command writes a PNG. A scenario with no capture and
+no perf run never creates a Vulkan device unless `--present` asks for the window.
 
 ### Scenario format
 
 ```json
 {
   "view": {"hud": false, "debug": false, "hint": false, "perf": false},
-  "steps": [
-    {"frames": 90, "forward": 1, "look": [220, 0]},
-    {"frames": 1, "jump": true},
-    {"frames": 30, "forward": 1}
+  "commands": [
+    {"cmd": "look", "dx": 220, "dy": 0},
+    {"cmd": "input", "forward": 1},
+    {"cmd": "step", "frames": 90},
+    {"cmd": "input", "jump": true},
+    {"cmd": "step", "frames": 1},
+    {"cmd": "capture", "name": "after-jump"}
   ],
-  "capture": [0, 90, 121],
   "checks": [
     {"field": "crates.0.position.z", "op": "lt", "value": 7.5}
   ]
 }
 ```
 
-One step means one fixed `SIMULATION_STEP`. `look` applies once before the
-step. `forward`, `right`, and `jump` persist; `jump` is an edge on the first
-frame of its block. Capture frames are zero-based frame numbers. Check operators
-are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. Check fields use the `state.json`
-shape, for example `player.position.y`, `player.grounded`, `crates.0.position.z`,
-`crates.count`, `settings.window_mode`, `settings.resolution`, `menu.open`,
-`debug.active`, `sun.elevation`, `sun.angular_diameter`,
-`renderer.taa_enabled`, or `render_digest`. A capture check can
-also read `capture.target`, `capture.format`, and `capture.stats.*` for the last
-capture in its window. Add `"window": {"start": 2, "count": 8}` to aggregate over
-part of the captures; `warmup` stays the shorthand for skipping the first N.
+The `commands` array runs verbatim, and `record` writes this form. Only a
+`capture` command writes a PNG; a scenario without one renders nothing unless
+`--present` asks for the window. `step` advances one fixed
+`SIMULATION_STEP` per frame. `look` applies once. `input` persists until the
+next `input`; `jump` is an edge on the next step.
+
+Check operators are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. Check fields use
+the `state.json` shape, for example `player.position.y`, `player.grounded`,
+`crates.0.position.z`, `crates.count`, `settings.window_mode`,
+`settings.resolution`, `menu.open`, `debug.active`, `sun.elevation`,
+`sun.angular_diameter`, `renderer.taa_enabled`, or `render_digest`. A capture
+check can also read `capture.target`, `capture.format`, and `capture.stats.*`
+for the last capture in its window. Add `"window": {"start": 2, "count": 8}` to
+aggregate over part of the captures; `warmup` stays the shorthand for skipping
+the first N.
 
 A run with captures writes `analysis.json`. It holds per-pair deltas, a
 summary, the dominant period, the worst unstable pixels' series, and optional
@@ -236,22 +246,6 @@ with only intermediate captures writes an empty summary. Checks read `analysis.p
 `analysis.period.correlation`, and the `analysis.worst_*` fields. Disable it with
 `"analysis": false` or `--no-analysis`; select a window and maps with
 `"analysis": {"start": 2, "count": 8, "maps": true}`.
-
-A scenario may use `commands` instead of `steps`:
-
-```json
-{
-  "commands": [
-    {"cmd": "view", "hud": false},
-    {"cmd": "input", "forward": 1},
-    {"cmd": "step", "frames": 90},
-    {"cmd": "capture", "name": "after-walk"}
-  ]
-}
-```
-
-A `commands` scenario runs verbatim. It does not add a default capture, so
-include a `capture` command when you want a PNG.
 
 ### Commands
 
@@ -275,9 +269,10 @@ The batch runner and the live session share one command set:
   digest, frame, and simulation digest. The sun object reports azimuth,
   elevation, and angular diameter in degrees. The renderer object reports the
   frame count, TAA state, jitter index, history validity, convergence frames,
-  history read index and weight, reset count and reason, shadow phase, and the
-  debug override values. `render_digest` covers the effective camera, sun,
-  boxes, jitter, shadow phase, the sky and AO flags, and view flags.
+  history read index and weight, reset count and reason, shadow phase, the
+  applied atlas weight, and the debug override values. `render_digest` covers
+  the effective camera, the sun direction and angular diameter, boxes, jitter,
+  shadow phase, applied atlas weight, the sky and AO flags, and view flags.
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`: write a PNG.
   `frame` is optional. A past frame is an error; a future frame queues. Add
   `"target": "velocity"`, `"history"`, `"depth"`, or `"scene_color"` to read an
@@ -293,23 +288,31 @@ The batch runner and the live session share one command set:
   is degrees above the horizon, and `diameter` is the angle the sun disk
   subtends in degrees. Omitted fields keep the value. A change resets TAA
   history, like a scene change.
+- `{"cmd": "crates", "clear": true}`: edit the dynamic crates. `reset` restores
+  the starting three, `clear` removes every crate, `add` creates one crate or a
+  row-major grid, and `remove` drops one by index. A grid add steps `columns`
+  along x and then the next row along z. An add that would exceed the 64-crate
+  limit is rejected as a whole.
 - `{"cmd": "debug_mode", "active": true}`: enter or leave the `F2` debug mode.
   Entering swaps the player for the free-fly camera; leaving restores the player.
   Repeating the same value is a no-op.
-- `{"cmd": "menu", "open": true, "select": 1, "activate": true, "direction": -1, "set": 900}`:
-  open or close the settings menu, select a row, activate the selected row, or
-  set the Type weight. `select` is zero-based and needs an open menu. `activate`
-  and `set` also need an open menu. `direction` is `-1` or `1` (default `1`) and
-  needs `activate`; `set` is a weight in 100..900. Omitted fields keep the state.
-  An open menu renders even when `hud` is off.
+- `{"cmd": "menu", "open": true, "item": "Type weight", "activate": true, "direction": -1, "set": 900}`:
+  open or close the settings menu, select a row by name, activate the selected
+  row, or set the Type weight. `item` is `Window mode`, `Display`, `Resolution`,
+  `Type weight`, `Sprint mode`, `Crouch mode`, `Prone mode`, or `Resume`, and
+  needs an open menu. `activate` and `set` also need an open menu. `direction`
+  is `-1` or `1` (default `1`) and needs `activate`; `set` is a weight in
+  100..900. Omitted fields keep the state. An open menu renders even when `hud`
+  is off.
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`:
   evaluate a predicate now.
-- `{"cmd": "perf", "frames": 120, "warmup": 60, "trace": "trace.jsonl"}`:
-  measure frames and report percentiles. `frames` defaults to 120 and `warmup`
-  to 60. `trace` writes one JSON object per measured frame; a relative path
-  resolves against the run directory. Offscreen measures throughput; with
-  `--present` it measures pacing. A run without a device reports CPU numbers
-  only.
+- `{"cmd": "perf", "frames": 120, "warmup": 60, "prime": 2.0, "name": "default", "trace": "trace.jsonl"}`:
+  measure frames. `frames` defaults to 120, `warmup` to 60, and `prime` to 2.0
+  seconds (`0` disables the time loop). `name` labels the result; `report.json`
+  keeps every named result in a `perf` array. `trace` writes one JSON object per
+  measured frame; a relative path resolves against the run directory and a run
+  holds one trace. Offscreen measures throughput; with `--present` it measures
+  pacing. A run without a device reports CPU numbers only.
 - `{"cmd": "renderer_debug", "jitter": false, "shadow_phase": 12}`: change
   renderer inputs. It needs `--debug-renderer` or a build with
   `-define:ENABLE_RENDERER_DEBUG=true`. `sky` and `ao` turn the sky and the
@@ -361,11 +364,14 @@ session never creates a Vulkan device.
 ```
 
 A `perf` command steps the simulation and draws one frame per measurement. The
-reply and `report.json` carry the interval percentiles, the CPU phase means, and
-the GPU pass means. Add `"trace": "trace.jsonl"` to write one JSON object per
-measured frame under the run directory. Offscreen runs measure throughput,
-because nothing waits for the display. `--present` measures pacing, because FIFO
-bounds the rate.
+reply and `report.json` carry the interval distribution, `p50`/`p95`/`mean` for
+every CPU phase and GPU pass, and the prime frame count. `prime` (seconds,
+default 2.0) warms the device clock before the measured window. `name` labels
+the result and `report.json` keeps every named result in a `perf` array. Add
+`"trace": "trace.jsonl"` to write one JSON object per measured frame under the
+run directory; a run holds one trace. Offscreen runs measure throughput, because
+nothing waits for the display. `--present` measures pacing, because FIFO bounds
+the rate.
 
 The first baseline is in [the perf baseline](docs/evidence/perf-baseline.md).
 The scene-pass before/after is in
@@ -374,7 +380,11 @@ The scene-pass before/after is in
 `scenarios/perf-arena.json` measures the whole arena from above, and
 `scenarios/perf-backface.json` measures the near wall where every covered pixel
 faces away from the sun. Both are regression probes for the scene pass; run
-them at the same size to compare two builds.
+them at the same size to compare two builds. `scenarios/perf-crates.json` adds
+60 crates in a grid and measures them.
+
+To compare two builds, use
+[the benchmark recipe](docs/agents/harness.md#benchmark-two-builds).
 
 ### Movement checks
 
@@ -473,6 +483,32 @@ and `sky` overrides:
 The zenith gate fails when the sky is off, the corner gates fail when the AO is
 never re-enabled, and the flat-zenith gate fails when the sky never turns off.
 
+### Compare two runs
+
+```sh
+./bin/harbagsa-agent diff runs/before runs/after
+./bin/harbagsa-agent diff runs/before runs/after --max-pixels 0 --json
+```
+
+`diff` pairs the PNG captures by name from each `report.json` `screenshots`
+array. When a run has no report, or an entry has no readable path, it uses
+`frames/<name>.png`. Each row reports the size, the number of different pixels,
+the largest RGB channel delta, the mean delta, the count over 16, and whether
+the pair is identical. Alpha is ignored. `analysis-diff.png` and
+`analysis-variance.png` are derived maps, so the frame fallback skips them.
+
+Exit codes:
+
+- `0`: every pair is present, the sizes match, and no pair is over the limit.
+- `1`: a pair is missing, a pair differs in size, or `--max-pixels N` is
+  exceeded.
+- `2`: bad arguments or a run directory that cannot be read.
+
+Without `--max-pixels`, differences are reported but do not fail the command.
+`--json` prints one object with `run_a`, `run_b`, `ok`, `pairs`, and `errors`
+instead of the table. Compare `setup.revision` and `setup.dirty` before the
+pixels so a dirty tree is not mistaken for a revision change.
+
 ## Build
 
 ```sh
@@ -525,10 +561,17 @@ them.
 `scenarios/smoke.json` offscreen, then again with `--present` when a display is
 available. Both runs exit on their own, and a validation error fails the target.
 
+`make validate-offscreen` is the headless target. It builds the validation agent
+and runs `smoke`, `type-weight`, `settings-menu`, `ui`, `shadow-angle`, and
+`perf-crates` offscreen, each into its own directory under
+`build/validate/offscreen/`. It never opens a window, stops on the first
+failure, and is the target an agent runs. The `sun` scenario joins the list when
+it exists.
+
 `make validate-demo` runs the demo with validation enabled for a manual
 session. It returns when you close the window.
 
-Both targets check for `VK_LAYER_KHRONOS_validation` first. If the layer is
+All three targets check for `VK_LAYER_KHRONOS_validation` first. If the layer is
 missing, they print the install command and exit without starting anything.
 They never install anything. `make check` and `make test` never enable
 validation.

@@ -8,7 +8,8 @@ Settle_Command :: struct {
 }
 
 @(private)
-parse_settle :: proc(object: json.Object) -> (Command, string) {	if key, unknown := json_unknown_key(object, {"cmd", "frames"}); unknown {
+parse_settle :: proc(object: json.Object) -> (Command, string) {
+	if key, unknown := json_unknown_key(object, {"cmd", "frames"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 	frames, frames_error := parse_frames(object)

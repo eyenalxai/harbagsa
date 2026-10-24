@@ -25,6 +25,23 @@ execute :: proc(t: ^testing.T, session: ^harness.Session, line: string) -> harne
 	return reply
 }
 
+// A rejection test asserts the error without turning the expected rejection
+// into a runner failure. The caller owns the returned string.
+execute_expect_error :: proc(t: ^testing.T, session: ^harness.Session, line: string) -> string {
+	command, parse_error := harness.command_parse_string(line, context.allocator)
+	defer harness.command_destroy(&command, context.allocator)
+	if parse_error != "" {
+		return parse_error
+	}
+	reply := harness.session_execute(session, command, line)
+	defer harness.reply_destroy(&reply, context.allocator)
+	testing.expectf(t, !reply.ok, "command was accepted: %s", line)
+	if reply.error == "" {
+		return ""
+	}
+	return strings.clone(reply.error, context.allocator)
+}
+
 fake_render :: proc(
 	ctx: rawptr,
 	session: ^harness.Session,

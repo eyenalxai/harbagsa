@@ -36,6 +36,7 @@ session_state :: proc(session: ^Session) -> State {
 		reset_count        = report.reset_count,
 		last_reset         = renderer.reset_reason_name(report.last_reset),
 		shadow_phase       = report.shadow_phase,
+		atlas_weight       = report.atlas_weight,
 		debug = {
 			active              = report.debug.active,
 			taa                 = report.debug.taa,
