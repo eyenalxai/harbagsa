@@ -97,6 +97,8 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 		if command.view.has_hint {
 			session.view.hint = command.view.hint
 		}
+	case .Menu:
+		command_error = session_menu(session, command.menu)
 	case .Check:
 		state := session_state(session)
 		result := check_evaluate(command.check, state, session.allocator)
