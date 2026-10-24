@@ -23,13 +23,3 @@ analysis_field :: proc(analysis: Analysis_Summary, path: string) -> (Check_Value
 	}
 	return {}, fmt.aprintf("unknown analysis field %q", path, allocator = context.allocator)
 }
-
-check_capture_window :: proc(captures: []Capture_Result, command: Check_Command) -> []Capture_Result {
-	if !command.window.has {
-		start := clamp(command.warmup, 0, len(captures))
-		return captures[start:]
-	}
-	start := clamp(command.window.start, 0, len(captures))
-	count := clamp(command.window.count, 0, len(captures) - start)
-	return captures[start:start + count]
-}

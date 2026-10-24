@@ -23,9 +23,9 @@ without a second build.
   renderer ignores every field until the command sets it.
 - A first command copies the current effective state into the struct, so an
   omitted field keeps its value.
-- A change to a TAA input resets the history with reason `debug_override`. The
-  shadow phase is not a TAA input: it changes the next frame's sun samples, not
-  the accumulated history.
+- A change to the override resets the history with reason `debug_override`. The
+  shadow phase is included: a new phase changes the sun samples the resolve
+  averages, so the old history no longer describes the same input.
 - `clear` restores the defaults and turns TAA on. A scenario can therefore end
   in the product configuration regardless of the path it took.
 - The resolve takes the overrides as push constants. A fixed weight replaces

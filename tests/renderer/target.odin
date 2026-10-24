@@ -226,8 +226,7 @@ render_offscreen_sequence :: proc() -> (
 	if !read_ok {
 		return nil, 0, false, true
 	}
-	value, has_digest := renderer.last_render_digest(state)
 	pixels = make([]u8, len(data), context.allocator)
 	copy(pixels, data)
-	return pixels, has_digest ? value.value : 0, true, true
+	return pixels, state.has_render_digest ? state.render_digest.value : 0, true, true
 }
