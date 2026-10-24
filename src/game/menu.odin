@@ -76,8 +76,7 @@ menu_open :: proc(menu: ^Menu_State) {
 menu_close :: proc(menu: ^Menu_State) {
 	menu.open = false
 	menu.dragging_weight = false
-	menu.status = ""
-	menu.status_remaining = 0
+	menu_clear_status(menu)
 	menu.view = {}
 }
 
@@ -123,9 +122,7 @@ menu_change_setting :: proc(
 	if !menu.open || menu.selected == .Resume || direction == 0 {
 		return .Not_A_Setting
 	}
-	// A note belongs to the press that set it.
-	menu.status = ""
-	menu.status_remaining = 0
+	menu_clear_status(menu)
 	#partial switch menu.selected {
 	case .Window_Mode:
 		settings.window.mode = toggle_window_mode(settings.window.mode)
@@ -167,19 +164,6 @@ menu_change_setting :: proc(
 	return .Changed
 }
 
-menu_set_type_weight :: proc(menu: ^Menu_State, settings: ^Settings, weight: f32) -> bool {
-	if !menu.open {
-		return false
-	}
-	settings.type_weight = clamp(math.round(weight), ui.TYPE_WEIGHT_MIN, ui.TYPE_WEIGHT_MAX)
-	return true
-}
-
-menu_set_type_weight_ratio :: proc(menu: ^Menu_State, settings: ^Settings, ratio: f32) -> bool {
-	span := ui.TYPE_WEIGHT_MAX - ui.TYPE_WEIGHT_MIN
-	return menu_set_type_weight(menu, settings, ui.TYPE_WEIGHT_MIN + clamp(ratio, 0, 1) * span)
-}
-
 menu_activate :: proc(menu: ^Menu_State, settings: ^Settings, direction := 1) -> bool {
 	if !menu.open {
 		return false
@@ -200,7 +184,13 @@ menu_set_status :: proc(menu: ^Menu_State, status: string) {
 	menu.status_remaining = MENU_STATUS_SECONDS
 }
 
-menu_view :: proc(menu: ^Menu_State, settings: Settings, debug_active: bool, delta: f32) {
+@(private)
+menu_clear_status :: proc(menu: ^Menu_State) {
+	menu.status = ""
+	menu.status_remaining = 0
+}
+
+menu_view :: proc(menu: ^Menu_State, settings: Settings, debug_active: bool, delta_seconds: f32) {
 	if !menu.open {
 		menu.view = {}
 		return
@@ -244,9 +234,9 @@ menu_view :: proc(menu: ^Menu_State, settings: Settings, debug_active: bool, del
 	menu.hints = hints
 
 	if menu.status != "" {
-		menu.status_remaining = max(menu.status_remaining - delta, 0)
+		menu.status_remaining = max(menu.status_remaining - delta_seconds, 0)
 		if menu.status_remaining <= 0 {
-			menu.status = ""
+			menu_clear_status(menu)
 		}
 	}
 	note := menu.status

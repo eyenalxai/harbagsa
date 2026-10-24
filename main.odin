@@ -271,7 +271,7 @@ run :: proc() -> bool {
 			&debug,
 			frame.Options {
 				alpha = alpha,
-				delta = delta,
+				delta_seconds = delta,
 				debug_view = debug_view,
 				captured = events.captured,
 				hud = true,
