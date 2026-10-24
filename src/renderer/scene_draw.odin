@@ -11,7 +11,7 @@ record_scene :: proc(
 	command_buffer: vk.CommandBuffer,
 	image_index: u32,
 	view: Frame_View,
-	capture: bool,
+	capture: Capture_Request,
 ) -> bool {
 	r.frame_count += 1
 	if int(image_index) >= len(r.target.views) {
@@ -67,11 +67,11 @@ record_scene :: proc(
 	write_timing(r, command_buffer, .After_Taa)
 	record_overlay_pass(r, command_buffer, image_index)
 	write_timing(r, command_buffer, .After_Overlay)
-	if capture && !record_capture_copy(r, command_buffer, image_index) {
+	if capture.enabled && !record_capture_copy(r, command_buffer, image_index, capture.target) {
 		return false
 	}
 	if r.target.kind == .Swapchain {
-		record_present_barrier(r, command_buffer, image_index, capture)
+		record_present_barrier(r, command_buffer, image_index, capture.enabled)
 	}
 
 	if !check(vk.EndCommandBuffer(command_buffer), "vkEndCommandBuffer") {

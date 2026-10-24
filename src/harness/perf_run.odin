@@ -73,7 +73,7 @@ session_perf :: proc(session: ^Session, command: Perf_Command) -> string {
 		session.frame += 1
 		perf.mark(&session.perf, .Simulation)
 		if session.backend != nil {
-			draw_error := session_draw(session, false, "", session.alpha)
+			draw_error := session_draw(session, {})
 			if draw_error != "" {
 				return draw_error
 			}

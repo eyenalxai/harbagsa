@@ -265,7 +265,15 @@ scenario_has_perf :: proc(scenario: Scenario) -> bool {
 @(private)
 rewrite_capture_paths :: proc(session: ^Session, out_dir: string) {
 	for &capture in session.captures {
-		filename := fmt.aprintf("%s.png", capture.name, allocator = context.temp_allocator)
+		if capture.path == "" {
+			continue
+		}
+		format := Capture_Format.Png
+		if parsed, ok := capture_format_parse(capture.format); ok {
+			format = parsed
+		}
+		extension := capture_format_extension(format)
+		filename := fmt.aprintf("%s%s", capture.name, extension, allocator = context.temp_allocator)
 		final_path := join_path({out_dir, "frames", filename}, context.allocator)
 		if final_path == "" {
 			continue

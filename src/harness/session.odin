@@ -214,12 +214,19 @@ session_finish_frame :: proc(session: ^Session) -> string {
 		}
 	}
 	if (session.present || session.render_every_step) && len(due) == 0 {
-		return session_draw(session, false, "", session.alpha)
+		return session_draw(session, {})
 	}
 	render_error := ""
 	for index in due {
 		pending := session.pending[index]
-		error := session_draw(session, true, pending.name, pending.alpha)
+		request := Capture_Request {
+			name    = pending.name,
+			alpha   = pending.alpha,
+			target  = pending.target,
+			format  = pending.format,
+			enabled = true,
+		}
+		error := session_draw(session, request)
 		if error != "" && render_error == "" {
 			render_error = error
 		}
@@ -233,66 +240,22 @@ session_finish_frame :: proc(session: ^Session) -> string {
 }
 
 @(private)
-session_draw :: proc(session: ^Session, capture: bool, name: string, alpha: f32) -> string {
+session_draw :: proc(session: ^Session, request: Capture_Request) -> string {
 	if session.backend == nil {
-		if capture {
+		if request.enabled {
 			return format_error("capture requires rendering")
 		}
 		return ""
 	}
-	result, error := session.backend.render(session.backend.ctx, session, capture, name, alpha)
+	result, error := session.backend.render(session.backend.ctx, session, request)
 	if error != "" {
 		session.render_failed = true
 		session_failure(session, error)
 		return error
 	}
-	if capture {
+	if request.enabled {
 		append(&session.captures, result)
 	}
 	session_refresh_renderer(session)
 	return ""
-}
-
-session_queue_capture :: proc(
-	session: ^Session,
-	command: Capture_Command,
-) -> (
-	immediate: bool,
-	error: string,
-) {
-	frame := command.has_frame ? command.frame : session.frame
-	if frame < session.frame {
-		return false, fmt.aprintf(
-			"capture frame %d is in the past (current frame %d)",
-			frame,
-			session.frame,
-			allocator = context.allocator,
-		)
-	}
-	name := command.name
-	owned_name := false
-	if name == "" {
-		name = capture_name(frame, session.allocator)
-		owned_name = true
-	}
-	defer if owned_name {
-		delete(name, session.allocator)
-	}
-	alpha := command.has_alpha ? command.alpha : session.alpha
-	if frame == session.frame {
-		return true, session_draw(session, true, name, alpha)
-	}
-	append(
-		&session.pending,
-		Pending_Capture{name = strings.clone(name, session.allocator), frame = frame, alpha = alpha},
-	)
-	return false, ""
-}
-
-@(private)
-ordered_remove :: proc(array: ^[dynamic]Pending_Capture, index: int) {
-	for next in index ..< len(array^) - 1 {
-		array[next] = array[next + 1]
-	}
-	resize(array, len(array^) - 1)
 }
