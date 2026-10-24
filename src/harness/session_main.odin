@@ -123,6 +123,7 @@ runtime_handle_line :: proc(runtime: ^Session_Runtime, line: string) -> []byte {
 	if command_error != "" {
 		reply := Reply{ok = false, cmd = "parse", frame = runtime.session.frame}
 		reply.error = strings.clone(command_error, context.allocator)
+		delete(command_error, context.allocator)
 		data := encode_reply(reply)
 		reply_destroy(&reply, context.allocator)
 		return data
@@ -143,6 +144,8 @@ runtime_handle_line :: proc(runtime: ^Session_Runtime, line: string) -> []byte {
 			   (scenario_has_perf(scenario) && !runtime.options.no_render) {
 				backend_error = runtime_ensure_backend(runtime, false)
 			}
+		} else {
+			delete(load_error, context.allocator)
 		}
 	}
 	if backend_error != "" {

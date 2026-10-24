@@ -16,6 +16,7 @@ Command_Kind :: enum {
 	Camera,
 	View,
 	Sun,
+	Crates,
 	Debug_Mode,
 	Menu,
 	Check,
@@ -128,6 +129,7 @@ Command :: struct {
 	camera:  Camera_Command,
 	view:       View_Command,
 	sun:        Sun_Command,
+	crates:     Crates_Command,
 	debug_mode: Debug_Mode_Command,
 	menu:       Menu_Command,
 	check:   Check_Command,
@@ -161,6 +163,8 @@ command_name :: proc(kind: Command_Kind) -> string {
 		return "view"
 	case .Sun:
 		return "sun"
+	case .Crates:
+		return "crates"
 	case .Debug_Mode:
 		return "debug_mode"
 	case .Menu:
@@ -196,6 +200,9 @@ command_destroy :: proc(command: ^Command, allocator: mem.Allocator) {
 		if command.perf.has_trace {
 			delete(command.perf.trace, allocator)
 		}
+		if command.perf.has_name {
+			delete(command.perf.name, allocator)
+		}
 	}
 	command^ = {}
 }
@@ -216,18 +223,19 @@ command_parse_string :: proc(line: string, allocator := context.allocator) -> (C
 	return command_parse(value, allocator)
 }
 
+// Parse errors are always allocated; the caller frees them.
 command_parse :: proc(value: json.Value, allocator := context.allocator) -> (Command, string) {
 	object, object_ok := json_object(value)
 	if !object_ok {
-		return {}, "command must be an object"
+		return {}, format_error("%s", "command must be an object")
 	}
 	cmd_value, has_cmd := json_get(object, "cmd")
 	if !has_cmd {
-		return {}, "command is missing 'cmd'"
+		return {}, format_error("%s", "command is missing 'cmd'")
 	}
 	name, name_ok := json_string(cmd_value)
 	if !name_ok {
-		return {}, "'cmd' must be a string"
+		return {}, format_error("%s", "'cmd' must be a string")
 	}
 
 	switch name {
@@ -259,6 +267,8 @@ command_parse :: proc(value: json.Value, allocator := context.allocator) -> (Com
 		return parse_view(object)
 	case "sun":
 		return parse_sun(object)
+	case "crates":
+		return parse_crates(object)
 	case "debug_mode":
 		return parse_debug_mode(object)
 	case "menu":

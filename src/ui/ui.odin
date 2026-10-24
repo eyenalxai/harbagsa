@@ -48,3 +48,28 @@ Menu :: struct {
 Hud :: struct {
 	rows: []Row,
 }
+
+Slider_Rect :: struct {
+	x, y, width, height: f32,
+	knob:                f32,
+}
+
+// `inside` uses the full track, so a press on either knob end starts a drag.
+// The ratio maps the travel between the knob centers.
+slider_hit :: proc(rect: Slider_Rect, point: [2]f32) -> (ratio: f32, inside: bool) {
+	if rect.width <= 0 || rect.height <= 0 {
+		return 0, false
+	}
+	inside =
+		point.x >= rect.x &&
+		point.x <= rect.x + rect.width &&
+		point.y >= rect.y &&
+		point.y <= rect.y + rect.height
+	knob := clamp(rect.knob, 0, rect.width)
+	travel := rect.width - knob
+	if travel <= 0 {
+		return 0, inside
+	}
+	ratio = clamp((point.x - (rect.x + knob * 0.5)) / travel, 0, 1)
+	return ratio, inside
+}
