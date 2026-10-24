@@ -28,17 +28,11 @@ colour_tokens_match_theme :: proc(t: ^testing.T) {
 		if count < 3 {
 			continue
 		}
-		hex_text := strip_ticks(cells[1])
-		if !strings.has_prefix(hex_text, "#") {
-			continue
-		}
-
-		token := strip_ticks(cells[0])
-		hex, hex_ok := strconv.parse_u64(hex_text[1:], 16)
+		hex, hex_ok := parse_palette_hex(t, doc.path, index + 1, cells[1])
 		if !hex_ok {
-			testing.expectf(t, false, "%s:%d has an unreadable hex %q", doc.path, index + 1, hex_text)
 			continue
 		}
+		token := strip_ticks(cells[0])
 		alpha, alpha_ok := strconv.parse_f32(cells[2])
 		if !alpha_ok {
 			testing.expectf(t, false, "%s:%d has an unreadable alpha %q", doc.path, index + 1, cells[2])
@@ -119,7 +113,7 @@ check_colour_row :: proc(
 	doc_path: string,
 	line: int,
 	token: string,
-	hex: u64,
+	hex: u32,
 	alpha: f32,
 	theme: renderer.UI_Theme,
 ) {
@@ -130,7 +124,7 @@ check_colour_row :: proc(
 	}
 	testing.expectf(
 		t,
-		hex == u64(spec.hex),
+		hex == spec.hex,
 		"%s:%d says %s is #%06X, %s says #%06X",
 		doc_path,
 		line,
