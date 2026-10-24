@@ -91,9 +91,10 @@ View_Command :: struct {
 }
 
 Check_Command :: struct {
-	field: string,
-	op:    Check_Op,
-	value: Check_Value,
+	field:  string,
+	op:     Check_Op,
+	value:  Check_Value,
+	warmup: int,
 }
 
 Record_Command :: struct {

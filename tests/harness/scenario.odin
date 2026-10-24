@@ -72,6 +72,27 @@ scenario_compiles_to_commands :: proc(t: ^testing.T) {
 }
 
 @(test)
+capture_checks_parse_the_warmup :: proc(t: ^testing.T) {
+	scenario, error := harness.scenario_parse(
+		`{
+			"steps": [{"frames": 12}],
+			"checks": [
+				{"field": "capture.worst_mean_delta", "op": "le", "value": 0.1, "warmup": 4}
+			]
+		}`,
+		context.allocator,
+	)
+	testing.expectf(t, error == "", "scenario parse failed: %s", error)
+	defer harness.scenario_destroy(&scenario, context.allocator)
+	if error != "" {
+		return
+	}
+	last := scenario.commands[len(scenario.commands) - 1]
+	testing.expect_value(t, last.check.field, "capture.worst_mean_delta")
+	testing.expect_value(t, last.check.warmup, 4)
+}
+
+@(test)
 default_capture_is_the_final_frame :: proc(t: ^testing.T) {
 	scenario, error := harness.scenario_parse(`{"steps": [{"frames": 12}]}`, context.allocator)
 	defer harness.scenario_destroy(&scenario, context.allocator)

@@ -28,6 +28,8 @@ serializes Make with `flock`.
 - `state.json`: the final state alone. It holds the player, crates, window and
   input settings, menu, frame, and digest.
 - `frames/frame_NNNN.png`: zero-padded captures.
+- Each screenshot entry carries `delta_mean`, `delta_max`, and `delta_over_16`
+  against the previous capture. The first capture has zeros.
 - `run.log`: log lines from the renderer, the session, and the runner.
 
 Standard output is one JSON summary. Standard error holds logs.
@@ -68,6 +70,13 @@ Rules:
 - A check uses the `state.json` shape. Operators: `eq`, `ne`, `lt`, `le`, `gt`,
   `ge`. Examples: `player.position.y`, `crates.count`, `settings.window_mode`,
   `settings.resolution`, `settings.sprint_mode`, `menu.open`.
+- A capture check reads the capture summary. Fields: `capture.count`,
+  `capture.worst_mean_delta`, `capture.worst_max_delta`,
+  `capture.worst_over_16`, and `capture.worst_over_16_fraction`. The fraction
+  scales with the capture size. Each capture after the first compares its
+  pixels with the previous capture. `warmup` skips that many captures before
+  the summary, so a scenario can ignore TAA convergence.
+- `scenarios/taa-static.json` uses capture checks to gate TAA stability.
 - A `commands` array runs verbatim. It is the form that `record` writes. It does
   not add a default capture.
 
@@ -135,8 +144,9 @@ scenario.
   present. The compositor controls the window size.
 - TAA history affects exact pixels. The first frame matches exactly. Later frames
   match when both runs share the same history. See the README note.
-- `scenarios/taa-static.json` captures consecutive static frames for TAA edge
-  stability. The first frames converge; compare later frames.
+- `scenarios/taa-static.json` settles for 8 frames, captures 25 steady frames,
+  and checks `capture.worst_mean_delta` and
+  `capture.worst_over_16_fraction`.
 - `scenarios/settings-menu.json` captures the settings menu and checks a changed
   input mode.
 - `scenarios/window-settings.json` captures the menu after switching to
@@ -170,8 +180,8 @@ Use `capture` or `--present`. Do not use `grim` for automated screenshots.
   applies the window state.
 - `tests/harness/`, `tests/frame/`, `tests/display/display.odin`,
   `tests/renderer/target.odin`.
-- `scenarios/smoke.json`, `scenarios/settings-menu.json`,
-  `scenarios/window-settings.json`.
+- `scenarios/smoke.json`, `scenarios/taa-static.json`,
+  `scenarios/settings-menu.json`, `scenarios/window-settings.json`.
 
 ## Adding a command
 
