@@ -170,8 +170,8 @@ true}` the frames directory also holds `analysis-diff.png` and
 `analysis-variance.png`.
 
 `report.json` holds the pass/fail result, the final state, the setup block,
-absolute screenshot paths, checks, the state digest, and the perf report when a
-perf run happened. `state.json` holds the final state alone.
+absolute screenshot paths, checks, the state digest, and the named perf reports
+when perf ran. `state.json` holds the final state alone.
 `analysis.json` holds the per-run image analysis when the run captured frames.
 The pair and pixel analysis uses color captures. `run.log` holds the log lines.
 Standard output is one JSON summary.
@@ -302,12 +302,13 @@ The batch runner and the live session share one command set:
   An open menu renders even when `hud` is off.
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`:
   evaluate a predicate now.
-- `{"cmd": "perf", "frames": 120, "warmup": 60, "trace": "trace.jsonl"}`:
-  measure frames and report percentiles. `frames` defaults to 120 and `warmup`
-  to 60. `trace` writes one JSON object per measured frame; a relative path
-  resolves against the run directory. Offscreen measures throughput; with
-  `--present` it measures pacing. A run without a device reports CPU numbers
-  only.
+- `{"cmd": "perf", "frames": 120, "warmup": 60, "prime": 2.0, "name": "default", "trace": "trace.jsonl"}`:
+  measure frames. `frames` defaults to 120, `warmup` to 60, and `prime` to 2.0
+  seconds (`0` disables the time loop). `name` labels the result; `report.json`
+  keeps every named result in a `perf` array. `trace` writes one JSON object per
+  measured frame; a relative path resolves against the run directory and a run
+  holds one trace. Offscreen measures throughput; with `--present` it measures
+  pacing. A run without a device reports CPU numbers only.
 - `{"cmd": "renderer_debug", "jitter": false, "shadow_phase": 12}`: change TAA
   inputs. It needs `--debug-renderer` or a build with
   `-define:ENABLE_RENDERER_DEBUG=true`. `clear` resets every override. Changing
@@ -358,11 +359,14 @@ session never creates a Vulkan device.
 ```
 
 A `perf` command steps the simulation and draws one frame per measurement. The
-reply and `report.json` carry the interval percentiles, the CPU phase means, and
-the GPU pass means. Add `"trace": "trace.jsonl"` to write one JSON object per
-measured frame under the run directory. Offscreen runs measure throughput,
-because nothing waits for the display. `--present` measures pacing, because FIFO
-bounds the rate.
+reply and `report.json` carry the interval distribution, `p50`/`p95`/`mean` for
+every CPU phase and GPU pass, and the prime frame count. `prime` (seconds,
+default 2.0) warms the device clock before the measured window. `name` labels
+the result and `report.json` keeps every named result in a `perf` array. Add
+`"trace": "trace.jsonl"` to write one JSON object per measured frame under the
+run directory; a run holds one trace. Offscreen runs measure throughput, because
+nothing waits for the display. `--present` measures pacing, because FIFO bounds
+the rate.
 
 The first baseline is in [the perf baseline](docs/evidence/perf-baseline.md).
 The scene-pass before/after is in

@@ -8,6 +8,9 @@ ODIN_LIB_CHECK_FLAGS := $(filter-out -vet-unused-procedures,$(ODIN_FLAGS))
 BIN := bin/harbagsa
 AGENT_BIN := bin/harbagsa-agent
 AGENT := cmd/harbagsa-agent
+HARNESS_REVISION := $(shell git rev-parse --short HEAD 2>/dev/null || printf unknown)
+HARNESS_DIRTY := $(shell if git rev-parse --git-dir >/dev/null 2>&1 && git diff --quiet 2>/dev/null; then printf false; else printf true; fi)
+AGENT_DEFINES := -define:HARNESS_REVISION=$(HARNESS_REVISION) -define:HARNESS_DIRTY=$(HARNESS_DIRTY)
 VALIDATE_AGENT_BIN := bin/harbagsa-agent-validate
 VALIDATE_SCENARIO := scenarios/smoke.json
 VALIDATE_OUT := build/validate
@@ -134,7 +137,7 @@ check-spirv: shaders
 build: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	mkdir -p bin
 	$(ODIN) build . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -out:$(BIN)
-	$(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -out:$(AGENT_BIN)
+	$(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) $(AGENT_DEFINES) -out:$(AGENT_BIN)
 
 check: check-lines check-spirv $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) check . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
@@ -195,7 +198,7 @@ check-validation-layer:
 validate: check-validation-layer $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	@mkdir -p $(dir $(VALIDATE_AGENT_BIN))
 	$(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) \
-		-define:ENABLE_VALIDATION_LAYERS=true -out:$(VALIDATE_AGENT_BIN)
+		$(AGENT_DEFINES) -define:ENABLE_VALIDATION_LAYERS=true -out:$(VALIDATE_AGENT_BIN)
 	$(VALIDATE_AGENT_BIN) run $(VALIDATE_SCENARIO) --out $(VALIDATE_OUT)/offscreen
 	@if [ -n "$${WAYLAND_DISPLAY:-}$${DISPLAY:-}" ]; then \
 		$(VALIDATE_AGENT_BIN) run $(VALIDATE_SCENARIO) --present --out $(VALIDATE_OUT)/present; \

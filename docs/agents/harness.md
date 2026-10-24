@@ -39,9 +39,9 @@ serializes Make with `flock`.
 `runs/<scenario-stem>/`
 
 - `report.json`: `ok`, `exit_code`, `frame`, `state`, `setup`, `screenshots`,
-  `checks`, `failures`, `digest`, `error`, `perf` when a perf run happened,
-  `trace` when the run wrote a perf trace, and `analysis` when the run wrote an
-  analysis report.
+  `checks`, `failures`, `digest`, `error`, `perf` (a list of named reports) when
+  perf ran, `trace` when the run wrote a perf trace, and `analysis` when the run
+  wrote an analysis report.
 - `analysis.json`: the per-run image analysis. See **Analysis**.
 - `frames/analysis-diff.png` and `frames/analysis-variance.png`: the optional
   analysis maps.
@@ -383,6 +383,7 @@ run never created a renderer, and `renderer.active` is `false`.
 | `reset_count` | history resets since renderer creation |
 | `last_reset` | the last reset reason |
 | `shadow_phase` | the sun sample phase the last frame used |
+| `atlas_weight` | the type weight the active coverage atlas holds |
 
 The state also carries a `sun` object with `azimuth`, `elevation`, and
 `angular_diameter`, in degrees. The angles describe the sun in the sky, so the
@@ -393,15 +394,18 @@ The reset reasons are `none`, `create`, `extent`, `toggle`, `teleport`,
 the sun direction or the sun angular diameter is a `scene_change`.
 
 The render digest is FNV-1a over the effective camera, the sun direction and
-angular diameter, every box, the jitter, the shadow phase, and the view flags.
+angular diameter, every box, the jitter, the shadow phase, the applied atlas
+weight, and the view flags.
 It changes when any of those change and stays the same when they do not. It is
 separate from the simulation digest: read `render_digest` for the render inputs
 and `digest` for the simulation.
 
 `report.json` carries a `setup` block: the target kind (`offscreen`,
-`swapchain`, or `none`), the extent, the view flags, the device name, the frame
-count in flight, the TAA state, and the jitter, history, and sample caps. Use it
-to compare two runs before you compare their pixels.
+`swapchain`, or `none`), the extent, the build revision and dirty flag, the view
+flags, the device name, the frame count in flight, the TAA state, and the jitter,
+history, and sample caps. Use it to compare two runs before you compare their
+pixels. `revision` is the short HEAD; `dirty` says the tree had uncommitted
+changes. A direct `odin run` or a test build reports `unknown` and `false`.
 
 `scenarios/renderer-state.json` checks the steady state. `scenarios/renderer-reset.json`
 checks a teleport reset.
@@ -441,13 +445,23 @@ The renderer records a perf sample every frame: the frame interval, five CPU
 phases, and five GPU pass times. The game shows it on `F4`. A scenario can show
 the same panel with `{"cmd": "view", "perf": true}`.
 
-`{"cmd": "perf", "frames": N, "warmup": M}` runs one priming frame, `M` warmup
-frames, and `N` measured frames. Each frame steps the simulation once and draws
-once without a capture. `frames` is capped at 600. The reply and `report.json`
-carry the interval percentiles, the CPU phase means, and the GPU pass means.
+`{"cmd": "perf", "frames": N, "warmup": M, "prime": S, "name": "label"}` runs
+one priming frame, primes until `S` seconds of wall clock pass (capped at 10,000
+frames), runs `M` warmup frames, and measures `N` frames. `prime` defaults to
+2.0 and `0` disables the time loop. Each frame steps the simulation once and
+draws once without a capture. `frames` is capped at 600. The reply and
+`report.json` carry the interval distribution, `p50`/`p95`/`mean` for every CPU
+phase and GPU pass, and `prime_seconds`/`prime_frames`. `report.json` keeps every
+named perf result in a `perf` array; the session reply carries the last one.
 `trace` writes one JSON object per measured frame under the run directory; it is
-the file to read when a percentile hides one spike. `scenarios/perf.json` is the
-ready example.
+the file to read when a percentile hides one spike. A run holds one trace, so a
+second `perf` with `trace` is rejected. `scenarios/perf.json` is the ready
+example.
+
+The prime loop exists because GPU clocks and shader caches move between a cold
+and a warm device. A fixed warmup can stop before the device settles, so two
+builds would be compared at different clock states. Prime frames never enter the
+trace or the statistics.
 
 - Offscreen runs measure throughput: nothing waits for the display.
 - `--present` measures pacing: FIFO bounds the rate and the percentiles show

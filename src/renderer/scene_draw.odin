@@ -50,6 +50,7 @@ record_scene :: proc(
 			boxes = view.boxes,
 			jitter = r.taa.current_jitter,
 			shadow_phase = r.taa.shadow_phase,
+			atlas_weight = r.overlay.atlas_applied_weight,
 			view_flags = view.view_flags,
 		},
 	)

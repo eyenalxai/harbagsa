@@ -50,6 +50,7 @@ Renderer_Report :: struct {
 	reset_count:        int,
 	last_reset:         History_Reset_Reason,
 	shadow_phase:       u32,
+	atlas_weight:       f32,
 	debug:              Debug_Report,
 }
 
@@ -88,6 +89,7 @@ renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
 		reset_count        = r.taa.reset_count,
 		last_reset         = r.taa.last_reset,
 		shadow_phase       = r.taa.shadow_phase,
+		atlas_weight       = r.overlay.atlas_applied_weight,
 		debug = {
 			active = r.taa.debug.active,
 			taa = r.taa.enabled,

@@ -23,6 +23,7 @@ digest_input :: proc() -> renderer.Render_Digest_Input {
 		boxes = {},
 		jitter = {0.001, -0.002},
 		shadow_phase = 7,
+		atlas_weight = 400,
 		view_flags = {.HUD, .Debug_Draw},
 	}
 }
@@ -77,6 +78,10 @@ render_digest_changes_with_each_render_input :: proc(t: ^testing.T) {
 	phase := base
 	phase.shadow_phase += 1
 	testing.expect(t, renderer.render_digest(phase).value != baseline.value, "shadow phase did not change the digest")
+
+	weight := base
+	weight.atlas_weight = 900
+	testing.expect(t, renderer.render_digest(weight).value != baseline.value, "atlas weight did not change the digest")
 
 	view := base
 	view.view_flags = {.HUD}

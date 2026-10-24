@@ -23,6 +23,8 @@ Setup_State :: struct {
 	target:   string               `json:"target"`,
 	width:    u32                  `json:"width"`,
 	height:   u32                  `json:"height"`,
+	revision: string               `json:"revision"`,
+	dirty:    bool                 `json:"dirty"`,
 	view:     View_State           `json:"view"`,
 	renderer: Renderer_Config_State `json:"renderer"`,
 }
@@ -32,6 +34,8 @@ setup_build :: proc(options: Common_Options, view: View, backend: Backend) -> Se
 		target = "none",
 		width = options.width,
 		height = options.height,
+		revision = HARNESS_REVISION,
+		dirty = HARNESS_DIRTY,
 		view = {hud = view.hud, debug = view.debug, hint = view.hint, perf = view.perf},
 		renderer = {
 			frames_in_flight = 0,

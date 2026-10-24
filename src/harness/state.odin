@@ -89,6 +89,7 @@ Renderer_State :: struct {
 	reset_count:        int                  `json:"reset_count"`,
 	last_reset:         string               `json:"last_reset"`,
 	shadow_phase:       u32                  `json:"shadow_phase"`,
+	atlas_weight:       f32                  `json:"atlas_weight"`,
 	debug:              Renderer_Debug_State `json:"debug"`,
 }
 
