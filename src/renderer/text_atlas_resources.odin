@@ -95,22 +95,22 @@ init_text_atlas_resources :: proc(r: ^Renderer) -> bool {
 }
 
 destroy_text_atlas_resources :: proc(r: ^Renderer) {
-	atlas := &r.overlay
+	overlay := &r.overlay
 	if r.device != nil {
-		if atlas.atlas_pool != 0 {
-			vk.DestroyDescriptorPool(r.device, atlas.atlas_pool, nil)
-			atlas.atlas_pool = 0
-			atlas.atlas_set = 0
+		if overlay.atlas_pool != 0 {
+			vk.DestroyDescriptorPool(r.device, overlay.atlas_pool, nil)
+			overlay.atlas_pool = 0
+			overlay.atlas_set = 0
 		}
-		if atlas.atlas_layout != 0 {
-			vk.DestroyDescriptorSetLayout(r.device, atlas.atlas_layout, nil)
-			atlas.atlas_layout = 0
+		if overlay.atlas_layout != 0 {
+			vk.DestroyDescriptorSetLayout(r.device, overlay.atlas_layout, nil)
+			overlay.atlas_layout = 0
 		}
-		if atlas.atlas_sampler != 0 {
-			vk.DestroySampler(r.device, atlas.atlas_sampler, nil)
-			atlas.atlas_sampler = 0
+		if overlay.atlas_sampler != 0 {
+			vk.DestroySampler(r.device, overlay.atlas_sampler, nil)
+			overlay.atlas_sampler = 0
 		}
-		destroy_image(r, &atlas.atlas_image)
+		destroy_image(r, &overlay.atlas_image)
 	}
-	text_atlas_destroy(&atlas.atlas, r.allocator)
+	text_atlas_destroy(&overlay.atlas, r.allocator)
 }

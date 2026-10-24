@@ -278,6 +278,11 @@ rasterized once at startup from the three subset Noto faces. One field draws
 crisply at every size, so no text is ever scaled from a bitmap.
 _Avoid_: Font texture, bitmap font, glyph sheet
 
+**Glyph**:
+One drawable letter in the SDF atlas: a uv rectangle, an offset from the pen, and
+an advance. The HUD never draws a character directly; it draws glyphs.
+_Avoid_: Character, letter
+
 **Row**:
 One line of the overlay: a kind, a label, a value, and whether the value is
 numeric. The game fills rows; the renderer lays them out. The kind set is closed:

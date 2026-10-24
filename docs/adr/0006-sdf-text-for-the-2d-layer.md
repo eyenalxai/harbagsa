@@ -45,12 +45,16 @@ in `hud.frag` with a `fwidth`-based threshold.
 
 ## Consequences
 
-- The game binary links `stb_truetype.a`, a 65 KB static archive, the same way it
-  already links `box3d`. No build-system change.
+- The Odin vendor tree ships `stb_truetype.a` (65 KB) inside the compiler
+  installation, and the binding links it with a relative `foreign import`. The
+  archive is not committed and the build system does not change.
 - Startup pays about 105 ms and 1 MB of texture memory.
 - The atlas has a maximum useful size. At density 2 the largest role draws at
   42 px, a 5% upscale from the 40 px field; a role larger than 21 px at density 1
   would soften. Raise `TEXT_ATLAS_BASE_PX` before adding one.
+- The smallest role is 14 px at density 1. Smaller text was tried and rejected:
+  a lowercase `l` became a hairline with more space around it than its own
+  width, so the word read with a gap in it.
 - `pyftsubset` is a development tool, not a build dependency. The subset files
   and their provenance are committed.
 - No future 2D layer may reintroduce a bitmap debug font. `docs/ui/type.md` is

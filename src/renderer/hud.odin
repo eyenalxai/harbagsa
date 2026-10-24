@@ -1,6 +1,8 @@
 #+vet explicit-allocators
 package renderer
 
+import "core:math"
+
 import "src:ui"
 
 HUD_Frame :: struct {
@@ -124,15 +126,44 @@ build_capture_hint :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
 @(private)
 build_crosshair :: proc(o: ^Overlay, center_x, center_y: f32) {
 	theme := o.theme
-	arm := HUD_CROSSHAIR_ARM * theme.density
-	gap := HUD_CROSSHAIR_GAP * theme.density
+	arm := hud_snap(HUD_CROSSHAIR_ARM * theme.density)
+	gap := hud_snap(HUD_CROSSHAIR_GAP * theme.density)
 	thickness := theme.hairline
 
-	// The crosshair is emitted last so it stays on top of the panels.
-	hud_crosshair_arm(o, center_x - gap - arm, center_y - thickness * 0.5, arm, thickness)
-	hud_crosshair_arm(o, center_x + gap, center_y - thickness * 0.5, arm, thickness)
-	hud_crosshair_arm(o, center_x - thickness * 0.5, center_y - gap - arm, thickness, arm)
-	hud_crosshair_arm(o, center_x - thickness * 0.5, center_y + gap, thickness, arm)
+	// The crosshair is emitted last so it stays on top of the panels. Its edges
+	// snap to whole pixels: a hairline on a fraction turns into two grey ones.
+	hud_crosshair_arm(
+		o,
+		hud_snap(center_x - gap - arm),
+		hud_snap(center_y - thickness * 0.5),
+		arm,
+		thickness,
+	)
+	hud_crosshair_arm(
+		o,
+		hud_snap(center_x + gap),
+		hud_snap(center_y - thickness * 0.5),
+		arm,
+		thickness,
+	)
+	hud_crosshair_arm(
+		o,
+		hud_snap(center_x - thickness * 0.5),
+		hud_snap(center_y - gap - arm),
+		thickness,
+		arm,
+	)
+	hud_crosshair_arm(
+		o,
+		hud_snap(center_x - thickness * 0.5),
+		hud_snap(center_y + gap),
+		thickness,
+		arm,
+	)
+}
+
+hud_snap :: proc(value: f32) -> f32 {
+	return math.round(value)
 }
 
 @(private)
