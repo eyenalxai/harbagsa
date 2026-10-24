@@ -51,6 +51,8 @@ Renderer_Report :: struct {
 	last_reset:         History_Reset_Reason,
 	shadow_phase:       u32,
 	atlas_weight:       f32,
+	text_truncated_runs: int,
+	text_font_drops:     int,
 	debug:              Debug_Report,
 }
 
@@ -95,6 +97,8 @@ renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
 		last_reset         = r.taa.last_reset,
 		shadow_phase       = r.taa.shadow_phase,
 		atlas_weight       = text_atlas_applied_weight(r),
+		text_truncated_runs = r.overlay.atlas.caps.truncated_runs,
+		text_font_drops     = r.overlay.atlas.caps.dropped_fonts,
 		debug = {
 			active = r.taa.debug.active,
 			taa = r.taa.enabled,

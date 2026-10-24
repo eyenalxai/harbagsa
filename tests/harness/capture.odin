@@ -71,7 +71,7 @@ capture_stats_reports_channels_and_velocity_median :: proc(t: ^testing.T) {
 		2, 0, 1, 0,
 		3, 0, 1, 0,
 	}
-	stats := harness.capture_stats(values, 2, 2, .Velocity, context.allocator)
+	stats := harness.capture_stats(values, 2, 2, .Velocity, nil, context.allocator)
 	testing.expect_value(t, stats.min[0], f32(0))
 	testing.expect_value(t, stats.max[0], f32(3))
 	testing.expect_value(t, stats.mean[0], f32(1.5))
@@ -81,7 +81,7 @@ capture_stats_reports_channels_and_velocity_median :: proc(t: ^testing.T) {
 		testing.expect_value(t, median, f32(4))
 	}
 
-	depth := harness.capture_stats(values, 2, 2, .Depth, context.allocator)
+	depth := harness.capture_stats(values, 2, 2, .Depth, nil, context.allocator)
 	_, has_depth_median := depth.velocity_median_texels.?
 	testing.expect(t, !has_depth_median, "depth stats reported a velocity median")
 }

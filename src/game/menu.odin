@@ -234,8 +234,10 @@ menu_view :: proc(menu: ^Menu_State, settings: Settings, debug_active: bool) {
 	}
 	menu.hints = hints
 
+	// The status belongs to the last blocked press. It stays until the next
+	// setting change clears it, so the harness can read the same note the
+	// panel shows.
 	note := menu.status
-	menu.status = ""
 	if note == "" {
 		note = MENU_NOTE
 	}

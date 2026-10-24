@@ -20,6 +20,14 @@ analysis_field :: proc(analysis: Analysis_Summary, path: string) -> (Check_Value
 		return {kind = .Number, number = f64(analysis.period.frames)}, ""
 	case "period.correlation":
 		return {kind = .Number, number = f64(analysis.period.correlation)}, ""
+	case "bands.longest_run":
+		return {kind = .Number, number = f64(analysis.bands.longest_run)}, ""
+	case "bands.median_run":
+		return {kind = .Number, number = f64(analysis.bands.median_run)}, ""
+	case "bands.levels":
+		return {kind = .Number, number = f64(analysis.bands.levels)}, ""
+	case "bands.columns":
+		return {kind = .Number, number = f64(analysis.bands.columns)}, ""
 	}
 	return {}, fmt.aprintf("unknown analysis field %q", path, allocator = context.allocator)
 }

@@ -7,72 +7,6 @@ import "core:strings"
 
 
 @(private)
-parse_look :: proc(object: json.Object) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "dx", "dy"}); unknown {
-		return {}, format_error("unknown key %q", key)
-	}
-	dx, dx_ok := number_field(object, "dx")
-	dy, dy_ok := number_field(object, "dy")
-	if !dx_ok || !dy_ok {
-		return {}, format_error("%s", "look needs numeric 'dx' and 'dy'")
-	}
-	return {kind = .Look, look = {dx = f32(dx), dy = f32(dy)}}, ""
-}
-
-@(private)
-parse_face :: proc(object: json.Object) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "yaw", "pitch"}); unknown {
-		return {}, format_error("unknown key %q", key)
-	}
-	yaw, yaw_ok := number_field(object, "yaw")
-	pitch, pitch_ok := number_field(object, "pitch")
-	if !yaw_ok || !pitch_ok {
-		return {}, format_error("%s", "face needs numeric 'yaw' and 'pitch'")
-	}
-	return {kind = .Face, face = {yaw = f32(yaw), pitch = f32(pitch)}}, ""
-}
-
-@(private)
-parse_input :: proc(object: json.Object) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "forward", "right", "jump"}); unknown {
-		return {}, format_error("unknown key %q", key)
-	}
-	input, input_error := parse_input_fields(object)
-	if input_error != "" {
-		return {}, input_error
-	}
-	return {kind = .Input, input = input}, ""
-}
-
-parse_input_fields :: proc(object: json.Object) -> (input: Input_Command, error: string) {
-	if value, has := json_get(object, "forward"); has {
-		forward, ok := json_number(value)
-		if !ok || forward < -1 || forward > 1 {
-			return {}, format_error("%s", "'forward' must be a number in [-1, 1]")
-		}
-		input.forward = f32(forward)
-		input.has_forward = true
-	}
-	if value, has := json_get(object, "right"); has {
-		right, ok := json_number(value)
-		if !ok || right < -1 || right > 1 {
-			return {}, format_error("%s", "'right' must be a number in [-1, 1]")
-		}
-		input.right = f32(right)
-		input.has_right = true
-	}
-	if value, has := json_get(object, "jump"); has {
-		jump, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'jump' must be a boolean")
-		}
-		input.jump = jump
-		input.has_jump = true
-	}
-	return input, ""
-}
-
-@(private)
 parse_step :: proc(object: json.Object) -> (Command, string) {
 	if key, unknown := json_unknown_key(object, {"cmd", "frames"}); unknown {
 		return {}, format_error("unknown key %q", key)
@@ -84,34 +18,6 @@ parse_step :: proc(object: json.Object) -> (Command, string) {
 	return {kind = .Step, step = {frames = frames}}, ""
 }
 
-
-@(private)
-parse_camera :: proc(object: json.Object) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "position", "yaw", "pitch", "clear"}); unknown {
-		return {}, format_error("unknown key %q", key)
-	}
-	command := Command{kind = .Camera}
-	if value, has := json_get(object, "clear"); has {
-		clear, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'clear' must be a boolean")
-		}
-		command.camera.clear = clear
-	}
-	if command.camera.clear {
-		return command, ""
-	}
-	position, position_ok := vec3_field(object, "position")
-	yaw, yaw_ok := number_field(object, "yaw")
-	pitch, pitch_ok := number_field(object, "pitch")
-	if !position_ok || !yaw_ok || !pitch_ok {
-		return {}, format_error("%s", "camera needs 'position', 'yaw' and 'pitch', or 'clear'")
-	}
-	command.camera.position = position
-	command.camera.yaw = f32(yaw)
-	command.camera.pitch = f32(pitch)
-	return command, ""
-}
 
 @(private)
 parse_view :: proc(object: json.Object) -> (Command, string) {
@@ -163,7 +69,10 @@ parse_view_fields :: proc(object: json.Object) -> (view: View_Command, error: st
 
 @(private)
 parse_check :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "field", "op", "value", "warmup", "window"}); unknown {
+	if key, unknown := json_unknown_key(
+		object,
+		{"cmd", "field", "op", "value", "other", "warmup", "window"},
+	); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 	field, field_ok := string_field(object, "field")
@@ -191,23 +100,33 @@ parse_check :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 		return {}, format_error("%s", "a check cannot use both 'warmup' and 'window'")
 	}
 	value, value_ok := json_get(object, "value")
-	if !value_ok {
-		return {}, format_error("%s", "check needs 'value'")
+	other, other_ok := string_field(object, "other")
+	if value_ok && other_ok {
+		return {}, format_error("%s", "check takes 'value' or 'other', not both")
 	}
-	check_value, value_error := parse_check_value(value, allocator)
-	if value_error != "" {
-		return {}, value_error
+	if !value_ok && !other_ok {
+		return {}, format_error("%s", "check needs 'value' or 'other'")
 	}
-	return {
-		kind = .Check,
-		check = {
-			field = strings.clone(field, allocator),
-			op = op,
-			value = check_value,
-			warmup = warmup,
-			window = window,
-		},
-	}, ""
+	check := Check_Command {
+		field  = strings.clone(field, allocator),
+		op     = op,
+		warmup = warmup,
+		window = window,
+	}
+	if other_ok {
+		if other == "" {
+			return {}, format_error("%s", "'other' must name a field")
+		}
+		check.other = strings.clone(other, allocator)
+		check.has_other = true
+	} else {
+		check_value, value_error := parse_check_value(value, allocator)
+		if value_error != "" {
+			return {}, value_error
+		}
+		check.value = check_value
+	}
+	return {kind = .Check, check = check}, ""
 }
 
 @(private)

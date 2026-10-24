@@ -169,3 +169,35 @@ menu_slider_track_stays_inside_the_panel :: proc(t: ^testing.T) {
 		"the track leaves the panel",
 	)
 }
+
+@(test)
+menu_slider_rect_matches_the_drawn_track_before_the_first_draw :: proc(t: ^testing.T) {
+	sim, _, hud, _ := create_state(t)
+	defer game.simulation_destroy(&sim)
+	hud.menu.displays = display.fallback_list()
+	game.menu_open(&hud.menu)
+	game.menu_select(&hud.menu, 3)
+	game.menu_view(&hud.menu, sim.settings, false)
+
+	theme := renderer.ui_theme_init(720)
+	atlas, built := build_atlas(t, theme)
+	testing.expect(t, built, "the atlas did not build")
+	if !built {
+		return
+	}
+	defer renderer.text_atlas_destroy(&atlas)
+
+	overlay := renderer.Overlay{theme = theme, atlas = atlas}
+	overlay.hud_vertices = make([]renderer.HUD_Vertex, 24576, context.allocator)
+	defer delete(overlay.hud_vertices, context.allocator)
+
+	r := renderer.Renderer {
+		target = {config = {width = 1280, height = 720}},
+		overlay = overlay,
+	}
+	measured := renderer.menu_slider_rect(&r, hud.menu.view)
+	renderer.build_menu(&overlay, 1280, 720, hud.menu.view)
+
+	testing.expect(t, overlay.menu_slider.width > 0, "the draw published no slider")
+	testing.expect_value(t, measured, overlay.menu_slider)
+}

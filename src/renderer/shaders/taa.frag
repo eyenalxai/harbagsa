@@ -20,6 +20,32 @@ layout(set = 0, binding = 3) uniform sampler2D sample_count;
 
 #include "gamma.glsl"
 
+// The 8-bit targets quantize after the resolve, and a slow gradient crosses
+// one level every tens of rows. A per-pixel ordered dither breaks those runs
+// without touching the history, which stays linear and exact. The pattern is
+// spatial and fixed, so a static frame keeps the same quantization.
+float dither_noise(ivec2 pixel) {
+    uint hash = uint(pixel.x) * 374761393u + uint(pixel.y) * 668265263u;
+    hash = (hash ^ (hash >> 13u)) * 1274126177u;
+    hash = hash ^ (hash >> 16u);
+    return float(hash) / 4294967295.0;
+}
+
+vec3 srgb_encode(vec3 c) {
+    return mix(c * 12.92, 1.055 * pow(c, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, c));
+}
+
+vec3 srgb_decode(vec3 c) {
+    return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(0.04045, c));
+}
+
+vec3 dither_output(vec3 linear, float needs_gamma) {
+    vec3 encoded = srgb_encode(clamp(linear, 0.0, 1.0));
+    encoded += (dither_noise(ivec2(gl_FragCoord.xy)) - 0.5) * (1.5 / 255.0);
+    encoded = clamp(encoded, 0.0, 1.0);
+    return needs_gamma > 0.5 ? encoded : srgb_decode(encoded);
+}
+
 const float DEPTH_TOLERANCE = 0.02;
 const float CLIP_SIGMA = 2.0;
 const float CLIP_EPSILON = 1e-5;
@@ -120,7 +146,7 @@ void main() {
         }
     }
 
-    out_color = vec4(apply_gamma(resolved, resolve.gamma), 1.0);
+    out_color = vec4(dither_output(resolved, resolve.gamma), 1.0);
     out_history = vec4(resolved, curr_depth);
     out_count = resolved_count;
 }

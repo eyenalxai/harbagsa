@@ -10,7 +10,7 @@ import "src:harness"
 @(test)
 verbose_summary_lists_captures_checks_failures_and_perf :: proc(t: ^testing.T) {
 	report := harness.Report {
-		scenario = "scenarios/smoke.json",
+		scenario = {path = "scenarios/smoke.json", hash = "0123456789abcdef"},
 		setup = {
 			revision = "abc1234",
 			dirty = true,

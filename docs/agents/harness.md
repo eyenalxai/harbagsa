@@ -6,6 +6,50 @@ screenshots. It needs no window, compositor, cursor capture, or `grim`.
 The user-facing command reference is `README.md` under **Agent harness**. This
 page is the short operational guide for agents.
 
+## Quick start
+
+Five recipes. Each writes a run directory; read `report.json` for the result.
+
+1. Capture the HUD:
+
+   ```sh
+   tools/make.sh build
+   ./bin/harbagsa-agent run scenarios/hud.json --out runs/ui/hud
+   jq -r '.screenshots[].path' runs/ui/hud/report.json
+   ```
+
+2. Capture the settings menu:
+
+   ```sh
+   ./bin/harbagsa-agent run scenarios/settings-menu.json --out runs/ui/menu
+   ```
+
+3. Assert a state without a renderer:
+
+   ```sh
+   ./bin/harbagsa-agent run scenarios/smoke.json --no-render --out runs/smoke
+   ```
+
+   A check is one JSON object: `{"cmd":"check","field":"player.position.y","op":"gt","value":0}`.
+   Use `other` to compare two fields.
+
+4. Record a scenario from a live session:
+
+   ```sh
+   printf '%s\n' \
+     '{"cmd":"record","path":"/tmp/opencode/walk.json"}' \
+     '{"cmd":"step","frames":60}' \
+     '{"cmd":"record"}' |
+     ./bin/harbagsa-agent session
+   ```
+
+5. Measure a build:
+
+   ```sh
+   ./bin/harbagsa-agent run scenarios/perf.json --out runs/perf
+   jq -r '.perf[0].gpu.scene' runs/perf/report.json
+   ```
+
 ## First move
 
 ```sh
@@ -35,6 +79,10 @@ serializes Make with `flock`.
 | check the sky and the ambient occlusion | **Sky and ambient occlusion** |
 | measure image stability or the period | **Analysis** |
 | compare two builds or revisions | **Cross-run diff** |
+| script the display list | **Commands** (`displays`) |
+| dump the HUD and menu rows | **Commands** (`rows`) |
+| measure an edge or a gradient | **Capture targets** and **Analysis** |
+| compare two builds | **Performance** and `ab` |
 | measure frame time | **Performance** |
 | prove a capture-free sequence is deterministic | **Screenshots** and `scenarios/capture-free.json` |
 | understand a design choice | `docs/adr/0008` to `docs/adr/0016` |
@@ -43,18 +91,18 @@ serializes Make with `flock`.
 
 `runs/<scenario-stem>/`
 
-- `report.json`: `ok`, `exit_code`, `frame`, `state`, `setup`, `screenshots`,
-  `checks`, `failures`, `digest`, `error`, `perf` (a list of named reports) when
-  perf ran, `trace` when the run wrote a perf trace, and `analysis` when the run
-  wrote an analysis report.
+- `report.json`: `ok`, `exit_code`, `scenario` (`path` and `hash`), `run_dir`,
+  `frame`, `state`, `setup`, `screenshots`, `checks`, `failures`, `digest`,
+  `error`, `perf` (a list of named reports) when perf ran, `trace` when the run
+  wrote a perf trace, and `analysis` when the run wrote an analysis report.
 - `analysis.json`: the per-run image analysis. See **Analysis**.
 - `frames/analysis-diff.png` and `frames/analysis-variance.png`: the optional
   analysis maps.
 - `trace.jsonl`: one JSON object per measured frame, when the perf command asks
   for a trace.
-- `state.json`: the final state alone. It holds the player, crates, window and
-  input settings, debug mode, sun, menu, frame, renderer, render digest, and
-  simulation digest.
+- `state.json`: the final state alone. It holds the player, camera, crates,
+  window and input settings, debug mode, sun, menu, rows, settle, frame,
+  renderer, render digest, and simulation digest.
 - `frames/<name>.png`, `.f32`, or `.bin`: captures. A color capture is a PNG;
   `float` and `raw` write the intermediate target.
 - Each screenshot entry carries `delta_mean`, `delta_max`, and `delta_over_16`
@@ -65,6 +113,11 @@ Standard output is one JSON summary. Standard error holds logs. `--verbose` (or
 `--summary`) adds a human summary to standard error: the setup revision and
 dirty flag, every capture, every check result, every failure, and every named
 perf result. The JSON line on standard output does not change.
+
+`run -` reads the scenario from standard input. `--tag NAME` appends a directory
+to the run path, so `runs/smoke/before` and `runs/smoke/after` coexist.
+`--renderer-debug KEY=VALUE` applies one gated override before the commands;
+repeat the flag for more fields.
 
 Exit codes:
 
@@ -129,6 +182,15 @@ Rules:
   to gate TAA stability.
 - A top-level `renderer_debug` object compiles to the renderer debug command
   before the commands. See **Renderer debug overrides**.
+- A top-level `"size": "1280x720"` pins the extent. `--size` with a declared
+  size is an error.
+- A top-level `"extends": "base.json"` merges the base object and lets the child
+  win; a relative path resolves against the extending file. A `parameters` block
+  substitutes `${name}` in any command value. A parameter must be a string,
+  number, or boolean.
+- A check compares with `value` or with `other`:
+  `{"cmd":"check","field":"capture.1.stats.mean.y","op":"gt","other":"capture.0.stats.mean.y"}`.
+  `capture.N.*`, `capture.first.*`, and `capture.last.*` name one capture.
 
 ## Commands
 
@@ -137,28 +199,58 @@ Rules:
 - `{"cmd": "face", "yaw": 0, "pitch": 0}`
 - `{"cmd": "input", "forward": 1, "right": 0, "jump": false}`
 - `{"cmd": "step", "frames": 60}`
+- `{"cmd": "settle", "until": "converged"}`: wait for the 512-sample cap; the
+  reply and `state.json` report `settle.frames` and `settle.converged`.
 - `{"cmd": "settle", "frames": 300}`
 - `{"cmd": "state"}`
+- `{"cmd": "rows"}`
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw": 0, "pitch": 0}`
+- `{"cmd": "camera", "position": [0, 2, 12], "look_at": [0, 1, 0], "fov": 75}`
 - `{"cmd": "camera", "clear": true}`
 - `{"cmd": "view", "hud": true, "debug": false, "hint": false, "perf": false}`
 - `{"cmd": "sun", "azimuth": 52.1, "elevation": 15, "diameter": 0.53}`
+- `{"cmd": "sun", "clear": true}`
+- `{"cmd": "sun", "clear": true}`
 - `{"cmd": "crates", "reset": true}`
 - `{"cmd": "crates", "clear": true}`
 - `{"cmd": "crates", "add": {"position": [0, 0.5, 6]}}`
 - `{"cmd": "crates", "add": {"origin": [0, 0.5, 6], "count": 60, "columns": 10, "spacing": [1, 0, 1]}}`
 - `{"cmd": "crates", "remove": {"index": 3}}`
+- `{"cmd": "displays", "set": [{"name": "Solo", "desktop": "1280x720", "modes": ["1280x720"]}]}`
+- `{"cmd": "displays", "clear": true}`
+- `{"cmd": "rows"}`
+- `{"cmd": "displays", "set": [{"name": "Solo", "desktop": "1280x720", "modes": ["1280x720"]}]}`
+- `{"cmd": "displays", "clear": true}`
 - `{"cmd": "debug_mode", "active": true}`
 - `{"cmd": "menu", "open": true, "item": "Type weight", "activate": true, "direction": -1}`
 - `{"cmd": "menu", "set": 900}`
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`
+- `{"cmd": "check", "field": "capture.1.stats.mean.y", "op": "gt", "other": "capture.0.stats.mean.y"}`
 - `{"cmd": "perf", "frames": 120, "warmup": 60}`
 - `{"cmd": "renderer_debug", "jitter": false, "shadow_phase": 12}`
 - `{"cmd": "record", "path": "scenarios/walk.json"}`
 - `{"cmd": "record"}`
 - `{"cmd": "replay", "path": "scenarios/walk.json"}`
 - `{"cmd": "quit"}`
+
+`camera` accepts `look_at` instead of `yaw`/`pitch`, and `fov` in degrees
+(1..170). Both angle forms together are an error, and so is a `look_at` equal to
+the position. `state.camera` reports the effective view and whether an override
+is active.
+
+`settle` also takes `{"cmd":"settle","until":"converged"}`. It renders until the
+convergence count reaches the 512 cap and reports `settle.frames` and
+`settle.converged`. It needs a renderer.
+
+`sun clear` restores the default direction and angular diameter.
+
+`displays` replaces the harness display list for the rest of the run. A display
+with no `desktop` and no modes gives the menu a zero-mode display, which blocks
+the Resolution row. `clear` restores the fallback list.
+
+`rows` returns the HUD and menu rows that the renderer would draw: `kind`,
+`label`, `value`, `blocked`, `ratio`, and `ticks`.
 
 A past capture frame is an error. A future capture frame queues. Unknown keys,
 wrong types, and out-of-range values are per-command errors; the session stays
@@ -176,7 +268,17 @@ along z; the y spacing is a constant offset. An add that would exceed the
 64-crate limit is rejected as a whole. `scenarios/perf-crates.json` adds 60
 crates in a grid and measures them.
 
-A capture names its target and format. See **Capture targets**.
+A capture names its target and format. See **Capture targets**. A region
+limits the statistics to a rectangle, a profile measures an edge or a gradient,
+a crop writes a scaled PNG, and a histogram counts the region's channels.
+
+`displays` replaces the menu's display list. Each entry has a name, an optional
+desktop size, and an optional mode list. A display with no modes blocks the
+Resolution row, so the blocked menu state is scriptable. `clear` restores the
+fallback list.
+
+`rows` replies with the HUD and menu rows: kind, label, value, blocked, ratio,
+and ticks. A check reads them as `rows.hud.N.*` and `rows.menu.N.*`.
 
 The `sun` command moves the light or resizes its disk. `azimuth` is degrees from
 `+z` toward `+x`, and `elevation` is degrees above the horizon; both describe
@@ -336,6 +438,31 @@ scenario does not change.
 | `depth` | the hardware depth buffer in [0, 1] | `stats` |
 | `scene_color` | the linear scene color before the resolve | `stats` |
 
+A stats capture accepts `"region": {"x","y","w","h"}` or `"rect": [x,y,w,h]`.
+The statistics cover the region. `"histogram": 8` adds per-channel bin counts
+for the region or the whole image. `capture.stats.region.*` and
+`capture.histogram.*` read them.
+
+A capture with `"crop": {"x","y","w","h","scale"}` writes a nearest-neighbor
+scaled PNG. `width` and `height` stay the source extent; `written_width` and
+`written_height` name the file. A crop stays out of the analysis window and the
+delta baseline, because it covers a rectangle rather than the frame.
+
+A profile capture measures one line or a mean profile:
+
+```json
+{"cmd":"capture","name":"edge","format":"profile",
+ "profile":{"axis":"y","at":1200,"from":300,"to":520,"channel":"luma"}}
+```
+
+`axis` names the direction the profile runs; `at` is the fixed coordinate on the
+other axis. `mean: true` averages the whole perpendicular span instead and
+ignores `at`. `channel` is `luma`, `x`, `y`, or `z`; values are decoded from
+sRGB to linear. `capture.profile.width` is the 10%–90% crossing width over the
+span's own minimum and maximum; `low_index`, `high_index`, and `flat` describe
+the crossing. `scenarios/edge-profile.json` uses a region, a histogram, a
+profile, and a crop on the shadow edge.
+
 Formats:
 
 - `png`: color only. 8-bit RGBA, sRGB. This is the screenshot path.
@@ -347,6 +474,15 @@ Formats:
 - `stats`: any target. Writes no file. The report holds per-channel `min`,
   `max`, and `mean`, and for `velocity` the median screen motion in texels over
   covered pixels.
+
+A stats capture accepts `"region": {"x","y","w","h"}` or `"rect": [x,y,w,h]`.
+The statistics cover the region and the report echoes it; a check reads
+`capture.stats.region.x` and the other region fields. Add `"histogram": 8` for
+per-channel bin counts in `capture.histogram.x`, `.y`, `.z`, and `.w`.
+
+A color capture accepts a `profile` block and `"format": "profile"` for an
+edge measurement, and a `crop` block to write a scaled PNG. A profile over a
+PNG capture is allowed and reported beside the PNG.
 
 `png` with an intermediate target, or `float`/`raw` with color, is a scenario
 error. Capture deltas compare color PNG captures only; another target does not
@@ -379,6 +515,11 @@ summary. The analysis is on by default. Disable it with `"analysis": false` or
   channel value, and the per-frame series.
 - `maps`: the diff and variance image paths, when `maps` is on.
 
+`analysis.bands` measures the identical-luma runs down the columns of the last
+analyzed frame: `longest_run`, `median_run`, `levels`, and `columns`. A gradient
+that is continuous in 16-bit and bands after the 8-bit resolve shows a long run.
+`scenarios/banding.json` gates the sky at `longest_run < 64`.
+
 The dominant period is the lag with the strongest autocorrelation over the
 per-pair mean series. A periodic series correlates at every multiple of its
 period, so the report keeps the smallest lag within 10% of the strongest and
@@ -391,6 +532,41 @@ captures. The diff map is the first-to-last frame difference. The variance map
 is the per-pixel variance over the window, square-rooted and scaled to 0..255.
 
 `scenarios/renderer-debug-jitter.json` writes both maps.
+
+`analysis.bands` reports the longest and median identical-luma run down the
+columns, the number of distinct levels, and the column count. A gradient that is
+continuous in the 16-bit scene colour and bands after the 8-bit write shows a
+long run. `scenarios/banding.json` gates the sky at 1280x720: the output dither
+keeps the longest run below 64 rows, and the median at most 2.
+
+### Measure an edge
+
+`scenarios/edge-profile.json` is the worked example. It puts the camera above a
+wall shadow and captures three ways:
+
+```json
+{"cmd": "capture", "name": "edge-stats", "format": "stats",
+ "region": {"x": 300, "y": 160, "w": 40, "h": 40}, "histogram": 8}
+{"cmd": "capture", "name": "edge-profile", "format": "profile",
+ "profile": {"axis": "y", "at": 320, "from": 140, "to": 220}}
+{"cmd": "capture", "name": "edge-zoom",
+ "crop": {"x": 300, "y": 160, "w": 40, "h": 20, "scale": 4}}
+```
+
+The checks gate the regional statistics, the histogram bin count, the profile
+width, and the written crop size. A check reads `capture.profile.width`,
+`capture.profile.low_index`, `capture.profile.high_index`,
+`capture.profile.flat`, and `capture.profile.values.N`.
+
+The profile decodes sRGB bytes to linear and measures the 10%-90% crossing width
+over the span's own range. `"mean": true` averages the whole perpendicular span
+instead of one line, so a full gradient can be read. `channel` is `luma` by
+default, or `x`, `y`, or `z`. `low` and `high` are optional fractions.
+
+A crop is independent of the region and the profile. It writes a nearest-neighbour
+PNG at `w*scale` by `h*scale`, keeps the source extent in `width`/`height`, and
+reports the written size in `written_width`/`written_height`. A cropped capture
+does not join the delta or analysis series.
 
 ## Cross-run diff
 
@@ -442,9 +618,19 @@ run never created a renderer, and `renderer.active` is `false`.
 | `last_reset` | the last reset reason |
 | `shadow_phase` | the sun sample phase the last frame used |
 | `atlas_weight` | the type weight the active coverage atlas holds |
+| `text_truncated_runs` | text runs cut at the 128-glyph cap |
+| `text_font_drops` | HarfBuzz fonts dropped at the 8-font cap |
+| `text_truncated_runs` | runs cut at the 128-glyph cap |
+| `text_font_drops` | fonts dropped at the 8-font shaper cap |
 
-The state also carries a `sun` object with `azimuth`, `elevation`, and
-`angular_diameter`, in degrees. The angles describe the sun in the sky, so the
+The state also carries a `camera` object: `position`, `yaw`, `pitch`, `fov` in
+degrees, and `overridden`. A `camera` command sets it; `clear` restores the
+player view. The `sun` object carries `azimuth`, `elevation`, and
+`angular_diameter`, in degrees. The `settle` object carries the last wait's
+`frames` and `converged`. The `rows` object carries the HUD and menu rows. The
+`menu` object carries `status` and `blocked` beside `open`, `selected`, and
+`item`; the status stays until the next setting change, so a check can read the
+note after the frame that drew it. The angles describe the sun in the sky, so the
 default sun reads about 52 degrees of azimuth and 60 degrees of elevation.
 
 The reset reasons are `none`, `create`, `extent`, `toggle`, `teleport`,
@@ -453,9 +639,9 @@ the sun direction or the sun angular diameter is a `scene_change`. A state
 check reads the override values as `renderer.debug.*`, for example
 `renderer.debug.sky` and `renderer.debug.ao`.
 
-The render digest is FNV-1a over the effective camera, the sun direction and
-angular diameter, every box, the jitter, the shadow phase, the applied atlas
-weight, the sky and AO flags, and the view flags. It changes when any of those
+The render digest is FNV-1a over the target extent, the effective camera, the sun
+direction and angular diameter, every box, the jitter, the shadow phase, the
+applied atlas weight, the sky and AO flags, and the view flags. It changes when any of those
 change and stays the same when they do not. It is
 separate from the simulation digest: read `render_digest` for the render inputs
 and `digest` for the simulation.
@@ -525,7 +711,8 @@ Without the flag, the session rejects the command.
 ## Performance
 
 The renderer records a perf sample every frame: the frame interval, five CPU
-phases, and five GPU pass times. The game shows it on `F4`. A scenario can show
+phases, and six GPU pass times (the TLAS build, the depth prepass, the lit
+scene, the sky, the TAA resolve, and the overlay). The game shows it on `F4`. A scenario can show
 the same panel with `{"cmd": "view", "perf": true}`.
 
 `{"cmd": "perf", "frames": N, "warmup": M, "prime": S, "name": "label"}` runs
@@ -556,8 +743,10 @@ What the numbers mean:
 
 - The frame interval is wall clock. A capture outside a perf run has no interval.
 - The GPU pass times come from Vulkan timestamps. They belong to the last
-  completed frame, two frames behind the recording frame. The depth prepass and
-  the lit scene pass are separate passes; the sky runs inside the scene pass.
+  completed frame, two frames behind the recording frame. The depth prepass, the
+  lit scene, and the sky are separate passes; both sky timestamps are written
+  even when the sky is off, so that pass reads near zero and the set is always
+  complete.
 - A device without timestamp support, a failed query pool, or a run without a
   device reports the CPU numbers and leaves the GPU fields empty.
 - Perf data never enters `State`, the state digest, or the pixel hash. A perf
@@ -593,6 +782,10 @@ The ref must understand the scenario's commands. `scenarios/perf-crates.json`
 needs a ref with the `crates` command; a base without it exits non-zero, which
 is the intended failure.
 
+The wrapper `./bin/harbagsa-agent ab --base REF ...` translates `--base` to
+`--ref` and passes the rest through. Use it when one command is easier to keep
+in a note.
+
 The tool builds the ref in a detached worktree under `build/ab/base`, builds the
 current tree in place, and copies both agents to a temporary directory. It runs
 each pair in alternating order, parses each `report.json`, and writes
@@ -623,6 +816,18 @@ windowed FIFO run measures how often a frame reaches the screen. Compare the
 same mode on both sides, and do not use the offscreen ratio to claim a visible
 frame-rate change.
 
+## Benchmark two builds with the agent
+
+The `ab` subcommand is the short form of the shell recipe below:
+
+```sh
+./bin/harbagsa-agent ab --base origin/main --scenario scenarios/perf.json --out runs/ab
+```
+
+It translates `--base` to `tools/ab.sh --ref` and passes `--scenario`, `--size`,
+`--runs`, `--prime`, and `--out` through. It writes the same `summary.json` and
+`summary.md` and exits non-zero when a side fails or a perf result is missing.
+
 ## Determinism
 
 - Fixed 60 Hz. Never sleep or use a wall-clock delta.
@@ -647,6 +852,25 @@ frame-rate change.
 - `src/harness/capture.odin`: the capture result, target, format, and file write.
 - `src/harness/capture_stats.odin`: the capture statistics and pixel hash.
 - `src/harness/capture_command.odin`: the capture target/format parser.
+- `src/harness/capture_region.odin`: the region, crop, and histogram.
+- `src/harness/capture_profile.odin`: the edge profile and its 10%-90% width.
+- `src/harness/analysis_bands.odin`: the identical-run band metric.
+- `src/harness/scenario_inherit.odin`: `extends` and `parameters`.
+- `src/harness/session_rows.odin`: the HUD and menu row dump.
+- `src/harness/session_displays.odin`: the scripted display list.
+- `src/harness/ab_command.odin`: the `ab` wrapper over `tools/ab.sh`.
+- `src/harness/capture_region.odin`: the region, crop, and histogram.
+- `src/harness/capture_profile.odin`: the profile build and crossing width.
+- `src/harness/analysis_bands.odin`: the band metric.
+- `src/harness/scenario_inherit.odin`: `extends` and `parameters`.
+- `src/harness/run_paths.odin`: the tag-aware run directory.
+- `src/harness/session_settle.odin`: the convergence wait.
+- `src/harness/session_displays.odin`: the scripted display list.
+- `src/harness/session_rows.odin`: the HUD and menu row dump.
+- `src/harness/state_field_leaves.odin`: the leaf field resolvers.
+- `src/harness/status_fields.odin`: the top-level state field table.
+- `src/harness/cli_override.odin`: the CLI renderer override.
+- `src/harness/ab_command.odin`: the `ab` wrapper over `tools/ab.sh`.
 - `src/harness/perf_run.odin`: the perf run and its prime loop.
 - `src/harness/perf_report.odin`: the perf report types and fill.
 - `src/harness/perf_command.odin`: the perf command parser.
@@ -728,11 +952,27 @@ tools/make.sh test
 tools/make.sh build
 ```
 
+`make smoke` runs the smoke scenario with the normal agent and needs no
+validation layer. `make shot SCENARIO=...` runs one scenario and prints the
+capture paths. `make ui` runs the four UI scenarios into `runs/ui-*`.
+
 `make validate` builds the agent with validation enabled and runs
 `scenarios/smoke.json` offscreen, then with `--present` when a display is
-available. `make validate-offscreen` is the headless target: it runs `smoke`,
+available. Both validation targets accept `SCENARIO=...` (one name, one path,
+or a list) and `AGENT_FLAGS=...`; each scenario still gets its own output
+directory. `make validate-offscreen` is the headless target: it runs `smoke`,
 `type-weight`, `settings-menu`, `ui`, `shadow-angle`, and `perf-crates` offscreen,
-each into its own output directory, and stops on the first failure.
+each into its own output directory, and stops on the first failure. Both
+validation targets accept `SCENARIO=...` (one path, one stem, or a list) and
+`AGENT_FLAGS=...`:
+
+```sh
+make validate-offscreen SCENARIO=renderer-debug AGENT_FLAGS=--debug-renderer
+```
+
+`make shot SCENARIO=scenarios/ui.json` builds, runs, and prints the capture
+paths. `make ui` runs the four UI scenarios into `runs/ui-*`. `make smoke` is the
+short end-to-end gate and needs no validation layers.
 `make validate-demo` runs the game with validation enabled.
 
 ## Keep the harness current
@@ -742,8 +982,8 @@ harness in the same change. Do not leave the automation behind the game.
 
 - New simulation input: add it to `game.Input_Snapshot`, the `input` command,
   and `tests/harness`.
-- New state field: add it to `State`, `state_build`, `state_field`, the report
-  schema, and the docs. Add it to `state_digest` only when it changes the
+- New state field: add it to `State`, `state_build`, the table in
+  `state_fields.odin` and its leaf resolver, the report schema, and the docs. Add it to `state_digest` only when it changes the
   simulation.
 - New setting or menu row: add it to `Settings` and `DEFAULT_SETTINGS`, then
   `Menu_Item`, `MENU_ITEM_COUNT`, `MENU_ITEM_NAMES`, `menu_view`, and
@@ -766,14 +1006,23 @@ harness in the same change. Do not leave the automation behind the game.
   `read_capture_target`, and `capture_values`. Add it to the capture parser,
   the README, this page, and a scenario. An unread target is not a tool.
 - New analysis field: add it to the `Analysis_*` types, `analysis_field`, the
-  analysis report, the docs, and a unit test. A check must read the same value
+  analysis report, the docs, and a unit test. `analysis_bands.odin` owns the
+  flat-run metric.
+- New capture block: add it to `Capture_Command`, `Capture_Request`,
+  `Pending_Capture`, the backend, `capture_field`, the docs, and a synthetic
+  image test. A block that writes no file must still be readable by a check. A check must read the same value
   the file records.
 - New renderer debug override: add it to `Renderer_Debug`,
   `set_renderer_debug`, the camera uniform or the resolve push constants and
   shader, `renderer_debug_fields`, the renderer state, the render digest, the
   docs, and the gate test. Do not make it reachable without the gate.
 - New scenario key or run option: add it to `scenario_parse` and its allowed
-  key set, the CLI parser, the README, this page, and a parser test.
+  key set, the CLI parser, the README, this page, and a parser test. A new
+  top-level key also joins `scenario_build` and the inheritance merge.
+- New state object: one row in `STATE_FIELDS` in `src/harness/state_fields.odin`
+  and the sub-resolver case. A flat field is one case; an indexed object is one
+  resolver.
+- New check namespace: add it to `check_field` and to the resolver table.
 - Render state is not simulation state: render fields do not go into
   `state_digest`. Put pipeline state in the render digest and `Renderer_State`.
   A scene input such as the sun stays at the top level and feeds the render

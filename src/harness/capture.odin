@@ -19,6 +19,7 @@ Capture_Format :: enum {
 	Float,
 	Raw,
 	Stats,
+	Profile,
 }
 
 capture_format_name :: proc(format: Capture_Format) -> string {
@@ -31,6 +32,8 @@ capture_format_name :: proc(format: Capture_Format) -> string {
 		return "raw"
 	case .Stats:
 		return "stats"
+	case .Profile:
+		return "profile"
 	}
 	return "png"
 }
@@ -45,6 +48,8 @@ capture_format_parse :: proc(name: string) -> (format: Capture_Format, ok: bool)
 		return .Raw, true
 	case "stats":
 		return .Stats, true
+	case "profile":
+		return .Profile, true
 	}
 	return .Png, false
 }
@@ -57,18 +62,22 @@ capture_format_extension :: proc(format: Capture_Format) -> string {
 		return ".f32"
 	case .Raw:
 		return ".bin"
-	case .Stats:
+	case .Stats, .Profile:
 		return ""
 	}
 	return ""
 }
 
 Capture_Request :: struct {
-	name:    string,
-	alpha:   f32,
-	target:  Capture_Target,
-	format:  Capture_Format,
-	enabled: bool,
+	name:      string,
+	alpha:     f32,
+	target:    Capture_Target,
+	format:    Capture_Format,
+	enabled:   bool,
+	region:    Maybe(Capture_Region),
+	profile:   Maybe(Capture_Profile),
+	crop:      Maybe(Capture_Crop),
+	histogram: Maybe(int),
 }
 
 Capture_Result :: struct {
@@ -81,7 +90,14 @@ Capture_Result :: struct {
 	format:        string         `json:"format"`,
 	target_format: string         `json:"target_format"`,
 	hash:          string         `json:"hash,omitempty"`,
+	render_digest: string         `json:"render_digest,omitempty"`,
 	stats:         Maybe(Capture_Stats) `json:"stats,omitempty"`,
+	region:        Maybe(Capture_Region) `json:"region,omitempty"`,
+	profile:       Maybe(Capture_Profile_Result) `json:"profile,omitempty"`,
+	crop:          Maybe(Capture_Crop_Result) `json:"crop,omitempty"`,
+	histogram:     Maybe(Capture_Histogram_Result) `json:"histogram,omitempty"`,
+	written_width:  u32 `json:"written_width,omitempty"`,
+	written_height: u32 `json:"written_height,omitempty"`,
 	delta_mean:    f32            `json:"delta_mean"`,
 	delta_max:     u8             `json:"delta_max"`,
 	delta_over_16: int            `json:"delta_over_16"`,
@@ -103,6 +119,10 @@ Capture_Summary :: struct {
 	last_target:            string,
 	last_format:            string,
 	last_stats:             Maybe(Capture_Stats),
+	last_profile:           Maybe(Capture_Profile_Result),
+	last_region:            Maybe(Capture_Region),
+	last_crop:              Maybe(Capture_Crop_Result),
+	last_histogram:         Maybe(Capture_Histogram_Result),
 }
 
 capture_summary :: proc(captures: []Capture_Result) -> Capture_Summary {
@@ -124,6 +144,10 @@ capture_summary :: proc(captures: []Capture_Result) -> Capture_Summary {
 		summary.last_target = last.target
 		summary.last_format = last.format
 		summary.last_stats = last.stats
+		summary.last_profile = last.profile
+		summary.last_region = last.region
+		summary.last_crop = last.crop
+		summary.last_histogram = last.histogram
 	}
 	return summary
 }
@@ -241,6 +265,15 @@ capture_result_destroy :: proc(result: ^Capture_Result, allocator: mem.Allocator
 	}
 	if result.hash != "" {
 		delete(result.hash, allocator)
+	}
+	if result.render_digest != "" {
+		delete(result.render_digest, allocator)
+	}
+	if profile, has_profile := result.profile.?; has_profile {
+		capture_profile_destroy(&profile, allocator)
+	}
+	if histogram, has_histogram := result.histogram.?; has_histogram {
+		capture_histogram_destroy(&histogram, allocator)
 	}
 	result^ = {}
 }

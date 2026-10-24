@@ -11,10 +11,17 @@ import "src:renderer"
 // horizon. Diameter is the angle the sun disk subtends.
 @(private)
 parse_sun :: proc(object: json.Object) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "azimuth", "elevation", "diameter"}); unknown {
+	if key, unknown := json_unknown_key(object, {"cmd", "azimuth", "elevation", "diameter", "clear"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 	command := Command{kind = .Sun}
+	if value, has := json_get(object, "clear"); has {
+		clear, ok := json_boolean(value)
+		if !ok {
+			return {}, format_error("%s", "'clear' must be a boolean")
+		}
+		command.sun.clear = clear
+	}
 	if value, has := json_get(object, "azimuth"); has {
 		azimuth, ok := json_number(value)
 		if !ok {
@@ -40,8 +47,14 @@ parse_sun :: proc(object: json.Object) -> (Command, string) {
 		command.sun.diameter = f32(diameter)
 		command.sun.has_diameter = true
 	}
+	if command.sun.clear {
+		if command.sun.has_azimuth || command.sun.has_elevation || command.sun.has_diameter {
+			return {}, format_error("%s", "sun 'clear' cannot be combined with another field")
+		}
+		return command, ""
+	}
 	if !command.sun.has_azimuth && !command.sun.has_elevation && !command.sun.has_diameter {
-		return {}, format_error("%s", "sun needs 'azimuth', 'elevation' or 'diameter'")
+		return {}, format_error("%s", "sun needs 'azimuth', 'elevation', 'diameter', or 'clear'")
 	}
 	return command, ""
 }
