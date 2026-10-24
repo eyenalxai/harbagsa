@@ -64,6 +64,9 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 	case .Step:
 		command_error = session_step(session, command.step.frames)
 		owns_error = true
+	case .Settle:
+		command_error = session_settle(session, command.settle.frames)
+		owns_error = true
 	case .State:
 		reply.state = new(State, session.allocator)
 		reply.state^ = session_state(session)
