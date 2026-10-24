@@ -54,6 +54,9 @@ debug_placement_arm :: proc(dm: ^Debug_Mode, sim: ^Simulation, prefab_id: Prefab
 		return false
 	}
 	debug_sun_cancel(dm)
+	// The palette is the one place that holds the next placement's body and
+	// light, so arming by prefab also selects it there.
+	_ = debug_palette_select(dm, int(prefab_id))
 	dm.placement.armed = true
 	dm.placement.prefab = prefab_id
 	debug_placement_refresh(dm, sim)
@@ -112,9 +115,16 @@ debug_ghost_box :: proc(dm: ^Debug_Mode) -> (geometry.Box, bool) {
 	return {
 		center = ghost.center,
 		half_extents = ghost.half_extents,
-		color = GHOST_COLOR,
+		color = debug_ghost_color(dm),
 		rotation = {ghost.rotation.x, ghost.rotation.y, ghost.rotation.z, ghost.rotation.w},
 	}, true
+}
+
+debug_ghost_color :: proc(dm: ^Debug_Mode) -> [4]f32 {
+	if prefab_has_light(dm.placement.prefab) {
+		return light_color4(dm.palette.light.color)
+	}
+	return GHOST_COLOR
 }
 
 @(private)
@@ -156,6 +166,7 @@ debug_placement_place :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Object_Id {
 			body_mode = dm.palette.body_mode,
 			center = ghost.center,
 			yaw = dm.placement.yaw_degrees * math.PI / 180.0,
+			light = dm.palette.light,
 		},
 	)
 }

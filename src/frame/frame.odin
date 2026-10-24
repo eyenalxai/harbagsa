@@ -19,6 +19,7 @@ Options :: struct {
 
 Scratch :: struct {
 	boxes:       [game.MAX_SCENE_BOXES]geometry.Box,
+	lights:      [game.MAX_ACTIVE_LIGHTS]renderer.Light,
 	debug_lines: game.Debug_Lines,
 }
 
@@ -45,6 +46,19 @@ build :: proc(
 	scene.sun_direction = game.debug_mode_sun_direction(debug)
 	scene.sun_angular_diameter = debug.sun_angular_diameter
 
+	snapshot := game.simulation_snapshot(sim)
+	scene.camera = snapshot_camera(snapshot, options.alpha)
+	if camera_override != nil {
+		scene.camera = camera_override^
+	} else if debug.active {
+		scene.camera = renderer.Camera {
+			position = debug.camera.position,
+			yaw      = debug.camera.yaw,
+			pitch    = debug.camera.pitch,
+			fov_x    = PLAYER_FOV_X,
+		}
+	}
+
 	box_count := 0
 	for box in game.arena_static_boxes() {
 		if !push_scene_box(scratch, &box_count, box) {
@@ -59,6 +73,17 @@ build :: proc(
 	}
 	scene.boxes = scratch.boxes[:box_count]
 
+	active := game.simulation_collect_lights(sim, scene.camera.position)
+	for light, index in active.lights[:active.count] {
+		scratch.lights[index] = {
+			position  = light.position,
+			intensity = light.intensity,
+			color     = light.color,
+			range     = light.range,
+		}
+	}
+	scene.lights = scratch.lights[:active.count]
+
 	scratch.debug_lines.count = 0
 	if options.debug_view {
 		game.collect_world_lines(sim, &scratch.debug_lines)
@@ -67,19 +92,6 @@ build :: proc(
 		game.collect_editor_lines(debug, sim, &scratch.debug_lines)
 	}
 	scene.debug_lines = scratch.debug_lines.lines[:scratch.debug_lines.count]
-
-	snapshot := game.simulation_snapshot(sim)
-	scene.camera = snapshot_camera(snapshot, options.alpha)
-	if camera_override != nil {
-		scene.camera = camera_override^
-	} else if debug.active {
-		scene.camera = renderer.Camera {
-			position = debug.camera.position,
-			yaw      = debug.camera.yaw,
-			pitch    = debug.camera.pitch,
-			fov_x    = PLAYER_FOV_X,
-		}
-	}
 
 	if options.hud || hud.menu.open {
 		game.hud_state_update(hud, sim, debug, snapshot, options.captured)

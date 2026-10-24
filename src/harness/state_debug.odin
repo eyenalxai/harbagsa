@@ -14,6 +14,7 @@ Debug_State :: struct {
 	sun:         Sun_State        `json:"sun"`,
 	inspector:   Inspector_State  `json:"inspector"`,
 	history:     History_State    `json:"history"`,
+	lights:      Light_Budget_State `json:"lights"`,
 }
 
 Palette_State :: struct {
@@ -26,9 +27,10 @@ Placement_State :: struct {
 	armed:    bool      `json:"armed"`,
 	prefab:   string    `json:"prefab"`,
 	position: Vec_State `json:"position"`,
-	height:   f32       `json:"height"`,
-	yaw:      f32       `json:"yaw"`,
-	snap:     bool      `json:"snap"`,
+	height:   f32         `json:"height"`,
+	yaw:      f32         `json:"yaw"`,
+	snap:     bool        `json:"snap"`,
+	light:    Light_State `json:"light"`,
 }
 
 Sun_State :: struct {
@@ -44,9 +46,10 @@ Inspector_State :: struct {
 	prefab:   string    `json:"prefab"`,
 	body:     string    `json:"body"`,
 	size:     Vec_State `json:"size"`,
-	position: Vec_State `json:"position"`,
-	yaw:      f32       `json:"yaw"`,
-	snap:     bool      `json:"snap"`,
+	position: Vec_State   `json:"position"`,
+	yaw:      f32         `json:"yaw"`,
+	snap:     bool        `json:"snap"`,
+	light:    Light_State `json:"light"`,
 }
 
 History_State :: struct {
@@ -72,6 +75,7 @@ debug_state_build :: proc(debug: ^game.Debug_Mode, sim: ^game.Simulation) -> Deb
 			height = debug.placement.height,
 			yaw = debug.placement.yaw_degrees,
 			snap = debug.placement.snap,
+			light = placement_light_state(debug),
 		},
 		sun = {
 			active = debug.sun.active,
@@ -83,9 +87,28 @@ debug_state_build :: proc(debug: ^game.Debug_Mode, sim: ^game.Simulation) -> Deb
 			depth = game.debug_history_depth(debug),
 			redo = game.debug_history_redo_depth(debug),
 		},
+		lights = light_budget_state(sim),
 	}
 	state.inspector = inspector_state(debug, sim)
 	return state
+}
+
+// The next placement light belongs to the prefab the placement tool will use:
+// the armed prefab, or the palette selection while the tool is idle.
+@(private)
+placement_light_state :: proc(debug: ^game.Debug_Mode) -> Light_State {
+	prefab := debug.placement.prefab
+	if !debug.placement.armed {
+		prefab = game.palette_selected(debug.palette)
+	}
+	if !game.prefab_has_light(prefab) {
+		return {}
+	}
+	settings := debug.palette.light
+	if !settings.active {
+		settings = game.prefab_light(prefab)
+	}
+	return light_state(settings)
 }
 
 @(private)
@@ -107,6 +130,7 @@ inspector_state :: proc(debug: ^game.Debug_Mode, sim: ^game.Simulation) -> Inspe
 	state.size = vec_state(box.half_extents * 2.0)
 	state.position = vec_state(box.center)
 	state.yaw = game.simulation_object_yaw(sim, id) * 180.0 / math.PI
+	state.light = light_state(object.light)
 	return state
 }
 

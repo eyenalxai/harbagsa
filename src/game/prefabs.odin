@@ -18,12 +18,22 @@ Prefab_Id :: enum {
 	Ramp,
 	Pillar,
 	Wall,
+	Lamp,
+	Light_Panel,
+	Beacon,
 }
 
 INITIAL_CRATE_COUNT :: 3
 MAX_PLACED_OBJECTS :: 128
 OBJECT_DENSITY :: 20.0
 RAMP_BASE_PITCH :: 20.0 * b3.DEG_TO_RAD
+
+LIGHT_LAMP_INTENSITY :: 1.5
+LIGHT_PANEL_INTENSITY :: 1.2
+LIGHT_BEACON_INTENSITY :: 2.0
+LIGHT_LAMP_RANGE :: 8.0
+LIGHT_PANEL_RANGE :: 10.0
+LIGHT_BEACON_RANGE :: 5.0
 
 INITIAL_CRATE_POSITIONS :: [INITIAL_CRATE_COUNT][3]f32 {
 	{0, 0.5, 8},
@@ -49,6 +59,7 @@ Prefab :: struct {
 	body_mode:    Body_Mode,
 	base_pitch:   f32,
 	density:      f32,
+	light:        Light_Settings,
 }
 
 PREFABS := [Prefab_Id]Prefab {
@@ -117,12 +128,73 @@ PREFABS := [Prefab_Id]Prefab {
 		body_mode = .Static,
 		density = OBJECT_DENSITY,
 	},
+	.Lamp = {
+		name = "Lamp",
+		short_name = "Lamp",
+		half_extents = {0.25, 0.25, 0.25},
+		body_mode = .Static,
+		density = OBJECT_DENSITY,
+		light = {
+			active = true,
+			color = .Warm,
+			intensity = LIGHT_LAMP_INTENSITY,
+			range = LIGHT_LAMP_RANGE,
+		},
+	},
+	.Light_Panel = {
+		name = "Light panel",
+		short_name = "Panel",
+		half_extents = {1.0, 0.05, 0.25},
+		body_mode = .Static,
+		density = OBJECT_DENSITY,
+		light = {
+			active = true,
+			color = .Cool,
+			intensity = LIGHT_PANEL_INTENSITY,
+			range = LIGHT_PANEL_RANGE,
+		},
+	},
+	.Beacon = {
+		name = "Beacon",
+		short_name = "Beacon",
+		half_extents = {0.15, 0.15, 0.15},
+		body_mode = .Static,
+		density = OBJECT_DENSITY,
+		light = {
+			active = true,
+			color = .Red,
+			intensity = LIGHT_BEACON_INTENSITY,
+			range = LIGHT_BEACON_RANGE,
+		},
+	},
 }
 
 PREFAB_COUNT :: len(PREFABS)
 
 prefab :: proc(id: Prefab_Id) -> Prefab {
 	return PREFABS[id]
+}
+
+prefab_color :: proc(id: Prefab_Id) -> [4]f32 {
+	info := prefab(id)
+	if info.light.active {
+		return light_color4(info.light.color)
+	}
+	return info.color
+}
+
+// The catalog stores the raw light values; the emissive strength follows the
+// intensity so a tuned lamp glows as brightly as it lights.
+prefab_light :: proc(id: Prefab_Id) -> Light_Settings {
+	settings := prefab(id).light
+	if settings.active {
+		settings.emissive = light_emissive(settings.intensity)
+	}
+	return settings
+}
+
+prefab_has_light :: proc(id: Prefab_Id) -> bool {
+	return prefab(id).light.active
 }
 
 prefab_name :: proc(id: Prefab_Id) -> string {

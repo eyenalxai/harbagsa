@@ -45,6 +45,11 @@ objects_field :: proc(objects: []Object_State, path: string) -> (Check_Value, st
 		return {kind = .Number, number = f64(object.scale)}, ""
 	case "spawn_age":
 		return {kind = .Number, number = f64(object.spawn_age)}, ""
+	case "light":
+		if !has_axis {
+			return {}, "object light needs a field"
+		}
+		return light_field(object.light, axis)
 	}
 	return {}, fmt.aprintf("unknown object field %q", tail, allocator = context.allocator)
 }

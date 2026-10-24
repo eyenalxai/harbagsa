@@ -53,7 +53,12 @@ simulation_object_visual_box :: proc(sim: ^Simulation, id: Object_Id) -> geometr
 
 // Undo and redo restore snapshots at full size; only fresh placements pop.
 simulation_restore_object :: proc(sim: ^Simulation, spawn: Object_Spawn) -> Object_Id {
-	return create_object(sim, spawn, prefab(spawn.prefab).color, true)
+	light := spawn_light(spawn)
+	color := prefab_color(spawn.prefab)
+	if light.active {
+		color = light_color4(light.color)
+	}
+	return create_object(sim, spawn, color, light, true)
 }
 
 @(private)

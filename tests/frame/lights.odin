@@ -33,6 +33,33 @@ scene_lights_reach_the_frame_view :: proc(t: ^testing.T) {
 }
 
 @(test)
+frame_keeps_eight_nearest_lamps_and_the_rest_emissive :: proc(t: ^testing.T) {
+	sim, debug, hud, scratch := create_state(t)
+	defer game.simulation_destroy(&sim)
+	positions := []f32{1, -1, 2, -2, 3, -3, 4, -4, 5, 6}
+	for x in positions {
+		_ = game.simulation_create_object(
+			&sim,
+			{prefab = .Lamp, body_mode = .Static, center = {x, 1, 0}, yaw = 0},
+		)
+	}
+
+	camera := renderer.Camera{position = {0, 1, 0}, fov_x = frame.PLAYER_FOV_X}
+	scene := frame.build(&sim, &debug, {}, &camera, &hud, &scratch)
+	testing.expect_value(t, len(scene.lights), game.MAX_ACTIVE_LIGHTS)
+	expected := []f32{1, -1, 2, -2, 3, -3, 4, -4}
+	for light, index in scene.lights {
+		testing.expect_value(t, light.position.x, expected[index])
+	}
+
+	arena_count := len(game.arena_static_boxes())
+	ninth := scene.boxes[arena_count + 8]
+	tenth := scene.boxes[arena_count + 9]
+	testing.expect(t, ninth.emissive > 0, "the ninth lamp stopped glowing")
+	testing.expect(t, tenth.emissive > 0, "the tenth lamp stopped glowing")
+}
+
+@(test)
 scene_box_emissive_survives_the_frame :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
 	defer game.simulation_destroy(&sim)

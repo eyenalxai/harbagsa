@@ -19,6 +19,8 @@ PALETTE_HINTS := [5]ui.Hint_Cell {
 	{keys = "Esc", action = "close"},
 }
 
+PALETTE_LIGHT_HINT :: ui.Hint_Cell{keys = "C [ ] , .", action = "light"}
+
 debug_palette_view :: proc(sim: ^Simulation, debug: ^Debug_Mode) -> ui.Palette {
 	palette: ui.Palette
 	palette.open = debug.active && debug.palette.open
@@ -39,17 +41,26 @@ debug_palette_view :: proc(sim: ^Simulation, debug: ^Debug_Mode) -> ui.Palette {
 		if index < len(PALETTE_KEYS) {
 			key = PALETTE_KEYS[index]
 		}
-		palette.items[index] = {
+		item := ui.Palette_Item {
 			name = info.name,
 			short_name = info.short_name,
 			half_extents = info.half_extents,
-			color = info.color,
+			color = prefab_color(id),
 			base_pitch = info.base_pitch,
 			body = body_mode_name(info.body_mode),
 			key = key,
+			emissive = info.light.active,
 		}
+		if info.light.active {
+			item.light_length = write_light_line(
+				item.light_line[:],
+				prefab_light(id),
+			)
+		}
+		palette.items[index] = item
 	}
 	palette.item_count = count
+	palette_light_preview(&palette, debug, count)
 
 	if palette.selected >= 0 && palette.selected < count {
 		info := PREFABS[Prefab_Id(palette.selected)]
@@ -70,9 +81,43 @@ debug_palette_view :: proc(sim: ^Simulation, debug: ^Debug_Mode) -> ui.Palette {
 	)
 	palette.count_length = len(count_text)
 
+	hint_count := len(PALETTE_HINTS)
 	for hint, index in PALETTE_HINTS {
 		palette.hints[index] = hint
 	}
-	palette.hint_count = len(PALETTE_HINTS)
+	if palette.selected >= 0 && prefab_has_light(palette_selected(debug.palette)) {
+		palette.hints[hint_count] = PALETTE_LIGHT_HINT
+		hint_count += 1
+	}
+	palette.hint_count = hint_count
 	return palette
+}
+
+// The preview wants the tuned next placement, not the catalog default, so the
+// selected card carries the colour the ghost and the next placement will use.
+@(private)
+palette_light_preview :: proc(palette: ^ui.Palette, debug: ^Debug_Mode, count: int) {
+	if palette.selected < 0 || palette.selected >= count {
+		return
+	}
+	id := palette_selected(debug.palette)
+	if !prefab_has_light(id) {
+		return
+	}
+	light := palette_light(debug)
+	item := &palette.items[palette.selected]
+	item.color = light_color4(light.color)
+	item.light_length = write_light_line(item.light_line[:], light)
+}
+
+@(private)
+write_light_line :: proc(buffer: []u8, light: Light_Settings) -> int {
+	text := fmt.bprintf(
+		buffer,
+		"%s · %.1f · %.0f m",
+		light_color_name(light.color),
+		light.intensity,
+		light.range,
+	)
+	return len(text)
 }

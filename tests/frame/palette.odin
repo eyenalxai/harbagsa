@@ -29,15 +29,11 @@ palette_fixture :: proc(filled: int) -> ui.Palette {
 		color := [4]f32{0.30, 0.60, 0.90, 1.0}
 		half_extents := [3]f32{0.5, 0.5, 0.5}
 		pitch: f32
-		light_line := ""
 		if index == 5 {
 			half_extents = {1.0, 0.25, 1.5}
 			pitch = game.RAMP_BASE_PITCH
 		}
-		if index == 7 {
-			light_line = "warm · 8 m"
-		}
-		palette.items[index] = {
+		item := ui.Palette_Item {
 			name = "Prefab",
 			short_name = "Short",
 			half_extents = half_extents,
@@ -45,8 +41,12 @@ palette_fixture :: proc(filled: int) -> ui.Palette {
 			base_pitch = pitch,
 			body = index < 3 ? "dynamic" : "static",
 			key = index < 9 ? "1" : "",
-			light_line = light_line,
 		}
+		if index == 7 {
+			item.light_length = write_palette_text(item.light_line[:], "warm · 1.5 · 8 m")
+			item.emissive = true
+		}
+		palette.items[index] = item
 	}
 	for hint, index in PALETTE_TEST_HINTS {
 		palette.hints[index] = hint

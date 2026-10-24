@@ -2,6 +2,7 @@
 #+vet !unused-procedures // @(test) procs are called by the test runner, not by name
 package frame_test
 
+import "core:strings"
 import "core:testing"
 
 import "src:game"
@@ -68,4 +69,49 @@ debug_inspector_width_survives_every_selection :: proc(t: ^testing.T) {
 	game.debug_placement_set_snap(&debug, true)
 	actual, _ = inspector_width(t, &sim, &debug, &hud, &atlas, theme)
 	testing.expectf(t, actual == expected, "the snap row changed the width to %v", actual)
+}
+
+@(test)
+debug_inspector_shows_the_lamp_light_and_budget :: proc(t: ^testing.T) {
+	sim, debug, hud, _ := create_state(t)
+	defer game.simulation_destroy(&sim)
+	defer game.debug_mode_destroy(&debug)
+	debug.active = true
+
+	id := game.simulation_create_object(
+		&sim,
+		{prefab = .Lamp, body_mode = .Static, center = {2, 1, 6}, yaw = 0},
+	)
+	testing.expect(t, game.debug_select_object(&debug, &sim, id), "select failed")
+	snapshot := game.simulation_snapshot(&sim)
+	game.hud_state_update(&hud, &sim, &debug, snapshot, true)
+	rows := hud.view.rows
+	testing.expect(
+		t,
+		strings.contains(rows[game.HUD_INSPECTOR_ROW_COUNT - 2].value, "warm"),
+		"the light row is missing",
+	)
+	testing.expect(
+		t,
+		strings.contains(rows[game.HUD_INSPECTOR_ROW_COUNT - 2].value, "1.5"),
+		"the intensity is missing",
+	)
+	testing.expect(
+		t,
+		strings.contains(rows[game.HUD_INSPECTOR_ROW_COUNT - 1].value, "1 active"),
+		"the active light count is missing",
+	)
+	testing.expect(
+		t,
+		strings.contains(rows[game.HUD_INSPECTOR_ROW_COUNT - 1].value, "1 lamps"),
+		"the lamp count is missing",
+	)
+
+	testing.expect(t, game.debug_placement_arm(&debug, &sim, .Beacon), "arm failed")
+	game.hud_state_update(&hud, &sim, &debug, snapshot, true)
+	testing.expect(
+		t,
+		strings.contains(hud.view.rows[game.HUD_PLACEMENT_ROW_COUNT - 1].value, "red"),
+		"the placement light row is missing",
+	)
 }

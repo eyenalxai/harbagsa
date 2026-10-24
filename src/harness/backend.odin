@@ -201,7 +201,7 @@ backend_render :: proc(
 		options,
 		camera_override,
 		&session.hud,
-		&session.scratch,
+		session.scratch,
 	)
 	perf.mark(&session.perf, .Build)
 	if request.enabled {

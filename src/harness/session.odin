@@ -22,7 +22,7 @@ Session :: struct {
 	sim:      game.Simulation,
 	debug:    game.Debug_Mode,
 	hud:      game.HUD_State,
-	scratch:  frame.Scratch,
+	scratch:  ^frame.Scratch,
 	input:    game.Input_Snapshot,
 	view:     View,
 	alpha:    f32,
@@ -82,6 +82,9 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 		analysis_config = analysis_config_default(),
 	}
 	session.hud.menu.displays = display.fallback_list()
+	// The scratch holds the frame's debug lines, so it is too large for a local
+	// Session on the stack.
+	session.scratch = new(frame.Scratch, allocator)
 	session.sim = game.simulation_create()
 	if !game.simulation_is_valid(&session.sim) {
 		return {}, "simulation init failed"
@@ -138,6 +141,9 @@ session_destroy :: proc(session: ^Session) {
 	}
 	delete(session.traces)
 	delete(session.trace_samples)
+	if session.scratch != nil {
+		free(session.scratch, session.allocator)
+	}
 	session^ = {}
 }
 

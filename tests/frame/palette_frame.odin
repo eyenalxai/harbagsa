@@ -46,6 +46,43 @@ frame_fills_the_palette_from_the_prefab_catalog :: proc(t: ^testing.T) {
 }
 
 @(test)
+frame_fills_the_lamp_light_line_and_emissive_thumbnail :: proc(t: ^testing.T) {
+	sim, debug, hud, scratch := create_state(t)
+	defer game.simulation_destroy(&sim)
+	debug.active = true
+	game.debug_palette_open(&debug)
+	lamp_index := int(game.Prefab_Id.Lamp)
+	testing.expect(t, game.debug_palette_select(&debug, lamp_index), "lamp select failed")
+
+	scene := frame.build(
+		&sim,
+		&debug,
+		{alpha = 1.0, captured = false, hud = true},
+		nil,
+		&hud,
+		&scratch,
+	)
+	item := scene.hud.palette.items[lamp_index]
+	testing.expect(t, item.emissive, "the lamp card is not emissive")
+	testing.expect_value(t, string(item.light_line[:item.light_length]), "warm · 1.5 · 8 m")
+	testing.expect_value(t, scene.hud.palette.hint_count, len(game.PALETTE_HINTS) + 1)
+
+	game.debug_light_change(&debug, &sim, .Color)
+	game.debug_light_change(&debug, &sim, .Intensity_Up)
+	game.debug_light_change(&debug, &sim, .Range_Up)
+	scene = frame.build(
+		&sim,
+		&debug,
+		{alpha = 1.0, captured = false, hud = true},
+		nil,
+		&hud,
+		&scratch,
+	)
+	item = scene.hud.palette.items[lamp_index]
+	testing.expect_value(t, string(item.light_line[:item.light_length]), "cool · 1.7 · 9 m")
+}
+
+@(test)
 palette_needs_debug_mode_and_yields_to_the_menu :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
 	defer game.simulation_destroy(&sim)

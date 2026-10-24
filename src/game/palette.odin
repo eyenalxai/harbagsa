@@ -6,6 +6,7 @@ Palette :: struct {
 	open:      bool,
 	selected:  int,
 	body_mode: Body_Mode,
+	light:     Light_Settings,
 }
 
 palette_selected :: proc(palette: Palette) -> Prefab_Id {
@@ -24,12 +25,18 @@ palette_select :: proc(palette: ^Palette, index: int) -> bool {
 	if index < 0 || index >= PREFAB_COUNT {
 		return false
 	}
-	// A repeat selection keeps a flipped body; a new prefab restores its default.
+	// A repeat selection keeps the tuned body and light; a new prefab restores its
+	// defaults.
 	if index != palette.selected {
 		palette.selected = index
 		palette.body_mode = prefab(Prefab_Id(index)).body_mode
+		palette.light = prefab_light(Prefab_Id(index))
 	}
 	return true
+}
+
+palette_set_light :: proc(palette: ^Palette, settings: Light_Settings) {
+	palette.light = settings
 }
 
 palette_set_body :: proc(palette: ^Palette, mode: Body_Mode) {
@@ -51,7 +58,11 @@ debug_palette_close :: proc(dm: ^Debug_Mode) {
 }
 
 debug_palette_select :: proc(dm: ^Debug_Mode, index: int) -> bool {
-	return palette_select(&dm.palette, index)
+	selected := palette_select(&dm.palette, index)
+	if selected && dm.placement.armed {
+		dm.placement.prefab = palette_selected(dm.palette)
+	}
+	return selected
 }
 
 debug_palette_set_body :: proc(dm: ^Debug_Mode, mode: Body_Mode) {

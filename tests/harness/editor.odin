@@ -151,7 +151,7 @@ debug_step_steps_the_world_not_the_player :: proc(t: ^testing.T) {
 editor_rejects_bad_fields :: proc(t: ^testing.T) {
 	lines := []string {
 		`{"cmd": "editor"}`,
-		`{"cmd": "editor", "select": 8}`,
+		`{"cmd": "editor", "select": 11}`,
 		`{"cmd": "editor", "body": "heavy"}`,
 		`{"cmd": "editor", "height": -1}`,
 		`{"cmd": "editor", "camera": {"position": [0, 0, 0]}}`,

@@ -17,6 +17,7 @@ Placed_Object :: struct {
 	body_mode:  Body_Mode,
 	body:       b3.BodyId,
 	color:      [4]f32,
+	light:      Light_Settings,
 	spawn_time: f32,
 	settled:    bool,
 }
@@ -26,6 +27,7 @@ Object_Spawn :: struct {
 	body_mode: Body_Mode,
 	center:    b3.Vec3,
 	yaw:       f32,
+	light:     Light_Settings,
 }
 
 // Read-only view for iteration. Every mutation takes an Object_Id.
@@ -76,11 +78,17 @@ object_box :: proc(object: Placed_Object) -> geometry.Box {
 		half_extents = info.half_extents,
 		color = object.color,
 		rotation = {rotation.x, rotation.y, rotation.z, rotation.w},
+		emissive = object.light.emissive,
 	}
 }
 
 simulation_create_object :: proc(sim: ^Simulation, spawn: Object_Spawn) -> Object_Id {
-	return create_object(sim, spawn, prefab(spawn.prefab).color, false)
+	light := spawn_light(spawn)
+	color := prefab_color(spawn.prefab)
+	if light.active {
+		color = light_color4(light.color)
+	}
+	return create_object(sim, spawn, color, light, false)
 }
 
 simulation_remove_object :: proc(sim: ^Simulation, id: Object_Id) -> bool {
@@ -209,6 +217,7 @@ simulation_reset_objects :: proc(sim: ^Simulation) {
 				yaw = 0.0,
 			},
 			colors[index],
+			{},
 			true,
 		)
 	}
@@ -217,6 +226,18 @@ simulation_reset_objects :: proc(sim: ^Simulation) {
 simulation_reset_scene :: proc(sim: ^Simulation) {
 	simulation_reset_objects(sim)
 	simulation_reset(sim)
+}
+
+// A spawn may omit the light; a lamp then falls back to its prefab defaults.
+@(private)
+spawn_light :: proc(spawn: Object_Spawn) -> Light_Settings {
+	if !prefab_has_light(spawn.prefab) {
+		return {}
+	}
+	if spawn.light.active {
+		return spawn.light
+	}
+	return prefab_light(spawn.prefab)
 }
 
 @(private)
