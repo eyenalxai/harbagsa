@@ -239,7 +239,8 @@ _Avoid_: Prop, entity, crate
 
 **Prefab**:
 A named box archetype in the fixed catalog: half extents, colour, default body
-mode, and an optional base pitch. The ramp carries a 20 degree base pitch.
+mode, an optional base pitch, and an optional point light. The ramp carries a
+20 degree base pitch; the Lamp, Light panel, and Beacon carry a light.
 _Avoid_: Template, class, prototype
 
 **Body mode**:
@@ -254,8 +255,8 @@ _Avoid_: Handle, slot
 
 **Object palette**:
 The debug-mode prefab chooser. It holds the open flag, the selected catalog
-index, and the body mode for the next placement. The bottom dock draws twelve
-cells, an isometric preview, and the key hints.
+index, and the body and light settings for the next placement. The bottom dock
+draws twelve cells, an isometric preview, and the key hints.
 _Avoid_: Toolbar, inventory
 
 **Placement**:
