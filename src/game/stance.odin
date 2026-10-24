@@ -118,7 +118,7 @@ update_engagement :: proc(engaged, other_engaged: ^bool, pressed, held: bool, mo
 }
 
 @(private)
-update_stance_input :: proc(player: ^Player, input: Input_Snapshot) {
+update_stance_input :: proc(player: ^Player, input: Input_Snapshot, settings: Settings) {
 	if player.movement_state != .None {
 		return
 	}
@@ -127,14 +127,14 @@ update_stance_input :: proc(player: ^Player, input: Input_Snapshot) {
 		&player.prone_engaged,
 		input.crouch_pressed,
 		input.crouch_held,
-		CROUCH_INPUT_MODE,
+		settings.crouch_mode,
 	)
 	update_engagement(
 		&player.prone_engaged,
 		&player.crouch_engaged,
 		input.prone_pressed,
 		input.prone_held,
-		PRONE_INPUT_MODE,
+		settings.prone_mode,
 	)
 }
 
@@ -153,14 +153,14 @@ sprint_request_step :: proc(
 }
 
 @(private)
-update_sprint_input :: proc(player: ^Player, input: Input_Snapshot) {
+update_sprint_input :: proc(player: ^Player, input: Input_Snapshot, mode: Input_Mode) {
 	if player.movement_state != .None {
 		player.sprint_wanted = false
 		return
 	}
 
 	engaged, requested := sprint_request_step(
-		SPRINT_INPUT_MODE,
+		mode,
 		player.sprint_toggled,
 		input.sprint_held,
 		input.sprint_pressed,
@@ -200,7 +200,7 @@ resolve_stance :: proc(sim: ^Simulation, input: Input_Snapshot) {
 			}
 			requested = .Standing
 			sprint_active = true
-		} else if SPRINT_INPUT_MODE == .Toggle &&
+		} else if sim.settings.sprint_mode == .Toggle &&
 		   input.sprint_pressed &&
 		   player.sprint_toggled {
 			player.sprint_toggled = false

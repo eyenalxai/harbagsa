@@ -144,3 +144,49 @@ command_parser_validates_ranges :: proc(t: ^testing.T) {
 	testing.expectf(t, error != "", "out-of-range input was accepted")
 	harness.command_destroy(&command, context.allocator)
 }
+
+@(test)
+menu_command_parses_its_fields :: proc(t: ^testing.T) {
+	command, error := harness.command_parse_string(
+		`{"cmd": "menu", "open": true, "select": 2, "activate": true}`,
+		context.allocator,
+	)
+	defer harness.command_destroy(&command, context.allocator)
+	testing.expectf(t, error == "", "menu command parse failed: %s", error)
+	if error != "" {
+		return
+	}
+	testing.expect(t, command.kind == .Menu, "menu command has the wrong kind")
+	testing.expect(t, command.menu.has_open && command.menu.open, "menu open was not parsed")
+	testing.expect(t, command.menu.has_select && command.menu.select == 2, "menu select was not parsed")
+	testing.expect(t, command.menu.activate, "menu activate was not parsed")
+}
+
+@(test)
+menu_command_rejects_bad_fields :: proc(t: ^testing.T) {
+	_, error := harness.command_parse_string(`{"cmd": "menu", "position": 1}`, context.allocator)
+	testing.expectf(t, error != "", "unknown menu key was accepted")
+	if error != "" {
+		delete(error, context.allocator)
+	}
+	_, error = harness.command_parse_string(`{"cmd": "menu", "select": 9}`, context.allocator)
+	testing.expectf(t, error != "", "out-of-range menu row was accepted")
+	if error != "" {
+		delete(error, context.allocator)
+	}
+}
+
+@(test)
+menu_command_accepts_activate_false :: proc(t: ^testing.T) {
+	command, error := harness.command_parse_string(
+		`{"cmd": "menu", "activate": false}`,
+		context.allocator,
+	)
+	defer harness.command_destroy(&command, context.allocator)
+	testing.expectf(t, error == "", "activate:false failed to parse: %s", error)
+	if error != "" {
+		return
+	}
+	testing.expect(t, command.menu.has_activate, "activate presence was lost")
+	testing.expect(t, !command.menu.activate, "activate:false became true")
+}

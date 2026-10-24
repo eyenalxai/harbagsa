@@ -30,17 +30,35 @@ into the binary.
 
 - `WASD`: move relative to the view. Every stance moves in any direction.
 - Mouse: look. Left click captures the cursor.
-- Left `Shift`: sprint. Hold by default; the mode is a code constant.
+- `Left Shift`: sprint. The settings menu switches the input mode between
+  Hold and Toggle.
 - `Space`: jump. In the air, hold `Space` while moving toward a ledge to mantle;
   a fresh press also works. Jump input buffers before landing.
-- `C`: crouch. Toggle by default. While sprinting, it starts a crouch slide.
-- `Z`: prone. Toggle by default. Crawl while prone. Dive in the air or from a sprint.
+- `C`: crouch. The settings menu switches the input mode between Hold and
+  Toggle. While sprinting, it starts a crouch slide.
+- `Z`: prone. The settings menu switches the input mode between Hold and
+  Toggle. Crawl while prone. Dive in the air or from a sprint.
 - `R`: return the player to spawn.
 - `Shift+R`: reset the crates, the sun, and the player.
 - `F1`: toggle the debug draw.
 - `F2`: toggle debug mode.
 - `F3`: toggle temporal anti-aliasing (TAA). TAA is on by default.
-- `Esc`: release the cursor capture.
+- `Esc`: open the settings menu. The menu pauses the game and releases the
+  cursor. Press `Esc` again to resume.
+
+### Settings menu
+
+`Esc` opens a centered settings menu. The menu pauses the simulation and shows
+the active control list. It changes the sprint, crouch, and prone input modes
+between Hold and Toggle.
+
+- `Up` / `Down`: select a row.
+- `Left` / `Right`: change the selected input mode.
+- `Enter`: apply the selected row. `Resume` closes the menu.
+- `Esc`: close the menu.
+
+When the menu closes, the game recaptures the cursor if it had capture before
+the menu opened.
 
 Movement follows the walkable ground plane. A straight climb keeps the stance
 speed along the slope, so the horizontal speed drops by the slope cosine.
@@ -62,10 +80,11 @@ stairs.
 - `R`: reset the player and return the camera to spawn.
 - `Shift+R`: reset the crates, the sun, and the player.
 - `F2`: leave debug mode. The player returns to the saved position and view.
+- `Esc`: open the settings menu.
 
 The HUD shows the stance, gait, horizontal speed, grounded state, movement
 state, and position, or the debug mode selection, crate count, and sun angles.
-It also shows the control list. The window is resizable.
+The settings menu shows the control list. The window is resizable.
 
 ## Agent harness
 
@@ -136,7 +155,7 @@ step. `forward`, `right`, and `jump` persist; `jump` is an edge on the first
 frame of its block. Capture frames are zero-based frame numbers. Check operators
 are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. Check fields use the `state.json`
 shape, for example `player.position.y`, `player.grounded`, `crates.0.position.z`,
-or `crates.count`.
+`crates.count`, `settings.sprint_mode`, or `menu.open`.
 
 A scenario may use `commands` instead of `steps`:
 
@@ -158,15 +177,17 @@ include a `capture` command when you want a PNG.
 
 The batch runner and the live session share one command set:
 
-- `{"cmd": "reset"}`: fresh simulation. Crates return to spawn.
+- `{"cmd": "reset"}`: fresh simulation. Crates return to spawn, the settings
+  return to their defaults, and the menu closes.
 - `{"cmd": "look", "dx": 220, "dy": 0}`: pixel look delta through the game
   sensitivity and pitch clamp.
 - `{"cmd": "face", "yaw": 0, "pitch": 0}`: set the player view directly.
 - `{"cmd": "input", "forward": 1, "right": 0, "jump": false}`: set persistent
   input. Omitted fields keep their value.
-- `{"cmd": "step", "frames": 60}`: fixed steps with no wall clock.
+- `{"cmd": "step", "frames": 60}`: fixed steps with no wall clock. A step is an
+  error while the menu is open.
 - `{"cmd": "state"}`: player, eye, velocity, yaw, pitch, grounded, crates,
-  frame, and digest.
+  settings, menu, frame, and digest.
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`: write a PNG.
   `frame` is optional. A past frame is an error; a future frame queues.
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw": 0, "pitch": 0}`: inspection
@@ -174,6 +195,10 @@ The batch runner and the live session share one command set:
   the override.
 - `{"cmd": "view", "hud": true, "debug": false, "hint": false}`: toggle the HUD,
   the debug draw, and the capture hint.
+- `{"cmd": "menu", "open": true, "select": 1, "activate": true}`: open or close
+  the settings menu, select a row, and activate the selected row. `select` is
+  zero-based and needs an open menu. `activate` also needs an open menu. Omitted
+  fields keep the state. An open menu renders even when `hud` is off.
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`:
   evaluate a predicate now.
 - `{"cmd": "record", "path": "scenarios/walk.json"}`: start recording. Send
@@ -218,8 +243,8 @@ make build
 
 Read `runs/smoke/report.json` and use the absolute paths in `screenshots`. The
 PNG is RGBA, sRGB, and `1280x720` by default. The repository samples are
-`docs/evidence/harness-smoke.png` and `docs/evidence/present-window.png`. To
-capture the owner's real window instead:
+`docs/evidence/harness-smoke.png`, `docs/evidence/present-window.png`, and
+`docs/evidence/settings-menu.png`. To capture the owner's real window instead:
 
 ```sh
 ./bin/harbagsa-agent run scenarios/smoke.json --present --out runs/present
@@ -232,6 +257,9 @@ TAA history; the first frame always matches.
 `scenarios/taa-static.json` captures 25 consecutive frames from a static camera.
 Use it to check TAA edge stability without a window. The first frames converge;
 compare later frames to see the steady-state ripple.
+
+`scenarios/settings-menu.json` opens the settings menu, captures it, changes the
+crouch input mode, closes the menu, and checks the saved state.
 
 ## Build
 

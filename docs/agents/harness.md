@@ -25,7 +25,8 @@ serializes Make with `flock`.
 
 - `report.json`: `ok`, `exit_code`, `frame`, `state`, `screenshots`, `checks`,
   `failures`, `digest`, and `error`.
-- `state.json`: the final state alone.
+- `state.json`: the final state alone. It holds the player, crates, settings,
+  menu, frame, and digest.
 - `frames/frame_NNNN.png`: zero-padded captures.
 - `run.log`: log lines from the renderer, the session, and the runner.
 
@@ -65,7 +66,8 @@ Rules:
 - A capture frame is a zero-based frame number. The final frame is captured by
   default. `"capture": []` opts out of rendering for that scenario.
 - A check uses the `state.json` shape. Operators: `eq`, `ne`, `lt`, `le`, `gt`,
-  `ge`.
+  `ge`. Examples: `player.position.y`, `crates.count`, `settings.sprint_mode`,
+  `menu.open`.
 - A `commands` array runs verbatim. It is the form that `record` writes. It does
   not add a default capture.
 
@@ -81,6 +83,7 @@ Rules:
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw": 0, "pitch": 0}`
 - `{"cmd": "camera", "clear": true}`
 - `{"cmd": "view", "hud": true, "debug": false, "hint": false}`
+- `{"cmd": "menu", "open": true, "select": 1, "activate": true}`
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`
 - `{"cmd": "record", "path": "scenarios/walk.json"}`
 - `{"cmd": "record"}`
@@ -89,7 +92,9 @@ Rules:
 
 A past capture frame is an error. A future capture frame queues. Unknown keys,
 wrong types, and out-of-range values are per-command errors; the session stays
-usable.
+usable. A `step` while the menu is open is an error, because the game pauses.
+An open menu renders even when the `view` HUD flag is off. `select` is zero-based.
+`select` and `activate` need an open menu.
 
 ## Live session
 
@@ -123,6 +128,8 @@ scenario.
   match when both runs share the same history. See the README note.
 - `scenarios/taa-static.json` captures consecutive static frames for TAA edge
   stability. The first frames converge; compare later frames.
+- `scenarios/settings-menu.json` captures the settings menu and checks a changed
+  input mode.
 - `--no-render` and capture-free scenarios never create a Vulkan device.
 
 Use `capture` or `--present`. Do not use `grim` for automated screenshots.
@@ -130,23 +137,26 @@ Use `capture` or `--present`. Do not use `grim` for automated screenshots.
 ## Determinism
 
 - Fixed 60 Hz. Never sleep or use a wall-clock delta.
-- `reset` creates a fresh `Simulation`. Crates return to spawn.
+- `reset` creates a fresh `Simulation`. Crates return to spawn, the settings
+  return to their defaults, and the menu closes.
 - `look` uses the game sensitivity and pitch clamp. `face` sets yaw and pitch
   directly.
 - Capture alpha defaults to 1.0 (post-step), so a capture matches `state` at the
   same frame.
-- The digest is FNV-1a over frame, player, and crate state. Use it in reports and
-  regression checks.
+- The digest is FNV-1a over frame, player, crates, settings, and menu state. Use
+  it in reports and regression checks.
 
 ## Where the code lives
 
 - `src/harness/`: CLI, scenario compiler, commands, session, runner, socket, PNG.
 - `src/frame/`: shared scene assembly and draw for the game and the harness.
+- `src/game/menu.odin`: the menu rows, settings text, and control list.
+- `src/game/settings.odin`: the runtime input-mode settings.
 - `src/renderer/`: `Target` and `Platform` ports, swapchain/offscreen targets,
-  TAA, capture readback.
+  TAA, capture readback, HUD and menu overlay.
 - `src/platform/`: SDL and headless adapters.
 - `tests/harness/`, `tests/frame/`, `tests/renderer/target.odin`.
-- `scenarios/smoke.json`.
+- `scenarios/smoke.json`, `scenarios/settings-menu.json`.
 
 ## Adding a command
 
@@ -154,9 +164,11 @@ Change:
 
 - `Command_Kind` and `Command` in `src/harness/command.odin`.
 - `command_name` and `command_destroy`.
-- `command_parse` and a parser in `src/harness/command_parsers.odin`.
+- `command_parse` and a parser in `src/harness/command_parsers.odin`, or a new
+  file when the command grows (`src/harness/menu_command.odin` is the example).
 - `session_execute` and `session_record_command` in
-  `src/harness/session_commands.odin`.
+  `src/harness/session_commands.odin`, with a helper in a `session_*.odin` file
+  when the command has its own state.
 - README and, for a new domain word, `GLOSSARY.md`.
 - A test in `tests/harness/`.
 
@@ -181,6 +193,10 @@ harness in the same change. Do not leave the automation behind the game.
   the scenario step fields, and `tests/harness`.
 - New state field: add it to `State`, `state_build`, `state_digest`,
   `state_field`, the report schema, and the docs.
+- New setting or menu row: add it to `Settings` and `DEFAULT_SETTINGS`, then
+  `Menu_Item`, `MENU_ITEM_COUNT`, `MENU_ITEM_NAMES`, `menu_view`, `menu_mode`,
+  and `menu_set_mode`. Add it to `Settings_State` or `Menu_State`, the digest,
+  and the docs.
 - New view toggle: add it to the `view` command, `frame.Options`, the README, and
   this page.
 - New command: follow **Adding a command**, add a JSONL test, and add a scenario
