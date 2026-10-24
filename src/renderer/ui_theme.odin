@@ -16,7 +16,7 @@ UI_COLOR_TEXT_TERTIARY :: 0x808C99
 UI_COLOR_ACCENT :: 0xE6AF3A
 UI_COLOR_SURFACE_HUD :: 0x10141A
 UI_COLOR_SURFACE_MENU :: 0x161B23
-UI_COLOR_SURFACE_RAISED :: 0x1D242E
+UI_COLOR_SURFACE_RAISED :: 0x26313D
 UI_COLOR_HAIRLINE :: 0xFFFFFF
 UI_COLOR_SEPARATOR :: 0xFFFFFF
 UI_COLOR_SCRIM :: 0x000000
@@ -37,6 +37,7 @@ Text_Type :: struct {
 	line_height: f32,
 	weight:      Text_Weight,
 	tracking:    f32,
+	caps:        bool,
 }
 
 UI_Spacing :: struct {
@@ -103,13 +104,14 @@ ui_theme_init :: proc(render_height: u32) -> UI_Theme {
 		UI_TRACKING_CAPS,
 		density,
 	)
+	theme.type_caption_caps.caps = true
 
 	theme.text_primary = ui_color(UI_COLOR_TEXT_PRIMARY, 1.0)
 	theme.text_secondary = ui_color(UI_COLOR_TEXT_SECONDARY, 1.0)
 	theme.text_tertiary = ui_color(UI_COLOR_TEXT_TERTIARY, 1.0)
 	theme.accent = ui_color(UI_COLOR_ACCENT, 1.0)
-	theme.surface_hud = ui_color(UI_COLOR_SURFACE_HUD, 0.90)
-	theme.surface_menu = ui_color(UI_COLOR_SURFACE_MENU, 0.96)
+	theme.surface_hud = ui_color(UI_COLOR_SURFACE_HUD, 0.94)
+	theme.surface_menu = ui_color(UI_COLOR_SURFACE_MENU, 1.0)
 	theme.surface_raised = ui_color(UI_COLOR_SURFACE_RAISED, 1.0)
 	theme.line_hairline = ui_color(UI_COLOR_HAIRLINE, 0.09)
 	theme.line_separator = ui_color(UI_COLOR_SEPARATOR, 0.16)
