@@ -37,6 +37,14 @@ encode_reply :: proc(reply: Reply) -> []u8 {
 		append(&out, `,"replay":`)
 		append_json(&out, reply.replay^)
 	}
+	if reply.perf != nil {
+		append(&out, `,"perf":`)
+		append_json(&out, reply.perf^)
+	}
+	if reply.trace != "" {
+		append(&out, `,"trace":`)
+		append_json(&out, reply.trace)
+	}
 	append(&out, "}")
 	return out[:]
 }

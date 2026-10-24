@@ -7,8 +7,9 @@ import "core:mem"
 import vk "vendor:vulkan"
 
 Queue_Families :: struct {
-	graphics: u32,
-	present:  u32,
+	graphics:             u32,
+	present:              u32,
+	timestamp_valid_bits: u32,
 }
 
 Swapchain_Support :: struct {
@@ -40,6 +41,7 @@ find_queue_families :: proc(
 	for property, i in properties {
 		if !graphics_found && .GRAPHICS in property.queueFlags {
 			families.graphics = u32(i)
+			families.timestamp_valid_bits = property.timestampValidBits
 			graphics_found = true
 			if !require_present {
 				families.present = u32(i)

@@ -7,6 +7,7 @@ import "core:time"
 
 import "src:frame"
 import "src:game"
+import "src:perf"
 import "src:platform"
 import "src:renderer"
 
@@ -44,12 +45,14 @@ run :: proc() -> bool {
 		log.error("harbagsa: window pixel size is zero")
 		return false
 	}
+	perf_state: perf.State
 	state, renderer_error := renderer.init(
 		renderer.Config {
 			platform = platform.renderer_platform(&window),
 			target = .Swapchain,
 			width = pixel_width,
 			height = pixel_height,
+			recorder = &perf_state.recorder,
 		},
 		context.allocator,
 	)
@@ -93,6 +96,7 @@ run :: proc() -> bool {
 	renderer.notify_resize(&state)
 
 	for {
+		perf.begin_frame(&perf_state)
 		events := platform.poll_events(&window)
 		if events.quit {
 			return true
@@ -101,36 +105,21 @@ run :: proc() -> bool {
 			renderer.notify_resize(&state)
 		}
 
-		if events.menu_toggle_pressed {
-			if hud.menu.open {
-				events.captured = close_settings_menu(&window, &hud.menu, menu_recapture)
-				accumulator = 0
-			} else {
-				menu_recapture = events.captured
-				events.captured = open_settings_menu(&window, &hud.menu)
-				accumulator = game.SIMULATION_STEP
-				clear_latches(&latches)
-			}
+		handle_settings_menu_events(
+			&window,
+			&hud.menu,
+			&sim.settings,
+			&events,
+			&accumulator,
+			&menu_recapture,
+			&latches,
+		)
+
+		if events.perf_pressed {
+			hud.perf.visible = !hud.perf.visible
 		}
 
-		if hud.menu.open {
-			if events.menu_up_pressed {
-				game.menu_move(&hud.menu, -1)
-			}
-			if events.menu_down_pressed {
-				game.menu_move(&hud.menu, 1)
-			}
-			if events.menu_left_pressed {
-				_ = game.menu_change_setting(&hud.menu, &sim.settings, -1)
-			}
-			if events.menu_right_pressed {
-				_ = game.menu_change_setting(&hud.menu, &sim.settings, 1)
-			}
-			if events.menu_confirm_pressed && game.menu_activate(&hud.menu, &sim.settings) {
-				events.captured = close_settings_menu(&window, &hud.menu, menu_recapture)
-				accumulator = 0
-			}
-		} else {
+		if !hud.menu.open {
 			if events.debug_view_pressed {
 				debug_view = !debug_view
 			}
@@ -162,6 +151,8 @@ run :: proc() -> bool {
 			renderer.notify_resize(&state)
 		}
 
+		perf.mark(&perf_state, .Events)
+
 		width, height := platform.pixel_size(&window)
 		if platform.is_minimized(&window) || width == 0 || height == 0 {
 			// Block while minimized; do not spin.
@@ -174,6 +165,7 @@ run :: proc() -> bool {
 			}
 			// Drop the wait time so the first restored frame does not step the whole pause.
 			last_time = time.now()
+			perf.discard_frame(&perf_state)
 			continue
 		}
 
@@ -266,6 +258,12 @@ run :: proc() -> bool {
 			)
 		}
 
+		perf.mark(&perf_state, .Simulation)
+
+		if hud.perf.visible {
+			hud.perf.stats = perf.stats(&perf_state)
+		}
+
 		alpha := clamp(accumulator / game.SIMULATION_STEP, 0, 1)
 		scene := frame.build(
 			&sim,
@@ -280,10 +278,15 @@ run :: proc() -> bool {
 			&hud,
 			&scratch,
 		)
+		perf.mark(&perf_state, .Build)
 
 		switch frame.draw(&state, scene) {
 		case .Ok:
+			perf.mark(&perf_state, .Present)
+			perf.set_gpu(&perf_state, renderer.gpu_times(&state))
+			perf.end_frame(&perf_state)
 		case .Skipped:
+			perf.discard_frame(&perf_state)
 			continue
 		case .Fatal:
 			return false

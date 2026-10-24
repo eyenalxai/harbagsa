@@ -84,26 +84,6 @@ parse_step :: proc(object: json.Object) -> (Command, string) {
 }
 
 @(private)
-parse_settle :: proc(object: json.Object) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "frames"}); unknown {
-		return {}, format_error("unknown key %q", key)
-	}
-	frames, frames_error := parse_frames(object)
-	if frames_error != "" {
-		return {}, frames_error
-	}
-	return {kind = .Settle, settle = {frames = frames}}, ""
-}
-
-parse_frames :: proc(object: json.Object) -> (frames: int, error: string) {
-	value, ok := integer_field(object, "frames")
-	if !ok || value < 1 || value > MAX_STEP_FRAMES {
-		return 0, format_error("'frames' must be an integer in [1, %d]", MAX_STEP_FRAMES)
-	}
-	return value, ""
-}
-
-@(private)
 parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(object, {"cmd", "name", "frame", "alpha"}); unknown {
 		return {}, format_error("unknown key %q", key)
@@ -164,24 +144,8 @@ parse_camera :: proc(object: json.Object) -> (Command, string) {
 }
 
 @(private)
-parse_debug_mode :: proc(object: json.Object) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "active"}); unknown {
-		return {}, format_error("unknown key %q", key)
-	}
-	value, has := json_get(object, "active")
-	if !has {
-		return {}, "debug_mode needs 'active'"
-	}
-	active, ok := json_boolean(value)
-	if !ok {
-		return {}, "'active' must be a boolean"
-	}
-	return {kind = .Debug_Mode, debug_mode = {active = active}}, ""
-}
-
-@(private)
 parse_view :: proc(object: json.Object) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "hud", "debug", "hint"}); unknown {
+	if key, unknown := json_unknown_key(object, {"cmd", "hud", "debug", "hint", "perf"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 	view, view_error := parse_view_fields(object)
@@ -215,6 +179,14 @@ parse_view_fields :: proc(object: json.Object) -> (view: View_Command, error: st
 		}
 		view.hint = flag
 		view.has_hint = true
+	}
+	if value, has := json_get(object, "perf"); has {
+		flag, ok := json_boolean(value)
+		if !ok {
+			return {}, "'perf' must be a boolean"
+		}
+		view.perf = flag
+		view.has_perf = true
 	}
 	return view, ""
 }
