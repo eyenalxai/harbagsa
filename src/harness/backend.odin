@@ -181,11 +181,11 @@ backend_render :: proc(
 	}
 
 	options := frame.Options {
-		alpha      = request.alpha,
-		delta      = game.SIMULATION_STEP,
-		debug_view = session.view.debug,
-		captured   = !session.view.hint,
-		hud        = session.view.hud,
+		alpha         = request.alpha,
+		delta_seconds = game.SIMULATION_STEP,
+		debug_view    = session.view.debug,
+		captured      = !session.view.hint,
+		hud           = session.view.hud,
 	}
 	session.hud.perf.visible = session.view.perf
 	if session.hud.perf.visible {
