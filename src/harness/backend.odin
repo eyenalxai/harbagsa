@@ -5,8 +5,23 @@ import "core:mem"
 import "core:strings"
 
 import "src:frame"
+import "src:perf"
 import "src:platform"
 import "src:renderer"
+
+Backend :: struct {
+	ready:    bool,
+	ctx:      rawptr,
+	render:   proc(
+		ctx: rawptr,
+		session: ^Session,
+		capture: bool,
+		name: string,
+		alpha: f32,
+	) -> (Capture_Result, string),
+	gpu_times: proc(ctx: rawptr) -> perf.Gpu_Times,
+	shutdown:  proc(ctx: rawptr),
+}
 
 Backend_Data :: struct {
 	window:          platform.Window,
@@ -83,8 +98,15 @@ backend_create :: proc(
 		ready = true,
 		ctx = data,
 		render = backend_render,
+		gpu_times = backend_gpu_times,
 		shutdown = backend_shutdown,
 	}, ""
+}
+
+@(private)
+backend_gpu_times :: proc(ctx: rawptr) -> perf.Gpu_Times {
+	data := cast(^Backend_Data)ctx
+	return renderer.gpu_times(&data.renderer)
 }
 
 @(private)
@@ -116,6 +138,10 @@ backend_render :: proc(
 		captured   = !session.view.hint,
 		hud        = session.view.hud,
 	}
+	session.hud.perf.visible = session.view.perf
+	if session.hud.perf.visible {
+		session.hud.perf.stats = perf.stats(&session.perf)
+	}
 	camera_override: ^renderer.Camera
 	if session.has_camera_override {
 		camera_override = &session.camera_override
@@ -128,7 +154,8 @@ backend_render :: proc(
 		&session.hud,
 		&session.scratch,
 	)
-
+	perf.mark(&session.perf, .Build)
+	data.renderer.recorder = &session.perf.recorder
 	status: renderer.Frame_Status
 	for _ in 0 ..< 2 {
 		status = frame.draw(&data.renderer, scene, capture)
@@ -141,9 +168,9 @@ backend_render :: proc(
 	}
 	if status != .Ok {
 		if status == .Fatal {
-			return {}, "render failed"
+			return {}, format_error("render failed")
 		}
-		return {}, "frame skipped"
+		return {}, format_error("frame skipped")
 	}
 	if !capture {
 		return {}, ""
@@ -151,7 +178,7 @@ backend_render :: proc(
 
 	pixels, width, height, ok := renderer.read_capture(&data.renderer)
 	if !ok {
-		return {}, "capture readback failed"
+		return {}, format_error("capture readback failed")
 	}
 	delta: Capture_Delta
 	if data.previous_pixels != nil &&

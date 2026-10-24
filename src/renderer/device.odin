@@ -42,12 +42,20 @@ select_physical_device :: proc(r: ^Renderer) -> Error {
 			r.physical_device = device
 			r.graphics_family = families.graphics
 			r.present_family = families.present
+			r.timestamp_valid_bits = families.timestamp_valid_bits
 		}
 	}
 
 	if r.physical_device == nil {
 		log.error("renderer: no device supports the required Vulkan 1.3 features")
 		return .No_Suitable_Device
+	}
+	props: vk.PhysicalDeviceProperties
+	vk.GetPhysicalDeviceProperties(r.physical_device, &props)
+	r.timestamp_period = props.limits.timestampPeriod
+	r.timing_available = r.timestamp_valid_bits > 0 && r.timestamp_period > 0
+	if !r.timing_available {
+		log.warn("renderer: the graphics queue cannot write timestamps; GPU timings are off")
 	}
 	vk.GetPhysicalDeviceMemoryProperties(r.physical_device, &r.memory_properties)
 	return .None

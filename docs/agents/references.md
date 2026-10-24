@@ -22,3 +22,9 @@ Odin's vendor packages live under the Odin root. This repository's `vendor/` hol
 - SDL3 bindings: `~/Projects/odin/references/Odin/vendor/sdl3`
 - SDL3 headers: `~/Projects/odin/references/Odin/vendor/sdl3/include`
 - Vulkan bindings: `~/Projects/odin/references/Odin/vendor/vulkan`
+
+## Instrumentation
+
+- Design and alternatives: `docs/adr/0008-performance-instrumentation.md`
+- Vulkan timestamp queries: search the Vulkan bindings for
+  `CmdWriteTimestamp`, `CmdResetQueryPool`, and `GetQueryPoolResults`
