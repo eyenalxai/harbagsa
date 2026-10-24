@@ -18,6 +18,24 @@ bans images, and a run directory is reproducible from its scenario.
 If the change needs a view that no scenario covers, add the scenario in the same
 change. The harness is part of the feature.
 
+## Subtract first
+
+Before the ordered check, walk every new element and ask what breaks if it is
+gone. Delete what does not break. The common survivors are a divider that
+spacing already separates, a caption that restates a title, and an icon that
+repeats a label.
+
+## Flag on sight
+
+- A literal hex outside `src/renderer/ui_theme.odin`.
+- A bare pixel size in `hud.odin`, `hud_menu.odin`, or `hud_rows.odin`.
+- `accent` on anything but the selection bar.
+- `text_tertiary` on a selectable row.
+- Any fade, slide, or scale on the overlay.
+- A new `Row_Kind` without the five touch points.
+- A second hue.
+- A value column that moves.
+
 ## Order
 
 The order is the triage order. A broken interaction outranks a weak colour.
