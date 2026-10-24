@@ -403,6 +403,20 @@ def build_scenario(raw):
 	}
 
 
+def side_setup(scenarios, side):
+	for scenario in scenarios:
+		for pair in scenario["pairs"]:
+			run = pair["runs"].get(side)
+			if run:
+				report = load_json(os.path.join(run["run_dir"], "report.json"))
+				setup = report.get("setup", {})
+				return {
+					"revision": setup.get("revision", "unknown"),
+					"dirty": bool(setup.get("dirty", False)),
+				}
+	return {"revision": "unknown", "dirty": False}
+
+
 def fmt(value, digits=3):
 	return "n/a" if value is None else f"{value:.{digits}f}"
 
@@ -414,15 +428,21 @@ def table_row(cells):
 def render(data):
 	base = data["base"]
 	head = data["optimized"]
+	base_dirty = " (dirty)" if base.get("dirty") else ""
+	head_dirty = " (dirty)" if head.get("dirty") else ""
 	lines = [
 		"# Paired A/B benchmark",
 		"",
-		f"- base: `{base['ref']}` @ `{base['short']}`",
-		f"- optimized: `HEAD` @ `{head['short']}`",
+		f"- base: `{base['ref']}` @ `{base['short']}`{base_dirty}",
+		f"- optimized: `HEAD` @ `{head['short']}`{head_dirty}",
 		f"- extent: `{data['size']}`",
 		f"- pairs per scenario: {data['runs']}",
 		f"- prime: `{data['prime_seconds']:g}` s",
 	]
+	if head.get("dirty"):
+		lines.append(
+			"- warning: the optimized tree is dirty; its revision is the commit it was built from, not a clean tree"
+		)
 	if not data["base_prime_supported"]:
 		lines.append(
 			"- base prime: unsupported; the base ran the original scenario with its default priming only"
@@ -498,6 +518,8 @@ def cmd_summary(args):
 	data["base_prime_supported"] = all(
 		scenario["base_prime_supported"] for scenario in data["scenarios"]
 	)
+	data["base"].update(side_setup(data["scenarios"], "base"))
+	data["optimized"].update(side_setup(data["scenarios"], "optimized"))
 	data["metrics"] = [
 		{"key": key, "label": label, "unit": unit} for key, label, unit, _ in METRICS
 	]

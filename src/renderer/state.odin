@@ -89,7 +89,7 @@ renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
 		reset_count        = r.taa.reset_count,
 		last_reset         = r.taa.last_reset,
 		shadow_phase       = r.taa.shadow_phase,
-		atlas_weight       = r.overlay.atlas_applied_weight,
+		atlas_weight       = text_atlas_applied_weight(r),
 		debug = {
 			active = r.taa.debug.active,
 			taa = r.taa.enabled,

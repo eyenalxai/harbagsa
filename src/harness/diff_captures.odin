@@ -113,15 +113,12 @@ diff_captures_report :: proc(
 
 @(private)
 diff_capture_path :: proc(run_dir, name, reported: string, allocator: mem.Allocator) -> string {
-	if reported != "" && os.is_file(reported) {
-		return strings.clone(reported, allocator)
-	}
 	filename := fmt.aprintf("%s.png", name, allocator = context.temp_allocator)
-	fallback := join_path({run_dir, "frames", filename}, allocator)
-	if os.is_file(fallback) {
-		return fallback
+	local := join_path({run_dir, "frames", filename}, allocator)
+	if os.is_file(local) {
+		return local
 	}
-	delete(fallback, allocator)
+	delete(local, allocator)
 	return strings.clone(reported, allocator)
 }
 

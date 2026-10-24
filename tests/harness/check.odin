@@ -56,3 +56,15 @@ capture_check_needs_a_capture :: proc(t: ^testing.T) {
 	defer harness.check_result_destroy(&result, context.allocator)
 	testing.expect(t, result.error != "", "empty capture summary was accepted")
 }
+
+@(test)
+bare_state_field_reports_an_error_without_crashing :: proc(t: ^testing.T) {
+	command := harness.Check_Command {
+		field = "sun",
+		op    = .Eq,
+		value = {kind = .Number, number = 0},
+	}
+	result := harness.check_evaluate(command, {}, {}, nil, context.allocator)
+	defer harness.check_result_destroy(&result, context.allocator)
+	testing.expect(t, result.error != "", "a bare sun field did not report an error")
+}

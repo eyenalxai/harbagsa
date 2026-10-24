@@ -11,11 +11,13 @@ cli_diff :: proc(args: []string) -> int {
 	options, option_error := diff_options_parse(args)
 	if option_error != "" {
 		fmt.eprintf("harbagsa-agent diff: %s\n", option_error)
+		delete(option_error, context.allocator)
 		return EXIT_SCENARIO
 	}
 	report, run_error := diff_runs(options, context.allocator)
 	if run_error != "" {
 		fmt.eprintf("harbagsa-agent diff: %s\n", run_error)
+		delete(run_error, context.allocator)
 		return EXIT_SCENARIO
 	}
 	defer diff_report_destroy(&report, context.allocator)
@@ -43,11 +45,11 @@ diff_options_parse :: proc(args: []string) -> (Diff_Options, string) {
 			index += 1
 		case argument == "--max-pixels":
 			if index + 1 >= len(args) {
-				return options, "--max-pixels needs a count"
+				return options, format_error("%s", "--max-pixels needs a count")
 			}
 			value, value_ok := strconv.parse_int(args[index + 1])
 			if !value_ok || value < 0 {
-				return options, "--max-pixels must be a non-negative count"
+				return options, format_error("%s", "--max-pixels must be a non-negative count")
 			}
 			options.max_pixels = value
 			options.has_max_pixels = true
@@ -65,13 +67,13 @@ diff_options_parse :: proc(args: []string) -> (Diff_Options, string) {
 			options.run_b = argument
 			index += 1
 		case:
-			return options, "diff takes two run directories"
+			return options, format_error("%s", "diff takes two run directories")
 		}
 	}
 	if options.run_a == "" || options.run_b == "" {
-		return options, "diff takes two run directories"
+		return options, format_error("%s", "diff takes two run directories")
 	}
-	return options, ""
+	return options, format_error("%s", "")
 }
 
 @(private)

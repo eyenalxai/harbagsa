@@ -556,12 +556,15 @@ keeps the cold clock out of the measured window.
 tools/ab.sh \
   --ref origin/main \
   --scenario scenarios/perf.json \
-  --scenario scenarios/perf-crates.json \
   --size 2560x1440 \
   --runs 5 \
   --prime 2.0 \
   --out runs/ab
 ```
+
+The ref must understand the scenario's commands. `scenarios/perf-crates.json`
+needs a ref with the `crates` command; a base without it exits non-zero, which
+is the intended failure.
 
 The tool builds the ref in a detached worktree under `build/ab/base`, builds the
 current tree in place, and copies both agents to a temporary directory. It runs

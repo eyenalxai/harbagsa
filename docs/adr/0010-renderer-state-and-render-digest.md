@@ -31,8 +31,8 @@ scene.
   count would need a readback; the scalar is enough to tell convergence from a
   reset.
 - `setup` holds the target kind, the extent, the build revision and dirty flag,
-  the view flags, the device name, the frames in flight, the TAA caps, and the
-  sun caps. It is written once per run.
+  the view flags, the device name, the frames in flight, and the TAA caps. It is
+  written once per run.
 - The simulation digest keeps its field set. Render fields never enter it.
 
 ## Consequences

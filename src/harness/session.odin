@@ -145,7 +145,7 @@ session_reset :: proc(session: ^Session) -> string {
 	}
 	session.sim = game.simulation_create()
 	if !game.simulation_is_valid(&session.sim) {
-		return "simulation init failed"
+		return format_error("%s", "simulation init failed")
 	}
 	session.input = {}
 	session.camera_override = {}

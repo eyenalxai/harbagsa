@@ -107,6 +107,50 @@ diff_captures_prefers_the_report_and_falls_back_to_frames :: proc(t: ^testing.T)
 	}
 }
 
+@(test)
+diff_captures_prefers_the_supplied_run_directory :: proc(t: ^testing.T) {
+	first_dir := "/tmp/opencode/harbagsa-diff-first"
+	second_dir := "/tmp/opencode/harbagsa-diff-second"
+	_ = os.remove_all(first_dir)
+	_ = os.remove_all(second_dir)
+	first_frames := "/tmp/opencode/harbagsa-diff-first/frames"
+	second_frames := "/tmp/opencode/harbagsa-diff-second/frames"
+	testing.expectf(t, os.make_directory_all(first_frames) == nil, "cannot create the first directory")
+	testing.expectf(t, os.make_directory_all(second_frames) == nil, "cannot create the second directory")
+	defer os.remove_all(first_dir)
+	defer os.remove_all(second_dir)
+
+	first_pixels: [16 * 4]u8
+	second_pixels: [16 * 4]u8
+	for pixel in 0 ..< 16 {
+		first_pixels[pixel * 4 + 0] = 10
+		first_pixels[pixel * 4 + 3] = 255
+		second_pixels[pixel * 4 + 0] = 20
+		second_pixels[pixel * 4 + 3] = 255
+	}
+	first := write_test_png(t, first_frames, "shot", first_pixels[:])
+	defer harness.capture_result_destroy(&first, context.allocator)
+	second := write_test_png(t, second_frames, "shot", second_pixels[:])
+	defer harness.capture_result_destroy(&second, context.allocator)
+
+	report := `{"screenshots": [{"name": "shot", "path": "/tmp/opencode/harbagsa-diff-first/frames/shot.png", "format": "png"}]}`
+	report_path := "/tmp/opencode/harbagsa-diff-second/report.json"
+	testing.expectf(t, os.write_entire_file(report_path, report) == nil, "cannot write the copied report")
+
+	captures, error := harness.diff_captures_load(second_dir, context.allocator)
+	testing.expectf(t, error == "", "copied run load failed: %s", error)
+	defer harness.diff_captures_destroy(captures, context.allocator)
+	testing.expect_value(t, len(captures), 1)
+	if len(captures) == 1 {
+		pixels, _, _, ok := harness.load_png_rgba(captures[0].path, context.allocator)
+		defer delete(pixels, context.allocator)
+		testing.expect(t, ok, "cannot decode the copied capture")
+		if ok {
+			testing.expect_value(t, pixels[0], u8(20))
+		}
+	}
+}
+
 @(private)
 write_test_png :: proc(
 	t: ^testing.T,

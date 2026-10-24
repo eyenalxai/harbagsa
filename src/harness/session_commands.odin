@@ -58,6 +58,7 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 	switch command.kind {
 	case .Reset:
 		command_error = session_reset(session)
+		owns_error = true
 	case .Look:
 		game.simulation_look(&session.sim, b3.Vec2{command.look.dx, command.look.dy})
 	case .Face:

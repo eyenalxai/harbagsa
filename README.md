@@ -223,7 +223,7 @@ no perf run never creates a Vulkan device unless `--present` asks for the window
 
 The `commands` array runs verbatim, and `record` writes this form. Only a
 `capture` command writes a PNG; a scenario without one renders nothing unless
-`settle` or `--present` needs a frame. `step` advances one fixed
+`--present` asks for the window. `step` advances one fixed
 `SIMULATION_STEP` per frame. `look` applies once. `input` persists until the
 next `input`; `jump` is an edge on the next step.
 
