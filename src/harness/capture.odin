@@ -3,22 +3,98 @@ package harness
 
 import "core:c"
 import "core:fmt"
+import "core:math"
 import "core:mem"
+import "core:os"
 import "core:path/filepath"
+import "core:slice"
 import "core:strings"
 
 import stb_image "vendor:stb/image"
 
+import "src:digest"
+import "src:renderer"
+
+Capture_Target :: renderer.Capture_Target
+
+Capture_Format :: enum {
+	Png,
+	Float,
+	Raw,
+	Stats,
+}
+
+capture_format_name :: proc(format: Capture_Format) -> string {
+	switch format {
+	case .Png:
+		return "png"
+	case .Float:
+		return "float"
+	case .Raw:
+		return "raw"
+	case .Stats:
+		return "stats"
+	}
+	return "png"
+}
+
+capture_format_parse :: proc(name: string) -> (format: Capture_Format, ok: bool) {
+	switch name {
+	case "png":
+		return .Png, true
+	case "float":
+		return .Float, true
+	case "raw":
+		return .Raw, true
+	case "stats":
+		return .Stats, true
+	}
+	return .Png, false
+}
+
+capture_format_extension :: proc(format: Capture_Format) -> string {
+	switch format {
+	case .Png:
+		return ".png"
+	case .Float:
+		return ".f32"
+	case .Raw:
+		return ".bin"
+	case .Stats:
+		return ""
+	}
+	return ""
+}
+
+Capture_Request :: struct {
+	name:    string,
+	alpha:   f32,
+	target:  Capture_Target,
+	format:  Capture_Format,
+	enabled: bool,
+}
+
+Capture_Stats :: struct {
+	min:                    [4]f32 `json:"min"`,
+	max:                    [4]f32 `json:"max"`,
+	mean:                   [4]f32 `json:"mean"`,
+	velocity_median_texels: Maybe(f32) `json:"velocity_median_texels,omitempty"`,
+}
+
 Capture_Result :: struct {
-	name:          string `json:"name"`,
-	path:          string `json:"path"`,
-	frame:         int    `json:"frame"`,
-	width:         u32    `json:"width"`,
-	height:        u32    `json:"height"`,
-	hash:          string `json:"hash"`,
-	delta_mean:    f32    `json:"delta_mean"`,
-	delta_max:     u8     `json:"delta_max"`,
-	delta_over_16: int    `json:"delta_over_16"`,
+	name:          string         `json:"name"`,
+	path:          string         `json:"path,omitempty"`,
+	frame:         int            `json:"frame"`,
+	width:         u32            `json:"width"`,
+	height:        u32            `json:"height"`,
+	target:        string         `json:"target"`,
+	format:        string         `json:"format"`,
+	target_format: string         `json:"target_format"`,
+	hash:          string         `json:"hash,omitempty"`,
+	stats:         Maybe(Capture_Stats) `json:"stats,omitempty"`,
+	delta_mean:    f32            `json:"delta_mean"`,
+	delta_max:     u8             `json:"delta_max"`,
+	delta_over_16: int            `json:"delta_over_16"`,
 }
 
 Capture_Delta :: struct {
@@ -33,6 +109,9 @@ Capture_Summary :: struct {
 	worst_max_delta:        u8,
 	worst_over_16:          int,
 	worst_over_16_fraction: f32,
+	last_target:            string,
+	last_format:            string,
+	last_stats:             Maybe(Capture_Stats),
 }
 
 capture_summary :: proc(captures: []Capture_Result) -> Capture_Summary {
@@ -48,6 +127,12 @@ capture_summary :: proc(captures: []Capture_Result) -> Capture_Summary {
 				f32(capture.delta_over_16) / pixels,
 			)
 		}
+	}
+	if len(captures) > 0 {
+		last := captures[len(captures) - 1]
+		summary.last_target = last.target
+		summary.last_format = last.format
+		summary.last_stats = last.stats
 	}
 	return summary
 }
@@ -76,6 +161,56 @@ capture_delta :: proc(previous, current: []u8) -> Capture_Delta {
 	return {mean = f32(total) / f32(count), max = highest, over_16 = over_16}
 }
 
+capture_stats :: proc(
+	values: []f32,
+	width, height: u32,
+	target: Capture_Target,
+	allocator: mem.Allocator,
+) -> Capture_Stats {
+	stats := Capture_Stats {
+		min = {1e30, 1e30, 1e30, 1e30},
+		max = {-1e30, -1e30, -1e30, -1e30},
+	}
+	pixels := len(values) / 4
+	if pixels == 0 {
+		return stats
+	}
+	sums: [4]f64
+	for pixel in 0 ..< pixels {
+		for channel in 0 ..< 4 {
+			value := values[pixel * 4 + channel]
+			stats.min[channel] = min(stats.min[channel], value)
+			stats.max[channel] = max(stats.max[channel], value)
+			sums[channel] += f64(value)
+		}
+	}
+	for channel in 0 ..< 4 {
+		stats.mean[channel] = f32(sums[channel] / f64(pixels))
+	}
+	if target == .Velocity {
+		lengths := make([]f32, pixels, allocator)
+		defer delete(lengths, allocator)
+		covered := 0
+		for pixel in 0 ..< pixels {
+			depth := values[pixel * 4 + 2]
+			if depth <= 0 || depth >= renderer.CAMERA_FAR {
+				continue
+			}
+			x := values[pixel * 4 + 0] * f32(width)
+			y := values[pixel * 4 + 1] * f32(height)
+			lengths[covered] = math.sqrt(x * x + y * y)
+			covered += 1
+		}
+		if covered > 0 {
+			slice.sort(lengths[:covered])
+			stats.velocity_median_texels = lengths[covered / 2]
+		} else {
+			stats.velocity_median_texels = 0
+		}
+	}
+	return stats
+}
+
 capture_write_png :: proc(
 	frames_dir, name: string,
 	frame: int,
@@ -83,10 +218,9 @@ capture_write_png :: proc(
 	pixels: []u8,
 	allocator: mem.Allocator,
 ) -> (Capture_Result, string) {
-	filename := fmt.aprintf("%s.png", name, allocator = context.temp_allocator)
-	path, join_error := filepath.join({frames_dir, filename}, allocator)
-	if join_error != nil {
-		return {}, fmt.aprintf("cannot build capture path: %v", join_error, allocator = allocator)
+	path, path_error := capture_path(frames_dir, name, ".png", allocator)
+	if path_error != "" {
+		return {}, path_error
 	}
 	cpath := strings.clone_to_cstring(path, context.temp_allocator)
 	written := stb_image.write_png(
@@ -98,9 +232,8 @@ capture_write_png :: proc(
 		c.int(width * 4),
 	)
 	if written == 0 {
-		error := fmt.aprintf("cannot write %s", path, allocator = allocator)
 		delete(path, allocator)
-		return {}, error
+		return {}, fmt.aprintf("cannot write %s", path, allocator = allocator)
 	}
 	result := Capture_Result {
 		name = strings.clone(name, allocator),
@@ -111,6 +244,35 @@ capture_write_png :: proc(
 		hash = pixel_hash(pixels, allocator),
 	}
 	return result, ""
+}
+
+capture_write_file :: proc(
+	frames_dir, name, extension: string,
+	data: []u8,
+	allocator: mem.Allocator,
+) -> (path: string, error: string) {
+	written_path, path_error := capture_path(frames_dir, name, extension, allocator)
+	if path_error != "" {
+		return "", path_error
+	}
+	if write_error := os.write_entire_file(written_path, data); write_error != nil {
+		delete(written_path, allocator)
+		return "", fmt.aprintf("cannot write %s: %v", written_path, write_error, allocator = allocator)
+	}
+	return written_path, ""
+}
+
+@(private)
+capture_path :: proc(
+	frames_dir, name, extension: string,
+	allocator: mem.Allocator,
+) -> (string, string) {
+	filename := fmt.aprintf("%s%s", name, extension, allocator = context.temp_allocator)
+	path, join_error := filepath.join({frames_dir, filename}, allocator)
+	if join_error != nil {
+		return "", fmt.aprintf("cannot build capture path: %v", join_error, allocator = allocator)
+	}
+	return path, ""
 }
 
 capture_result_destroy :: proc(result: ^Capture_Result, allocator: mem.Allocator) {
@@ -127,9 +289,7 @@ capture_result_destroy :: proc(result: ^Capture_Result, allocator: mem.Allocator
 }
 
 pixel_hash :: proc(pixels: []u8, allocator: mem.Allocator) -> string {
-	hash: u64 = 0xcbf29ce484222325
-	for pixel in pixels {
-		hash = (hash ~ u64(pixel)) * 0x100000001b3
-	}
-	return fmt.aprintf("%016x", hash, allocator = allocator)
+	hash := digest.fnv()
+	digest.write_string(&hash, string(pixels))
+	return digest.hex(hash, allocator)
 }

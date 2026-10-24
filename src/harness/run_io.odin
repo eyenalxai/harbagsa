@@ -49,11 +49,13 @@ build_summary :: proc(report: Report, out_dir: string) -> Run_Summary {
 		digest    = strings.clone(report.digest, context.allocator),
 		error     = strings.clone(report.error, context.allocator),
 	}
-	screenshots := make([]string, len(report.screenshots), context.allocator)
-	for capture, index in report.screenshots {
-		screenshots[index] = strings.clone(capture.path, context.allocator)
+	screenshots := make([dynamic]string, 0, len(report.screenshots), context.allocator)
+	for capture in report.screenshots {
+		if capture.path != "" {
+			append(&screenshots, strings.clone(capture.path, context.allocator))
+		}
 	}
-	summary.screenshots = screenshots
+	summary.screenshots = screenshots[:]
 	return summary
 }
 

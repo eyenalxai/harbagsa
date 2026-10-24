@@ -30,7 +30,8 @@ serializes Make with `flock`.
   for a trace.
 - `state.json`: the final state alone. It holds the player, crates, window and
   input settings, menu, frame, renderer, render digest, and simulation digest.
-- `frames/frame_NNNN.png`: zero-padded captures.
+- `frames/<name>.png`, `.f32`, or `.bin`: captures. A color capture is a PNG;
+  `float` and `raw` write the intermediate target.
 - Each screenshot entry carries `delta_mean`, `delta_max`, and `delta_over_16`
   against the previous capture. The first capture has zeros.
 - `run.log`: log lines from the renderer, the session, and the runner.
@@ -117,6 +118,8 @@ game pauses. A settle renders every frame and writes no screenshot. An open menu
 `select` and `activate` need an open menu. `direction` is `-1` or `1` (default
 `1`) and needs `activate`. The rows are Window mode, Display, Resolution, Sprint
 mode, Crouch mode, Prone mode, and Resume.
+
+A capture names its target and format. See **Capture targets**.
 
 The harness has no compositor, so the menu uses a fixed two-display list:
 `Display 1` (1920x1080) and `Display 2` (2560x1440). Each lists smaller modes.
@@ -213,6 +216,44 @@ scenario.
   `--no-render`, `settle` is a plain step.
 
 Use `capture` or `--present`. Do not use `grim` for automated screenshots.
+
+## Capture targets
+
+A capture reads the final color image or one intermediate target. It still
+renders one frame. The default is the color target in PNG, so an existing
+scenario does not change.
+
+| Target | Image | Default format |
+| --- | --- | --- |
+| `color` | the final image, after the overlay | `png` |
+| `velocity` | screen motion in unjittered UV, linear view depth in `.z` | `stats` |
+| `history` | the resolved history: linear color, view depth in `.a` | `stats` |
+| `depth` | the hardware depth buffer in [0, 1] | `stats` |
+| `scene_color` | the linear scene color before the resolve | `stats` |
+
+Formats:
+
+- `png`: color only. 8-bit RGBA, sRGB. This is the screenshot path.
+- `float`: intermediate targets only. Writes `<name>.f32` with
+  `width * height * 4` little-endian `f32` values in RGBA order. Depth fills
+  `.x` and the other channels are zero. Color values stay in 0..255.
+- `raw`: intermediate targets only. Writes `<name>.bin` with the exact texel
+  bytes. `target_format` in the report names the Vulkan format.
+- `stats`: any target. Writes no file. The report holds per-channel `min`,
+  `max`, and `mean`, and for `velocity` the median screen motion in texels over
+  covered pixels.
+
+`png` with an intermediate target, or `float`/`raw` with color, is a scenario
+error. Capture deltas compare color PNG captures only; another target does not
+move the baseline.
+
+A check reads the last capture in its window: `capture.target`,
+`capture.format`, and `capture.stats.min.x`, `capture.stats.max.x`,
+`capture.stats.mean.x`, `capture.stats.velocity_median_texels`, and the same
+`.y`, `.z`, `.w` channels.
+
+`scenarios/capture-targets.json` covers a static and a moving velocity capture,
+scene color, history, and depth.
 
 ## Renderer state
 
@@ -322,7 +363,7 @@ ranked causes are in `docs/evidence/perf-baseline.md`.
 - `scenarios/smoke.json`, `scenarios/taa-static.json`,
   `scenarios/taa-motion.json`, `scenarios/settings-menu.json`,
   `scenarios/window-settings.json`, `scenarios/renderer-state.json`,
-  `scenarios/renderer-reset.json`.
+  `scenarios/renderer-reset.json`, `scenarios/capture-targets.json`.
 
 ## Adding a command
 
