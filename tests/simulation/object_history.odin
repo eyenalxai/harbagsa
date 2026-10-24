@@ -121,4 +121,3 @@ reset_scene_clears_history :: proc(t: ^testing.T) {
 	testing.expect_value(t, game.debug_history_redo_depth(&dm), 0)
 	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT)
 }
-

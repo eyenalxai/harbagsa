@@ -135,4 +135,3 @@ object_id_lookup_finds_the_body_owner :: proc(t: ^testing.T) {
 	)
 	testing.expect_value(t, game.simulation_object_id_for_body(&sim, {}), game.INVALID_OBJECT_ID)
 }
-
