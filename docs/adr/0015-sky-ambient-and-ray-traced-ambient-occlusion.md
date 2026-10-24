@@ -72,15 +72,16 @@ diagnosis.
   `docs/adr/0014-scene-pass-depth-prepass-and-culling.md`: the depth prepass,
   the lit pass, and the sky pass. The sky scope loads color and velocity and
   leaves depth in the layout the prepass set.
-- The scene pass grew from 0.80 ms to 2.17 ms at 1440p, so it now owns most of
-  the frame. Whole-GPU totals are 1.596 ms at 1080p, 2.619 ms at 1440p, 3.023 ms
-  for the arena view at 1440p, and 1.440 ms for the backface view at 1080p. The
-  same views cost 0.77, 1.11, 1.19, and 0.55 ms before this feature.
-- AO costs about 1.37 ms extra at 1440p. That is 0.17 ms per ray at eight rays.
-  The marginal ray cost falls as the count drops: four rays save 0.43 ms, so
-  the first rays carry a fixed traversal cost. Hemisphere rays are incoherent:
-  each ray leaves the pixel in a new direction across the hemisphere. The 16 sun
-  rays stay inside the 3° disk, so they stay coherent.
+- The scene pass grew from 1.26 ms to 2.17 ms at 1440p, so it now owns most of
+  the frame. Whole-GPU totals are 1.597 ms at 1080p, 2.611 ms at 1440p, 2.991 ms
+  for the arena view at 1440p, and 1.438 ms for the backface view at 1080p. The
+  same views cost 1.060, 1.697, 2.152, and 0.882 ms on the current base, so the
+  feature adds 0.54, 0.91, 0.84, and 0.56 ms.
+- AO costs about 0.91 ms extra at 1440p. That is 0.11 ms per ray at eight rays.
+  The marginal ray cost falls as the count drops: four rays save 0.42 ms. The
+  first rays carry a fixed traversal cost. Hemisphere rays are incoherent: each
+  ray leaves the pixel in a new direction across the hemisphere. The 16 sun
+  rays stay inside the 0.53° disk, so they stay coherent.
 - A pixel that faces the sun now traces 24 rays: 16 sun rays and 8 AO rays. The
   AO pattern is stochastic. TAA averages it. With TAA off, the ambient term is
   noisy.
@@ -90,7 +91,8 @@ diagnosis.
   tunnel gets darker as it gets deeper. That is deliberate, not a bug.
 - The sky ambient is scaled to the scene exposure, not to the visible sky
   radiance. The visible gradient is zenith (0.10, 0.20, 0.42) and horizon
-  (0.52, 0.62, 0.74), with a sun disk and a glow at the 3° angular diameter. The
+  (0.52, 0.62, 0.74), with a sun disk and a glow at the sun's angular
+  diameter. The
   ambient palette is (0.20, 0.24, 0.32) up and (0.10, 0.11, 0.13) down. One is
   not the integral of the other, so a change to the sky color does not move the
   ambient by itself.
@@ -100,7 +102,7 @@ diagnosis.
   jump at the skyline.
 - The AO pattern changes the converged frame-to-frame mean.
   `scenarios/taa-motion.json` moves `capture.worst_mean_delta` from 0.03 to
-  0.07. The measured value is 0.057 of 255, or 0.022 percent. The
+  0.07. The measured value is 0.0567 of 255, or 0.022 percent. The
   `capture.worst_over_16_fraction` gate stays at 5e-06 and measures 2.17e-06
   at 1280x720. The mean gate is wider because the AO samples are stochastic.
 - `scenarios/sky-ao.json` gates the image. Mean green: zenith 135.9 against a
