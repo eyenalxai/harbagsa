@@ -31,6 +31,8 @@ Scene :: struct {
 
 	pipeline_layout:       vk.PipelineLayout,
 	pipeline:              vk.Pipeline,
+	depth_layout:          vk.PipelineLayout,
+	depth_pipeline:        vk.Pipeline,
 	descriptor_set_layout: vk.DescriptorSetLayout,
 	descriptor_pool:       vk.DescriptorPool,
 	descriptor_sets:       [MAX_FRAMES_IN_FLIGHT]vk.DescriptorSet,
@@ -66,6 +68,7 @@ destroy_scene :: proc(r: ^Renderer) {
 	}
 
 	destroy_acceleration(r)
+	destroy_pipeline_pair(r, &r.scene.depth_pipeline, &r.scene.depth_layout)
 	destroy_pipeline_pair(r, &r.scene.pipeline, &r.scene.pipeline_layout)
 	if r.scene.descriptor_pool != 0 {
 		vk.DestroyDescriptorPool(r.device, r.scene.descriptor_pool, nil)

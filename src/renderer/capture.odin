@@ -133,7 +133,7 @@ record_capture_copy :: proc(
 	case .Depth:
 		subresource = DEPTH_SUBRESOURCE
 		old_layout = .DEPTH_ATTACHMENT_OPTIMAL
-		src_stage = {.LATE_FRAGMENT_TESTS}
+		src_stage = {.EARLY_FRAGMENT_TESTS, .LATE_FRAGMENT_TESTS}
 		src_access = {.DEPTH_STENCIL_ATTACHMENT_WRITE}
 	case .Velocity, .History, .Scene_Color:
 	}

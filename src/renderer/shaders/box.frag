@@ -1,6 +1,8 @@
 #version 460
 #extension GL_EXT_ray_query : require
 
+layout(early_fragment_tests) in;
+
 layout(location = 0) in vec3 v_normal;
 layout(location = 1) in vec3 v_color;
 layout(location = 2) in vec3 v_world_position;
@@ -87,7 +89,10 @@ void main() {
     vec3 normal = normalize(v_normal);
     vec3 to_light = normalize(-camera.light_direction.xyz);
     float diffuse = max(dot(normal, to_light), 0.0);
-    float visibility = sun_visibility(v_world_position, normal, to_light);
+    float visibility = 0.0;
+    if (diffuse > 0.0) {
+        visibility = sun_visibility(v_world_position, normal, to_light);
+    }
     vec3 color = v_color * (camera.ambient.rgb + diffuse * SUN_COLOR * visibility);
 
     vec4 world_position = vec4(v_world_position, 1.0);
