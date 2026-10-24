@@ -76,6 +76,7 @@ run :: proc() -> bool {
 	scratch: frame.Scratch
 	hud: game.HUD_State
 	menu_recapture := false
+	editor: Editor_State
 	last_time := time.now()
 
 	displays := platform.query_displays()
@@ -105,10 +106,21 @@ run :: proc() -> bool {
 			renderer.notify_resize(&state)
 		}
 
+		handle_editor_events(
+			&window,
+			&debug,
+			&sim,
+			&state,
+			hud.menu.open,
+			&events,
+			&editor,
+		)
+
 		handle_settings_menu_events(
 			&state,
 			&window,
 			&hud.menu,
+			&debug,
 			&sim.settings,
 			debug.active,
 			&events,
@@ -126,6 +138,10 @@ run :: proc() -> bool {
 				debug_view = !debug_view
 			}
 			if events.debug_mode_pressed {
+				if debug.active && debug.palette.open {
+					game.debug_palette_close(&debug)
+					recapture_after_palette(&window, &events, &editor)
+				}
 				game.debug_mode_toggle(&debug, &sim)
 				clear_latches(&latches)
 			}
@@ -206,18 +222,7 @@ run :: proc() -> bool {
 				} else {
 					game.simulation_step(
 						&sim,
-						game.Input_Snapshot {
-							move_forward = events.move_forward,
-							move_right = events.move_right,
-							sprint_held = events.sprint_held,
-							sprint_pressed = latches.sprint,
-							crouch_held = events.crouch_held,
-							crouch_pressed = latches.crouch,
-							prone_held = events.prone_held,
-							prone_pressed = latches.prone,
-							jump_pressed = latches.jump,
-							jump_held = events.jump_held,
-						},
+						player_input(events, latches),
 						game.SIMULATION_STEP,
 					)
 					clear_latches(&latches)
@@ -232,32 +237,8 @@ run :: proc() -> bool {
 		}
 
 		// Edit after the fixed steps so a dragged transform is the one rendered.
-		move_up: f32
-		if events.fly_up {
-			move_up += 1
-		}
-		if events.fly_down {
-			move_up -= 1
-		}
 		if debug.active && !hud.menu.open {
-			game.debug_mode_update(
-				&debug,
-				&sim,
-				game.Debug_Input {
-					move_forward = events.move_forward,
-					move_right = events.move_right,
-					move_up = move_up,
-					look_delta = events.look_delta,
-					wheel_delta = events.wheel_delta,
-					primary_pressed = events.primary_pressed,
-					primary_released = events.primary_released,
-					add_pressed = events.add_pressed,
-					delete_pressed = events.delete_pressed,
-					sun_pressed = events.sun_pressed,
-					captured = events.captured,
-				},
-				delta,
-			)
+			game.debug_mode_update(&debug, &sim, editor_input_from_events(events), delta)
 		}
 
 		perf.mark(&perf_state, .Simulation)

@@ -7,8 +7,13 @@ import "src:renderer"
 import "src:ui"
 
 @(private)
-open_settings_menu :: proc(window: ^platform.Window, menu: ^game.Menu_State) -> bool {
+open_settings_menu :: proc(
+	window: ^platform.Window,
+	menu: ^game.Menu_State,
+	debug: ^game.Debug_Mode,
+) -> bool {
 	game.menu_open(menu)
+	game.debug_mode_cancel_editing(debug)
 	platform.set_click_capture(window, false)
 	return platform.set_cursor_capture(window, false)
 }
@@ -32,6 +37,7 @@ handle_settings_menu_events :: proc(
 	r: ^renderer.Renderer,
 	window: ^platform.Window,
 	menu: ^game.Menu_State,
+	debug: ^game.Debug_Mode,
 	settings: ^game.Settings,
 	debug_active: bool,
 	events: ^platform.Events,
@@ -39,13 +45,13 @@ handle_settings_menu_events :: proc(
 	recapture: ^bool,
 	latches: ^Input_Latches,
 ) {
-	if events.menu_toggle_pressed {
+	if events.cancel_pressed {
 		if menu.open {
 			events.captured = close_settings_menu(window, menu, recapture^)
 			accumulator^ = 0
 		} else {
 			recapture^ = events.captured
-			events.captured = open_settings_menu(window, menu)
+			events.captured = open_settings_menu(window, menu, debug)
 			accumulator^ = game.SIMULATION_STEP
 			clear_latches(latches)
 			// The rows and the track rect normally come from the previous draw.
@@ -57,19 +63,19 @@ handle_settings_menu_events :: proc(
 	if !menu.open {
 		return
 	}
-	if events.menu_up_pressed {
+	if events.navigate_up_pressed {
 		game.menu_move(menu, -1)
 	}
-	if events.menu_down_pressed {
+	if events.navigate_down_pressed {
 		game.menu_move(menu, 1)
 	}
-	if events.menu_left_pressed {
+	if events.navigate_left_pressed {
 		_ = game.menu_change_setting(menu, settings, -1)
 	}
-	if events.menu_right_pressed {
+	if events.navigate_right_pressed {
 		_ = game.menu_change_setting(menu, settings, 1)
 	}
-	if events.menu_confirm_pressed && game.menu_activate(menu, settings) {
+	if events.confirm_pressed && game.menu_activate(menu, settings) {
 		events.captured = close_settings_menu(window, menu, recapture^)
 		accumulator^ = 0
 	}

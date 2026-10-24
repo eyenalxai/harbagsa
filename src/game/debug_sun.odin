@@ -11,6 +11,9 @@ SUN_ELEVATION_MAX :: 1.5
 SUN_CLICK_MOTION :: 3.0
 
 debug_edit_sun :: proc(dm: ^Debug_Mode, input: Debug_Input) {
+	if dm.palette.open || dm.placement.armed {
+		return
+	}
 	if input.sun_pressed {
 		if dm.selection == .Sun {
 			debug_mode_clear_selection(dm)

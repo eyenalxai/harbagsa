@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // a later pointer ticket and the frame tests call the hit test
+#+vet !unused-procedures // the frame tests call the panel bounds
 package renderer
 
 PALETTE_COLUMNS :: 6
@@ -106,6 +106,26 @@ palette_card_at :: proc(layout: Palette_Layout, pointer: [2]f32) -> int {
 		}
 	}
 	return -1
+}
+
+Palette_Hit :: struct {
+	inside: bool,
+	card:   int,
+}
+
+// The game loop asks the renderer where a normalized pointer lands. The layout
+// and the hit test stay in one package, so a card cannot move under the pointer
+// unnoticed.
+palette_hit_test :: proc(r: ^Renderer, pointer: [2]f32, item_count: int) -> Palette_Hit {
+	width := f32(r.target.config.width)
+	height := f32(r.target.config.height)
+	layout := palette_layout(ui_theme_init(r.target.config.height), width, height, item_count)
+	x := pointer.x * width
+	y := pointer.y * height
+	return {
+		inside = hud_rect_contains(layout.panel, x, y),
+		card = palette_card_at(layout, pointer),
+	}
 }
 
 hud_rect_contains :: proc(rect: HUD_Rect, x, y: f32) -> bool {
