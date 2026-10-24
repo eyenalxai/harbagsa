@@ -15,7 +15,11 @@ Row_Kind :: enum {
 	Slider,
 	Divider,
 	Header,
-	Spacer,
+}
+
+Row_Align :: enum {
+	Left,
+	Right,
 }
 
 Row :: struct {
@@ -23,6 +27,7 @@ Row :: struct {
 	label:   string,
 	value:   string,
 	numeric: bool,
+	blocked: bool,
 	ratio:   f32,
 	ticks:   int,
 }
@@ -33,12 +38,11 @@ Hint_Cell :: struct {
 }
 
 Menu :: struct {
-	title:        string,
-	rows:         []Row,
-	selected:     int,
-	hints:        []Hint_Cell,
-	hint_columns: int,
-	note:         string,
+	title:    string,
+	rows:     []Row,
+	selected: int,
+	hints:    []Hint_Cell,
+	note:     string,
 }
 
 Hud :: struct {
