@@ -90,9 +90,17 @@ record_taa_resolve :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image
 	)
 
 	params := TAA_Params {
-		gamma         = srgb_gamma(r),
-		history_valid = taa.enabled && taa.history_valid ? 1 : 0,
-		max_samples   = TAA_MAX_SAMPLES,
+		gamma          = srgb_gamma(r),
+		history_valid  = taa.enabled && taa.history_valid ? 1 : 0,
+		max_samples    = TAA_MAX_SAMPLES,
+		history_weight = -1,
+		clamp_enabled  = 1,
+		force_trust    = 0,
+	}
+	if taa.debug.active {
+		params.history_weight = taa.debug.history_weight
+		params.clamp_enabled = taa.debug.clamp ? 1 : 0
+		params.force_trust = taa.debug.force_depth_trust ? 1 : 0
 	}
 	vk.CmdPushConstants(
 		command_buffer,

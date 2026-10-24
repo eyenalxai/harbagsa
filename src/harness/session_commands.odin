@@ -158,6 +158,9 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 		if command_error == "" {
 			reply.perf = &session.perf_report
 		}
+	case .Renderer_Debug:
+		command_error = session_renderer_debug(session, command.renderer_debug)
+		owns_error = true
 	case .Quit:
 		if session.recording {
 			recorded, _ := session_record_stop(session)
