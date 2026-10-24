@@ -59,13 +59,21 @@ Events :: struct {
 	captured:            bool,
 }
 
-init :: proc(title: cstring, width, height: i32) -> (window: Window, err: Error) {
+sync_window :: proc(window: ^Window) {
+	sdl3.SyncWindow(window.handle)
+}
+
+init :: proc(title: cstring, width, height: i32, fullscreen := false) -> (window: Window, err: Error) {
 	if !sdl3.Init({.VIDEO}) {
 		log.errorf("platform: SDL_Init failed: %v", sdl3.GetError())
 		return {}, .SDL_Init
 	}
 
-	window.handle = sdl3.CreateWindow(title, width, height, {.VULKAN, .RESIZABLE})
+	flags := sdl3.WindowFlags{.VULKAN, .RESIZABLE}
+	if fullscreen {
+		flags |= {.FULLSCREEN}
+	}
+	window.handle = sdl3.CreateWindow(title, width, height, flags)
 	if window.handle == nil {
 		message := string(sdl3.GetError())
 		log.errorf("platform: SDL_CreateWindow failed: %s", message)
