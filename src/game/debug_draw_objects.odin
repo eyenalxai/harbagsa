@@ -16,7 +16,7 @@ collect_object_editor_lines :: proc(dm: ^Debug_Mode, sim: ^Simulation, collector
 		return
 	}
 
-	box := simulation_object_box(sim, id)
+	box := simulation_object_visual_box(sim, id)
 	corners := oriented_box_corners(
 		box.center,
 		box.half_extents,

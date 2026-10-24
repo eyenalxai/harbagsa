@@ -342,6 +342,29 @@ the palette, captures the Platform preview, selects the Ramp, and captures its
 pitched preview. Run it with `--size 800x600` to check the dock fits the smallest
 supported window.
 
+## Spawn pop
+
+A placement or a duplicate plays a 0.28 s spawn pop. The visual scale follows
+`easeOutBack` with a back factor of 1.5: it peaks at about 1.08 and has a floor
+of 0.01. The scale multiplies the box half extents and moves the centre so the
+AABB bottom stays fixed. The physics body keeps its full size.
+
+Initial crates and undo or redo restores are settled: scale 1 and spawn age 0.
+`objects.<id>.scale` and `objects.<id>.spawn_age` report the animation.
+`objects.<id>.position` and `objects.<id>.rotation` stay the physical transform,
+so the state digest covers the transform and not the animation phase.
+
+The visual box is what the renderer and the selection outline use. The TLAS and
+the sun shadows therefore follow the pop. A pop keeps the box count, so the
+renderer does not reset TAA history for it; a placement or a deletion still
+changes the box count and resets history with `scene_change`.
+
+`scenarios/debug-pop.json` enters debug mode, renders the arena once, places a
+block with the `editor` command, and captures the start, overshoot, and settled
+frames. It checks the scale, the spawn age, the physical position, and that the
+pop does not reset TAA. `simulation_restore_object` is the settled create path
+for a future undo or redo restore.
+
 The harness has no compositor, so the menu uses a fixed two-display list:
 `Display 1` (1920x1080) and `Display 2` (2560x1440). Each lists smaller modes.
 `settings.display` is the short display name, `settings.display_index` is the
@@ -359,6 +382,7 @@ The 2D layer is part of the feature, so its captures live next to it.
 | `scenarios/hud-debug.json` | the debug-mode readout, which shares the row renderer |
 | `scenarios/editor-ghost.json` | the armed placement HUD, the ghost, and an exact place |
 | `scenarios/debug-palette.json` | the open palette, its selection, and the cube and ramp previews |
+| `scenarios/debug-pop.json` | the spawn pop at the start, overshoot, and settled frames |
 | `scenarios/ui.json` | the settings panel with a numeric value selected, then an action row |
 | `scenarios/settings-menu.json` | the settings round trip and the menu digest |
 | `scenarios/blocked-note.json` | the blocked-change note and its clear on a successful change |
@@ -833,9 +857,10 @@ and the second `perf` measures again. Both traces stay in the run directory:
 - Capture alpha defaults to 1.0 (post-step), so a capture matches `state` at the
   same frame.
 - The digest is FNV-1a over frame, player, the placed objects (id, prefab, body,
-  and transform), the window and input settings, and menu state. Scale and spawn
-  age are animation output, so they stay out of the digest. Use it in reports
-  and regression checks.
+  and the physical transform), the window and input settings, and menu state.
+  Scale and spawn age are animation output, so they stay out of the digest. The
+  visual pop box is not digest input. Use the digest in reports and regression
+  checks.
 
 ## Where the code lives
 
@@ -893,6 +918,8 @@ and the second `perf` measures again. Both traces stay in the run directory:
   starting crate layout.
 - `src/game/objects.odin`: the placed-object list and the create, remove, move,
   yaw, convert, and reset API.
+- `src/game/spawn_pop.odin`: the pop curve, the spawn age and scale, the visual
+  box, and the settled restore path.
 - `src/game/palette.odin`: the object palette state and the debug palette API.
 - `src/game/placement.odin`: the armed placement state, the ray anchor, the
   ghost transform, the height and yaw steps, the snap, and place.
@@ -921,7 +948,8 @@ and the second `perf` measures again. Both traces stay in the run directory:
   `scenarios/renderer-reset.json`, `scenarios/capture-targets.json`,
   `scenarios/renderer-debug.json`, `scenarios/renderer-debug-converge.json`,
   `scenarios/renderer-debug-jitter.json`, `scenarios/capture-free.json`,
-  `scenarios/editor-ghost.json`, and `scenarios/perf-lamps.json`.
+  `scenarios/editor-ghost.json`, `scenarios/debug-pop.json`, and
+  `scenarios/perf-lamps.json`.
 
 ## Adding a command
 

@@ -245,6 +245,13 @@ The wireframe preview of the armed placement: the oriented box, its footprint on
 the surface, and the height guide. It is a planning aid, not a collision test.
 _Avoid_: Preview, hologram
 
+**Spawn pop**:
+The short scale animation that a newly placed or duplicated object plays. It
+starts at a 0.01 floor, overshoots by about 8 percent, and settles at full size
+in 0.28 s with the AABB bottom fixed. The physics body keeps its full size.
+Initial crates and undo or redo restores do not pop.
+_Avoid_: Spawn animation, grow effect
+
 **Grid snap**:
 The optional 0.25 m X/Z rounding of the ghost's bottom anchor. It is off by
 default.
