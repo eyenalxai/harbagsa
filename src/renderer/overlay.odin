@@ -4,6 +4,7 @@ package renderer
 import "core:mem"
 
 import "src:geometry"
+import "src:ui"
 import vk "vendor:vulkan"
 
 MAX_DEBUG_VERTICES :: 32768
@@ -44,7 +45,7 @@ Overlay :: struct {
 
 	theme: UI_Theme,
 
-	menu_slider:        Menu_Slider,
+	menu_slider:        ui.Slider_Rect,
 	menu_frozen_width:  f32,
 
 	atlas:                Text_Atlas,
@@ -57,11 +58,7 @@ Overlay :: struct {
 	atlas_set:     vk.DescriptorSet,
 }
 
-Menu_Slider :: struct {
-	x, y, width, height: f32,
-}
-
-menu_slider_travel :: proc(r: ^Renderer) -> Menu_Slider {
+menu_slider_track :: proc(r: ^Renderer) -> ui.Slider_Rect {
 	return r.overlay.menu_slider
 }
 

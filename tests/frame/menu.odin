@@ -55,7 +55,7 @@ menu_renders_without_the_hud_flag :: proc(t: ^testing.T) {
 }
 
 @(test)
-menu_slider_travel_stays_inside_the_panel :: proc(t: ^testing.T) {
+menu_slider_track_stays_inside_the_panel :: proc(t: ^testing.T) {
 	sim, _, hud, _ := create_state(t)
 	defer game.simulation_destroy(&sim)
 	hud.menu.displays = display.fallback_list()
@@ -74,21 +74,24 @@ menu_slider_travel_stays_inside_the_panel :: proc(t: ^testing.T) {
 	slider := overlay.menu_slider
 	padding := overlay.theme.spacing.xl
 	knob := overlay.theme.spacing.md
-	expected_travel := panel.width - padding * 2 - knob
+	expected_track := panel.width - padding * 2
+	travel := slider.width - knob
 
-	testing.expect(t, slider.width > 0, "the slider has no travel")
+	testing.expect(t, slider.width > 0, "the slider has no track")
 	testing.expectf(
 		t,
-		math.abs(slider.width - expected_travel) < 0.01,
-		"the travel is %v, expected %v",
+		math.abs(slider.width - expected_track) < 0.01,
+		"the track is %v, expected %v",
 		slider.width,
-		expected_travel,
+		expected_track,
 	)
-	testing.expect(t, slider.x >= panel.x + padding, "the travel starts outside the panel")
+	testing.expectf(t, math.abs(slider.knob - knob) < 0.01, "the knob is %v, expected %v", slider.knob, knob)
+	testing.expect(t, travel > 0, "the slider has no travel")
+	testing.expect(t, slider.x >= panel.x + padding, "the track starts outside the panel")
 	testing.expect(
 		t,
 		slider.x + slider.width <= panel.x + panel.width - padding + 0.01,
-		"the travel runs past the panel",
+		"the track runs past the panel",
 	)
 	testing.expect(
 		t,
