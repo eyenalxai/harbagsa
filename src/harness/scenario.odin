@@ -48,7 +48,7 @@ scenario_parse :: proc(data: string, allocator: mem.Allocator) -> (Scenario, str
 	}
 	if key, unknown := json_unknown_key(
 		object,
-		{"version", "view", "steps", "capture", "checks", "commands"},
+		{"version", "view", "steps", "capture", "checks", "commands", "renderer_debug"},
 	); unknown {
 		return {}, fmt.aprintf("unknown scenario key %q", key, allocator = allocator)
 	}
@@ -73,6 +73,12 @@ scenario_parse :: proc(data: string, allocator: mem.Allocator) -> (Scenario, str
 			return {}, view_error
 		}
 		append(&scenario.commands, Command{kind = .View, view = view})
+	}
+
+	if debug_value, has_debug := json_get(object, "renderer_debug"); has_debug {
+		if debug_error := scenario_renderer_debug(&scenario, debug_value); debug_error != "" {
+			return {}, debug_error
+		}
 	}
 
 	has_body := false

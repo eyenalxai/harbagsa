@@ -8,6 +8,9 @@ layout(push_constant) uniform PushConstants {
     float gamma;
     float history_valid;
     float max_samples;
+    float history_weight;
+    float clamp_enabled;
+    float force_trust;
 } resolve;
 
 layout(set = 0, binding = 0) uniform sampler2D scene_color;
@@ -84,7 +87,9 @@ void main() {
         vec2 clamped_uv = clamp(history_uv, half_texel, 1.0 - half_texel);
         vec4 history_sample = textureLod(history, clamped_uv, 0.0);
         vec3 raw_history = rgb_to_ycocg(max(history_sample.rgb, vec3(0.0)));
-        vec3 clipped_history = clip_aabb(lo, hi, raw_history);
+        vec3 clipped_history = resolve.clamp_enabled > 0.5
+            ? clip_aabb(lo, hi, raw_history)
+            : raw_history;
 
         // Jitter moves a geometry edge across a pixel, so the history depth and
         // the current depth differ on exactly the pixels that need smoothing.
@@ -95,10 +100,16 @@ void main() {
         float depth_hi = depth_max + depth_tolerance;
         float depth_outside = max(depth_lo - history_sample.a, history_sample.a - depth_hi);
         float trust = 1.0 - smoothstep(0.0, depth_tolerance, depth_outside);
+        if (resolve.force_trust > 0.5) {
+            trust = 1.0;
+        }
 
         float samples = textureLod(sample_count, clamped_uv, 0.0).r;
         float count = clamp(samples, 0.0, resolve.max_samples);
         float weight = count / (count + 1.0);
+        if (resolve.history_weight >= 0.0) {
+            weight = resolve.history_weight;
+        }
 
         if (trust < 0.5) {
             resolved = current.rgb;

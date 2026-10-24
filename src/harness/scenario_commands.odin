@@ -18,6 +18,23 @@ scenario_view :: proc(value: json.Value) -> (View_Command, string) {
 }
 
 @(private)
+scenario_renderer_debug :: proc(scenario: ^Scenario, value: json.Value) -> string {
+	object, object_ok := json_object(value)
+	if !object_ok {
+		return "scenario 'renderer_debug' must be an object"
+	}
+	if key, unknown := json_unknown_key(object, RENDERER_DEBUG_BLOCK_KEYS); unknown {
+		return fmt.aprintf("unknown renderer_debug key %q", key, allocator = context.allocator)
+	}
+	fields, fields_error := renderer_debug_fields(object)
+	if fields_error != "" {
+		return fields_error
+	}
+	append(&scenario.commands, Command{kind = .Renderer_Debug, renderer_debug = fields})
+	return ""
+}
+
+@(private)
 scenario_commands :: proc(scenario: ^Scenario, value: json.Value, allocator: mem.Allocator) -> string {
 	array, array_ok := json_array(value)
 	if !array_ok || len(array) == 0 {

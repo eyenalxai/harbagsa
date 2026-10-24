@@ -173,6 +173,8 @@ Options:
 - `--no-render`: run the simulation and checks only. No Vulkan device is created.
 - `--present`: render the real SDL window and capture the swapchain image
   before present. No compositor and no `grim`.
+- `--debug-renderer`: accept the renderer debug command. A build with
+  `-define:ENABLE_RENDERER_DEBUG=true` always accepts it.
 
 The harness view starts with the HUD off, the debug draw off, and the capture
 hint off. A scenario captures the final frame by default. `capture` adds more
@@ -270,6 +272,10 @@ The batch runner and the live session share one command set:
   resolves against the run directory. Offscreen measures throughput; with
   `--present` it measures pacing. A run without a device reports CPU numbers
   only.
+- `{"cmd": "renderer_debug", "jitter": false, "shadow_phase": 12}`: change TAA
+  inputs. It needs `--debug-renderer` or a build with
+  `-define:ENABLE_RENDERER_DEBUG=true`. `clear` resets every override. Changing
+  a TAA input resets history.
 - `{"cmd": "record", "path": "scenarios/walk.json"}`: start recording. Send
   `{"cmd": "record"}` to stop and write the scenario.
 - `{"cmd": "replay", "path": "scenarios/walk.json"}`: reset and run a scenario.
@@ -377,6 +383,14 @@ A capture can read an intermediate target. `"target": "velocity"` with
 screen motion in texels. `"format": "float"` writes a `.f32` file and `"raw"`
 writes the exact texel bytes. A PNG capture is color only.
 `scenarios/capture-targets.json` covers every target.
+
+`renderer_debug` changes TAA inputs for a diagnosis: TAA, jitter, history weight,
+clamp, depth trust, and the shadow phase. It is gated behind `--debug-renderer`
+or the `ENABLE_RENDERER_DEBUG` define; a release build rejects it. Changing a
+TAA input resets history and records the `debug_override` reason.
+`scenarios/renderer-debug.json` covers the overrides, and
+`scenarios/renderer-debug-converge.json` shows the image converging with jitter
+off.
 
 ## Build
 
