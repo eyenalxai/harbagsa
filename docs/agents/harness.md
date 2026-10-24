@@ -71,6 +71,7 @@ serializes Make with `flock`.
 | Task | Read |
 | --- | --- |
 | drive the simulation | **Scenario format** and **Commands** |
+| drive the object palette and placement tool | **Editor** |
 | capture the final image | **Capture targets** (`color` + `png`) |
 | read velocity, history, depth, or scene color | **Capture targets** |
 | read numeric image statistics | **Capture targets** (`stats`) |
@@ -101,9 +102,9 @@ serializes Make with `flock`.
 - `trace.jsonl`: one JSON object per measured frame, when the perf command asks
   for a trace.
 - `state.json`: the final state alone. It holds the player, placed objects,
-  window and input settings, menu, frame, renderer, render digest, and simulation
-  digest. Each object carries `id`, `prefab`, `body`, `position`, `rotation`,
-  `scale`, and `spawn_age`.
+  window and input settings, menu, debug palette and placement, frame, renderer,
+  render digest, and simulation digest. Each object carries `id`, `prefab`,
+  `body`, `position`, `rotation`, `scale`, and `spawn_age`.
 - `frames/<name>.png`, `.f32`, or `.bin`: captures. A color capture is a PNG;
   `float` and `raw` write the intermediate target.
 - Each screenshot entry carries `delta_mean`, `delta_max`, and `delta_over_16`
@@ -158,7 +159,9 @@ Rules:
   run does not create a renderer unless `--present` asks for the window.
 - A check uses the `state.json` shape. Operators: `eq`, `ne`, `lt`, `le`, `gt`,
   `ge`. Examples: `player.position.y`, `objects.count`, `settings.window_mode`,
-  `settings.resolution`, `settings.sprint_mode`, `menu.open`.
+  `settings.resolution`, `settings.sprint_mode`, `menu.open`, `debug.active`,
+  `debug.palette.open`, `debug.placement.armed`, and
+  `debug.placement.prefab`.
 - An object check addresses a placed object by id: `objects.7.position.z`,
   `objects.7.rotation.w`, `objects.7.prefab`, `objects.7.body`,
   `objects.7.scale`, and `objects.7.spawn_age`. The id is stable while the object
@@ -228,8 +231,10 @@ Rules:
 - `{"cmd": "displays", "set": [{"name": "Solo", "desktop": "1280x720", "modes": ["1280x720"]}]}`
 - `{"cmd": "displays", "clear": true}`
 - `{"cmd": "debug_mode", "active": true}`
-- `{"cmd": "menu", "open": true, "item": "Type weight", "activate": true, "direction": -1}`
-- `{"cmd": "menu", "set": 900}`
+- `{"cmd": "editor", "open": true, "select": 4, "pick": true, "height": 0.5}`
+- `{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw": 0, "pitch": -0.6}}`
+- `{"cmd": "editor", "place": {"prefab": "Block", "position": [0, 0.5, 10], "body": "static"}}`
+- `{"cmd": "menu", "open": true, "select": 1, "activate": true, "direction": -1}`
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`
 - `{"cmd": "check", "field": "capture.1.stats.mean.y", "op": "gt", "other": "capture.0.stats.mean.y"}`
 - `{"cmd": "perf", "frames": 120, "warmup": 60}`
@@ -293,6 +298,46 @@ keep their value, and `reset` restores the default sun. The state reports the
 same three values under `sun.*`, so a check can assert the light a capture used.
 Changing the sun resets TAA history with the `scene_change` reason.
 
+## Editor
+
+The `editor` command drives the debug placement tool. It needs debug mode; send
+`{"cmd": "debug_mode", "active": true}` first. Every field is optional, and one
+command may combine fields. They apply in this order: `camera`, `open`,
+`select`, `body`, `height`, `yaw`, `snap`, `pick`, `cancel`, `place`.
+
+| Field | Meaning |
+| --- | --- |
+| `open` | open or close the object palette |
+| `select` | zero-based prefab index; a new prefab restores its default body |
+| `body` | `static` or `dynamic` for the next placement |
+| `pick` | arm the selected prefab, close the palette, cast the placement ray |
+| `height` | offset above the surface in metres; clamped at 0 |
+| `yaw` | rotation in degrees |
+| `snap` | round the X/Z bottom anchor to a 0.25 m grid |
+| `cancel` | clear the armed tool without placing |
+| `camera` | `{"position", "yaw", "pitch"}` for the debug camera; yaw and pitch are radians |
+| `place` | `{"prefab", "position", "yaw", "body"}` creates at an exact transform |
+
+`select` follows the catalog order: Crate, Small crate, Wide crate, Block,
+Platform, Ramp, Pillar, Wall. A pick casts a 100 m ray from the debug camera. A
+hit puts the object's AABB bottom on the hit point; a miss puts it 3 m ahead of
+the camera. The state reports the ghost centre as `debug.placement.position`.
+
+`place` requires `prefab` and `position`. Its `yaw` defaults to 0 and its `body`
+to the prefab default. It bypasses the ray and leaves the armed tool unchanged.
+At the 128-object cap it creates nothing.
+
+The state carries `debug.palette` (`open`, `selected`, `body`) and
+`debug.placement` (`armed`, `prefab`, `position`, `height`, `yaw`, `snap`).
+`debug.selection` is `none`, `object`, or `sun`, and `debug.selected_id` is the
+selected placed object's id or 0. `debug.placement.height` is metres,
+`debug.placement.yaw` is degrees, and `debug.placement.position` is the ghost
+centre (zero when not armed). The ghost is drawn as debug lines while armed: the
+oriented box, the footprint on the surface, and the height guide.
+
+`scenarios/editor-ghost.json` captures the armed ghost on the floor and raised,
+then places a block at an exact transform.
+
 The harness has no compositor, so the menu uses a fixed two-display list:
 `Display 1` (1920x1080) and `Display 2` (2560x1440). Each lists smaller modes.
 `settings.display` is the short display name, `settings.display_index` is the
@@ -308,6 +353,7 @@ The 2D layer is part of the feature, so its captures live next to it.
 | --- | --- |
 | `scenarios/hud.json` | the status panel at spawn, mid-walk, and facing the arena |
 | `scenarios/hud-debug.json` | the debug-mode readout, which shares the row renderer |
+| `scenarios/editor-ghost.json` | the armed placement HUD, the ghost, and an exact place |
 | `scenarios/ui.json` | the settings panel with a numeric value selected, then an action row |
 | `scenarios/settings-menu.json` | the settings round trip and the menu digest |
 | `scenarios/blocked-note.json` | the blocked-change note and its clear on a successful change |
@@ -841,7 +887,8 @@ It translates `--base` to `tools/ab.sh --ref` and passes `--scenario`, `--size`,
 - A perf command is the one wall-clock exception. It never writes the state,
   the digest, or the pixel hash.
 - `reset` creates a fresh `Simulation`. Placed objects return to spawn, the
-  settings return to their defaults, and the menu closes.
+  settings return to their defaults, the menu closes, and the debug palette and
+  placement return to their defaults.
 - `look` uses the game sensitivity and pitch clamp. `face` sets yaw and pitch
   directly.
 - Capture alpha defaults to 1.0 (post-step), so a capture matches `state` at the
@@ -877,10 +924,8 @@ It translates `--base` to `tools/ab.sh --ref` and passes `--scenario`, `--size`,
 - `src/harness/perf_report.odin`: the perf report types and fill.
 - `src/harness/perf_command.odin`: the perf command parser.
 - `src/harness/session_state.odin`: the session's renderer snapshot.
-- `src/harness/sun_command.odin`: the sun command parser.
-- `src/harness/session_sun.odin`: the sun command's session state.
-- `src/harness/crates_command.odin`: the crates command parser.
-- `src/harness/session_crates.odin`: the crates command's session state.
+- `src/harness/editor_command.odin`: the `editor` command and its parser.
+- `src/harness/session_editor.odin`: the `editor` command execution.
 - `src/harness/session_debug.odin`: the renderer debug gate and overrides.
 - `src/harness/renderer_debug_command.odin`: the override parser.
 - `src/harness/analysis.odin`: the analysis config, summary, and period.
@@ -907,6 +952,13 @@ It translates `--base` to `tools/ab.sh --ref` and passes `--scenario`, `--size`,
   starting crate layout.
 - `src/game/objects.odin`: the placed-object list and the create, remove, move,
   yaw, convert, and reset API.
+- `src/game/palette.odin`: the object palette state and the debug palette API.
+- `src/game/placement.odin`: the armed placement state, the ray anchor, the
+  ghost transform, the height and yaw steps, the snap, and place.
+- `src/game/oriented_box.odin`: the oriented box corners and the AABB half
+  extents.
+- `src/game/debug_draw_ghost.odin`: the ghost outline, footprint, and height
+  guide lines.
 - `src/game/box_body.odin`: the one Box3D box-body creation path for the static
   arena and the placed objects.
 - `src/game/menu.odin`: the menu rows, settings text, and control list.
@@ -923,17 +975,12 @@ It translates `--base` to `tools/ab.sh --ref` and passes `--scenario`, `--size`,
   `tests/display/display.odin`, `tests/renderer/` (including `target.odin`,
   `render_digest.odin`, `capture_values.odin`, and `debug.odin`).
 - `scenarios/smoke.json`, `scenarios/taa-static.json`,
-  `scenarios/taa-motion.json`, `scenarios/hud.json`, `scenarios/hud-debug.json`,
-  `scenarios/ui.json`, `scenarios/type-weight.json`,
-  `scenarios/settings-menu.json`, `scenarios/window-settings.json`,
-  `scenarios/renderer-state.json`, `scenarios/renderer-reset.json`,
-  `scenarios/capture-targets.json`, `scenarios/renderer-debug.json`,
-  `scenarios/renderer-debug-converge.json`,
-  `scenarios/renderer-debug-jitter.json`, `scenarios/sky-ao.json`,
-  `scenarios/capture-free.json`, `scenarios/shadow-angle.json`,
-  `scenarios/perf.json`, `scenarios/perf-crates.json`,
-  `scenarios/perf-arena.json`, `scenarios/perf-backface.json`,
-  `scenarios/step-angle.json`.
+  `scenarios/taa-motion.json`, `scenarios/settings-menu.json`,
+  `scenarios/window-settings.json`, `scenarios/renderer-state.json`,
+  `scenarios/renderer-reset.json`, `scenarios/capture-targets.json`,
+  `scenarios/renderer-debug.json`, `scenarios/renderer-debug-converge.json`,
+  `scenarios/renderer-debug-jitter.json`, `scenarios/capture-free.json`, and
+  `scenarios/editor-ghost.json`.
 
 ## Adding a command
 

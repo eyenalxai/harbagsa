@@ -8,8 +8,9 @@ import "src:perf"
 import "src:ui"
 
 HUD_ROW_COUNT :: 6
+HUD_PLACEMENT_ROW_COUNT :: 7
 HUD_PERF_ROW_COUNT :: 2
-HUD_MAX_ROWS :: HUD_ROW_COUNT + HUD_PERF_ROW_COUNT
+HUD_MAX_ROWS :: HUD_PLACEMENT_ROW_COUNT + HUD_PERF_ROW_COUNT
 
 HUD_CAPTURE_HINT :: "Click to capture mouse"
 HUD_HEADER_SEPARATOR :: " · "
@@ -84,7 +85,10 @@ hud_perf_append :: proc(hud: ^HUD_State) {
 	if !hud.perf.visible {
 		return
 	}
-	index := HUD_ROW_COUNT
+	index := len(hud.view.rows)
+	if index >= HUD_MAX_ROWS {
+		return
+	}
 	hud.rows[index] = {
 		kind    = .Detail,
 		label   = "Perf",
@@ -106,6 +110,11 @@ hud_perf_append :: proc(hud: ^HUD_State) {
 
 @(private)
 hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_Mode) {
+	if debug.placement.armed {
+		hud_placement_state_update(hud, sim, debug)
+		return
+	}
+
 	selected := "None"
 	if id, ok := debug_selected_object_id(debug, sim); ok {
 		if object, found := simulation_object_find(sim, id); found {
@@ -147,6 +156,51 @@ hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_
 		numeric = true,
 	}
 	hud.view.rows = hud.rows[:HUD_ROW_COUNT]
+}
+
+@(private)
+hud_placement_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_Mode) {
+	hud.rows[0] = {kind = .Header, label = "Debug mode"}
+	hud.rows[1] = {
+		kind  = .Metric,
+		label = "Prefab",
+		value = prefab_name(debug.placement.prefab),
+	}
+	hud.rows[2] = {
+		kind  = .Metric,
+		label = "Body",
+		value = body_mode_name(debug.palette.body_mode),
+	}
+	hud.rows[3] = {
+		kind    = .Metric,
+		label   = "Height",
+		value   = line_format(&hud.storage, 3, "% 6.2f m", debug.placement.height),
+		numeric = true,
+	}
+	hud.rows[4] = {
+		kind    = .Metric,
+		label   = "Yaw",
+		value   = line_format(&hud.storage, 4, "% 6.1f deg", debug.placement.yaw_degrees),
+		numeric = true,
+	}
+	snap := "off"
+	if debug.placement.snap {
+		snap = "0.25 m"
+	}
+	hud.rows[5] = {kind = .Metric, label = "Snap", value = snap}
+	hud.rows[6] = {
+		kind    = .Metric,
+		label   = "Objects",
+		value   = line_format(
+			&hud.storage,
+			6,
+			"% 3d / %d",
+			simulation_object_count(sim),
+			MAX_PLACED_OBJECTS,
+		),
+		numeric = true,
+	}
+	hud.view.rows = hud.rows[:HUD_PLACEMENT_ROW_COUNT]
 }
 
 // Every number that changes while the player moves is formatted into a fixed

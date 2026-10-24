@@ -17,6 +17,7 @@ Command_Kind :: enum {
 	Sun,
 	Crates,
 	Debug_Mode,
+	Editor,
 	Menu,
 	Check,
 	Record,
@@ -147,23 +148,22 @@ Renderer_Debug_Command :: struct {
 }
 
 Command :: struct {
-	kind:    Command_Kind,
-	look:    Look_Command,
-	face:    Face_Command,
-	input:   Input_Command,
-	step:    Step_Command,
-	settle:  Settle_Command,
-	capture: Capture_Command,
-	camera:  Camera_Command,
-	view:       View_Command,
-	sun:        Sun_Command,
-	crates:     Crates_Command,
-	debug_mode: Debug_Mode_Command,
-	menu:       Menu_Command,
-	check:   Check_Command,
-	record:  Record_Command,
-	replay:  Replay_Command,
-	perf:    Perf_Command,
+	kind:           Command_Kind,
+	look:           Look_Command,
+	face:           Face_Command,
+	input:          Input_Command,
+	step:           Step_Command,
+	settle:         Settle_Command,
+	capture:        Capture_Command,
+	camera:         Camera_Command,
+	view:           View_Command,
+	debug_mode:     Debug_Mode_Command,
+	editor:         Editor_Command,
+	menu:           Menu_Command,
+	check:          Check_Command,
+	record:         Record_Command,
+	replay:         Replay_Command,
+	perf:           Perf_Command,
 	renderer_debug: Renderer_Debug_Command,
 	displays:       Displays_Command,
 }
@@ -196,6 +196,8 @@ command_name :: proc(kind: Command_Kind) -> string {
 		return "crates"
 	case .Debug_Mode:
 		return "debug_mode"
+	case .Editor:
+		return "editor"
 	case .Menu:
 		return "menu"
 	case .Check:
@@ -251,3 +253,79 @@ check_value_destroy :: proc(value: ^Check_Value, allocator: mem.Allocator) {
 	}
 	value^ = {}
 }
+
+command_parse_string :: proc(line: string, allocator := context.allocator) -> (Command, string) {
+	value, parse_error := json.parse_string(line, .JSON, true, allocator)
+	if parse_error != .None {
+		return {}, format_error("invalid JSON: %v", parse_error)
+	}
+	defer json.destroy_value(value, allocator)
+	return command_parse(value, allocator)
+}
+
+command_parse :: proc(value: json.Value, allocator := context.allocator) -> (Command, string) {
+	object, object_ok := json_object(value)
+	if !object_ok {
+		return {}, "command must be an object"
+	}
+	cmd_value, has_cmd := json_get(object, "cmd")
+	if !has_cmd {
+		return {}, "command is missing 'cmd'"
+	}
+	name, name_ok := json_string(cmd_value)
+	if !name_ok {
+		return {}, "'cmd' must be a string"
+	}
+
+	switch name {
+	case "reset":
+		if key, unknown := json_unknown_key(object, {"cmd"}); unknown {
+			return {}, format_error("unknown key %q", key)
+		}
+		return {kind = .Reset}, ""
+	case "look":
+		return parse_look(object)
+	case "face":
+		return parse_face(object)
+	case "input":
+		return parse_input(object)
+	case "step":
+		return parse_step(object)
+	case "settle":
+		return parse_settle(object)
+	case "state":
+		if key, unknown := json_unknown_key(object, {"cmd"}); unknown {
+			return {}, format_error("unknown key %q", key)
+		}
+		return {kind = .State}, ""
+	case "capture":
+		return parse_capture(object, allocator)
+	case "camera":
+		return parse_camera(object)
+	case "view":
+		return parse_view(object)
+	case "debug_mode":
+		return parse_debug_mode(object)
+	case "editor":
+		return parse_editor(object)
+	case "menu":
+		return parse_menu(object)
+	case "check":
+		return parse_check(object, allocator)
+	case "record":
+		return parse_record(object, allocator)
+	case "replay":
+		return parse_replay(object, allocator)
+	case "perf":
+		return parse_perf(object, allocator)
+	case "renderer_debug":
+		return parse_renderer_debug(object)
+	case "quit":
+		if key, unknown := json_unknown_key(object, {"cmd"}); unknown {
+			return {}, format_error("unknown key %q", key)
+		}
+		return {kind = .Quit}, ""
+	}
+	return {}, format_error("unknown command %q", name)
+}
+

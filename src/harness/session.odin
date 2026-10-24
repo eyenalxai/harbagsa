@@ -203,7 +203,11 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 		if index > 0 {
 			input.jump_pressed = false
 		}
-		game.simulation_step(&session.sim, input, game.SIMULATION_STEP)
+		if session.debug.active {
+			game.simulation_step_world(&session.sim, game.SIMULATION_STEP)
+		} else {
+			game.simulation_step(&session.sim, input, game.SIMULATION_STEP)
+		}
 		session.input.jump_pressed = false
 		session.frame += 1
 		if render_error := session_finish_frame(session); render_error != "" {
