@@ -3,12 +3,20 @@ package renderer
 
 import stb_easy_font "vendor:stb/easy_font"
 
+HUD_Menu :: struct {
+	open:     bool,
+	title:    string,
+	lines:    []string,
+	selected: int,
+	note:     string,
+}
+
 HUD_Frame :: struct {
-	enabled:       bool,
-	status_lines:  []string,
-	control_lines: []string,
-	capture_hint:  string,
-	captured:      bool,
+	enabled:      bool,
+	status_lines: []string,
+	capture_hint: string,
+	captured:     bool,
+	menu:         HUD_Menu,
 }
 
 HUD_TEXT_COLOR :: [4]f32{1.0, 1.0, 1.0, 1.0}
@@ -79,14 +87,16 @@ build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
 	margin := 8.0 * scale
 	padding := 5.0 * scale
 
-	hud_emit_panel(o, hud.status_lines, margin, margin, scale, padding)
+	if hud.menu.open {
+		build_menu(o, width, height, hud.menu, scale)
+		return
+	}
 
-	control_y := height - margin - hud_panel_height(hud.control_lines, scale) - padding * 2
-	hud_emit_panel(o, hud.control_lines, margin, control_y, scale, padding)
+	hud_emit_panel(o, hud.status_lines, margin, margin, scale, padding)
 
 	center_x := width * 0.5
 	center_y := height * 0.5
-	if !hud.captured {
+	if !hud.captured && hud.capture_hint != "" {
 		overlay_scale := scale * 1.1
 		text_width := f32(stb_easy_font.width(hud.capture_hint)) * overlay_scale
 		text_height := f32(stb_easy_font.height(hud.capture_hint)) * overlay_scale

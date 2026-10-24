@@ -16,7 +16,8 @@ Error :: enum {
 }
 
 Window :: struct {
-	handle: ^sdl3.Window,
+	handle:           ^sdl3.Window,
+	capture_on_click: bool,
 }
 
 // jump, reset, debug, the stance edges, and the editor actions are key-down
@@ -42,6 +43,12 @@ Events :: struct {
 	debug_view_pressed:  bool,
 	debug_mode_pressed:  bool,
 	taa_pressed:         bool,
+	menu_toggle_pressed: bool,
+	menu_up_pressed:     bool,
+	menu_down_pressed:   bool,
+	menu_left_pressed:   bool,
+	menu_right_pressed:  bool,
+	menu_confirm_pressed: bool,
 	add_pressed:         bool,
 	delete_pressed:      bool,
 	sun_pressed:         bool,
@@ -68,6 +75,7 @@ init :: proc(title: cstring, width, height: i32) -> (window: Window, err: Error)
 		sdl3.Quit()
 		return {}, .Create_Window
 	}
+	window.capture_on_click = true
 
 	return window, .None
 }
@@ -193,8 +201,8 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 		if event.button.button == sdl3.BUTTON_LEFT {
 			if events.captured {
 				events.primary_pressed = true
-			} else {
-				events.captured = set_capture(window, true)
+			} else if window.capture_on_click {
+				events.captured = set_cursor_capture(window, true)
 			}
 		}
 	case .MOUSE_BUTTON_UP:
@@ -211,10 +219,17 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 		}
 		#partial switch event.key.scancode {
 		case .ESCAPE:
-			if events.captured {
-				events.captured = set_capture(window, false)
-				events.look_delta = {}
-			}
+			events.menu_toggle_pressed = true
+		case .UP:
+			events.menu_up_pressed = true
+		case .DOWN:
+			events.menu_down_pressed = true
+		case .LEFT:
+			events.menu_left_pressed = true
+		case .RIGHT:
+			events.menu_right_pressed = true
+		case .RETURN, .KP_ENTER:
+			events.menu_confirm_pressed = true
 		case .SPACE:
 			events.jump_pressed = true
 		case .LSHIFT:
@@ -250,9 +265,13 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 	}
 }
 
-set_capture :: proc(window: ^Window, enabled: bool) -> bool {
+set_cursor_capture :: proc(window: ^Window, enabled: bool) -> bool {
 	if !sdl3.SetWindowRelativeMouseMode(window.handle, enabled) {
 		log.errorf("platform: SDL_SetWindowRelativeMouseMode failed: %v", sdl3.GetError())
 	}
 	return sdl3.GetWindowRelativeMouseMode(window.handle)
+}
+
+set_click_capture :: proc(window: ^Window, allowed: bool) {
+	window.capture_on_click = allowed
 }

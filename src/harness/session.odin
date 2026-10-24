@@ -121,6 +121,7 @@ session_set_backend :: proc(session: ^Session, backend: ^Backend, present: bool)
 }
 
 session_reset :: proc(session: ^Session) -> string {
+	game.menu_reset(&session.hud.menu)
 	if game.simulation_is_valid(&session.sim) {
 		game.simulation_destroy(&session.sim)
 	}
@@ -168,6 +169,9 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 			MAX_STEP_FRAMES,
 			allocator = context.allocator,
 		)
+	}
+	if session.hud.menu.open {
+		return fmt.aprintf("menu is open; close the menu to step", allocator = context.allocator)
 	}
 	for index in 0 ..< frames {
 		input := session.input
@@ -236,7 +240,7 @@ session_draw :: proc(session: ^Session, capture: bool, name: string, alpha: f32)
 }
 
 session_state :: proc(session: ^Session) -> State {
-	return state_build(&session.sim, session.frame, session.allocator)
+	return state_build(&session.sim, session.frame, &session.hud.menu, session.allocator)
 }
 
 session_queue_capture :: proc(
