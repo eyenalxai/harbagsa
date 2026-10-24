@@ -18,8 +18,7 @@ scenario_view :: proc(value: json.Value) -> (View_Command, string) {
 }
 
 @(private)
-scenario_renderer_debug :: proc(scenario: ^Scenario, value: json.Value) -> string {
-	object, object_ok := json_object(value)
+scenario_renderer_debug :: proc(scenario: ^Scenario, value: json.Value) -> string {	object, object_ok := json_object(value)
 	if !object_ok {
 		return "scenario 'renderer_debug' must be an object"
 	}
@@ -35,8 +34,56 @@ scenario_renderer_debug :: proc(scenario: ^Scenario, value: json.Value) -> strin
 }
 
 @(private)
-scenario_commands :: proc(scenario: ^Scenario, value: json.Value, allocator: mem.Allocator) -> string {
-	array, array_ok := json_array(value)
+scenario_analysis :: proc(value: json.Value) -> (Analysis_Config, string) {
+	config := analysis_config_default()
+	if enabled, ok := json_boolean(value); ok {
+		config.enabled = enabled
+		return config, ""
+	}
+	object, object_ok := json_object(value)
+	if !object_ok {
+		return {}, "scenario 'analysis' must be a boolean or an object"
+	}
+	if key, unknown := json_unknown_key(object, {"enabled", "start", "count", "maps"}); unknown {
+		return {}, fmt.aprintf("unknown analysis key %q", key, allocator = context.allocator)
+	}
+	if enabled_value, has := json_get(object, "enabled"); has {
+		flag, ok := json_boolean(enabled_value)
+		if !ok {
+			return {}, "'analysis.enabled' must be a boolean"
+		}
+		config.enabled = flag
+	}
+	if maps_value, has := json_get(object, "maps"); has {
+		flag, ok := json_boolean(maps_value)
+		if !ok {
+			return {}, "'analysis.maps' must be a boolean"
+		}
+		config.maps = flag
+	}
+	start_value, has_start := json_get(object, "start")
+	count_value, has_count := json_get(object, "count")
+	if has_start != has_count {
+		return {}, "'analysis' needs both 'start' and 'count'"
+	}
+	if has_start {
+		start, start_ok := json_integer(start_value)
+		count, count_ok := json_integer(count_value)
+		if !start_ok || start < 0 {
+			return {}, "'analysis.start' must be a non-negative integer"
+		}
+		if !count_ok || count < 1 {
+			return {}, "'analysis.count' must be a positive integer"
+		}
+		config.start = int(start)
+		config.count = int(count)
+		config.has_window = true
+	}
+	return config, ""
+}
+
+@(private)
+scenario_commands :: proc(scenario: ^Scenario, value: json.Value, allocator: mem.Allocator) -> string {	array, array_ok := json_array(value)
 	if !array_ok || len(array) == 0 {
 		return "scenario 'commands' must be a non-empty array"
 	}

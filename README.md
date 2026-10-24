@@ -157,7 +157,8 @@ runs/smoke/
 `report.json` holds the pass/fail result, the final state, the setup block,
 absolute screenshot paths, checks, the state digest, and the perf report when a
 perf run happened. `state.json` holds the final state alone.
-`run.log` holds the log lines. Standard output is one JSON summary.
+`analysis.json` holds the per-run image analysis when the run captured color
+frames. `run.log` holds the log lines. Standard output is one JSON summary.
 
 Exit codes:
 
@@ -175,6 +176,7 @@ Options:
   before present. No compositor and no `grim`.
 - `--debug-renderer`: accept the renderer debug command. A build with
   `-define:ENABLE_RENDERER_DEBUG=true` always accepts it.
+- `--no-analysis`: skip `analysis.json` and the analysis maps.
 
 The harness view starts with the HUD off, the debug draw off, and the capture
 hint off. A scenario captures the final frame by default. `capture` adds more
@@ -205,7 +207,15 @@ shape, for example `player.position.y`, `player.grounded`, `crates.0.position.z`
 `crates.count`, `settings.window_mode`, `settings.resolution`, `menu.open`,
 `debug.active`, `renderer.taa_enabled`, or `render_digest`. A capture check can
 also read `capture.target`, `capture.format`, and `capture.stats.*` for the last
-capture in its window.
+capture in its window. Add `"window": {"start": 2, "count": 8}` to aggregate over
+part of the captures; `warmup` stays the shorthand for skipping the first N.
+
+A run with color captures writes `analysis.json`. It holds per-pair deltas, a
+summary, the dominant period, the worst unstable pixels' series, and optional
+diff and variance maps. Checks read `analysis.period.frames`,
+`analysis.period.correlation`, and the `analysis.worst_*` fields. Disable it with
+`"analysis": false` or `--no-analysis`; select a window and maps with
+`"analysis": {"start": 2, "count": 8, "maps": true}`.
 
 A scenario may use `commands` instead of `steps`:
 
@@ -357,9 +367,9 @@ overlap two writes to the same image and stays deterministic. The swapchain
 target keeps two frames in flight.
 
 `scenarios/taa-static.json` settles the stairs camera for 520 frames, then
-captures 60 steady frames and checks the capture deltas. It gates TAA edge
-stability without a window. The settle passes the 512-sample cap, so the check
-sees the steady image instead of the initial convergence.
+captures 60 steady frames and checks the capture deltas and the analysis period.
+It gates TAA edge stability without a window. The settle passes the 512-sample
+cap, so the check sees the steady image instead of the initial convergence.
 
 `scenarios/taa-motion.json` moves the camera up the stairs, turns around, and
 holds, then captures 60 hold frames. It gates that the image settles after the
@@ -390,7 +400,8 @@ or the `ENABLE_RENDERER_DEBUG` define; a release build rejects it. Changing a
 TAA input resets history and records the `debug_override` reason.
 `scenarios/renderer-debug.json` covers the overrides, and
 `scenarios/renderer-debug-converge.json` shows the image converging with jitter
-off.
+off. `scenarios/renderer-debug-jitter.json` freezes the phase, lets jitter cycle,
+and writes the analysis maps.
 
 ## Build
 
