@@ -180,6 +180,14 @@ cli_error :: proc(message: string) -> int {
 @(private)
 print_usage :: proc() {
 	fmt.eprintln("usage:")
-	fmt.eprintln("  harbagsa-agent run <scenario.json> [--out DIR] [--size WxH] [--present] [--no-render] [--no-analysis] [--debug-renderer]")
+	fmt.eprintln("  harbagsa-agent run <scenario.json> [--out DIR] [--size WxH] [--present] [--no-render] [--no-analysis] [--debug-renderer] [--verbose]")
 	fmt.eprintln("  harbagsa-agent session [--socket PATH] [--out DIR] [--size WxH] [--present] [--no-render] [--no-analysis] [--debug-renderer]")
+	fmt.eprintln("  harbagsa-agent diff <run-a> <run-b> [--max-pixels N] [--json]")
+	fmt.eprintln("  harbagsa-agent help | -h | --help")
+	fmt.eprintln("")
+	fmt.eprintln("run --verbose writes captures, checks, failures, setup, and perf to standard error;")
+	fmt.eprintln("standard output stays one JSON line.")
+	fmt.eprintln("perf takes {\"cmd\": \"perf\", \"frames\": N, \"warmup\": M, \"prime\": SECONDS, \"name\": \"label\", \"trace\": \"trace.jsonl\"}.")
+	fmt.eprintln("diff pairs PNG captures by name. --max-pixels N exits 1 when a pair exceeds N;")
+	fmt.eprintln("--json prints one machine-readable object.")
 }

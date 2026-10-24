@@ -10,8 +10,11 @@ page is the short operational guide for agents.
 
 ```sh
 tools/make.sh build
+./bin/harbagsa-agent --help
 ./bin/harbagsa-agent run scenarios/smoke.json
 ```
+
+`--help` and `-h` print the command list and exit 0.
 
 Read `runs/smoke/report.json`. Use the absolute paths in `screenshots`. Exit
 code 0 means every check passed.
@@ -642,6 +645,8 @@ harness in the same change. Do not leave the automation behind the game.
   the trace, and this page.
 - New command: follow **Adding a command**, add a JSONL test, and add a scenario
   example when it changes a normal workflow.
+- New CLI subcommand or flag: add the dispatcher and parser, the `--help` text,
+  the README, this page, and a test.
 - New capture target or format: add it to `Capture_Target` or `Capture_Format`,
   the name/parse and extension helpers, `target_image`, `record_capture_copy`,
   `read_capture_target`, and `capture_values`. Add it to the capture parser,

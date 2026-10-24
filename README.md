@@ -144,7 +144,8 @@ CPU numbers only. The overlay adds six timestamp writes per frame.
 
 `bin/harbagsa-agent` drives the simulation and writes screenshots without a
 window or compositor. `make build` builds it next to the game. Agent-specific
-operational notes are in `docs/agents/harness.md`.
+operational notes are in `docs/agents/harness.md`. Run
+`./bin/harbagsa-agent --help` (or `-h`) for the command and option list.
 
 ### Run a scenario
 
