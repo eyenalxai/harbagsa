@@ -17,6 +17,8 @@ RENDERER_DEBUG_KEYS :: []string {
 	"shadow_phase",
 	"light_shadows",
 	"synthetic_lights",
+	"sky",
+	"ao",
 }
 
 RENDERER_DEBUG_BLOCK_KEYS :: []string {
@@ -30,6 +32,8 @@ RENDERER_DEBUG_BLOCK_KEYS :: []string {
 	"shadow_phase",
 	"light_shadows",
 	"synthetic_lights",
+	"sky",
+	"ao",
 }
 
 @(private)
@@ -125,6 +129,22 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 		command.synthetic_lights = int(count)
 		command.has_synthetic_lights = true
 	}
+	if value, has := json_get(object, "sky"); has {
+		flag, ok := json_boolean(value)
+		if !ok {
+			return {}, "'sky' must be a boolean"
+		}
+		command.sky = flag
+		command.has_sky = true
+	}
+	if value, has := json_get(object, "ao"); has {
+		flag, ok := json_boolean(value)
+		if !ok {
+			return {}, "'ao' must be a boolean"
+		}
+		command.ao = flag
+		command.has_ao = true
+	}
 	if command.clear {
 		if command.has_taa ||
 		   command.has_jitter ||
@@ -134,7 +154,9 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 		   command.has_freeze_shadow_phase ||
 		   command.has_shadow_phase ||
 		   command.has_light_shadows ||
-		   command.has_synthetic_lights {
+		   command.has_synthetic_lights ||
+		   command.has_sky ||
+		   command.has_ao {
 			return {}, "'clear' cannot be combined with overrides"
 		}
 	}

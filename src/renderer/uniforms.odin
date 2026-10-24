@@ -8,8 +8,9 @@ MAX_SCENE_BOXES :: 256
 // The uniform block mirrors camera.glsl. Mat4 is column-major, so the
 // matrices upload directly. screen carries the gamma flag in .x, the render
 // extent in .y and .z, and the TAA sample phase in .w. sun.x is the tangent
-// of the sun angular radius, sun.y the point light count, and sun.z the
-// point-light shadow flag.
+// of the sun angular radius, sun.y the camera far plane, so the sky pass
+// writes the same depth as the velocity clear, sun.z the point light count,
+// and sun.w the point-light shadow flag.
 Camera_Uniform :: struct {
 	view:                 Mat4,
 	projection:           Mat4,

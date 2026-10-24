@@ -57,6 +57,7 @@ UI_Spacing :: struct {
 }
 
 UI_Theme :: struct {
+	density: f32,
 	hairline: f32,
 	spacing: UI_Spacing,
 	crosshair_arm: f32,
@@ -91,6 +92,7 @@ ui_theme_init :: proc(render_height: u32, base_weight: f32 = BASE_WEIGHT) -> UI_
 	theme: UI_Theme
 	// One device pixel, never a fraction of one: a half-pixel hairline resolves
 	// to a two-pixel grey smear on a non-integer density.
+	theme.density = density
 	theme.hairline = max(1.0, math.round(density))
 
 	theme.crosshair_arm = UI_CROSSHAIR_ARM * density

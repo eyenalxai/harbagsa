@@ -32,8 +32,14 @@ renderer_field :: proc(renderer: Renderer_State, path: string) -> (Check_Value, 
 		return {kind = .String, text = renderer.last_reset}, ""
 	case "shadow_phase":
 		return {kind = .Number, number = f64(renderer.shadow_phase)}, ""
+	case "atlas_weight":
+		return {kind = .Number, number = f64(renderer.atlas_weight)}, ""
 	case "light_count":
 		return {kind = .Number, number = f64(renderer.light_count)}, ""
+	case "text_truncated_runs":
+		return {kind = .Number, number = f64(renderer.text_truncated_runs)}, ""
+	case "text_font_drops":
+		return {kind = .Number, number = f64(renderer.text_font_drops)}, ""
 	}
 	return {}, fmt.aprintf("unknown renderer field %q", path, allocator = context.allocator)
 }
@@ -61,6 +67,10 @@ renderer_debug_field :: proc(debug: Renderer_Debug_State, path: string) -> (Chec
 		return {kind = .Bool, boolean = debug.light_shadows}, ""
 	case "synthetic_lights":
 		return {kind = .Number, number = f64(debug.synthetic_lights)}, ""
+	case "sky":
+		return {kind = .Bool, boolean = debug.sky}, ""
+	case "ao":
+		return {kind = .Bool, boolean = debug.ao}, ""
 	}
 	return {}, fmt.aprintf("unknown renderer debug field %q", path, allocator = context.allocator)
 }

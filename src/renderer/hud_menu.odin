@@ -172,7 +172,11 @@ build_menu :: proc(o: ^Overlay, width, height: f32, menu: ui.Menu) {
 @(private)
 hint_grid_measure :: proc(o: ^Overlay, theme: UI_Theme, menu: ui.Menu) -> Hint_Grid {
 	grid: Hint_Grid
-	grid.columns = clamp(HINT_COLUMNS, 1, HUD_MENU_MAX_HINT_COLUMNS)
+	columns := menu.hint_columns
+	if columns <= 0 {
+		columns = HINT_COLUMNS
+	}
+	grid.columns = clamp(columns, 1, HUD_MENU_MAX_HINT_COLUMNS)
 	if len(menu.hints) == 0 {
 		return grid
 	}

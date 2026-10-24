@@ -50,6 +50,12 @@ session_renderer_debug :: proc(session: ^Session, command: Renderer_Debug_Comman
 	if command.has_synthetic_lights {
 		debug.synthetic_lights = command.synthetic_lights
 	}
+	if command.has_sky {
+		debug.sky = command.sky
+	}
+	if command.has_ao {
+		debug.ao = command.ao
+	}
 	session.backend.set_debug(session.backend.ctx, debug)
 	session_refresh_renderer(session)
 	return ""

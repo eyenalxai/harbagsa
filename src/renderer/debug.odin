@@ -7,8 +7,8 @@ package renderer
 // shipped renderer.
 RENDERER_DEBUG_ENABLED :: #config(ENABLE_RENDERER_DEBUG, false)
 
-// The overrides cover TAA and the point-light path. Any change resets TAA
-// history, because an override changes the image the history describes.
+// The overrides cover TAA, the point-light path, the sky, and ambient
+// occlusion.
 Renderer_Debug :: struct {
 	active:              bool,
 	taa:                 bool,
@@ -20,6 +20,8 @@ Renderer_Debug :: struct {
 	shadow_phase:        u32,
 	light_shadows:       bool,
 	synthetic_lights:    int,
+	sky:                 bool,
+	ao:                  bool,
 }
 
 renderer_debug_default :: proc() -> Renderer_Debug {
@@ -29,6 +31,8 @@ renderer_debug_default :: proc() -> Renderer_Debug {
 		history_weight = -1,
 		clamp = true,
 		light_shadows = true,
+		sky = true,
+		ao = true,
 	}
 }
 

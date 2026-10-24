@@ -124,6 +124,7 @@ update_camera :: proc(
 	camera: Camera,
 	light_direction: [3]f32,
 	light_count: int,
+	sun_angular_diameter: f32,
 ) -> bool {
 	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
 	height := f32(extent.height)
@@ -194,10 +195,10 @@ update_camera :: proc(
 		// The sun sample pattern rotates only while TAA can average it.
 		screen = {srgb_gamma(r), f32(extent.width), height, f32(r.taa.shadow_phase)},
 		sun = {
-			math.tan(f32(SUN_ANGULAR_DIAMETER * 0.5)),
+			math.tan(sun_angular_diameter * 0.5),
+			CAMERA_FAR,
 			f32(light_count),
 			r.taa.debug.active && !r.taa.debug.light_shadows ? 0 : 1,
-			0,
 		},
 		jitter = {jitter.x, jitter.y, 0, 0},
 		lighting = {

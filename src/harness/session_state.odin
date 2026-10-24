@@ -41,6 +41,9 @@ session_state :: proc(session: ^Session) -> State {
 		last_reset         = renderer.reset_reason_name(report.last_reset),
 		shadow_phase       = report.shadow_phase,
 		light_count        = report.light_count,
+		atlas_weight       = report.atlas_weight,
+		text_truncated_runs = report.text_truncated_runs,
+		text_font_drops     = report.text_font_drops,
 		debug = {
 			active              = report.debug.active,
 			taa                 = report.debug.taa,
@@ -52,6 +55,8 @@ session_state :: proc(session: ^Session) -> State {
 			shadow_phase        = report.debug.shadow_phase,
 			light_shadows       = report.debug.light_shadows,
 			synthetic_lights    = report.debug.synthetic_lights,
+			sky                 = report.debug.sky,
+			ao                  = report.debug.ao,
 		},
 	}
 	return state_build(

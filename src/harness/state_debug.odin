@@ -36,8 +36,9 @@ Placement_State :: struct {
 Sun_State :: struct {
 	active:    bool      `json:"active"`,
 	position:  Vec_State `json:"position"`,
-	azimuth:   f32       `json:"azimuth"`,
-	elevation: f32       `json:"elevation"`,
+	azimuth:          f32 `json:"azimuth"`,
+	elevation:        f32 `json:"elevation"`,
+	angular_diameter: f32 `json:"angular_diameter"`,
 }
 
 // The selected-object half of the debug inspector. Every number is in metres
@@ -82,6 +83,7 @@ debug_state_build :: proc(debug: ^game.Debug_Mode, sim: ^game.Simulation) -> Deb
 			position = vec_state(debug.sun.position),
 			azimuth = azimuth * 180.0 / math.PI,
 			elevation = elevation * 180.0 / math.PI,
+			angular_diameter = debug.sun_angular_diameter * 180.0 / math.PI,
 		},
 		history = {
 			depth = game.debug_history_depth(debug),

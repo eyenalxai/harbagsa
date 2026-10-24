@@ -98,6 +98,7 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 	session.checks = make([dynamic]Check_Result, 0, 8, allocator)
 	session.failures = make([dynamic]string, 0, 8, allocator)
 	session.recorded = make([dynamic]string, 0, 16, allocator)
+	session.perf_reports = make([dynamic]Perf_Report, 0, 4, allocator)
 	session.traces = make([dynamic]Trace_Record, 0, 2, allocator)
 	return session, ""
 }
@@ -144,6 +145,12 @@ session_destroy :: proc(session: ^Session) {
 		delete(trace.samples, session.allocator)
 	}
 	delete(session.traces)
+	for &report in session.perf_reports {
+		if report.name != "" {
+			delete(report.name, session.allocator)
+		}
+	}
+	delete(session.perf_reports)
 	delete(session.trace_samples)
 	if session.scratch != nil {
 		free(session.scratch, session.allocator)
@@ -186,11 +193,9 @@ session_restart :: proc(session: ^Session) -> string {
 	session.alpha = 1.0
 	return session_reset(session)
 }
-
 session_failure :: proc(session: ^Session, message: string) {
 	append(&session.failures, strings.clone(message, session.allocator))
 }
-
 session_apply_input :: proc(session: ^Session, command: Input_Command) {
 	if command.has_forward {
 		session.input.move_forward = command.forward
@@ -202,7 +207,6 @@ session_apply_input :: proc(session: ^Session, command: Input_Command) {
 		session.input.jump_pressed = command.jump
 	}
 }
-
 session_step :: proc(session: ^Session, frames: int) -> string {
 	if frames < 1 || frames > MAX_STEP_FRAMES {
 		return fmt.aprintf(
@@ -233,70 +237,5 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 			break
 		}
 	}
-	return ""
-}
-
-@(private)
-session_finish_frame :: proc(session: ^Session) -> string {
-	due := make([dynamic]int, 0, 4, context.temp_allocator)
-	defer delete(due)
-	for pending, index in session.pending {
-		if pending.frame <= session.frame {
-			append(&due, index)
-		}
-	}
-	if (session.present || session.render_every_step) && len(due) == 0 {
-		return session_draw(session, {})
-	}
-	render_error := ""
-	for index in due {
-		pending := session.pending[index]
-		request := Capture_Request {
-			name      = pending.name,
-			alpha     = pending.alpha,
-			target    = pending.target,
-			format    = pending.format,
-			enabled   = true,
-			region    = pending.region,
-			profile   = pending.profile,
-			crop      = pending.crop,
-			histogram = pending.histogram,
-		}
-		error := session_draw(session, request)
-		if error != "" && render_error == "" {
-			render_error = error
-		}
-	}
-	for cursor := len(due) - 1; cursor >= 0; cursor -= 1 {
-		index := due[cursor]
-		delete(session.pending[index].name, session.allocator)
-		ordered_remove(&session.pending, index)
-	}
-	return render_error
-}
-
-@(private)
-session_draw :: proc(session: ^Session, request: Capture_Request) -> string {
-	if session.backend == nil {
-		if request.enabled {
-			return format_error("capture requires rendering")
-		}
-		return ""
-	}
-	result, error := session.backend.render(session.backend.ctx, session, request)
-	if error != "" {
-		session.render_failed = true
-		session_failure(session, error)
-		return error
-	}
-	if request.enabled {
-		// The digest names the frame this capture just wrote, so refresh the
-		// renderer snapshot before the capture joins the list.
-		session_refresh_renderer(session)
-		result.render_digest = strings.clone(session.render_digest_text, session.allocator)
-		append(&session.captures, result)
-		session_refresh_analysis(session)
-	}
-	session_refresh_renderer(session)
 	return ""
 }
