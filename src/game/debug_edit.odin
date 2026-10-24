@@ -6,14 +6,20 @@ import b3 "libs:box3d"
 OBJECT_DRAG_SCALE :: 0.02
 OBJECT_WHEEL_STEP :: 0.5
 OBJECT_RAY_LENGTH :: 100.0
-OBJECT_ADD_GAP :: 0.01
-OBJECT_ADD_DISTANCE :: 3.0
 
 debug_edit_objects :: proc(dm: ^Debug_Mode, sim: ^Simulation, input: Debug_Input) {
+	if dm.palette.open {
+		return
+	}
+	if dm.placement.armed {
+		debug_placement_input(dm, sim, input)
+		return
+	}
+
 	clear_stale_object_selection(dm, sim)
 
-	if input.add_pressed {
-		add_crate_at_crosshair(dm, sim)
+	if input.secondary_pressed {
+		debug_mode_clear_selection(dm)
 	}
 	if input.primary_pressed && input.captured && dm.dragging == .None {
 		press_object(dm, sim)
@@ -96,36 +102,6 @@ wheel_object :: proc(dm: ^Debug_Mode, sim: ^Simulation, wheel_delta: f32) {
 }
 
 @(private)
-add_crate_at_crosshair :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
-	forward := debug_camera_forward(dm.camera)
-	center := dm.camera.position + forward * OBJECT_ADD_DISTANCE
-
-	hit := cast_edit_ray(dm, sim)
-	if hit.hit {
-		normal := hit.normal
-		extent := box_extent_along(prefab(.Crate).half_extents, normal)
-		center = b3.ToVec3(hit.point) + normal * (extent + OBJECT_ADD_GAP)
-	}
-
-	id := simulation_create_object(
-		sim,
-		{
-			prefab = .Crate,
-			body_mode = .Dynamic,
-			center = center,
-			yaw = 0.0,
-		},
-	)
-	if id == INVALID_OBJECT_ID {
-		return
-	}
-	dm.selection = .Object
-	dm.selected_object_id = id
-	dm.dragging = .None
-	dm.drag_position = center
-}
-
-@(private)
 delete_selected_object :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	id, ok := debug_selected_object_id(dm, sim)
 	if !ok {
@@ -145,11 +121,4 @@ cast_edit_ray :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> b3.RayResult {
 		debug_camera_forward(dm.camera) * OBJECT_RAY_LENGTH,
 		b3.DefaultQueryFilter(),
 	)
-}
-
-@(private)
-box_extent_along :: proc(half_extents, direction: b3.Vec3) -> f32 {
-	return half_extents.x * abs(direction.x) +
-	       half_extents.y * abs(direction.y) +
-	       half_extents.z * abs(direction.z)
 }

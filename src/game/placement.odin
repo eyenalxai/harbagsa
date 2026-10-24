@@ -116,6 +116,29 @@ debug_ghost_box :: proc(dm: ^Debug_Mode) -> (geometry.Box, bool) {
 	}, true
 }
 
+@(private)
+debug_placement_input :: proc(dm: ^Debug_Mode, sim: ^Simulation, input: Debug_Input) {
+	if input.secondary_pressed {
+		debug_placement_cancel(dm)
+		return
+	}
+	if !input.captured {
+		return
+	}
+	if input.primary_pressed {
+		_ = debug_placement_place(dm, sim)
+	}
+	if input.wheel_delta != 0.0 {
+		debug_placement_raise(dm, int(math.round(input.wheel_delta)), input.large_step)
+	}
+	if input.rotate_left {
+		debug_placement_turn(dm, -1, input.large_step)
+	}
+	if input.rotate_right {
+		debug_placement_turn(dm, 1, input.large_step)
+	}
+}
+
 debug_placement_place :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Object_Id {
 	if !dm.placement.armed {
 		return INVALID_OBJECT_ID
