@@ -18,12 +18,13 @@ View_Flags :: bit_set[View_Flag]
 // with the same digest draw the same scene, so a measurement can assert the
 // inputs before it compares pixels.
 Render_Digest_Input :: struct {
-	camera:          Camera,
-	light_direction: [3]f32,
-	boxes:           []geometry.Box,
-	jitter:          [2]f32,
-	shadow_phase:    u32,
-	view_flags:      View_Flags,
+	camera:               Camera,
+	light_direction:      [3]f32,
+	sun_angular_diameter: f32,
+	boxes:                []geometry.Box,
+	jitter:               [2]f32,
+	shadow_phase:         u32,
+	view_flags:           View_Flags,
 }
 
 render_digest :: proc(input: Render_Digest_Input) -> digest.FNV {
@@ -37,6 +38,7 @@ render_digest :: proc(input: Render_Digest_Input) -> digest.FNV {
 	digest.write_f32(&hash, input.light_direction.x)
 	digest.write_f32(&hash, input.light_direction.y)
 	digest.write_f32(&hash, input.light_direction.z)
+	digest.write_f32(&hash, input.sun_angular_diameter)
 	digest.write_u64(&hash, u64(len(input.boxes)))
 	for box in input.boxes {
 		digest.write_f32(&hash, box.center.x)

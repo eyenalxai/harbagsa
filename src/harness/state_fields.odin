@@ -38,6 +38,19 @@ debug_field :: proc(debug: Debug_State, path: string) -> (Check_Value, string) {
 }
 
 @(private)
+sun_field :: proc(sun: Sun_State, path: string) -> (Check_Value, string) {
+	switch path {
+	case "azimuth":
+		return {kind = .Number, number = f64(sun.azimuth)}, ""
+	case "elevation":
+		return {kind = .Number, number = f64(sun.elevation)}, ""
+	case "angular_diameter":
+		return {kind = .Number, number = f64(sun.angular_diameter)}, ""
+	}
+	return {}, fmt.aprintf("unknown sun field %q", path, allocator = context.allocator)
+}
+
+@(private)
 menu_field :: proc(menu: Menu_State, path: string) -> (Check_Value, string) {
 	switch path {
 	case "open":

@@ -18,9 +18,10 @@ Camera :: struct {
 }
 
 AMBIENT_COLOR :: [3]f32{0.24, 0.25, 0.28}
-// The real sun is about 0.53 degrees. The demo uses a wider disk so the
-// contact-hardening cue is visible over the arena's short shadows.
-SUN_ANGULAR_DIAMETER :: 3.0 * math.PI / 180.0
+
+// The renderer accepts any sun the scene names, but a zero or absurd angular
+// diameter has no valid tangent and would break every shadow ray.
+SUN_ANGULAR_DIAMETER_LIMIT :: 45.0 * math.PI / 180.0
 
 Scene :: struct {
 	vertex_buffer: vk.Buffer,
@@ -98,11 +99,20 @@ destroy_scene :: proc(r: ^Renderer) {
 	r.scene.index_count = 0
 }
 
-update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> bool {
+update_camera :: proc(
+	r: ^Renderer,
+	camera: Camera,
+	light_direction: [3]f32,
+	sun_angular_diameter: f32,
+) -> bool {
 	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
 	height := f32(extent.height)
 	if height <= 0 {
 		log.error("renderer: cannot build a projection for a zero-height target")
+		return false
+	}
+	if !(sun_angular_diameter > 0 && sun_angular_diameter < SUN_ANGULAR_DIAMETER_LIMIT) {
+		log.errorf("renderer: sun angular diameter %v is out of range", sun_angular_diameter)
 		return false
 	}
 	aspect := f32(extent.width) / height
@@ -162,7 +172,7 @@ update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> 
 		ambient = {AMBIENT_COLOR.x, AMBIENT_COLOR.y, AMBIENT_COLOR.z, 0},
 		// The sun sample pattern rotates only while TAA can average it.
 		screen = {srgb_gamma(r), f32(extent.width), height, f32(r.taa.shadow_phase)},
-		sun = {math.tan(f32(SUN_ANGULAR_DIAMETER * 0.5)), 0, 0, 0},
+		sun = {math.tan(sun_angular_diameter * 0.5), 0, 0, 0},
 		jitter = {jitter.x, jitter.y, 0, 0},
 	}
 	return true

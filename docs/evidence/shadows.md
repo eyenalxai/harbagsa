@@ -31,3 +31,23 @@ shape and a smooth penumbra. The remaining diagonal steps are screen pixels at
 - `make validate` ran both offscreen and present scenarios with
   `VK_LAYER_KHRONOS_validation`. No `VUID` or `[ERROR]` lines.
 - The fullscreen app ran with validation. No `VUID` or `[ERROR]` lines.
+
+## Sun angular diameter
+
+The 3° sun disk that the ray-query path shipped with was too wide. The penumbra
+widened quickly even close to the point of contact, so a wall shadow read as a
+gradient instead of a shadow, most of all when the sun sat low. The penumbra is
+linear in the disk diameter, so one art constant set the whole problem.
+
+Measured on `scenarios/shadow-angle.json`, top-down over the wall shadow edge at
+a 15° sun, 1280x720: the 10% to 90% transition is 72 px at 3° and 13 px at
+0.53°, a ratio of 5.5. The shader is correct; the constant was not. The build
+now ships the real 0.53° disk, and the harness `sun` command sets the diameter
+so the comparison needs no rebuild.
+
+```sh
+./bin/harbagsa-agent run scenarios/shadow-angle.json --out runs/shadow/angle
+```
+
+The same run holds `wall-wide-sun.png` and `wall-real-sun.png` from the floor
+view.
