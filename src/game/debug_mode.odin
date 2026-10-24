@@ -1,7 +1,9 @@
 #+vet explicit-allocators
+#+vet !unused-procedures // the agent harness and tests call this API; the game binary does not
 package game
 
 import "core:math"
+import "core:mem"
 
 import b3 "libs:box3d"
 
@@ -44,6 +46,9 @@ Debug_Mode :: struct {
 	selected_object_id: Object_Id,
 	dragging:           Debug_Drag,
 	drag_position:      b3.Vec3,
+	drag_recorded:      bool,
+	history:            ^Object_History,
+	history_allocator:  mem.Allocator,
 	palette:            Palette,
 	placement:          Placement,
 }
@@ -58,6 +63,9 @@ Debug_Input :: struct {
 	primary_released:      bool,
 	secondary_pressed:     bool,
 	delete_pressed:        bool,
+	duplicate_pressed:     bool,
+	undo_pressed:          bool,
+	redo_pressed:          bool,
 	rotate_left:           bool,
 	rotate_right:          bool,
 	large_step:            bool,
@@ -65,9 +73,10 @@ Debug_Input :: struct {
 	captured:              bool,
 }
 
-debug_mode_create :: proc() -> Debug_Mode {
+debug_mode_create :: proc(allocator: mem.Allocator) -> Debug_Mode {
 	return {
 		sun = {position = DEFAULT_SUN_POSITION},
+		history_allocator = allocator,
 		palette = {
 			selected = 0,
 			body_mode = prefab(.Crate).body_mode,
@@ -76,6 +85,26 @@ debug_mode_create :: proc() -> Debug_Mode {
 			prefab = .Crate,
 		},
 	}
+}
+
+debug_mode_destroy :: proc(dm: ^Debug_Mode) {
+	if dm.history != nil {
+		allocator := dm.history.allocator
+		object_history_destroy(dm.history)
+		free(dm.history, allocator)
+		dm.history = nil
+	}
+	dm^ = {}
+}
+
+// The history itself lives on the heap. It is allocated on the first edit, so a
+// fresh debug mode and a fresh Session stay small.
+debug_history :: proc(dm: ^Debug_Mode) -> ^Object_History {
+	if dm.history == nil {
+		dm.history = new(Object_History, dm.history_allocator)
+		dm.history^ = object_history_create(dm.history_allocator)
+	}
+	return dm.history
 }
 
 debug_mode_toggle :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
@@ -102,6 +131,21 @@ debug_mode_clear_selection :: proc(dm: ^Debug_Mode) {
 
 debug_mode_end_drag :: proc(dm: ^Debug_Mode) {
 	dm.dragging = .None
+	dm.drag_recorded = false
+}
+
+debug_history_depth :: proc(dm: ^Debug_Mode) -> int {
+	if dm.history == nil {
+		return 0
+	}
+	return object_history_depth(dm.history)
+}
+
+debug_history_redo_depth :: proc(dm: ^Debug_Mode) -> int {
+	if dm.history == nil {
+		return 0
+	}
+	return object_history_redo_depth(dm.history)
 }
 
 debug_selected_object_id :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> (Object_Id, bool) {
@@ -139,6 +183,9 @@ debug_mode_reset_player :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 
 debug_mode_reset_scene :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	simulation_reset_scene(sim)
+	if dm.history != nil {
+		object_history_clear(dm.history)
+	}
 	debug_sun_reset(dm)
 	debug_mode_clear_selection(dm)
 	save_player_and_sync_camera(dm, sim)

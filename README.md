@@ -119,11 +119,17 @@ stairs.
   placement tool is armed, a click places the object at the ghost and keeps the
   tool armed.
 - Wheel: raise or lower the ghost while armed, otherwise the selected object.
-- `Q` / `E`: turn the ghost left or right in 15 degree steps. Hold `Shift` for
-  45 degree steps.
+- `Q` / `E`: turn the ghost or the selected object left or right in 15 degree
+  steps. Hold `Shift` for 45 degree steps.
 - `G`: toggle the 0.25 m grid snap.
-- `M`: flip the body mode for the next placement.
+- `M`: flip the body mode for the next placement while the palette is open.
+  With the palette closed, it flips the selected object between static and
+  dynamic.
+- `Ctrl+D`: duplicate the selected object one prefab half extent along +X, and
+  select the copy. A duplicate at the object cap does nothing.
 - `Delete` or `X`: remove the selected object.
+- `Ctrl+Z`: undo the last place, delete, duplicate, move, wheel height, rotate,
+  or body conversion. `Ctrl+Shift+Z`: redo it.
 - `L`: toggle the sun placement. The sun follows the crosshair on a sky dome
   and the lighting updates live. A click commits the position; `Esc` or a right
   click restores the sun from before the mode.
@@ -140,10 +146,13 @@ nine cards, and `Enter` or a click picks. A click outside the panel closes it. A
 click inside the panel that misses every card does nothing.
 
 The HUD shows the stance, gait, horizontal speed, grounded state, movement
-state, and position, or the debug mode selection, object count, and sun angles.
-While the placement tool is armed, it shows the armed prefab, body, height, yaw,
-snap, and object count instead. While sun placement is active, it adds a sun
-placement row.
+state, and position. In debug mode the inspector shows the selection as the
+prefab and object id, the object count and capacity, and the selected object's
+body, size, position, yaw, and snap state. Every changing value uses a fixed
+field and the mono face, so the panel does not resize with the selection. While
+the placement tool is armed, it shows the armed prefab, body, height, yaw, snap,
+and object count instead. While sun placement is active, it adds a sun placement
+row.
 The settings menu shows the control list. Borderless fills the selected display;
 Windowed uses the chosen resolution.
 
@@ -304,7 +313,9 @@ The batch runner and the live session share one command set:
   mode, position, rotation, scale, and spawn age. The debug entry carries
   `active`, `selection`, `selected_id`, the palette (`open`, `selected`,
   `body`), the placement (`armed`, `prefab`, `position`, `height`, `yaw`,
-  `snap`), and the sun (`active`, `position`, `azimuth`, `elevation`). The
+  `snap`), the sun (`active`, `position`, `azimuth`, `elevation`), the inspector
+  (`prefab`, `body`, `size`, `position`, `yaw`, `snap`), and the history
+  (`depth`, `redo`). The
   renderer object reports the frame count, TAA state, jitter index,
   history validity, convergence frames, history read index and weight, reset
   count and reason, shadow phase, and the active light count. `render_digest`
@@ -354,6 +365,12 @@ The batch runner and the live session share one command set:
   create an object at an exact transform, bypassing the placement ray. `prefab`
   and `position` are required; `yaw` (degrees) defaults to 0 and `body` to the
   prefab's default.
+- `{"cmd": "editor", "select_object": 1, "move": [1, 0.5, 7], "rotate": 15, "body": "static", "delete": false, "duplicate": true, "undo": false, "redo": false}`:
+  edit a placed object by id. `select_object` is the object id, and 0 clears the
+  selection. `move` sets the centre, `rotate` turns the object by degrees, and
+  `body` flips between `static` and `dynamic` when the palette is closed. With
+  the palette open, `body` still sets the next placement. `delete`, `duplicate`,
+  `undo`, and `redo` are actions. A duplicate at the cap does nothing.
 - `{"cmd": "editor", "sun": {"active": true, "position": [0, 40, -30], "place": false, "cancel": false}}`:
   drive the sun placement. `active` enters or leaves the mode, `position` sets
   the sun position directly, `place` commits and leaves, and `cancel` restores
@@ -536,6 +553,8 @@ that the bottom dock still fits and clears the crosshair.
 
 `scenarios/editor-sun.json` enters sun placement, captures the sun gizmo on the
 sky dome, sets an exact sun position, and captures the committed lighting.
+`scenarios/editor-object.json` edits a placed object, captures the inspector,
+then captures the undo and redo restores.
 
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window

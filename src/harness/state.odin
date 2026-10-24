@@ -2,7 +2,6 @@
 package harness
 
 import "core:fmt"
-import "core:math"
 import "core:mem"
 import "core:strings"
 
@@ -126,7 +125,6 @@ state_build :: proc(
 	snapshot := game.simulation_snapshot(sim)
 	resolution := game.settings_effective_resolution(sim.settings, &menu.displays)
 	window_resolution := sim.settings.window.resolution
-	sun_azimuth, sun_elevation := game.debug_mode_sun_angles(debug)
 	state := State {
 		frame = frame,
 		player = {
@@ -165,31 +163,7 @@ state_build :: proc(
 			prone_mode = game.input_mode_name(sim.settings.prone_mode),
 			type_weight = sim.settings.type_weight,
 		},
-		debug = {
-			active = debug.active,
-			selection = game.debug_selection_name(debug.selection),
-			selected_id = selected_object_id(debug, sim),
-			palette = {
-				open = debug.palette.open,
-				selected = debug.palette.selected,
-				body = game.body_mode_name(debug.palette.body_mode),
-			},
-			placement = {
-				armed = debug.placement.armed,
-				prefab = game.prefab_name(debug.placement.prefab),
-				position = debug_placement_position(debug),
-				height = debug.placement.height,
-				yaw = debug.placement.yaw_degrees,
-				snap = debug.placement.snap,
-			},
-			sun = {
-				active = debug.sun.active,
-				position = vec_state(debug.sun.position),
-				azimuth = sun_azimuth * 180.0 / math.PI,
-				elevation = sun_elevation * 180.0 / math.PI,
-			},
-		},
-		sun = sun_state(debug),
+		debug = debug_state_build(debug, sim),
 		menu = {
 			open = menu.open,
 			selected = int(menu.selected),

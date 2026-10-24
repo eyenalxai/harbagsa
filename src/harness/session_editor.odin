@@ -31,8 +31,22 @@ session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 			return format_error("select index %d is out of range", command.select)
 		}
 	}
+	if command.object.has_select_object {
+		id := game.Object_Id(command.object.select_object)
+		if !game.debug_select_object(&session.debug, &session.sim, id) {
+			return format_error("object id %d does not exist", command.object.select_object)
+		}
+	}
 	if command.has_body {
-		game.debug_palette_set_body(&session.debug, command.body)
+		if session.debug.palette.open {
+			game.debug_palette_set_body(&session.debug, command.body)
+		} else if _, selected := game.debug_selected_object_id(&session.debug, &session.sim); selected {
+			if !game.debug_convert_selected(&session.debug, &session.sim, command.body) {
+				return format_error("body conversion failed")
+			}
+		} else {
+			game.debug_palette_set_body(&session.debug, command.body)
+		}
 	}
 	if command.has_height {
 		game.debug_placement_set_height(&session.debug, command.height)
@@ -60,6 +74,33 @@ session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 				yaw = command.place.yaw * math.PI / 180.0,
 			},
 		)
+	}
+	if command.object.has_move {
+		if !game.debug_move_selected(&session.debug, &session.sim, command.object.move) {
+			return format_error("move needs a selected object")
+		}
+	}
+	if command.object.has_rotate {
+		if !game.debug_rotate_selected(&session.debug, &session.sim, command.object.rotate) {
+			return format_error("rotate needs a selected object")
+		}
+	}
+	if command.object.delete {
+		if !game.debug_delete_selected(&session.debug, &session.sim) {
+			return format_error("delete needs a selected object")
+		}
+	}
+	if command.object.duplicate {
+		if _, selected := game.debug_selected_object_id(&session.debug, &session.sim); !selected {
+			return format_error("duplicate needs a selected object")
+		}
+		_ = game.debug_duplicate_selected(&session.debug, &session.sim)
+	}
+	if command.object.undo {
+		_ = game.debug_undo(&session.debug, &session.sim)
+	}
+	if command.object.redo {
+		_ = game.debug_redo(&session.debug, &session.sim)
 	}
 	if command.has_sun {
 		if command.sun.has_active {
