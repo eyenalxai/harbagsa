@@ -132,8 +132,11 @@ ui_theme_init :: proc(render_height: u32) -> UI_Theme {
 	return theme
 }
 
+// A text size is an em in device pixels, rounded so it keys the rasterization
+// atlas exactly. Leading multiplies the rounded size, so the line box and the
+// glyphs share one unit.
 text_type :: proc(size, leading: f32, weight: Text_Weight, tracking, density: f32) -> Text_Type {
-	pixels := size * density
+	pixels := max(math.round(size * density), 1)
 	return {size = pixels, line_height = pixels * leading, weight = weight, tracking = tracking}
 }
 

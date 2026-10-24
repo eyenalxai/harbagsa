@@ -90,7 +90,7 @@ No shadow, no gradient, no radius token. `docs/ui/README.md` explains why.
 - No `width: auto` equivalent: every panel width traces to a measured row plus
   padding.
 - No nested panels. A row is not a card.
-- No clipping. The settings panel is 446 px tall and 422 px wide at 720p; the
+- No clipping. The settings panel is 446 px tall and 542 px wide at 720p; the
   smallest supported window is 800x600, so it always fits. The panel still clamps
   its top to `spacing.md`, so an offscreen target of any size keeps the header on
   screen. A new surface must say what happens when it does not fit.
