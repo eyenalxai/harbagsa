@@ -1,5 +1,5 @@
 ODIN ?= odin
-ODIN_FLAGS ?= -vet -vet-style -vet-semicolon -vet-tabs -vet-using-param -vet-unused-procedures -vet-packages:main,platform,renderer,game,geometry,frame,harness,display -strict-style -warnings-as-errors -disallow-do
+ODIN_FLAGS ?= -vet -vet-style -vet-semicolon -vet-tabs -vet-using-param -vet-unused-procedures -vet-packages:main,platform,renderer,game,geometry,frame,harness,display,ui -strict-style -warnings-as-errors -disallow-do
 ODIN_COLLECTIONS := -collection:libs=vendor -collection:src=src
 # Library checks and the renderer test cannot know which procedures another
 # package calls, so they omit -vet-unused-procedures. The main check still runs
@@ -89,6 +89,7 @@ check: check-lines check-spirv $(BOX3D_LIB) shaders
 	$(ODIN) check src/geometry $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/frame $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/harness $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
+	$(ODIN) check src/ui $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 
 check-lines:
 	@status=0; \

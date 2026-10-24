@@ -66,6 +66,9 @@ text_cursor_next :: proc(cursor: ^Text_Cursor) -> (glyph: Text_Glyph, x: f32, ok
 	for cursor.byte < len(cursor.text) {
 		r, width := utf8.decode_rune_in_string(cursor.text[cursor.byte:])
 		cursor.byte += width
+		if cursor.style.caps && r >= 'a' && r <= 'z' {
+			r -= 'a' - 'A'
+		}
 
 		index, found := text_codepoint_index(r)
 		if !found {
