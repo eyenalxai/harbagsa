@@ -227,6 +227,12 @@ The render target with a color image, a depth image, and a readback buffer, but
 no surface or swapchain.
 _Avoid_: Headless framebuffer
 
+**Frame in flight**:
+The number of submitted frames the CPU may record before the GPU completes one.
+The swapchain target keeps two. The offscreen target keeps one, because it owns
+a single color image and a single readback buffer.
+_Avoid_: Queue depth
+
 **Swapchain target**:
 The render target that acquires and presents swapchain images for the window.
 _Avoid_: Window target

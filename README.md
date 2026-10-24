@@ -335,6 +335,11 @@ The compositor may resize the window. The PNG has the actual swapchain size. It
 matches an offscreen capture at the same size when both frames share the same
 TAA history; the first frame always matches.
 
+The offscreen target submits one frame at a time, because it owns a single color
+image and a single readback buffer. A capture-free sequence therefore cannot
+overlap two writes to the same image and stays deterministic. The swapchain
+target keeps two frames in flight.
+
 `scenarios/taa-static.json` settles the stairs camera for 520 frames, then
 captures 60 steady frames and checks the capture deltas. It gates TAA edge
 stability without a window. The settle passes the 512-sample cap, so the check

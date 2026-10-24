@@ -188,6 +188,10 @@ scenario.
 
 - Headless runs use the offscreen target. The default is 1280x720 with the HUD,
   debug draw, and capture hint off.
+- The offscreen target submits one frame at a time, so a capture-free sequence
+  cannot overlap two writes to its single color image. The swapchain target
+  keeps two frames in flight. See
+  `docs/adr/0009-offscreen-submission-serialization.md`.
 - `--present` opens the real window and captures the swapchain image before
   present. The compositor controls the window size.
 - TAA history affects exact pixels. The first frame matches exactly. Later frames
