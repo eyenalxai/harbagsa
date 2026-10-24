@@ -46,7 +46,9 @@ build_menu :: proc(o: ^Overlay, width, height: f32, menu: ui.Menu) {
 		note_gap +
 		note_height
 	panel_x := (width - panel_width) * 0.5
-	panel_y := (height - panel_height) * 0.5
+	// The smallest supported window is 800x600 and this panel is shorter than
+	// that, but an offscreen target can be any size; keep the top on screen.
+	panel_y := max((height - panel_height) * 0.5, theme.spacing.md)
 
 	hud_emit_rect(o, 0, 0, width, height, theme.scrim)
 	hud_emit_rect(o, panel_x, panel_y, panel_width, panel_height, theme.surface_menu)
@@ -76,8 +78,8 @@ build_menu :: proc(o: ^Overlay, width, height: f32, menu: ui.Menu) {
 	rows_layout.width = content_width
 
 	rows_y := separator_y + theme.hairline + separator_gap
-	row_options.band_x = inner_x
-	row_options.band_width = inner_width
+	row_options.frame_x = inner_x
+	row_options.frame_width = inner_width
 	row_options.selected = menu.selected
 	rows_emit(o, theme, inner_x + gutter, rows_y, rows_layout, menu.rows, row_options)
 
