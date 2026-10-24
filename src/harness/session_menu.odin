@@ -26,7 +26,11 @@ session_menu :: proc(session: ^Session, command: Menu_Command) -> string {
 		game.menu_select(&session.hud.menu, command.select)
 	}
 	if command.activate {
-		_ = game.menu_activate(&session.hud.menu, &session.sim.settings)
+		direction := 1
+		if command.has_direction {
+			direction = command.direction
+		}
+		_ = game.menu_activate(&session.hud.menu, &session.sim.settings, direction)
 	}
 	return ""
 }

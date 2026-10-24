@@ -136,21 +136,17 @@ state_destroy :: proc(state: ^State, allocator: mem.Allocator) {
 		delete(state.crates, allocator)
 		state.crates = nil
 	}
-	if state.settings.display != "" {
-		delete(state.settings.display, allocator)
-		state.settings.display = ""
-	}
-	if state.settings.resolution != "" {
-		delete(state.settings.resolution, allocator)
-		state.settings.resolution = ""
-	}
-	if state.settings.window_resolution != "" {
-		delete(state.settings.window_resolution, allocator)
-		state.settings.window_resolution = ""
-	}
-	if state.digest != "" {
-		delete(state.digest, allocator)
-		state.digest = ""
+	free_string(&state.settings.display, allocator)
+	free_string(&state.settings.resolution, allocator)
+	free_string(&state.settings.window_resolution, allocator)
+	free_string(&state.digest, allocator)
+}
+
+@(private)
+free_string :: proc(text: ^string, allocator: mem.Allocator) {
+	if text^ != "" {
+		delete(text^, allocator)
+		text^ = ""
 	}
 }
 

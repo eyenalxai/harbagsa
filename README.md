@@ -59,8 +59,10 @@ resolution, and the sprint, crouch, and prone input modes.
 - `Esc`: close the menu.
 
 `Window mode` is `Borderless` or `Windowed`. Borderless fills the selected
-display at its desktop size. Windowed uses the chosen resolution, a normal title
-bar, and a fixed size; pick another resolution instead of resizing it by hand.
+display at its desktop size. Windowed uses the chosen resolution and a normal
+title bar, and asks for a fixed size; pick another resolution instead of
+resizing it by hand. A tiling compositor that honors the size hint floats the
+window.
 
 `Display` chooses a connected display. The selected display supplies the
 resolution list. On Wayland the compositor controls where a windowed window
@@ -68,10 +70,10 @@ sits; the selected display still decides where the next Borderless fullscreen
 opens. On X11 the window also moves to the selected display.
 
 `Resolution` cycles through the selected display's unique modes, largest first.
-Changing it in Borderless switches to Windowed, because the desktop size has no
-smaller borderless alternatives. The row shows the desktop size in Borderless
-and the chosen size in Windowed. Modes smaller than 800x600 are left out so the
-settings menu stays fully visible.
+Changing it in Borderless switches to Windowed, because Borderless has only the
+desktop size. The row shows the desktop size in Borderless and the chosen size
+in Windowed. Modes smaller than 800x600 are left out so the settings menu stays
+fully visible; the display's desktop mode is always kept.
 
 The display list and its modes come from SDL at startup. The choices last for
 the current run. A new run starts Borderless, with 1280x720 as the Windowed
@@ -216,9 +218,10 @@ The batch runner and the live session share one command set:
   the override.
 - `{"cmd": "view", "hud": true, "debug": false, "hint": false}`: toggle the HUD,
   the debug draw, and the capture hint.
-- `{"cmd": "menu", "open": true, "select": 1, "activate": true}`: open or close
-  the settings menu, select a row, and activate the selected row. `select` is
-  zero-based and needs an open menu. `activate` also needs an open menu. Omitted
+- `{"cmd": "menu", "open": true, "select": 1, "activate": true, "direction": -1}`:
+  open or close the settings menu, select a row, and activate the selected row.
+  `select` is zero-based and needs an open menu. `activate` also needs an open
+  menu. `direction` is `-1` or `1` (default `1`) and needs `activate`. Omitted
   fields keep the state. An open menu renders even when `hud` is off.
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`:
   evaluate a predicate now.
@@ -319,8 +322,9 @@ make test
 strict compiler checks on the game, the agent, and every library package. If
 `spirv-val` is not installed, the shader check prints a skip message and does
 not fail the build. `make check-spirv` runs only the shader check. `make test`
-runs the physics, simulation, frame, harness, and renderer tests headless. The
-offscreen render test logs a skip when no Vulkan device is available.
+runs the display, physics, simulation, frame, harness, and renderer tests
+headless. The offscreen render test logs a skip when no Vulkan device is
+available.
 
 If more than one agent or terminal can build in this checkout, use the
 wrapper. It serializes Make with `flock` and needs `flock` from util-linux.

@@ -9,9 +9,6 @@ import "core:strings"
 import "src:display"
 import "vendor:sdl3"
 
-MIN_MODE_WIDTH :: 800
-MIN_MODE_HEIGHT :: 600
-
 // The SDL display IDs live here, so the game menu only needs the snapshot.
 Displays :: struct {
 	list: display.List,
@@ -26,6 +23,7 @@ query_displays :: proc() -> Displays {
 		log.errorf("platform: SDL_GetDisplays failed: %v", sdl3.GetError())
 		return displays
 	}
+	defer sdl3.free(rawptr(ids))
 	primary := sdl3.GetPrimaryDisplay()
 	for id in ids[:int(count)] {
 		if displays.list.count >= display.MAX_DISPLAYS {
@@ -48,7 +46,7 @@ query_displays :: proc() -> Displays {
 
 display_index_for_window :: proc(window: ^Window, displays: ^Displays) -> int {
 	if window == nil || window.handle == nil || displays == nil {
-		return 0
+		return -1
 	}
 	id := sdl3.GetDisplayForWindow(window.handle)
 	for index in 0 ..< displays.list.count {
@@ -56,7 +54,7 @@ display_index_for_window :: proc(window: ^Window, displays: ^Displays) -> int {
 			return index
 		}
 	}
-	return 0
+	return -1
 }
 
 apply_window_state :: proc(
@@ -78,6 +76,10 @@ apply_window_state :: proc(
 	height := max(settings.resolution.height, 240)
 	centered_x := sdl3.WINDOWPOS_CENTERED_DISPLAY(c.int(id))
 	centered_y := sdl3.WINDOWPOS_CENTERED_DISPLAY(c.int(id))
+	on_wayland := false
+	if driver := sdl3.GetCurrentVideoDriver(); driver != nil {
+		on_wayland = string(driver) == "wayland"
+	}
 
 	switch settings.mode {
 	case .Borderless:
@@ -92,9 +94,13 @@ apply_window_state :: proc(
 	case .Windowed:
 		was_fullscreen := .FULLSCREEN in sdl3.GetWindowFlags(window.handle)
 		_ = sdl3.SetWindowFullscreen(window.handle, false)
+		if .MAXIMIZED in sdl3.GetWindowFlags(window.handle) {
+			_ = sdl3.RestoreWindow(window.handle)
+		}
 		_ = sdl3.SetWindowBordered(window.handle, true)
-		// Equal size limits make a fixed-size window, which floats on tiling
-		// compositors. Open the maximum first so the new minimum is valid.
+		// Equal size limits request a fixed size; tiling compositors that honor
+		// the hint float the window. Open the maximum first so the new minimum
+		// is valid.
 		_ = sdl3.SetWindowMaximumSize(window.handle, 0, 0)
 		if !sdl3.SetWindowMinimumSize(window.handle, c.int(width), c.int(height)) {
 			log.errorf("platform: SDL_SetWindowMinimumSize failed: %v", sdl3.GetError())
@@ -111,7 +117,7 @@ apply_window_state :: proc(
 		// Wayland lets only the compositor place a normal window. The position
 		// still selects the output for the next Borderless fullscreen.
 		_ = sdl3.SetWindowPosition(window.handle, centered_x, centered_y)
-		if was_fullscreen {
+		if was_fullscreen && on_wayland {
 			// A tiling compositor can keep the old tiled slot. A fresh map lets
 			// it apply the fixed size and float the window.
 			_ = sdl3.HideWindow(window.handle)
@@ -150,11 +156,12 @@ fill_display :: proc(info: ^display.Info, id: sdl3.DisplayID, index: int) {
 	mode_count: i32
 	modes := sdl3.GetFullscreenDisplayModes(id, &mode_count)
 	if modes != nil {
+		defer sdl3.free(rawptr(modes))
 		for mode_index in 0 ..< mode_count {
 			mode := modes[mode_index]
-			// Smaller windows clip the settings menu, so leave them out. The
-			// desktop mode is always added, even when it is smaller.
-			if mode.w < MIN_MODE_WIDTH || mode.h < MIN_MODE_HEIGHT {
+			// Smaller windows clip the settings menu. The desktop mode is added
+			// separately, even when it is smaller.
+			if !display.keep_windowed_mode({mode.w, mode.h}) {
 				continue
 			}
 			display.add_mode(info, {mode.w, mode.h})

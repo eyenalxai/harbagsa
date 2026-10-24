@@ -83,7 +83,7 @@ Rules:
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw": 0, "pitch": 0}`
 - `{"cmd": "camera", "clear": true}`
 - `{"cmd": "view", "hud": true, "debug": false, "hint": false}`
-- `{"cmd": "menu", "open": true, "select": 1, "activate": true}`
+- `{"cmd": "menu", "open": true, "select": 1, "activate": true, "direction": -1}`
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`
 - `{"cmd": "record", "path": "scenarios/walk.json"}`
 - `{"cmd": "record"}`
@@ -94,8 +94,9 @@ A past capture frame is an error. A future capture frame queues. Unknown keys,
 wrong types, and out-of-range values are per-command errors; the session stays
 usable. A `step` while the menu is open is an error, because the game pauses.
 An open menu renders even when the `view` HUD flag is off. `select` is zero-based.
-`select` and `activate` need an open menu. The rows are Window mode, Display,
-Resolution, Sprint mode, Crouch mode, Prone mode, and Resume.
+`select` and `activate` need an open menu. `direction` is `-1` or `1` (default
+`1`) and needs `activate`. The rows are Window mode, Display, Resolution, Sprint
+mode, Crouch mode, Prone mode, and Resume.
 
 The harness has no compositor, so the menu uses a fixed two-display list:
 `Display 1` (1920x1080) and `Display 2` (2560x1440). Each lists smaller modes.
@@ -138,8 +139,8 @@ scenario.
   stability. The first frames converge; compare later frames.
 - `scenarios/settings-menu.json` captures the settings menu and checks a changed
   input mode.
-- `scenarios/window-settings.json` captures the Windowed mode with Display 2 and
-  a changed resolution, then checks the window settings.
+- `scenarios/window-settings.json` captures the menu after switching to
+  Windowed and changing the resolution, then checks the window settings.
 - `--no-render` and capture-free scenarios never create a Vulkan device.
 
 Use `capture` or `--present`. Do not use `grim` for automated screenshots.
@@ -167,7 +168,8 @@ Use `capture` or `--present`. Do not use `grim` for automated screenshots.
   TAA, capture readback, HUD and menu overlay.
 - `src/platform/`: SDL and headless adapters. `display.odin` queries displays and
   applies the window state.
-- `tests/harness/`, `tests/frame/`, `tests/renderer/target.odin`.
+- `tests/harness/`, `tests/frame/`, `tests/display/display.odin`,
+  `tests/renderer/target.odin`.
 - `scenarios/smoke.json`, `scenarios/settings-menu.json`,
   `scenarios/window-settings.json`.
 
