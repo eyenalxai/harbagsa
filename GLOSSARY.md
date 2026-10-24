@@ -212,6 +212,27 @@ The stable number that addresses a placed object through the game API and the
 harness. The list index stays internal.
 _Avoid_: Handle, slot
 
+**Object palette**:
+The debug-mode prefab chooser. It holds the open flag, the selected catalog
+index, and the body mode for the next placement.
+_Avoid_: Toolbar, inventory
+
+**Placement**:
+The armed debug tool state: the prefab, the surface anchor, the height offset,
+the yaw, and the grid snap flag. Picking a palette card arms it; placing keeps
+it armed.
+_Avoid_: Spawn mode, build mode
+
+**Ghost**:
+The wireframe preview of the armed placement: the oriented box, its footprint on
+the surface, and the height guide. It is a planning aid, not a collision test.
+_Avoid_: Preview, hologram
+
+**Grid snap**:
+The optional 0.25 m X/Z rounding of the ghost's bottom anchor. It is off by
+default.
+_Avoid_: Grid, quantization
+
 **Slide lane**:
 The marked arena strip for crouch slides.
 _Avoid_: Runway

@@ -31,6 +31,7 @@ collect_world_lines :: proc(sim: ^Simulation, collector: ^Debug_Lines) {
 collect_editor_lines :: proc(dm: ^Debug_Mode, sim: ^Simulation, collector: ^Debug_Lines) {
 	collect_object_editor_lines(dm, sim, collector)
 	collect_sun_editor_lines(dm, collector)
+	collect_placement_lines(dm, collector)
 }
 
 append_debug_line :: proc "contextless" (collector: ^Debug_Lines, from, to: [3]f32, color: [4]f32) {
