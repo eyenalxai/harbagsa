@@ -78,7 +78,7 @@ destroy_target :: proc(r: ^Renderer) {
 }
 
 create_readback :: proc(r: ^Renderer, width, height: u32) -> bool {
-	size := vk.DeviceSize(width) * vk.DeviceSize(height) * 4
+	size := vk.DeviceSize(width) * vk.DeviceSize(height) * MAX_CAPTURE_TEXEL_BYTES
 	if size == 0 {
 		return false
 	}

@@ -22,9 +22,7 @@ Backend :: struct {
 	render:   proc(
 		ctx: rawptr,
 		session: ^Session,
-		capture: bool,
-		name: string,
-		alpha: f32,
+		request: Capture_Request,
 	) -> (Capture_Result, string),
 	gpu_times: proc(ctx: rawptr) -> perf.Gpu_Times,
 	snapshot:  proc(ctx: rawptr) -> Backend_Snapshot,
@@ -137,9 +135,7 @@ backend_gpu_times :: proc(ctx: rawptr) -> perf.Gpu_Times {
 backend_render :: proc(
 	ctx: rawptr,
 	session: ^Session,
-	capture: bool,
-	name: string,
-	alpha: f32,
+	request: Capture_Request,
 ) -> (
 	Capture_Result,
 	string,
@@ -157,7 +153,7 @@ backend_render :: proc(
 	}
 
 	options := frame.Options {
-		alpha      = alpha,
+		alpha      = request.alpha,
 		debug_view = session.view.debug,
 		captured   = !session.view.hint,
 		hud        = session.view.hud,
@@ -180,9 +176,13 @@ backend_render :: proc(
 	)
 	perf.mark(&session.perf, .Build)
 	data.renderer.recorder = &session.perf.recorder
+	capture_request := renderer.Capture_Request {
+		target  = request.target,
+		enabled = request.enabled,
+	}
 	status: renderer.Frame_Status
 	for _ in 0 ..< 2 {
-		status = frame.draw(&data.renderer, scene, capture)
+		status = frame.draw(&data.renderer, scene, capture_request)
 		if status == .Ok {
 			break
 		}
@@ -196,44 +196,11 @@ backend_render :: proc(
 		}
 		return {}, format_error("frame skipped")
 	}
-	if !capture {
+	if !request.enabled {
 		return {}, ""
 	}
 
-	pixels, width, height, ok := renderer.read_capture(&data.renderer)
-	if !ok {
-		return {}, format_error("capture readback failed")
-	}
-	delta: Capture_Delta
-	if data.previous_pixels != nil &&
-	   data.previous_width == width &&
-	   data.previous_height == height &&
-	   len(data.previous_pixels) == len(pixels) {
-		delta = capture_delta(data.previous_pixels, pixels)
-	}
-	result, write_error := capture_write_png(
-		data.frames_dir,
-		name,
-		session.frame,
-		width,
-		height,
-		pixels,
-		data.allocator,
-	)
-	if write_error != "" {
-		return {}, write_error
-	}
-	result.delta_mean = delta.mean
-	result.delta_max = delta.max
-	result.delta_over_16 = delta.over_16
-	if len(data.previous_pixels) != len(pixels) {
-		delete(data.previous_pixels, data.allocator)
-		data.previous_pixels = make([]u8, len(pixels), data.allocator)
-	}
-	copy(data.previous_pixels, pixels)
-	data.previous_width = width
-	data.previous_height = height
-	return result, ""
+	return backend_capture(data, session, request)
 }
 
 @(private)

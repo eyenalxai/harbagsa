@@ -28,24 +28,25 @@ execute :: proc(t: ^testing.T, session: ^harness.Session, line: string) -> harne
 fake_render :: proc(
 	ctx: rawptr,
 	session: ^harness.Session,
-	capture: bool,
-	name: string,
-	alpha: f32,
+	request: harness.Capture_Request,
 ) -> (
 	harness.Capture_Result,
 	string,
 ) {
 	counter := cast(^int)ctx
 	counter^ += 1
-	if !capture {
+	if !request.enabled {
 		return {}, ""
 	}
 	return {
-		name = strings.clone(name, context.allocator),
+		name = strings.clone(request.name, context.allocator),
 		path = strings.clone("/tmp/opencode/fake-capture.png", context.allocator),
 		frame = session.frame,
 		width = 1,
 		height = 1,
+		target = "color",
+		format = "png",
+		target_format = "R8G8B8A8_SRGB",
 		hash = strings.clone("fake", context.allocator),
 	}, ""
 }

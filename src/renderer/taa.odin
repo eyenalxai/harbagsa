@@ -104,15 +104,27 @@ destroy_taa :: proc(r: ^Renderer) {
 }
 
 check_taa_formats :: proc(r: ^Renderer) -> bool {
-	required := vk.FormatFeatureFlags{.COLOR_ATTACHMENT, .SAMPLED_IMAGE, .SAMPLED_IMAGE_FILTER_LINEAR}
+	required := vk.FormatFeatureFlags {
+		.COLOR_ATTACHMENT,
+		.SAMPLED_IMAGE,
+		.SAMPLED_IMAGE_FILTER_LINEAR,
+		.TRANSFER_SRC,
+	}
 	formats := [4]vk.Format{SCENE_COLOR_FORMAT, VELOCITY_FORMAT, HISTORY_FORMAT, COUNT_FORMAT}
 	for format in formats {
 		properties: vk.FormatProperties
 		vk.GetPhysicalDeviceFormatProperties(r.physical_device, format, &properties)
 		if (properties.optimalTilingFeatures & required) != required {
-			log.errorf("renderer: format %v lacks the TAA color, sample, or filter features", format)
+			log.errorf("renderer: format %v lacks the TAA color, sample, filter, or transfer features", format)
 			return false
 		}
+	}
+	depth_required := vk.FormatFeatureFlags{.DEPTH_STENCIL_ATTACHMENT, .TRANSFER_SRC}
+	depth_properties: vk.FormatProperties
+	vk.GetPhysicalDeviceFormatProperties(r.physical_device, DEPTH_FORMAT, &depth_properties)
+	if (depth_properties.optimalTilingFeatures & depth_required) != depth_required {
+		log.errorf("renderer: format %v lacks the depth or transfer features", DEPTH_FORMAT)
+		return false
 	}
 	return true
 }
@@ -125,7 +137,7 @@ create_taa_color_target :: proc(r: ^Renderer, extent: vk.Extent2D, format: vk.Fo
 		extent.width,
 		extent.height,
 		format,
-		{.COLOR_ATTACHMENT, .SAMPLED},
+		{.COLOR_ATTACHMENT, .SAMPLED, .TRANSFER_SRC},
 		{.COLOR},
 	)
 	if !ok {
@@ -149,7 +161,7 @@ create_taa_targets :: proc(r: ^Renderer, reason: History_Reset_Reason) -> bool {
 			extent.width,
 			extent.height,
 			DEPTH_FORMAT,
-			{.DEPTH_STENCIL_ATTACHMENT},
+			{.DEPTH_STENCIL_ATTACHMENT, .TRANSFER_SRC},
 			{.DEPTH},
 		)
 		if !depth_ok {
