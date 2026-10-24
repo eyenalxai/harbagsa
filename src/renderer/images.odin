@@ -2,6 +2,7 @@
 package renderer
 
 import "core:log"
+import "core:mem"
 
 import vk "vendor:vulkan"
 
@@ -90,6 +91,79 @@ destroy_image :: proc(r: ^Renderer, image: ^Image) {
 		vk.FreeMemory(r.device, image.memory, nil)
 		image.memory = 0
 	}
+}
+
+// Uploads one mip level and leaves the image in SHADER_READ_ONLY_OPTIMAL, ready
+// for a combined image sampler.
+upload_texture :: proc(
+	r: ^Renderer,
+	width, height: u32,
+	format: vk.Format,
+	pixels: []u8,
+) -> (
+	result: Image,
+	ok: bool,
+) {
+	size := vk.DeviceSize(len(pixels))
+	staging: vk.Buffer
+	staging_memory: vk.DeviceMemory
+	if !create_buffer(r, size, {.TRANSFER_SRC}, {.HOST_VISIBLE, .HOST_COHERENT}, &staging, &staging_memory) {
+		return {}, false
+	}
+	defer destroy_buffer(r, &staging, &staging_memory)
+
+	mapped: rawptr
+	if !check(vk.MapMemory(r.device, staging_memory, 0, size, {}, &mapped), "vkMapMemory") {
+		return {}, false
+	}
+	mem.copy(mapped, raw_data(pixels), len(pixels))
+	vk.UnmapMemory(r.device, staging_memory)
+
+	result, ok = create_image(r, width, height, format, {.SAMPLED, .TRANSFER_DST}, {.COLOR})
+	if !ok {
+		return {}, false
+	}
+
+	command_buffer, command_ok := begin_immediate_command(r)
+	if !command_ok {
+		destroy_image(r, &result)
+		return {}, false
+	}
+	defer free_immediate_command(r, command_buffer)
+
+	image_barrier(
+		command_buffer,
+		result.image,
+		COLOR_SUBRESOURCE,
+		.UNDEFINED,
+		.TRANSFER_DST_OPTIMAL,
+		{.TOP_OF_PIPE},
+		{.TRANSFER},
+		{},
+		{.TRANSFER_WRITE},
+	)
+	region := vk.BufferImageCopy {
+		imageSubresource = {aspectMask = COLOR_SUBRESOURCE.aspectMask, layerCount = 1},
+		imageExtent = {width, height, 1},
+	}
+	vk.CmdCopyBufferToImage(command_buffer, staging, result.image, .TRANSFER_DST_OPTIMAL, 1, &region)
+	image_barrier(
+		command_buffer,
+		result.image,
+		COLOR_SUBRESOURCE,
+		.TRANSFER_DST_OPTIMAL,
+		.SHADER_READ_ONLY_OPTIMAL,
+		{.TRANSFER},
+		{.FRAGMENT_SHADER},
+		{.TRANSFER_WRITE},
+		{.SHADER_READ},
+	)
+
+	if !end_immediate_command(r, command_buffer) {
+		destroy_image(r, &result)
+		return {}, false
+	}
+	return result, true
 }
 
 image_barrier :: proc(
