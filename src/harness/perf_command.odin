@@ -8,13 +8,16 @@ import "core:strings"
 Perf_Command :: struct {
 	frames:    int,
 	warmup:    int,
+	prime:     f64,
+	name:      string,
+	has_name:  bool,
 	trace:     string,
 	has_trace: bool,
 }
 
 @(private)
 parse_perf :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "frames", "warmup", "trace"}); unknown {
+	if key, unknown := json_unknown_key(object, {"cmd", "frames", "warmup", "prime", "name", "trace"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 	command := Command {
@@ -22,6 +25,8 @@ parse_perf :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, s
 		perf = {
 			frames = PERF_DEFAULT_FRAMES,
 			warmup = PERF_DEFAULT_WARMUP,
+			prime  = PERF_DEFAULT_PRIME,
+			name   = "perf",
 		},
 	}
 	if value, has := json_get(object, "frames"); has {
@@ -37,6 +42,24 @@ parse_perf :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, s
 			return {}, format_error("'warmup' must be an integer in [0, %d]", MAX_PERF_FRAMES)
 		}
 		command.perf.warmup = warmup
+	}
+	if value, has := json_get(object, "prime"); has {
+		prime, ok := json_number(value)
+		if !ok || prime < 0 || prime > MAX_PERF_PRIME {
+			return {}, format_error("'prime' must be a number in [0, %g]", MAX_PERF_PRIME)
+		}
+		command.perf.prime = prime
+	}
+	if value, has := json_get(object, "name"); has {
+		name, ok := json_string(value)
+		if !ok || len(name) > MAX_PERF_NAME || !valid_capture_name(name) {
+			return {}, format_error(
+				"'name' must be 1 to %d letters, digits, '-' or '_'",
+				MAX_PERF_NAME,
+			)
+		}
+		command.perf.name = strings.clone(name, allocator)
+		command.perf.has_name = true
 	}
 	if value, has := json_get(object, "trace"); has {
 		path, ok := json_string(value)

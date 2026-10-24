@@ -192,6 +192,9 @@ command_destroy :: proc(command: ^Command, allocator: mem.Allocator) {
 		if command.perf.has_trace {
 			delete(command.perf.trace, allocator)
 		}
+		if command.perf.has_name {
+			delete(command.perf.name, allocator)
+		}
 	}
 	command^ = {}
 }

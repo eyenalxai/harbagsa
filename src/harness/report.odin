@@ -19,7 +19,7 @@ Report :: struct {
 	failures:    []string         `json:"failures"`,
 	digest:      string           `json:"digest"`,
 	error:       string           `json:"error,omitempty"`,
-	perf:        Maybe(Perf_Report) `json:"perf,omitempty"`,
+	perf:        []Perf_Report    `json:"perf,omitempty"`,
 	trace:       string           `json:"trace,omitempty"`,
 	analysis:    string           `json:"analysis,omitempty"`,
 }

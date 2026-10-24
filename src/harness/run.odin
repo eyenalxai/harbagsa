@@ -166,8 +166,8 @@ run_batch :: proc(options: Run_Options) -> int {
 		digest      = state.digest,
 		error       = backend_error,
 	}
-	if session.has_perf_report {
-		report.perf = session.perf_report
+	if len(session.perf_reports) > 0 {
+		report.perf = session.perf_reports[:]
 	}
 	if session.has_trace && !trace_failed {
 		report.trace = perf_trace_path(session.trace_name, absolute_out, context.allocator)

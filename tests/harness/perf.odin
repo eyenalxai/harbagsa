@@ -16,14 +16,19 @@ perf_command_parses_defaults :: proc(t: ^testing.T) {
 	testing.expect_value(t, command.kind, harness.Command_Kind.Perf)
 	testing.expect_value(t, command.perf.frames, harness.PERF_DEFAULT_FRAMES)
 	testing.expect_value(t, command.perf.warmup, harness.PERF_DEFAULT_WARMUP)
+	testing.expect_value(t, command.perf.prime, harness.PERF_DEFAULT_PRIME)
+	testing.expect_value(t, command.perf.name, "perf")
 }
 
 @(test)
 perf_command_rejects_bad_fields :: proc(t: ^testing.T) {
-	lines := [3]string {
+	lines := [6]string {
 		`{"cmd": "perf", "nope": 1}`,
 		`{"cmd": "perf", "frames": 0}`,
 		`{"cmd": "perf", "warmup": -1}`,
+		`{"cmd": "perf", "prime": -1}`,
+		`{"cmd": "perf", "prime": 61}`,
+		`{"cmd": "perf", "name": "two words"}`,
 	}
 	for line in lines {
 		command, error := harness.command_parse_string(line, context.allocator)
@@ -51,7 +56,7 @@ perf_digest :: proc(t: ^testing.T) -> string {
 	testing.expectf(t, create_error == "", "session failed: %s", create_error)
 	defer harness.session_destroy(&session)
 
-	reply := execute(t, &session, `{"cmd": "perf", "frames": 5, "warmup": 0}`)
+	reply := execute(t, &session, `{"cmd": "perf", "frames": 5, "warmup": 0, "prime": 0}`)
 	defer harness.reply_destroy(&reply, context.allocator)
 	testing.expectf(t, reply.ok, "perf failed: %s", reply.error)
 
@@ -71,7 +76,7 @@ perf_trace_writes_jsonl :: proc(t: ^testing.T) {
 	reply := execute(
 		t,
 		&session,
-		`{"cmd": "perf", "frames": 3, "warmup": 0, "trace": "/tmp/opencode/harbagsa-perf-trace.jsonl"}`,
+		`{"cmd": "perf", "frames": 3, "warmup": 0, "prime": 0, "trace": "/tmp/opencode/harbagsa-perf-trace.jsonl"}`,
 	)
 	defer harness.reply_destroy(&reply, context.allocator)
 	testing.expectf(t, reply.ok, "perf failed: %s", reply.error)
@@ -111,13 +116,14 @@ perf_runs_without_a_device :: proc(t: ^testing.T) {
 	testing.expectf(t, create_error == "", "session failed: %s", create_error)
 	defer harness.session_destroy(&session)
 
-	reply := execute(t, &session, `{"cmd": "perf", "frames": 5, "warmup": 0}`)
+	reply := execute(t, &session, `{"cmd": "perf", "frames": 5, "warmup": 0, "prime": 0}`)
 	defer harness.reply_destroy(&reply, context.allocator)
 	testing.expectf(t, reply.ok, "perf failed: %s", reply.error)
 	testing.expect(t, reply.perf != nil, "reply has no perf object")
 	if reply.perf != nil {
 		testing.expect_value(t, reply.perf.measured, 5)
 		testing.expect_value(t, reply.perf.warmup, 0)
+		testing.expect_value(t, reply.perf.name, "perf")
 		testing.expect(t, reply.perf.interval.p50 >= 0, "negative interval")
 	}
 
@@ -126,4 +132,95 @@ perf_runs_without_a_device :: proc(t: ^testing.T) {
 	text := string(encoded)
 	testing.expect(t, strings.contains(text, `"perf"`), "reply JSON has no perf object")
 	testing.expect(t, !strings.contains(text, `"gpu"`), "CPU-only reply has GPU fields")
+}
+
+@(test)
+perf_prime_runs_before_the_measured_window :: proc(t: ^testing.T) {
+	session, create_error := harness.session_create(context.allocator)
+	testing.expectf(t, create_error == "", "session failed: %s", create_error)
+	defer harness.session_destroy(&session)
+
+	reply := execute(
+		t,
+		&session,
+		`{"cmd": "perf", "frames": 3, "warmup": 0, "prime": 0.01}`,
+	)
+	defer harness.reply_destroy(&reply, context.allocator)
+	testing.expectf(t, reply.ok, "perf failed: %s", reply.error)
+	if reply.perf == nil {
+		return
+	}
+	testing.expect_value(t, reply.perf.measured, 3)
+	testing.expect_value(t, reply.perf.prime_seconds, 0.01)
+	testing.expect(t, reply.perf.prime_frames >= 1, "the prime loop ran no frames")
+	testing.expect(t, reply.perf.prime_frames <= harness.MAX_PERF_PRIME_FRAMES, "the prime loop ran too long")
+}
+
+@(test)
+perf_names_accumulate_in_the_session :: proc(t: ^testing.T) {
+	session, create_error := harness.session_create(context.allocator)
+	testing.expectf(t, create_error == "", "session failed: %s", create_error)
+	defer harness.session_destroy(&session)
+
+	first := execute(
+		t,
+		&session,
+		`{"cmd": "perf", "frames": 2, "warmup": 0, "prime": 0, "name": "first"}`,
+	)
+	harness.reply_destroy(&first, context.allocator)
+	second := execute(
+		t,
+		&session,
+		`{"cmd": "perf", "frames": 2, "warmup": 0, "prime": 0, "name": "second"}`,
+	)
+	defer harness.reply_destroy(&second, context.allocator)
+	testing.expectf(t, second.ok, "second perf failed: %s", second.error)
+
+	testing.expect_value(t, len(session.perf_reports), 2)
+	if len(session.perf_reports) == 2 {
+		testing.expect_value(t, session.perf_reports[0].name, "first")
+		testing.expect_value(t, session.perf_reports[1].name, "second")
+	}
+	if second.perf != nil {
+		testing.expect_value(t, second.perf.name, "second")
+	}
+}
+
+@(test)
+perf_rejects_a_second_trace :: proc(t: ^testing.T) {
+	session, create_error := harness.session_create(context.allocator)
+	testing.expectf(t, create_error == "", "session failed: %s", create_error)
+	defer harness.session_destroy(&session)
+
+	first := execute(
+		t,
+		&session,
+		`{"cmd": "perf", "frames": 2, "warmup": 0, "prime": 0, "trace": "/tmp/opencode/perf-one.jsonl"}`,
+	)
+	harness.reply_destroy(&first, context.allocator)
+	second := execute(
+		t,
+		&session,
+		`{"cmd": "perf", "frames": 2, "warmup": 0, "prime": 0, "trace": "/tmp/opencode/perf-two.jsonl"}`,
+	)
+	defer harness.reply_destroy(&second, context.allocator)
+	testing.expect(t, !second.ok, "a second perf trace was accepted")
+	testing.expect(t, strings.contains(second.error, "one perf trace"), "missing the trace limit error")
+}
+
+@(test)
+perf_reports_distributions_for_the_cpu_phases :: proc(t: ^testing.T) {
+	session, create_error := harness.session_create(context.allocator)
+	testing.expectf(t, create_error == "", "session failed: %s", create_error)
+	defer harness.session_destroy(&session)
+
+	reply := execute(t, &session, `{"cmd": "perf", "frames": 3, "warmup": 0, "prime": 0}`)
+	defer harness.reply_destroy(&reply, context.allocator)
+	testing.expectf(t, reply.ok, "perf failed: %s", reply.error)
+	if reply.perf == nil {
+		return
+	}
+	testing.expect(t, reply.perf.cpu.events.p50 >= 0, "the CPU p50 is negative")
+	testing.expect(t, reply.perf.cpu.events.p95 >= reply.perf.cpu.events.p50, "the CPU p95 is below p50")
+	testing.expect(t, reply.perf.cpu.events.mean >= 0, "the CPU mean is negative")
 }

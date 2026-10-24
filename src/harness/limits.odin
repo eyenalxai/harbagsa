@@ -10,8 +10,12 @@ MAX_SESSION_LINE :: 1 << 20
 
 MAX_PERF_FRAMES :: perf.RING_CAPACITY
 MAX_PERF_TRACE_PATH :: 1024
+MAX_PERF_NAME :: 64
+MAX_PERF_PRIME :: 60.0
+MAX_PERF_PRIME_FRAMES :: 10_000
 PERF_DEFAULT_FRAMES :: 120
 PERF_DEFAULT_WARMUP :: 60
+PERF_DEFAULT_PRIME :: 2.0
 
 format_error :: proc(format: string, args: ..any) -> string {
 	return fmt.aprintf(format, ..args, allocator = context.allocator)
