@@ -24,7 +24,7 @@ menu_command_opens_selects_and_toggles :: proc(t: ^testing.T) {
 	harness.reply_destroy(&reply, context.allocator)
 	testing.expect(t, session.hud.menu.open, "menu did not open")
 
-	reply = execute(t, &session, `{"cmd": "menu", "select": 1}`)
+	reply = execute(t, &session, `{"cmd": "menu", "select": 4}`)
 	harness.reply_destroy(&reply, context.allocator)
 	testing.expect_value(t, session.hud.menu.selected, game.Menu_Item.Crouch)
 
@@ -36,7 +36,7 @@ menu_command_opens_selects_and_toggles :: proc(t: ^testing.T) {
 	defer harness.state_destroy(&state, context.allocator)
 	testing.expect_value(t, state.settings.crouch_mode, "Hold")
 	testing.expect(t, state.menu.open, "state did not report the open menu")
-	testing.expect_value(t, state.menu.selected, 1)
+	testing.expect_value(t, state.menu.selected, 4)
 	testing.expect_value(t, state.menu.item, "Crouch mode")
 
 	reply = execute(t, &session, `{"cmd": "menu", "open": false}`)
@@ -112,10 +112,10 @@ menu_activate_false_is_accepted :: proc(t: ^testing.T) {
 rejected_menu_command_leaves_the_menu_unchanged :: proc(t: ^testing.T) {
 	session, _ := harness.session_create(context.allocator)
 	defer harness.session_destroy(&session)
-	reply := execute(t, &session, `{"cmd": "menu", "open": true, "select": 2}`)
+	reply := execute(t, &session, `{"cmd": "menu", "open": true, "select": 5}`)
 	harness.reply_destroy(&reply, context.allocator)
 
-	reply = execute(t, &session, `{"cmd": "menu", "open": false, "select": 0}`)
+	reply = execute(t, &session, `{"cmd": "menu", "open": false, "select": 5}`)
 	harness.reply_destroy(&reply, context.allocator)
 	testing.expect(t, session.hud.menu.open, "a rejected command closed the menu")
 	testing.expect_value(t, session.hud.menu.selected, game.Menu_Item.Prone)
@@ -125,7 +125,7 @@ rejected_menu_command_leaves_the_menu_unchanged :: proc(t: ^testing.T) {
 reset_restores_the_menu_and_the_settings :: proc(t: ^testing.T) {
 	session, _ := harness.session_create(context.allocator)
 	defer harness.session_destroy(&session)
-	reply := execute(t, &session, `{"cmd": "menu", "open": true, "select": 2}`)
+	reply := execute(t, &session, `{"cmd": "menu", "open": true, "select": 5}`)
 	harness.reply_destroy(&reply, context.allocator)
 	reply = execute(t, &session, `{"cmd": "menu", "activate": true}`)
 	harness.reply_destroy(&reply, context.allocator)
@@ -175,4 +175,41 @@ menu_commands_replay_to_the_same_digest :: proc(t: ^testing.T) {
 	after := harness.session_state(&session)
 	defer harness.state_destroy(&after, context.allocator)
 	testing.expect_value(t, after.digest, before.digest)
+}
+
+@(test)
+window_settings_are_reported_and_checkable :: proc(t: ^testing.T) {
+	session, _ := harness.session_create(context.allocator)
+	defer harness.session_destroy(&session)
+
+	state := harness.session_state(&session)
+	defer harness.state_destroy(&state, context.allocator)
+	testing.expect_value(t, state.settings.window_mode, "Borderless")
+	testing.expect_value(t, state.settings.display, "Display 1")
+	testing.expect_value(t, state.settings.display_index, 0)
+	testing.expect_value(t, state.settings.resolution, "1920x1080")
+	testing.expect_value(t, state.settings.window_resolution, "1280x720")
+
+	reply := execute(t, &session, `{"cmd": "menu", "open": true, "select": 0, "activate": true}`)
+	harness.reply_destroy(&reply, context.allocator)
+	reply = execute(t, &session, `{"cmd": "menu", "select": 2, "activate": true}`)
+	harness.reply_destroy(&reply, context.allocator)
+	reply = execute(t, &session, `{"cmd": "menu", "select": 1, "activate": true}`)
+	harness.reply_destroy(&reply, context.allocator)
+
+	after := harness.session_state(&session)
+	defer harness.state_destroy(&after, context.allocator)
+	testing.expect_value(t, after.settings.window_mode, "Windowed")
+	testing.expect_value(t, after.settings.display, "Display 2")
+	testing.expect_value(t, after.settings.display_index, 1)
+	testing.expect_value(t, after.settings.resolution, "1920x1080")
+	testing.expect_value(t, after.settings.window_resolution, "1920x1080")
+
+	reply = execute(
+		t,
+		&session,
+		`{"cmd": "check", "field": "settings.window_mode", "op": "eq", "value": "Windowed"}`,
+	)
+	defer harness.reply_destroy(&reply, context.allocator)
+	testing.expect(t, reply.ok, "settings.window_mode check failed")
 }

@@ -25,7 +25,7 @@ menu_maps_to_the_hud :: proc(t: ^testing.T) {
 	testing.expect(t, scene.hud.menu.open, "menu flag was dropped")
 	testing.expect_value(t, scene.hud.menu.title, game.MENU_TITLE)
 	testing.expect_value(t, scene.hud.menu.note, game.MENU_NOTE)
-	testing.expect_value(t, len(scene.hud.menu.lines), 11)
+	testing.expect_value(t, len(scene.hud.menu.lines), 14)
 	testing.expect_value(t, scene.hud.menu.selected, 0)
 }
 

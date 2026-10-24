@@ -50,13 +50,32 @@ into the binary.
 ### Settings menu
 
 `Esc` opens a centered settings menu. The menu pauses the simulation and shows
-the active control list. It changes the sprint, crouch, and prone input modes
-between Hold and Toggle.
+the active control list. It changes the window mode, the display, the
+resolution, and the sprint, crouch, and prone input modes.
 
 - `Up` / `Down`: select a row.
-- `Left` / `Right`: change the selected input mode.
-- `Enter`: apply the selected row. `Resume` closes the menu.
+- `Left` / `Right`: change the selected row in that direction.
+- `Enter`: change the selected row. `Resume` closes the menu.
 - `Esc`: close the menu.
+
+`Window mode` is `Borderless` or `Windowed`. Borderless fills the selected
+display at its desktop size. Windowed uses the chosen resolution, a normal title
+bar, and a fixed size; pick another resolution instead of resizing it by hand.
+
+`Display` chooses a connected display. The selected display supplies the
+resolution list. On Wayland the compositor controls where a windowed window
+sits; the selected display still decides where the next Borderless fullscreen
+opens. On X11 the window also moves to the selected display.
+
+`Resolution` cycles through the selected display's unique modes, largest first.
+Changing it in Borderless switches to Windowed, because the desktop size has no
+smaller borderless alternatives. The row shows the desktop size in Borderless
+and the chosen size in Windowed. Modes smaller than 800x600 are left out so the
+settings menu stays fully visible.
+
+The display list and its modes come from SDL at startup. The choices last for
+the current run. A new run starts Borderless, with 1280x720 as the Windowed
+size.
 
 When the menu closes, the game recaptures the cursor if it had capture before
 the menu opened.
@@ -85,7 +104,8 @@ stairs.
 
 The HUD shows the stance, gait, horizontal speed, grounded state, movement
 state, and position, or the debug mode selection, crate count, and sun angles.
-The settings menu shows the control list. The window is resizable.
+The settings menu shows the control list. Borderless fills the selected display;
+Windowed uses the chosen resolution.
 
 ## Agent harness
 
@@ -156,7 +176,7 @@ step. `forward`, `right`, and `jump` persist; `jump` is an edge on the first
 frame of its block. Capture frames are zero-based frame numbers. Check operators
 are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. Check fields use the `state.json`
 shape, for example `player.position.y`, `player.grounded`, `crates.0.position.z`,
-`crates.count`, `settings.sprint_mode`, or `menu.open`.
+`crates.count`, `settings.window_mode`, `settings.resolution`, or `menu.open`.
 
 A scenario may use `commands` instead of `steps`:
 
@@ -188,7 +208,7 @@ The batch runner and the live session share one command set:
 - `{"cmd": "step", "frames": 60}`: fixed steps with no wall clock. A step is an
   error while the menu is open.
 - `{"cmd": "state"}`: player, eye, velocity, yaw, pitch, grounded, crates,
-  settings, menu, frame, and digest.
+  window and input settings, menu, frame, and digest.
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`: write a PNG.
   `frame` is optional. A past frame is an error; a future frame queues.
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw": 0, "pitch": 0}`: inspection
@@ -209,6 +229,12 @@ The batch runner and the live session share one command set:
 
 Unknown keys, wrong types, and out-of-range values are per-command errors. The
 session stays usable.
+
+The harness has no compositor, so it uses a fixed two-display list. `Display 1`
+is 1920x1080 with 1600x900 and 1280x720 below it. `Display 2` is 2560x1440 with
+1920x1080 and 1280x720 below it. `settings.resolution` is the effective size:
+the display's desktop mode in Borderless, the stored size in Windowed.
+`settings.window_resolution` is always the stored Windowed size.
 
 ### Live session
 
@@ -244,8 +270,9 @@ make build
 
 Read `runs/smoke/report.json` and use the absolute paths in `screenshots`. The
 PNG is RGBA, sRGB, and `1280x720` by default. The repository samples are
-`docs/evidence/harness-smoke.png`, `docs/evidence/present-window.png`, and
-`docs/evidence/settings-menu.png`. To capture the owner's real window instead:
+`docs/evidence/harness-smoke.png`, `docs/evidence/present-window.png`,
+`docs/evidence/settings-menu.png`, and `docs/evidence/window-settings.png`. To
+capture the owner's real window instead:
 
 ```sh
 ./bin/harbagsa-agent run scenarios/smoke.json --present --out runs/present
@@ -261,6 +288,10 @@ compare later frames to see the steady-state ripple.
 
 `scenarios/settings-menu.json` opens the settings menu, captures it, changes the
 crouch input mode, closes the menu, and checks the saved state.
+
+`scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
+Windowed, changes the resolution, captures the result, and checks the window
+settings.
 
 ## Build
 
