@@ -21,6 +21,8 @@ Graphics_Pipeline_Desc :: struct {
 	depth_format:      vk.Format,
 	depth_test:        bool,
 	depth_write:       bool,
+	depth_compare:     Maybe(vk.CompareOp),
+	cull_back:         bool,
 	blend:             bool,
 	dynamic_viewport:  bool,
 	dynamic_scissor:   bool,
@@ -165,9 +167,11 @@ create_graphics_pipeline :: proc(
 	rasterization := vk.PipelineRasterizationStateCreateInfo {
 		sType       = .PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 		polygonMode = .FILL,
-		cullMode    = {},
-		frontFace   = .CLOCKWISE,
-		lineWidth   = 1.0,
+		cullMode    = desc.cull_back ? {.BACK} : {},
+		// The box mesh winds counter-clockwise. No other pipeline culls, so the
+		// front face only matters where `cull_back` is set.
+		frontFace = .COUNTER_CLOCKWISE,
+		lineWidth = 1.0,
 	}
 
 	multisample := vk.PipelineMultisampleStateCreateInfo {
@@ -179,6 +183,9 @@ create_graphics_pipeline :: proc(
 	depth_compare := vk.CompareOp.ALWAYS
 	if has_depth && desc.depth_test {
 		depth_compare = .LESS
+	}
+	if compare, has_compare := desc.depth_compare.?; has_compare {
+		depth_compare = compare
 	}
 	depth_stencil := vk.PipelineDepthStencilStateCreateInfo {
 		sType            = .PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,

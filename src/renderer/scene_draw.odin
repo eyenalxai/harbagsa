@@ -120,7 +120,6 @@ record_scene_pass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_co
 	color := taa.scene_color[frame]
 	velocity := taa.velocity[frame]
 	depth := taa.depth[frame]
-	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
 
 	image_barrier(
 		command_buffer,
@@ -146,46 +145,9 @@ record_scene_pass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_co
 	)
 	record_depth_write_barrier(command_buffer, depth.image)
 
-	color_clear := vk.ClearValue{}
-	color_clear.color.float32 = r.clear_color
-	velocity_clear := vk.ClearValue{}
-	velocity_clear.color.float32 = {0, 0, CAMERA_FAR, 0}
-	attachments := [2]vk.RenderingAttachmentInfo {
-		{
-			sType = .RENDERING_ATTACHMENT_INFO,
-			imageView = color.view,
-			imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
-			loadOp = .CLEAR,
-			storeOp = .STORE,
-			clearValue = color_clear,
-		},
-		{
-			sType = .RENDERING_ATTACHMENT_INFO,
-			imageView = velocity.view,
-			imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
-			loadOp = .CLEAR,
-			storeOp = .STORE,
-			clearValue = velocity_clear,
-		},
-	}
-	depth_attachment := make_depth_attachment(depth.view, .DEPTH_ATTACHMENT_OPTIMAL)
-	rendering_info := vk.RenderingInfo {
-		sType = .RENDERING_INFO,
-		renderArea = {extent = extent},
-		layerCount = 1,
-		colorAttachmentCount = u32(len(attachments)),
-		pColorAttachments = &attachments[0],
-		pDepthAttachment = &depth_attachment,
-	}
-	vk.CmdBeginRendering(command_buffer, &rendering_info)
-
-	set_viewport(command_buffer, extent.width, extent.height)
-
-	vk.CmdBindPipeline(command_buffer, .GRAPHICS, r.scene.pipeline)
-	bind_camera(command_buffer, r.scene.pipeline_layout, r.scene.descriptor_sets[frame])
-	draw_boxes_indexed(r, command_buffer, r.scene.pipeline_layout, box_count)
-
-	vk.CmdEndRendering(command_buffer)
+	record_depth_prepass(r, command_buffer, box_count)
+	record_depth_read_barrier(command_buffer, depth.image)
+	record_color_pass(r, command_buffer, box_count)
 
 	image_barrier(
 		command_buffer,
@@ -209,4 +171,97 @@ record_scene_pass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_co
 		{.COLOR_ATTACHMENT_WRITE},
 		{.SHADER_READ},
 	)
+}
+
+// Writing depth first means the lighting pass traces the sun rays for the
+// nearest surface at each pixel, even when several boxes overlap on screen.
+@(private)
+record_depth_prepass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_count: int) {
+	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
+	depth := r.taa.depth[r.frame_index]
+	depth_attachment := make_depth_attachment(depth.view, .DEPTH_ATTACHMENT_OPTIMAL)
+	rendering_info := vk.RenderingInfo {
+		sType = .RENDERING_INFO,
+		renderArea = {extent = extent},
+		layerCount = 1,
+		pDepthAttachment = &depth_attachment,
+	}
+	record_box_scope(
+		r,
+		command_buffer,
+		&rendering_info,
+		r.scene.depth_pipeline,
+		r.scene.depth_layout,
+		{.VERTEX},
+		box_count,
+	)
+}
+
+@(private)
+record_color_pass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_count: int) {
+	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
+	frame := r.frame_index
+	color := r.taa.scene_color[frame]
+	velocity := r.taa.velocity[frame]
+	depth := r.taa.depth[frame]
+
+	color_clear := vk.ClearValue{}
+	color_clear.color.float32 = r.clear_color
+	velocity_clear := vk.ClearValue{}
+	velocity_clear.color.float32 = {0, 0, CAMERA_FAR, 0}
+	attachments := [2]vk.RenderingAttachmentInfo {
+		{
+			sType = .RENDERING_ATTACHMENT_INFO,
+			imageView = color.view,
+			imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
+			loadOp = .CLEAR,
+			storeOp = .STORE,
+			clearValue = color_clear,
+		},
+		{
+			sType = .RENDERING_ATTACHMENT_INFO,
+			imageView = velocity.view,
+			imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
+			loadOp = .CLEAR,
+			storeOp = .STORE,
+			clearValue = velocity_clear,
+		},
+	}
+	depth_attachment := make_depth_attachment(depth.view, .DEPTH_ATTACHMENT_OPTIMAL, .LOAD)
+	rendering_info := vk.RenderingInfo {
+		sType = .RENDERING_INFO,
+		renderArea = {extent = extent},
+		layerCount = 1,
+		colorAttachmentCount = u32(len(attachments)),
+		pColorAttachments = &attachments[0],
+		pDepthAttachment = &depth_attachment,
+	}
+	record_box_scope(
+		r,
+		command_buffer,
+		&rendering_info,
+		r.scene.pipeline,
+		r.scene.pipeline_layout,
+		{.VERTEX, .FRAGMENT},
+		box_count,
+	)
+}
+
+@(private)
+record_box_scope :: proc(
+	r: ^Renderer,
+	command_buffer: vk.CommandBuffer,
+	rendering_info: ^vk.RenderingInfo,
+	pipeline: vk.Pipeline,
+	layout: vk.PipelineLayout,
+	stages: vk.ShaderStageFlags,
+	box_count: int,
+) {
+	extent := rendering_info.renderArea.extent
+	vk.CmdBeginRendering(command_buffer, rendering_info)
+	set_viewport(command_buffer, extent.width, extent.height)
+	vk.CmdBindPipeline(command_buffer, .GRAPHICS, pipeline)
+	bind_camera(command_buffer, layout, r.scene.descriptor_sets[r.frame_index])
+	draw_boxes_indexed(r, command_buffer, layout, stages, box_count)
+	vk.CmdEndRendering(command_buffer)
 }
