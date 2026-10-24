@@ -45,13 +45,56 @@ text_atlas_includes_the_separator_glyphs :: proc(t: ^testing.T) {
 
 	theme := renderer.ui_theme_init(720)
 	layer := &atlas.layers[renderer.text_layer_index(&atlas, theme.type_body)]
-	for character in ([2]rune{0x00B7, 0x00D7}) {
+	for character in ([3]rune{0x00B7, 0x00D7, 0x2026}) {
 		index := glyph_for_rune(.Sans, 400, character)
 		testing.expectf(t, index >= 0 && index < len(layer.glyphs), "0x%X has no glyph", character)
 		if index >= 0 && index < len(layer.glyphs) {
 			testing.expectf(t, layer.glyphs[index].present, "0x%X has no bitmap", character)
 		}
 	}
+}
+
+// HarfBuzz maps a rune the subset lacks to .notdef, and the shaper drops
+// .notdef, so the text measures zero and nothing draws. The guide needs a true
+// ellipsis, so the body face must carry a real glyph.
+@(test)
+text_atlas_measures_the_ellipsis :: proc(t: ^testing.T) {
+	atlas, ok := build_test_atlas(t)
+	testing.expect(t, ok, "the atlas did not build")
+	defer renderer.text_atlas_destroy(&atlas)
+
+	theme := renderer.ui_theme_init(720)
+	width := renderer.text_measure(&atlas, theme.type_body, "…")
+	testing.expectf(t, width > 0, "the ellipsis measures %v", width)
+
+	index := glyph_for_rune(.Sans, 400, 0x2026)
+	testing.expectf(t, index > 0, "0x2026 maps to glyph %d, not a real glyph", index)
+	layer := &atlas.layers[renderer.text_layer_index(&atlas, theme.type_body)]
+	if index <= 0 || index >= len(layer.glyphs) {
+		return
+	}
+	testing.expect(t, layer.glyphs[index].present, "the ellipsis has no bitmap")
+}
+
+@(test)
+text_atlas_measures_the_mono_ellipsis :: proc(t: ^testing.T) {
+	atlas, ok := build_test_atlas(t)
+	testing.expect(t, ok, "the atlas did not build")
+	defer renderer.text_atlas_destroy(&atlas)
+
+	theme := renderer.ui_theme_init(720)
+	mono := theme.type_body
+	mono.face = .Mono
+	width := renderer.text_measure(&atlas, mono, "…")
+	testing.expectf(t, width > 0, "the mono ellipsis measures %v", width)
+
+	index := glyph_for_rune(.Mono, 400, 0x2026)
+	testing.expectf(t, index > 0, "0x2026 maps to mono glyph %d, not a real glyph", index)
+	layer := &atlas.layers[renderer.text_layer_index(&atlas, mono)]
+	if index <= 0 || index >= len(layer.glyphs) {
+		return
+	}
+	testing.expect(t, layer.glyphs[index].present, "the mono ellipsis has no bitmap")
 }
 
 @(test)
