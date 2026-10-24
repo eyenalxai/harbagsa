@@ -255,6 +255,51 @@ the window mode, display, resolution, and three input modes. The harness opens
 it with the `menu` command and reports `settings.*` and `menu.*` in the state.
 _Avoid_: Options screen, pause menu
 
+**UI theme**:
+The tokens the 2D layer draws with: colour, type, spacing, and the hairline
+width. Built once per frame from the render height. `src/renderer/ui_theme.odin`
+is the only place a colour or a size is written.
+_Avoid_: Style sheet, skin
+
+**Density**:
+The type and spacing scale factor, `clamp(render height / 720, 1, 2)`. A 720p
+target gets 1, a 1080p target 1.5, a 1440p target 2.
+_Avoid_: DPI scale, zoom
+
+**Type scale**:
+The five type roles the overlay uses: title, body, label, detail, and section
+header. Each role fixes size, leading, weight, and tracking. See
+`docs/ui/type.md`.
+_Avoid_: Font sizes, text styles
+
+**SDF atlas**:
+The 1024x512 texture that holds every glyph as a signed distance field,
+rasterized once at startup from the three subset Noto faces. One field draws
+crisply at every size, so no text is ever scaled from a bitmap.
+_Avoid_: Font texture, bitmap font, glyph sheet
+
+**Row**:
+One line of the overlay: a kind, a label, a value, and whether the value is
+numeric. The game fills rows; the renderer lays them out. The kind set is closed:
+setting, action, metric, detail, header, divider, spacer.
+_Avoid_: Line, item, entry
+
+**Value column**:
+The measured x where row values start, or end when they are right-aligned. It is
+the widest label plus one gutter, so every value in a panel shares one edge.
+_Avoid_: Column, tab stop
+
+**Hint legend**:
+The control list inside the settings menu, drawn as a grid of keyboard keys and
+their actions. Not a list of rows: it is documentation, so it must not look
+selectable.
+_Avoid_: Control list, key list
+
+**Selection band**:
+The two signals that mark the selected menu row: the raised surface and the
+accent bar on the leading edge. Neither alone is enough.
+_Avoid_: Highlight, hover, cursor
+
 **Pause**:
 The state while the settings menu is open. The simulation and debug camera do
 not update.
