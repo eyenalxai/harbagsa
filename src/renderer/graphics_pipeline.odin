@@ -5,7 +5,7 @@ import "core:log"
 
 import vk "vendor:vulkan"
 
-GRAPHICS_PIPELINE_MAX_COLOR_ATTACHMENTS :: 2
+GRAPHICS_PIPELINE_MAX_COLOR_ATTACHMENTS :: 3
 GRAPHICS_PIPELINE_MAX_DYNAMIC_STATES :: 2
 
 Graphics_Pipeline_Desc :: struct {

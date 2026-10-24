@@ -319,8 +319,12 @@ The subpixel camera offset applied each frame for TAA.
 _Avoid_: Shake, offset
 
 **History**:
-The previous resolved frame, with linear color and depth, that TAA blends into the current frame.
+The previous resolved frame, with linear color, view depth, and sample count, that TAA blends into the current frame.
 _Avoid_: Accumulation buffer, cache
+
+**Sample count**:
+The number of frames accumulated into a history pixel. The resolve weights a new sample by one over the count plus one, and stops at 512.
+_Avoid_: Frame counter, age
 
 **Screen motion**:
 The screen-space movement of a surface point from the previous frame to the
@@ -332,7 +336,7 @@ The offscreen image that stores each pixel's previous-to-current screen motion a
 _Avoid_: Motion buffer, motion vectors
 
 **Resolve**:
-The fullscreen pass that reprojects, tests the depth range, clamps, and blends the history into the current frame.
+The fullscreen pass that reprojects, tests the depth range, clamps, and averages the history into the current frame.
 _Avoid_: Composite, merge
 
 **Disocclusion**:
@@ -348,7 +352,7 @@ The state where TAA ignores the previous history and starts a new accumulation.
 _Avoid_: Clear, flush
 
 **Convergence**:
-The frames after a history reset while the history weight ramps from 0.5 to 0.9.
+The frames after a history reset while the sample count grows from 1 to 512. The first frames change the image quickly; later frames add small corrections.
 _Avoid_: Warmup
 
 **TAA toggle**:
