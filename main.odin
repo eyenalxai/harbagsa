@@ -10,9 +10,6 @@ import "src:game"
 import "src:platform"
 import "src:renderer"
 
-WINDOW_WIDTH :: 1280
-WINDOW_HEIGHT :: 720
-
 MAX_FRAME_DELTA :: f32(0.1)
 MAX_STEPS_PER_FRAME :: 8
 
@@ -39,19 +36,25 @@ main :: proc() {
 }
 
 run :: proc() -> bool {
-	window, platform_error := platform.init("harbagsa", WINDOW_WIDTH, WINDOW_HEIGHT)
+	window, platform_error := platform.init("harbagsa", 1280, 720, true)
 	if platform_error != .None {
 		log.errorf("harbagsa: platform init failed: %v", platform_error)
 		return false
 	}
 	defer platform.deinit(&window)
+	platform.sync_window(&window)
 
+	pixel_width, pixel_height := platform.pixel_size(&window)
+	if pixel_width == 0 || pixel_height == 0 {
+		log.error("harbagsa: window pixel size is zero")
+		return false
+	}
 	state, renderer_error := renderer.init(
 		renderer.Config {
 			platform = platform.renderer_platform(&window),
 			target = .Swapchain,
-			width = WINDOW_WIDTH,
-			height = WINDOW_HEIGHT,
+			width = pixel_width,
+			height = pixel_height,
 		},
 		context.allocator,
 	)
