@@ -2,13 +2,15 @@
 #+vet !unused-procedures // @(test) procs are called by the test runner, not by name
 package frame_test
 
+import "core:strings"
 import "core:testing"
 
 import b3 "libs:box3d"
 import "src:frame"
 import "src:game"
-import "src:ui"
+import "src:perf"
 import "src:renderer"
+import "src:ui"
 
 create_state :: proc(t: ^testing.T) -> (game.Simulation, game.Debug_Mode, game.HUD_State, frame.Scratch) {
 	sim := game.simulation_create()
@@ -43,6 +45,64 @@ hud_can_be_enabled :: proc(t: ^testing.T) {
 	testing.expect_value(t, len(scene.hud.view.rows), game.HUD_ROW_COUNT)
 	testing.expect_value(t, scene.hud.view.rows[0].kind, ui.Row_Kind.Header)
 	testing.expect_value(t, scene.hud.view.rows[0].label, "Standing · Walk")
+}
+
+@(test)
+perf_pass_line_joins_the_hud :: proc(t: ^testing.T) {
+	sim, debug, hud, scratch := create_state(t)
+	defer game.simulation_destroy(&sim)
+	hud.perf.visible = true
+	stats := perf.Stats {
+		count    = 1,
+		interval = {mean = 16.6667, p95 = 17.1},
+		cpu      = {mean = 0.42},
+	}
+	stats.gpu.available = true
+	stats.gpu.passes[.Tlas] = perf.Distribution{mean = 0.08}
+	stats.gpu.passes[.Scene] = perf.Distribution{mean = 2.70}
+	stats.gpu.passes[.Taa] = perf.Distribution{mean = 0.22}
+	stats.gpu.passes[.Overlay] = perf.Distribution{mean = 0.10}
+	stats.gpu.total = perf.Distribution{mean = 3.10}
+	stats.gpu.top = .Scene
+	hud.perf.stats = stats
+	scene := frame.build(
+		&sim,
+		&debug,
+		{alpha = 1.0, captured = true, hud = true},
+		nil,
+		&hud,
+		&scratch,
+	)
+	testing.expect_value(t, len(scene.hud.view.rows), game.HUD_ROW_COUNT + 2)
+	perf_row := scene.hud.view.rows[game.HUD_ROW_COUNT]
+	pass_row := scene.hud.view.rows[game.HUD_ROW_COUNT + 1]
+	testing.expect_value(t, perf_row.label, "Perf")
+	testing.expect_value(t, pass_row.label, "Passes")
+	testing.expect(t, strings.contains(perf_row.value, "gpu"), "summary has no GPU total")
+	testing.expect(t, strings.contains(pass_row.value, "scene"), "pass line is missing")
+}
+
+@(test)
+perf_line_joins_the_hud :: proc(t: ^testing.T) {
+	sim, debug, hud, scratch := create_state(t)
+	defer game.simulation_destroy(&sim)
+	hud.perf.visible = true
+	hud.perf.stats = perf.Stats {
+		count    = 1,
+		interval = {mean = 16.6667, p95 = 17.1},
+		cpu      = {mean = 0.42},
+	}
+	scene := frame.build(
+		&sim,
+		&debug,
+		{alpha = 1.0, captured = true, hud = true},
+		nil,
+		&hud,
+		&scratch,
+	)
+	testing.expect_value(t, len(scene.hud.view.rows), game.HUD_ROW_COUNT + 1)
+	line := scene.hud.view.rows[game.HUD_ROW_COUNT].value
+	testing.expect(t, len(line) > len("perf --"), "perf line has no numbers")
 }
 
 @(test)

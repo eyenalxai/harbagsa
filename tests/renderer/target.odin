@@ -7,11 +7,13 @@ import "core:log"
 import "core:os"
 import "core:strings"
 import "core:testing"
+import "core:time"
 
 import stb_image "vendor:stb/image"
 
 import "src:frame"
 import "src:game"
+import "src:perf"
 import "src:platform"
 import "src:renderer"
 
@@ -28,12 +30,19 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 	}
 	defer platform.headless_deinit(&headless)
 
+	recorder: perf.Recorder
+	perf.recorder_begin(&recorder, time.tick_now())
+	perf.recorder_mark(&recorder, .Events)
+	perf.recorder_mark(&recorder, .Simulation)
+	perf.recorder_mark(&recorder, .Build)
+
 	state, init_error := renderer.init(
 		renderer.Config {
 			platform = platform.headless_platform(&headless),
 			target = .Offscreen,
 			width = TEST_WIDTH,
 			height = TEST_HEIGHT,
+			recorder = &recorder,
 		},
 		context.allocator,
 	)
@@ -60,6 +69,45 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 	if status != .Ok {
 		return
 	}
+	testing.expect(
+		t,
+		perf.recorder_has(&recorder, .Record),
+		"renderer did not mark the end of command recording",
+	)
+
+	// The fences retire a slot after MAX_FRAMES_IN_FLIGHT frames, so draw
+	// enough frames to read the first frame's query pool.
+	for _ in 0 ..< renderer.MAX_FRAMES_IN_FLIGHT {
+		status = frame.draw(&state, scene, false)
+		if status != .Ok {
+			break
+		}
+	}
+	testing.expectf(t, status == .Ok, "offscreen perf draw failed: %v", status)
+
+	times := renderer.gpu_times(&state)
+	if !times.available {
+		log.info("skipping GPU timestamp assertions: timestamps are unavailable")
+		return
+	}
+	testing.expect(t, times.frame > 0, "GPU timing has no frame number")
+	total: time.Duration
+	for index in 0 ..< perf.PASS_COUNT {
+		pass := perf.Pass(index)
+		testing.expectf(t, times.passes[pass] >= 0, "pass %v is negative", pass)
+		total += times.passes[pass]
+	}
+	difference := total - times.total
+	if difference < 0 {
+		difference = -difference
+	}
+	testing.expectf(
+		t,
+		difference <= time.Microsecond,
+		"pass sum %v does not match total %v",
+		total,
+		times.total,
+	)
 
 	pixels, width, height, ok := renderer.read_capture(&state)
 	testing.expect(t, ok, "capture readback failed")

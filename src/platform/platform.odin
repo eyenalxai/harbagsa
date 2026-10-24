@@ -43,6 +43,7 @@ Events :: struct {
 	debug_view_pressed:  bool,
 	debug_mode_pressed:  bool,
 	taa_pressed:         bool,
+	perf_pressed:        bool,
 	menu_toggle_pressed: bool,
 	menu_up_pressed:     bool,
 	menu_down_pressed:   bool,
@@ -258,6 +259,8 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 			events.debug_mode_pressed = true
 		case .F3:
 			events.taa_pressed = true
+		case .F4:
+			events.perf_pressed = true
 		case .E:
 			events.add_pressed = true
 		case .DELETE, .X:

@@ -8,32 +8,8 @@ import "core:strings"
 import "src:display"
 import "src:frame"
 import "src:game"
+import perf_pkg "src:perf"
 import "src:renderer"
-
-View :: struct {
-	hud:   bool,
-	debug: bool,
-	hint:  bool,
-}
-
-Pending_Capture :: struct {
-	name:  string,
-	frame: int,
-	alpha: f32,
-}
-
-Backend :: struct {
-	ready:    bool,
-	ctx:      rawptr,
-	render:   proc(
-		ctx: rawptr,
-		session: ^Session,
-		capture: bool,
-		name: string,
-		alpha: f32,
-	) -> (Capture_Result, string),
-	shutdown: proc(ctx: rawptr),
-}
 
 Session :: struct {
 	allocator: mem.Allocator,
@@ -67,6 +43,14 @@ Session :: struct {
 	record_path:        string,
 	record_start_frame: int,
 	recorded:           [dynamic]string,
+
+	perf:            perf_pkg.State,
+	perf_report:     Perf_Report,
+	has_perf_report: bool,
+	trace_name:      string,
+	trace_samples:   [dynamic]perf_pkg.Sample,
+	trace_path:      string,
+	has_trace:       bool,
 }
 
 session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
@@ -115,6 +99,13 @@ session_destroy :: proc(session: ^Session) {
 	if session.record_path != "" {
 		delete(session.record_path, session.allocator)
 	}
+	if session.trace_name != "" {
+		delete(session.trace_name, session.allocator)
+	}
+	if session.trace_path != "" {
+		delete(session.trace_path, session.allocator)
+	}
+	delete(session.trace_samples)
 	session^ = {}
 }
 
