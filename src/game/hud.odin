@@ -2,7 +2,6 @@
 #+vet !unused-procedures // main calls this API; test builds compile game as a dependency
 package game
 
-import "core:fmt"
 import "core:math"
 
 import "src:perf"
@@ -107,16 +106,14 @@ hud_perf_append :: proc(hud: ^HUD_State) {
 
 @(private)
 hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_Mode) {
-	selection: [32]u8
 	selected := "None"
-	switch debug.selection {
-	case .Crate:
-		if debug.selected_crate >= 0 && debug.selected_crate < simulation_crate_count(sim) {
-			selected = fmt.bprintf(selection[:], "Crate % 2d", debug.selected_crate + 1)
+	if id, ok := debug_selected_object_id(debug, sim); ok {
+		if object, found := simulation_object_find(sim, id); found {
+			selected = prefab_name(object.prefab)
 		}
-	case .Sun:
+	}
+	if debug.selection == .Sun {
 		selected = "Sun"
-	case .None:
 	}
 
 	azimuth, elevation := debug_mode_sun_angles(debug)
@@ -126,8 +123,8 @@ hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_
 	hud.rows[1] = {kind = .Metric, label = "Selection", value = selected}
 	hud.rows[2] = {
 		kind    = .Metric,
-		label   = "Crates",
-		value   = line_format(&hud.storage, 0, "% 2d", simulation_crate_count(sim)),
+		label   = "Objects",
+		value   = line_format(&hud.storage, 0, "% 2d", simulation_object_count(sim)),
 		numeric = true,
 	}
 	hud.rows[3] = {kind = .Divider}

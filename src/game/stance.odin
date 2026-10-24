@@ -21,7 +21,7 @@ headroom_overlap :: proc "c" (shape_id: b3.ShapeId, ctx: rawptr) -> bool {
 	return true
 }
 
-// Headroom is a ceiling check, not a full-capsule overlap. A step or a crate
+// Headroom is a ceiling check, not a full-capsule overlap. A step or a placed
 // beside the feet touches the capsule but does not block a taller stance. A
 // shape whose lower bound starts above the floor margin is a ceiling.
 has_headroom :: proc(sim: ^Simulation, feet: b3.Vec3, stance: Stance) -> bool {

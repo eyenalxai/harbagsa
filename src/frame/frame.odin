@@ -47,12 +47,15 @@ build :: proc(
 
 	box_count := 0
 	for box in game.arena_static_boxes() {
-		scratch.boxes[box_count] = box
-		box_count += 1
+		if !push_scene_box(scratch, &box_count, box) {
+			break
+		}
 	}
-	for index in 0 ..< game.simulation_crate_count(sim) {
-		scratch.boxes[box_count] = game.simulation_crate_box(sim, index)
-		box_count += 1
+	for object in game.simulation_objects(sim) {
+		box := game.simulation_object_box(sim, object.id)
+		if !push_scene_box(scratch, &box_count, box) {
+			break
+		}
 	}
 	scene.boxes = scratch.boxes[:box_count]
 
@@ -131,6 +134,16 @@ draw :: proc(
 		return begin_status
 	}
 	return renderer.end_frame(state, frame)
+}
+
+@(private)
+push_scene_box :: proc(scratch: ^Scratch, count: ^int, box: geometry.Box) -> bool {
+	if count^ >= len(scratch.boxes) {
+		return false
+	}
+	scratch.boxes[count^] = box
+	count^ += 1
+	return true
 }
 
 @(private)

@@ -30,17 +30,14 @@ Player_State :: struct {
 	grounded: bool      `json:"grounded"`,
 }
 
-Camera_State :: struct {
-	position:   Vec_State `json:"position"`,
-	yaw:        f32       `json:"yaw"`,
-	pitch:      f32       `json:"pitch"`,
-	fov:        f32       `json:"fov"`,
-	overridden: bool      `json:"overridden"`,
-}
-
-Crate_State :: struct {
-	position: Vec_State  `json:"position"`,
-	rotation: Quat_State `json:"rotation"`,
+Object_State :: struct {
+	id:        u32        `json:"id"`,
+	prefab:    string     `json:"prefab"`,
+	body:      string     `json:"body"`,
+	position:  Vec_State  `json:"position"`,
+	rotation:  Quat_State `json:"rotation"`,
+	scale:     f32        `json:"scale"`,
+	spawn_age: f32        `json:"spawn_age"`,
 }
 
 Settings_State :: struct {
@@ -112,8 +109,7 @@ Renderer_State :: struct {
 State :: struct {
 	frame:         int            `json:"frame"`,
 	player:        Player_State   `json:"player"`,
-	camera:        Camera_State   `json:"camera"`,
-	crates:        []Crate_State  `json:"crates"`,
+	objects:       []Object_State `json:"objects"`,
 	settings:      Settings_State `json:"settings"`,
 	debug:         Debug_State    `json:"debug"`,
 	sun:           Sun_State      `json:"sun"`,
@@ -195,18 +191,20 @@ state_build :: proc(
 		renderer = renderer_state,
 		render_digest = render_digest == "" ? "" : strings.clone(render_digest, allocator),
 	}
-	crate_count := game.simulation_crate_count(sim)
-	state.crates = make([]Crate_State, crate_count, allocator)
-	for index in 0 ..< crate_count {
-		box := game.simulation_crate_box(sim, index)
-		state.crates[index] = {
-			position = vec_state(box.center),
-			rotation = Quat_State {
-				x = box.rotation.x,
-				y = box.rotation.y,
-				z = box.rotation.z,
-				w = box.rotation.w,
-			},
+	objects := game.simulation_objects(sim)
+	state.objects = make([]Object_State, len(objects), allocator)
+	for object, index in objects {
+		box := game.simulation_object_box(sim, object.id)
+		state.objects[index] = {
+			id        = u32(object.id),
+			prefab    = game.prefab_name(object.prefab),
+			body      = game.body_mode_name(object.body_mode),
+			position  = vec_state(box.center),
+			rotation  = quat_state(box.rotation),
+			// The pop animation lands in a later ticket; until then every object
+			// reports its settled shape and spawn age.
+			scale     = 1.0,
+			spawn_age = 0.0,
 		}
 	}
 	state.digest = state_digest(state, allocator)
@@ -214,9 +212,9 @@ state_build :: proc(
 }
 
 state_destroy :: proc(state: ^State, allocator: mem.Allocator) {
-	if state.crates != nil {
-		delete(state.crates, allocator)
-		state.crates = nil
+	if state.objects != nil {
+		delete(state.objects, allocator)
+		state.objects = nil
 	}
 	rows_state_destroy(&state.rows, allocator)
 	free_string(&state.settings.display, allocator)
@@ -232,4 +230,55 @@ free_string :: proc(text: ^string, allocator: mem.Allocator) {
 		delete(text^, allocator)
 		text^ = ""
 	}
+}
+
+state_digest :: proc(state: State, allocator: mem.Allocator) -> string {
+	hash := digest.fnv()
+	digest.write_i64(&hash, i64(state.frame))
+	digest.write_f32(&hash, state.player.position.x)
+	digest.write_f32(&hash, state.player.position.y)
+	digest.write_f32(&hash, state.player.position.z)
+	digest.write_f32(&hash, state.player.eye.x)
+	digest.write_f32(&hash, state.player.eye.y)
+	digest.write_f32(&hash, state.player.eye.z)
+	digest.write_f32(&hash, state.player.velocity.x)
+	digest.write_f32(&hash, state.player.velocity.y)
+	digest.write_f32(&hash, state.player.velocity.z)
+	digest.write_f32(&hash, state.player.yaw)
+	digest.write_f32(&hash, state.player.pitch)
+	digest.write_bool(&hash, state.player.grounded)
+	digest.write_string(&hash, state.settings.window_mode)
+	digest.write_string(&hash, state.settings.display)
+	digest.write_i64(&hash, i64(state.settings.display_index))
+	digest.write_string(&hash, state.settings.resolution)
+	digest.write_string(&hash, state.settings.window_resolution)
+	digest.write_string(&hash, state.settings.sprint_mode)
+	digest.write_string(&hash, state.settings.crouch_mode)
+	digest.write_string(&hash, state.settings.prone_mode)
+	digest.write_bool(&hash, state.menu.open)
+	digest.write_i64(&hash, i64(state.menu.selected))
+	digest.write_i64(&hash, i64(len(state.objects)))
+	for object in state.objects {
+		digest.write_i64(&hash, i64(object.id))
+		digest.write_string(&hash, object.prefab)
+		digest.write_string(&hash, object.body)
+		digest.write_f32(&hash, object.position.x)
+		digest.write_f32(&hash, object.position.y)
+		digest.write_f32(&hash, object.position.z)
+		digest.write_f32(&hash, object.rotation.x)
+		digest.write_f32(&hash, object.rotation.y)
+		digest.write_f32(&hash, object.rotation.z)
+		digest.write_f32(&hash, object.rotation.w)
+	}
+	return digest.hex(hash, allocator)
+}
+
+@(private)
+vec_state :: proc(value: b3.Vec3) -> Vec_State {
+	return {x = value.x, y = value.y, z = value.z}
+}
+
+@(private)
+quat_state :: proc(value: [4]f32) -> Quat_State {
+	return {x = value[0], y = value[1], z = value[2], w = value[3]}
 }
