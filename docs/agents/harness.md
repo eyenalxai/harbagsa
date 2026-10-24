@@ -196,13 +196,14 @@ Read the evidence from a run directory:
 ./bin/harbagsa-agent run scenarios/type-weight.json --out runs/ui/weight
 ```
 
-The PNGs live under `frames/`. Screenshots stay out of the repository; point at
-the run directory instead of copying them into `docs/evidence/`.
+The PNGs live under `frames/`. Evidence is a run directory plus a scenario.
+Screenshots stay out of the repository; point at the run directory instead of
+copying them into `docs/evidence/`.
 
-Text is rasterized at the device pixel size and the atlas rebuilds on a worker
-when the weight or the density changes. A capture waits for the pending build,
-so the image and the text theme always agree. A capture at another size exercises
-the density path:
+Text is rasterized at the device pixel size. The first atlas builds
+synchronously at startup; later weight or density changes rebuild on a worker.
+A capture waits for the pending build, so the image and the text theme always
+agree. A capture at another size exercises the density path:
 
 ```sh
 ./bin/harbagsa-agent run scenarios/settings-menu.json --size 2560x1440 --out /tmp/menu-2x

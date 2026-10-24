@@ -19,6 +19,7 @@ UI_COLOR_SURFACE_MENU :: 0x161B23
 UI_COLOR_SURFACE_RAISED :: 0x26313D
 UI_COLOR_HAIRLINE :: 0xFFFFFF
 UI_COLOR_SEPARATOR :: 0xFFFFFF
+UI_COLOR_SLIDER_TRACK :: 0xFFFFFF
 UI_COLOR_SCRIM :: 0x000000
 
 UI_TEXT_SIZE_TITLE :: 21.0
@@ -56,7 +57,6 @@ UI_Spacing :: struct {
 }
 
 UI_Theme :: struct {
-	density: f32,
 	hairline: f32,
 	spacing: UI_Spacing,
 	crosshair_arm: f32,
@@ -78,6 +78,7 @@ UI_Theme :: struct {
 	surface_raised: [4]f32,
 	line_hairline:  [4]f32,
 	line_separator: [4]f32,
+	slider_track:   [4]f32,
 	scrim:          [4]f32,
 	crosshair:      [4]f32,
 	crosshair_edge: [4]f32,
@@ -88,7 +89,6 @@ ui_theme_init :: proc(render_height: u32, base_weight: f32 = BASE_WEIGHT) -> UI_
 	weight := clamp(math.round(base_weight), MIN_WEIGHT, MAX_WEIGHT)
 	strong := clamp(weight + 100, MIN_WEIGHT, MAX_WEIGHT)
 	theme: UI_Theme
-	theme.density = density
 	// One device pixel, never a fraction of one: a half-pixel hairline resolves
 	// to a two-pixel grey smear on a non-integer density.
 	theme.hairline = max(1.0, math.round(density))
@@ -130,6 +130,7 @@ ui_theme_init :: proc(render_height: u32, base_weight: f32 = BASE_WEIGHT) -> UI_
 	theme.surface_raised = ui_color(UI_COLOR_SURFACE_RAISED, 1.0)
 	theme.line_hairline = ui_color(UI_COLOR_HAIRLINE, 0.09)
 	theme.line_separator = ui_color(UI_COLOR_SEPARATOR, 0.16)
+	theme.slider_track = ui_color(UI_COLOR_SLIDER_TRACK, 0.20)
 	theme.scrim = ui_color(UI_COLOR_SCRIM, 0.62)
 	theme.crosshair = ui_color(UI_COLOR_HAIRLINE, 0.9)
 	theme.crosshair_edge = ui_color(UI_COLOR_SCRIM, 0.55)
