@@ -4,7 +4,6 @@ package docs_test
 
 import "core:math"
 import "core:strconv"
-import "core:strings"
 import "core:testing"
 
 import "src:renderer"
@@ -37,16 +36,11 @@ palette_oklch_matches_the_hex :: proc(t: ^testing.T) {
 		if count < 7 {
 			continue
 		}
-		hex_text := strip_ticks(cells[1])
-		if !strings.has_prefix(hex_text, "#") {
-			continue
-		}
-		hex, hex_ok := strconv.parse_u64(hex_text[1:], 16)
+		hex, hex_ok := parse_palette_hex(t, doc.path, index + 1, cells[1])
 		if !hex_ok {
-			testing.expectf(t, false, "%s:%d has an unreadable hex %q", doc.path, index + 1, hex_text)
 			continue
 		}
-		expected_l, expected_c, expected_h := oklch_from_hex(u32(hex))
+		expected_l, expected_c, expected_h := oklch_from_hex(hex)
 		actual_l, l_ok := strconv.parse_f32(cells[3])
 		actual_c, c_ok := strconv.parse_f32(cells[4])
 		actual_h, h_ok := strconv.parse_f32(cells[5])
@@ -62,7 +56,7 @@ palette_oklch_matches_the_hex :: proc(t: ^testing.T) {
 			doc.path,
 			index + 1,
 			actual_l,
-			hex_text,
+			cells[1],
 			expected_l,
 		)
 		testing.expectf(
@@ -72,7 +66,7 @@ palette_oklch_matches_the_hex :: proc(t: ^testing.T) {
 			doc.path,
 			index + 1,
 			actual_c,
-			hex_text,
+			cells[1],
 			expected_c,
 		)
 		// Hue is undefined when chroma is zero, so a white or black row has no
@@ -85,7 +79,7 @@ palette_oklch_matches_the_hex :: proc(t: ^testing.T) {
 				doc.path,
 				index + 1,
 				actual_h,
-				hex_text,
+				cells[1],
 				expected_h,
 			)
 		}
@@ -94,7 +88,7 @@ palette_oklch_matches_the_hex :: proc(t: ^testing.T) {
 }
 
 @(test)
-neutral_hues_share_one_hue :: proc(t: ^testing.T) {
+neutral_hues_stay_in_one_band :: proc(t: ^testing.T) {
 	doc, ok := doc_open(t, "docs/ui/colour.md")
 	if !ok {
 		return
@@ -113,13 +107,11 @@ neutral_hues_share_one_hue :: proc(t: ^testing.T) {
 		if !neutral_token(token) {
 			continue
 		}
-		hex_text := strip_ticks(cells[1])
-		hex, hex_ok := strconv.parse_u64(hex_text[1:], 16)
+		hex, hex_ok := parse_palette_hex(t, doc.path, index + 1, cells[1])
 		if !hex_ok {
-			testing.expectf(t, false, "%s:%d has an unreadable hex %q", doc.path, index + 1, hex_text)
 			continue
 		}
-		_, _, hue := oklch_from_hex(u32(hex))
+		_, _, hue := oklch_from_hex(hex)
 		checked += 1
 		lowest = min(lowest, hue)
 		highest = max(highest, hue)
