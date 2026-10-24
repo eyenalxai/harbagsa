@@ -5,20 +5,29 @@ package game
 import "core:fmt"
 import "core:math"
 
+import "src:perf"
 import "src:ui"
 
 HUD_ROW_COUNT :: 6
+HUD_PERF_ROW_COUNT :: 2
+HUD_MAX_ROWS :: HUD_ROW_COUNT + HUD_PERF_ROW_COUNT
 
 HUD_CAPTURE_HINT :: "Click to capture mouse"
 HUD_HEADER_SEPARATOR :: " · "
 
+HUD_Perf :: struct {
+	visible: bool,
+	stats:   perf.Stats,
+}
+
 HUD_State :: struct {
 	view:         ui.Hud,
-	rows:         [HUD_ROW_COUNT]ui.Row,
+	rows:         [HUD_MAX_ROWS]ui.Row,
 	storage:      Line_Buffer,
 	capture_hint: string,
 	captured:     bool,
 	menu:         Menu_State,
+	perf:         HUD_Perf,
 }
 
 hud_state_update :: proc(
@@ -33,9 +42,14 @@ hud_state_update :: proc(
 	menu_view(&hud.menu, sim.settings, debug.active)
 	if debug.active {
 		hud_debug_state_update(hud, sim, debug)
-		return
+	} else {
+		hud_player_state_update(hud, snapshot)
 	}
+	hud_perf_append(hud)
+}
 
+@(private)
+hud_player_state_update :: proc(hud: ^HUD_State, snapshot: Render_Snapshot) {
 	hud.rows[0] = {
 		kind  = .Header,
 		label = line_format(
@@ -62,7 +76,32 @@ hud_state_update :: proc(
 		value   = hud_arena_position(&hud.storage, 2, snapshot.position),
 		numeric = true,
 	}
-	hud.view.rows = hud.rows[:]
+	hud.view.rows = hud.rows[:HUD_ROW_COUNT]
+}
+
+@(private)
+hud_perf_append :: proc(hud: ^HUD_State) {
+	if !hud.perf.visible {
+		return
+	}
+	index := HUD_ROW_COUNT
+	hud.rows[index] = {
+		kind    = .Detail,
+		label   = "Perf",
+		value   = perf.format_summary(hud.storage.storage[index][:], hud.perf.stats),
+		numeric = true,
+	}
+	index += 1
+	if hud.perf.stats.gpu.available && index < HUD_MAX_ROWS {
+		hud.rows[index] = {
+			kind    = .Detail,
+			label   = "Passes",
+			value   = perf.format_passes(hud.storage.storage[index][:], hud.perf.stats),
+			numeric = true,
+		}
+		index += 1
+	}
+	hud.view.rows = hud.rows[:index]
 }
 
 @(private)
@@ -109,7 +148,7 @@ hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_
 		),
 		numeric = true,
 	}
-	hud.view.rows = hud.rows[:]
+	hud.view.rows = hud.rows[:HUD_ROW_COUNT]
 }
 
 // Every number that changes while the player moves is formatted into a fixed

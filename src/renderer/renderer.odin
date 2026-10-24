@@ -5,6 +5,7 @@ import "base:runtime"
 import "core:log"
 import "core:mem"
 
+import "src:perf"
 import vk "vendor:vulkan"
 
 ENABLE_VALIDATION_LAYERS :: #config(ENABLE_VALIDATION_LAYERS, false)
@@ -53,11 +54,13 @@ Config :: struct {
 	target:   Target_Kind,
 	width:    u32,
 	height:   u32,
+	recorder: ^perf.Recorder,
 }
 
 Renderer :: struct {
 	platform:          Platform,
 	allocator:         mem.Allocator,
+	recorder:          ^perf.Recorder,
 	instance:          vk.Instance,
 	debug_messenger:   vk.DebugUtilsMessengerEXT,
 	physical_device:   vk.PhysicalDevice,
@@ -72,9 +75,16 @@ Renderer :: struct {
 	command_buffers: [MAX_FRAMES_IN_FLIGHT]vk.CommandBuffer,
 	image_available: [MAX_FRAMES_IN_FLIGHT]vk.Semaphore,
 	in_flight:       [MAX_FRAMES_IN_FLIGHT]vk.Fence,
+	query_pools:     [MAX_FRAMES_IN_FLIGHT]vk.QueryPool,
+	timing_frames:   [MAX_FRAMES_IN_FLIGHT]u64,
+	timing_valid:    [MAX_FRAMES_IN_FLIGHT]bool,
+	gpu_times:       perf.Gpu_Times,
 	frame_index:     int,
 	frame_count:     u32,
 	clear_color:     [4]f32,
+	timestamp_period:     f32,
+	timestamp_valid_bits: u32,
+	timing_available:     bool,
 
 	target:       Target,
 	scene:        Scene,
@@ -99,6 +109,7 @@ init :: proc(config: Config, allocator: mem.Allocator) -> (r: Renderer, err: Err
 	g_validation_failed = false
 	r.platform = config.platform
 	r.allocator = allocator
+	r.recorder = config.recorder
 	r.clear_color = DEFAULT_CLEAR_COLOR
 	r.target.kind = config.target
 
@@ -124,6 +135,7 @@ init :: proc(config: Config, allocator: mem.Allocator) -> (r: Renderer, err: Err
 		deinit(&r)
 		return
 	}
+	init_timing(&r)
 	if err = init_scene(&r); err != .None {
 		deinit(&r)
 		return
@@ -154,6 +166,7 @@ deinit :: proc(r: ^Renderer) {
 	destroy_taa(r)
 	destroy_scene(r)
 	destroy_target(r)
+	destroy_timing(r)
 
 	if r.device != nil {
 		for i in 0 ..< MAX_FRAMES_IN_FLIGHT {

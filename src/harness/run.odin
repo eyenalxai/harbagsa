@@ -29,6 +29,8 @@ Report :: struct {
 	failures:    []string         `json:"failures"`,
 	digest:      string           `json:"digest"`,
 	error:       string           `json:"error,omitempty"`,
+	perf:        Maybe(Perf_Report) `json:"perf,omitempty"`,
+	trace:       string           `json:"trace,omitempty"`,
 }
 
 Run_Summary :: struct {
@@ -106,7 +108,7 @@ run_batch :: proc(options: Run_Options) -> int {
 
 	has_capture := scenario_has_capture(scenario)
 	render_enabled := !options.no_render
-	needs_backend := render_enabled && (options.present || has_capture)
+	needs_backend := render_enabled && (options.present || has_capture || scenario_has_perf(scenario))
 	backend: Backend
 	backend_error := ""
 	if needs_backend {
@@ -134,6 +136,16 @@ run_batch :: proc(options: Run_Options) -> int {
 	if failure != "" {
 		session_failure(&session, failure)
 	}
+	trace_failed := false
+	if session.has_trace {
+		if trace_error := write_session_trace(&session, staging); trace_error != "" {
+			trace_failed = true
+			if failure == "" {
+				failure = trace_error
+				session_failure(&session, failure)
+			}
+		}
+	}
 	state := session_state(&session)
 	defer state_destroy(&state, context.allocator)
 	state_path := join_path({staging, "state.json"}, context.allocator)
@@ -160,11 +172,17 @@ run_batch :: proc(options: Run_Options) -> int {
 		digest      = state.digest,
 		error       = backend_error,
 	}
+	if session.has_perf_report {
+		report.perf = session.perf_report
+	}
+	if session.has_trace && !trace_failed {
+		report.trace = perf_trace_path(session.trace_name, absolute_out, context.allocator)
+	}
 	exit_code := EXIT_OK
 	if len(session.failures) > 0 || failure != "" {
 		exit_code = EXIT_CHECK
 	}
-	if backend_error != "" || session.render_failed || state_write_failed {
+	if backend_error != "" || session.render_failed || state_write_failed || trace_failed {
 		exit_code = EXIT_RENDER
 	}
 	report.ok = exit_code == EXIT_OK
@@ -178,6 +196,9 @@ run_batch :: proc(options: Run_Options) -> int {
 		report.ok = false
 		report.exit_code = exit_code
 		report.error = write_error
+	}
+	if report.trace != "" {
+		delete(report.trace, context.allocator)
 	}
 
 	summary := build_summary(report, absolute_out)
@@ -223,6 +244,16 @@ execute_commands :: proc(session: ^Session, scenario: Scenario, render_enabled: 
 scenario_has_capture :: proc(scenario: Scenario) -> bool {
 	for command in scenario.commands {
 		if command.kind == .Capture {
+			return true
+		}
+	}
+	return false
+}
+
+@(private)
+scenario_has_perf :: proc(scenario: Scenario) -> bool {
+	for command in scenario.commands {
+		if command.kind == .Perf {
 			return true
 		}
 	}

@@ -24,7 +24,10 @@ serializes Make with `flock`.
 `runs/<scenario-stem>/`
 
 - `report.json`: `ok`, `exit_code`, `frame`, `state`, `screenshots`, `checks`,
-  `failures`, `digest`, and `error`.
+  `failures`, `digest`, `error`, `perf` when a perf run happened, and `trace`
+  when the run wrote a perf trace.
+- `trace.jsonl`: one JSON object per measured frame, when the perf command asks
+  for a trace.
 - `state.json`: the final state alone. It holds the player, crates, window and
   input settings, menu, frame, and digest.
 - `frames/frame_NNNN.png`: zero-padded captures.
@@ -45,7 +48,7 @@ Exit codes:
 
 ```json
 {
-  "view": {"hud": false, "debug": false, "hint": false},
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
   "steps": [
     {"frames": 90, "forward": 1, "look": [220, 0]},
     {"frames": 1, "jump": true},
@@ -95,10 +98,11 @@ Rules:
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw": 0, "pitch": 0}`
 - `{"cmd": "camera", "clear": true}`
-- `{"cmd": "view", "hud": true, "debug": false, "hint": false}`
+- `{"cmd": "view", "hud": true, "debug": false, "hint": false, "perf": false}`
 - `{"cmd": "debug_mode", "active": true}`
 - `{"cmd": "menu", "open": true, "select": 1, "activate": true, "direction": -1}`
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`
+- `{"cmd": "perf", "frames": 120, "warmup": 60}`
 - `{"cmd": "record", "path": "scenarios/walk.json"}`
 - `{"cmd": "record"}`
 - `{"cmd": "replay", "path": "scenarios/walk.json"}`
@@ -204,9 +208,44 @@ scenario.
 
 Use `capture` or `--present`. Do not use `grim` for automated screenshots.
 
+## Performance
+
+The renderer records a perf sample every frame: the frame interval, five CPU
+phases, and four GPU pass times. The game shows it on `F4`. A scenario can show
+the same panel with `{"cmd": "view", "perf": true}`.
+
+`{"cmd": "perf", "frames": N, "warmup": M}` runs one priming frame, `M` warmup
+frames, and `N` measured frames. Each frame steps the simulation once and draws
+once without a capture. `frames` is capped at 600. The reply and `report.json`
+carry the interval percentiles, the CPU phase means, and the GPU pass means.
+`trace` writes one JSON object per measured frame under the run directory; it is
+the file to read when a percentile hides one spike. `scenarios/perf.json` is the
+ready example.
+
+- Offscreen runs measure throughput: nothing waits for the display.
+- `--present` measures pacing: FIFO bounds the rate and the percentiles show
+  missed refreshes.
+- `--no-render` measures the CPU only.
+
+What the numbers mean:
+
+- The frame interval is wall clock. A capture outside a perf run has no interval.
+- The GPU pass times come from Vulkan timestamps. They belong to the last
+  completed frame, two frames behind the recording frame.
+- A device without timestamp support, a failed query pool, or a run without a
+  device reports the CPU numbers and leaves the GPU fields empty.
+- Perf data never enters `State`, the state digest, or the pixel hash. A perf
+  run cannot change a check result.
+
+The design and its alternatives are in
+`docs/adr/0008-performance-instrumentation.md`. The current numbers and the
+ranked causes are in `docs/evidence/perf-baseline.md`.
+
 ## Determinism
 
 - Fixed 60 Hz. Never sleep or use a wall-clock delta.
+- A perf command is the one wall-clock exception. It never writes the state,
+  the digest, or the pixel hash.
 - `reset` creates a fresh `Simulation`. Crates return to spawn, the settings
   return to their defaults, and the menu closes.
 - `look` uses the game sensitivity and pitch clamp. `face` sets yaw and pitch
@@ -219,6 +258,11 @@ Use `capture` or `--present`. Do not use `grim` for automated screenshots.
 ## Where the code lives
 
 - `src/harness/`: CLI, scenario compiler, commands, session, runner, socket, PNG.
+- `src/harness/perf_run.odin`: the perf run and the perf report.
+- `src/harness/perf_command.odin`: the perf command parser.
+- `src/perf/`: the perf sample, ring, statistics, and text formatting.
+- `src/renderer/timing.odin`: the timestamp pools, the pass boundaries, and the
+  read.
 - `src/frame/`: shared scene assembly and draw for the game and the harness.
 - `src/game/menu.odin`: the menu rows, settings text, and control list.
 - `src/game/settings.odin`: the runtime window and input-mode settings.
@@ -276,6 +320,10 @@ harness in the same change. Do not leave the automation behind the game.
   `platform.apply_window_state`.
 - New view toggle: add it to the `view` command, `frame.Options`, the README, and
   this page.
+- New CPU phase or GPU pass: add it to the `perf` enums, the renderer timing
+  boundaries, the formatters, the tests, and this page.
+- New perf field: add it to the perf report struct, the reply, the run report,
+  the trace, and this page.
 - New command: follow **Adding a command**, add a JSONL test, and add a scenario
   example when it changes a normal workflow.
 - New renderer pass or target: keep it behind `Target` or `Frame_View`. Add an
