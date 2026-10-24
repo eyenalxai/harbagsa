@@ -88,9 +88,10 @@ Capture_Result :: struct {
 }
 
 Capture_Delta :: struct {
-	mean:    f32,
-	max:     u8,
-	over_16: int,
+	mean:      f32,
+	max:       u8,
+	over_16:   int,
+	different: int,
 }
 
 Capture_Summary :: struct {
@@ -135,12 +136,16 @@ capture_delta :: proc(previous, current: []u8) -> Capture_Delta {
 	total: u64
 	highest: u8
 	over_16: int
+	different: int
 	for index in 0 ..< count {
 		base := index * 4
 		delta := abs(i32(current[base]) - i32(previous[base]))
 		delta = max(delta, abs(i32(current[base + 1]) - i32(previous[base + 1])))
 		delta = max(delta, abs(i32(current[base + 2]) - i32(previous[base + 2])))
 		total += u64(delta)
+		if delta > 0 {
+			different += 1
+		}
 		if delta > 16 {
 			over_16 += 1
 		}
@@ -148,7 +153,12 @@ capture_delta :: proc(previous, current: []u8) -> Capture_Delta {
 			highest = u8(delta)
 		}
 	}
-	return {mean = f32(total) / f32(count), max = highest, over_16 = over_16}
+	return {
+		mean = f32(total) / f32(count),
+		max = highest,
+		over_16 = over_16,
+		different = different,
+	}
 }
 
 capture_write_png :: proc(

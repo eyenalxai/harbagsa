@@ -144,7 +144,8 @@ CPU numbers only. The overlay adds six timestamp writes per frame.
 
 `bin/harbagsa-agent` drives the simulation and writes screenshots without a
 window or compositor. `make build` builds it next to the game. Agent-specific
-operational notes are in `docs/agents/harness.md`.
+operational notes are in `docs/agents/harness.md`. Run
+`./bin/harbagsa-agent --help` (or `-h`) for the command and option list.
 
 ### Run a scenario
 
@@ -193,6 +194,9 @@ Options:
 - `--debug-renderer`: accept the renderer debug command. A build with
   `-define:ENABLE_RENDERER_DEBUG=true` always accepts it.
 - `--no-analysis`: skip `analysis.json` and the analysis maps.
+- `--verbose` (or `--summary`): write the setup revision and dirty flag, every
+  capture, every check result, every failure, and every named perf result to
+  standard error. Standard output stays one JSON line.
 
 The harness view starts with the HUD off, the debug draw off, and the capture
 hint off. Only a `capture` command writes a PNG. A scenario with no capture and
@@ -463,6 +467,32 @@ off. `scenarios/renderer-debug-jitter.json` freezes the phase, lets jitter cycle
 and writes the analysis maps. `scenarios/capture-free.json` settles without
 captures and then captures; run it twice and compare the digests and PNG hashes
 to prove the offscreen sequence is deterministic.
+
+### Compare two runs
+
+```sh
+./bin/harbagsa-agent diff runs/before runs/after
+./bin/harbagsa-agent diff runs/before runs/after --max-pixels 0 --json
+```
+
+`diff` pairs the PNG captures by name from each `report.json` `screenshots`
+array. When a run has no report, or an entry has no readable path, it uses
+`frames/<name>.png`. Each row reports the size, the number of different pixels,
+the largest RGB channel delta, the mean delta, the count over 16, and whether
+the pair is identical. Alpha is ignored. `analysis-diff.png` and
+`analysis-variance.png` are derived maps, so the frame fallback skips them.
+
+Exit codes:
+
+- `0`: every pair is present, the sizes match, and no pair is over the limit.
+- `1`: a pair is missing, a pair differs in size, or `--max-pixels N` is
+  exceeded.
+- `2`: bad arguments or a run directory that cannot be read.
+
+Without `--max-pixels`, differences are reported but do not fail the command.
+`--json` prints one object with `run_a`, `run_b`, `ok`, `pairs`, and `errors`
+instead of the table. Compare `setup.revision` and `setup.dirty` before the
+pixels so a dirty tree is not mistaken for a revision change.
 
 ## Build
 

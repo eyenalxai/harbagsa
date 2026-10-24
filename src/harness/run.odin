@@ -213,6 +213,9 @@ run_batch :: proc(options: Run_Options) -> int {
 		print_summary_failure(swap_error, EXIT_RENDER)
 		return EXIT_RENDER
 	}
+	if options.verbose {
+		print_verbose_summary(report)
+	}
 	print_summary(summary)
 	if failure != "" {
 		delete(failure, context.allocator)

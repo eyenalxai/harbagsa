@@ -84,6 +84,17 @@ analysis_write_png :: proc(
 	return ""
 }
 
+load_png_rgba :: proc(
+	path: string,
+	allocator: mem.Allocator,
+) -> (
+	pixels: []u8,
+	width, height: u32,
+	ok: bool,
+) {
+	return analysis_load_png(path, allocator)
+}
+
 @(private)
 analysis_load_png :: proc(
 	path: string,
