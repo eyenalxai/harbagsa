@@ -45,6 +45,13 @@ Overlay :: struct {
 	hud_mapped:   [MAX_FRAMES_IN_FLIGHT]rawptr,
 
 	quads: []stb_easy_font.Quad,
+
+	atlas:         Text_Atlas,
+	atlas_image:   Image,
+	atlas_sampler: vk.Sampler,
+	atlas_layout:  vk.DescriptorSetLayout,
+	atlas_pool:    vk.DescriptorPool,
+	atlas_set:     vk.DescriptorSet,
 }
 
 init_overlay :: proc(r: ^Renderer) -> Error {
@@ -79,11 +86,15 @@ init_overlay :: proc(r: ^Renderer) -> Error {
 	if !create_overlay_pipelines(r) {
 		return .Create_Overlay
 	}
+	if !init_text_atlas_resources(r) {
+		return .Create_Overlay
+	}
 	return .None
 }
 
 destroy_overlay :: proc(r: ^Renderer) {
 	destroy_overlay_pipelines(r)
+	destroy_text_atlas_resources(r)
 
 	if r.device != nil {
 		for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
