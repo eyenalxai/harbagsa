@@ -31,13 +31,22 @@ record_scene :: proc(
 	if r.taa.has_prev_models && box_count != r.taa.prev_model_count {
 		reset_history(r, .Scene_Change)
 	}
-	if !update_camera(r, view.camera, view.light_direction) {
+	if r.taa.has_prev_sun &&
+	   (r.taa.prev_light_direction != view.light_direction ||
+		   r.taa.prev_sun_angular_diameter != view.sun_angular_diameter) {
+		reset_history(r, .Scene_Change)
+	}
+	r.taa.prev_light_direction = view.light_direction
+	r.taa.prev_sun_angular_diameter = view.sun_angular_diameter
+	r.taa.has_prev_sun = true
+	if !update_camera(r, view.camera, view.light_direction, view.sun_angular_diameter) {
 		return false
 	}
 	r.render_digest = render_digest(
 		Render_Digest_Input {
 			camera = view.camera,
 			light_direction = view.light_direction,
+			sun_angular_diameter = view.sun_angular_diameter,
 			boxes = view.boxes,
 			jitter = r.taa.current_jitter,
 			shadow_phase = r.taa.shadow_phase,
