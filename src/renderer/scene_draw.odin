@@ -13,6 +13,7 @@ record_scene :: proc(
 	view: Frame_View,
 	capture: bool,
 ) -> bool {
+	r.frame_count += 1
 	if int(image_index) >= len(r.target.views) {
 		log.errorf("renderer: target image index %d is out of range", image_index)
 		return false
@@ -30,8 +31,6 @@ record_scene :: proc(
 	if box_count != r.taa.prev_model_count {
 		reset_history(r)
 	}
-	// The shadow matrix feeds the camera uniform, so rebuild it first.
-	r.shadow.light_view_projection = shadow_light_matrix(view.light_direction)
 	if !update_camera(r, view.camera, view.light_direction) {
 		return false
 	}
@@ -47,7 +46,7 @@ record_scene :: proc(
 		return false
 	}
 
-	record_shadow_pass(r, command_buffer, view.boxes)
+	record_acceleration(r, command_buffer, view.boxes)
 	record_scene_pass(r, command_buffer, box_count)
 	record_taa_resolve(r, command_buffer, image_index)
 	record_overlay_pass(r, command_buffer, image_index)
