@@ -3,6 +3,7 @@ build/
 vendor/box3d/lib/
 .make/
 runs/
+/harbagsa
 *.exe
 *.pdb
 *.spv
