@@ -19,6 +19,8 @@ Reply :: struct {
 	check:    ^Check_Result  `json:"check,omitempty"`,
 	recorded: string         `json:"recorded,omitempty"`,
 	replay:   ^Replay_Summary `json:"replay,omitempty"`,
+	perf:     ^Perf_Report   `json:"perf,omitempty"`,
+	trace:    string         `json:"trace,omitempty"`,
 }
 
 Replay_Summary :: struct {
@@ -100,6 +102,9 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 		if command.view.has_hint {
 			session.view.hint = command.view.hint
 		}
+		if command.view.has_perf {
+			session.view.perf = command.view.perf
+		}
 	case .Debug_Mode:
 		if session.debug.active != command.debug_mode.active {
 			game.debug_mode_toggle(&session.debug, &session.sim)
@@ -145,6 +150,12 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 		if command_error == "" {
 			reply.replay = new(Replay_Summary, session.allocator)
 			reply.replay^ = summary
+		}
+	case .Perf:
+		command_error = session_perf(session, command.perf)
+		owns_error = true
+		if command_error == "" {
+			reply.perf = &session.perf_report
 		}
 	case .Quit:
 		if session.recording {
@@ -210,7 +221,9 @@ session_record_command :: proc(session: ^Session, command: Command, raw_line: st
 			allocator = session.allocator,
 		)
 		append(&session.recorded, line)
-	case .Record, .Replay, .Quit:
+	case .Record, .Replay, .Quit, .Perf:
+		// A perf command measures wall time. Recording it would make a replay
+		// measure again, and the numbers would differ.
 	case:
 		trimmed := strings.trim_space(raw_line)
 		if trimmed != "" {

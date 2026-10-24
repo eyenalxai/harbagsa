@@ -194,6 +194,16 @@ past_capture_is_rejected :: proc(t: ^testing.T) {
 }
 
 @(test)
+view_perf_flag_reaches_the_session :: proc(t: ^testing.T) {
+	session, _ := harness.session_create(context.allocator)
+	defer harness.session_destroy(&session)
+	reply := execute(t, &session, `{"cmd": "view", "perf": true}`)
+	defer harness.reply_destroy(&reply, context.allocator)
+	testing.expectf(t, reply.ok, "view failed: %s", reply.error)
+	testing.expect(t, session.view.perf, "perf flag was dropped")
+}
+
+@(test)
 record_then_replay_round_trips :: proc(t: ^testing.T) {
 	_ = os.remove(RECORD_PATH)
 	session, _ := harness.session_create(context.allocator)

@@ -20,10 +20,11 @@ session_record_start :: proc(session: ^Session, path: string) -> string {
 
 	append(&session.recorded, strings.clone(`{"cmd": "reset"}`, session.allocator))
 	view_line := fmt.aprintf(
-		`{{"cmd": "view", "hud": %v, "debug": %v, "hint": %v}}`,
+		`{{"cmd": "view", "hud": %v, "debug": %v, "hint": %v, "perf": %v}}`,
 		session.view.hud,
 		session.view.debug,
 		session.view.hint,
+		session.view.perf,
 		allocator = session.allocator,
 	)
 	append(&session.recorded, view_line)

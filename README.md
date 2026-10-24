@@ -44,6 +44,8 @@ into the binary.
 - `F1`: toggle the debug draw.
 - `F2`: toggle debug mode.
 - `F3`: toggle temporal anti-aliasing (TAA). TAA is on by default.
+- `F4`: toggle the perf overlay. It shows the frame interval, the CPU frame
+  time, and the GPU pass times.
 - `Esc`: open the settings menu. The menu pauses the game and releases the
   cursor. Press `Esc` again to resume.
 
@@ -114,6 +116,20 @@ state, and position, or the debug mode selection, crate count, and sun angles.
 The settings menu shows the control list. Borderless fills the selected display;
 Windowed uses the chosen resolution.
 
+### Perf overlay
+
+`F4` shows the perf overlay. It starts off and hides while the settings menu is
+open.
+
+The summary row holds frames per second, the frame interval, the CPU frame
+time, the p95 interval, the spike count, and the GPU total with the costliest
+pass. The pass row holds the last completed frame's GPU pass times: the TLAS
+build, the scene pass, the TAA resolve, and the overlay pass.
+
+The GPU numbers belong to the last completed frame, so they are two frames
+behind the frame being recorded. A device without timestamp support shows the
+CPU numbers only. The overlay adds five timestamp writes per frame.
+
 ## Agent harness
 
 `bin/harbagsa-agent` drives the simulation and writes screenshots without a
@@ -139,7 +155,7 @@ runs/smoke/
 ```
 
 `report.json` holds the pass/fail result, the final state, absolute screenshot
-paths, checks, and the state digest. `state.json` holds the final state alone.
+paths, checks, the state digest, and the perf report when a perf run happened. `state.json` holds the final state alone.
 `run.log` holds the log lines. Standard output is one JSON summary.
 
 Exit codes:
@@ -165,7 +181,7 @@ frames, and `"capture": []` turns rendering off for that scenario.
 
 ```json
 {
-  "view": {"hud": false, "debug": false, "hint": false},
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
   "steps": [
     {"frames": 90, "forward": 1, "look": [220, 0]},
     {"frames": 1, "jump": true},
@@ -226,8 +242,8 @@ The batch runner and the live session share one command set:
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw": 0, "pitch": 0}`: inspection
   camera. It does not move the player. `{"cmd": "camera", "clear": true}` drops
   the override.
-- `{"cmd": "view", "hud": true, "debug": false, "hint": false}`: toggle the HUD,
-  the debug draw, and the capture hint.
+- `{"cmd": "view", "hud": true, "debug": false, "hint": false, "perf": false}`:
+  toggle the HUD, the debug draw, the capture hint, and the perf overlay.
 - `{"cmd": "debug_mode", "active": true}`: enter or leave the `F2` debug mode.
   Entering swaps the player for the free-fly camera; leaving restores the player.
   Repeating the same value is a no-op.
@@ -238,6 +254,12 @@ The batch runner and the live session share one command set:
   fields keep the state. An open menu renders even when `hud` is off.
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`:
   evaluate a predicate now.
+- `{"cmd": "perf", "frames": 120, "warmup": 60, "trace": "trace.jsonl"}`:
+  measure frames and report percentiles. `frames` defaults to 120 and `warmup`
+  to 60. `trace` writes one JSON object per measured frame; a relative path
+  resolves against the run directory. Offscreen measures throughput; with
+  `--present` it measures pacing. A run without a device reports CPU numbers
+  only.
 - `{"cmd": "record", "path": "scenarios/walk.json"}`: start recording. Send
   `{"cmd": "record"}` to stop and write the scenario.
 - `{"cmd": "replay", "path": "scenarios/walk.json"}`: reset and run a scenario.
@@ -276,6 +298,21 @@ The server prints one ready line on standard output. Capture files go to
 `runs/session/frames/` unless `--out` selects another directory. The offscreen
 target is created on the first `capture` or `replay`, so a simulation-only
 session never creates a Vulkan device.
+
+### Measure performance
+
+```sh
+./bin/harbagsa-agent run scenarios/perf.json
+```
+
+A `perf` command steps the simulation and draws one frame per measurement. The
+reply and `report.json` carry the interval percentiles, the CPU phase means, and
+the GPU pass means. Add `"trace": "trace.jsonl"` to write one JSON object per
+measured frame under the run directory. Offscreen runs measure throughput,
+because nothing waits for the display. `--present` measures pacing, because FIFO
+bounds the rate.
+
+The first baseline is in [the perf baseline](docs/evidence/perf-baseline.md).
 
 ### Screenshot workflow
 
@@ -340,7 +377,7 @@ make test
 strict compiler checks on the game, the agent, and every library package. If
 `spirv-val` is not installed, the shader check prints a skip message and does
 not fail the build. `make check-spirv` runs only the shader check. `make test`
-runs the display, physics, simulation, frame, harness, and renderer tests
+runs the display, physics, simulation, frame, perf, harness, and renderer tests
 headless. The offscreen render test logs a skip when no Vulkan device is
 available.
 

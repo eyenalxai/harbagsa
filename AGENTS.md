@@ -10,6 +10,10 @@ Keep each first-party `.odin` file under 300 lines. `make check` enforces it. Ve
 
 All new commits must be written in conventional commit style.
 
+## Repository hygiene
+
+Never commit images. Screenshots, captures, and other binary evidence stay out of the repository; point at a run directory or an external link instead.
+
 ## Comments
 
 Write a comment only when it answers a hard "Why this way?" question. Do not narrate what the code does, restate a name, or explain how it works. If the signature and the names already say it, delete the comment.
@@ -43,7 +47,8 @@ spacing, or components.
 Use `bin/harbagsa-agent` to drive the simulation, run checks, and take
 screenshots. It is separate from the game and needs no window or compositor.
 See `docs/agents/harness.md` for the scenario format, commands, run layout, and
-determinism rules.
+determinism rules. For performance work, read its **Performance** section and
+`docs/adr/0008-performance-instrumentation.md`.
 
 When you add or change a feature, update the harness and its docs in the same
 change. The harness is part of the feature, not an afterthought.

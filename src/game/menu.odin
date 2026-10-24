@@ -11,7 +11,7 @@ MENU_ROW_DIVIDER :: 6
 MENU_ROW_RESUME :: 7
 MENU_ROW_HEADER :: 8
 MENU_HINT_COLUMNS :: 3
-MENU_HINT_COUNT :: 15
+MENU_HINT_COUNT :: 18
 
 MENU_TITLE :: "Settings"
 MENU_NOTE :: "Up/Down select · Left/Right change · Enter change · Esc close"
@@ -45,7 +45,10 @@ MENU_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
 	{keys = "F1", action = "debug view"},
 	{keys = "F2", action = "debug mode"},
 	{keys = "F3", action = "TAA"},
+	{keys = "F4", action = "perf"},
 	{keys = "Esc", action = "settings"},
+	{},
+	{},
 }
 
 MENU_DEBUG_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
@@ -63,7 +66,10 @@ MENU_DEBUG_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
 	{keys = "Shift+R", action = "scene"},
 	{keys = "F1", action = "debug view"},
 	{keys = "F3", action = "TAA"},
+	{keys = "F4", action = "perf"},
 	{keys = "Esc", action = "settings"},
+	{},
+	{},
 }
 
 Menu_Item :: enum {

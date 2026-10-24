@@ -20,29 +20,8 @@ Command_Kind :: enum {
 	Check,
 	Record,
 	Replay,
+	Perf,
 	Quit,
-}
-
-Check_Op :: enum {
-	Eq,
-	Ne,
-	Lt,
-	Le,
-	Gt,
-	Ge,
-}
-
-Value_Kind :: enum {
-	Number,
-	Bool,
-	String,
-}
-
-Check_Value :: struct {
-	kind:    Value_Kind,
-	number:  f64,
-	boolean: bool,
-	text:    string,
 }
 
 Look_Command :: struct {
@@ -68,10 +47,6 @@ Step_Command :: struct {
 	frames: int,
 }
 
-Settle_Command :: struct {
-	frames: int,
-}
-
 Capture_Command :: struct {
 	name:      string,
 	frame:     int,
@@ -87,24 +62,15 @@ Camera_Command :: struct {
 	clear:    bool,
 }
 
-Debug_Mode_Command :: struct {
-	active: bool,
-}
-
 View_Command :: struct {
 	hud:       bool,
 	debug:     bool,
 	hint:      bool,
+	perf:      bool,
 	has_hud:   bool,
 	has_debug: bool,
 	has_hint:  bool,
-}
-
-Check_Command :: struct {
-	field:  string,
-	op:     Check_Op,
-	value:  Check_Value,
-	warmup: int,
+	has_perf:  bool,
 }
 
 Record_Command :: struct {
@@ -131,6 +97,7 @@ Command :: struct {
 	check:   Check_Command,
 	record:  Record_Command,
 	replay:  Replay_Command,
+	perf:    Perf_Command,
 }
 
 command_name :: proc(kind: Command_Kind) -> string {
@@ -165,6 +132,8 @@ command_name :: proc(kind: Command_Kind) -> string {
 		return "record"
 	case .Replay:
 		return "replay"
+	case .Perf:
+		return "perf"
 	case .Quit:
 		return "quit"
 	}
@@ -182,6 +151,10 @@ command_destroy :: proc(command: ^Command, allocator: mem.Allocator) {
 		delete(command.record.path, allocator)
 	case .Replay:
 		delete(command.replay.path, allocator)
+	case .Perf:
+		if command.perf.has_trace {
+			delete(command.perf.trace, allocator)
+		}
 	}
 	command^ = {}
 }
@@ -289,6 +262,8 @@ command_parse :: proc(value: json.Value, allocator := context.allocator) -> (Com
 		return parse_record(object, allocator)
 	case "replay":
 		return parse_replay(object, allocator)
+	case "perf":
+		return parse_perf(object, allocator)
 	case "quit":
 		if key, unknown := json_unknown_key(object, {"cmd"}); unknown {
 			return {}, format_error("unknown key %q", key)
