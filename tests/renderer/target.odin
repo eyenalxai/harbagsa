@@ -88,26 +88,26 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 	times := renderer.gpu_times(&state)
 	if !times.available {
 		log.info("skipping GPU timestamp assertions: timestamps are unavailable")
-		return
+	} else {
+		testing.expect(t, times.frame > 0, "GPU timing has no frame number")
+		total: time.Duration
+		for index in 0 ..< perf.PASS_COUNT {
+			pass := perf.Pass(index)
+			testing.expectf(t, times.passes[pass] >= 0, "pass %v is negative", pass)
+			total += times.passes[pass]
+		}
+		difference := total - times.total
+		if difference < 0 {
+			difference = -difference
+		}
+		testing.expectf(
+			t,
+			difference <= time.Microsecond,
+			"pass sum %v does not match total %v",
+			total,
+			times.total,
+		)
 	}
-	testing.expect(t, times.frame > 0, "GPU timing has no frame number")
-	total: time.Duration
-	for index in 0 ..< perf.PASS_COUNT {
-		pass := perf.Pass(index)
-		testing.expectf(t, times.passes[pass] >= 0, "pass %v is negative", pass)
-		total += times.passes[pass]
-	}
-	difference := total - times.total
-	if difference < 0 {
-		difference = -difference
-	}
-	testing.expectf(
-		t,
-		difference <= time.Microsecond,
-		"pass sum %v does not match total %v",
-		total,
-		times.total,
-	)
 
 	pixels, width, height, _, ok := renderer.read_capture_target(&state, .Color)
 	testing.expect(t, ok, "capture readback failed")
@@ -128,6 +128,47 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 		}
 	}
 	testing.expect(t, different, "offscreen capture is a single flat color")
+
+	// The sky is the only background. A flat clear color would make the top and
+	// horizon bands equal.
+	up_camera := renderer.Camera {
+		position = {0, 1.7, 0},
+		yaw      = 0,
+		pitch    = 1.2,
+		fov_x    = 1.5,
+	}
+	sky_scene := frame.build(
+		&sim,
+		&debug,
+		{alpha = 1.0, captured = true},
+		&up_camera,
+		&hud,
+		&scratch,
+	)
+	sky_draw_ok := true
+	for _ in 0 ..< 40 {
+		if frame.draw(&state, sky_scene) != .Ok {
+			sky_draw_ok = false
+			break
+		}
+	}
+	testing.expect(t, sky_draw_ok, "sky draw failed")
+	sky_pixels, sky_width, _, _, sky_ok := renderer.read_capture_target(&state, .Color)
+	testing.expect(t, sky_ok, "sky capture readback failed")
+	if sky_ok {
+		width := int(sky_width)
+		rows := len(sky_pixels) / (4 * width)
+		band := 20
+		top := mean_green_band(sky_pixels, width, 0, band)
+		bottom := mean_green_band(sky_pixels, width, rows - band, band)
+		testing.expectf(
+			t,
+			top + 2 < bottom,
+			"sky gradient is missing: top band %.1f, horizon band %.1f",
+			top,
+			bottom,
+		)
+	}
 
 	_ = os.remove(TEST_PNG)
 	cpath := strings.clone_to_cstring(TEST_PNG, context.temp_allocator)
@@ -157,6 +198,24 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 offscreen_target_keeps_one_frame_in_flight :: proc(t: ^testing.T) {
 	testing.expect_value(t, renderer.frames_in_flight(.Offscreen), 1)
 	testing.expect_value(t, renderer.frames_in_flight(.Swapchain), renderer.MAX_FRAMES_IN_FLIGHT)
+}
+
+@(private)
+mean_green_band :: proc(pixels: []u8, width, start, count: int) -> f32 {
+	if width <= 0 {
+		return 0
+	}
+	rows := len(pixels) / (4 * width)
+	if count <= 0 || start < 0 || start + count > rows {
+		return 0
+	}
+	total: int
+	for y in start ..< start + count {
+		for x in 0 ..< width {
+			total += int(pixels[(y * width + x) * 4 + 1])
+		}
+	}
+	return f32(total) / f32(width * count)
 }
 
 @(test)
