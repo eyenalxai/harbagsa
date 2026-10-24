@@ -62,7 +62,7 @@ init_frames :: proc(r: ^Renderer) -> Error {
 begin_frame :: proc(
 	r: ^Renderer,
 	view: Frame_View,
-	capture := false,
+	capture := Capture_Request{},
 ) -> (
 	frame: Frame,
 	status: Frame_Status,
@@ -134,7 +134,7 @@ begin_frame :: proc(
 		return {}, .Fatal
 	}
 
-	return Frame{image_index = image_index, command_buffer = command_buffer, capture = capture}, .Ok
+	return Frame{image_index = image_index, command_buffer = command_buffer, capture = capture.enabled}, .Ok
 }
 
 end_frame :: proc(r: ^Renderer, frame: Frame) -> Frame_Status {

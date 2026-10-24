@@ -217,6 +217,18 @@ _Avoid_: Script, test case
 One rendered frame written as a PNG by the harness.
 _Avoid_: Shot
 
+**Capture target**:
+The image a capture reads: the final color, the velocity target, the history, the depth buffer, or the scene color.
+_Avoid_: Render layer
+
+**Capture format**:
+The output a capture writes: PNG for color, `float` for RGBA f32 values, `raw` for the stored texel bytes, or `stats` for the numeric summary.
+_Avoid_: Export mode
+
+**Capture statistics**:
+The per-channel minimum, maximum, and mean of a capture, plus the median screen motion in texels for a velocity capture over covered pixels.
+_Avoid_: Image metrics
+
 **Session**:
 The live harness process that reads one JSON command per line and writes one
 JSON reply per line.

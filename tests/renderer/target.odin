@@ -64,7 +64,7 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 	hud: game.HUD_State
 	scratch: frame.Scratch
 	scene := frame.build(&sim, &debug, {alpha = 1.0, captured = true}, nil, &hud, &scratch)
-	status := frame.draw(&state, scene, true)
+	status := frame.draw(&state, scene, {target = .Color, enabled = true})
 	testing.expectf(t, status == .Ok, "offscreen draw failed: %v", status)
 	if status != .Ok {
 		return
@@ -78,7 +78,7 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 	// The fences retire a slot after MAX_FRAMES_IN_FLIGHT frames, so draw
 	// enough frames to read the first frame's query pool.
 	for _ in 0 ..< renderer.MAX_FRAMES_IN_FLIGHT {
-		status = frame.draw(&state, scene, false)
+		status = frame.draw(&state, scene)
 		if status != .Ok {
 			break
 		}
@@ -109,7 +109,7 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 		times.total,
 	)
 
-	pixels, width, height, ok := renderer.read_capture(&state)
+	pixels, width, height, _, ok := renderer.read_capture_target(&state, .Color)
 	testing.expect(t, ok, "capture readback failed")
 	if !ok {
 		return
@@ -228,14 +228,14 @@ render_offscreen_sequence :: proc() -> (
 	scratch: frame.Scratch
 	scene := frame.build(&sim, &debug, {alpha = 1.0, captured = true}, nil, &hud, &scratch)
 	for _ in 0 ..< 12 {
-		if frame.draw(&state, scene, false) != .Ok {
+		if frame.draw(&state, scene) != .Ok {
 			return nil, 0, false, true
 		}
 	}
-	if frame.draw(&state, scene, true) != .Ok {
+	if frame.draw(&state, scene, {target = .Color, enabled = true}) != .Ok {
 		return nil, 0, false, true
 	}
-	data, _, _, read_ok := renderer.read_capture(&state)
+	data, _, _, _, read_ok := renderer.read_capture_target(&state, .Color)
 	if !read_ok {
 		return nil, 0, false, true
 	}

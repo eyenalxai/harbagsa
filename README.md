@@ -201,7 +201,9 @@ frame of its block. Capture frames are zero-based frame numbers. Check operators
 are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. Check fields use the `state.json`
 shape, for example `player.position.y`, `player.grounded`, `crates.0.position.z`,
 `crates.count`, `settings.window_mode`, `settings.resolution`, `menu.open`,
-`debug.active`, `renderer.taa_enabled`, or `render_digest`.
+`debug.active`, `renderer.taa_enabled`, or `render_digest`. A capture check can
+also read `capture.target`, `capture.format`, and `capture.stats.*` for the last
+capture in its window.
 
 A scenario may use `commands` instead of `steps`:
 
@@ -243,7 +245,10 @@ The batch runner and the live session share one command set:
   index and weight, reset count and reason, and shadow phase. `render_digest`
   covers the effective camera, sun, boxes, jitter, shadow phase, and view flags.
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`: write a PNG.
-  `frame` is optional. A past frame is an error; a future frame queues.
+  `frame` is optional. A past frame is an error; a future frame queues. Add
+  `"target": "velocity"`, `"history"`, `"depth"`, or `"scene_color"` to read an
+  intermediate image, and `"format": "float"`, `"raw"`, or `"stats"` to choose
+  the output. The default is a color PNG.
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw": 0, "pitch": 0}`: inspection
   camera. It does not move the player. `{"cmd": "camera", "clear": true}` drops
   the override.
@@ -366,6 +371,12 @@ the renderer state and render digest. `scenarios/renderer-reset.json` teleports
 the camera and checks that the history reset names the teleport. `report.json`
 also carries a `setup` block: target kind, extent, view flags, and renderer
 config, so a run is reproducible.
+
+A capture can read an intermediate target. `"target": "velocity"` with
+`"format": "stats"` reports per-channel min, max, and mean plus the median
+screen motion in texels. `"format": "float"` writes a `.f32` file and `"raw"`
+writes the exact texel bytes. A PNG capture is color only.
+`scenarios/capture-targets.json` covers every target.
 
 ## Build
 
