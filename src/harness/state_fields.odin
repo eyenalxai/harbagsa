@@ -22,6 +22,8 @@ settings_field :: proc(settings: Settings_State, path: string) -> (Check_Value, 
 		return {kind = .String, text = settings.crouch_mode}, ""
 	case "prone_mode":
 		return {kind = .String, text = settings.prone_mode}, ""
+	case "type_weight":
+		return {kind = .Number, number = f64(settings.type_weight)}, ""
 	}
 	return {}, fmt.aprintf("unknown settings field %q", path, allocator = context.allocator)
 }

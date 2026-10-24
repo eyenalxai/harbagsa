@@ -1,18 +1,22 @@
 #+vet explicit-allocators
+#+vet !unused-procedures // the harness waits on the atlas before a capture
 package renderer
 
 import "core:log"
+import "core:sync"
 
 import vk "vendor:vulkan"
 
 TEXT_ATLAS_BINDING :: 0
 
-// The atlas changes only when the UI density does, so one sampler and one
-// descriptor set outlive the texture they read.
+// The atlas changes only when the weight or the UI density does, so one sampler
+// and one descriptor set outlive the texture they read.
 init_text_atlas_resources :: proc(r: ^Renderer) -> bool {
+	o := &r.overlay
 	if !text_atlas_rebuild(r) {
 		return false
 	}
+	o.atlas_applied_weight = BASE_WEIGHT
 
 	sampler_info := vk.SamplerCreateInfo {
 		sType        = .SAMPLER_CREATE_INFO,
@@ -24,7 +28,7 @@ init_text_atlas_resources :: proc(r: ^Renderer) -> bool {
 		addressModeW = .CLAMP_TO_EDGE,
 		maxLod       = 0,
 	}
-	if !check(vk.CreateSampler(r.device, &sampler_info, nil, &r.overlay.atlas_sampler), "vkCreateSampler") {
+	if !check(vk.CreateSampler(r.device, &sampler_info, nil, &o.atlas_sampler), "vkCreateSampler") {
 		return false
 	}
 
@@ -42,7 +46,7 @@ init_text_atlas_resources :: proc(r: ^Renderer) -> bool {
 		pBindings    = &bindings[0],
 	}
 	if !check(
-		vk.CreateDescriptorSetLayout(r.device, &layout_info, nil, &r.overlay.atlas_layout),
+		vk.CreateDescriptorSetLayout(r.device, &layout_info, nil, &o.atlas_layout),
 		"vkCreateDescriptorSetLayout",
 	) {
 		return false
@@ -58,17 +62,17 @@ init_text_atlas_resources :: proc(r: ^Renderer) -> bool {
 		poolSizeCount = 1,
 		pPoolSizes    = &pool_size,
 	}
-	if !check(vk.CreateDescriptorPool(r.device, &pool_info, nil, &r.overlay.atlas_pool), "vkCreateDescriptorPool") {
+	if !check(vk.CreateDescriptorPool(r.device, &pool_info, nil, &o.atlas_pool), "vkCreateDescriptorPool") {
 		return false
 	}
 
 	allocate := vk.DescriptorSetAllocateInfo {
 		sType              = .DESCRIPTOR_SET_ALLOCATE_INFO,
-		descriptorPool     = r.overlay.atlas_pool,
+		descriptorPool     = o.atlas_pool,
 		descriptorSetCount = 1,
-		pSetLayouts        = &r.overlay.atlas_layout,
+		pSetLayouts        = &o.atlas_layout,
 	}
-	if !check(vk.AllocateDescriptorSets(r.device, &allocate, &r.overlay.atlas_set), "vkAllocateDescriptorSets") {
+	if !check(vk.AllocateDescriptorSets(r.device, &allocate, &o.atlas_set), "vkAllocateDescriptorSets") {
 		return false
 	}
 	text_atlas_bind(r)
@@ -76,8 +80,7 @@ init_text_atlas_resources :: proc(r: ^Renderer) -> bool {
 }
 
 // Repacks the atlas for the overlay's current theme and points the descriptor at
-// the new texture. Rebuilding mid-run needs an idle device, because the old
-// image may still be sampled by a frame in flight; init has nothing in flight.
+// the new texture. Startup has nothing in flight, so it does not wait.
 text_atlas_rebuild :: proc(r: ^Renderer) -> bool {
 	o := &r.overlay
 	set := text_theme_layer_set(o.theme)
@@ -85,7 +88,7 @@ text_atlas_rebuild :: proc(r: ^Renderer) -> bool {
 	if !built {
 		return false
 	}
-	text_atlas_destroy(&o.atlas, r.allocator)
+	text_atlas_destroy(&o.atlas)
 	o.atlas = atlas
 
 	destroy_image(r, &o.atlas_image)
@@ -100,18 +103,124 @@ text_atlas_rebuild :: proc(r: ^Renderer) -> bool {
 	return true
 }
 
-text_atlas_sync :: proc(r: ^Renderer) -> bool {
-	if text_atlas_covers(&r.overlay.atlas, text_theme_layer_set(r.overlay.theme)) {
+// Applies a finished atlas. Returns false only on a fatal device failure.
+text_atlas_apply :: proc(r: ^Renderer) -> bool {
+	o := &r.overlay
+	worker := &o.atlas_worker
+	sync.lock(&worker.mutex)
+	if !worker.result_ready {
+		sync.unlock(&worker.mutex)
 		return true
 	}
+	result := worker.result
+	weight := worker.result_weight
+	worker.result = {}
+	worker.result_ready = false
+	sync.unlock(&worker.mutex)
+
+	if result.shaper.buffer == nil {
+		shaper, shaper_ok := text_shaper_init()
+		if !shaper_ok {
+			text_atlas_destroy(&result)
+			text_atlas_mark_failed(worker)
+			return true
+		}
+		result.shaper = shaper
+	}
+
 	if !check(vk.DeviceWaitIdle(r.device), "vkDeviceWaitIdle") {
+		text_atlas_destroy(&result)
 		return false
 	}
-	if !text_atlas_rebuild(r) {
-		return false
+	image, uploaded := upload_texture(r, result.width, result.height, .R8_UNORM, result.pixels)
+	if !uploaded {
+		text_atlas_destroy(&result)
+		text_atlas_mark_failed(worker)
+		return true
 	}
-	log.infof("text atlas: rebuilt for %d UI layers", r.overlay.atlas.count)
+
+	old_image := o.atlas_image
+	text_atlas_destroy(&o.atlas)
+	o.atlas = result
+	o.atlas_applied_weight = weight
+	o.atlas_image = image
+	if o.atlas_set != 0 {
+		text_atlas_bind(r)
+	}
+	destroy_image(r, &old_image)
+	log.debugf("text atlas: applied weight %d", int(weight))
 	return true
+}
+
+@(private)
+text_atlas_mark_failed :: proc(worker: ^Text_Atlas_Worker) {
+	sync.lock(&worker.mutex)
+	worker.failed = true
+	sync.unlock(&worker.mutex)
+}
+
+text_atlas_sync :: proc(r: ^Renderer, requested_weight: f32) -> bool {
+	o := &r.overlay
+	if o.atlas_worker.thread == nil && !text_atlas_worker_start(o) {
+		return false
+	}
+	if !text_atlas_apply(r) {
+		return false
+	}
+	requested := ui_theme_init(r.target.config.height, requested_weight)
+	requested_set := text_theme_layer_set(requested)
+	worker := &o.atlas_worker
+	if text_atlas_covers(&o.atlas, requested_set) {
+		sync.lock(&worker.mutex)
+		// A request that the active atlas already satisfies must not be
+		// overwritten by an older build that is still in flight.
+		worker.job_pending = false
+		worker.request_generation += 1
+		worker.job_generation = 0
+		worker.failed = false
+		sync.unlock(&worker.mutex)
+		return true
+	}
+
+	sync.lock(&worker.mutex)
+	if worker.job_generation == 0 || !text_layer_set_equal(worker.job, requested_set) {
+		worker.request_generation += 1
+		worker.job = requested_set
+		worker.job_weight = requested_weight
+		worker.job_generation = worker.request_generation
+		worker.job_pending = true
+		worker.failed = false
+		sync.cond_signal(&worker.job_cond)
+	}
+	sync.unlock(&worker.mutex)
+	return true
+}
+
+// Blocks until the pending request has been built and applied. Captures call
+// this so the image and the text theme agree.
+text_atlas_wait :: proc(r: ^Renderer) -> bool {
+	o := &r.overlay
+	worker := &o.atlas_worker
+	if worker.thread == nil {
+		return true
+	}
+	for {
+		if !text_atlas_apply(r) {
+			return false
+		}
+		sync.lock(&worker.mutex)
+		if !worker.job_pending && !worker.busy && !worker.result_ready {
+			failed := worker.failed
+			sync.unlock(&worker.mutex)
+			return !failed
+		}
+		if worker.result_ready {
+			sync.unlock(&worker.mutex)
+			continue
+		}
+		sync.cond_wait(&worker.done_cond, &worker.mutex)
+		sync.unlock(&worker.mutex)
+	}
 }
 
 @(private)
@@ -135,6 +244,7 @@ text_atlas_bind :: proc(r: ^Renderer) {
 
 destroy_text_atlas_resources :: proc(r: ^Renderer) {
 	overlay := &r.overlay
+	text_atlas_worker_stop(overlay)
 	if r.device != nil {
 		if overlay.atlas_pool != 0 {
 			vk.DestroyDescriptorPool(r.device, overlay.atlas_pool, nil)
@@ -151,5 +261,5 @@ destroy_text_atlas_resources :: proc(r: ^Renderer) {
 		}
 		destroy_image(r, &overlay.atlas_image)
 	}
-	text_atlas_destroy(&overlay.atlas, r.allocator)
+	text_atlas_destroy(&overlay.atlas)
 }

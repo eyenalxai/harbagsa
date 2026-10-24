@@ -5,55 +5,87 @@ import "core:c"
 import "core:log"
 import "core:mem"
 
+import "src:renderer/font"
 import stbrp "vendor:stb/rect_pack"
-import stbtt "vendor:stb/truetype"
 
 @(private)
 Text_Glyph_Slot :: struct {
-	layer: int,
-	index: int,
-	phase: int,
-	box:   [4]c.int,
+	layer:  int,
+	index:  int,
+	phase:  int,
+	width:  int,
+	height: int,
 }
 
-text_atlas_build :: proc(allocator: mem.Allocator, set: ^Text_Layer_Set) -> (atlas: Text_Atlas, ok: bool) {
+text_atlas_build :: proc(
+	allocator: mem.Allocator,
+	set: ^Text_Layer_Set,
+	with_shaper := true,
+) -> (atlas: Text_Atlas, ok: bool) {
 	if set.count == 0 {
 		log.error("text atlas: a build needs at least one layer")
 		return {}, false
 	}
+	atlas.allocator = allocator
 
-	infos: [TEXT_LAYER_MAX]stbtt.fontinfo
-	scales: [TEXT_LAYER_MAX]f32
-	for key, layer in set.keys[:set.count] {
-		if !stbtt.InitFont(&infos[layer], raw_data(text_face(key.weight)), 0) {
-			log.errorf("text atlas: could not parse the %v face", key.weight)
+	library: font.Library
+	if font.Init_FreeType(&library) != font.OK {
+		log.error("text atlas: FreeType did not initialise")
+		return {}, false
+	}
+	faces: [TEXT_FACE_COUNT]font.Face
+	opened := 0
+	defer {
+		for face in Text_Face {
+			if faces[face] != nil {
+				_ = font.Done_Face(faces[face])
+			}
+		}
+		_ = font.Done_FreeType(library)
+	}
+	for face in Text_Face {
+		bytes := text_face_data(face)
+		if font.New_Memory_Face(library, raw_data(bytes), font.Long(len(bytes)), 0, &faces[face]) != font.OK {
+			log.errorf("text atlas: could not open the %v face", face)
 			return {}, false
 		}
-		scales[layer] = stbtt.ScaleForMappingEmToPixels(&infos[layer], f32(key.px))
+		opened += 1
+	}
+	if opened != TEXT_FACE_COUNT {
+		return {}, false
 	}
 
-	slots := make([dynamic]Text_Glyph_Slot, 0, set.count * TEXT_CODEPOINT_COUNT * TEXT_SUBPIXEL_PHASES, context.temp_allocator)
-	defer delete(slots)
+	atlas.count = set.count
+	slots := make([dynamic]Text_Glyph_Slot, 0, set.count * 256, context.temp_allocator)
 	area := 0
-	for _, layer in set.keys[:set.count] {
-		for index in 0 ..< TEXT_CODEPOINT_COUNT {
-			codepoint := text_codepoint_at(index)
+	for key, layer_index in set.keys[:set.count] {
+		face := faces[key.face]
+		if !text_face_setup(face, key.weight, key.px) {
+			text_atlas_destroy(&atlas)
+			return {}, false
+		}
+		atlas.layers[layer_index].key = key
+		text_layer_metrics(&atlas.layers[layer_index], face, key.px)
+
+		glyph_count := int(face.num_glyphs)
+		atlas.layers[layer_index].glyphs = make([]Text_Glyph, glyph_count, allocator)
+		for index in 0 ..< glyph_count {
 			for phase in 0 ..< TEXT_SUBPIXEL_PHASES {
-				box := text_glyph_box(&infos[layer], scales[layer], codepoint, phase)
-				if box.z <= box.x || box.w <= box.y {
+				bitmap, _, _, rendered := text_glyph_render(face, u32(index), phase)
+				if !rendered {
 					continue
 				}
 				append(
 					&slots,
 					Text_Glyph_Slot {
-						layer = layer,
+						layer = layer_index,
 						index = index,
 						phase = phase,
-						box = box,
+						width = int(bitmap.width),
+						height = int(bitmap.rows),
 					},
 				)
-				cell := text_glyph_cell_size(box)
-				area += cell.x * cell.y
+				area += (int(bitmap.width) + TEXT_GLYPH_PADDING * 2) * (int(bitmap.rows) + TEXT_GLYPH_PADDING * 2)
 			}
 		}
 	}
@@ -61,18 +93,15 @@ text_atlas_build :: proc(allocator: mem.Allocator, set: ^Text_Layer_Set) -> (atl
 	rects := make([]stbrp.Rect, len(slots), context.temp_allocator)
 	defer delete(rects, context.temp_allocator)
 	for slot, index in slots {
-		cell := text_glyph_cell_size(slot.box)
-		rects[index] = stbrp.Rect {
-			id = c.int(index),
-			w  = stbrp.Coord(cell.x),
-			h  = stbrp.Coord(cell.y),
-		}
+		cell := text_glyph_cell(slot)
+		rects[index] = stbrp.Rect{id = c.int(index), w = stbrp.Coord(cell.x), h = stbrp.Coord(cell.y)}
 	}
 
 	side := text_atlas_side_for(int(f32(area) * TEXT_ATLAS_PACK_HEADROOM))
 	for {
 		if side > TEXT_ATLAS_MAX_SIDE {
 			log.errorf("text atlas: %d glyph phases do not fit in %dx%d", len(rects), TEXT_ATLAS_MAX_SIDE, TEXT_ATLAS_MAX_SIDE)
+			text_atlas_destroy(&atlas)
 			return {}, false
 		}
 		if text_atlas_pack(rects, side) {
@@ -83,44 +112,87 @@ text_atlas_build :: proc(allocator: mem.Allocator, set: ^Text_Layer_Set) -> (atl
 
 	atlas.width = side
 	atlas.height = side
-	atlas.count = set.count
 	atlas.pixels = make([]u8, int(side) * int(side), allocator)
-	for key, layer in set.keys[:set.count] {
-		atlas.layers[layer].key = key
-		text_layer_metrics(&atlas.layers[layer], &infos[layer], scales[layer])
+
+	for key, layer_index in set.keys[:set.count] {
+		face := faces[key.face]
+		if !text_face_setup(face, key.weight, key.px) {
+			text_atlas_destroy(&atlas)
+			return {}, false
+		}
+		for slot, index in slots {
+			if slot.layer == layer_index {
+				text_atlas_blit(&atlas, face, slot, rects[index])
+			}
+		}
 	}
 
-	for slot, index in slots {
-		text_atlas_blit(&atlas, &infos[slot.layer], scales[slot.layer], slot, rects[index])
-	}
-	for layer in 0 ..< set.count {
-		atlas.layers[layer].kern = text_layer_kerning(allocator, &infos[layer], scales[layer])
+	if with_shaper {
+		shaper, shaper_ok := text_shaper_init()
+		if !shaper_ok {
+			text_atlas_destroy(&atlas)
+			return {}, false
+		}
+		atlas.shaper = shaper
 	}
 
-	log.infof(
-		"text atlas: %dx%d, %d layers, %d glyph phases",
-		atlas.width,
-		atlas.height,
-		atlas.count,
-		len(slots),
-	)
+	log.debugf("text atlas: %dx%d, %d layers, %d glyph phases", atlas.width, atlas.height, atlas.count, len(slots))
 	return atlas, true
 }
 
 @(private)
-text_glyph_box :: proc(info: ^stbtt.fontinfo, scale: f32, codepoint: rune, phase: int) -> [4]c.int {
-	x0, y0, x1, y1: c.int
-	shift := f32(phase) / f32(TEXT_SUBPIXEL_PHASES)
-	stbtt.GetCodepointBitmapBoxSubpixel(info, codepoint, scale, scale, shift, 0, &x0, &y0, &x1, &y1)
-	return {x0, y0, x1, y1}
+text_face_setup :: proc(face: font.Face, weight: u16, px: u32) -> bool {
+	if face.face_flags & font.FACE_FLAG_MULTIPLE_MASTERS != 0 {
+		coord := font.Fixed(f32(weight) * 65536.0)
+		if font.Set_Var_Design_Coordinates(face, 1, &coord) != font.OK {
+			log.errorf("text atlas: could not set weight %d", weight)
+			return false
+		}
+	}
+	if font.Set_Pixel_Sizes(face, 0, c.uint(px)) != font.OK {
+		return false
+	}
+	return true
 }
 
 @(private)
-text_glyph_cell_size :: proc(box: [4]c.int) -> [2]int {
-	return {
-		int(box.z - box.x) + TEXT_GLYPH_PADDING * 2,
-		int(box.w - box.y) + TEXT_GLYPH_PADDING * 2,
+text_glyph_render :: proc(face: font.Face, index: u32, phase: int) -> (bitmap: font.Bitmap, left, top: int, ok: bool) {
+	if font.Load_Glyph(face, index, font.LOAD_NO_HINTING | font.LOAD_NO_BITMAP) != font.OK {
+		return {}, 0, 0, false
 	}
+	slot := face.glyph
+	if slot == nil {
+		return {}, 0, 0, false
+	}
+	if slot.outline.n_points > 0 {
+		shift := font.Pos((phase * 64) / TEXT_SUBPIXEL_PHASES)
+		font.Outline_Translate(&slot.outline, shift, 0)
+	}
+	if font.Render_Glyph(slot, font.RENDER_MODE_NORMAL) != font.OK {
+		return {}, 0, 0, false
+	}
+	bitmap = slot.bitmap
+	if bitmap.rows == 0 || bitmap.width == 0 || bitmap.pixel_mode != font.PIXEL_MODE_GRAY {
+		return {}, 0, 0, false
+	}
+	return bitmap, int(slot.bitmap_left), -int(slot.bitmap_top), true
+}
+
+@(private)
+text_glyph_cell :: proc(slot: Text_Glyph_Slot) -> [2]int {
+	return {
+		slot.width + TEXT_GLYPH_PADDING * 2,
+		slot.height + TEXT_GLYPH_PADDING * 2,
+	}
+}
+
+@(private)
+text_layer_metrics :: proc(layer: ^Text_Layer, face: font.Face, px: u32) {
+	upem := f32(face.units_per_em)
+	scale := f32(px) / upem
+	layer.ascent = f32(face.ascender) * scale
+	layer.descent = f32(face.descender) * scale
+	layer.line_gap = f32(face.height - (face.ascender - face.descender)) * scale
 }
 
 @(private)
@@ -155,76 +227,33 @@ text_atlas_pack :: proc(rects: []stbrp.Rect, side: u32) -> bool {
 }
 
 @(private)
-text_layer_metrics :: proc(layer: ^Text_Layer, info: ^stbtt.fontinfo, scale: f32) {
-	ascent, descent, line_gap: c.int
-	stbtt.GetFontVMetrics(info, &ascent, &descent, &line_gap)
-	layer.ascent = f32(ascent) * scale
-	layer.descent = f32(descent) * scale
-	layer.line_gap = f32(line_gap) * scale
-	for index in 0 ..< TEXT_CODEPOINT_COUNT {
-		advance, bearing: c.int
-		stbtt.GetCodepointHMetrics(info, text_codepoint_at(index), &advance, &bearing)
-		layer.glyphs[index].advance = f32(advance) * scale
+text_atlas_blit :: proc(atlas: ^Text_Atlas, face: font.Face, slot: Text_Glyph_Slot, rect: stbrp.Rect) {
+	bitmap, left, top, rendered := text_glyph_render(face, u32(slot.index), slot.phase)
+	if !rendered {
+		return
 	}
-}
-
-@(private)
-text_atlas_blit :: proc(
-	atlas: ^Text_Atlas,
-	info: ^stbtt.fontinfo,
-	scale: f32,
-	slot: Text_Glyph_Slot,
-	rect: stbrp.Rect,
-) {
-	cell := text_glyph_cell_size(slot.box)
+	cell_w := int(bitmap.width) + TEXT_GLYPH_PADDING * 2
+	cell_h := int(bitmap.rows) + TEXT_GLYPH_PADDING * 2
 	x := int(rect.x) + TEXT_GLYPH_PADDING
 	y := int(rect.y) + TEXT_GLYPH_PADDING
+	width := int(bitmap.width)
+	pitch := int(bitmap.pitch)
+	for row in 0 ..< int(bitmap.rows) {
+		src := bitmap.buffer[row * pitch :][:width]
+		dst := atlas.pixels[(y + row) * int(atlas.width) + x :][:width]
+		copy(dst, src)
+	}
+
 	glyph := &atlas.layers[slot.layer].glyphs[slot.index]
-	width := f32(atlas.width)
-	height := f32(atlas.height)
 	glyph.phases[slot.phase] = {
 		uv = {
-			f32(rect.x) / width,
-			f32(rect.y) / height,
-			f32(int(rect.x) + cell.x) / width,
-			f32(int(rect.y) + cell.y) / height,
+			f32(rect.x) / f32(atlas.width),
+			f32(rect.y) / f32(atlas.height),
+			f32(int(rect.x) + cell_w) / f32(atlas.width),
+			f32(int(rect.y) + cell_h) / f32(atlas.height),
 		},
-		offset = {
-			f32(slot.box.x - TEXT_GLYPH_PADDING),
-			f32(slot.box.y - TEXT_GLYPH_PADDING),
-		},
-		size = {f32(cell.x), f32(cell.y)},
+		offset = {f32(left - TEXT_GLYPH_PADDING), f32(top - TEXT_GLYPH_PADDING)},
+		size = {f32(cell_w), f32(cell_h)},
 	}
 	glyph.present = true
-
-	shift := f32(slot.phase) / f32(TEXT_SUBPIXEL_PHASES)
-	target := &atlas.pixels[y * int(atlas.width) + x]
-	stbtt.MakeCodepointBitmapSubpixel(
-		info,
-		target,
-		c.int(cell.x - TEXT_GLYPH_PADDING * 2),
-		c.int(cell.y - TEXT_GLYPH_PADDING * 2),
-		c.int(atlas.width),
-		scale,
-		scale,
-		shift,
-		0,
-		text_codepoint_at(slot.index),
-	)
-}
-
-@(private)
-text_layer_kerning :: proc(allocator: mem.Allocator, info: ^stbtt.fontinfo, scale: f32) -> []f32 {
-	kern := make([]f32, TEXT_CODEPOINT_COUNT * TEXT_CODEPOINT_COUNT, allocator)
-	for first in 0 ..< TEXT_CODEPOINT_COUNT {
-		for second in 0 ..< TEXT_CODEPOINT_COUNT {
-			advance := stbtt.GetCodepointKernAdvance(
-				info,
-				text_codepoint_at(first),
-				text_codepoint_at(second),
-			)
-			kern[first * TEXT_CODEPOINT_COUNT + second] = f32(advance) * scale
-		}
-	}
-	return kern
 }
