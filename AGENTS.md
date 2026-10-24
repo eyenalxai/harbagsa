@@ -10,6 +10,12 @@ Keep each first-party `.odin` file under 300 lines. `make check` enforces it. Ve
 
 All new commits must be written in conventional commit style.
 
+## Git identity and signing
+
+- Keep the repository identity. Never pass `-c user.name`, `-c user.email`, `GIT_AUTHOR_NAME`, `GIT_AUTHOR_EMAIL`, `GIT_COMMITTER_NAME`, or `GIT_COMMITTER_EMAIL`. A made-up identity breaks GitHub attribution: the commit shows an unknown author and `Unverified`.
+- Sign every commit. Never pass `--no-gpg-sign` and never set `commit.gpgsign` to false.
+- Do not use GitHub's "Rebase and merge". GitHub rewrites the commits without their signatures, so the published commits become `Unverified`. Use a merge commit, or rebase locally and sign the rewritten commits.
+
 ## Repository hygiene
 
 Never commit images. Screenshots, captures, and other binary evidence stay out of the repository; point at a run directory or an external link instead.
