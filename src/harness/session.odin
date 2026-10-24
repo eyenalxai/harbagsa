@@ -59,6 +59,10 @@ Session :: struct {
 	has_trace:       bool,
 
 	debug_renderer: bool,
+
+	analysis_config: Analysis_Config,
+	analysis:        Analysis_Summary,
+	has_analysis:    bool,
 }
 
 session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
@@ -66,6 +70,7 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 		allocator = allocator,
 		alpha = 1.0,
 		debug = game.debug_mode_create(),
+		analysis_config = analysis_config_default(),
 	}
 	session.hud.menu.displays = display.fallback_list()
 	session.sim = game.simulation_create()
@@ -257,6 +262,7 @@ session_draw :: proc(session: ^Session, request: Capture_Request) -> string {
 	}
 	if request.enabled {
 		append(&session.captures, result)
+		session_refresh_analysis(session)
 	}
 	session_refresh_renderer(session)
 	return ""
