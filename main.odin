@@ -13,17 +13,6 @@ import "src:renderer"
 MAX_FRAME_DELTA :: f32(0.1)
 MAX_STEPS_PER_FRAME :: 8
 
-Input_Latches :: struct {
-	jump:   bool,
-	sprint: bool,
-	crouch: bool,
-	prone:  bool,
-}
-
-clear_latches :: proc(latches: ^Input_Latches) {
-	latches^ = {}
-}
-
 main :: proc() {
 	logger := log.create_console_logger(lowest = .Info, allocator = context.allocator)
 	context.logger = logger
@@ -91,9 +80,14 @@ run :: proc() -> bool {
 		log.warn("harbagsa: SDL reported no displays; keeping the created window")
 	}
 	hud.menu.displays = displays.list
-	sim.settings.window.display = platform.display_index_for_window(&window, &displays)
+	initial_display := platform.display_index_for_window(&window, &displays)
+	if initial_display >= 0 {
+		sim.settings.window.display = initial_display
+	} else {
+		log.warn("harbagsa: the launch display is not in the display list")
+	}
 	applied_window := sim.settings.window
-	if !platform.apply_window_state(&window, &displays, applied_window) {
+	if initial_display >= 0 && !platform.apply_window_state(&window, &displays, applied_window) {
 		log.warn("harbagsa: the initial window settings were not applied")
 	}
 	renderer.notify_resize(&state)
@@ -159,10 +153,12 @@ run :: proc() -> bool {
 		}
 
 		if sim.settings.window != applied_window {
-			if !platform.apply_window_state(&window, &displays, sim.settings.window) {
+			if platform.apply_window_state(&window, &displays, sim.settings.window) {
+				applied_window = sim.settings.window
+			} else {
 				log.warn("harbagsa: the window settings were not applied")
+				sim.settings.window = applied_window
 			}
-			applied_window = sim.settings.window
 			renderer.notify_resize(&state)
 		}
 
