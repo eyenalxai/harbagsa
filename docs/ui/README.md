@@ -29,6 +29,9 @@ Everything scales from one number: `density = clamp(height / 720, 1, 2)`, where
 window 1.5, a 1440p window 2. Below 720p it stays at 1 so the smallest supported
 window still shows every row.
 
+Text rasterizes at the scaled pixel size, so the coverage atlas repacks when a
+rounded type size changes. See [type.md](type.md).
+
 ## Files
 
 - [type.md](type.md): the five type roles, leading, tracking, and the fixed-width
