@@ -14,7 +14,7 @@ MENU_ROW_RESUME :: 7
 MENU_ROW_HEADER :: 8
 MENU_HINT_COLUMNS :: 3
 MENU_CONTROL_HINT_COUNT :: 18
-MENU_HINT_COUNT :: 21
+MENU_HINT_COUNT :: 22
 
 MENU_TITLE :: "Settings"
 MENU_NOTE :: "Up/Down select · Left/Right change · Drag slider · Enter change · Esc close"
@@ -61,6 +61,7 @@ MENU_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
 	{},
 	{},
 	{},
+	{},
 }
 
 MENU_DEBUG_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
@@ -85,6 +86,7 @@ MENU_DEBUG_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
 	{keys = "Ctrl+D", action = "duplicate"},
 	{keys = "Ctrl+Z", action = "undo"},
 	{keys = "Ctrl+Shift+Z", action = "redo"},
+	{keys = "C [ ] , .", action = "lamp light"},
 }
 
 Menu_Item :: enum {

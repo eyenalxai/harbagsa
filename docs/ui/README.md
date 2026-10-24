@@ -86,8 +86,10 @@ index or `-1`, including the empty cells.
 
 The debug inspector is the existing top-left status panel with object rows. It
 shows the selection as `prefab # id`, the object count and capacity, and the
-selected object's body, size, position, yaw, and snap. The placement rows
-replace it while the placement tool is armed.
+selected object's body, size, position, yaw, snap, light values, and the active
+light count against the lamp count. The placement rows replace it while the
+placement tool is armed and add the next lamp light. The light line is always
+formatted into the same fields, so a cold selection does not resize the panel.
 
 Every changing number uses `Row.numeric` and a fixed field, exactly as the
 player rows do. The panel width must not move when the selection changes, so

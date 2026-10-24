@@ -107,6 +107,11 @@ editor_input_from_events :: proc(events: platform.Events) -> game.Debug_Input {
 		rotate_right = events.rotate_right_pressed,
 		large_step = events.sprint_held,
 		sun_placement_pressed = events.sun_placement_pressed,
+		light_color_pressed = events.light_color_pressed,
+		light_intensity_down_pressed = events.light_intensity_down_pressed,
+		light_intensity_up_pressed = events.light_intensity_up_pressed,
+		light_range_down_pressed = events.light_range_down_pressed,
+		light_range_up_pressed = events.light_range_up_pressed,
 		captured = events.captured,
 	}
 }

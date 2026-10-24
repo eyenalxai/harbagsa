@@ -87,12 +87,14 @@ debug_duplicate_selected :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Object_Id
 		prefab    = object.prefab,
 		body_mode = object.body_mode,
 		center    = b3.Body_GetPosition(object.body) + {prefab(object.prefab).half_extents.x, 0.0, 0.0},
+		light     = object.light,
 	}
 	id := create_object_rotated(
 		sim,
 		spawn,
 		b3.Body_GetRotation(object.body),
 		object.color,
+		object.light,
 		false,
 	)
 	if id != INVALID_OBJECT_ID {

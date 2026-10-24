@@ -17,6 +17,7 @@ Object_Record :: struct {
 	center:    b3.Vec3,
 	rotation:  b3.Quat,
 	color:     [4]f32,
+	light:     Light_Settings,
 }
 
 Object_Snapshot :: struct {
@@ -41,6 +42,7 @@ object_snapshot_capture :: proc(sim: ^Simulation, allocator: mem.Allocator) -> O
 			center    = b3.Body_GetPosition(object.body),
 			rotation  = b3.Body_GetRotation(object.body),
 			color     = object.color,
+			light     = object.light,
 		}
 	}
 	return snapshot
@@ -74,8 +76,9 @@ simulation_apply_snapshot :: proc(sim: ^Simulation, snapshot: Object_Snapshot) -
 			prefab    = record.prefab,
 			body_mode = record.body_mode,
 			center    = record.center,
+			light     = record.light,
 		}
-		if !spawn_object(sim, record.id, spawn, record.rotation, record.color, true) {
+		if !spawn_object(sim, record.id, spawn, record.rotation, record.color, record.light, true) {
 			return false
 		}
 		next_id = max(next_id, record.id + 1)
@@ -89,9 +92,17 @@ create_object :: proc(
 	sim: ^Simulation,
 	spawn: Object_Spawn,
 	color: [4]f32,
+	light: Light_Settings,
 	settled: bool,
 ) -> Object_Id {
-	return create_object_rotated(sim, spawn, object_rotation(spawn.prefab, spawn.yaw), color, settled)
+	return create_object_rotated(
+		sim,
+		spawn,
+		object_rotation(spawn.prefab, spawn.yaw),
+		color,
+		light,
+		settled,
+	)
 }
 
 // Duplicate and restore paths that already hold an exact quaternion use this so
@@ -102,13 +113,14 @@ create_object_rotated :: proc(
 	spawn: Object_Spawn,
 	rotation: b3.Quat,
 	color: [4]f32,
+	light: Light_Settings,
 	settled: bool,
 ) -> Object_Id {
 	if sim.object_count >= MAX_PLACED_OBJECTS {
 		return INVALID_OBJECT_ID
 	}
 	id := sim.next_object_id
-	if !spawn_object(sim, id, spawn, rotation, color, settled) {
+	if !spawn_object(sim, id, spawn, rotation, color, light, settled) {
 		return INVALID_OBJECT_ID
 	}
 	sim.next_object_id = id + 1
@@ -122,10 +134,15 @@ spawn_object :: proc(
 	spawn: Object_Spawn,
 	rotation: b3.Quat,
 	color: [4]f32,
+	light: Light_Settings,
 	settled: bool,
 ) -> bool {
 	if sim.object_count >= MAX_PLACED_OBJECTS {
 		return false
+	}
+	box_color := color
+	if light.active {
+		box_color = light_color4(light.color)
 	}
 	info := prefab(spawn.prefab)
 	body := create_box_body(
@@ -145,7 +162,8 @@ spawn_object :: proc(
 		prefab     = spawn.prefab,
 		body_mode  = spawn.body_mode,
 		body       = body,
-		color      = color,
+		color      = box_color,
+		light      = light,
 		spawn_time = sim.time,
 		settled    = settled,
 	}

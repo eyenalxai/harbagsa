@@ -3,9 +3,9 @@ package game
 
 import "core:math"
 
-HUD_INSPECTOR_ROW_COUNT :: 10
-HUD_INSPECTOR_SUN_ROW_COUNT :: 11
-HUD_PLACEMENT_ROW_COUNT :: 7
+HUD_INSPECTOR_ROW_COUNT :: 12
+HUD_INSPECTOR_SUN_ROW_COUNT :: 13
+HUD_PLACEMENT_ROW_COUNT :: 8
 
 HUD_SNAP_OFF :: "off"
 HUD_SNAP_GRID :: "0.25 m"
@@ -26,6 +26,7 @@ hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_
 	half_extents: [3]f32
 	position: [3]f32
 	yaw: f32
+	light: Light_Settings
 	if has_selection {
 		if object, found := simulation_object_find(sim, id); found {
 			name = prefab_name(object.prefab)
@@ -34,6 +35,7 @@ hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_
 			half_extents = box.half_extents
 			position = box.center
 			yaw = simulation_object_yaw(sim, id) * 180.0 / math.PI
+			light = object.light
 		}
 	}
 
@@ -132,6 +134,18 @@ hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_
 		),
 		numeric = true,
 	}
+	hud.rows[10] = {
+		kind    = .Detail,
+		label   = "Light",
+		value   = hud_light_line(hud, 10, light),
+		numeric = true,
+	}
+	hud.rows[11] = {
+		kind    = .Detail,
+		label   = "Lights",
+		value   = hud_light_budget(hud, 11, sim),
+		numeric = true,
+	}
 	row_count := HUD_INSPECTOR_ROW_COUNT
 	if debug.sun.active {
 		hud.rows[HUD_INSPECTOR_ROW_COUNT] = {
@@ -186,5 +200,42 @@ hud_placement_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^De
 		),
 		numeric = true,
 	}
+	light: Light_Settings
+	if prefab_has_light(debug.placement.prefab) {
+		light = debug.palette.light
+	}
+	hud.rows[7] = {
+		kind    = .Metric,
+		label   = "Light",
+		value   = hud_light_line(hud, 7, light),
+		numeric = true,
+	}
 	hud.view.rows = hud.rows[:HUD_PLACEMENT_ROW_COUNT]
+}
+
+@(private)
+hud_light_line :: proc(hud: ^HUD_State, slot: int, light: Light_Settings) -> string {
+	name := "none"
+	if light.active {
+		name = light_color_name(light.color)
+	}
+	return line_format(
+		&hud.storage,
+		slot,
+		"%-5s % 4.1f % 2.0f m",
+		name,
+		light.intensity,
+		light.range,
+	)
+}
+
+@(private)
+hud_light_budget :: proc(hud: ^HUD_State, slot: int, sim: ^Simulation) -> string {
+	return line_format(
+		&hud.storage,
+		slot,
+		"% 2d active / % 2d lamps",
+		simulation_active_light_count(sim),
+		simulation_lamp_count(sim),
+	)
 }

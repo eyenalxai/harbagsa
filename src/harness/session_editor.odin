@@ -57,6 +57,25 @@ session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 	if command.has_snap {
 		game.debug_placement_set_snap(&session.debug, command.snap)
 	}
+	if command.light.has_color {
+		if !game.debug_light_set_color(&session.debug, &session.sim, command.light.color) {
+			return format_error("light_color needs a lamp placement or a selected lamp")
+		}
+	}
+	if command.light.has_intensity {
+		if !game.debug_light_set_intensity(
+			&session.debug,
+			&session.sim,
+			command.light.intensity,
+		) {
+			return format_error("light_intensity needs a lamp placement or a selected lamp")
+		}
+	}
+	if command.light.has_range {
+		if !game.debug_light_set_range(&session.debug, &session.sim, command.light.range) {
+			return format_error("light_range needs a lamp placement or a selected lamp")
+		}
+	}
 	if command.pick {
 		_ = game.debug_palette_pick(&session.debug, &session.sim)
 	}
@@ -72,6 +91,7 @@ session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 				body_mode = command.place.body,
 				center = command.place.position,
 				yaw = command.place.yaw * math.PI / 180.0,
+				light = placement_light(&session.debug, command.place.prefab),
 			},
 		)
 	}
@@ -121,4 +141,18 @@ session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 		}
 	}
 	return ""
+}
+
+// A direct place carries the tuned next-placement light only when it places the
+// prefab the palette currently holds; another lamp prefab starts from its own
+// defaults.
+@(private)
+placement_light :: proc(debug: ^game.Debug_Mode, prefab_id: game.Prefab_Id) -> game.Light_Settings {
+	if !game.prefab_has_light(prefab_id) {
+		return {}
+	}
+	if prefab_id == game.palette_selected(debug.palette) {
+		return debug.palette.light
+	}
+	return game.prefab_light(prefab_id)
 }
