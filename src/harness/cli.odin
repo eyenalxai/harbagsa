@@ -17,6 +17,7 @@ Common_Options :: struct {
 	height:         u32,
 	present:        bool,
 	no_render:      bool,
+	no_analysis:    bool,
 	debug_renderer: bool,
 }
 
@@ -138,6 +139,9 @@ parse_common_option :: proc(
 	case "--no-render":
 		options.no_render = true
 		return index + 1, true, ""
+	case "--no-analysis":
+		options.no_analysis = true
+		return index + 1, true, ""
 	case "--debug-renderer":
 		options.debug_renderer = true
 		return index + 1, true, ""
@@ -170,6 +174,6 @@ cli_error :: proc(message: string) -> int {
 @(private)
 print_usage :: proc() {
 	fmt.eprintln("usage:")
-	fmt.eprintln("  harbagsa-agent run <scenario.json> [--out DIR] [--size WxH] [--present] [--no-render] [--debug-renderer]")
-	fmt.eprintln("  harbagsa-agent session [--socket PATH] [--out DIR] [--size WxH] [--present] [--no-render] [--debug-renderer]")
+	fmt.eprintln("  harbagsa-agent run <scenario.json> [--out DIR] [--size WxH] [--present] [--no-render] [--no-analysis] [--debug-renderer]")
+	fmt.eprintln("  harbagsa-agent session [--socket PATH] [--out DIR] [--size WxH] [--present] [--no-render] [--no-analysis] [--debug-renderer]")
 }

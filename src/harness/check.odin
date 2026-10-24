@@ -21,6 +21,7 @@ check_evaluate :: proc(
 	command: Check_Command,
 	state: State,
 	capture: Capture_Summary,
+	analysis: ^Analysis_Summary,
 	allocator: mem.Allocator,
 ) -> Check_Result {
 	result := Check_Result {
@@ -28,7 +29,7 @@ check_evaluate :: proc(
 		op = check_op_name(command.op),
 		expected = check_value_display(command.value, allocator),
 	}
-	actual, field_error := check_field(state, capture, command.field)
+	actual, field_error := check_field(state, capture, analysis, command.field)
 	if field_error != "" {
 		result.error = field_error
 		return result
@@ -47,11 +48,18 @@ check_evaluate :: proc(
 check_field :: proc(
 	state: State,
 	capture: Capture_Summary,
+	analysis: ^Analysis_Summary,
 	path: string,
 ) -> (
 	Check_Value,
 	string,
 ) {
+	if strings.has_prefix(path, "analysis.") {
+		if analysis == nil {
+			return {}, "analysis is not available; enable it and capture a color frame"
+		}
+		return analysis_field(analysis^, path[len("analysis."):])
+	}
 	if strings.has_prefix(path, "capture.") {
 		if capture.count == 0 {
 			return {}, "no capture has run"

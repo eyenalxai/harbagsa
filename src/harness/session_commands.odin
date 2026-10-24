@@ -114,11 +114,13 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 		command_error = session_menu(session, command.menu)
 	case .Check:
 		state := session_state(session)
-		warmup := clamp(command.check.warmup, 0, len(session.captures))
+		window := check_capture_window(session.captures[:], command.check)
+		analysis := session.has_analysis ? &session.analysis : nil
 		result := check_evaluate(
 			command.check,
 			state,
-			capture_summary(session.captures[warmup:]),
+			capture_summary(window),
+			analysis,
 			session.allocator,
 		)
 		state_destroy(&state, session.allocator)
