@@ -125,3 +125,8 @@ delete_target_slices :: proc(r: ^Renderer) {
 		r.target.render_finished = nil
 	}
 }
+
+
+target_extent :: proc(r: ^Renderer) -> (width, height: u32) {
+	return r.target.config.width, r.target.config.height
+}

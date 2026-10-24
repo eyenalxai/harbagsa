@@ -17,7 +17,7 @@ status_panel_width_survives_a_full_sweep :: proc(t: ^testing.T) {
 	theme := renderer.ui_theme_init(720)
 	atlas, built := build_atlas(t, theme)
 	testing.expect(t, built, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas, context.allocator)
+	defer renderer.text_atlas_destroy(&atlas)
 	positions := [5][3]f32{{0, 0, 14}, {-19.9, 0.1, -19.9}, {19.9, 0, 0}, {-0.1, 0, 0.1}, {9.9, 9.9, 9.9}}
 	expected := measure_status_panel(t, &sim, &debug, &hud, &atlas, theme, positions[0])
 
@@ -87,7 +87,7 @@ capture_hint_clears_the_crosshair :: proc(t: ^testing.T) {
 	theme := renderer.ui_theme_init(720)
 	atlas, built := build_atlas(t, theme)
 	testing.expect(t, built, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas, context.allocator)
+	defer renderer.text_atlas_destroy(&atlas)
 	overlay := renderer.Overlay {
 		atlas = atlas,
 		theme = theme,
@@ -126,7 +126,7 @@ every_menu_item_selects_a_selectable_row :: proc(t: ^testing.T) {
 		hud.menu.selected = item
 		game.menu_view(&hud.menu, sim.settings, false)
 		row := hud.menu.view.rows[hud.menu.view.selected]
-		selectable := row.kind == .Setting || row.kind == .Action
+		selectable := row.kind == .Setting || row.kind == .Action || row.kind == .Slider
 		testing.expectf(t, selectable, "%v selected a %v row", item, row.kind)
 		testing.expect_value(t, row.label, game.MENU_ITEM_NAMES[item])
 	}
@@ -182,7 +182,7 @@ build_menu_overlay :: proc(t: ^testing.T, menu: ui.Menu) -> (overlay: renderer.O
 @(private)
 destroy_overlay_scratch :: proc(overlay: ^renderer.Overlay) {
 	delete(overlay.hud_vertices, context.allocator)
-	renderer.text_atlas_destroy(&overlay.atlas, context.allocator)
+	renderer.text_atlas_destroy(&overlay.atlas)
 }
 
 // Fills buffer with every quad drawn in one colour and returns the count. The

@@ -44,12 +44,25 @@ Overlay :: struct {
 
 	theme: UI_Theme,
 
-	atlas:         Text_Atlas,
+	menu_slider:        Menu_Slider,
+	menu_frozen_width:  f32,
+
+	atlas:                Text_Atlas,
+	atlas_applied_weight: f32,
+	atlas_worker:         Text_Atlas_Worker,
 	atlas_image:   Image,
 	atlas_sampler: vk.Sampler,
 	atlas_layout:  vk.DescriptorSetLayout,
 	atlas_pool:    vk.DescriptorPool,
 	atlas_set:     vk.DescriptorSet,
+}
+
+Menu_Slider :: struct {
+	x, y, width, height: f32,
+}
+
+menu_slider_travel :: proc(r: ^Renderer) -> Menu_Slider {
+	return r.overlay.menu_slider
 }
 
 init_overlay :: proc(r: ^Renderer) -> Error {
@@ -124,16 +137,24 @@ prepare_overlay :: proc(r: ^Renderer, debug_lines: []geometry.Line, hud: HUD_Fra
 	o := &r.overlay
 	o.debug_count = 0
 	o.hud_count = 0
+	o.menu_slider = {}
+	if !hud.menu_open {
+		o.menu_frozen_width = 0
+	}
 
 	for line in debug_lines {
 		append_debug_vertex(o, line.from, line.color)
 		append_debug_vertex(o, line.to, line.color)
 	}
 
-	o.theme = ui_theme_init(r.target.config.height)
-	if !text_atlas_sync(r) {
+	requested_weight := hud.weight
+	if requested_weight == 0 {
+		requested_weight = BASE_WEIGHT
+	}
+	if !text_atlas_sync(r, requested_weight) {
 		return false
 	}
+	o.theme = ui_theme_init(r.target.config.height, o.atlas_applied_weight)
 	build_hud(o, f32(r.target.config.width), f32(r.target.config.height), hud)
 
 	frame := r.frame_index

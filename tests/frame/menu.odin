@@ -2,6 +2,7 @@
 #+vet !unused-procedures // @(test) procs are called by the test runner, not by name
 package frame_test
 
+import "core:math"
 import "core:testing"
 
 import "src:display"
@@ -51,4 +52,47 @@ menu_renders_without_the_hud_flag :: proc(t: ^testing.T) {
 	)
 	testing.expect(t, scene.hud.enabled, "menu needs the HUD overlay")
 	testing.expect(t, scene.hud.menu_open, "menu flag was dropped")
+}
+
+@(test)
+menu_slider_travel_stays_inside_the_panel :: proc(t: ^testing.T) {
+	sim, _, hud, _ := create_state(t)
+	defer game.simulation_destroy(&sim)
+	hud.menu.displays = display.fallback_list()
+	game.menu_open(&hud.menu)
+	game.menu_select(&hud.menu, 3)
+	game.menu_view(&hud.menu, sim.settings, false)
+
+	overlay, ok := build_menu_overlay(t, hud.menu.view)
+	testing.expect(t, ok, "the menu did not build")
+	if !ok {
+		return
+	}
+	defer destroy_overlay_scratch(&overlay)
+
+	panel := widest_quad(overlay, overlay.theme.surface_menu)
+	slider := overlay.menu_slider
+	padding := overlay.theme.spacing.xl
+	knob := overlay.theme.spacing.md
+	expected_travel := panel.width - padding * 2 - knob
+
+	testing.expect(t, slider.width > 0, "the slider has no travel")
+	testing.expectf(
+		t,
+		math.abs(slider.width - expected_travel) < 0.01,
+		"the travel is %v, expected %v",
+		slider.width,
+		expected_travel,
+	)
+	testing.expect(t, slider.x >= panel.x + padding, "the travel starts outside the panel")
+	testing.expect(
+		t,
+		slider.x + slider.width <= panel.x + panel.width - padding + 0.01,
+		"the travel runs past the panel",
+	)
+	testing.expect(
+		t,
+		slider.y >= panel.y && slider.y + slider.height <= panel.y + panel.height,
+		"the track leaves the panel",
+	)
 }

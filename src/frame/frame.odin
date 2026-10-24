@@ -39,6 +39,7 @@ build :: proc(
 	scratch: ^Scratch,
 ) -> Scene {
 	scene: Scene
+	scene.hud.weight = sim.settings.type_weight
 	scene.sun_direction = game.debug_mode_sun_direction(debug)
 
 	box_count := 0
@@ -83,6 +84,7 @@ build :: proc(
 			capture_hint = hud.capture_hint,
 			captured     = hud.captured,
 			menu         = hud.menu.view,
+			weight       = sim.settings.type_weight,
 		}
 	}
 	if scene.hud.enabled {

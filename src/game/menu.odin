@@ -2,24 +2,28 @@
 #+vet !unused-procedures // the agent harness calls the menu reset and selection API
 package game
 
+import "core:math"
+
 import "src:display"
 import "src:ui"
 
-MENU_ITEM_COUNT :: 7
-MENU_ROW_COUNT :: 9
-MENU_ROW_DIVIDER :: 6
-MENU_ROW_RESUME :: 7
-MENU_ROW_HEADER :: 8
+MENU_ITEM_COUNT :: 8
+MENU_ROW_COUNT :: 10
+MENU_ROW_DIVIDER :: 7
+MENU_ROW_RESUME :: 8
+MENU_ROW_HEADER :: 9
+TYPE_WEIGHT_STEP :: f32(10)
 MENU_HINT_COLUMNS :: 3
 MENU_HINT_COUNT :: 18
 
 MENU_TITLE :: "Settings"
-MENU_NOTE :: "Up/Down select · Left/Right change · Enter change · Esc close"
+MENU_NOTE :: "Up/Down select · Left/Right change · Drag slider · Enter change · Esc close"
 
 MENU_ITEM_NAMES := [MENU_ITEM_COUNT]string {
 	"Window mode",
 	"Display",
 	"Resolution",
+	"Type weight",
 	"Sprint mode",
 	"Crouch mode",
 	"Prone mode",
@@ -28,7 +32,7 @@ MENU_ITEM_NAMES := [MENU_ITEM_COUNT]string {
 
 // One row per menu item, in item order, so the harness `select` index and the
 // drawn row index stay independent of where the dividers sit.
-MENU_ITEM_ROWS := [MENU_ITEM_COUNT]int{0, 1, 2, 3, 4, 5, MENU_ROW_RESUME}
+MENU_ITEM_ROWS := [MENU_ITEM_COUNT]int{0, 1, 2, 3, 4, 5, 6, MENU_ROW_RESUME}
 
 MENU_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
 	{keys = "WASD", action = "move"},
@@ -76,6 +80,7 @@ Menu_Item :: enum {
 	Window_Mode,
 	Display,
 	Resolution,
+	Type_Weight,
 	Sprint,
 	Crouch,
 	Prone,
@@ -88,16 +93,19 @@ Menu_State :: struct {
 	view:     ui.Menu,
 	rows:     [MENU_ROW_COUNT]ui.Row,
 	hints:    [MENU_HINT_COUNT]ui.Hint_Cell,
-	storage:  Line_Buffer,
-	displays: display.List,
+	storage:         Line_Buffer,
+	displays:        display.List,
+	dragging_weight: bool,
 }
 
 menu_open :: proc(menu: ^Menu_State) {
 	menu.open = true
+	menu.dragging_weight = false
 }
 
 menu_close :: proc(menu: ^Menu_State) {
 	menu.open = false
+	menu.dragging_weight = false
 	menu.view = {}
 }
 
@@ -137,6 +145,12 @@ menu_change_setting :: proc(menu: ^Menu_State, settings: ^Settings, direction: i
 		change_display(menu, settings, direction)
 	case .Resolution:
 		change_resolution(menu, settings, direction)
+	case .Type_Weight:
+		settings.type_weight = clamp(
+			settings.type_weight + f32(direction) * TYPE_WEIGHT_STEP,
+			ui.TYPE_WEIGHT_MIN,
+			ui.TYPE_WEIGHT_MAX,
+		)
 	case .Sprint:
 		settings.sprint_mode = toggle_input_mode(settings.sprint_mode)
 	case .Crouch:
@@ -145,6 +159,19 @@ menu_change_setting :: proc(menu: ^Menu_State, settings: ^Settings, direction: i
 		settings.prone_mode = toggle_input_mode(settings.prone_mode)
 	}
 	return true
+}
+
+menu_set_type_weight :: proc(menu: ^Menu_State, settings: ^Settings, weight: f32) -> bool {
+	if !menu.open {
+		return false
+	}
+	settings.type_weight = clamp(math.round(weight), ui.TYPE_WEIGHT_MIN, ui.TYPE_WEIGHT_MAX)
+	return true
+}
+
+menu_set_type_weight_ratio :: proc(menu: ^Menu_State, settings: ^Settings, ratio: f32) -> bool {
+	span := ui.TYPE_WEIGHT_MAX - ui.TYPE_WEIGHT_MIN
+	return menu_set_type_weight(menu, settings, ui.TYPE_WEIGHT_MIN + clamp(ratio, 0, 1) * span)
 }
 
 menu_activate :: proc(menu: ^Menu_State, settings: ^Settings, direction := 1) -> bool {
@@ -177,11 +204,19 @@ menu_view :: proc(menu: ^Menu_State, settings: Settings, debug_active: bool) {
 		line_format(&menu.storage, 2, "%d×%d", resolution.width, resolution.height),
 		numeric = true,
 	)
-	menu_setting_row(menu, 3, MENU_ITEM_NAMES[3], input_mode_name(settings.sprint_mode))
-	menu_setting_row(menu, 4, MENU_ITEM_NAMES[4], input_mode_name(settings.crouch_mode))
-	menu_setting_row(menu, 5, MENU_ITEM_NAMES[5], input_mode_name(settings.prone_mode))
+	menu.rows[3] = {
+		kind    = .Slider,
+		label   = MENU_ITEM_NAMES[3],
+		value   = line_format(&menu.storage, 3, "%d", int(math.round(settings.type_weight))),
+		numeric = true,
+		ratio   = (settings.type_weight - ui.TYPE_WEIGHT_MIN) / (ui.TYPE_WEIGHT_MAX - ui.TYPE_WEIGHT_MIN),
+		ticks   = 9,
+	}
+	menu_setting_row(menu, 4, MENU_ITEM_NAMES[4], input_mode_name(settings.sprint_mode))
+	menu_setting_row(menu, 5, MENU_ITEM_NAMES[5], input_mode_name(settings.crouch_mode))
+	menu_setting_row(menu, 6, MENU_ITEM_NAMES[6], input_mode_name(settings.prone_mode))
 	menu.rows[MENU_ROW_DIVIDER] = {kind = .Divider}
-	menu.rows[MENU_ROW_RESUME] = {kind = .Action, label = MENU_ITEM_NAMES[6]}
+	menu.rows[MENU_ROW_RESUME] = {kind = .Action, label = MENU_ITEM_NAMES[7]}
 	menu.rows[MENU_ROW_HEADER] = {kind = .Header, label = "Controls"}
 
 	hints := MENU_CONTROL_HINTS

@@ -110,6 +110,7 @@ run :: proc() -> bool {
 			&hud.menu,
 			&sim.settings,
 			&events,
+			menu_slider_for_window(&state, &window),
 			&accumulator,
 			&menu_recapture,
 			&latches,

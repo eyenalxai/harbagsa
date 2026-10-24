@@ -11,7 +11,7 @@ import "src:renderer"
 text_measure_of_empty_text_is_zero :: proc(t: ^testing.T) {
 	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas, context.allocator)
+	defer renderer.text_atlas_destroy(&atlas)
 
 	theme := renderer.ui_theme_init(720)
 	testing.expect_value(t, renderer.text_measure(&atlas, theme.type_body, ""), 0)
@@ -21,18 +21,18 @@ text_measure_of_empty_text_is_zero :: proc(t: ^testing.T) {
 text_measure_of_one_glyph_is_its_advance :: proc(t: ^testing.T) {
 	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas, context.allocator)
+	defer renderer.text_atlas_destroy(&atlas)
 
 	theme := renderer.ui_theme_init(720)
-	index, found := renderer.text_codepoint_index('M')
-	testing.expect(t, found, "M must exist")
-
-	layer := &atlas.layers[renderer.text_layer_index(&atlas, theme.type_body)]
-	expected := layer.glyphs[index].advance
+	one := renderer.text_measure(&atlas, theme.type_body, "M")
+	two := renderer.text_measure(&atlas, theme.type_body, "MM")
+	testing.expect(t, one > 0, "the glyph must advance")
 	testing.expectf(
 		t,
-		math.abs(renderer.text_measure(&atlas, theme.type_body, "M") - expected) < 0.01,
-		"one glyph must measure its own advance",
+		math.abs(two - one * 2) < 0.01,
+		"two glyphs must advance twice: %v against %v",
+		two,
+		one * 2,
 	)
 }
 
@@ -40,7 +40,7 @@ text_measure_of_one_glyph_is_its_advance :: proc(t: ^testing.T) {
 text_tracking_adds_a_gap_between_glyphs_only :: proc(t: ^testing.T) {
 	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas, context.allocator)
+	defer renderer.text_atlas_destroy(&atlas)
 
 	theme := renderer.ui_theme_init(720)
 	tracked := theme.type_caption_caps
@@ -66,31 +66,44 @@ text_tracking_adds_a_gap_between_glyphs_only :: proc(t: ^testing.T) {
 text_kerning_tightens_a_pair :: proc(t: ^testing.T) {
 	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas, context.allocator)
+	defer renderer.text_atlas_destroy(&atlas)
 
 	theme := renderer.ui_theme_init(720)
 	style := theme.type_body
-	a, a_ok := renderer.text_codepoint_index('A')
-	v, v_ok := renderer.text_codepoint_index('V')
-	testing.expect(t, a_ok && v_ok, "A and V must exist")
-
-	layer := &atlas.layers[renderer.text_layer_index(&atlas, style)]
-	advances := layer.glyphs[a].advance + layer.glyphs[v].advance
 	measured := renderer.text_measure(&atlas, style, "AV")
+	separate :=
+		renderer.text_measure(&atlas, style, "A") + renderer.text_measure(&atlas, style, "V")
 	testing.expectf(
 		t,
-		measured < advances - 0.01,
+		measured < separate - 0.01,
 		"AV must kern tighter: %v measured against %v",
 		measured,
-		advances,
+		separate,
 	)
+}
+
+// Roboto Condensed widens as the axis rises. The atlas key must carry the
+// weight, or the heavy atlas would silently reuse the regular advances.
+@(test)
+text_weight_changes_the_advance :: proc(t: ^testing.T) {
+	light_atlas, light_ok := build_weight_atlas(t, 100)
+	testing.expect(t, light_ok, "the light atlas did not build")
+	defer renderer.text_atlas_destroy(&light_atlas)
+	heavy_atlas, heavy_ok := build_weight_atlas(t, 900)
+	testing.expect(t, heavy_ok, "the heavy atlas did not build")
+	defer renderer.text_atlas_destroy(&heavy_atlas)
+
+	text := "Hamburgefonstiv"
+	light := renderer.text_measure(&light_atlas, renderer.ui_theme_init(720, 100).type_body, text)
+	heavy := renderer.text_measure(&heavy_atlas, renderer.ui_theme_init(720, 900).type_body, text)
+	testing.expectf(t, heavy > light, "900 must be wider than 100: %v against %v", heavy, light)
 }
 
 @(test)
 text_measure_skips_glyphs_outside_the_atlas :: proc(t: ^testing.T) {
 	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas, context.allocator)
+	defer renderer.text_atlas_destroy(&atlas)
 
 	theme := renderer.ui_theme_init(720)
 	measured := renderer.text_measure(&atlas, theme.type_body, "\u2603")
@@ -101,7 +114,7 @@ text_measure_skips_glyphs_outside_the_atlas :: proc(t: ^testing.T) {
 text_baseline_sits_inside_the_line_box :: proc(t: ^testing.T) {
 	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas, context.allocator)
+	defer renderer.text_atlas_destroy(&atlas)
 
 	theme := renderer.ui_theme_init(720)
 	for style in ([3]renderer.Text_Type {
@@ -126,7 +139,7 @@ text_baseline_sits_inside_the_line_box :: proc(t: ^testing.T) {
 text_quads_land_on_the_pixel_grid :: proc(t: ^testing.T) {
 	atlas, ok := build_test_atlas(t)
 	testing.expect(t, ok, "the atlas did not build")
-	defer renderer.text_atlas_destroy(&atlas, context.allocator)
+	defer renderer.text_atlas_destroy(&atlas)
 
 	theme := renderer.ui_theme_init(720)
 	overlay := renderer.Overlay {
