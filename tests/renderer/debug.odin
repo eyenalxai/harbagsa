@@ -19,28 +19,42 @@ debug_taa_inputs_reset_history :: proc(t: ^testing.T) {
 	defer close_test_device(&device)
 	state := &device.state
 
-	debug := renderer.taa_debug(state)
+	debug := renderer.renderer_debug(state)
 	testing.expect(t, !debug.active, "debug overrides start active")
 	debug.active = true
 	debug.jitter = false
-	testing.expect(t, renderer.set_taa_debug(state, debug), "jitter change did not reset history")
+	testing.expect(t, renderer.set_renderer_debug(state, debug), "jitter change did not reset history")
 	testing.expect(t, state.taa.last_reset == .Debug_Override, "reset reason is not the override")
 	before := state.taa.reset_count
 
 	debug.freeze_shadow_phase = true
 	debug.shadow_phase = 12
-	testing.expect(t, renderer.set_taa_debug(state, debug), "shadow phase did not reset history")
+	testing.expect(t, renderer.set_renderer_debug(state, debug), "shadow phase did not reset history")
 	testing.expect_value(t, state.taa.reset_count, before + 1)
 	before = state.taa.reset_count
 
 	debug.clamp = false
-	testing.expect(t, renderer.set_taa_debug(state, debug), "clamp change did not reset history")
+	testing.expect(t, renderer.set_renderer_debug(state, debug), "clamp change did not reset history")
 	testing.expect_value(t, state.taa.reset_count, before + 1)
+	before = state.taa.reset_count
 
-	renderer.clear_taa_debug(state)
+	debug.sky = false
+	testing.expect(t, renderer.set_renderer_debug(state, debug), "sky change did not reset history")
+	testing.expect_value(t, state.taa.reset_count, before + 1)
+	before = state.taa.reset_count
+
+	debug.ao = false
+	testing.expect(t, renderer.set_renderer_debug(state, debug), "ao change did not reset history")
+	testing.expect_value(t, state.taa.reset_count, before + 1)
+	testing.expect(t, !renderer.renderer_debug(state).sky, "sky override did not stick")
+	testing.expect(t, !renderer.renderer_debug(state).ao, "ao override did not stick")
+
+	renderer.clear_renderer_debug(state)
 	testing.expect(t, !state.taa.debug.active, "clear left the overrides active")
 	testing.expect(t, state.taa.enabled, "clear left TAA off")
 	testing.expect(t, state.taa.last_reset == .Debug_Override, "clear did not record a reset")
+	testing.expect(t, state.taa.debug.sky, "clear left the sky off")
+	testing.expect(t, state.taa.debug.ao, "clear left AO off")
 }
 
 @(test)
@@ -53,15 +67,15 @@ debug_shadow_phase_is_frozen_or_rotating :: proc(t: ^testing.T) {
 	defer close_test_device(&device)
 	state := &device.state
 
-	debug := renderer.taa_debug(state)
+	debug := renderer.renderer_debug(state)
 	debug.active = true
 	debug.freeze_shadow_phase = true
 	debug.shadow_phase = 7
-	renderer.set_taa_debug(state, debug)
+	renderer.set_renderer_debug(state, debug)
 	testing.expect_value(t, renderer.taa_shadow_phase(state), u32(7))
 
 	debug.freeze_shadow_phase = false
-	renderer.set_taa_debug(state, debug)
+	renderer.set_renderer_debug(state, debug)
 	state.frame_count = 13
 	testing.expect_value(t, renderer.taa_shadow_phase(state), u32(13))
 }
@@ -75,10 +89,10 @@ render_digest_is_stable_for_a_static_scene :: proc(t: ^testing.T) {
 	}
 	defer close_test_device(&device)
 	state := &device.state
-	debug := renderer.taa_debug(state)
+	debug := renderer.renderer_debug(state)
 	debug.active = true
 	debug.taa = false
-	renderer.set_taa_debug(state, debug)
+	renderer.set_renderer_debug(state, debug)
 
 	sim := game.simulation_create()
 	if !game.simulation_is_valid(&sim) {

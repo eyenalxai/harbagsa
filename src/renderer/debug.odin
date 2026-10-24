@@ -7,7 +7,7 @@ package renderer
 // shipped renderer.
 RENDERER_DEBUG_ENABLED :: #config(ENABLE_RENDERER_DEBUG, false)
 
-TAA_Debug :: struct {
+Renderer_Debug :: struct {
 	active:             bool,
 	taa:                bool,
 	jitter:             bool,
@@ -16,30 +16,34 @@ TAA_Debug :: struct {
 	force_depth_trust:  bool,
 	freeze_shadow_phase: bool,
 	shadow_phase:       u32,
+	sky:                bool,
+	ao:                 bool,
 }
 
-taa_debug_default :: proc() -> TAA_Debug {
+renderer_debug_default :: proc() -> Renderer_Debug {
 	return {
 		taa = true,
 		jitter = true,
 		history_weight = -1,
 		clamp = true,
+		sky = true,
+		ao = true,
 	}
 }
 
-taa_debug :: proc(r: ^Renderer) -> TAA_Debug {
+renderer_debug :: proc(r: ^Renderer) -> Renderer_Debug {
 	debug := r.taa.debug
 	if !debug.active {
-		debug = taa_debug_default()
+		debug = renderer_debug_default()
 		debug.taa = r.taa.enabled
 		debug.shadow_phase = taa_shadow_phase(r)
 	}
 	return debug
 }
 
-// Any change to the override struct is a TAA input change: the resolve reads
-// every nonzero field. A new shadow phase therefore resets history too.
-set_taa_debug :: proc(r: ^Renderer, debug: TAA_Debug) -> bool {
+// An override can change the resolved image, so any change resets history.
+// A pixel comparison must settle after a toggle.
+set_renderer_debug :: proc(r: ^Renderer, debug: Renderer_Debug) -> bool {
 	previous := r.taa.debug
 	changed := previous != debug
 	r.taa.debug = debug
@@ -52,8 +56,8 @@ set_taa_debug :: proc(r: ^Renderer, debug: TAA_Debug) -> bool {
 	return changed
 }
 
-clear_taa_debug :: proc(r: ^Renderer) {
-	r.taa.debug = taa_debug_default()
+clear_renderer_debug :: proc(r: ^Renderer) {
+	r.taa.debug = renderer_debug_default()
 	r.taa.enabled = true
 	reset_history(r, .Debug_Override)
 }
