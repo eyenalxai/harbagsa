@@ -30,9 +30,24 @@ layout(set = 0, binding = 1) readonly buffer Objects {
 
 layout(set = 0, binding = 2) uniform accelerationStructureEXT scene_tlas;
 
+// std430: position.xyz is the light position and position.w its intensity;
+// color.rgb is the light color and color.w its range.
+struct Light {
+    vec4 position;
+    vec4 color;
+};
+
+layout(set = 0, binding = 3) readonly buffer Lights {
+    Light lights[];
+} light_set;
+
 const vec3 SUN_COLOR = vec3(1.0, 0.98, 0.94);
 const int SUN_SAMPLES = 16;
 const float GOLDEN_ANGLE = 2.39996323;
+const uint SUN_RAY_MASK = 0xFFu;
+// A lamp instance carries 0x01. The point shadow ray tests 0x02, so a lamp
+// never blocks its own light while the sun ray still sees it.
+const uint POINT_RAY_MASK = 0x02u;
 
 vec2 vogel_disk(int index, int count, float phase) {
     float radius = sqrt((float(index) + 0.5) / float(count));
@@ -52,13 +67,13 @@ vec3 sun_direction(vec3 to_light, int index, int count, float phase) {
     return normalize(to_light + tangent * disk.x + bitangent * disk.y);
 }
 
-bool occluded(vec3 origin, vec3 direction, float max_distance) {
+bool occluded(vec3 origin, vec3 direction, uint mask) {
     rayQueryEXT query;
     rayQueryInitializeEXT(
         query,
         scene_tlas,
         gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT,
-        0xFF,
+        mask,
         origin,
         0.001,
         direction,
@@ -77,34 +92,39 @@ float sun_visibility(vec3 world_position, vec3 normal, vec3 to_light) {
     int visible = 0;
     for (int i = 0; i < SUN_SAMPLES; ++i) {
         vec3 direction = sun_direction(to_light, i, SUN_SAMPLES, phase);
-        if (!occluded(origin, direction, 1000.0)) {
+        if (!occluded(origin, direction, SUN_RAY_MASK)) {
             visible += 1;
         }
     }
     return float(visible) / float(SUN_SAMPLES);
 }
 
-// The shader constant must match AO_SAMPLES in scene.odin. A cosine-weighted
-// hemisphere sample already carries the cosine and the 1/pi of the AO
-// integral, so the visible fraction is the AO term.
-const int AO_SAMPLES = 8;
-
-float ambient_visibility(vec3 position, vec3 normal, float radius, float phase) {
-    vec3 origin = position + normal * 0.01;
-    vec3 up = abs(normal.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
-    vec3 tangent = normalize(cross(up, normal));
-    vec3 bitangent = cross(normal, tangent);
-
-    int visible = 0;
-    for (int i = 0; i < AO_SAMPLES; ++i) {
-        vec2 disk = vogel_disk(i, AO_SAMPLES, phase);
-        float height = sqrt(max(0.0, 1.0 - dot(disk, disk)));
-        vec3 direction = normalize(tangent * disk.x + bitangent * disk.y + normal * height);
-        if (!occluded(origin, direction, radius)) {
-            visible += 1;
+vec3 point_light_radiance(vec3 world_position, vec3 normal) {
+    int count = int(camera.sun.y);
+    bool shadows = camera.sun.z > 0.5;
+    vec3 sum = vec3(0.0);
+    for (int i = 0; i < count; ++i) {
+        Light light = light_set.lights[i];
+        vec3 offset = light.position.xyz - world_position;
+        float distance = length(offset);
+        if (distance <= 0.0 || distance >= light.color.w) {
+            continue;
         }
+        vec3 direction = offset / distance;
+        float diffuse = max(dot(normal, direction), 0.0);
+        if (diffuse <= 0.0) {
+            continue;
+        }
+        float reach = distance / light.color.w;
+        float falloff = 1.0 - reach * reach;
+        falloff *= falloff;
+        float visibility = 1.0;
+        if (shadows && occluded(world_position + normal * 0.002, direction, POINT_RAY_MASK)) {
+            visibility = 0.0;
+        }
+        sum += light.color.rgb * (light.position.w * diffuse * falloff * visibility);
     }
-    return float(visible) / float(AO_SAMPLES);
+    return sum;
 }
 
 void main() {
@@ -117,18 +137,9 @@ void main() {
     if (diffuse > 0.0) {
         visibility = sun_visibility(v_world_position, normal, to_light);
     }
-    vec3 ambient = camera.lighting.w > 0.5 ? sky_ambient(normal) : camera.ambient.rgb;
-    float ao = 1.0;
-    if (camera.lighting.z > 0.5) {
-        // A different irrational than the sun phase keeps the two sample sets
-        // from sharing a rotation.
-        float phase = fract(
-            interleaved_gradient_noise(gl_FragCoord.xy) + camera.screen.w * 0.7548776662
-        ) * 6.2831853;
-        ao = ambient_visibility(v_world_position, normal, camera.lighting.x, phase);
-        ao = mix(1.0, ao, camera.lighting.y);
-    }
-    vec3 color = v_color * (ambient * ao + diffuse * SUN_COLOR * visibility);
+    vec3 lit = camera.ambient.rgb + diffuse * SUN_COLOR * visibility;
+    lit += point_light_radiance(v_world_position, normal);
+    vec3 color = v_color * lit + v_color * object.color.a;
 
     vec4 world_position = vec4(v_world_position, 1.0);
     vec4 previous_world = object.prev_model * vec4(v_local_position, 1.0);

@@ -129,7 +129,23 @@ _Avoid_: Scene colours, 3D palette
 
 **Sun**:
 The directional light that lights the arena and casts the sun shadows. Debug mode rotates it.
-_Avoid_: Lamp, light source
+_Avoid_: Light source
+
+**Point light**:
+A light with a position, colour, intensity, and range. The renderer holds up to 8 per frame, and each costs one hard shadow ray per fragment. A lamp prefab owns one.
+_Avoid_: Lamp (the prefab), bulb
+
+**Emissive box**:
+A box whose colour adds to its shaded colour after the sun and point lights. It carries an emissive strength in the box data. Lamps are emissive so they glow even when their light is not in the active eight.
+_Avoid_: Glow shader, unlit material
+
+**Light mask**:
+The TLAS instance mask that decides which acceleration-structure ray queries see a box. Normal boxes use `0xFF`, lamps use `0x01`, the point-light shadow ray tests `0x02`, and the sun ray tests `0xFF`.
+_Avoid_: Layer mask, collision mask
+
+**Synthetic light**:
+A fixed test light that the renderer debug override injects, so a perf run can measure the light budget before the game has lamp prefabs.
+_Avoid_: Fake light
 
 **Sun direction**:
 The unit vector from a point in the world toward the sun. The sky angles describe
@@ -180,11 +196,11 @@ The acceleration structure for the unit cube mesh. Every TLAS instance shares it
 _Avoid_: Mesh BVH
 
 **Ray query**:
-A shader ray test against an acceleration structure. The sun shadow traces one ray per sun sample and counts the unblocked rays.
+A shader ray test against an acceleration structure. The sun shadow traces one ray per sun sample and counts the unblocked rays; each point light traces one ray.
 _Avoid_: Ray trace, RTX
 
 **Shadow ray**:
-A ray from a surface point toward a sample point on the sun. A hit means the sun sample is blocked.
+A ray from a surface point toward a sun sample or a point light. A hit means the sample or light is blocked.
 _Avoid_: Light ray
 
 **Crate**:
@@ -391,7 +407,8 @@ _Avoid_: Z prepass
 
 **Lit pass**:
 The color scope of the scene pass. It loads the depth the prepass wrote and
-shades the boxes, including the sun shadows.
+shades the boxes, including the sun and point-light shadows and the emissive
+term.
 _Avoid_: Main pass, color pass
 
 **Backface culling**:
@@ -598,11 +615,11 @@ The frames after a history reset while the sample count grows from 1 to 512. The
 _Avoid_: Warmup
 
 **Renderer state**:
-The harness state block that describes the last rendered frame: frame count, TAA state, jitter index, history validity, convergence frames, history read index and weight, reset count and reason, shadow phase, and the applied atlas weight.
+The harness state block that describes the last rendered frame: frame count, TAA state, jitter index, history validity, convergence frames, history read index and weight, reset count and reason, shadow phase, and active point-light count.
 _Avoid_: Render stats, GPU state
 
 **Render digest**:
-The FNV-1a hash of the effective render inputs: camera, sun direction and angular diameter, boxes, jitter, shadow phase, applied atlas weight, and view flags. It is separate from the simulation digest. It does not cover the target extent.
+The FNV-1a hash of the effective render inputs: camera, sun, boxes, box emissive strengths, point lights, jitter, shadow phase, and view flags. It is separate from the simulation digest.
 _Avoid_: Frame hash, image hash
 
 **History reset reason**:
@@ -610,7 +627,7 @@ The cause recorded at each TAA history reset: create, extent, toggle, teleport, 
 _Avoid_: Reset flag
 
 **Renderer debug override**:
-A gated change to a renderer input for diagnosis: TAA, jitter, history weight, clamp, depth trust, shadow phase, sky, or ambient occlusion. Every change resets history.
+A gated change to a TAA or point-light input for diagnosis: TAA, jitter, history weight, clamp, depth trust, shadow phase, point-light shadows, or synthetic lights. Every change resets history.
 _Avoid_: Debug flag
 
 **Debug override gate**:

@@ -21,6 +21,7 @@ debug_taa_inputs_reset_history :: proc(t: ^testing.T) {
 
 	debug := renderer.renderer_debug(state)
 	testing.expect(t, !debug.active, "debug overrides start active")
+	testing.expect(t, debug.light_shadows, "point-light shadows start off")
 	debug.active = true
 	debug.jitter = false
 	testing.expect(t, renderer.set_renderer_debug(state, debug), "jitter change did not reset history")
@@ -38,20 +39,20 @@ debug_taa_inputs_reset_history :: proc(t: ^testing.T) {
 	testing.expect_value(t, state.taa.reset_count, before + 1)
 	before = state.taa.reset_count
 
-	debug.sky = false
-	testing.expect(t, renderer.set_renderer_debug(state, debug), "sky change did not reset history")
+	debug.light_shadows = false
+	testing.expect(t, renderer.set_renderer_debug(state, debug), "light shadow change did not reset history")
 	testing.expect_value(t, state.taa.reset_count, before + 1)
 	before = state.taa.reset_count
 
-	debug.ao = false
-	testing.expect(t, renderer.set_renderer_debug(state, debug), "ao change did not reset history")
+	debug.synthetic_lights = 8
+	testing.expect(t, renderer.set_renderer_debug(state, debug), "synthetic lights did not reset history")
 	testing.expect_value(t, state.taa.reset_count, before + 1)
-	testing.expect(t, !renderer.renderer_debug(state).sky, "sky override did not stick")
-	testing.expect(t, !renderer.renderer_debug(state).ao, "ao override did not stick")
 
 	renderer.clear_renderer_debug(state)
 	testing.expect(t, !state.taa.debug.active, "clear left the overrides active")
 	testing.expect(t, state.taa.enabled, "clear left TAA off")
+	testing.expect(t, state.taa.debug.light_shadows, "clear left light shadows off")
+	testing.expect_value(t, state.taa.debug.synthetic_lights, 0)
 	testing.expect(t, state.taa.last_reset == .Debug_Override, "clear did not record a reset")
 	testing.expect(t, state.taa.debug.sky, "clear left the sky off")
 	testing.expect(t, state.taa.debug.ao, "clear left AO off")

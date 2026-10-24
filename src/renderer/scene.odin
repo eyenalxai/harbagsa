@@ -51,6 +51,10 @@ Scene :: struct {
 	object_buffers: [MAX_FRAMES_IN_FLIGHT]vk.Buffer,
 	object_memory:  [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
 	object_mapped:  [MAX_FRAMES_IN_FLIGHT]rawptr,
+
+	light_buffers: [MAX_FRAMES_IN_FLIGHT]vk.Buffer,
+	light_memory:  [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
+	light_mapped:  [MAX_FRAMES_IN_FLIGHT]rawptr,
 }
 
 init_scene :: proc(r: ^Renderer) -> Error {
@@ -102,6 +106,12 @@ destroy_scene :: proc(r: ^Renderer) {
 			r.scene.object_mapped[i] = nil
 		}
 		destroy_buffer(r, &r.scene.object_buffers[i], &r.scene.object_memory[i])
+
+		if r.scene.light_mapped[i] != nil {
+			vk.UnmapMemory(r.device, r.scene.light_memory[i])
+			r.scene.light_mapped[i] = nil
+		}
+		destroy_buffer(r, &r.scene.light_buffers[i], &r.scene.light_memory[i])
 	}
 
 	destroy_buffer(r, &r.scene.vertex_buffer, &r.scene.vertex_memory)
@@ -113,7 +123,7 @@ update_camera :: proc(
 	r: ^Renderer,
 	camera: Camera,
 	light_direction: [3]f32,
-	sun_angular_diameter: f32,
+	light_count: int,
 ) -> bool {
 	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
 	height := f32(extent.height)
@@ -183,7 +193,12 @@ update_camera :: proc(
 		ambient = {AMBIENT_COLOR.x, AMBIENT_COLOR.y, AMBIENT_COLOR.z, 0},
 		// The sun sample pattern rotates only while TAA can average it.
 		screen = {srgb_gamma(r), f32(extent.width), height, f32(r.taa.shadow_phase)},
-		sun = {math.tan(sun_angular_diameter * 0.5), CAMERA_FAR, 0, 0},
+		sun = {
+			math.tan(f32(SUN_ANGULAR_DIAMETER * 0.5)),
+			f32(light_count),
+			r.taa.debug.active && !r.taa.debug.light_shadows ? 0 : 1,
+			0,
+		},
 		jitter = {jitter.x, jitter.y, 0, 0},
 		lighting = {
 			AO_RADIUS,

@@ -13,7 +13,7 @@ renderer_debug_parses_every_override :: proc(t: ^testing.T) {
 	command, error := harness.command_parse_string(
 		`{"cmd": "renderer_debug", "taa": false, "jitter": false, "history_weight": 0.25,
 		  "clamp": false, "depth_trust": true, "freeze_shadow_phase": true,
-		  "shadow_phase": 9, "sky": false, "ao": false}`,
+		  "shadow_phase": 9, "light_shadows": false, "synthetic_lights": 8}`,
 		context.allocator,
 	)
 	defer harness.command_destroy(&command, context.allocator)
@@ -30,8 +30,8 @@ renderer_debug_parses_every_override :: proc(t: ^testing.T) {
 	testing.expect(t, debug.has_depth_trust && debug.depth_trust, "depth trust was not parsed")
 	testing.expect(t, debug.has_freeze_shadow_phase, "freeze was not parsed")
 	testing.expect(t, debug.has_shadow_phase && debug.shadow_phase == 9, "phase was not parsed")
-	testing.expect(t, debug.has_sky && !debug.sky, "sky was not parsed")
-	testing.expect(t, debug.has_ao && !debug.ao, "ao was not parsed")
+	testing.expect(t, debug.has_light_shadows && !debug.light_shadows, "light shadows were not parsed")
+	testing.expect(t, debug.has_synthetic_lights && debug.synthetic_lights == 8, "synthetic lights were not parsed")
 }
 
 @(test)
@@ -40,8 +40,9 @@ renderer_debug_rejects_bad_fields :: proc(t: ^testing.T) {
 		`{"cmd": "renderer_debug", "shadow_phase": 64}`,
 		`{"cmd": "renderer_debug", "history_weight": 1.5}`,
 		`{"cmd": "renderer_debug", "clear": true, "jitter": false}`,
-		`{"cmd": "renderer_debug", "sky": 1}`,
-		`{"cmd": "renderer_debug", "ao": "off"}`,
+		`{"cmd": "renderer_debug", "clear": true, "synthetic_lights": 2}`,
+		`{"cmd": "renderer_debug", "synthetic_lights": 9}`,
+		`{"cmd": "renderer_debug", "light_shadows": 1}`,
 		`{"cmd": "renderer_debug", "speed": 2}`,
 	}
 	for line in bad {
@@ -99,7 +100,7 @@ renderer_debug_needs_the_gate :: proc(t: ^testing.T) {
 		t,
 		&session,
 		`{"cmd": "renderer_debug", "jitter": false, "history_weight": 0.5, "shadow_phase": 3,
-		  "sky": false, "ao": false}`,
+		  "light_shadows": false, "synthetic_lights": 8}`,
 	)
 	testing.expectf(t, reply.ok, "gated debug command failed: %s", reply.error)
 	harness.reply_destroy(&reply, context.allocator)
@@ -108,8 +109,8 @@ renderer_debug_needs_the_gate :: proc(t: ^testing.T) {
 	testing.expect(t, fake.debug.history_weight == 0.5, "history weight was not set")
 	testing.expect(t, fake.debug.freeze_shadow_phase, "shadow phase was not frozen")
 	testing.expect(t, fake.debug.shadow_phase == 3, "shadow phase was not set")
-	testing.expect(t, !fake.debug.sky, "sky was not disabled")
-	testing.expect(t, !fake.debug.ao, "ao was not disabled")
+	testing.expect(t, !fake.debug.light_shadows, "light shadows were not disabled")
+	testing.expect(t, fake.debug.synthetic_lights == 8, "synthetic lights were not set")
 
 	reply = execute(t, &session, `{"cmd": "renderer_debug", "clear": true}`)
 	testing.expectf(t, reply.ok, "clear failed: %s", reply.error)

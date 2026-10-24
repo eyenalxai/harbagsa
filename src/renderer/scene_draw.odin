@@ -31,15 +31,12 @@ record_scene :: proc(
 	if r.taa.has_prev_models && box_count != r.taa.prev_model_count {
 		reset_history(r, .Scene_Change)
 	}
-	if r.taa.has_prev_sun &&
-	   (r.taa.prev_light_direction != view.light_direction ||
-		   r.taa.prev_sun_angular_diameter != view.sun_angular_diameter) {
-		reset_history(r, .Scene_Change)
+	lights := frame_lights(r, view.lights)
+	if !write_light_data(r, lights) {
+		return false
 	}
-	r.taa.prev_light_direction = view.light_direction
-	r.taa.prev_sun_angular_diameter = view.sun_angular_diameter
-	r.taa.has_prev_sun = true
-	if !update_camera(r, view.camera, view.light_direction, view.sun_angular_diameter) {
+	lights = lights[:r.light_count]
+	if !update_camera(r, view.camera, view.light_direction, r.light_count) {
 		return false
 	}
 	debug := renderer_debug(r)
@@ -51,6 +48,7 @@ record_scene :: proc(
 			light_direction = view.light_direction,
 			sun_angular_diameter = view.sun_angular_diameter,
 			boxes = view.boxes,
+			lights = lights,
 			jitter = r.taa.current_jitter,
 			shadow_phase = r.taa.shadow_phase,
 			atlas_weight = text_atlas_applied_weight(r),
@@ -123,7 +121,7 @@ write_object_data :: proc(r: ^Renderer, boxes: []geometry.Box) -> bool {
 		data[index] = Object_Data {
 			model = models[index],
 			prev_model = previous,
-			color = box.color,
+			color = {box.color.x, box.color.y, box.color.z, box.emissive},
 		}
 	}
 	for index in 0 ..< len(boxes) {

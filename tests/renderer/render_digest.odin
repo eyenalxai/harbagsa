@@ -21,6 +21,7 @@ digest_input :: proc() -> renderer.Render_Digest_Input {
 		light_direction = {0.3, -0.9, 0.2},
 		sun_angular_diameter = 0.53 * 3.14159265 / 180.0,
 		boxes = {},
+		lights = {},
 		jitter = {0.001, -0.002},
 		shadow_phase = 7,
 		atlas_weight = 400,
@@ -71,6 +72,36 @@ render_digest_changes_with_each_render_input :: proc(t: ^testing.T) {
 		t,
 		renderer.render_digest(boxes).value != boxes_digest,
 		"box color did not change the digest",
+	)
+
+	emissive_digest := renderer.render_digest(boxes).value
+	boxes.boxes[0].emissive = 1
+	testing.expect(
+		t,
+		renderer.render_digest(boxes).value != emissive_digest,
+		"box emissive did not change the digest",
+	)
+
+	lights := base
+	lights.lights = []renderer.Light {
+		{position = {1, 2, 3}, intensity = 2, color = {1, 0.5, 0.25}, range = 8},
+	}
+	lights_digest := renderer.render_digest(lights).value
+	testing.expect(t, lights_digest != baseline.value, "lights did not change the digest")
+
+	lights.lights[0].intensity = 3
+	testing.expect(
+		t,
+		renderer.render_digest(lights).value != lights_digest,
+		"light intensity did not change the digest",
+	)
+
+	lights.lights[0].intensity = 2
+	lights.lights[0].range = 9
+	testing.expect(
+		t,
+		renderer.render_digest(lights).value != lights_digest,
+		"light range did not change the digest",
 	)
 
 	jitter := base

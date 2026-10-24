@@ -7,17 +7,19 @@ package renderer
 // shipped renderer.
 RENDERER_DEBUG_ENABLED :: #config(ENABLE_RENDERER_DEBUG, false)
 
+// The overrides cover TAA and the point-light path. Any change resets TAA
+// history, because an override changes the image the history describes.
 Renderer_Debug :: struct {
-	active:             bool,
-	taa:                bool,
-	jitter:             bool,
-	history_weight:     f32,
-	clamp:              bool,
-	force_depth_trust:  bool,
+	active:              bool,
+	taa:                 bool,
+	jitter:              bool,
+	history_weight:      f32,
+	clamp:               bool,
+	force_depth_trust:   bool,
 	freeze_shadow_phase: bool,
-	shadow_phase:       u32,
-	sky:                bool,
-	ao:                 bool,
+	shadow_phase:        u32,
+	light_shadows:       bool,
+	synthetic_lights:    int,
 }
 
 renderer_debug_default :: proc() -> Renderer_Debug {
@@ -26,8 +28,7 @@ renderer_debug_default :: proc() -> Renderer_Debug {
 		jitter = true,
 		history_weight = -1,
 		clamp = true,
-		sky = true,
-		ao = true,
+		light_shadows = true,
 	}
 }
 
@@ -41,8 +42,6 @@ renderer_debug :: proc(r: ^Renderer) -> Renderer_Debug {
 	return debug
 }
 
-// An override can change the resolved image, so any change resets history.
-// A pixel comparison must settle after a toggle.
 set_renderer_debug :: proc(r: ^Renderer, debug: Renderer_Debug) -> bool {
 	previous := r.taa.debug
 	changed := previous != debug

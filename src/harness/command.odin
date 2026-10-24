@@ -134,8 +134,8 @@ Renderer_Debug_Command :: struct {
 	depth_trust:             bool,
 	freeze_shadow_phase:     bool,
 	shadow_phase:            int,
-	sky:                     bool,
-	ao:                      bool,
+	light_shadows:           bool,
+	synthetic_lights:        int,
 	has_taa:                 bool,
 	has_jitter:              bool,
 	has_history_weight:      bool,
@@ -143,8 +143,8 @@ Renderer_Debug_Command :: struct {
 	has_depth_trust:         bool,
 	has_freeze_shadow_phase: bool,
 	has_shadow_phase:        bool,
-	has_sky:                 bool,
-	has_ao:                  bool,
+	has_light_shadows:       bool,
+	has_synthetic_lights:    bool,
 }
 
 Command :: struct {

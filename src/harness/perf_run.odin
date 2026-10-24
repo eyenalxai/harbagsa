@@ -73,6 +73,12 @@ session_perf :: proc(session: ^Session, command: Perf_Command) -> string {
 		session.trace_samples = make([dynamic]perf.Sample, 0, len(samples), session.allocator)
 		append(&session.trace_samples, ..samples[:])
 		session.has_trace = true
+		record := Trace_Record {
+			name = strings.clone(command.trace, session.allocator),
+			samples = make([]perf.Sample, len(samples), session.allocator),
+		}
+		copy(record.samples, samples[:])
+		append(&session.traces, record)
 	}
 	summary := perf.Summary {
 		measured = len(samples),

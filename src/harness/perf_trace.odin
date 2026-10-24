@@ -32,6 +32,23 @@ write_session_trace :: proc(session: ^Session, run_dir: string) -> string {
 	return ""
 }
 
+// A run may measure more than one side in one scenario, so every perf command
+// that asks for a trace keeps its own file.
+write_session_traces :: proc(session: ^Session, run_dir: string) -> string {
+	for &trace in session.traces {
+		path := perf_trace_path(trace.name, run_dir, session.allocator)
+		if write_error := write_perf_trace(path, trace.samples); write_error != "" {
+			delete(path, session.allocator)
+			return write_error
+		}
+		if session.trace_path != "" {
+			delete(session.trace_path, session.allocator)
+		}
+		session.trace_path = path
+	}
+	return ""
+}
+
 write_perf_trace :: proc(path: string, samples: []perf.Sample) -> string {
 	out := make([dynamic]u8, 0, len(samples) * 220, context.allocator)
 	defer delete(out)

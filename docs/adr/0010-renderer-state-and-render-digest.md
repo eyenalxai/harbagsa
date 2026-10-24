@@ -20,12 +20,12 @@ scene.
 
 - `renderer` holds the frame count, TAA state, jitter index, history validity,
   convergence frames, history read index, history weight, reset count, last
-  reset reason, shadow phase, and the applied atlas weight. The values describe
+  reset reason, shadow phase, and active point-light count. The values describe
   the last frame the renderer recorded, not the next one.
-- `render_digest` is FNV-1a over the target extent, the effective camera, the
-  sun direction and angular diameter, every box, the jitter, the shadow phase,
-  the applied atlas weight, and the view flags. If a frame has the same digest,
-  its render inputs and its projection match.
+- `render_digest` is FNV-1a over the effective camera, the sun direction, every
+  box, the box emissive strengths, the point lights, the jitter, the shadow
+  phase, and the view flags. If a frame has the same digest, its render inputs
+  match.
 - `history_weight` is the weight the next resolve would give the history,
   `count / (count + 1)`, from the renderer's convergence counter. A per-pixel
   count would need a readback; the scalar is enough to tell convergence from a

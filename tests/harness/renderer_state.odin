@@ -36,7 +36,8 @@ renderer_state_reaches_the_state_and_checks :: proc(t: ^testing.T) {
 		reset_count        = 2,
 		last_reset         = .Teleport,
 		shadow_phase       = 12,
-		atlas_weight       = 900,
+		light_count        = 3,
+		debug              = {light_shadows = true},
 	}
 	state := harness.session_state(&session)
 	defer harness.state_destroy(&state, context.allocator)
@@ -44,7 +45,8 @@ renderer_state_reaches_the_state_and_checks :: proc(t: ^testing.T) {
 	testing.expect_value(t, state.renderer.frame_count, u32(12))
 	testing.expect_value(t, state.renderer.last_reset, "teleport")
 	testing.expect(t, state.renderer.taa_enabled, "TAA flag was dropped")
-	testing.expect_value(t, state.renderer.atlas_weight, f32(900))
+	testing.expect_value(t, state.renderer.light_count, 3)
+	testing.expect(t, state.renderer.debug.light_shadows, "light shadow default was dropped")
 
 	command := harness.Check_Command {
 		field = "renderer.atlas_weight",
@@ -63,6 +65,15 @@ renderer_state_reaches_the_state_and_checks :: proc(t: ^testing.T) {
 	convergence_result := harness.check_evaluate(command, state, {}, nil, context.allocator)
 	defer harness.check_result_destroy(&convergence_result, context.allocator)
 	testing.expect(t, convergence_result.ok, "renderer check did not pass")
+
+	light_command := harness.Check_Command {
+		field = "renderer.light_count",
+		op    = .Eq,
+		value = {kind = .Number, number = 3},
+	}
+	light_result := harness.check_evaluate(light_command, state, {}, nil, context.allocator)
+	defer harness.check_result_destroy(&light_result, context.allocator)
+	testing.expect(t, light_result.ok, "light count check did not pass")
 
 	missing := harness.Check_Command {
 		field = "renderer.speed",

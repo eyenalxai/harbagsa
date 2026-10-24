@@ -82,6 +82,7 @@ Renderer :: struct {
 	gpu_times:       perf.Gpu_Times,
 	frame_index:     int,
 	frame_count:     u32,
+	light_count:     int,
 	clear_color:     [4]f32,
 	timestamp_period:     f32,
 	timestamp_valid_bits: u32,

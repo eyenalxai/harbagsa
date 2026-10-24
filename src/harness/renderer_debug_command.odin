@@ -3,6 +3,8 @@ package harness
 
 import "core:encoding/json"
 
+import "src:renderer"
+
 RENDERER_DEBUG_KEYS :: []string {
 	"cmd",
 	"clear",
@@ -13,8 +15,8 @@ RENDERER_DEBUG_KEYS :: []string {
 	"depth_trust",
 	"freeze_shadow_phase",
 	"shadow_phase",
-	"sky",
-	"ao",
+	"light_shadows",
+	"synthetic_lights",
 }
 
 RENDERER_DEBUG_BLOCK_KEYS :: []string {
@@ -26,8 +28,8 @@ RENDERER_DEBUG_BLOCK_KEYS :: []string {
 	"depth_trust",
 	"freeze_shadow_phase",
 	"shadow_phase",
-	"sky",
-	"ao",
+	"light_shadows",
+	"synthetic_lights",
 }
 
 @(private)
@@ -107,21 +109,21 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 		command.shadow_phase = int(phase)
 		command.has_shadow_phase = true
 	}
-	if value, has := json_get(object, "sky"); has {
+	if value, has := json_get(object, "light_shadows"); has {
 		flag, ok := json_boolean(value)
 		if !ok {
-			return {}, format_error("%s", "'sky' must be a boolean")
+			return {}, "'light_shadows' must be a boolean"
 		}
-		command.sky = flag
-		command.has_sky = true
+		command.light_shadows = flag
+		command.has_light_shadows = true
 	}
-	if value, has := json_get(object, "ao"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'ao' must be a boolean")
+	if value, has := json_get(object, "synthetic_lights"); has {
+		count, ok := json_integer(value)
+		if !ok || count < 0 || count > renderer.MAX_POINT_LIGHTS {
+			return {}, "'synthetic_lights' must be an integer in [0, 8]"
 		}
-		command.ao = flag
-		command.has_ao = true
+		command.synthetic_lights = int(count)
+		command.has_synthetic_lights = true
 	}
 	if command.clear {
 		if command.has_taa ||
@@ -131,9 +133,9 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 		   command.has_depth_trust ||
 		   command.has_freeze_shadow_phase ||
 		   command.has_shadow_phase ||
-		   command.has_sky ||
-		   command.has_ao {
-			return {}, format_error("%s", "'clear' cannot be combined with overrides")
+		   command.has_light_shadows ||
+		   command.has_synthetic_lights {
+			return {}, "'clear' cannot be combined with overrides"
 		}
 	}
 	return command, ""

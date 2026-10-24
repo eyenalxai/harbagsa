@@ -12,9 +12,13 @@ import "src:game"
 import perf_pkg "src:perf"
 import "src:renderer"
 
+Trace_Record :: struct {
+	name:    string,
+	samples: []perf_pkg.Sample,
+}
+
 Session :: struct {
 	allocator: mem.Allocator,
-
 	sim:      game.Simulation,
 	debug:    game.Debug_Mode,
 	hud:      game.HUD_State,
@@ -58,6 +62,7 @@ Session :: struct {
 	trace_samples:   [dynamic]perf_pkg.Sample,
 	trace_path:      string,
 	has_trace:       bool,
+	traces:          [dynamic]Trace_Record,
 
 	debug_renderer: bool,
 
@@ -86,7 +91,7 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 	session.checks = make([dynamic]Check_Result, 0, 8, allocator)
 	session.failures = make([dynamic]string, 0, 8, allocator)
 	session.recorded = make([dynamic]string, 0, 16, allocator)
-	session.perf_reports = make([dynamic]Perf_Report, 0, 4, allocator)
+	session.traces = make([dynamic]Trace_Record, 0, 2, allocator)
 	return session, ""
 }
 
@@ -126,12 +131,11 @@ session_destroy :: proc(session: ^Session) {
 	if session.render_digest_text != "" {
 		delete(session.render_digest_text, session.allocator)
 	}
-	for &report in session.perf_reports {
-		if report.name != "" {
-			delete(report.name, session.allocator)
-		}
+	for trace in session.traces {
+		delete(trace.name, session.allocator)
+		delete(trace.samples, session.allocator)
 	}
-	delete(session.perf_reports)
+	delete(session.traces)
 	delete(session.trace_samples)
 	session^ = {}
 }
