@@ -132,11 +132,11 @@ run :: proc() -> bool {
 			}
 			if events.reset_scene_pressed {
 				game.debug_mode_reset_scene(&debug, &sim)
-				renderer.reset_history(&state)
+				renderer.reset_history(&state, .Scene_Reset)
 				clear_latches(&latches)
 			} else if events.reset_pressed {
 				game.debug_mode_reset_player(&debug, &sim)
-				renderer.reset_history(&state)
+				renderer.reset_history(&state, .Player_Reset)
 				clear_latches(&latches)
 			}
 		}

@@ -141,9 +141,14 @@ update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> 
 
 	jitter: [2]f32
 	if r.taa.enabled {
+		r.taa.applied_jitter_index = r.taa.jitter_index
 		jitter = taa_jitter(r.taa.jitter_index, extent)
 		r.taa.jitter_index = (r.taa.jitter_index + 1) % TAA_JITTER_SAMPLES
+	} else {
+		r.taa.applied_jitter_index = 0
 	}
+	r.taa.current_jitter = jitter
+	r.taa.shadow_phase = r.taa.enabled ? r.frame_count % 64 : 0
 
 	buffer^ = Camera_Uniform {
 		view = view,
@@ -152,7 +157,7 @@ update_camera :: proc(r: ^Renderer, camera: Camera, light_direction: [3]f32) -> 
 		light_direction = {light_direction.x, light_direction.y, light_direction.z, 0},
 		ambient = {AMBIENT_COLOR.x, AMBIENT_COLOR.y, AMBIENT_COLOR.z, 0},
 		// The sun sample pattern rotates only while TAA can average it.
-		screen = {srgb_gamma(r), f32(extent.width), height, r.taa.enabled ? f32(r.frame_count % 64) : 0},
+		screen = {srgb_gamma(r), f32(extent.width), height, f32(r.taa.shadow_phase)},
 		sun = {math.tan(f32(SUN_ANGULAR_DIAMETER * 0.5)), 0, 0, 0},
 		jitter = {jitter.x, jitter.y, 0, 0},
 	}

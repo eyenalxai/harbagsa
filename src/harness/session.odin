@@ -5,6 +5,7 @@ import "core:fmt"
 import "core:mem"
 import "core:strings"
 
+import "src:digest"
 import "src:display"
 import "src:frame"
 import "src:game"
@@ -31,6 +32,11 @@ Session :: struct {
 	present:           bool,
 	render_every_step: bool,
 	render_failed:     bool,
+
+	renderer_report:   renderer.Renderer_Report,
+	render_digest:     digest.FNV,
+	has_render_digest: bool,
+	render_digest_text: string,
 
 	pending:  [dynamic]Pending_Capture,
 	captures: [dynamic]Capture_Result,
@@ -104,6 +110,9 @@ session_destroy :: proc(session: ^Session) {
 	}
 	if session.trace_path != "" {
 		delete(session.trace_path, session.allocator)
+	}
+	if session.render_digest_text != "" {
+		delete(session.render_digest_text, session.allocator)
 	}
 	delete(session.trace_samples)
 	session^ = {}
@@ -240,17 +249,8 @@ session_draw :: proc(session: ^Session, capture: bool, name: string, alpha: f32)
 	if capture {
 		append(&session.captures, result)
 	}
+	session_refresh_renderer(session)
 	return ""
-}
-
-session_state :: proc(session: ^Session) -> State {
-	return state_build(
-		&session.sim,
-		session.frame,
-		&session.hud.menu,
-		&session.debug,
-		session.allocator,
-	)
 }
 
 session_queue_capture :: proc(
