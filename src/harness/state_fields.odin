@@ -133,6 +133,16 @@ debug_field :: proc(debug: Debug_State, path: string) -> (Check_Value, string) {
 			return {}, "debug.sun needs a field"
 		}
 		return sun_field(debug.sun, tail)
+	case "inspector":
+		if !has_tail {
+			return {}, "debug.inspector needs a field"
+		}
+		return inspector_field(debug.inspector, tail)
+	case "history":
+		if !has_tail {
+			return {}, "debug.history needs a field"
+		}
+		return history_field(debug.history, tail)
 	}
 	return {}, fmt.aprintf("unknown settle field %q", path, allocator = context.allocator)
 }
@@ -190,6 +200,43 @@ sun_field :: proc(sun: Sun_State, path: string) -> (Check_Value, string) {
 		return vec_field(sun.position, tail)
 	}
 	return {}, fmt.aprintf("unknown debug.sun field %q", path, allocator = context.allocator)
+}
+
+@(private)
+inspector_field :: proc(inspector: Inspector_State, path: string) -> (Check_Value, string) {
+	head, tail, has_tail := split_field(path)
+	switch head {
+	case "prefab":
+		return {kind = .String, text = inspector.prefab}, ""
+	case "body":
+		return {kind = .String, text = inspector.body}, ""
+	case "yaw":
+		return {kind = .Number, number = f64(inspector.yaw)}, ""
+	case "snap":
+		return {kind = .Bool, boolean = inspector.snap}, ""
+	case "size":
+		if !has_tail {
+			return {}, "debug.inspector.size needs an axis"
+		}
+		return vec_field(inspector.size, tail)
+	case "position":
+		if !has_tail {
+			return {}, "debug.inspector.position needs an axis"
+		}
+		return vec_field(inspector.position, tail)
+	}
+	return {}, fmt.aprintf("unknown debug.inspector field %q", path, allocator = context.allocator)
+}
+
+@(private)
+history_field :: proc(history: History_State, path: string) -> (Check_Value, string) {
+	switch path {
+	case "depth":
+		return {kind = .Number, number = f64(history.depth)}, ""
+	case "redo":
+		return {kind = .Number, number = f64(history.redo)}, ""
+	}
+	return {}, fmt.aprintf("unknown debug.history field %q", path, allocator = context.allocator)
 }
 
 @(private)

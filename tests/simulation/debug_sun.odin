@@ -25,7 +25,7 @@ expect_direction_near :: proc(t: ^testing.T, actual, expected: [3]f32, tolerance
 @(private)
 create_sun_test :: proc(t: ^testing.T) -> (game.Simulation, game.Debug_Mode) {
 	sim := create(t)
-	dm := game.debug_mode_create()
+	dm := game.debug_mode_create(context.allocator)
 	dm.active = true
 	dm.camera = {
 		position = {0.0, 10.0, 0.0},
@@ -109,6 +109,7 @@ sun_direction_runs_from_the_position_to_the_centre :: proc(t: ^testing.T) {
 @(test)
 sun_key_enters_the_placement_mode :: proc(t: ^testing.T) {
 	sim, dm := create_sun_test(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
 	enter_sun(&dm, &sim)
@@ -128,6 +129,7 @@ sun_key_enters_the_placement_mode :: proc(t: ^testing.T) {
 @(test)
 sun_lighting_follows_the_camera :: proc(t: ^testing.T) {
 	sim, dm := create_sun_test(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
 	enter_sun(&dm, &sim)
@@ -148,6 +150,7 @@ sun_lighting_follows_the_camera :: proc(t: ^testing.T) {
 @(test)
 sun_click_commits_the_aimed_position :: proc(t: ^testing.T) {
 	sim, dm := create_sun_test(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
 	enter_sun(&dm, &sim)
@@ -164,6 +167,7 @@ sun_click_commits_the_aimed_position :: proc(t: ^testing.T) {
 @(test)
 sun_secondary_cancels_and_restores :: proc(t: ^testing.T) {
 	sim, dm := create_sun_test(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
 	before := dm.sun.position
@@ -180,6 +184,7 @@ sun_secondary_cancels_and_restores :: proc(t: ^testing.T) {
 @(test)
 sun_key_leaves_and_keeps_the_current_position :: proc(t: ^testing.T) {
 	sim, dm := create_sun_test(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
 	enter_sun(&dm, &sim)
@@ -195,6 +200,7 @@ sun_key_leaves_and_keeps_the_current_position :: proc(t: ^testing.T) {
 @(test)
 sun_reset_restores_the_default_position :: proc(t: ^testing.T) {
 	sim, dm := create_sun_test(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
 	enter_sun(&dm, &sim)
@@ -209,6 +215,7 @@ sun_reset_restores_the_default_position :: proc(t: ^testing.T) {
 @(test)
 sun_mode_is_exclusive_with_the_palette_and_placement :: proc(t: ^testing.T) {
 	sim, dm := create_sun_test(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
 	enter_sun(&dm, &sim)

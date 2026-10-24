@@ -26,6 +26,7 @@ placement_arm :: proc(t: ^testing.T, dm: ^game.Debug_Mode, sim: ^game.Simulation
 @(test)
 palette_pick_arms_the_selected_prefab :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
 	game.debug_palette_open(&dm)
@@ -41,7 +42,8 @@ palette_pick_arms_the_selected_prefab :: proc(t: ^testing.T) {
 
 @(test)
 palette_body_defaults_from_the_prefab_and_sticks_until_changed :: proc(t: ^testing.T) {
-	dm := game.debug_mode_create()
+	dm := game.debug_mode_create(context.allocator)
+	defer game.debug_mode_destroy(&dm)
 	testing.expect_value(t, dm.palette.body_mode, game.Body_Mode.Dynamic)
 
 	game.debug_palette_flip_body(&dm)
@@ -60,6 +62,7 @@ palette_body_defaults_from_the_prefab_and_sticks_until_changed :: proc(t: ^testi
 @(test)
 placement_ray_puts_the_aabb_bottom_on_the_hit :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	placement_arm(t, &dm, &sim, .Block)
 
@@ -82,6 +85,7 @@ placement_ray_puts_the_aabb_bottom_on_the_hit :: proc(t: ^testing.T) {
 @(test)
 placement_ray_miss_uses_the_fallback_distance :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	dm.camera.pitch = PLACEMENT_SKY_PITCH
 	placement_arm(t, &dm, &sim, .Crate)
@@ -96,6 +100,7 @@ placement_ray_miss_uses_the_fallback_distance :: proc(t: ^testing.T) {
 @(test)
 placement_height_steps_and_clamps_to_the_surface :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	placement_arm(t, &dm, &sim, .Crate)
 
@@ -113,6 +118,7 @@ placement_height_steps_and_clamps_to_the_surface :: proc(t: ^testing.T) {
 @(test)
 placement_yaw_steps_fifteen_and_forty_five_degrees :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	placement_arm(t, &dm, &sim, .Crate)
 
@@ -129,6 +135,7 @@ placement_yaw_steps_fifteen_and_forty_five_degrees :: proc(t: ^testing.T) {
 @(test)
 placement_rotation_composes_yaw_and_base_pitch :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	placement_arm(t, &dm, &sim, .Ramp)
 	game.debug_placement_set_yaw(&dm, 90.0)
@@ -147,6 +154,7 @@ placement_rotation_composes_yaw_and_base_pitch :: proc(t: ^testing.T) {
 @(test)
 placement_snap_rounds_the_bottom_to_a_quarter_metre_grid :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	placement_arm(t, &dm, &sim, .Block)
 	testing.expect(t, !dm.placement.snap, "snap must start off")
@@ -169,6 +177,7 @@ placement_snap_rounds_the_bottom_to_a_quarter_metre_grid :: proc(t: ^testing.T) 
 @(test)
 placement_place_creates_at_the_ghost_and_stays_armed :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	game.debug_palette_select(&dm, 3)
 	testing.expect(t, game.debug_palette_pick(&dm, &sim), "pick failed")
@@ -198,6 +207,7 @@ placement_place_creates_at_the_ghost_and_stays_armed :: proc(t: ^testing.T) {
 @(test)
 placement_at_capacity_is_a_no_op :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	for game.simulation_object_count(&sim) < game.MAX_PLACED_OBJECTS {
 		_ = game.simulation_create_object(
@@ -220,6 +230,7 @@ placement_at_capacity_is_a_no_op :: proc(t: ^testing.T) {
 @(test)
 placement_cancel_clears_the_armed_tool :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	placement_arm(t, &dm, &sim, .Crate)
 	before := game.simulation_object_count(&sim)
@@ -233,6 +244,7 @@ placement_cancel_clears_the_armed_tool :: proc(t: ^testing.T) {
 @(test)
 placement_ghost_lines_draw_the_outline_footprint_and_height_guide :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	placement_arm(t, &dm, &sim, .Block)
 	game.debug_placement_set_height(&dm, 0.5)
@@ -250,6 +262,7 @@ placement_ghost_lines_draw_the_outline_footprint_and_height_guide :: proc(t: ^te
 @(test)
 editor_lines_include_the_armed_ghost :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
 	lines: game.Debug_Lines

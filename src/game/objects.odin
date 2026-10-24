@@ -220,44 +220,6 @@ simulation_reset_scene :: proc(sim: ^Simulation) {
 }
 
 @(private)
-create_object :: proc(
-	sim: ^Simulation,
-	spawn: Object_Spawn,
-	color: [4]f32,
-	settled: bool,
-) -> Object_Id {
-	if sim.object_count >= MAX_PLACED_OBJECTS {
-		return INVALID_OBJECT_ID
-	}
-	info := prefab(spawn.prefab)
-	body := create_box_body(
-		sim.world_id,
-		body_type(spawn.body_mode),
-		spawn.center,
-		object_rotation(spawn.prefab, spawn.yaw),
-		info.half_extents,
-		info.density,
-	)
-	if !b3.Body_IsValid(body) {
-		return INVALID_OBJECT_ID
-	}
-
-	id := sim.next_object_id
-	sim.objects[sim.object_count] = {
-		id = id,
-		prefab = spawn.prefab,
-		body_mode = spawn.body_mode,
-		body = body,
-		color = color,
-		spawn_time = sim.time,
-		settled = settled,
-	}
-	sim.object_count += 1
-	sim.next_object_id += 1
-	return id
-}
-
-@(private)
 object_index_for_id :: proc(sim: ^Simulation, id: Object_Id) -> (index: int, ok: bool) {
 	if id == INVALID_OBJECT_ID {
 		return -1, false

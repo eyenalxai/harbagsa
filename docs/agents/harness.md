@@ -71,7 +71,7 @@ serializes Make with `flock`.
 | Task | Read |
 | --- | --- |
 | drive the simulation | **Scenario format** and **Commands** |
-| drive the object palette and placement tool | **Editor** |
+| drive the object palette, placement, object edits, and history | **Editor** |
 | drive the sun placement | **Editor** |
 | capture the final image | **Capture targets** (`color` + `png`) |
 | read velocity, history, depth, or scene color | **Capture targets** |
@@ -103,7 +103,8 @@ serializes Make with `flock`.
   for a trace. A scenario with more than one traced perf command writes one file
   per command; `report.trace` names the last.
 - `state.json`: the final state alone. It holds the player, placed objects,
-  window and input settings, menu, debug palette, placement and sun, frame,
+  window and input settings, menu, debug palette, placement, sun, inspector, and
+  history, frame,
   renderer, render digest, and simulation digest. Each object carries `id`,
   `prefab`, `body`, `position`, `rotation`, `scale`, and `spawn_age`.
 - `frames/<name>.png`, `.f32`, or `.bin`: captures. A color capture is a PNG;
@@ -161,8 +162,9 @@ Rules:
 - A check uses the `state.json` shape. Operators: `eq`, `ne`, `lt`, `le`, `gt`,
   `ge`. Examples: `player.position.y`, `objects.count`, `settings.window_mode`,
   `settings.resolution`, `settings.sprint_mode`, `menu.open`, `debug.active`,
-  `debug.palette.open`, `debug.placement.armed`, `debug.placement.prefab`, and
-  `debug.sun.active`.
+  `debug.palette.open`, `debug.placement.armed`, `debug.placement.prefab`,
+  `debug.sun.active`, `debug.inspector.body`, `debug.inspector.size.x`,
+  `debug.inspector.yaw`, `debug.inspector.snap`, and `debug.history.depth`.
 - An object check addresses a placed object by id: `objects.7.position.z`,
   `objects.7.rotation.w`, `objects.7.prefab`, `objects.7.body`,
   `objects.7.scale`, and `objects.7.spawn_age`. The id is stable while the object
@@ -307,14 +309,15 @@ Changing the sun resets TAA history with the `scene_change` reason.
 The `editor` command drives the debug placement tool and the sun placement. It
 needs debug mode; send `{"cmd": "debug_mode", "active": true}` first. Every field
 is optional, and one command may combine fields. They apply in this order:
-`camera`, `open`, `select`, `body`, `height`, `yaw`, `snap`, `pick`, `cancel`,
-`place`, `sun`.
+`camera`, `open`, `select`, `select_object`, `body`, `height`, `yaw`, `snap`,
+`pick`, `cancel`, `place`, `move`, `rotate`, `delete`, `duplicate`, `undo`,
+`redo`, `sun`.
 
 | Field | Meaning |
 | --- | --- |
 | `open` | open or close the object palette |
 | `select` | zero-based prefab index; a new prefab restores its default body |
-| `body` | `static` or `dynamic` for the next placement |
+| `body` | `static` or `dynamic`; the next placement while the palette is open, the selected object while it is closed |
 | `pick` | arm the selected prefab, close the palette, cast the placement ray |
 | `height` | offset above the surface in metres; clamped at 0 |
 | `yaw` | rotation in degrees |
@@ -322,6 +325,13 @@ is optional, and one command may combine fields. They apply in this order:
 | `cancel` | clear the armed tool without placing |
 | `camera` | `{"position", "yaw", "pitch"}` for the debug camera; yaw and pitch are radians |
 | `place` | `{"prefab", "position", "yaw", "body"}` creates at an exact transform |
+| `select_object` | placed object id; 0 clears the selection |
+| `move` | `[x, y, z]` centre for the selected object; y clamps above the floor |
+| `rotate` | degrees to turn the selected object; negative turns the other way |
+| `delete` | remove the selected object |
+| `duplicate` | copy the selected object one half extent along +X, select the copy, and play the pop; a no-op at the cap |
+| `undo` | restore the previous object-list snapshot |
+| `redo` | restore the next object-list snapshot |
 | `sun` | `{"active", "position", "place", "cancel"}` drives sun placement |
 
 `select` follows the catalog order: Crate, Small crate, Wide crate, Block,
@@ -333,6 +343,13 @@ the camera. The state reports the ghost centre as `debug.placement.position`.
 to the prefab default. It bypasses the ray and leaves the armed tool unchanged.
 At the 128-object cap it creates nothing.
 
+`select_object` changes only the selection, so it does not add a history entry.
+`move`, `rotate`, `delete`, `duplicate`, and `body` on the selection each add one
+entry. The 64-entry history covers place, delete, duplicate, move, wheel height,
+rotate, and body conversion. Undo and redo restore the object list, keep the
+object ids, and skip the spawn pop. A new edit clears redo. Camera, sun, palette,
+and placement state are not undoable.
+
 The `sun` fields apply in this order: `active`, `position`, `place`, `cancel`.
 `active: true` enters the mode and saves the current sun for a cancel; it also
 closes the palette and cancels the object placement. `position` sets the sun
@@ -341,10 +358,14 @@ position. `place` commits and leaves the mode. `cancel` restores the sun from
 before the mode. `active: false` leaves the mode and keeps the current sun.
 
 The state carries `debug.palette` (`open`, `selected`, `body`),
-`debug.placement` (`armed`, `prefab`, `position`, `height`, `yaw`, `snap`), and
-`debug.sun` (`active`, `position`, `azimuth`, `elevation`). The sun angles are
-degrees. `debug.selection` is `none` or `object`, and `debug.selected_id` is the
-selected placed object's id or 0. `debug.placement.height` is metres,
+`debug.placement` (`armed`, `prefab`, `position`, `height`, `yaw`, `snap`),
+`debug.sun` (`active`, `position`, `azimuth`, `elevation`), `debug.inspector`
+(`prefab`, `body`, `size`, `position`, `yaw`, `snap`), and `debug.history`
+(`depth`, `redo`). The sun angles and the inspector yaw are degrees.
+`debug.selection` is `none` or `object`, and `debug.selected_id` is the selected
+placed object's id or 0. `debug.inspector` reports zeroes and empty strings when
+nothing is selected. `debug.history.depth` is the undo count, from 0 to 64, and
+`debug.history.redo` is the redo count. `debug.placement.height` is metres,
 `debug.placement.yaw` is degrees, and `debug.placement.position` is the ghost
 centre (zero when not armed). The ghost is drawn as debug lines while armed: the
 oriented box, the footprint on the surface, and the height guide.
@@ -360,6 +381,8 @@ the palette, captures the Platform preview, selects the Ramp, and captures its
 pitched preview. Run it with `--size 800x600` to check the dock fits the smallest
 supported window. `scenarios/editor-sun.json` captures the default light, the
 sun gizmo on the sky dome, and the committed lighting.
+`scenarios/editor-object.json` selects an object, moves, rotates, and converts
+it, duplicates it, then captures the inspector and the undo and redo restores.
 
 The harness has no real cursor. Frame tests cover the card hit test, platform
 tests cover the normalized pointer math and the key map, and a manual run covers
@@ -385,8 +408,9 @@ changes the box count and resets history with `scene_change`.
 `scenarios/debug-pop.json` enters debug mode, renders the arena once, places a
 block with the `editor` command, and captures the start, overshoot, and settled
 frames. It checks the scale, the spawn age, the physical position, and that the
-pop does not reset TAA. `simulation_restore_object` is the settled create path
-for a future undo or redo restore.
+pop does not reset TAA. `simulation_apply_snapshot` is the settled restore path:
+it recreates the body, keeps the object id, and clears the selection when the
+selected object is gone.
 
 The harness has no compositor, so the menu uses a fixed two-display list:
 `Display 1` (1920x1080) and `Display 2` (2560x1440). Each lists smaller modes.
@@ -405,6 +429,7 @@ The 2D layer is part of the feature, so its captures live next to it.
 | `scenarios/hud-debug.json` | the debug-mode readout, which shares the row renderer |
 | `scenarios/editor-ghost.json` | the armed placement HUD, the ghost, and an exact place |
 | `scenarios/editor-sun.json` | the default light, the sun gizmo, and the committed sun |
+| `scenarios/editor-object.json` | the inspector, the object edit flow, and the undo and redo restores |
 | `scenarios/debug-palette.json` | the open palette, its selection, and the cube and ramp previews |
 | `scenarios/debug-pop.json` | the spawn pop at the start, overshoot, and settled frames |
 | `scenarios/ui.json` | the settings panel with a numeric value selected, then an action row |
@@ -913,6 +938,7 @@ and the second `perf` measures again. Both traces stay in the run directory:
 - `src/harness/perf_command.odin`: the perf command parser.
 - `src/harness/session_state.odin`: the session's renderer snapshot.
 - `src/harness/editor_command.odin`: the `editor` command and its parser.
+- `src/harness/editor_object_command.odin`: the object editing fields.
 - `src/harness/session_editor.odin`: the `editor` command execution.
 - `src/harness/session_debug.odin`: the renderer debug gate and overrides.
 - `src/harness/renderer_debug_command.odin`: the override parser.
@@ -942,6 +968,14 @@ and the second `perf` measures again. Both traces stay in the run directory:
   starting crate layout.
 - `src/game/objects.odin`: the placed-object list and the create, remove, move,
   yaw, convert, and reset API.
+- `src/game/object_records.odin`: the object record and snapshot capture, the
+  restore path, and the one placed-object spawn path.
+- `src/game/object_history.odin`: the 64-entry heap snapshot stack and its undo
+  and redo.
+- `src/game/debug_object_tools.odin`: select, move, rotate, convert, delete,
+  duplicate, body key, and undo and redo for the selection.
+- `src/game/hud_debug.odin`: the debug inspector, placement rows, and their fixed
+  number fields.
 - `src/game/spawn_pop.odin`: the pop curve, the spawn age and scale, the visual
   box, and the settled restore path.
 - `src/game/palette.odin`: the object palette state and the debug palette API.
@@ -977,7 +1011,8 @@ and the second `perf` measures again. Both traces stay in the run directory:
   `scenarios/renderer-debug.json`, `scenarios/renderer-debug-converge.json`,
   `scenarios/renderer-debug-jitter.json`, `scenarios/capture-free.json`,
   `scenarios/editor-ghost.json`, `scenarios/editor-sun.json`,
-  `scenarios/debug-pop.json`, and `scenarios/perf-lamps.json`.
+  `scenarios/editor-object.json`, `scenarios/debug-pop.json`, and
+  `scenarios/perf-lamps.json`.
 
 ## Adding a command
 

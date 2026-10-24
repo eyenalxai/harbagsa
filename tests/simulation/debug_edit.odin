@@ -14,7 +14,7 @@ OBJECT_EDITOR_SELECT_PITCH :: -0.2
 @(private)
 object_editor_setup :: proc(t: ^testing.T) -> (game.Simulation, game.Debug_Mode) {
 	sim := create(t)
-	dm := game.debug_mode_create()
+	dm := game.debug_mode_create(context.allocator)
 	dm.active = true
 	dm.camera = {
 		position = sim.player.position + b3.Vec3{0.0, game.PLAYER_STANDING_EYE, 0.0},
@@ -42,6 +42,7 @@ first_object_id :: proc(sim: ^game.Simulation) -> game.Object_Id {
 @(test)
 debug_edit_selects_object_under_crosshair :: proc(t: ^testing.T) {
 	sim, dm := object_editor_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
 	object_editor_select(&dm, &sim)
@@ -54,6 +55,7 @@ debug_edit_selects_object_under_crosshair :: proc(t: ^testing.T) {
 @(test)
 debug_edit_drag_moves_object_horizontally :: proc(t: ^testing.T) {
 	sim, dm := object_editor_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
 	object_editor_select(&dm, &sim)
@@ -76,6 +78,7 @@ debug_edit_drag_moves_object_horizontally :: proc(t: ^testing.T) {
 @(test)
 debug_edit_wheel_raises_and_clamps_object :: proc(t: ^testing.T) {
 	sim, dm := object_editor_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
 	object_editor_select(&dm, &sim)
@@ -101,6 +104,7 @@ debug_edit_wheel_raises_and_clamps_object :: proc(t: ^testing.T) {
 @(test)
 debug_edit_right_click_clears_the_selection :: proc(t: ^testing.T) {
 	sim, dm := object_editor_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
 	object_editor_select(&dm, &sim)
@@ -114,6 +118,7 @@ debug_edit_right_click_clears_the_selection :: proc(t: ^testing.T) {
 @(test)
 debug_edit_delete_removes_selected_object :: proc(t: ^testing.T) {
 	sim, dm := object_editor_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
 	object_editor_select(&dm, &sim)
@@ -132,6 +137,7 @@ debug_edit_delete_removes_selected_object :: proc(t: ^testing.T) {
 @(test)
 debug_edit_empty_click_clears_selection :: proc(t: ^testing.T) {
 	sim, dm := object_editor_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
 	object_editor_select(&dm, &sim)
@@ -153,6 +159,7 @@ debug_edit_empty_click_clears_selection :: proc(t: ^testing.T) {
 @(test)
 debug_edit_clears_stale_selection :: proc(t: ^testing.T) {
 	sim, dm := object_editor_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
 	objects := game.simulation_objects(&sim)
@@ -172,6 +179,7 @@ debug_edit_clears_stale_selection :: proc(t: ^testing.T) {
 @(test)
 debug_edit_draws_selected_object_outline :: proc(t: ^testing.T) {
 	sim, dm := object_editor_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
 	lines: game.Debug_Lines

@@ -60,7 +60,7 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 	sim := game.simulation_create()
 	testing.expect(t, game.simulation_is_valid(&sim), "simulation world is invalid")
 	defer game.simulation_destroy(&sim)
-	debug := game.debug_mode_create()
+	debug := game.debug_mode_create(context.allocator)
 	hud: game.HUD_State
 	scratch: frame.Scratch
 	scene := frame.build(&sim, &debug, {alpha = 1.0, captured = true}, nil, &hud, &scratch)
@@ -270,7 +270,7 @@ render_offscreen_sequence :: proc() -> (
 		return nil, 0, false, true
 	}
 	defer game.simulation_destroy(&sim)
-	debug := game.debug_mode_create()
+	debug := game.debug_mode_create(context.allocator)
 	hud: game.HUD_State
 	scratch: frame.Scratch
 	scene := frame.build(&sim, &debug, {alpha = 1.0, captured = true}, nil, &hud, &scratch)

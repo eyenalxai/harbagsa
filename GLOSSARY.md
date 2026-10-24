@@ -675,6 +675,18 @@ _Avoid_: Noclip, spectator
 The placed object that debug mode acts on.
 _Avoid_: Focus, target
 
+**Object inspector**:
+The debug HUD block that shows the selected object's prefab and id, the object
+count and capacity, and the body, size, position, yaw, and snap state. Every
+changing value uses a fixed field and the mono face.
+_Avoid_: Edit panel, properties
+
+**Undo history**:
+The 64-entry stack of placed-object snapshots that undo and redo restore. Each
+snapshot keeps the object ids and the exact transforms; a restore never plays
+the spawn pop.
+_Avoid_: Journal, transaction log
+
 **Scene reset**:
 The `Shift+R` action that restores the starting crates, the sun, and the player.
 _Avoid_: Reload, wipe

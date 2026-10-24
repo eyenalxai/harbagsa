@@ -15,7 +15,7 @@ import "src:ui"
 create_state :: proc(t: ^testing.T) -> (game.Simulation, game.Debug_Mode, game.HUD_State, frame.Scratch) {
 	sim := game.simulation_create()
 	testing.expect(t, game.simulation_is_valid(&sim), "simulation world is invalid")
-	return sim, game.debug_mode_create(), {}, {}
+	return sim, game.debug_mode_create(context.allocator), {}, {}
 }
 
 @(test)
@@ -123,7 +123,8 @@ debug_hud_names_the_selected_prefab :: proc(t: ^testing.T) {
 		&scratch,
 	)
 	testing.expect_value(t, scene.hud.view.rows[1].label, "Selection")
-	testing.expect_value(t, scene.hud.view.rows[1].value, "Platform")
+	testing.expect(t, strings.has_prefix(scene.hud.view.rows[1].value, "Platform"), "prefab missing")
+	testing.expect(t, strings.contains(scene.hud.view.rows[1].value, "# 004"), "id missing")
 	testing.expect_value(t, scene.hud.view.rows[2].label, "Objects")
 }
 

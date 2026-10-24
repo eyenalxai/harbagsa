@@ -72,7 +72,8 @@ run :: proc() -> bool {
 	accumulator: f32 = 0
 	latches: Input_Latches
 	debug_view := false
-	debug := game.debug_mode_create()
+	debug := game.debug_mode_create(context.allocator)
+	defer game.debug_mode_destroy(&debug)
 	scratch: frame.Scratch
 	hud: game.HUD_State
 	menu_recapture := false

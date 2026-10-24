@@ -14,6 +14,7 @@ placement_input :: proc(dm: ^game.Debug_Mode, sim: ^game.Simulation, input: game
 @(test)
 placement_left_click_places_at_the_ghost_and_stays_armed :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	_ = game.debug_palette_select(&dm, 3)
 	testing.expect(t, game.debug_palette_pick(&dm, &sim), "pick failed")
@@ -34,6 +35,7 @@ placement_left_click_places_at_the_ghost_and_stays_armed :: proc(t: ^testing.T) 
 @(test)
 placement_right_click_cancels_without_placing :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	placement_arm(t, &dm, &sim, .Crate)
 
@@ -47,6 +49,7 @@ placement_right_click_cancels_without_placing :: proc(t: ^testing.T) {
 @(test)
 placement_wheel_raises_the_ghost_in_quarter_metre_steps :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	placement_arm(t, &dm, &sim, .Crate)
 
@@ -61,6 +64,7 @@ placement_wheel_raises_the_ghost_in_quarter_metre_steps :: proc(t: ^testing.T) {
 @(test)
 placement_qe_turns_the_ghost :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	placement_arm(t, &dm, &sim, .Crate)
 
@@ -73,6 +77,7 @@ placement_qe_turns_the_ghost :: proc(t: ^testing.T) {
 @(test)
 debug_mode_cancel_editing_closes_the_palette_and_disarms :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	game.debug_palette_open(&dm)
 	placement_arm(t, &dm, &sim, .Crate)
@@ -86,6 +91,7 @@ debug_mode_cancel_editing_closes_the_palette_and_disarms :: proc(t: ^testing.T) 
 @(test)
 placement_palette_blocks_world_editing :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
+	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	placement_arm(t, &dm, &sim, .Crate)
 	game.debug_palette_open(&dm)

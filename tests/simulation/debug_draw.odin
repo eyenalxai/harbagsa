@@ -14,7 +14,9 @@ debug_line_collectors_fill_lines :: proc(t: ^testing.T) {
 	game.collect_world_lines(&sim, &lines)
 	testing.expect(t, lines.count > 0, "world debug lines are empty")
 
-	dm := game.debug_mode_create()
+	dm := game.debug_mode_create(context.allocator)
+
+	defer game.debug_mode_destroy(&dm)
 	game.debug_mode_toggle(&dm, &sim)
 	lines.count = 0
 	game.collect_editor_lines(&dm, &sim, &lines)
@@ -23,7 +25,8 @@ debug_line_collectors_fill_lines :: proc(t: ^testing.T) {
 
 @(test)
 sun_gizmo_draws_the_ring_cross_and_dashed_line :: proc(t: ^testing.T) {
-	dm := game.debug_mode_create()
+	dm := game.debug_mode_create(context.allocator)
+	defer game.debug_mode_destroy(&dm)
 	lines: game.Debug_Lines
 	game.collect_sun_editor_lines(&dm, &lines)
 	testing.expect(t, lines.count > 40, "the sun gizmo has no ring or dashed line")

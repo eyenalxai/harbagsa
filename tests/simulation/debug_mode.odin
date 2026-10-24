@@ -15,7 +15,9 @@ debug_mode_toggle_saves_and_restores_player :: proc(t: ^testing.T) {
 	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 30)
 	before := sim.player
 
-	dm := game.debug_mode_create()
+	dm := game.debug_mode_create(context.allocator)
+
+	defer game.debug_mode_destroy(&dm)
 	game.debug_mode_toggle(&dm, &sim)
 	testing.expect(t, dm.active, "debug mode did not open")
 
@@ -42,7 +44,9 @@ free_fly_moves_horizontally_and_vertically :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 
-	dm := game.debug_mode_create()
+	dm := game.debug_mode_create(context.allocator)
+
+	defer game.debug_mode_destroy(&dm)
 	game.debug_mode_toggle(&dm, &sim)
 	player_before := sim.player
 	step_distance: f32 = game.DEBUG_FLY_SPEED * 0.1
@@ -81,7 +85,8 @@ free_fly_moves_horizontally_and_vertically :: proc(t: ^testing.T) {
 
 @(test)
 debug_mode_sun_direction_is_normalized :: proc(t: ^testing.T) {
-	dm := game.debug_mode_create()
+	dm := game.debug_mode_create(context.allocator)
+	defer game.debug_mode_destroy(&dm)
 	dm.sun.position = {0.0, 100.0, 0.0}
 
 	direction := game.debug_mode_sun_direction(&dm)
@@ -93,7 +98,8 @@ debug_mode_sun_direction_is_normalized :: proc(t: ^testing.T) {
 
 @(test)
 debug_mode_sun_angles_follow_direction :: proc(t: ^testing.T) {
-	dm := game.debug_mode_create()
+	dm := game.debug_mode_create(context.allocator)
+	defer game.debug_mode_destroy(&dm)
 	dm.sun.position = {0.0, 50.0, 0.0}
 
 	azimuth, elevation := game.debug_mode_sun_angles(&dm)
@@ -117,7 +123,9 @@ reset_player_moves_the_debug_camera_to_spawn :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 
-	dm := game.debug_mode_create()
+	dm := game.debug_mode_create(context.allocator)
+
+	defer game.debug_mode_destroy(&dm)
 	game.debug_mode_toggle(&dm, &sim)
 	dm.camera.position = {5, 5, 5}
 
@@ -133,7 +141,9 @@ reset_scene_restores_objects_sun_and_player :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 
-	dm := game.debug_mode_create()
+	dm := game.debug_mode_create(context.allocator)
+
+	defer game.debug_mode_destroy(&dm)
 	game.debug_mode_toggle(&dm, &sim)
 
 	_ = game.simulation_remove_object(&sim, game.simulation_objects(&sim)[0].id)

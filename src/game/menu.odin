@@ -7,13 +7,14 @@ import "core:math"
 import "src:display"
 import "src:ui"
 
-MENU_ITEM_COUNT :: 8
-MENU_ROW_COUNT :: 10
-MENU_ROW_DIVIDER :: 7
-MENU_ROW_RESUME :: 8
-MENU_ROW_HEADER :: 9
-TYPE_WEIGHT_STEP :: f32(10)
-MENU_HINT_COUNT :: 18
+MENU_ITEM_COUNT :: 7
+MENU_ROW_COUNT :: 9
+MENU_ROW_DIVIDER :: 6
+MENU_ROW_RESUME :: 7
+MENU_ROW_HEADER :: 8
+MENU_HINT_COLUMNS :: 3
+MENU_CONTROL_HINT_COUNT :: 18
+MENU_HINT_COUNT :: 21
 
 MENU_TITLE :: "Settings"
 MENU_NOTE :: "Up/Down select · Left/Right change · Drag slider · Enter change · Esc close"
@@ -57,6 +58,9 @@ MENU_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
 	{keys = "Esc", action = "settings"},
 	{},
 	{},
+	{},
+	{},
+	{},
 }
 
 MENU_DEBUG_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
@@ -78,6 +82,9 @@ MENU_DEBUG_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
 	{keys = "F3", action = "TAA"},
 	{keys = "F4", action = "perf"},
 	{keys = "Esc", action = "settings"},
+	{keys = "Ctrl+D", action = "duplicate"},
+	{keys = "Ctrl+Z", action = "undo"},
+	{keys = "Ctrl+Shift+Z", action = "redo"},
 }
 
 Menu_Item :: enum {
@@ -270,8 +277,10 @@ menu_view :: proc(menu: ^Menu_State, settings: Settings, debug_active: bool, del
 		(settings.window.mode == .Windowed && info.mode_count == 1)
 
 	hints := MENU_CONTROL_HINTS
+	hint_count := MENU_CONTROL_HINT_COUNT
 	if debug_active {
 		hints = MENU_DEBUG_CONTROL_HINTS
+		hint_count = MENU_HINT_COUNT
 	}
 	menu.hints = hints
 
@@ -287,11 +296,12 @@ menu_view :: proc(menu: ^Menu_State, settings: Settings, debug_active: bool, del
 	}
 
 	menu.view = {
-		title    = MENU_TITLE,
-		rows     = menu.rows[:],
-		selected = MENU_ITEM_ROWS[menu.selected],
-		hints    = menu.hints[:],
-		note     = note,
+		title        = MENU_TITLE,
+		rows         = menu.rows[:],
+		selected     = MENU_ITEM_ROWS[menu.selected],
+		hints        = menu.hints[:hint_count],
+		hint_columns = MENU_HINT_COLUMNS,
+		note         = MENU_NOTE,
 	}
 }
 

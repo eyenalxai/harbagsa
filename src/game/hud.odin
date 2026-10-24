@@ -2,16 +2,14 @@
 #+vet !unused-procedures // main calls this API; test builds compile game as a dependency
 package game
 
-import "core:math"
-
 import "src:perf"
 import "src:ui"
 
 HUD_ROW_COUNT :: 6
-HUD_PLACEMENT_ROW_COUNT :: 7
-HUD_SUN_ROW_COUNT :: 7
+// The debug inspector rows live in hud_debug.odin; the panel still reserves the
+// widest debug mode so the perf rows fit after it.
 HUD_PERF_ROW_COUNT :: 2
-HUD_MAX_ROWS :: HUD_PLACEMENT_ROW_COUNT + HUD_PERF_ROW_COUNT
+HUD_MAX_ROWS :: HUD_INSPECTOR_SUN_ROW_COUNT + HUD_PERF_ROW_COUNT
 
 HUD_CAPTURE_HINT :: "Click to capture mouse"
 HUD_HEADER_SEPARATOR :: " · "
@@ -110,106 +108,6 @@ hud_perf_append :: proc(hud: ^HUD_State) {
 }
 
 @(private)
-hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_Mode) {
-	if debug.placement.armed {
-		hud_placement_state_update(hud, sim, debug)
-		return
-	}
-
-	selected := "None"
-	if id, ok := debug_selected_object_id(debug, sim); ok {
-		if object, found := simulation_object_find(sim, id); found {
-			selected = prefab_name(object.prefab)
-		}
-	}
-
-	azimuth, elevation := debug_mode_sun_angles(debug)
-	camera := debug.camera.position
-
-	hud.rows[0] = {kind = .Header, label = "Debug mode"}
-	hud.rows[1] = {kind = .Metric, label = "Selection", value = selected}
-	hud.rows[2] = {
-		kind    = .Metric,
-		label   = "Objects",
-		value   = line_format(&hud.storage, 0, "% 2d", simulation_object_count(sim)),
-		numeric = true,
-	}
-	hud.rows[3] = {kind = .Divider}
-	hud.rows[4] = {
-		kind    = .Detail,
-		label   = "Position",
-		value   = hud_camera_position(&hud.storage, 1, camera),
-		numeric = true,
-	}
-	hud.rows[5] = {
-		kind    = .Detail,
-		label   = "Sun",
-		value   = line_format(
-			&hud.storage,
-			2,
-			"az % 4.0f  el % 4.0f",
-			azimuth * 180.0 / math.PI,
-			elevation * 180.0 / math.PI,
-		),
-		numeric = true,
-	}
-	row_count := HUD_ROW_COUNT
-	if debug.sun.active {
-		hud.rows[6] = {kind = .Metric, label = "Sun mode", value = "click place · Esc cancel"}
-		row_count = HUD_SUN_ROW_COUNT
-	}
-	hud.view.rows = hud.rows[:row_count]
-}
-
-@(private)
-hud_placement_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_Mode) {
-	hud.rows[0] = {kind = .Header, label = "Debug mode"}
-	hud.rows[1] = {
-		kind  = .Metric,
-		label = "Prefab",
-		value = prefab_name(debug.placement.prefab),
-	}
-	hud.rows[2] = {
-		kind  = .Metric,
-		label = "Body",
-		value = body_mode_name(debug.palette.body_mode),
-	}
-	hud.rows[3] = {
-		kind    = .Metric,
-		label   = "Height",
-		value   = line_format(&hud.storage, 3, "% 6.2f m", debug.placement.height),
-		numeric = true,
-	}
-	hud.rows[4] = {
-		kind    = .Metric,
-		label   = "Yaw",
-		value   = line_format(&hud.storage, 4, "% 6.1f deg", debug.placement.yaw_degrees),
-		numeric = true,
-	}
-	snap := "off"
-	if debug.placement.snap {
-		snap = "0.25 m"
-	}
-	hud.rows[5] = {kind = .Metric, label = "Snap", value = snap}
-	hud.rows[6] = {
-		kind    = .Metric,
-		label   = "Objects",
-		value   = line_format(
-			&hud.storage,
-			6,
-			"% 3d / %d",
-			simulation_object_count(sim),
-			MAX_PLACED_OBJECTS,
-		),
-		numeric = true,
-	}
-	hud.view.rows = hud.rows[:HUD_PLACEMENT_ROW_COUNT]
-}
-
-// Every number that changes while the player moves is formatted into a fixed
-// field, so the row width never changes and the panel never resizes. The arena
-// spans 40 m; the debug camera is unclamped and gets two more columns.
-@(private)
 hud_arena_position :: proc(buffer: ^Line_Buffer, slot: int, position: [3]f32) -> string {
 	return line_format(
 		buffer,
@@ -218,18 +116,6 @@ hud_arena_position :: proc(buffer: ^Line_Buffer, slot: int, position: [3]f32) ->
 		snap_near_zero(position.x),
 		snap_near_zero(position.y),
 		snap_near_zero(position.z),
-	)
-}
-
-@(private)
-hud_camera_position :: proc(buffer: ^Line_Buffer, slot: int, position: [3]f32) -> string {
-	return line_format(
-		buffer,
-		slot,
-		"X % 7.1f  Y % 7.1f  Z % 7.1f",
-		position.x,
-		position.y,
-		position.z,
 	)
 }
 

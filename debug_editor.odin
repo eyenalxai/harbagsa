@@ -66,7 +66,7 @@ handle_editor_events :: proc(
 	}
 
 	if events.flip_body_pressed {
-		game.debug_palette_flip_body(debug)
+		game.debug_body_key(debug, sim)
 	}
 	if events.toggle_snap_pressed {
 		game.debug_placement_toggle_snap(debug)
@@ -100,6 +100,9 @@ editor_input_from_events :: proc(events: platform.Events) -> game.Debug_Input {
 		primary_released = events.primary_released,
 		secondary_pressed = events.secondary_pressed,
 		delete_pressed = events.delete_pressed,
+		duplicate_pressed = events.duplicate_pressed,
+		undo_pressed = events.undo_pressed,
+		redo_pressed = events.redo_pressed,
 		rotate_left = events.rotate_left_pressed,
 		rotate_right = events.rotate_right_pressed,
 		large_step = events.sprint_held,

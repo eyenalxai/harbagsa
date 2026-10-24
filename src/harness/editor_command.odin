@@ -39,6 +39,7 @@ Editor_Command :: struct {
 	has_place:  bool,
 	sun:        Editor_Sun,
 	has_sun:    bool,
+	object:     Editor_Object,
 }
 
 parse_editor :: proc(object: json.Object) -> (Command, string) {
@@ -55,6 +56,13 @@ parse_editor :: proc(object: json.Object) -> (Command, string) {
 		"camera",
 		"place",
 		"sun",
+		"select_object",
+		"move",
+		"rotate",
+		"delete",
+		"duplicate",
+		"undo",
+		"redo",
 	}
 	if key, unknown := json_unknown_key(object, allowed); unknown {
 		return {}, format_error("unknown key %q", key)
@@ -150,6 +158,11 @@ parse_editor :: proc(object: json.Object) -> (Command, string) {
 		command.editor.sun = sun
 		command.editor.has_sun = true
 	}
+	editor_object, object_error := parse_editor_object(object)
+	if object_error != "" {
+		return {}, object_error
+	}
+	command.editor.object = editor_object
 
 	if !editor_command_has_action(object) {
 		return {}, "editor needs at least one field"
@@ -246,6 +259,13 @@ editor_command_has_action :: proc(object: json.Object) -> bool {
 		"camera",
 		"place",
 		"sun",
+		"select_object",
+		"move",
+		"rotate",
+		"delete",
+		"duplicate",
+		"undo",
+		"redo",
 	}
 	for key in keys {
 		if _, present := json_get(object, key); present {

@@ -100,7 +100,7 @@ render_digest_is_stable_for_a_static_scene :: proc(t: ^testing.T) {
 		return
 	}
 	defer game.simulation_destroy(&sim)
-	editor := game.debug_mode_create()
+	editor := game.debug_mode_create(context.allocator)
 	hud: game.HUD_State
 	scratch: frame.Scratch
 	scene := frame.build(&sim, &editor, {alpha = 1.0, captured = true}, nil, &hud, &scratch)
@@ -136,7 +136,7 @@ spawn_pop_keeps_taa_history :: proc(t: ^testing.T) {
 	)
 	testing.expect(t, id != game.INVALID_OBJECT_ID, "block did not create")
 
-	editor := game.debug_mode_create()
+	editor := game.debug_mode_create(context.allocator)
 	hud: game.HUD_State
 	scratch: frame.Scratch
 	scene := frame.build(&sim, &editor, {alpha = 1.0}, nil, &hud, &scratch)
