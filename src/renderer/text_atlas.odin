@@ -13,10 +13,11 @@ NOTO_SANS_REGULAR :: #load("fonts/NotoSans-Regular.ttf")
 NOTO_SANS_MEDIUM :: #load("fonts/NotoSans-Medium.ttf")
 NOTO_SANS_MONO_REGULAR :: #load("fonts/NotoSansMono-Regular.ttf")
 
-// The atlas rasterizes at 48 px so a 36 px title still downscales rather than
-// upscales; the field stays accurate because stb_truetype measures the outline,
-// not the bitmap.
-TEXT_ATLAS_BASE_PX :: 48.0
+// The atlas rasterizes at 40 px. That is close enough to the largest title
+// (42 px at the highest density, a 5% upscale) and gives the small sizes the
+// tighter field grid they need: at 12.5 px a 48 px field is minified four
+// times, which thins the stroke.
+TEXT_ATLAS_BASE_PX :: 40.0
 TEXT_ATLAS_PADDING :: 6
 TEXT_ATLAS_ONEDGE :: 128
 TEXT_ATLAS_DIST_SCALE :: 64.0

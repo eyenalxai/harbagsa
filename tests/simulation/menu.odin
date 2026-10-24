@@ -5,6 +5,7 @@ package simulation
 import "core:testing"
 
 import "src:display"
+import "src:ui"
 import game "src:game"
 
 @(test)
@@ -218,17 +219,28 @@ menu_view_lists_the_settings_and_controls :: proc(t: ^testing.T) {
 	game.menu_open(&menu)
 	game.menu_view(&menu, sim.settings, false)
 
-	testing.expect_value(t, menu.text.count, 14)
-	testing.expect_value(t, menu.text.lines[0], "Window mode  Borderless")
-	testing.expect_value(t, menu.text.lines[1], "Display      Display 1")
-	testing.expect_value(t, menu.text.lines[2], "Resolution   1920x1080")
-	testing.expect_value(t, menu.text.lines[3], "Sprint mode  Hold")
-	testing.expect_value(t, menu.text.lines[4], "Crouch mode  Toggle")
-	testing.expect_value(t, menu.text.lines[5], "Prone mode   Toggle")
-	testing.expect_value(t, menu.text.lines[6], "Resume")
-	testing.expect_value(t, menu.text.lines[8], "Controls")
-	testing.expect_value(t, menu.text.lines[13], "F2 debug mode    F3 TAA    Esc settings")
+	rows := menu.view.rows
+	testing.expect_value(t, len(rows), game.MENU_ROW_COUNT)
+	testing.expect_value(t, rows[0].kind, ui.Row_Kind.Setting)
+	testing.expect_value(t, rows[0].label, "Window mode")
+	testing.expect_value(t, rows[0].value, "Borderless")
+	testing.expect_value(t, rows[1].value, "Display 1")
+	testing.expect_value(t, rows[2].value, "1920×1080")
+	testing.expect(t, rows[2].numeric, "the resolution is a number")
+	testing.expect_value(t, rows[3].value, "Hold")
+	testing.expect_value(t, rows[4].value, "Toggle")
+	testing.expect_value(t, rows[5].value, "Toggle")
+	testing.expect_value(t, rows[game.MENU_ROW_DIVIDER].kind, ui.Row_Kind.Divider)
+	testing.expect_value(t, rows[game.MENU_ROW_RESUME].kind, ui.Row_Kind.Action)
+	testing.expect_value(t, rows[game.MENU_ROW_RESUME].label, "Resume")
+	testing.expect_value(t, rows[game.MENU_ROW_HEADER].kind, ui.Row_Kind.Header)
+	testing.expect_value(t, rows[game.MENU_ROW_HEADER].label, "Controls")
+	testing.expect_value(t, menu.view.selected, game.MENU_ITEM_ROWS[0])
+	testing.expect_value(t, len(menu.view.hints), game.MENU_HINT_COUNT)
+	testing.expect_value(t, menu.view.hints[0].keys, "WASD")
+	testing.expect_value(t, menu.view.hints[0].action, "move")
 
 	game.menu_view(&menu, sim.settings, true)
-	testing.expect_value(t, menu.text.lines[9], "WASD fly    Space up    Ctrl down")
+	testing.expect_value(t, menu.view.hints[0].keys, "WASD")
+	testing.expect_value(t, menu.view.hints[0].action, "fly")
 }

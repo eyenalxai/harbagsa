@@ -2,14 +2,19 @@
 #+vet !unused-procedures // the agent harness calls the menu reset and selection API
 package game
 
-import "core:fmt"
-
 import "src:display"
+import "src:ui"
 
 MENU_ITEM_COUNT :: 7
+MENU_ROW_COUNT :: 9
+MENU_ROW_DIVIDER :: 6
+MENU_ROW_RESUME :: 7
+MENU_ROW_HEADER :: 8
+MENU_HINT_COLUMNS :: 3
+MENU_HINT_COUNT :: 15
 
 MENU_TITLE :: "Settings"
-MENU_NOTE :: "Up/Down select    Left/Right change    Enter change    Esc close"
+MENU_NOTE :: "Up/Down select · Left/Right change · Enter change · Esc close"
 
 MENU_ITEM_NAMES := [MENU_ITEM_COUNT]string {
 	"Window mode",
@@ -21,20 +26,44 @@ MENU_ITEM_NAMES := [MENU_ITEM_COUNT]string {
 	"Resume",
 }
 
-MENU_CONTROL_LINES := [5]string {
-	"WASD move    Mouse look    Left click capture",
-	"Shift sprint    Space jump or hold to mantle",
-	"C crouch or slide    Z prone, crawl, or dive",
-	"R reset    Shift+R scene    F1 debug view",
-	"F2 debug mode    F3 TAA    Esc settings",
+// One row per menu item, in item order, so the harness `select` index and the
+// drawn row index stay independent of where the dividers sit.
+MENU_ITEM_ROWS := [MENU_ITEM_COUNT]int{0, 1, 2, 3, 4, 5, MENU_ROW_RESUME}
+
+MENU_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
+	{keys = "WASD", action = "move"},
+	{keys = "Mouse", action = "look"},
+	{keys = "Click", action = "capture"},
+	{keys = "Shift", action = "sprint"},
+	{keys = "Space", action = "jump or hold to mantle"},
+	{},
+	{keys = "C", action = "crouch or slide"},
+	{keys = "Z", action = "prone, crawl, or dive"},
+	{},
+	{keys = "R", action = "reset"},
+	{keys = "Shift+R", action = "scene"},
+	{keys = "F1", action = "debug view"},
+	{keys = "F2", action = "debug mode"},
+	{keys = "F3", action = "TAA"},
+	{keys = "Esc", action = "settings"},
 }
 
-MENU_DEBUG_CONTROL_LINES := [5]string {
-	"WASD fly    Space up    Ctrl down",
-	"Click select    Drag move    Wheel height",
-	"E add    Delete or X remove    L sun",
-	"R reset player    F2 exit    Shift+R scene",
-	"F1 debug view    F3 TAA    Esc settings",
+MENU_DEBUG_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
+	{keys = "WASD", action = "fly"},
+	{keys = "Space", action = "up"},
+	{keys = "Ctrl", action = "down"},
+	{keys = "Click", action = "select"},
+	{keys = "Drag", action = "move"},
+	{keys = "Wheel", action = "height"},
+	{keys = "E", action = "add"},
+	{keys = "Delete or X", action = "remove"},
+	{keys = "L", action = "sun"},
+	{keys = "R", action = "reset player"},
+	{keys = "F2", action = "exit"},
+	{keys = "Shift+R", action = "scene"},
+	{keys = "F1", action = "debug view"},
+	{keys = "F3", action = "TAA"},
+	{keys = "Esc", action = "settings"},
 }
 
 Menu_Item :: enum {
@@ -50,7 +79,10 @@ Menu_Item :: enum {
 Menu_State :: struct {
 	open:     bool,
 	selected: Menu_Item,
-	text:     Line_Buffer,
+	view:     ui.Menu,
+	rows:     [MENU_ROW_COUNT]ui.Row,
+	hints:    [MENU_HINT_COUNT]ui.Hint_Cell,
+	storage:  Line_Buffer,
 	displays: display.List,
 }
 
@@ -60,7 +92,7 @@ menu_open :: proc(menu: ^Menu_State) {
 
 menu_close :: proc(menu: ^Menu_State) {
 	menu.open = false
-	menu.text.count = 0
+	menu.view = {}
 }
 
 // The display snapshot belongs to the window, not to a menu session.
@@ -125,60 +157,46 @@ menu_activate :: proc(menu: ^Menu_State, settings: ^Settings, direction := 1) ->
 
 menu_view :: proc(menu: ^Menu_State, settings: Settings, debug_active: bool) {
 	if !menu.open {
-		menu.text.count = 0
+		menu.view = {}
 		return
 	}
 
 	resolution := settings_effective_resolution(settings, &menu.displays)
-	menu.text.lines[0] = fmt.bprintf(
-		menu.text.storage[0][:],
-		"%-12s %s",
-		MENU_ITEM_NAMES[0],
-		window_mode_name(settings.window.mode),
-	)
-	menu.text.lines[1] = fmt.bprintf(
-		menu.text.storage[1][:],
-		"%-12s %s",
-		MENU_ITEM_NAMES[1],
-		settings_display_name(settings, &menu.displays),
-	)
-	menu.text.lines[2] = fmt.bprintf(
-		menu.text.storage[2][:],
-		"%-12s %dx%d",
+	menu_setting_row(menu, 0, MENU_ITEM_NAMES[0], window_mode_name(settings.window.mode))
+	menu_setting_row(menu, 1, MENU_ITEM_NAMES[1], settings_display_name(settings, &menu.displays))
+	menu_setting_row(
+		menu,
+		2,
 		MENU_ITEM_NAMES[2],
-		resolution.width,
-		resolution.height,
+		line_format(&menu.storage, 2, "%d×%d", resolution.width, resolution.height),
+		numeric = true,
 	)
-	menu.text.lines[3] = fmt.bprintf(
-		menu.text.storage[3][:],
-		"%-12s %s",
-		MENU_ITEM_NAMES[3],
-		input_mode_name(settings.sprint_mode),
-	)
-	menu.text.lines[4] = fmt.bprintf(
-		menu.text.storage[4][:],
-		"%-12s %s",
-		MENU_ITEM_NAMES[4],
-		input_mode_name(settings.crouch_mode),
-	)
-	menu.text.lines[5] = fmt.bprintf(
-		menu.text.storage[5][:],
-		"%-12s %s",
-		MENU_ITEM_NAMES[5],
-		input_mode_name(settings.prone_mode),
-	)
-	menu.text.lines[6] = MENU_ITEM_NAMES[6]
-	menu.text.lines[7] = ""
-	menu.text.lines[8] = "Controls"
+	menu_setting_row(menu, 3, MENU_ITEM_NAMES[3], input_mode_name(settings.sprint_mode))
+	menu_setting_row(menu, 4, MENU_ITEM_NAMES[4], input_mode_name(settings.crouch_mode))
+	menu_setting_row(menu, 5, MENU_ITEM_NAMES[5], input_mode_name(settings.prone_mode))
+	menu.rows[MENU_ROW_DIVIDER] = {kind = .Divider}
+	menu.rows[MENU_ROW_RESUME] = {kind = .Action, label = MENU_ITEM_NAMES[6]}
+	menu.rows[MENU_ROW_HEADER] = {kind = .Header, label = "Controls"}
 
-	controls := MENU_CONTROL_LINES[:]
+	hints := MENU_CONTROL_HINTS
 	if debug_active {
-		controls = MENU_DEBUG_CONTROL_LINES[:]
+		hints = MENU_DEBUG_CONTROL_HINTS
 	}
-	for line, index in controls {
-		menu.text.lines[9 + index] = line
+	menu.hints = hints
+
+	menu.view = {
+		title        = MENU_TITLE,
+		rows         = menu.rows[:],
+		selected     = MENU_ITEM_ROWS[menu.selected],
+		hints        = menu.hints[:],
+		hint_columns = MENU_HINT_COLUMNS,
+		note         = MENU_NOTE,
 	}
-	menu.text.count = 9 + len(controls)
+}
+
+@(private)
+menu_setting_row :: proc(menu: ^Menu_State, row: int, label, value: string, numeric := false) {
+	menu.rows[row] = {kind = .Setting, label = label, value = value, numeric = numeric}
 }
 
 @(private)

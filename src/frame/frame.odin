@@ -77,16 +77,11 @@ build :: proc(
 		game.hud_state_update(hud, sim, debug, snapshot, options.captured)
 		scene.hud = renderer.HUD_Frame {
 			enabled      = true,
-			status_lines = hud.status.lines[:hud.status.count],
+			menu_open    = hud.menu.open,
+			view         = hud.view,
 			capture_hint = hud.capture_hint,
 			captured     = hud.captured,
-			menu = {
-				open     = hud.menu.open,
-				title    = game.MENU_TITLE,
-				lines    = hud.menu.text.lines[:hud.menu.text.count],
-				selected = int(hud.menu.selected),
-				note     = game.MENU_NOTE,
-			},
+			menu         = hud.menu.view,
 		}
 	}
 

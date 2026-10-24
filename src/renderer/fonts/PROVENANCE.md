@@ -12,7 +12,7 @@ Upstream:
 
 Subset: Unicode `U+0020-007E` plus `U+00B7` (`·`) and `U+00D7` (`×`), which the
 HUD and the menu use as separators. Hinting is dropped and CFF subroutines are
-flattened; the atlas rasterizes glyphs at 48 px so hinting cannot apply.
+flattened; the atlas rasterizes glyphs at 40 px so hinting cannot apply.
 
 ```sh
 pyftsubset <source>.ttf \

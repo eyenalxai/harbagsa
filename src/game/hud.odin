@@ -5,13 +5,17 @@ package game
 import "core:fmt"
 import "core:math"
 
-HUD_STATUS_LINE_COUNT :: 6
-HUD_DEBUG_STATUS_LINE_COUNT :: 5
+import "src:ui"
+
+HUD_ROW_COUNT :: 6
 
 HUD_CAPTURE_HINT :: "Click to capture mouse"
+HUD_HEADER_SEPARATOR :: " · "
 
 HUD_State :: struct {
-	status:       Line_Buffer,
+	view:         ui.Hud,
+	rows:         [HUD_ROW_COUNT]ui.Row,
+	storage:      Line_Buffer,
 	capture_hint: string,
 	captured:     bool,
 	menu:         Menu_State,
@@ -32,80 +36,111 @@ hud_state_update :: proc(
 		return
 	}
 
-	grounded := "no"
-	if snapshot.grounded {
-		grounded = "yes"
+	hud.rows[0] = {
+		kind  = .Header,
+		label = line_format(
+			&hud.storage,
+			0,
+			"%s%s%s",
+			stance_name(snapshot.stance),
+			HUD_HEADER_SEPARATOR,
+			gait_name(snapshot.gait),
+		),
 	}
-
-	hud.status.lines[0] = fmt.bprintf(
-		hud.status.storage[0][:],
-		"Stance %s",
-		stance_name(snapshot.stance),
-	)
-	hud.status.lines[1] = fmt.bprintf(
-		hud.status.storage[1][:],
-		"Gait %s",
-		gait_name(snapshot.gait),
-	)
-	hud.status.lines[2] = fmt.bprintf(
-		hud.status.storage[2][:],
-		"Speed %.1f m/s",
-		horizontal_speed(snapshot.velocity),
-	)
-	hud.status.lines[3] = fmt.bprintf(hud.status.storage[3][:], "Grounded %s", grounded)
-	hud.status.lines[4] = fmt.bprintf(
-		hud.status.storage[4][:],
-		"State %s",
-		movement_state_name(snapshot.movement_state),
-	)
-	hud.status.lines[5] = fmt.bprintf(
-		hud.status.storage[5][:],
-		"Position %.1f  %.1f  %.1f",
-		snap_near_zero(snapshot.position.x),
-		snap_near_zero(snapshot.position.y),
-		snap_near_zero(snapshot.position.z),
-	)
-	hud.status.count = HUD_STATUS_LINE_COUNT
+	hud.rows[1] = {
+		kind    = .Metric,
+		label   = "Speed",
+		value   = line_format(&hud.storage, 1, "% 4.1f m/s", horizontal_speed(snapshot.velocity)),
+		numeric = true,
+	}
+	hud.rows[2] = {kind = .Metric, label = "State", value = movement_state_name(snapshot.movement_state)}
+	hud.rows[3] = {kind = .Divider}
+	hud.rows[4] = {kind = .Detail, label = "Grounded", value = grounded_name(snapshot.grounded)}
+	hud.rows[5] = {
+		kind    = .Detail,
+		label   = "Position",
+		value   = hud_position(&hud.storage, 2, snapshot.position, 5),
+		numeric = true,
+	}
+	hud.view.rows = hud.rows[:]
 }
 
 @(private)
 hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_Mode) {
 	selection: [32]u8
-	selected := "Selected None"
+	selected := "None"
 	switch debug.selection {
 	case .Crate:
 		if debug.selected_crate >= 0 && debug.selected_crate < simulation_crate_count(sim) {
-			selected = fmt.bprintf(selection[:], "Selected Crate %d", debug.selected_crate + 1)
+			selected = fmt.bprintf(selection[:], "Crate % 2d", debug.selected_crate + 1)
 		}
 	case .Sun:
-		selected = "Selected Sun"
+		selected = "Sun"
 	case .None:
 	}
 
 	azimuth, elevation := debug_mode_sun_angles(debug)
-	position := debug.camera.position
+	camera := debug.camera.position
 
-	hud.status.lines[0] = "Debug mode"
-	hud.status.lines[1] = fmt.bprintf(hud.status.storage[1][:], "%s", selected)
-	hud.status.lines[2] = fmt.bprintf(
-		hud.status.storage[2][:],
-		"Crates %d",
-		simulation_crate_count(sim),
-	)
-	hud.status.lines[3] = fmt.bprintf(
-		hud.status.storage[3][:],
-		"Position %.1f  %.1f  %.1f",
-		snap_near_zero(position.x),
-		snap_near_zero(position.y),
-		snap_near_zero(position.z),
-	)
-	hud.status.lines[4] = fmt.bprintf(
-		hud.status.storage[4][:],
-		"Sun az %.0f  el %.0f",
-		azimuth * 180.0 / math.PI,
-		elevation * 180.0 / math.PI,
-	)
-	hud.status.count = HUD_DEBUG_STATUS_LINE_COUNT
+	hud.rows[0] = {kind = .Header, label = "Debug mode"}
+	hud.rows[1] = {kind = .Metric, label = "Selection", value = selected}
+	hud.rows[2] = {
+		kind    = .Metric,
+		label   = "Crates",
+		value   = line_format(&hud.storage, 0, "% 2d", simulation_crate_count(sim)),
+		numeric = true,
+	}
+	hud.rows[3] = {kind = .Divider}
+	hud.rows[4] = {
+		kind    = .Detail,
+		label   = "Position",
+		value   = hud_position(&hud.storage, 1, camera, 7),
+		numeric = true,
+	}
+	hud.rows[5] = {
+		kind    = .Detail,
+		label   = "Sun",
+		value   = line_format(
+			&hud.storage,
+			2,
+			"az % 4.0f  el % 4.0f",
+			azimuth * 180.0 / math.PI,
+			elevation * 180.0 / math.PI,
+		),
+		numeric = true,
+	}
+	hud.view.rows = hud.rows[:]
+}
+
+// Every number that changes while the player moves is formatted into a fixed
+// field, so the row width never changes and the panel never resizes.
+@(private)
+hud_position :: proc(buffer: ^Line_Buffer, slot: int, position: [3]f32, field: int) -> string {
+	switch field {
+	case 5:
+		return line_format(
+			buffer,
+			slot,
+			"X % 5.1f  Y % 5.1f  Z % 5.1f",
+			snap_near_zero(position.x),
+			snap_near_zero(position.y),
+			snap_near_zero(position.z),
+		)
+	case:
+		return line_format(
+			buffer,
+			slot,
+			"X % 7.1f  Y % 7.1f  Z % 7.1f",
+			position.x,
+			position.y,
+			position.z,
+		)
+	}
+}
+
+@(private)
+grounded_name :: proc(grounded: bool) -> string {
+	return grounded ? "yes" : "no"
 }
 
 @(private)
