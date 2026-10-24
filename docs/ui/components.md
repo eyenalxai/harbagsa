@@ -138,4 +138,5 @@ up; the original panel shipped exactly this.
 
 An unlisted kind does not exist. If a surface needs one, extend `Row_Kind` and all
 four of `row_label_style`, `row_value_style`, `row_gap`, and `row_height` in the
-same change — a kind that only two of them know about draws at the wrong height.
+same change. A kind that only two of the four know about draws at the wrong
+height.
