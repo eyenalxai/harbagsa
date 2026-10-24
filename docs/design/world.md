@@ -24,7 +24,7 @@ space. This is the opposite of the 2D layer, which authors sRGB hex
 | Crate, green | `0.30 0.68 0.38` | `src/game/arena.odin:32` |
 | Crate, orange | `0.86 0.56 0.20` | `src/game/arena.odin:33` |
 | Crate, blue | `0.26 0.48 0.84` | `src/game/arena.odin:34` |
-| Sun light | `1.00 0.98 0.94` | `src/renderer/shaders/box.frag:30` |
+| Sun light | `1.00 0.98 0.94` | `src/renderer/shaders/box.frag:32` |
 | Ambient | `0.24 0.25 0.28` | `src/renderer/scene.odin:20` |
 | Debug selection | `1.00 0.80 0.20` | `src/game/debug_draw_crates.odin:6` |
 

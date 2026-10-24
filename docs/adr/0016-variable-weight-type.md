@@ -26,8 +26,8 @@ frame stall during the change.
 ## Decision
 
 - **Fonts.** Ship Roboto Condensed and Roboto Mono as variable TTF files, subset
-  to ASCII plus `·` and `×`. Roboto Condensed covers `wght` 100 to 900; Roboto
-  Mono covers 100 to 700. Both are SIL OFL 1.1.
+  to ASCII plus `·`, `×`, and `…`. Roboto Condensed covers `wght` 100 to 900;
+  Roboto Mono covers 100 to 700. Both are SIL OFL 1.1.
 - **Libraries.** Vendor FreeType 2.15.0 and HarfBuzz 15.0.0, built as static
   archives by the Makefile. FreeType is configured without the bytecode
   interpreter, autohinter, zlib, CFF, or Type 1. HarfBuzz builds its amalgamation
