@@ -18,7 +18,8 @@ scenario_view :: proc(value: json.Value) -> (View_Command, string) {
 }
 
 @(private)
-scenario_renderer_debug :: proc(scenario: ^Scenario, value: json.Value) -> string {	object, object_ok := json_object(value)
+scenario_renderer_debug :: proc(scenario: ^Scenario, value: json.Value) -> string {
+	object, object_ok := json_object(value)
 	if !object_ok {
 		return "scenario 'renderer_debug' must be an object"
 	}
@@ -83,7 +84,8 @@ scenario_analysis :: proc(value: json.Value) -> (Analysis_Config, string) {
 }
 
 @(private)
-scenario_commands :: proc(scenario: ^Scenario, value: json.Value, allocator: mem.Allocator) -> string {	array, array_ok := json_array(value)
+scenario_commands :: proc(scenario: ^Scenario, value: json.Value, allocator: mem.Allocator) -> string {
+	array, array_ok := json_array(value)
 	if !array_ok || len(array) == 0 {
 		return "scenario 'commands' must be a non-empty array"
 	}

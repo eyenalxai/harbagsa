@@ -93,3 +93,9 @@ capture_summary_uses_the_capture_extent :: proc(t: ^testing.T) {
 	)
 	testing.expect_value(t, summary.worst_over_16_fraction, f32(0.04))
 }
+
+@(test)
+pixel_hash_hashes_every_byte :: proc(t: ^testing.T) {
+	hash := harness.pixel_hash([]u8{0x00, 0xFF, 0x80}, context.temp_allocator)
+	testing.expect_value(t, hash, "d6c4781869e88da0")
+}

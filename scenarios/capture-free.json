@@ -1,0 +1,14 @@
+{
+  "view": {"hud": false, "debug": false, "hint": false},
+  "commands": [
+    {"cmd": "camera", "position": [-12, 1.7, 6.0], "yaw": 0, "pitch": -0.22},
+    {"cmd": "settle", "frames": 40},
+    {"cmd": "capture", "name": "after-settle"},
+    {"cmd": "step", "frames": 2},
+    {"cmd": "capture", "name": "after-two"}
+  ],
+  "checks": [
+    {"field": "renderer.frame_count", "op": "ge", "value": 42},
+    {"field": "capture.count", "op": "eq", "value": 2}
+  ]
+}
