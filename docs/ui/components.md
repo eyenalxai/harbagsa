@@ -10,6 +10,9 @@ closed. `build_hud` returns after building the menu, so the status panel, the
 capture hint, and the crosshair are all hidden while the menu is open. It draws
 in the top-left margin and never moves.
 
+Use instead when the game is paused: the settings panel. The capture hint may
+draw at the same time; it does not replace this panel.
+
 ```odin
 theme := o.theme
 padding := theme.spacing.lg
@@ -38,6 +41,9 @@ literal that no longer matches the theme.
 Use when the cursor is not captured and the player needs one instruction. It is
 transient: it disappears when capture is set.
 
+Use instead when the game is paused: the settings panel, which hides the hint.
+The status panel may draw at the same time.
+
 ```odin
 box_y := height * 0.5 + hud_crosshair_reach(theme) + theme.spacing.md
 ```
@@ -56,12 +62,17 @@ Always present while the menu is closed. Four arms, one hairline thick, with a
 dark outline so it reads against sky and floor alike. Arm and gap scale with
 density.
 
+Use instead when the game is paused: the settings panel, which replaces the
+crosshair. The capture hint sits below the crosshair, never in place of it.
+
 Do not animate it, do not give it a colour, and do not draw it above a menu.
 
 ## Settings panel
 
 Use for a paused decision. It draws a scrim over the whole target, then the
 panel, then the rows, then the legend, then the note.
+
+Use instead when the game is not paused: the status panel.
 
 Order matters and is fixed: scrim, panel, ring, title, separator, rows, legend,
 note. Each later element lands on top of the earlier ones.
@@ -95,6 +106,9 @@ lifts to `surface_raised`, and a `max(2, hairline * 2)` `accent` bar sits on its
 leading edge (2 px at 720p). The label lifts to `text_primary`; the value keeps
 its own style. The band extends `spacing.xxs` above and below the row.
 
+Use instead when the row is a `Detail`, `Header`, or `Divider`: no band. The band
+is only for a `Setting`, `Action`, or `Slider` row.
+
 ```odin
 if options.frame_width > 0 && index == options.selected && selectable {
 	hud_emit_rect(o, options.frame_x, y - pad, options.frame_width, height + pad * 2, theme.surface_raised)
@@ -120,6 +134,9 @@ Use for the control list, and only there. The renderer owns the column count:
 Keys are right-aligned against their action so a one-letter key does not float
 in a column sized by the longest shortcut.
 
+Use instead when the surface holds settings: rows. The legend documents the keys
+and holds no controls.
+
 ```odin
 text_emit_aligned(o, cell_x + grid.key_width[column], baseline, keys_style, cell.keys, .Right)
 text_emit(o, cell_x + grid.key_width[column] + theme.spacing.xs, baseline, action_style, cell.action)
@@ -139,6 +156,9 @@ exactly this.
 ## Rows
 
 `ui.Row_Kind` is closed. Seven kinds, one meaning each.
+
+Use instead when the fact is quiet: a `Detail` row. When it needs emphasis: a
+`Metric` row. When the player changes it: a `Setting` row.
 
 | Kind | Reads as | Selectable |
 | --- | --- | --- |
@@ -183,6 +203,9 @@ Type weight. At density 1:
   bar.
 - The selection band is 44.5 px at density 1 and carries the same
   `max(2, hairline * 2)` accent bar.
+
+Use instead when the choice is discrete: a `Setting` row. The slider is for one
+continuous value with named stops.
 
 Incorrect: drawing the fill in `accent`, or sizing the track from the value
 column. The track is the inner width, and a selected row already has the accent

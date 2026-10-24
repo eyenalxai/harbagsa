@@ -36,10 +36,11 @@ hud_state_update :: proc(
 	debug: ^Debug_Mode,
 	snapshot: Render_Snapshot,
 	captured: bool,
+	delta_seconds: f32,
 ) {
 	hud.captured = captured
 	hud.capture_hint = HUD_CAPTURE_HINT
-	menu_view(&hud.menu, sim.settings, debug.active)
+	menu_view(&hud.menu, sim.settings, debug.active, delta_seconds)
 	if debug.active {
 		hud_debug_state_update(hud, sim, debug)
 	} else {

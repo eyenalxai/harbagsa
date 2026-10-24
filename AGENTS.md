@@ -18,6 +18,14 @@ Never commit images. Screenshots, captures, and other binary evidence stay out o
 
 Write a comment only when it answers a hard "Why this way?" question. Do not narrate what the code does, restate a name, or explain how it works. If the signature and the names already say it, delete the comment.
 
+## Code hygiene
+
+- Do not hide a failed call behind a default. An `or_else` value that keeps the program running is a bug unless the degraded state is visible.
+- Do not add a helper that only forwards its arguments. Inline it.
+- Search for an existing helper before you add one.
+- Do not name a thing `V2`, `New`, or `Enhanced`. Replace the old one and take its name.
+- Never weaken or delete a test to make a run pass.
+
 ## Agent skills
 
 ### Issue tracker

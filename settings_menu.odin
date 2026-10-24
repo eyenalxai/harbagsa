@@ -50,7 +50,7 @@ handle_settings_menu_events :: proc(
 			clear_latches(latches)
 			// The rows and the track rect normally come from the previous draw.
 			// Neither exists yet, so build them before this frame reads input.
-			game.menu_view(menu, settings^, debug_active)
+			game.menu_view(menu, settings^, debug_active, 0)
 		}
 	}
 

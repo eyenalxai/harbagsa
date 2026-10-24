@@ -18,6 +18,28 @@ bans images, and a run directory is reproducible from its scenario.
 If the change needs a view that no scenario covers, add the scenario in the same
 change. The harness is part of the feature.
 
+## Subtract first
+
+Before the ordered check, walk every new element and ask what breaks if it is
+gone. Delete what does not break. The common survivors are a divider that
+spacing already separates, a caption that restates a title, and an icon that
+repeats a label.
+
+## Flag on sight
+
+This is the short form of the order below. Use it for a fast pass; use the
+order for the full review.
+
+- A literal colour outside `src/renderer/ui_theme.odin`.
+- A bare pixel size in `src/renderer/hud.odin`, `src/renderer/hud_menu.odin`,
+  or `src/renderer/hud_rows.odin`.
+- `accent` on anything but the selection bar.
+- `text_tertiary` as the label or value of a selectable row.
+- Any fade, slide, or scale on the overlay.
+- A new `Row_Kind` without the five touch points.
+- A third hue.
+- A value column that moves.
+
 ## Order
 
 The order is the triage order. A broken interaction outranks a weak colour.
@@ -32,9 +54,10 @@ The order is the triage order. A broken interaction outranks a weak colour.
    [colour.md](../ui/colour.md).
 4. **Fixed fields.** Every number that changes during play is in a fixed-width
    field and drawn in mono. The panel width must not move.
-5. **Token only.** No literal colour and no bare pixel size in `hud.odin`,
-   `hud_menu.odin`, `hud_rows.odin`, or `hud_slider.odin`. The one exception is
-   the documented 2 px accent-bar floor. Every other value belongs in
+5. **Token only.** No literal colour and no bare pixel size in
+   `src/renderer/hud.odin`, `src/renderer/hud_menu.odin`,
+   `src/renderer/hud_rows.odin`, or `src/renderer/hud_slider.odin`. The one
+   exception is the documented 2 px accent-bar floor. Every other value belongs in
    `src/renderer/ui_theme.odin`.
 6. **One of the documented components.** A new panel is a status panel, a capture
    hint, a crosshair, or the settings panel; the selection band, legend, rows,
