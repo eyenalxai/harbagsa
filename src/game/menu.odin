@@ -13,11 +13,15 @@ MENU_ROW_DIVIDER :: 7
 MENU_ROW_RESUME :: 8
 MENU_ROW_HEADER :: 9
 TYPE_WEIGHT_STEP :: f32(10)
-MENU_HINT_COLUMNS :: 3
 MENU_HINT_COUNT :: 18
 
 MENU_TITLE :: "Settings"
 MENU_NOTE :: "Up/Down select · Left/Right change · Drag slider · Enter change · Esc close"
+MENU_STATUS_ONE_DISPLAY :: "One display · nothing to change"
+MENU_STATUS_NO_MODES :: "No modes · nothing to change"
+MENU_STATUS_ONE_MODE :: "One mode · nothing to change"
+MENU_STATUS_MIN_WEIGHT :: "Minimum weight · nothing to change"
+MENU_STATUS_MAX_WEIGHT :: "Maximum weight · nothing to change"
 
 MENU_ITEM_NAMES := [MENU_ITEM_COUNT]string {
 	"Window mode",
@@ -34,48 +38,6 @@ MENU_ITEM_NAMES := [MENU_ITEM_COUNT]string {
 // drawn row index stay independent of where the dividers sit.
 MENU_ITEM_ROWS := [MENU_ITEM_COUNT]int{0, 1, 2, 3, 4, 5, 6, MENU_ROW_RESUME}
 
-MENU_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
-	{keys = "WASD", action = "move"},
-	{keys = "Mouse", action = "look"},
-	{keys = "Click", action = "capture"},
-	{keys = "Shift", action = "sprint"},
-	{keys = "Space", action = "jump or hold to mantle"},
-	{},
-	{keys = "C", action = "crouch or slide"},
-	{keys = "Z", action = "prone, crawl, or dive"},
-	{},
-	{keys = "R", action = "reset"},
-	{keys = "Shift+R", action = "scene"},
-	{keys = "F1", action = "debug view"},
-	{keys = "F2", action = "debug mode"},
-	{keys = "F3", action = "TAA"},
-	{keys = "F4", action = "perf"},
-	{keys = "Esc", action = "settings"},
-	{},
-	{},
-}
-
-MENU_DEBUG_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
-	{keys = "WASD", action = "fly"},
-	{keys = "Space", action = "up"},
-	{keys = "Ctrl", action = "down"},
-	{keys = "Click", action = "select"},
-	{keys = "Drag", action = "move"},
-	{keys = "Wheel", action = "height"},
-	{keys = "E", action = "add"},
-	{keys = "Delete or X", action = "remove"},
-	{keys = "L", action = "sun"},
-	{keys = "R", action = "reset player"},
-	{keys = "F2", action = "exit"},
-	{keys = "Shift+R", action = "scene"},
-	{keys = "F1", action = "debug view"},
-	{keys = "F3", action = "TAA"},
-	{keys = "F4", action = "perf"},
-	{keys = "Esc", action = "settings"},
-	{},
-	{},
-}
-
 Menu_Item :: enum {
 	Window_Mode,
 	Display,
@@ -87,15 +49,22 @@ Menu_Item :: enum {
 	Resume,
 }
 
+Change_Result :: enum {
+	Not_A_Setting,
+	Changed,
+	Blocked,
+}
+
 Menu_State :: struct {
-	open:     bool,
-	selected: Menu_Item,
-	view:     ui.Menu,
-	rows:     [MENU_ROW_COUNT]ui.Row,
-	hints:    [MENU_HINT_COUNT]ui.Hint_Cell,
+	open:            bool,
+	selected:        Menu_Item,
+	view:            ui.Menu,
+	rows:            [MENU_ROW_COUNT]ui.Row,
+	hints:           [MENU_HINT_COUNT]ui.Hint_Cell,
 	storage:         Line_Buffer,
 	displays:        display.List,
 	dragging_weight: bool,
+	status:          string,
 }
 
 menu_open :: proc(menu: ^Menu_State) {
@@ -106,6 +75,7 @@ menu_open :: proc(menu: ^Menu_State) {
 menu_close :: proc(menu: ^Menu_State) {
 	menu.open = false
 	menu.dragging_weight = false
+	menu.status = ""
 	menu.view = {}
 }
 
@@ -143,23 +113,47 @@ menu_item_from_name :: proc(name: string) -> (Menu_Item, bool) {
 	return .Window_Mode, false
 }
 
-menu_change_setting :: proc(menu: ^Menu_State, settings: ^Settings, direction: int) -> bool {
+menu_change_setting :: proc(
+	menu: ^Menu_State,
+	settings: ^Settings,
+	direction: int,
+) -> Change_Result {
 	if !menu.open || menu.selected == .Resume || direction == 0 {
-		return false
+		return .Not_A_Setting
 	}
+	// A note belongs to the press that set it.
+	menu.status = ""
 	#partial switch menu.selected {
 	case .Window_Mode:
 		settings.window.mode = toggle_window_mode(settings.window.mode)
 	case .Display:
+		if menu.displays.count <= 1 {
+			menu.status = MENU_STATUS_ONE_DISPLAY
+			return .Blocked
+		}
 		change_display(menu, settings, direction)
 	case .Resolution:
+		info := display.info_at(&menu.displays, settings.window.display)
+		if info.mode_count == 0 {
+			menu.status = MENU_STATUS_NO_MODES
+			return .Blocked
+		}
+		if settings.window.mode == .Windowed && info.mode_count == 1 {
+			menu.status = MENU_STATUS_ONE_MODE
+			return .Blocked
+		}
 		change_resolution(menu, settings, direction)
 	case .Type_Weight:
-		settings.type_weight = clamp(
+		weight := clamp(
 			settings.type_weight + f32(direction) * TYPE_WEIGHT_STEP,
 			ui.TYPE_WEIGHT_MIN,
 			ui.TYPE_WEIGHT_MAX,
 		)
+		if weight == settings.type_weight {
+			menu.status = direction > 0 ? MENU_STATUS_MAX_WEIGHT : MENU_STATUS_MIN_WEIGHT
+			return .Blocked
+		}
+		settings.type_weight = weight
 	case .Sprint:
 		settings.sprint_mode = toggle_input_mode(settings.sprint_mode)
 	case .Crouch:
@@ -167,7 +161,7 @@ menu_change_setting :: proc(menu: ^Menu_State, settings: ^Settings, direction: i
 	case .Prone:
 		settings.prone_mode = toggle_input_mode(settings.prone_mode)
 	}
-	return true
+	return .Changed
 }
 
 menu_set_type_weight :: proc(menu: ^Menu_State, settings: ^Settings, weight: f32) -> bool {
@@ -187,7 +181,7 @@ menu_activate :: proc(menu: ^Menu_State, settings: ^Settings, direction := 1) ->
 	if !menu.open {
 		return false
 	}
-	if menu_change_setting(menu, settings, direction) {
+	if menu_change_setting(menu, settings, direction) != .Not_A_Setting {
 		return false
 	}
 	if menu.selected == .Resume {
@@ -228,19 +222,30 @@ menu_view :: proc(menu: ^Menu_State, settings: Settings, debug_active: bool) {
 	menu.rows[MENU_ROW_RESUME] = {kind = .Action, label = MENU_ITEM_NAMES[7]}
 	menu.rows[MENU_ROW_HEADER] = {kind = .Header, label = "Controls"}
 
+	info := display.info_at(&menu.displays, settings.window.display)
+	menu.rows[1].blocked = menu.displays.count <= 1
+	menu.rows[2].blocked =
+		info.mode_count == 0 ||
+		(settings.window.mode == .Windowed && info.mode_count == 1)
+
 	hints := MENU_CONTROL_HINTS
 	if debug_active {
 		hints = MENU_DEBUG_CONTROL_HINTS
 	}
 	menu.hints = hints
 
+	note := menu.status
+	menu.status = ""
+	if note == "" {
+		note = MENU_NOTE
+	}
+
 	menu.view = {
-		title        = MENU_TITLE,
-		rows         = menu.rows[:],
-		selected     = MENU_ITEM_ROWS[menu.selected],
-		hints        = menu.hints[:],
-		hint_columns = MENU_HINT_COLUMNS,
-		note         = MENU_NOTE,
+		title    = MENU_TITLE,
+		rows     = menu.rows[:],
+		selected = MENU_ITEM_ROWS[menu.selected],
+		hints    = menu.hints[:],
+		note     = note,
 	}
 }
 
@@ -251,10 +256,6 @@ menu_setting_row :: proc(menu: ^Menu_State, row: int, label, value: string, nume
 
 @(private)
 change_display :: proc(menu: ^Menu_State, settings: ^Settings, direction: int) {
-	if menu.displays.count <= 1 {
-		settings.window.display = 0
-		return
-	}
 	current := display.clamp_index(&menu.displays, settings.window.display)
 	settings.window.display = (current + direction + menu.displays.count) % menu.displays.count
 	settings.window.resolution = display.snap_mode(
@@ -266,9 +267,6 @@ change_display :: proc(menu: ^Menu_State, settings: ^Settings, direction: int) {
 @(private)
 change_resolution :: proc(menu: ^Menu_State, settings: ^Settings, direction: int) {
 	info := display.info_at(&menu.displays, settings.window.display)
-	if info.mode_count == 0 {
-		return
-	}
 	// A desktop-sized borderless window has no smaller alternatives, so choosing
 	// a size always starts a window.
 	if settings.window.mode == .Borderless {

@@ -1,80 +1,108 @@
 # TAA evidence
 
-Captured on 2026-10-23 from `main` at `363041e` (merge of #62). GPU: AMD Radeon RX 9060 XT (RADV GFX1200). Window: 2536x1386. This is larger than the 1280x720 acceptance target.
+Captured on 2026-10-23 from `main` at `363041e` (merge of #62). GPU: AMD Radeon
+RX 9060 XT (RADV GFX1200). Window: 2536x1386. This is larger than the 1280x720
+acceptance target.
+
+Evidence is a run directory plus a scenario. `scenarios/taa-static.json` is the
+still-camera record and `scenarios/taa-motion.json` is the motion record. Run
+each into `runs/taa-static/` and `runs/taa-motion/`, then read `frames/` and
+`analysis.json`.
 
 ## Still camera
 
-The camera does not move between the two images. `F3` toggles TAA. The HUD and the crosshair are drawn after the resolve, so they stay crisp.
-
-TAA on:
-
-![TAA on](taa/taa-on.png)
-
-TAA off:
-
-![TAA off](taa/taa-off.png)
-
-### Edge crop
-
-2x nearest-neighbor crop of the green crate and the blue ramp. TAA smooths the diagonal edges. With TAA off, the edges show stair-steps.
-
-| TAA on | TAA off |
-| --- | --- |
-| ![TAA on crop](taa/taa-on-crop.png) | ![TAA off crop](taa/taa-off-crop.png) |
+The camera does not move between frames. `F3` toggles TAA. The HUD and the
+crosshair are drawn after the resolve, so they stay crisp. The diagonal edges of
+the green crate and the blue ramp are the edge check: TAA smooths them, and with
+TAA off they show stair-steps.
 
 ## Walking, crate push, and reset
 
-[Walking clip](taa/walking.mp4), 4 seconds at a 12 fps capture rate. The camera walks into the green crate and pushes it. `R` returns the player to spawn and clears the history. The crate leaves no trail, and the reset does not smear.
-
-The clip capture runs at 12 fps. The demo runs at 60 fps.
+`scenarios/taa-motion.json` moves the camera into the green crate and pushes it,
+then holds the view. `R` returns the player to spawn and clears the history. The
+crate leaves no trail, and the reset does not smear.
 
 ## HUD and debug view
 
-`F3` is in both control panels. `F1` draws exact outlines. `F2` enters debug mode and keeps `F3` active.
+`F3` is in both control panels. `F1` draws exact outlines. `F2` enters debug mode
+and keeps `F3` active. `scenarios/hud-debug.json` captures the debug readout into
+`runs/hud-debug/`.
 
-![F1 debug view](taa/debug-view.png)
-
-![F2 debug mode](taa/debug-mode.png)
+`scenarios/renderer-state.json` settles a static scene and gates
+`renderer.taa_enabled`, `renderer.history_valid`, `renderer.convergence_frames`,
+and the render digest. Run it into `runs/renderer-state/`.
 
 ## Performance
 
-MangoHud reports 60 fps and 16.7 ms at 2536x1386. The GPU load is 8%. The 1280x720 target is smaller.
-
-![MangoHud at 60 fps](taa/mangohud-60fps.png)
+MangoHud reports 60 fps and 16.7 ms at 2536x1386. The GPU load is 8%. The
+1280x720 target is smaller.
 
 ## Validation
 
-`make validate` ran with `VK_LAYER_KHRONOS_validation` for 15 seconds. The log had no `VUID` or `[ERROR]` lines. The target runs the demo until it closes, so the run was stopped after the checks.
+`make validate` ran with `VK_LAYER_KHRONOS_validation` for 15 seconds. The log
+had no `VUID` or `[ERROR]` lines. The target runs the demo until it closes, so
+the run was stopped after the checks.
 
-The validation layer found a pre-existing swapchain semaphore reuse error. #24 fixes it with one render-finished semaphore per acquired image.
+The validation layer found a pre-existing swapchain semaphore reuse error. #24
+fixes it with one render-finished semaphore per acquired image.
 
 ## Temporal stability fix
 
-Captured on 2026-10-24 from `fix/taa-unjittered-velocity`. The original capture above predates the ray-query shadows and this fix.
+Captured on 2026-10-24 from `fix/taa-unjittered-velocity`. The original run
+predates the ray-query shadows and this fix.
 
-At the time, `scenarios/taa-static.json` settled the camera for 8 frames and captured 25 frames. The harness then rendered only capture frames, so those frames measured the initial convergence, not the steady image. On the 16 pairs from frames 8-23 the mean frame delta was 0.196/255 and 0.290% of pixels changed by more than 16/255. The worst pair changed by 0.350/255 mean with 6,832 pixels above 16/255.
+At the time, `scenarios/taa-static.json` settled the camera for 8 frames and
+captured 25 frames. The harness then rendered only capture frames, so those
+frames measured the initial convergence, not the steady image. On the 16 pairs
+from frames 8-23 the mean frame delta was 0.196/255 and 0.290% of pixels changed
+by more than 16/255. The worst pair changed by 0.350/255 mean with 6,832 pixels
+above 16/255.
 
-After that fix, the worst pair in the same window changed by 0.053/255 mean. The worst count above 16/255 was 972, or 0.105% of the frame. Those numbers are historical; the accumulation fix below retargets the scenario at the steady image.
+After that fix, the worst pair in the same window changed by 0.053/255 mean. The
+worst count above 16/255 was 972, or 0.105% of the frame. Those numbers are
+historical; the accumulation fix below retargets the scenario at the steady
+image.
 
-The root cause was the velocity target. The box fragment shader mixed an unjittered previous projection with the jittered current sample, so a still camera stored the negative jitter. The resolve then sampled the history one jitter offset away from the pixel. The fragment shader now projects both ends in unjittered UV space. See #101.
+The root cause was the velocity target. The box fragment shader mixed an
+unjittered previous projection with the jittered current sample, so a still
+camera stored the negative jitter. The resolve then sampled the history one
+jitter offset away from the pixel. The fragment shader now projects both ends in
+unjittered UV space. See #101.
 
 ## Accumulation fix
 
-Captured on 2026-10-24 from `fix-taa-stairs-flicker`. The fix for #101 removed the reprojection error, but a still image still rippled on stair silhouettes. The ripple repeated every eight frames, the length of the jitter cycle.
+Captured on 2026-10-24 from `fix-taa-stairs-flicker`. The fix for #101 removed
+the reprojection error, but a still image still rippled on stair silhouettes.
+The ripple repeated every eight frames, the length of the jitter cycle.
 
-The earlier scenario captured 25 frames and warmed up four captures. The harness then rendered only capture frames, so those frames were the initial convergence, not the steady image. That is why the gate passed while the flicker remained. The new `settle` command renders frames without writing a PNG.
+The earlier scenario captured 25 frames and warmed up four captures. The harness
+then rendered only capture frames, so those frames were the initial convergence,
+not the steady image. That is why the gate passed while the flicker remained. The
+new `settle` command renders frames without writing a PNG.
 
 ### Root cause
 
-The resolve blended with a fixed weight of 0.9. Over one eight-phase jitter cycle the weights were 0.1, 0.09, 0.081, and so on, so a still pixel settled into a period-eight cycle instead of a fixed value. Longer fixed weights reduced the ripple, but a global weight or count froze edge patterns after camera motion: a 300-frame global ramp left a hold image 95/255 away from a fresh still image on 1,619 pixels.
+The resolve blended with a fixed weight of 0.9. Over one eight-phase jitter cycle
+the weights were 0.1, 0.09, 0.081, and so on, so a still pixel settled into a
+period-eight cycle instead of a fixed value. Longer fixed weights reduced the
+ripple, but a global weight or count froze edge patterns after camera motion: a
+300-frame global ramp left a hold image 95/255 away from a fresh still image on
+1,619 pixels.
 
 ### Change
 
-Each history image now has a per-pixel sample count. The resolve averages a new sample with weight one over the count plus one, up to 512. The count follows the reprojected surface, and a depth rejection resets it to one, so a disocclusion reconverges in a few frames. The history clamp uses a 2σ variance box in YCoCg instead of the min/max intersection; the min/max box collapses on flat neighborhoods and causes phase-dependent pops.
+Each history image now has a per-pixel sample count. The resolve averages a new
+sample with weight one over the count plus one, up to 512. The count follows the
+reprojected surface, and a depth rejection resets it to one, so a disocclusion
+reconverges in a few frames. The history clamp uses a 2σ variance box in YCoCg
+instead of the min/max intersection; the min/max box collapses on flat
+neighborhoods and causes phase-dependent pops.
 
 ### Still camera at 800x600
 
-The camera is the stairs view from the reported repro: `[-12, 1.7, 6.0]`, yaw 0, pitch -0.22. The comparison uses the last 200 frames after the accumulation settles.
+The camera is the stairs view from the reported repro: `[-12, 1.7, 6.0]`, yaw 0,
+pitch -0.22. The comparison uses the last 200 frames after the accumulation
+settles.
 
 | Metric | Before | After |
 | --- | --- | --- |
@@ -85,17 +113,24 @@ The camera is the stairs view from the reported repro: `[-12, 1.7, 6.0]`, yaw 0,
 | pixels with a 200-frame range above 4/255 | 5,660 | 220 |
 | worst 200-frame per-pixel range | 42/255 | 12/255 |
 
-The arena stairs region alone drops from a 30/255 range and 924 pixels above 8/255 to a 12/255 range and 2 pixels above 8/255.
+The arena stairs region alone drops from a 30/255 range and 924 pixels above
+8/255 to a 12/255 range and 2 pixels above 8/255.
 
-![Temporal range over 200 still frames](taa/taa-stairs-range-800x600.png)
+The scenario settles 520 frames, so the accumulation count reaches the 512 cap.
+The 800x600 worst pair is 0.0022/255 mean and the 1280x720 worst pair is
+0.0031/255. The static scenario gates `capture.worst_mean_delta <= 0.02` and
+`capture.worst_over_16_fraction <= 0.000005`.
 
-The scenario settles 520 frames, so the accumulation count reaches the 512 cap. The 800x600 worst pair is 0.0022/255 mean and the 1280x720 worst pair is 0.0031/255. The static scenario gates `capture.worst_mean_delta <= 0.02` and `capture.worst_over_16_fraction <= 0.000005`.
-
-The pre-fix renderer fails both new gates: the static worst pair is 0.058/255 with 51 pixels above 16/255, and the motion worst hold pair is 0.052/255 with 202 pixels above 16/255.
+The pre-fix renderer fails both new gates: the static worst pair is 0.058/255
+with 51 pixels above 16/255, and the motion worst hold pair is 0.052/255 with 202
+pixels above 16/255.
 
 ### After motion
 
-Move the camera up the stairs, turn 180 degrees, hold, and compare the last hold frame with a fresh still image of the same view at 800x600. The per-pixel count reconverges after the disocclusions, so the hold image returns to the fresh image instead of keeping a baked edge pattern.
+Move the camera up the stairs, turn 180 degrees, hold, and compare the last hold
+frame with a fresh still image of the same view at 800x600. The per-pixel count
+reconverges after the disocclusions, so the hold image returns to the fresh image
+instead of keeping a baked edge pattern.
 
 | Variant | Pixels above 16/255 | Worst pixel | Mean |
 | --- | --- | --- | --- |
@@ -103,10 +138,14 @@ Move the camera up the stairs, turn 180 degrees, hold, and compare the last hold
 | Global 256-frame ramp | 1,619 | 95/255 | 0.172 |
 | Per-pixel count | 24 | 25/255 | 0.040 |
 
-`scenarios/taa-motion.json` gates the hold deltas after 20 warmup captures at `capture.worst_mean_delta <= 0.03` and `capture.worst_over_16_fraction <= 0.000005`.
+`scenarios/taa-motion.json` gates the hold deltas after 20 warmup captures at
+`capture.worst_mean_delta <= 0.03` and `capture.worst_over_16_fraction <=
+0.000005`.
 
 Superseded by `docs/adr/0015-sky-ambient-and-ray-traced-ambient-occlusion.md`: the stochastic AO term moves the mean gate to 0.07. The fraction gate stays at 0.000005 and measures 2.17e-06.
 
 ### Crate push
 
-The moving crate shadow stays sharp. Against a no-TAA reference the count variant differs by 0.39/255 mean; the count does not keep the stale shadow for the length of the history.
+The moving crate shadow stays sharp. Against a no-TAA reference the count variant
+differs by 0.39/255 mean; the count does not keep the stale shadow for the length
+of the history.

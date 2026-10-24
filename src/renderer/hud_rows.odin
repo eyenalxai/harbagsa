@@ -7,7 +7,7 @@ import "src:ui"
 // and every divider use it, so both share one edge; a zero width means the
 // caller has no panel and the row block is its own frame.
 Rows_Options :: struct {
-	value_align: Text_Align,
+	value_align: ui.Row_Align,
 	frame_x:     f32,
 	frame_width: f32,
 	selected:    int,
@@ -31,7 +31,7 @@ row_label_style :: proc(theme: UI_Theme, kind: ui.Row_Kind) -> Text_Style {
 		return {type = theme.type_caption, color = theme.text_tertiary}
 	case .Header:
 		return {type = theme.type_caption_caps, color = theme.text_tertiary}
-	case .Divider, .Spacer:
+	case .Divider:
 	}
 	return {type = theme.type_body, color = theme.text_secondary}
 }
@@ -44,12 +44,15 @@ row_value_style :: proc(theme: UI_Theme, row: ui.Row) -> Text_Style {
 		style = theme.type_caption
 		color = theme.text_tertiary
 	case .Setting, .Action, .Metric, .Slider:
-	case .Divider, .Spacer, .Header:
+	case .Divider, .Header:
 		return {type = theme.type_body, color = color}
 	}
 	if row.numeric {
 		style.face = .Mono
 		style.weight = min(style.weight, MONO_MAX_WEIGHT)
+	}
+	if row.blocked {
+		color = theme.text_secondary
 	}
 	return {type = style, color = color}
 }
@@ -60,8 +63,6 @@ row_gap :: proc(theme: UI_Theme, kind: ui.Row_Kind) -> f32 {
 		return theme.spacing.lg
 	case .Divider:
 		return theme.spacing.sm
-	case .Spacer:
-		return 0
 	case .Setting, .Action, .Slider:
 		return theme.spacing.sm
 	case .Metric, .Detail:
@@ -75,8 +76,6 @@ row_height :: proc(theme: UI_Theme, kind: ui.Row_Kind) -> f32 {
 		return theme.type_caption.line_height
 	case .Divider:
 		return theme.hairline
-	case .Spacer:
-		return theme.spacing.sm
 	case .Slider:
 		return theme.type_body.line_height + theme.spacing.sm + theme.spacing.lg
 	case .Setting, .Action, .Metric:
@@ -91,17 +90,21 @@ rows_measure :: proc(atlas: ^Text_Atlas, theme: UI_Theme, rows: []ui.Row, option
 			layout.height += row_gap(theme, row.kind)
 		}
 		layout.height += row_height(theme, row.kind)
-		if row.label != "" {
-			layout.label_column = max(
-				layout.label_column,
-				text_measure(atlas, row_label_style(theme, row.kind).type, row.label),
-			)
-		}
-		if row.value != "" {
-			layout.value_width = max(
-				layout.value_width,
-				text_measure(atlas, row_value_style(theme, row).type, row.value),
-			)
+		switch row.kind {
+		case .Header, .Divider:
+		case .Setting, .Action, .Metric, .Detail, .Slider:
+			if row.label != "" {
+				layout.label_column = max(
+					layout.label_column,
+					text_measure(atlas, row_label_style(theme, row.kind).type, row.label),
+				)
+			}
+			if row.value != "" {
+				layout.value_width = max(
+					layout.value_width,
+					text_measure(atlas, row_value_style(theme, row).type, row.value),
+				)
+			}
 		}
 	}
 	layout.value_column = layout.label_column + theme.spacing.xl
@@ -151,8 +154,6 @@ rows_emit_row :: proc(
 		frame_x, frame_width := rows_frame(x, layout, options)
 		hud_emit_rect(o, frame_x, y, frame_width, theme.hairline, theme.line_separator)
 		return
-	case .Spacer:
-		return
 	case .Header:
 		text_emit(o, x, baseline, row_style, row.label)
 		return
@@ -186,15 +187,6 @@ rows_emit_row :: proc(
 	switch options.value_align {
 	case .Left:
 		text_emit(o, x + layout.value_column, baseline, value_style, row.value)
-	case .Center:
-		text_emit_aligned(
-			o,
-			x + layout.value_column + layout.value_width * 0.5,
-			baseline,
-			value_style,
-			row.value,
-			.Center,
-		)
 	case .Right:
 		text_emit_aligned(
 			o,
@@ -231,7 +223,7 @@ rows_emit_slider :: proc(
 	ratio := clamp(row.ratio, 0, 1)
 	knob_center := track_x + knob * 0.5 + ratio * travel
 
-	hud_emit_rect(o, track_x, track_y, track_width, thickness, theme.line_separator)
+	hud_emit_rect(o, track_x, track_y, track_width, thickness, theme.slider_track)
 	hud_emit_rect(o, track_x, track_y, max(knob_center - track_x, 0), thickness, theme.text_secondary)
 	if row.ticks >= 2 {
 		pitch := travel / f32(row.ticks - 1)
