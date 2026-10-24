@@ -73,7 +73,7 @@ handle_settings_menu_events :: proc(
 		events.captured = close_settings_menu(window, menu, recapture^)
 		accumulator^ = 0
 	}
-	game.menu_slider_input(
+	game.menu_weight_input(
 		menu,
 		settings,
 		menu_slider_for_window(r, window, menu.view),

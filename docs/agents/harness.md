@@ -859,18 +859,11 @@ It translates `--base` to `tools/ab.sh --ref` and passes `--scenario`, `--size`,
 - `src/harness/session_rows.odin`: the HUD and menu row dump.
 - `src/harness/session_displays.odin`: the scripted display list.
 - `src/harness/ab_command.odin`: the `ab` wrapper over `tools/ab.sh`.
-- `src/harness/capture_region.odin`: the region, crop, and histogram.
-- `src/harness/capture_profile.odin`: the profile build and crossing width.
-- `src/harness/analysis_bands.odin`: the band metric.
-- `src/harness/scenario_inherit.odin`: `extends` and `parameters`.
 - `src/harness/run_paths.odin`: the tag-aware run directory.
 - `src/harness/session_settle.odin`: the convergence wait.
-- `src/harness/session_displays.odin`: the scripted display list.
-- `src/harness/session_rows.odin`: the HUD and menu row dump.
 - `src/harness/state_field_leaves.odin`: the leaf field resolvers.
-- `src/harness/status_fields.odin`: the top-level state field table.
+- `src/harness/state_fields.odin`: the top-level state field table.
 - `src/harness/cli_override.odin`: the CLI renderer override.
-- `src/harness/ab_command.odin`: the `ab` wrapper over `tools/ab.sh`.
 - `src/harness/perf_run.odin`: the perf run and its prime loop.
 - `src/harness/perf_report.odin`: the perf report types and fill.
 - `src/harness/perf_command.odin`: the perf command parser.
@@ -901,6 +894,7 @@ It translates `--base` to `tools/ab.sh --ref` and passes `--scenario`, `--size`,
 - `src/renderer/capture.odin`: the target copy and RGBA f32 decode.
 - `src/frame/`: shared scene assembly and draw for the game and the harness.
 - `src/game/menu.odin`: the menu rows, settings text, and control list.
+- `src/game/menu_input.odin`: the pure slider drag state machine.
 - `src/game/settings.odin`: the runtime window and input-mode settings.
 - `src/display/`: the display list, mode ordering, and window settings types.
 - `src/renderer/`: `Target` and `Platform` ports, swapchain/offscreen targets,
