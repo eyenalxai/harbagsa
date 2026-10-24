@@ -142,7 +142,7 @@ instead of keeping a baked edge pattern.
 `capture.worst_mean_delta <= 0.03` and `capture.worst_over_16_fraction <=
 0.000005`.
 
-Superseded by `docs/adr/0015-sky-ambient-and-ray-traced-ambient-occlusion.md`: the stochastic AO term moves the mean gate to 0.07. The fraction gate stays at 0.000005 and measures 2.17e-06.
+Superseded by `docs/adr/0017-sky-ambient-and-ray-traced-ambient-occlusion.md`: the stochastic AO term moves the mean gate to 0.07. The fraction gate stays at 0.000005 and measures 2.17e-06.
 
 ### Crate push
 
