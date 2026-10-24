@@ -1,0 +1,14 @@
+{
+  "view": {"hud": false, "debug": false, "hint": false},
+  "commands": [
+    {"cmd": "reset"},
+    {"cmd": "face", "yaw": 0.534, "pitch": 0},
+    {"cmd": "input", "forward": 1},
+    {"cmd": "step", "frames": 155},
+    {"cmd": "check", "field": "player.position.y", "op": "lt", "value": 0.1},
+    {"cmd": "check", "field": "player.position.z", "op": "gt", "value": 3.0},
+    {"cmd": "face", "yaw": 1.047, "pitch": 0},
+    {"cmd": "step", "frames": 15},
+    {"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0.3}
+  ]
+}
