@@ -154,8 +154,9 @@ runs/smoke/
   run.log
 ```
 
-`report.json` holds the pass/fail result, the final state, absolute screenshot
-paths, checks, the state digest, and the perf report when a perf run happened. `state.json` holds the final state alone.
+`report.json` holds the pass/fail result, the final state, the setup block,
+absolute screenshot paths, checks, the state digest, and the perf report when a
+perf run happened. `state.json` holds the final state alone.
 `run.log` holds the log lines. Standard output is one JSON summary.
 
 Exit codes:
@@ -199,8 +200,8 @@ step. `forward`, `right`, and `jump` persist; `jump` is an edge on the first
 frame of its block. Capture frames are zero-based frame numbers. Check operators
 are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. Check fields use the `state.json`
 shape, for example `player.position.y`, `player.grounded`, `crates.0.position.z`,
-`crates.count`, `settings.window_mode`, `settings.resolution`, `menu.open`, or
-`debug.active`.
+`crates.count`, `settings.window_mode`, `settings.resolution`, `menu.open`,
+`debug.active`, `renderer.taa_enabled`, or `render_digest`.
 
 A scenario may use `commands` instead of `steps`:
 
@@ -236,7 +237,11 @@ The batch runner and the live session share one command set:
   settle is an error while the menu is open. Under `--no-render`, or in a
   scenario with no captures, it is a plain step.
 - `{"cmd": "state"}`: player, eye, velocity, yaw, pitch, grounded, crates,
-  window and input settings, debug mode, menu, frame, and digest.
+  window and input settings, debug mode, menu, renderer state, render digest,
+  frame, and simulation digest. The renderer object reports the frame count,
+  TAA state, jitter index, history validity, convergence frames, history read
+  index and weight, reset count and reason, and shadow phase. `render_digest`
+  covers the effective camera, sun, boxes, jitter, shadow phase, and view flags.
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`: write a PNG.
   `frame` is optional. A past frame is an error; a future frame queues.
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw": 0, "pitch": 0}`: inspection
@@ -355,6 +360,12 @@ crouch input mode, closes the menu, and checks the saved state.
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window
 settings.
+
+`scenarios/renderer-state.json` settles a static scene, captures it, and checks
+the renderer state and render digest. `scenarios/renderer-reset.json` teleports
+the camera and checks that the history reset names the teleport. `report.json`
+also carries a `setup` block: target kind, extent, view flags, and renderer
+config, so a run is reproducible.
 
 ## Build
 

@@ -53,6 +53,8 @@ select_physical_device :: proc(r: ^Renderer) -> Error {
 	props: vk.PhysicalDeviceProperties
 	vk.GetPhysicalDeviceProperties(r.physical_device, &props)
 	r.timestamp_period = props.limits.timestampPeriod
+	r.device_name = props.deviceName
+	r.device_name_len = len(name_from_bytes(props.deviceName[:]))
 	r.timing_available = r.timestamp_valid_bits > 0 && r.timestamp_period > 0
 	if !r.timing_available {
 		log.warn("renderer: the graphics queue cannot write timestamps; GPU timings are off")
