@@ -3,8 +3,10 @@ package harness
 
 import "core:fmt"
 import "core:mem"
+import "core:strings"
 
 import b3 "libs:box3d"
+import "src:display"
 import "src:game"
 
 Vec_State :: struct {
@@ -35,9 +37,14 @@ Crate_State :: struct {
 }
 
 Settings_State :: struct {
-	sprint_mode: string `json:"sprint_mode"`,
-	crouch_mode: string `json:"crouch_mode"`,
-	prone_mode:  string `json:"prone_mode"`,
+	window_mode:       string `json:"window_mode"`,
+	display:           string `json:"display"`,
+	display_index:     int    `json:"display_index"`,
+	resolution:        string `json:"resolution"`,
+	window_resolution: string `json:"window_resolution"`,
+	sprint_mode:       string `json:"sprint_mode"`,
+	crouch_mode:       string `json:"crouch_mode"`,
+	prone_mode:        string `json:"prone_mode"`,
 }
 
 Menu_State :: struct {
@@ -62,6 +69,8 @@ state_build :: proc(
 	allocator: mem.Allocator,
 ) -> State {
 	snapshot := game.simulation_snapshot(sim)
+	resolution := game.settings_effective_resolution(sim.settings, &menu.displays)
+	window_resolution := sim.settings.window.resolution
 	state := State {
 		frame = frame,
 		player = {
@@ -73,6 +82,27 @@ state_build :: proc(
 			grounded = snapshot.grounded,
 		},
 		settings = {
+			window_mode = game.window_mode_name(sim.settings.window.mode),
+			display = strings.clone(
+				game.settings_display_name(sim.settings, &menu.displays),
+				allocator,
+			),
+			display_index = display.clamp_index(
+				&menu.displays,
+				sim.settings.window.display,
+			),
+			resolution = fmt.aprintf(
+				"%dx%d",
+				resolution.width,
+				resolution.height,
+				allocator = allocator,
+			),
+			window_resolution = fmt.aprintf(
+				"%dx%d",
+				window_resolution.width,
+				window_resolution.height,
+				allocator = allocator,
+			),
 			sprint_mode = game.input_mode_name(sim.settings.sprint_mode),
 			crouch_mode = game.input_mode_name(sim.settings.crouch_mode),
 			prone_mode = game.input_mode_name(sim.settings.prone_mode),
@@ -106,6 +136,18 @@ state_destroy :: proc(state: ^State, allocator: mem.Allocator) {
 		delete(state.crates, allocator)
 		state.crates = nil
 	}
+	if state.settings.display != "" {
+		delete(state.settings.display, allocator)
+		state.settings.display = ""
+	}
+	if state.settings.resolution != "" {
+		delete(state.settings.resolution, allocator)
+		state.settings.resolution = ""
+	}
+	if state.settings.window_resolution != "" {
+		delete(state.settings.window_resolution, allocator)
+		state.settings.window_resolution = ""
+	}
 	if state.digest != "" {
 		delete(state.digest, allocator)
 		state.digest = ""
@@ -127,6 +169,11 @@ state_digest :: proc(state: State, allocator: mem.Allocator) -> string {
 	hash = digest_f32(hash, state.player.yaw)
 	hash = digest_f32(hash, state.player.pitch)
 	hash = digest_u64(hash, state.player.grounded ? 1 : 0)
+	hash = digest_string(hash, state.settings.window_mode)
+	hash = digest_string(hash, state.settings.display)
+	hash = digest_u64(hash, u64(state.settings.display_index))
+	hash = digest_string(hash, state.settings.resolution)
+	hash = digest_string(hash, state.settings.window_resolution)
 	hash = digest_string(hash, state.settings.sprint_mode)
 	hash = digest_string(hash, state.settings.crouch_mode)
 	hash = digest_string(hash, state.settings.prone_mode)
