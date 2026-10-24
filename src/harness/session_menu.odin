@@ -8,7 +8,7 @@ session_menu :: proc(session: ^Session, command: Menu_Command) -> string {
 	if command.has_open {
 		will_open = command.open
 	}
-	if command.has_select && !will_open {
+	if command.has_item && !will_open {
 		return "menu must be open to select a row"
 	}
 	if command.has_activate && !will_open {
@@ -25,8 +25,8 @@ session_menu :: proc(session: ^Session, command: Menu_Command) -> string {
 			game.menu_close(&session.hud.menu)
 		}
 	}
-	if command.has_select {
-		game.menu_select(&session.hud.menu, command.select)
+	if command.has_item {
+		game.menu_select(&session.hud.menu, int(command.item))
 	}
 	if command.activate {
 		direction := 1

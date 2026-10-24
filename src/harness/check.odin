@@ -56,13 +56,13 @@ check_field :: proc(
 ) {
 	if strings.has_prefix(path, "analysis.") {
 		if analysis == nil {
-			return {}, "analysis is not available; enable it and capture a color frame"
+			return {}, format_error("%s", "analysis is not available; enable it and capture a color frame")
 		}
 		return analysis_field(analysis^, path[len("analysis."):])
 	}
 	if strings.has_prefix(path, "capture.") {
 		if capture.count == 0 {
-			return {}, "no capture has run"
+			return {}, format_error("%s", "no capture has run")
 		}
 		return capture_field(capture, path[len("capture."):])
 	}
@@ -76,30 +76,33 @@ check_result_destroy :: proc(result: ^Check_Result, allocator: mem.Allocator) {
 	if result.actual != "" {
 		delete(result.actual, allocator)
 	}
+	if result.error != "" {
+		delete(result.error, allocator)
+	}
 	result^ = {}
 }
 
 check_compare :: proc(actual: Check_Value, op: Check_Op, expected: Check_Value) -> (bool, string) {
 	if actual.kind != expected.kind {
-		return false, "check value type does not match the field type"
+		return false, format_error("%s", "check value type does not match the field type")
 	}
 	switch actual.kind {
 	case .Number:
 		return compare_number(actual.number, op, expected.number)
 	case .Bool:
 		if op != .Eq && op != .Ne {
-			return false, "boolean checks support only 'eq' and 'ne'"
+			return false, format_error("%s", "boolean checks support only 'eq' and 'ne'")
 		}
 		equal := actual.boolean == expected.boolean
 		return equal if op == .Eq else !equal, ""
 	case .String:
 		if op != .Eq && op != .Ne {
-			return false, "string checks support only 'eq' and 'ne'"
+			return false, format_error("%s", "string checks support only 'eq' and 'ne'")
 		}
 		equal := actual.text == expected.text
 		return equal if op == .Eq else !equal, ""
 	}
-	return false, "unsupported check value"
+	return false, format_error("%s", "unsupported check value")
 }
 
 @(private)
@@ -118,7 +121,7 @@ compare_number :: proc(actual: f64, op: Check_Op, expected: f64) -> (bool, strin
 	case .Ge:
 		return actual >= expected, ""
 	}
-	return false, "unknown check op"
+	return false, format_error("%s", "unknown check op")
 }
 
 state_field :: proc(state: State, path: string) -> (Check_Value, string) {
@@ -136,37 +139,37 @@ state_field :: proc(state: State, path: string) -> (Check_Value, string) {
 	switch head {
 	case "player":
 		if !has_tail {
-			return {}, "player needs a field"
+			return {}, format_error("%s", "player needs a field")
 		}
 		return player_field(state.player, tail)
 	case "crates":
 		if !has_tail {
-			return {}, "crates needs an index or 'count'"
+			return {}, format_error("%s", "crates needs an index or 'count'")
 		}
 		return crates_field(state.crates, tail)
 	case "settings":
 		if !has_tail {
-			return {}, "settings needs a field"
+			return {}, format_error("%s", "settings needs a field")
 		}
 		return settings_field(state.settings, tail)
 	case "debug":
 		if !has_tail {
-			return {}, "debug needs a field"
+			return {}, format_error("%s", "debug needs a field")
 		}
 		return debug_field(state.debug, tail)
 	case "sun":
 		if !has_tail {
-			return {}, "sun needs a field"
+			return {}, format_error("%s", "sun needs a field")
 		}
 		return sun_field(state.sun, tail)
 	case "menu":
 		if !has_tail {
-			return {}, "menu needs a field"
+			return {}, format_error("%s", "menu needs a field")
 		}
 		return menu_field(state.menu, tail)
 	case "renderer":
 		if !has_tail {
-			return {}, "renderer needs a field"
+			return {}, format_error("%s", "renderer needs a field")
 		}
 		return renderer_field(state.renderer, tail)
 	}
@@ -179,17 +182,17 @@ player_field :: proc(player: Player_State, path: string) -> (Check_Value, string
 	switch head {
 	case "position":
 		if !has_tail {
-			return {}, "position needs an axis"
+			return {}, format_error("%s", "position needs an axis")
 		}
 		return vec_field(player.position, tail)
 	case "eye":
 		if !has_tail {
-			return {}, "eye needs an axis"
+			return {}, format_error("%s", "eye needs an axis")
 		}
 		return vec_field(player.eye, tail)
 	case "velocity":
 		if !has_tail {
-			return {}, "velocity needs an axis"
+			return {}, format_error("%s", "velocity needs an axis")
 		}
 		return vec_field(player.velocity, tail)
 	case "yaw":
@@ -213,19 +216,19 @@ crates_field :: proc(crates: []Crate_State, path: string) -> (Check_Value, strin
 		return {}, fmt.aprintf("crate index %q is out of range", head, allocator = context.allocator)
 	}
 	if !has_tail {
-		return {}, "crate needs 'position' or 'rotation'"
+		return {}, format_error("%s", "crate needs 'position' or 'rotation'")
 	}
 	crate := crates[index]
 	property, axis, has_axis := split_field(tail)
 	switch property {
 	case "position":
 		if !has_axis {
-			return {}, "crate position needs an axis"
+			return {}, format_error("%s", "crate position needs an axis")
 		}
 		return vec_field(crate.position, axis)
 	case "rotation":
 		if !has_axis {
-			return {}, "crate rotation needs an axis"
+			return {}, format_error("%s", "crate rotation needs an axis")
 		}
 		return quat_field(crate.rotation, axis)
 	}

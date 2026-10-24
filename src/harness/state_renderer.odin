@@ -32,6 +32,8 @@ renderer_field :: proc(renderer: Renderer_State, path: string) -> (Check_Value, 
 		return {kind = .String, text = renderer.last_reset}, ""
 	case "shadow_phase":
 		return {kind = .Number, number = f64(renderer.shadow_phase)}, ""
+	case "atlas_weight":
+		return {kind = .Number, number = f64(renderer.atlas_weight)}, ""
 	}
 	return {}, fmt.aprintf("unknown renderer field %q", path, allocator = context.allocator)
 }

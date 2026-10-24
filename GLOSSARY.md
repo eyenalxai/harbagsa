@@ -250,8 +250,19 @@ The `harbagsa-agent` program that drives the simulation, runs checks, and writes
 screenshots without the game loop.
 _Avoid_: Bot, driver
 
+**Build revision**:
+The short HEAD and dirty flag the agent build injects into `setup`. A direct
+`odin run` or a test build reports `unknown` and `false`.
+_Avoid_: Version, commit
+
+**Offscreen validation**:
+The `make validate-offscreen` target. It builds the validation agent and runs the
+smoke and UI scenarios without a window.
+_Avoid_: Headless validate
+
 **Scenario**:
-A JSON document that compiles to one command list for the harness.
+A JSON document with one `commands` list for the harness. It runs verbatim, and
+only a `capture` command captures.
 _Avoid_: Script, test case
 
 **Capture**:
@@ -326,12 +337,15 @@ _Avoid_: UI budget, draw budget
 
 **Scene pass**:
 The scopes that draw the scene into the depth, color, and velocity targets: the
-depth prepass, the lit pass, and the sky pass.
+depth prepass, the lit pass, and the sky pass. The perf report times the depth
+prepass and the lit pass as separate GPU passes; the sky runs inside the scene
+pass.
 _Avoid_: Main pass
 
 **Depth prepass**:
 The depth-only scope of the scene pass. It writes the nearest box surface before
-the lit pass, so the sun rays run for the surface that reaches the frame.
+the lit pass, so the sun rays run for the surface that reaches the frame. It is
+its own GPU pass in the perf report.
 _Avoid_: Z prepass
 
 **Lit pass**:
@@ -414,6 +428,11 @@ covers, rasterized at the device pixel size from the two subset Roboto variable
 faces. A layer is keyed by face, weight, and pixel size. The first build is
 synchronous at startup; later weight or density changes repack on a worker.
 _Avoid_: SDF atlas, font texture, bitmap font, glyph sheet
+
+**Applied atlas weight**:
+The weight the active coverage atlas holds. The renderer reports it as
+`renderer.atlas_weight`; `settings.type_weight` is only the request.
+_Avoid_: Requested weight, font weight
 
 **Sub-pixel phase**:
 One of four horizontal offsets a glyph is rasterized at, so text placed on a
@@ -514,11 +533,11 @@ The frames after a history reset while the sample count grows from 1 to 512. The
 _Avoid_: Warmup
 
 **Renderer state**:
-The harness state block that describes the last rendered frame: frame count, TAA state, jitter index, history validity, convergence frames, history read index and weight, reset count and reason, and shadow phase.
+The harness state block that describes the last rendered frame: frame count, TAA state, jitter index, history validity, convergence frames, history read index and weight, reset count and reason, shadow phase, and the applied atlas weight.
 _Avoid_: Render stats, GPU state
 
 **Render digest**:
-The FNV-1a hash of the effective render inputs: camera, sun, boxes, jitter, shadow phase, and view flags. It is separate from the simulation digest.
+The FNV-1a hash of the effective render inputs: camera, sun direction and angular diameter, boxes, jitter, shadow phase, applied atlas weight, and view flags. It is separate from the simulation digest. It does not cover the target extent.
 _Avoid_: Frame hash, image hash
 
 **History reset reason**:
@@ -598,19 +617,26 @@ the wall clock, so its numbers are not deterministic.
 _Avoid_: Benchmark, stress test
 
 **Perf report**:
-The `perf` object in a harness reply and in `report.json` that holds the
-percentiles and per-pass means of a perf run.
+The `perf` list in `report.json` and the `perf` object in a harness reply. Each
+named report holds the interval distribution, the `p50`/`p95`/`mean` of every CPU
+phase and GPU pass, and the prime fields. The session reply keeps the last one.
 _Avoid_: Benchmark result, profile
 
 **Perf trace**:
 The opt-in per-frame file from a perf run. It holds one JSON object per perf
-sample.
+sample. A run holds one trace.
 _Avoid_: Log, dump
 
 **Perf warmup**:
 The frames a perf run measures but does not count, so shader and swapchain
-warmup does not pollute the numbers. One priming frame always runs before it.
+warmup does not pollute the numbers. The perf prime runs before it, and one
+priming frame always runs first.
 _Avoid_: Warmup (that word belongs to convergence)
+
+**Perf prime**:
+The wall-clock warm-up before the perf warmup frames. It lets the GPU clock and
+the shader cache settle; its frames never enter the trace or the statistics.
+_Avoid_: Warmup (see convergence and perf warmup)
 
 **Spike**:
 A frame interval above 1.5 times the median interval of the measured window.
