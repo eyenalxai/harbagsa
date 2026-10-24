@@ -338,8 +338,7 @@ _Avoid_: UI budget, draw budget
 **Scene pass**:
 The scopes that draw the scene into the depth, color, and velocity targets: the
 depth prepass, the lit pass, and the sky pass. The perf report times the depth
-prepass and the lit pass as separate GPU passes; the sky runs inside the scene
-pass.
+prepass, the lit pass, and the sky pass as separate GPU passes.
 _Avoid_: Main pass
 
 **Depth prepass**:
@@ -665,3 +664,44 @@ _Avoid_: Warmup (see convergence and perf warmup)
 **Spike**:
 A frame interval above 1.5 times the median interval of the measured window.
 _Avoid_: Hitch, stutter
+
+## Harness measurement terms
+
+### Banding
+A run of identical 8-bit values along a gradient. **Avoid**: stepping, contouring.
+
+### Dither
+A fixed, per-pixel offset applied before an 8-bit quantization. The output
+dither on the resolve breaks a band without entering the TAA history.
+**Avoid**: noise, grain.
+
+### Region
+A rectangle of the source image that limits a capture's statistics or
+histogram. **Avoid**: window, crop (a crop changes the written image).
+
+### Crop
+A scaled PNG written from a rectangle of a capture. The capture keeps its source
+extent and reports the written size. **Avoid**: region, zoom.
+
+### Profile
+A line or mean span of a capture, decoded from sRGB to linear, that reports the
+10%-90% crossing width. **Avoid**: scanline, slice.
+
+### Histogram
+Per-channel bin counts over a region. **Avoid**: distribution.
+
+### Settle convergence
+A settle that renders until the TAA sample count reaches the 512 cap.
+**Avoid**: settle, warmup.
+
+### Scenario extension
+An `extends` path that merges a base scenario object with a child that wins.
+**Avoid**: include, import.
+
+### Run tag
+A directory name appended to the run path so two runs coexist. **Avoid**:
+label, suffix.
+
+### Display list
+The harness's scripted set of displays and modes. It replaces the compositor
+snapshot for a scenario. **Avoid**: monitor list.

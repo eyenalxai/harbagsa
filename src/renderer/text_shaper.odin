@@ -84,13 +84,20 @@ text_shaper_destroy :: proc(shaper: ^Text_Shaper) {
 }
 
 @(private)
-text_shaper_font :: proc(shaper: ^Text_Shaper, face: Text_Face, weight: u16) -> ^font.Hb_Font {
+text_shaper_font :: proc(
+	shaper: ^Text_Shaper,
+	caps: ^Text_Caps,
+	face: Text_Face,
+	weight: u16,
+) -> ^font.Hb_Font {
 	for shaper_font in shaper.fonts[:shaper.count] {
 		if shaper_font.face == face && shaper_font.weight == weight {
 			return shaper_font.font
 		}
 	}
 	if shaper.count >= TEXT_SHAPER_FONT_MAX {
+		caps.dropped_fonts += 1
+		text_caps_warn(caps, "font")
 		return nil
 	}
 	hb_font := font.Font_Create(shaper.faces[face])
@@ -125,6 +132,8 @@ text_shape :: proc(atlas: ^Text_Atlas, style: Text_Type, text: string, run: ^Tex
 			cut -= 1
 		}
 		source = text[:cut]
+		atlas.caps.truncated_runs += 1
+		text_caps_warn(&atlas.caps, "run")
 	}
 	capped: [TEXT_RUN_MAX]u8
 	if style.caps {
@@ -139,7 +148,7 @@ text_shape :: proc(atlas: ^Text_Atlas, style: Text_Type, text: string, run: ^Tex
 	}
 
 	shaper := &atlas.shaper
-	hb_font := text_shaper_font(shaper, style.face, text_style_weight(style))
+	hb_font := text_shaper_font(shaper, &atlas.caps, style.face, text_style_weight(style))
 	if hb_font == nil {
 		return false
 	}
@@ -166,6 +175,8 @@ text_shape :: proc(atlas: ^Text_Atlas, style: Text_Type, text: string, run: ^Tex
 			continue
 		}
 		if emitted >= TEXT_RUN_MAX {
+			atlas.caps.truncated_runs += 1
+			text_caps_warn(&atlas.caps, "glyph")
 			break
 		}
 		run.glyphs[emitted] = int(glyph)
@@ -182,4 +193,19 @@ text_shape :: proc(atlas: ^Text_Atlas, style: Text_Type, text: string, run: ^Tex
 		run.width -= style.tracking * style.size
 	}
 	return true
+}
+
+// One warning per atlas keeps a dropped label from flooding the log every frame.
+@(private)
+text_caps_warn :: proc(caps: ^Text_Caps, kind: string) {
+	if caps.warned {
+		return
+	}
+	caps.warned = true
+	log.warnf(
+		"text: %s cap hit; truncated runs %d, dropped fonts %d",
+		kind,
+		caps.truncated_runs,
+		caps.dropped_fonts,
+	)
 }
