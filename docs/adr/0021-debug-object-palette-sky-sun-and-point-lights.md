@@ -52,6 +52,10 @@ window, so the editor had to be testable without a cursor.
   even when its light is not active. The point-light shadow ray uses a TLAS mask
   that excludes lamps, so a lamp does not shadow its own light; the sun ray
   still sees them. The sun keeps its 16-ray soft shadow.
+- **The point shadow ray stops short of the light.** A lamp placed against a
+  wall puts its light exactly on the wall plane. An endpoint hit then made the
+  wall paint a fan of shadows on every surface the lamp lit. The ray stops one
+  millimetre short of the light, so a surface at the light cannot shadow it.
 - **Per-placement light tuning.** `C` cycles colour, brackets change intensity,
   comma and period change range. The values stick to the next placement and edit
   a selected lamp. The palette preview and the inspector show them.
