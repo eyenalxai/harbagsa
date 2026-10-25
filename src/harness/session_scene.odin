@@ -26,26 +26,47 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 	}
 
 	if command.has_settings {
-		window_mode, window_ok := game.window_mode_parse(scene.settings.window_mode)
-		sprint, sprint_ok := game.input_mode_parse(scene.settings.sprint_mode)
-		crouch, crouch_ok := game.input_mode_parse(scene.settings.crouch_mode)
-		prone, prone_ok := game.input_mode_parse(scene.settings.prone_mode)
-		if !window_ok || !sprint_ok || !crouch_ok || !prone_ok {
-			return format_error("%s", "scene settings hold an unknown mode")
+		settings := command.settings
+		if name, has := settings.window_mode.?; has {
+			mode, mode_ok := game.window_mode_parse(name)
+			if !mode_ok {
+				return format_error("%s", "scene settings hold an unknown window mode")
+			}
+			session.sim.settings.window.mode = mode
 		}
-		session.sim.settings.window.mode = window_mode
-		session.sim.settings.window.display = display.clamp_index(
-			&session.sim.settings.display,
-			scene.settings.display,
-		)
-		session.sim.settings.window.resolution = {
-			scene.settings.resolution[0],
-			scene.settings.resolution[1],
+		if index, has := settings.display.?; has {
+			session.sim.settings.window.display = display.clamp_index(
+				&session.sim.settings.display,
+				index,
+			)
 		}
-		session.sim.settings.sprint_mode = sprint
-		session.sim.settings.crouch_mode = crouch
-		session.sim.settings.prone_mode = prone
-		session.sim.settings.type_weight = scene.settings.type_weight
+		if resolution, has := settings.resolution.?; has {
+			session.sim.settings.window.resolution = {resolution[0], resolution[1]}
+		}
+		if name, has := settings.sprint_mode.?; has {
+			mode, mode_ok := game.input_mode_parse(name)
+			if !mode_ok {
+				return format_error("%s", "scene settings hold an unknown sprint mode")
+			}
+			session.sim.settings.sprint_mode = mode
+		}
+		if name, has := settings.crouch_mode.?; has {
+			mode, mode_ok := game.input_mode_parse(name)
+			if !mode_ok {
+				return format_error("%s", "scene settings hold an unknown crouch mode")
+			}
+			session.sim.settings.crouch_mode = mode
+		}
+		if name, has := settings.prone_mode.?; has {
+			mode, mode_ok := game.input_mode_parse(name)
+			if !mode_ok {
+				return format_error("%s", "scene settings hold an unknown prone mode")
+			}
+			session.sim.settings.prone_mode = mode
+		}
+		if weight, has := settings.type_weight.?; has {
+			session.sim.settings.type_weight = weight
+		}
 	}
 
 	if command.has_objects {
@@ -154,11 +175,27 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 	}
 
 	if command.has_view {
-		session.view = {
-			hud = scene.view.hud,
-			debug = scene.view.debug,
-			hint = scene.view.hint,
-			perf = scene.view.perf,
+		if value, has := command.view.hud.?; has {
+			session.view.hud = value
+		}
+		if value, has := command.view.debug.?; has {
+			session.view.debug = value
+		}
+		if value, has := command.view.hint.?; has {
+			session.view.hint = value
+		}
+		if value, has := command.view.perf.?; has {
+			session.view.perf = value
+		}
+	}
+	if debug, has := command.renderer_debug.?; has {
+		if session.backend == nil || !session.backend.ready {
+			if ensure_error := session_ensure_backend(session); ensure_error != "" {
+				return ensure_error
+			}
+		}
+		if debug_error := session_renderer_debug(session, debug); debug_error != "" {
+			return debug_error
 		}
 	}
 	game.menu_close(&session.hud.menu)

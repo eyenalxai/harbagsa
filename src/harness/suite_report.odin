@@ -13,17 +13,19 @@ suite_print_table :: proc(report: Suite_Report) {
 		}
 	}
 	fmt.printf(
-		"suite %s: %d entries, %d passed, %d failed\n",
+		"suite %s: %d entries, %d passed, %d failed, %.3fs\n",
 		report.suite,
 		len(report.rows),
 		passed,
 		len(report.rows) - passed,
+		report.seconds,
 	)
 	fmt.printf(
-		"%-6s %-28s %-4s %-10s %-6s %-6s %s\n",
+		"%-6s %-28s %-4s %-8s %-10s %-6s %-6s %s\n",
 		"STATUS",
 		"ENTRY",
 		"CODE",
+		"TIME",
 		"SIZE",
 		"GATE",
 		"MODE",
@@ -34,10 +36,11 @@ suite_print_table :: proc(report: Suite_Report) {
 		gate := row.requires_renderer_debug ? "debug" : "-"
 		mode := row.no_render ? "cpu" : "render"
 		fmt.printf(
-			"%-6s %-28s %-4d %-10s %-6s %-6s %s\n",
+			"%-6s %-28s %-4d % 7.2fs %-10s %-6s %-6s %s\n",
 			status,
 			row.label,
 			row.exit_code,
+			row.seconds,
 			row.size,
 			gate,
 			mode,

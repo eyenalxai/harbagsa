@@ -12,6 +12,7 @@ View_State :: struct {
 
 Renderer_Config_State :: struct {
 	device:           string `json:"device"`,
+	shader_digest:    string `json:"shader_digest"`,
 	taa:              bool   `json:"taa"`,
 	frames_in_flight: int    `json:"frames_in_flight"`,
 	jitter_samples:   int    `json:"jitter_samples"`,
@@ -48,6 +49,7 @@ setup_build :: proc(
 		renderer_debug = renderer_debug || renderer.RENDERER_DEBUG_ENABLED,
 		view = {hud = view.hud, debug = view.debug, hint = view.hint, perf = view.perf},
 		renderer = {
+			shader_digest = renderer.shader_digest(),
 			frames_in_flight = 0,
 			jitter_samples = renderer.TAA_JITTER_SAMPLES,
 			history_images = renderer.TAA_HISTORY_IMAGES,
@@ -66,6 +68,7 @@ setup_build :: proc(
 	setup.height = report.height
 	setup.renderer = {
 		device = report.device,
+		shader_digest = report.shader_digest,
 		taa = report.taa,
 		frames_in_flight = report.frames_in_flight,
 		jitter_samples = report.jitter_samples,

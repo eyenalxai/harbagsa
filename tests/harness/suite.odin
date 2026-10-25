@@ -47,6 +47,28 @@ suite_parse_reads_string_and_object_entries :: proc(t: ^testing.T) {
 }
 
 @(test)
+suite_paths_resolve_from_the_repository_root :: proc(t: ^testing.T) {
+	root := SUITE_DIR + "/root"
+	_ = os.remove_all(SUITE_DIR)
+	testing.expectf(t, os.make_directory_all(fmt.aprintf("%s/suites", root, allocator = context.temp_allocator)) == nil, "cannot create suites")
+	testing.expectf(t, os.make_directory_all(fmt.aprintf("%s/scenarios", root, allocator = context.temp_allocator)) == nil, "cannot create scenarios")
+	testing.expectf(t, os.make_directory_all(fmt.aprintf("%s/sub", root, allocator = context.temp_allocator)) == nil, "cannot create sub")
+	defer os.remove_all(SUITE_DIR)
+	previous, previous_error := os.get_working_directory(context.allocator)
+	defer delete(previous, context.allocator)
+	testing.expectf(t, previous_error == nil, "cannot read the working directory")
+	defer os.set_working_directory(previous)
+	testing.expectf(t, os.set_working_directory(fmt.aprintf("%s/sub", root, allocator = context.temp_allocator)) == nil, "cannot change directory")
+
+	manifest := harness.suite_resolve_path("renderer", context.allocator)
+	defer delete(manifest, context.allocator)
+	testing.expect_value(t, manifest, fmt.aprintf("%s/suites/renderer.json", root, allocator = context.temp_allocator))
+	scenario := harness.suite_scenario_path("smoke", context.allocator)
+	defer delete(scenario, context.allocator)
+	testing.expect_value(t, scenario, fmt.aprintf("%s/scenarios/smoke.json", root, allocator = context.temp_allocator))
+}
+
+@(test)
 suite_parse_rejects_bad_entries :: proc(t: ^testing.T) {
 	cases := []string {
 		`{"entries":[]}`,

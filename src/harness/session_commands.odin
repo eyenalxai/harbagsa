@@ -62,6 +62,11 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 	if session.quit {
 		return reply_error(session, command.kind, "session is closed")
 	}
+	if timeout := session_check_timeout(session); timeout != "" {
+		reply := reply_error(session, command.kind, timeout)
+		delete(timeout, context.allocator)
+		return reply
+	}
 	row := command_row_by_kind(command.kind)
 	reply := Reply{ok = true, cmd = row.name, frame = session.frame}
 	if row.backend != .None && session.render_enabled {

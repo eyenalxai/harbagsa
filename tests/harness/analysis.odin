@@ -41,6 +41,28 @@ analysis_summary_aggregates_pairs :: proc(t: ^testing.T) {
 }
 
 @(test)
+analysis_bands_restrict_to_a_region :: proc(t: ^testing.T) {
+	image := build_image(8, 8, proc(x, y: int) -> u8 {
+		if x < 4 {
+			return 40
+		}
+		return u8(40 + x * 10)
+	})
+	defer delete(image, context.allocator)
+	full := harness.analysis_bands(image, 8, 8)
+	region := harness.analysis_bands(image, 8, 8, harness.Capture_Region{x = 0, y = 0, w = 4, h = 8})
+	testing.expect_value(t, region.columns, 4)
+	testing.expect_value(t, region.longest_run, 8)
+	testing.expect_value(t, region.levels, 1)
+	testing.expect(t, full.levels > region.levels, "the full image did not see the right half")
+	value, has_region := region.region.?
+	testing.expect(t, has_region, "the region is not recorded")
+	if has_region {
+		testing.expect_value(t, value.w, 4)
+	}
+}
+
+@(test)
 analysis_window_selects_the_configured_slice :: proc(t: ^testing.T) {
 	captures := []harness.Capture_Result {
 		{frame = 0}, {frame = 1}, {frame = 2}, {frame = 3}, {frame = 4},
@@ -109,7 +131,7 @@ check_window_parses_and_rejects_bad_ranges :: proc(t: ^testing.T) {
 @(test)
 scenario_analysis_parses_a_window_and_maps :: proc(t: ^testing.T) {
 	scenario, error := harness.scenario_parse(
-		`{"analysis": {"start": 4, "count": 8, "maps": true}, "commands": [{"cmd": "step", "frames": 1}]}`,
+		`{"analysis": {"start": 4, "count": 8, "maps": true, "region": {"x": 2, "y": 3, "w": 10, "h": 12}}, "commands": [{"cmd": "step", "frames": 1}]}`,
 		context.allocator,
 	)
 	defer harness.scenario_destroy(&scenario, context.allocator)
@@ -120,6 +142,12 @@ scenario_analysis_parses_a_window_and_maps :: proc(t: ^testing.T) {
 		testing.expect_value(t, scenario.analysis.start, 4)
 		testing.expect_value(t, scenario.analysis.count, 8)
 		testing.expect(t, scenario.analysis.maps, "maps were dropped")
+		region, has_region := scenario.analysis.region.?
+		testing.expect(t, has_region, "the region was dropped")
+		if has_region {
+			testing.expect_value(t, region.x, 2)
+			testing.expect_value(t, region.h, 12)
+		}
 	}
 
 	disabled, disabled_error := harness.scenario_parse(

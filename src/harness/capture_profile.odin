@@ -30,15 +30,23 @@ srgb_byte_to_linear :: proc(value: u8) -> f32 {
 	return math.pow((c + 0.055) / 1.055, 2.4)
 }
 
-capture_profile_build :: proc(
+Capture_Profile_Source :: struct {
 	pixels: []u8,
-	width, height: u32,
+	values: []f32,
+	width:  u32,
+	height: u32,
+}
+
+capture_profile_build :: proc(
+	source: Capture_Profile_Source,
 	spec: Capture_Profile,
 	allocator: mem.Allocator,
 ) -> (
 	Capture_Profile_Result,
 	string,
 ) {
+	width := source.width
+	height := source.height
 	run_extent := spec.axis == .X ? int(width) : int(height)
 	fixed_extent := spec.axis == .X ? int(height) : int(width)
 	if spec.from < 0 || spec.to < spec.from || spec.to >= run_extent {
@@ -62,16 +70,17 @@ capture_profile_build :: proc(
 			for other in 0 ..< fixed_extent {
 				x := spec.axis == .X ? position : other
 				y := spec.axis == .X ? other : position
-				total += capture_channel_value(pixels, int(width), x, y, spec.channel)
+				total += capture_profile_channel(source, x, y, spec.channel)
 			}
 			values[index] = total / f32(max(fixed_extent, 1))
 		} else {
 			x := spec.axis == .X ? position : spec.at
 			y := spec.axis == .X ? spec.at : position
-			values[index] = capture_channel_value(pixels, int(width), x, y, spec.channel)
+			values[index] = capture_profile_channel(source, x, y, spec.channel)
 		}
 	}
 	result := capture_profile_summary(values, spec)
+	result.source = source.values == nil ? "srgb" : "linear"
 	result.axis = profile_axis_name(spec.axis)
 	result.at = spec.at
 	result.from = spec.from
@@ -82,18 +91,37 @@ capture_profile_build :: proc(
 }
 
 @(private)
-capture_channel_value :: proc(
-	pixels: []u8,
-	width, x, y: int,
+capture_profile_channel :: proc(
+	source: Capture_Profile_Source,
+	x, y: int,
 	channel: Profile_Channel,
 ) -> f32 {
-	base := (y * width + x) * 4
-	if base + 3 >= len(pixels) {
+	index := (y * int(source.width) + x) * 4
+	if source.values != nil {
+		if index + 3 >= len(source.values) {
+			return 0
+		}
+		r := source.values[index + 0]
+		g := source.values[index + 1]
+		b := source.values[index + 2]
+		switch channel {
+		case .Luma:
+			return (r + g + b) / 3.0
+		case .X:
+			return r
+		case .Y:
+			return g
+		case .Z:
+			return b
+		}
 		return 0
 	}
-	r := srgb_byte_to_linear(pixels[base])
-	g := srgb_byte_to_linear(pixels[base + 1])
-	b := srgb_byte_to_linear(pixels[base + 2])
+	if index + 3 >= len(source.pixels) {
+		return 0
+	}
+	r := srgb_byte_to_linear(source.pixels[index + 0])
+	g := srgb_byte_to_linear(source.pixels[index + 1])
+	b := srgb_byte_to_linear(source.pixels[index + 2])
 	switch channel {
 	case .Luma:
 		return 0.2126 * r + 0.7152 * g + 0.0722 * b

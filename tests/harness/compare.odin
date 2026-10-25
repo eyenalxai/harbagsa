@@ -2,6 +2,7 @@
 #+vet !unused-procedures // @(test) procs are called by the test runner, not by name
 package harness_test
 
+import "core:encoding/json"
 import "core:fmt"
 import "core:os"
 import "core:strings"
@@ -78,6 +79,57 @@ compare_reports_a_size_mismatch :: proc(t: ^testing.T) {
 	defer delete(data, context.allocator)
 	testing.expectf(t, read_error == nil, "cannot read compare.json: %v", read_error)
 	testing.expect(t, strings.contains(string(data), `"size_mismatch": true`), "the size mismatch is missing")
+}
+
+@(test)
+compare_selects_pairs_and_writes_a_delta_column :: proc(t: ^testing.T) {
+	out := COMPARE_DIR + "/selected"
+	_ = os.remove_all(COMPARE_DIR)
+	defer os.remove_all(COMPARE_DIR)
+	first := COMPARE_DIR + "/first"
+	second := COMPARE_DIR + "/second"
+	write_compare_run(t, first, "keep", 4, 4, {10, 20, 30, 255}, "a", false)
+	write_compare_run(t, second, "keep", 4, 4, {30, 40, 50, 255}, "b", false)
+
+	code := harness.cli_compare([]string {
+		first,
+		second,
+		"--out",
+		out,
+		"--pairs",
+		"keep",
+		"--scale",
+		"2",
+		"--delta",
+		"--json",
+	})
+	testing.expect_value(t, code, 0)
+	report_path := fmt.aprintf("%s/compare.json", out, allocator = context.temp_allocator)
+	data, read_error := os.read_entire_file(report_path, context.allocator)
+	defer delete(data, context.allocator)
+	testing.expectf(t, read_error == nil, "cannot read compare.json: %v", read_error)
+	if read_error != nil {
+		return
+	}
+	value, parse_error := json.parse_string(string(data), .JSON, true, context.temp_allocator)
+	testing.expectf(t, parse_error == .None, "compare.json did not parse: %v", parse_error)
+	object, object_ok := value.(json.Object)
+	testing.expect(t, object_ok, "compare.json is not an object")
+	if !object_ok {
+		return
+	}
+	pairs, _ := object["pairs"].(json.Array)
+	testing.expect_value(t, len(pairs), 1)
+	testing.expect_value(t, object["scale"].(json.Integer), json.Integer(2))
+	testing.expect_value(t, object["delta"].(json.Boolean), true)
+
+	code = harness.cli_compare([]string{first, second, "--out", out, "--pairs", "missing"})
+	testing.expect_value(t, code, 1)
+	data, read_error = os.read_entire_file(report_path, context.allocator)
+	testing.expectf(t, read_error == nil, "cannot read compare.json: %v", read_error)
+	if read_error == nil {
+		testing.expect(t, strings.contains(string(data), "missing from both runs"), "the missing pair is not named")
+	}
 }
 
 @(test)

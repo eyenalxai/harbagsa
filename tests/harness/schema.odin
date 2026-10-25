@@ -78,6 +78,52 @@ every_state_field_resolves_through_the_schema :: proc(t: ^testing.T) {
 }
 
 @(test)
+schema_covers_every_command_and_the_new_fields :: proc(t: ^testing.T) {
+	document := harness.schema_build(context.allocator)
+	defer harness.schema_destroy(&document, context.allocator)
+	testing.expect_value(t, len(document.commands), len(harness.COMMANDS))
+	for row in harness.COMMANDS {
+		command, found := harness.schema_find_command(document, row.name)
+		testing.expectf(t, found, "command %q is missing from the schema", row.name)
+		if found {
+			testing.expect_value(t, command.name, row.name)
+			testing.expectf(
+				t,
+				harness.schema_command_description(row.kind) != "",
+				"command %q has no description",
+				row.name,
+			)
+		}
+	}
+	scene, scene_found := harness.schema_find_command(document, "scene")
+	testing.expect(t, scene_found, "scene is missing from the schema")
+	if scene_found {
+		for name in ([?]string{"camera", "sun", "objects", "settings", "view", "renderer_debug"}) {
+			_, found := harness.schema_field_named(scene, name)
+			testing.expectf(t, found, "scene field %q is missing", name)
+		}
+	}
+	capture, capture_found := harness.schema_find_command(document, "capture")
+	testing.expect(t, capture_found, "capture is missing from the schema")
+	if capture_found {
+		_, found := harness.schema_field_named(capture, "steps")
+		testing.expect(t, found, "capture.steps is missing")
+	}
+	testing.expect(t, schema_contains(document.check_fields, "analysis.bands.region.x"), "the band region check is missing")
+	testing.expect(t, schema_contains(document.state_fields, "player.position.y"), "the state schema is missing")
+}
+
+@(private)
+schema_contains :: proc(values: []string, wanted: string) -> bool {
+	for value in values {
+		if value == wanted {
+			return true
+		}
+	}
+	return false
+}
+
+@(test)
 an_unknown_state_path_names_the_path :: proc(t: ^testing.T) {
 	state := schema_state()
 	_, error := harness.state_field(state, "player.nope")

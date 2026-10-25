@@ -29,11 +29,16 @@ session_repro :: proc(session: ^Session, path: string, reply: ^Reply) -> string 
 	if session.has_camera_override {
 		camera = &session.camera_override
 	}
+	debug: ^renderer.Renderer_Debug
+	if session.renderer_debug.active {
+		debug = &session.renderer_debug
+	}
 	absolute, write_error := frame.scene_write(
 		&session.sim,
 		&session.debug,
 		options,
 		camera,
+		debug,
 		path,
 	)
 	game.hud_notice_scene_snapshot(&session.hud, path, write_error == "")

@@ -64,7 +64,10 @@ scenario_analysis :: proc(value: json.Value) -> (Analysis_Config, string) {
 	if !object_ok {
 		return {}, format_error("%s", "scenario 'analysis' must be a boolean or an object")
 	}
-	if key, unknown := json_unknown_key(object, {"enabled", "start", "count", "maps"}); unknown {
+	if key, unknown := json_unknown_key(
+		object,
+		{"enabled", "start", "count", "maps", "region"},
+	); unknown {
 		return {}, fmt.aprintf("unknown analysis key %q", key, allocator = context.allocator)
 	}
 	if enabled_value, has := json_get(object, "enabled"); has {
@@ -80,6 +83,13 @@ scenario_analysis :: proc(value: json.Value) -> (Analysis_Config, string) {
 			return {}, format_error("%s", "'analysis.maps' must be a boolean")
 		}
 		config.maps = flag
+	}
+	if region_value, has := json_get(object, "region"); has {
+		region, region_error := parse_region_value(region_value)
+		if region_error != "" {
+			return {}, region_error
+		}
+		config.region = region
 	}
 	start_value, has_start := json_get(object, "start")
 	count_value, has_count := json_get(object, "count")

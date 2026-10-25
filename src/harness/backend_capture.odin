@@ -12,11 +12,12 @@ backend_capture :: proc(
 	data: ^Backend_Data,
 	session: ^Session,
 	request: Capture_Request,
+	slot: int,
 ) -> (
 	Capture_Result,
 	string,
 ) {
-	pixels, width, height, format, ok := renderer.read_capture_target(&data.renderer, request.target)
+	pixels, width, height, format, ok := renderer.read_capture_target(&data.renderer, request.target, slot)
 	if !ok {
 		return {}, format_error("capture readback failed")
 	}
@@ -46,7 +47,7 @@ backend_capture :: proc(
 	case .Stats:
 		return backend_capture_stats(data, session, request, result, pixels, width, height, format)
 	case .Profile:
-		return backend_capture_profile(data, session, request, result, pixels, width, height)
+		return backend_capture_profile(data, session, request, result, pixels, width, height, format)
 	}
 	return result, ""
 }
@@ -135,6 +136,7 @@ backend_capture_stats :: proc(
 		height,
 		request.target,
 		request.region,
+		request.steps,
 		data.allocator,
 	)
 	if histogram, has_histogram := request.histogram.?; has_histogram {
@@ -178,6 +180,7 @@ backend_capture_profile :: proc(
 	initial: Capture_Result,
 	pixels: []u8,
 	width, height: u32,
+	format: vk.Format,
 ) -> (
 	Capture_Result,
 	string,
@@ -187,7 +190,17 @@ backend_capture_profile :: proc(
 	if !has_profile {
 		return {}, format_error("a profile capture needs a profile")
 	}
-	profile, profile_error := capture_profile_build(pixels, width, height, spec, data.allocator)
+	source := Capture_Profile_Source{pixels = pixels, width = width, height = height}
+	values: []f32
+	if request.target != .Color {
+		values = renderer.capture_values(pixels, format, data.allocator)
+		if values == nil {
+			return {}, format_error("cannot convert the %s capture to floats", renderer.format_name(format))
+		}
+		defer delete(values, data.allocator)
+		source = {values = values, width = width, height = height}
+	}
+	profile, profile_error := capture_profile_build(source, spec, data.allocator)
 	if profile_error != "" {
 		return {}, profile_error
 	}

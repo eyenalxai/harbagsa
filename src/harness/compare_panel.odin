@@ -27,8 +27,10 @@ COMPARE_ERROR :: [4]u8{220, 108, 108, 255}
 
 compare_write_pages :: proc(
 	report: ^Compare_Report,
-	first, second: Compare_Run,
+	first, second: Run_Data,
 	out_dir: string,
+	max_scale: int,
+	delta: bool,
 	allocator: mem.Allocator,
 ) -> ([]string, string) {
 	text := compare_text_init(allocator)
@@ -42,7 +44,18 @@ compare_write_pages :: proc(
 	for page in 0 ..< total_pages {
 		start := page * COMPARE_ROWS_PER_PAGE
 		end := min(start + COMPARE_ROWS_PER_PAGE, len(report.pairs))
-		canvas := compare_panel_canvas(report, first, second, page, total_pages, report.pairs[start:end], &text, allocator)
+		canvas := compare_panel_canvas(
+			report,
+			first,
+			second,
+			page,
+			total_pages,
+			report.pairs[start:end],
+			max_scale,
+			delta,
+			&text,
+			allocator,
+		)
 		if canvas.pixels == nil {
 			compare_pages_destroy(pages[:], allocator)
 			return nil, format_error("%s", "cannot allocate the compare panel")
@@ -81,9 +94,11 @@ compare_pages_destroy :: proc(pages: []string, allocator: mem.Allocator) {
 @(private)
 compare_panel_canvas :: proc(
 	report: ^Compare_Report,
-	first, second: Compare_Run,
+	first, second: Run_Data,
 	page, total_pages: int,
 	pairs: []Compare_Pair,
+	max_scale: int,
+	delta: bool,
 	text: ^Compare_Text,
 	allocator: mem.Allocator,
 ) -> Compare_Canvas {
@@ -91,7 +106,9 @@ compare_panel_canvas :: proc(
 	row_height :=
 		COMPARE_ROW_LABEL_HEIGHT + COMPARE_COLUMN_HEIGHT + COMPARE_ROW_DELTA_HEIGHT + COMPARE_ROW_GAP
 	height := header_height + len(pairs) * row_height + COMPARE_MARGIN
-	width := COMPARE_MARGIN * 2 + COMPARE_COLUMN_WIDTH * 2 + COMPARE_GAP
+	columns := delta ? 3 : 2
+	column_span := COMPARE_COLUMN_WIDTH * columns + COMPARE_GAP * (columns - 1)
+	width := COMPARE_MARGIN * 2 + column_span
 	canvas := compare_canvas_create(width, height, allocator)
 	if canvas.pixels == nil {
 		return {}
@@ -117,7 +134,7 @@ compare_panel_canvas :: proc(
 	compare_text_draw(
 		&canvas,
 		text,
-		compare_text_fit(text, first.dir, width - COMPARE_MARGIN * 2),
+		compare_text_fit(text, first.metadata.dir, width - COMPARE_MARGIN * 2),
 		COMPARE_MARGIN,
 		baseline,
 		COMPARE_SECONDARY,
@@ -141,7 +158,7 @@ compare_panel_canvas :: proc(
 	compare_text_draw(
 		&canvas,
 		text,
-		compare_text_fit(text, second.dir, width - COMPARE_MARGIN * 2),
+		compare_text_fit(text, second.metadata.dir, width - COMPARE_MARGIN * 2),
 		COMPARE_MARGIN,
 		baseline,
 		COMPARE_SECONDARY,
@@ -164,9 +181,13 @@ compare_panel_canvas :: proc(
 
 	column_a := COMPARE_MARGIN
 	column_b := COMPARE_MARGIN + COMPARE_COLUMN_WIDTH + COMPARE_GAP
+	column_delta := column_b + COMPARE_COLUMN_WIDTH + COMPARE_GAP
 	label_baseline := header_height - 6
 	compare_text_draw(&canvas, text, "A", column_a, label_baseline, COMPARE_SECONDARY)
 	compare_text_draw(&canvas, text, "B", column_b, label_baseline, COMPARE_SECONDARY)
+	if delta {
+		compare_text_draw(&canvas, text, "A-B", column_delta, label_baseline, COMPARE_SECONDARY)
+	}
 
 	row_y := header_height
 	for pair in pairs {
@@ -179,14 +200,17 @@ compare_panel_canvas :: proc(
 				pair.width,
 				pair.height,
 				allocator = context.temp_allocator,
-			), COMPARE_COLUMN_WIDTH * 2 + COMPARE_GAP),
+			), column_span),
 			COMPARE_MARGIN,
 			row_y + 16,
 			COMPARE_TEXT,
 		)
 		image_y := row_y + COMPARE_ROW_LABEL_HEIGHT
-		compare_draw_slot(&canvas, text, column_a, image_y, first, pair, true, allocator)
-		compare_draw_slot(&canvas, text, column_b, image_y, second, pair, false, allocator)
+		compare_draw_slot(&canvas, text, column_a, image_y, first, pair, true, max_scale, allocator)
+		compare_draw_slot(&canvas, text, column_b, image_y, second, pair, false, max_scale, allocator)
+		if delta {
+			compare_draw_delta(&canvas, column_delta, image_y, first, second, pair, max_scale, allocator)
+		}
 		delta_baseline := image_y + COMPARE_COLUMN_HEIGHT + 16
 		if pair.ok {
 			value := "identical"
@@ -214,67 +238,4 @@ compare_panel_canvas :: proc(
 		row_y += row_height
 	}
 	return canvas
-}
-
-@(private)
-compare_draw_slot :: proc(
-	canvas: ^Compare_Canvas,
-	text: ^Compare_Text,
-	x, y: int,
-	run: Compare_Run,
-	pair: Compare_Pair,
-	is_first: bool,
-	allocator: mem.Allocator,
-) {
-	compare_canvas_border(canvas, x, y, COMPARE_COLUMN_WIDTH, COMPARE_COLUMN_HEIGHT, COMPARE_BORDER)
-	missing := is_first ? pair.missing_a : pair.missing_b
-	if missing || pair.decode_error {
-		compare_canvas_fill_rect(
-			canvas,
-			x + 1,
-			y + 1,
-			COMPARE_COLUMN_WIDTH - 2,
-			COMPARE_COLUMN_HEIGHT - 2,
-			COMPARE_PLACEHOLDER,
-		)
-		message := missing ? (is_first ? "missing in A" : "missing in B") : "decode error"
-		message_width := compare_text_width(text, message)
-		compare_text_draw(
-			canvas,
-			text,
-			message,
-			x + (COMPARE_COLUMN_WIDTH - message_width) / 2,
-			y + COMPARE_COLUMN_HEIGHT / 2,
-			COMPARE_ERROR,
-		)
-		return
-	}
-	capture, found := diff_capture_find(run.captures, pair.name)
-	if !found || capture.path == "" {
-		return
-	}
-	pixels, source_width, source_height, ok := load_png_rgba(capture.path, allocator)
-	defer delete(pixels, allocator)
-	if !ok {
-		return
-	}
-	scale := min(
-		f32(COMPARE_COLUMN_WIDTH - 2) / f32(source_width),
-		f32(COMPARE_COLUMN_HEIGHT - 2) / f32(source_height),
-	)
-	scale = min(scale, 1.0)
-	draw_width := max(1, int(f32(source_width) * scale))
-	draw_height := max(1, int(f32(source_height) * scale))
-	draw_x := x + 1 + (COMPARE_COLUMN_WIDTH - 2 - draw_width) / 2
-	draw_y := y + 1 + (COMPARE_COLUMN_HEIGHT - 2 - draw_height) / 2
-	compare_canvas_blit_scaled(
-		canvas,
-		draw_x,
-		draw_y,
-		draw_width,
-		draw_height,
-		pixels,
-		int(source_width),
-		int(source_height),
-	)
 }
