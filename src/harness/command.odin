@@ -57,19 +57,11 @@ Step_Command :: struct {
 }
 
 Capture_Command :: struct {
-	name:      string,
+	using spec: Capture_Spec,
 	frame:     int,
 	has_frame: bool,
 	alpha:     f32,
 	has_alpha: bool,
-	target:    Capture_Target,
-	format:    Capture_Format,
-	png:       bool,
-	region:    Maybe(Capture_Region),
-	profile:   Maybe(Capture_Profile),
-	crop:      Maybe(Capture_Crop),
-	histogram: Maybe(int),
-	steps:     Maybe(Capture_Steps_Options),
 }
 
 Captures_Command :: struct {

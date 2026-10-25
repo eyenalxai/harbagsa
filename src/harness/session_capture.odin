@@ -24,17 +24,10 @@ session_queue_capture :: proc(
 	}
 	alpha := command.has_alpha ? command.alpha : session.alpha
 	request := Capture_Request {
-		name      = name,
-		alpha     = alpha,
-		target    = command.target,
-		format    = command.format,
-		png       = command.png,
-		region    = command.region,
-		profile   = command.profile,
-		crop      = command.crop,
-		histogram = command.histogram,
-		steps     = command.steps,
+		spec  = command.spec,
+		alpha = alpha,
 	}
+	request.name = name
 	return session_queue_capture_group(session, frame, command.has_frame, []Capture_Request{request})
 }
 
@@ -50,16 +43,8 @@ session_queue_captures :: proc(
 	requests := make([]Capture_Request, len(command.outputs), context.temp_allocator)
 	for output, index in command.outputs {
 		requests[index] = {
-			name      = output.name,
-			alpha     = alpha,
-			target    = output.target,
-			format    = output.format,
-			png       = output.png,
-			region    = output.region,
-			profile   = output.profile,
-			crop      = output.crop,
-			histogram = output.histogram,
-			steps     = output.steps,
+			spec  = output.spec,
+			alpha = alpha,
 		}
 	}
 	return session_queue_capture_group(session, frame, command.has_frame, requests)
@@ -116,7 +101,6 @@ session_queue_capture_group :: proc(
 	}
 	pending: Pending_Capture
 	pending.frame = frame
-	pending.alpha = requests[0].alpha
 	pending.requests = make([]Capture_Request, len(requests), session.allocator)
 	for request, index in requests {
 		pending.requests[index] = request
