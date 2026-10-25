@@ -50,6 +50,7 @@ COMMANDS := [?]Command_Row {
 	{.Check, "check", parse_check, execute_check, .Raw, destroy_check, .None},
 	{.Record, "record", parse_record, execute_record, .Skip, destroy_record, .None},
 	{.Replay, "replay", parse_replay, execute_replay, .Skip, destroy_replay, .Optional},
+	{.Repro, "repro", parse_repro, execute_repro, .Skip, destroy_repro, .None},
 	{.Perf, "perf", parse_perf, execute_perf, .Skip, destroy_perf, .Required},
 	{.Renderer_Debug, "renderer_debug", parse_renderer_debug_row, execute_renderer_debug, .Raw, nil, .Optional},
 	{.Displays, "displays", parse_displays, execute_displays, .Raw, destroy_displays, .None},
@@ -169,6 +170,12 @@ destroy_record :: proc(command: ^Command, allocator: mem.Allocator) {
 @(private)
 destroy_replay :: proc(command: ^Command, allocator: mem.Allocator) {
 	delete(command.replay.path, allocator)
+	command^ = {}
+}
+
+@(private)
+destroy_repro :: proc(command: ^Command, allocator: mem.Allocator) {
+	delete(command.repro.path, allocator)
 	command^ = {}
 }
 

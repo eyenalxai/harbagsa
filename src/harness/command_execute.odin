@@ -154,6 +154,11 @@ execute_replay :: proc(session: ^Session, command: Command, reply: ^Reply) -> st
 }
 
 @(private)
+execute_repro :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
+	return session_repro(session, command.repro.path, reply)
+}
+
+@(private)
 execute_perf :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	perf_error := session_perf(session, command.perf)
 	if perf_error == "" {

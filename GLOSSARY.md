@@ -475,8 +475,8 @@ for the depth prepass and one for the lit pass.
 _Avoid_: Render pass (that word belongs to the Vulkan object)
 
 **HUD**:
-The 2D part of the overlay: crosshair and player state. It does not show the
-control list.
+The 2D part of the overlay: crosshair, player state, and the notice. It does not
+show the control list.
 _Avoid_: UI
 
 **Settings menu**:
@@ -568,6 +568,12 @@ The one-line reason under the settings panel after a blocked change. It holds
 for two seconds of frame time, then the default note returns. A new blocked
 press restarts the hold; a successful change clears it.
 _Avoid_: Error message, toast, tooltip
+
+**Notice**:
+A one-line message on the top-right margin after an action whose result is not
+on screen. It names the scene snapshot path, or says the write failed, and holds
+for two seconds of frame time. Unlike the status note, it is not inside a panel.
+_Avoid_: Toast, popup, tooltip
 
 **Value column**:
 The measured x where row values start, or end when they are right-aligned. It is
@@ -847,6 +853,11 @@ run's scenario, revision, and dirty flag. It is evidence, not a numeric check.
 One `scene` command that carries the exact camera, sun, placed objects,
 settings, display list, and view flags of a live view. `F5` writes one, and
 `record` starts with one. **Avoid**: state dump, replay file.
+
+### Repro
+The `F5` action and its harness twin, the `repro` command: write one scene
+snapshot to a file and show the notice. The key writes
+`runs/repro/repro-<unix>.json`. **Avoid**: replay file, state dump.
 
 ### Display list
 The harness's scripted set of displays and modes. It replaces the compositor

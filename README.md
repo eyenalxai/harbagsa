@@ -51,7 +51,8 @@ SPIR-V lives in `build/shaders/` and is embedded into the binary.
 - `F4`: toggle the perf overlay. It shows the frame interval, the CPU frame
   time, and the GPU pass times.
 - `F5`: write a repro scenario to `runs/repro/`. It holds the camera, sun,
-  placed objects, settings, view flags, and display list.
+  placed objects, settings, view flags, and display list. A notice names the
+  file it wrote, or says the write failed.
 - `Esc`: open the settings menu. The menu pauses the game and releases the
   cursor. Press `Esc` again to resume.
 
@@ -146,7 +147,8 @@ stairs.
   click restores the sun from before the mode.
 - `R`: reset the player and return the camera to spawn.
 - `Shift+R`: reset the placed objects, the sun, and the player.
-- `F5`: write a repro scenario to `runs/repro/`.
+- `F5`: write a repro scenario to `runs/repro/` and show the notice that names
+  the file.
 - `F2`: leave debug mode. The player returns to the saved position and view.
 - `Esc`: close the palette, cancel the placement, cancel the sun placement, or
   open the settings menu, in that order. The settings menu closes the palette and
@@ -364,8 +366,10 @@ the repository. `diff` stays the numeric command.
 
 ### Live repro
 
-`F5` in the game writes `runs/repro/repro-<unix>.json` and logs the absolute
-path. The file is a normal scenario with one `scene` command; run it directly:
+`F5` in the game writes `runs/repro/repro-<unix>.json`, logs the absolute path,
+and shows `Scene snapshot · runs/repro/repro-<unix>.json` in the top-right for
+two seconds. A failed write shows `Scene snapshot failed` with the path instead.
+The file is a normal scenario with one `scene` command; run it directly:
 
 ```sh
 ./bin/harbagsa-agent run runs/repro/repro-1750000000.json
@@ -429,7 +433,7 @@ are frames; `perf.prime` is seconds. Capture regions and crops are pixels.
 Check fields use the `state.json` shape, for example `player.position.y`,
 `player.grounded`, `player.stance`, `objects.1.position.z`, `objects.count`,
 `settings.window_mode`, `settings.resolution`, `settings.type_weight`,
-`menu.open`, `menu.status`, `menu.blocked`, `debug.active`,
+`menu.open`, `menu.status`, `menu.blocked`, `notice.text`, `debug.active`,
 `debug.placement.armed`, `debug.sun.angular_diameter_deg`, `sun.elevation_deg`,
 `sun.angular_diameter_deg`, `camera.yaw_deg`, `camera.fov_deg`, `camera.source`,
 `camera.overridden`, `player.yaw_deg`, `settle.converged`,
@@ -477,10 +481,11 @@ The batch runner and the live session share one command set:
   `{"cmd":"settle","until":"converged"}` waits for the 512-sample cap and reports
   the frames and the result in `settle.frames` and `settle.converged`.
 - `{"cmd": "state"}`: player, eye, velocity, `yaw_deg`, `pitch_deg`, stance, grounded, camera,
-  objects, window and input settings, debug mode, menu, rows, settle, renderer
-  state, render digest, frame, and simulation digest. Each object entry carries
-  its id, prefab, body mode, position, rotation, scale, spawn age, and light
-  (`active`, `color`, `intensity`, `range`). The debug entry carries `active`,
+  objects, window and input settings, debug mode, menu, notice, rows, settle,
+  renderer state, render digest, frame, and simulation digest. Each object entry
+  carries its id, prefab, body mode, position, rotation, scale, spawn age, and
+  light (`active`, `color`, `intensity`, `range`). The debug entry carries
+  `active`,
   `selection`, `selected_id`, the palette (`open`, `selected`, `body`), the
   placement (`armed`, `prefab`, `position`, `height`, `yaw_deg`, `snap`, `light`),
   the sun (`active`, `position`, `azimuth_deg`, `elevation_deg`,
@@ -596,6 +601,10 @@ The batch runner and the live session share one command set:
 - `{"cmd": "scene", ...}`: apply an exact scene with `camera`, `sun`, `objects`,
   `settings`, `view`, and `displays` blocks. `F5` writes one and `record` starts
   with one; see **Live repro**.
+- `{"cmd": "repro", "path": "runs/repro/live.json"}`: write the live view as a
+  scene scenario and show the notice. It is the harness twin of `F5`. `path`
+  must hold at most 64 bytes, so the notice can name it. A write failure returns
+  `ok: false` and leaves the failure notice set.
 - `{"cmd": "record", "path": "scenarios/walk.json"}`: start recording. Send
   `{"cmd": "record"}` to stop and write the scenario.
 - `{"cmd": "replay", "path": "scenarios/walk.json"}`: reset and run a scenario.
@@ -743,6 +752,9 @@ crouch input mode, closes the menu, and checks the saved state.
 
 `scenarios/blocked-note.json` opens the menu, blocks the Type weight at 900,
 captures the status note, sets the weight to 400, and captures the cleared note.
+
+`scenarios/repro-notice.json` writes a scene snapshot, checks and captures the
+notice, settles past the two-second hold, and captures the cleared notice.
 
 `scenarios/type-weight.json` opens the menu, selects Type weight, captures 400,
 sets 900 and 100, captures both, and checks the stored value.
