@@ -2,10 +2,10 @@
   "view": {"hud": true, "debug": false, "hint": false},
   "commands": [
     {"cmd": "debug_mode", "active": true},
-    {"cmd": "editor", "camera": {"position": [4, 1.7, 13], "yaw": 0, "pitch": -0.28}},
+    {"cmd": "editor", "camera": {"position": [4, 1.7, 13], "yaw_deg": 0, "pitch_deg": -16.0428}},
     {"cmd": "check", "field": "objects.count", "op": "eq", "value": 3},
     {"cmd": "capture", "name": "pop-before"},
-    {"cmd": "editor", "place": {"prefab": "Block", "position": [4, 0.5, 9], "yaw": 0, "body": "static"}},
+    {"cmd": "editor", "place": {"prefab": "Block", "position": [4, 0.5, 9], "body": "static", "yaw_deg": 0}},
     {"cmd": "check", "field": "objects.count", "op": "eq", "value": 4},
     {"cmd": "check", "field": "objects.4.prefab", "op": "eq", "value": "Block"},
     {"cmd": "check", "field": "objects.4.scale", "op": "eq", "value": 0.01},

@@ -11,7 +11,7 @@ parse_editor_camera :: proc(value: json.Value) -> (Editor_Camera, string) {
 	}
 	if key, unknown := json_unknown_key(
 		object,
-		{"position", "look_at", "yaw", "pitch"},
+		{"position", "look_at", "yaw_deg", "pitch_deg"},
 	); unknown {
 		return {}, format_error("unknown editor camera key %q", key)
 	}
@@ -23,5 +23,5 @@ parse_editor_camera :: proc(value: json.Value) -> (Editor_Camera, string) {
 	if angles_error != "" {
 		return {}, angles_error
 	}
-	return {position = position, yaw = angles.yaw, pitch = angles.pitch}, ""
+	return {position = position, yaw_rad = angles.yaw_rad, pitch_rad = angles.pitch_rad}, ""
 }

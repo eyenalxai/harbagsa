@@ -162,8 +162,8 @@ Rules:
   `ge`. Examples: `player.position.y`, `objects.count`, `settings.window_mode`,
   `settings.resolution`, `settings.sprint_mode`, `settings.type_weight`,
   `menu.open`, `debug.active`, `debug.palette.open`, `debug.placement.armed`,
-  `debug.placement.prefab`, `debug.sun.active`, `debug.sun.angular_diameter`,
-  `debug.inspector.body`, `debug.inspector.size.x`, `debug.inspector.yaw`,
+  `debug.placement.prefab`, `debug.sun.active`, `debug.sun.angular_diameter_deg`,
+  `debug.inspector.body`, `debug.inspector.size.x`, `debug.inspector.yaw_deg`,
   `debug.inspector.snap`, and `debug.history.depth`.
 - An object check addresses a placed object by id: `objects.7.position.z`,
   `objects.7.rotation.w`, `objects.7.prefab`, `objects.7.body`,
@@ -209,11 +209,19 @@ Rules:
   `capture.named.<name>.*` names a capture by its `name`; a missing name is a
   check error.
 
+## Units
+
+Every angle in a scenario, `state.json`, and `report.json` is in degrees, and
+every angle key ends in `_deg`. The engine converts to radians at the edge.
+Positions, heights, and light ranges are metres. `look` deltas are pixels.
+`step` and `perf` counts are frames; `perf.prime` is seconds. Capture regions
+and crops are pixels. `turn` and `wheel` are step counts.
+
 ## Commands
 
 - `{"cmd": "reset"}`
 - `{"cmd": "look", "dx": 220, "dy": 0}`
-- `{"cmd": "face", "yaw": 0, "pitch": 0}`
+- `{"cmd": "face", "yaw_deg": 0, "pitch_deg": 0}`
 - `{"cmd": "input", "forward": 1, "right": 0, "jump": false}`
 - `{"cmd": "step", "frames": 60}`
 - `{"cmd": "settle", "until": "converged"}`: wait for the 512-sample cap; the
@@ -222,11 +230,11 @@ Rules:
 - `{"cmd": "state"}`
 - `{"cmd": "rows"}`
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`
-- `{"cmd": "camera", "position": [0, 2, 12], "yaw": 0, "pitch": 0}`
-- `{"cmd": "camera", "position": [0, 2, 12], "look_at": [0, 1, 0], "fov": 75}`
+- `{"cmd": "camera", "position": [0, 2, 12], "yaw_deg": 0, "pitch_deg": 0}`
+- `{"cmd": "camera", "position": [0, 2, 12], "look_at": [0, 1, 0], "fov_deg": 75}`
 - `{"cmd": "camera", "clear": true}`
 - `{"cmd": "view", "hud": true, "debug": false, "hint": false, "perf": false}`
-- `{"cmd": "sun", "azimuth": 52.1, "elevation": 15, "diameter": 0.53}`
+- `{"cmd": "sun", "azimuth_deg": 52.1, "elevation_deg": 15, "diameter_deg": 0.53}`
 - `{"cmd": "sun", "clear": true}`
 - `{"cmd": "displays", "set": [{"name": "Solo", "desktop": "1280x720", "modes": ["1280x720"]}]}`
 - `{"cmd": "displays", "clear": true}`
@@ -234,7 +242,7 @@ Rules:
 - `{"cmd": "debug_mode", "active": true}`
 - `{"cmd": "editor", "open": true, "select": 4, "pick": true, "height": 0.5}`
 - `{"cmd": "editor", "select": 8, "light_color": "cool", "light_intensity": 2.2, "light_range": 12}`
-- `{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw": 0, "pitch": -0.6}}`
+- `{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw_deg": 0, "pitch_deg": -34.3775}}`
 - `{"cmd": "editor", "place": {"prefab": "Block", "position": [0, 0.5, 10], "body": "static"}}`
 - `{"cmd": "editor", "sun": {"active": true, "position": [0, 40, -30]}}`
 - `{"cmd": "editor", "sun": {"place": true}}`
@@ -252,9 +260,9 @@ Rules:
 - `{"cmd": "replay", "path": "scenarios/walk.json"}`
 - `{"cmd": "quit"}`
 
-`camera` accepts `look_at` instead of `yaw`/`pitch`, and `fov` in degrees
-(1..170). Both angle forms together are an error, and so is a `look_at` equal to
-the position. `state.camera` reports the effective view and whether an override
+`camera` accepts `look_at` instead of `yaw_deg`/`pitch_deg`, and `fov_deg` in
+degrees (1..170). Both angle forms together are an error, and so is a `look_at`
+equal to the position. `state.camera` reports the effective view and whether an override
 is active.
 
 `settle` also takes `{"cmd":"settle","until":"converged"}`. It renders until the
@@ -329,10 +337,11 @@ The `editor` command drives the debug placement tool, the lamp light, and the su
 placement. It needs debug mode; send `{"cmd": "debug_mode", "active": true}`
 first. Every field is optional, and one command may combine fields. They apply
 in this order: `camera`, `open`, `select`, `palette_step`, `palette_number`,
-`select_object`, `body`, `flip_body`, `height`, `yaw`, `snap`, `snap_toggle`,
-`light_color`, `light_intensity`, `light_range`, `pick`, `cancel`, `place`,
-`move`, `rotate`, `turn`, `wheel`, `primary`, `secondary`, `drag_move`,
-`drag_release`, `delete`, `duplicate`, `undo`, `redo`, `sun`.
+`select_object`, `body`, `flip_body`, `height`, `yaw_deg`, `snap`,
+`snap_toggle`, `light_color`, `light_intensity`, `light_range`, `pick`,
+`cancel`, `place`, `move`, `rotate_deg`, `turn`, `wheel`, `primary`,
+`secondary`, `drag_move`, `drag_release`, `delete`, `duplicate`, `undo`,
+`redo`, `sun`.
 
 The keyboard and the harness both build `game.Edit_Action` values and call
 `game.edit_apply`; the rules live there once. A rejected edit returns `ok: false`
@@ -358,17 +367,17 @@ with no active mode is a no-op.
 | `drag_release` | left mouse release: end the object drag |
 | `pick` | arm the selected prefab, close the palette, cast the placement ray |
 | `height` | offset above the surface in metres; clamped at 0 |
-| `yaw` | rotation in degrees |
+| `yaw_deg` | rotation in degrees |
 | `snap` | round the X/Z bottom anchor to a 0.25 m grid |
 | `light_color` | `warm`, `cool`, `red`, `green`, or `blue` |
 | `light_intensity` | intensity in [0.2, 4.0], rounded to a tenth |
 | `light_range` | range in [2, 20] metres, rounded to a whole metre |
 | `cancel` | clear the armed tool without placing |
-| `camera` | `{"position", "look_at"}` or `{"position", "yaw", "pitch"}` for the debug camera; angles are radians |
-| `place` | `{"prefab", "position", "yaw", "body"}` creates at an exact transform |
+| `camera` | `{"position", "look_at"}` or `{"position", "yaw_deg", "pitch_deg"}` for the debug camera; angles are degrees |
+| `place` | `{"prefab", "position", "yaw_deg", "body"}` creates at an exact transform |
 | `select_object` | placed object id; 0 clears the selection |
 | `move` | `[x, y, z]` centre for the selected object; y clamps above the floor |
-| `rotate` | degrees to turn the selected object; negative turns the other way |
+| `rotate_deg` | degrees to turn the selected object; negative turns the other way |
 | `delete` | remove the selected object |
 | `duplicate` | copy the selected object one half extent along +X, select the copy, and play the pop; a no-op at the cap |
 | `undo` | restore the previous object-list snapshot |
@@ -388,8 +397,8 @@ reports the next placement light, `debug.inspector.light` the selected lamp, and
 `debug.lights` the active and total lamp counts. The state and the HUD read
 `debug.placement.light` from `game.next_placement_light`.
 
-`place` requires `prefab` and `position`. Its `yaw` defaults to 0 and its `body`
-to the prefab default. It bypasses the ray and leaves the armed tool unchanged.
+`place` requires `prefab` and `position`. Its `yaw_deg` defaults to 0 and its
+`body` to the prefab default. It bypasses the ray and leaves the armed tool unchanged.
 A lamp uses the tuned next-placement light when it is the palette-selected
 prefab, and its catalog default otherwise. At the 128-object cap it returns an
 error and creates nothing.
@@ -409,17 +418,17 @@ position. `place` commits and leaves the mode. `cancel` restores the sun from
 before the mode. `active: false` leaves the mode and keeps the current sun.
 
 The state carries `debug.palette` (`open`, `selected`, `body`),
-`debug.placement` (`armed`, `prefab`, `position`, `height`, `yaw`, `snap`,
-`light`), `debug.sun` (`active`, `position`, `azimuth`, `elevation`),
-`debug.inspector` (`prefab`, `body`, `size`, `position`, `yaw`, `snap`,
-`light`), `debug.lights` (`active`, `lamps`), and `debug.history`
-(`depth`, `redo`). The sun angles and the inspector yaw are degrees. A light
-value carries `active`, `color`, `intensity`, and `range`.
+`debug.placement` (`armed`, `prefab`, `position`, `height`, `yaw_deg`, `snap`,
+`light`), `debug.sun` (`active`, `position`, `azimuth_deg`, `elevation_deg`,
+`angular_diameter_deg`), `debug.inspector` (`prefab`, `body`, `size`,
+`position`, `yaw_deg`, `snap`, `light`), `debug.lights` (`active`, `lamps`),
+and `debug.history` (`depth`, `redo`). Every angle field ends in `_deg` and is
+in degrees. A light value carries `active`, `color`, `intensity`, and `range`.
 `debug.selection` is `none` or `object`, and `debug.selected_id` is the selected
 placed object's id or 0. `debug.inspector` reports zeroes and empty strings when
 nothing is selected. `debug.history.depth` is the undo count, from 0 to 64, and
 `debug.history.redo` is the redo count. `debug.placement.height` is metres,
-`debug.placement.yaw` is degrees, and `debug.placement.position` is the ghost
+`debug.placement.yaw_deg` is degrees, and `debug.placement.position` is the ghost
 centre (zero when not armed). The ghost is drawn as debug lines while armed: the
 oriented box, the footprint on the surface, and the height guide.
 
@@ -789,13 +798,13 @@ run never created a renderer, and `renderer.active` is `false`.
 | `text_truncated_runs` | runs cut at the 128-glyph cap |
 | `text_font_drops` | fonts dropped at the 8-font shaper cap |
 
-The state also carries a `camera` object: `position`, `yaw`, `pitch`, `fov` in
-degrees, `source`, and `overridden`. It reports the view the renderer uses.
-`source` is `player`, `debug`, or `override`; `overridden` is true whenever that
-view is not the player. A `camera` command sets the override; `clear` drops it
-and restores the player or debug view. The `sun` object is the debug sun
-placement: it carries `azimuth`,
-`elevation`, and `angular_diameter`, in degrees. The `settle` object carries the
+The state also carries a `camera` object: `position`, `yaw_deg`, `pitch_deg`,
+`fov_deg`, `source`, and `overridden`. Every angle is in degrees. It reports
+the view the renderer uses. `source` is `player`, `debug`, or `override`;
+`overridden` is true whenever that view is not the player. A `camera` command
+sets the override; `clear` drops it and restores the player or debug view. The
+`sun` object is the debug sun placement: it carries `azimuth_deg`,
+`elevation_deg`, and `angular_diameter_deg`. The `settle` object carries the
 last wait's `frames` and `converged`. The `rows` object carries the HUD and menu
 rows. The `menu` object carries `status` and `blocked` beside `open`, `selected`,
 and `item`; the status stays until the next setting change, so a check can read
@@ -808,8 +817,8 @@ The nested `debug` object repeats the active override values: `taa`, `jitter`,
 `history_weight`, `clamp`, `depth_trust`, `shadow_phase_frozen`,
 `shadow_phase`, `light_shadows`, `synthetic_lights`, `sky`, and `ao`.
 
-The `debug.sun` object reports `active`, `position`, `azimuth`, `elevation`,
-and `angular_diameter`. The angles and the diameter are degrees, and the
+The `debug.sun` object reports `active`, `position`, `azimuth_deg`,
+`elevation_deg`, and `angular_diameter_deg`. Every angle is in degrees, and the
 position is the sky-dome point the light comes from.
 
 The render digest is FNV-1a over the target extent, the effective camera, the sun

@@ -139,7 +139,7 @@ placement_rotation_composes_yaw_and_base_pitch :: proc(t: ^testing.T) {
 	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	placement_arm(t, &dm, &sim, .Ramp)
-	apply_expect(t, &dm, &sim, game.Placement_Set_Yaw{yaw = 90.0})
+	apply_expect(t, &dm, &sim, game.Placement_Set_Yaw{yaw_deg = 90.0})
 
 	ghost, _ := game.debug_ghost_geometry(&dm)
 	expected := b3.MulQuat(
@@ -182,7 +182,7 @@ placement_place_creates_at_the_ghost_and_stays_armed :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 	apply_expect(t, &dm, &sim, game.Palette_Select{index = 3}, "select failed")
 	apply_expect(t, &dm, &sim, game.Palette_Pick{}, "pick failed")
-	apply_expect(t, &dm, &sim, game.Placement_Set_Yaw{yaw = 30.0}, "yaw failed")
+	apply_expect(t, &dm, &sim, game.Placement_Set_Yaw{yaw_deg = 30.0}, "yaw failed")
 	apply_expect(t, &dm, &sim, game.Placement_Set_Height{height = 0.5}, "height failed")
 
 	ghost, _ := game.debug_ghost_geometry(&dm)

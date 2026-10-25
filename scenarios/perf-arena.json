@@ -1,6 +1,6 @@
 {
   "commands": [
-    {"cmd": "camera", "position": [0, 30, 10], "yaw": 0, "pitch": -1.2},
+    {"cmd": "camera", "position": [0, 30, 10], "yaw_deg": 0, "pitch_deg": -68.7549},
     {"cmd": "view", "hud": false, "debug": false, "hint": false, "perf": false},
     {"cmd": "perf", "frames": 120, "warmup": 60}
   ]

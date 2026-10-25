@@ -357,12 +357,18 @@ capture in the window; `capture.first` and `capture.last` are aliases.
 `capture.named.<name>.*` names a capture by its `name`; a missing name is a
 check error.
 
+Every angle in a scenario, `state.json`, and `report.json` is in degrees, and
+every angle key ends in `_deg`. Positions and distances are metres unless a
+field says otherwise. `look` deltas are pixels. `step.frames` and `perf.frames`
+are frames; `perf.prime` is seconds. Capture regions and crops are pixels.
+
 Check fields use the `state.json` shape, for example `player.position.y`,
 `player.grounded`, `objects.1.position.z`, `objects.count`,
 `settings.window_mode`, `settings.resolution`, `settings.type_weight`,
 `menu.open`, `menu.status`, `menu.blocked`, `debug.active`,
-`debug.placement.armed`, `debug.sun.angular_diameter`, `sun.elevation`,
-`sun.angular_diameter`, `camera.fov`, `camera.source`, `camera.overridden`, `settle.converged`,
+`debug.placement.armed`, `debug.sun.angular_diameter_deg`, `sun.elevation_deg`,
+`sun.angular_diameter_deg`, `camera.yaw_deg`, `camera.fov_deg`, `camera.source`,
+`camera.overridden`, `player.yaw_deg`, `settle.converged`,
 `rows.menu.3.kind`, `renderer.taa_enabled`, `renderer.text_truncated_runs`, or
 `render_digest`. A capture check can also read `capture.target`,
 `capture.format`, `capture.stats.*`, `capture.region.*`, `capture.profile.*`,
@@ -393,7 +399,8 @@ The batch runner and the live session share one command set:
   placement, and sun return to their defaults.
 - `{"cmd": "look", "dx": 220, "dy": 0}`: pixel look delta through the game
   sensitivity and pitch clamp.
-- `{"cmd": "face", "yaw": 0, "pitch": 0}`: set the player view directly.
+- `{"cmd": "face", "yaw_deg": 0, "pitch_deg": 0}`: set the player view directly.
+  Both angles are degrees.
 - `{"cmd": "input", "forward": 1, "right": 0, "jump": false}`: set persistent
   input. Omitted fields keep their value.
 - `{"cmd": "step", "frames": 60}`: fixed steps with no wall clock. A step is an
@@ -404,18 +411,20 @@ The batch runner and the live session share one command set:
   scenario with no captures, it is a plain step.
   `{"cmd":"settle","until":"converged"}` waits for the 512-sample cap and reports
   the frames and the result in `settle.frames` and `settle.converged`.
-- `{"cmd": "state"}`: player, eye, velocity, yaw, pitch, grounded, camera,
+- `{"cmd": "state"}`: player, eye, velocity, `yaw_deg`, `pitch_deg`, grounded, camera,
   objects, window and input settings, debug mode, menu, rows, settle, renderer
   state, render digest, frame, and simulation digest. Each object entry carries
   its id, prefab, body mode, position, rotation, scale, spawn age, and light
   (`active`, `color`, `intensity`, `range`). The debug entry carries `active`,
   `selection`, `selected_id`, the palette (`open`, `selected`, `body`), the
-  placement (`armed`, `prefab`, `position`, `height`, `yaw`, `snap`, `light`),
-  the sun (`active`, `position`, `azimuth`, `elevation`, `angular_diameter`),
-  the inspector (`prefab`, `body`, `size`, `position`, `yaw`, `snap`, `light`),
+  placement (`armed`, `prefab`, `position`, `height`, `yaw_deg`, `snap`, `light`),
+  the sun (`active`, `position`, `azimuth_deg`, `elevation_deg`,
+  `angular_diameter_deg`), the inspector (`prefab`, `body`, `size`, `position`,
+  `yaw_deg`, `snap`, `light`),
   the light budget (`lights.active`, `lights.lamps`), and the history (`depth`,
-  `redo`). The sun angles and the angular diameter are degrees. `camera` reports
-  the view the renderer uses: position, yaw, pitch, fov, `source` (`player`,
+  `redo`). Every angle field ends in `_deg` and is in degrees. `camera` reports
+  the view the renderer uses: position, `yaw_deg`, `pitch_deg`, `fov_deg`,
+  `source` (`player`,
   `debug`, or `override`), and whether an override is active.
   `rows` dumps the HUD and menu rows. The renderer object reports the frame
   count, TAA state, jitter index, history validity, convergence frames, history
@@ -435,26 +444,26 @@ The batch runner and the live session share one command set:
   to write a scaled PNG, and a `"profile"` block to measure an edge. Region,
   profile, and crop do not change the capture extent; the crop reports
   `written_width` and `written_height`.
-- `{"cmd": "camera", "position": [0, 2, 12], "yaw": 0, "pitch": 0}`: inspection
+- `{"cmd": "camera", "position": [0, 2, 12], "yaw_deg": 0, "pitch_deg": 0}`: inspection
   camera. It does not move the player. It accepts `look_at` instead of
-  `yaw`/`pitch`, and `fov` in degrees (1..170). `look_at` with yaw/pitch is an
-  error. `{"cmd": "camera", "clear": true}` drops the override.
+  `yaw_deg`/`pitch_deg`, and `fov_deg` in degrees (1..170). `look_at` with
+  `yaw_deg`/`pitch_deg` is an error. `{"cmd": "camera", "clear": true}` drops the override.
 - `{"cmd": "view", "hud": true, "debug": false, "hint": false, "perf": false}`:
   toggle the HUD, the debug draw, the capture hint, and the perf overlay.
-- `{"cmd": "sun", "azimuth": 52.1, "elevation": 15, "diameter": 0.53}`: move the
-  sun or resize its disk. `azimuth` is degrees from `+z` toward `+x`, `elevation`
-  is degrees above the horizon, and `diameter` is the angle the sun disk
-  subtends in degrees. Omitted fields keep the value, and at least one field is
+- `{"cmd": "sun", "azimuth_deg": 52.1, "elevation_deg": 15, "diameter_deg": 0.53}`: move the
+  sun or resize its disk. `azimuth_deg` is degrees from `+z` toward `+x`,
+  `elevation_deg` is degrees above the horizon, and `diameter_deg` is the angle
+  the sun disk subtends in degrees. Omitted fields keep the value, and at least one field is
   required. `{"cmd":"sun","clear":true}` restores the default direction and
   diameter. A change resets TAA history, like a scene change.
 - `{"cmd": "debug_mode", "active": true}`: enter or leave the `F2` debug mode.
   Entering swaps the player for the free-fly camera; leaving restores the player.
   Repeating the same value is a no-op.
-- `{"cmd": "editor", "open": true, "select": 4, "body": "static", "pick": true, "height": 0.5, "yaw": 45, "snap": true, "cancel": false}`:
+- `{"cmd": "editor", "open": true, "select": 4, "body": "static", "pick": true, "height": 0.5, "yaw_deg": 45, "snap": true, "cancel": false}`:
   drive the debug placement tool. The command needs debug mode. `open` opens or
   closes the object palette, `select` is the zero-based prefab index, `body` is
   `static` or `dynamic`, and `pick` arms the selected prefab. `height` is the
-  offset above the surface in metres, `yaw` is the rotation in degrees, and
+  offset above the surface in metres, `yaw_deg` is the rotation in degrees, and
   `snap` toggles the 0.25 m X/Z grid. `light_color` is `warm`, `cool`, `red`,
   `green`, or `blue`; `light_intensity` is in [0.2, 4.0] and `light_range` in
   [2, 20]. The light fields tune the next lamp placement, or the selected lamp
@@ -468,16 +477,16 @@ The batch runner and the live session share one command set:
   Shift step, `primary` and `secondary` are the mouse buttons, and
   `drag_move`/`drag_release` drive one object drag.
 - `{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "look_at": [0, 1.7, 4]}}`:
-  set the debug camera. It accepts `look_at` or `yaw` and `pitch`, never both;
-  the angles are radians, as in the `camera` command. The editor command accepts
+  set the debug camera. It accepts `look_at` or `yaw_deg` and `pitch_deg`, never
+  both; the angles are degrees, as in the `camera` command. The editor command accepts
   this alongside the other fields.
-- `{"cmd": "editor", "place": {"prefab": "Block", "position": [0, 0.5, 10], "yaw": 0, "body": "static"}}`:
+- `{"cmd": "editor", "place": {"prefab": "Block", "position": [0, 0.5, 10], "yaw_deg": 0, "body": "static"}}`:
   create an object at an exact transform, bypassing the placement ray. `prefab`
-  and `position` are required; `yaw` (degrees) defaults to 0 and `body` to the
+  and `position` are required; `yaw_deg` (degrees) defaults to 0 and `body` to the
   prefab's default.
-- `{"cmd": "editor", "select_object": 1, "move": [1, 0.5, 7], "rotate": 15, "body": "static", "delete": false, "duplicate": true, "undo": false, "redo": false}`:
+- `{"cmd": "editor", "select_object": 1, "move": [1, 0.5, 7], "rotate_deg": 15, "body": "static", "delete": false, "duplicate": true, "undo": false, "redo": false}`:
   edit a placed object by id. `select_object` is the object id, and 0 clears the
-  selection. `move` sets the centre, `rotate` turns the object by degrees, and
+  selection. `move` sets the centre, `rotate_deg` turns the object by degrees, and
   `body` flips between `static` and `dynamic`. The open palette or the armed
   placement tool owns it; otherwise it converts the selection. `delete`, `duplicate`,
   `undo`, and `redo` are actions. A duplicate at the cap does nothing.

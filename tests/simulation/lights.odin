@@ -18,7 +18,7 @@ place_lamp :: proc(
 		prefab = .Lamp,
 		body_mode = .Static,
 		center = center,
-		yaw = 0,
+		yaw_rad = 0,
 	}, "lamp did not place")
 	return dm.selected_object_id
 }

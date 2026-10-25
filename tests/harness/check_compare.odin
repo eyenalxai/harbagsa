@@ -12,14 +12,14 @@ compare_reads_two_fields_with_the_same_resolver :: proc(t: ^testing.T) {
 	command := harness.Check_Command {
 		field     = "frame",
 		op        = .Lt,
-		other     = "camera.fov",
+		other     = "camera.fov_deg",
 		has_other = true,
 	}
-	state.camera.fov = 90
+	state.camera.fov_deg = 90
 	result := harness.check_evaluate(command, state, nil, nil, context.allocator)
 	defer harness.check_result_destroy(&result, context.allocator)
 	testing.expectf(t, result.ok, "compare failed: %s", result.error)
-	testing.expect_value(t, result.other, "camera.fov")
+	testing.expect_value(t, result.other, "camera.fov_deg")
 }
 
 @(test)

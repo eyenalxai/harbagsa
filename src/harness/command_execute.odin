@@ -21,7 +21,7 @@ execute_look :: proc(session: ^Session, command: Command, reply: ^Reply) -> stri
 
 @(private)
 execute_face :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
-	game.simulation_face(&session.sim, command.face.yaw, command.face.pitch)
+	game.simulation_face(&session.sim, command.face.yaw_rad, command.face.pitch_rad)
 	return ""
 }
 
@@ -66,12 +66,12 @@ execute_camera :: proc(session: ^Session, command: Command, reply: ^Reply) -> st
 	}
 	fov := frame.PLAYER_FOV_X
 	if command.camera.has_fov {
-		fov = math.to_radians(command.camera.fov)
+		fov = math.to_radians(command.camera.fov_deg)
 	}
 	session.camera_override = {
 		position = command.camera.position,
-		yaw      = command.camera.yaw,
-		pitch    = command.camera.pitch,
+		yaw      = command.camera.yaw_rad,
+		pitch    = command.camera.pitch_rad,
 		fov_x    = fov,
 	}
 	session.has_camera_override = true

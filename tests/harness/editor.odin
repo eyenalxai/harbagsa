@@ -34,11 +34,11 @@ editor_camera_aims_at_a_point :: proc(t: ^testing.T) {
 	if error != "" {
 		return
 	}
-	testing.expect(t, abs(command.editor.camera.yaw) < 1e-5, "looking down -z has a nonzero yaw")
-	testing.expect(t, abs(command.editor.camera.pitch) < 1e-5, "looking level has a nonzero pitch")
+	testing.expect(t, abs(command.editor.camera.yaw_rad) < 1e-5, "looking down -z has a nonzero yaw")
+	testing.expect(t, abs(command.editor.camera.pitch_rad) < 1e-5, "looking level has a nonzero pitch")
 
 	bad := []string{
-		`{"cmd":"editor","camera":{"position":[0,0,0],"look_at":[0,0,-1],"yaw":0,"pitch":0}}`,
+		`{"cmd":"editor","camera":{"position":[0,0,0],"look_at":[0,0,-1],"yaw_deg":0,"pitch_deg":0}}`,
 		`{"cmd":"editor","camera":{"position":[0,0,0],"look_at":[0,0,0]}}`,
 	}
 	for line in bad {
@@ -99,7 +99,7 @@ editor_opens_selects_and_picks_a_prefab :: proc(t: ^testing.T) {
 	reply := execute(
 		t,
 		&session,
-		`{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw": 0, "pitch": -0.9}}`,
+		`{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw_deg": 0, "pitch_deg": -51.5662}}`,
 	)
 	harness.reply_destroy(&reply, context.allocator)
 	reply = execute(t, &session, `{"cmd": "editor", "open": true, "select": 4}`)
@@ -122,19 +122,19 @@ editor_height_yaw_and_snap_reach_the_state_and_checks :: proc(t: ^testing.T) {
 	defer harness.session_destroy(&session)
 	_ = execute(t, &session, `{"cmd": "editor", "open": true, "select": 4, "pick": true}`)
 
-	reply := execute(t, &session, `{"cmd": "editor", "height": 0.5, "yaw": 45, "snap": true}`)
+	reply := execute(t, &session, `{"cmd": "editor", "height": 0.5, "yaw_deg": 45, "snap": true}`)
 	harness.reply_destroy(&reply, context.allocator)
 
 	state := harness.session_state(&session)
 	defer harness.state_destroy(&state, context.allocator)
 	testing.expect_value(t, state.debug.placement.height, 0.5)
-	testing.expect_value(t, state.debug.placement.yaw, 45.0)
+	testing.expect_value(t, state.debug.placement.yaw_deg, 45.0)
 	testing.expect(t, state.debug.placement.snap, "snap was dropped")
 
 	reply = execute(t, &session, `{"cmd": "check", "field": "debug.placement.height", "op": "eq", "value": 0.5}`)
 	testing.expectf(t, reply.ok, "height check failed: %s", reply.error)
 	harness.reply_destroy(&reply, context.allocator)
-	reply = execute(t, &session, `{"cmd": "check", "field": "debug.placement.yaw", "op": "eq", "value": 45}`)
+	reply = execute(t, &session, `{"cmd": "check", "field": "debug.placement.yaw_deg", "op": "eq", "value": 45}`)
 	testing.expectf(t, reply.ok, "yaw check failed: %s", reply.error)
 	harness.reply_destroy(&reply, context.allocator)
 	reply = execute(t, &session, `{"cmd": "check", "field": "debug.palette.body", "op": "eq", "value": "static"}`)
@@ -153,7 +153,7 @@ editor_place_creates_the_exact_transform :: proc(t: ^testing.T) {
 	reply := execute(
 		t,
 		&session,
-		`{"cmd": "editor", "place": {"prefab": "Block", "position": [0, 2, 5], "yaw": 30, "body": "static"}}`,
+		`{"cmd": "editor", "place": {"prefab": "Block", "position": [0, 2, 5], "yaw_deg": 30, "body": "static"}}`,
 	)
 	testing.expectf(t, reply.ok, "place failed: %s", reply.error)
 	harness.reply_destroy(&reply, context.allocator)
@@ -254,7 +254,7 @@ editor_commands_record_and_replay :: proc(t: ^testing.T) {
 	reply = execute(
 		t,
 		&session,
-		`{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw": 0, "pitch": -0.9}}`,
+		`{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw_deg": 0, "pitch_deg": -51.5662}}`,
 	)
 	harness.reply_destroy(&reply, context.allocator)
 	reply = execute(t, &session, `{"cmd": "editor", "open": true, "select": 3, "pick": true, "height": 0.5}`)
@@ -262,7 +262,7 @@ editor_commands_record_and_replay :: proc(t: ^testing.T) {
 	reply = execute(
 		t,
 		&session,
-		`{"cmd": "editor", "place": {"prefab": "Block", "position": [0, 2, 5], "yaw": 30}}`,
+		`{"cmd": "editor", "place": {"prefab": "Block", "position": [0, 2, 5], "yaw_deg": 30}}`,
 	)
 	harness.reply_destroy(&reply, context.allocator)
 
@@ -285,5 +285,5 @@ editor_commands_record_and_replay :: proc(t: ^testing.T) {
 	testing.expect_value(t, after.debug.placement.armed, before.debug.placement.armed)
 	testing.expect_value(t, after.debug.placement.prefab, before.debug.placement.prefab)
 	testing.expect_value(t, after.debug.placement.height, before.debug.placement.height)
-	testing.expect_value(t, after.debug.placement.yaw, before.debug.placement.yaw)
+	testing.expect_value(t, after.debug.placement.yaw_deg, before.debug.placement.yaw_deg)
 }

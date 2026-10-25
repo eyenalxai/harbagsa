@@ -66,7 +66,7 @@ sun_clear_restores_the_default_light :: proc(t: ^testing.T) {
 	if session_error != "" {
 		return
 	}
-	reply := execute(t, &session, `{"cmd":"sun","azimuth":0,"elevation":5,"diameter":3}`)
+	reply := execute(t, &session, `{"cmd":"sun","azimuth_deg":0,"elevation_deg":5,"diameter_deg":3}`)
 	harness.reply_destroy(&reply, context.allocator)
 	reply = execute(t, &session, `{"cmd":"sun","clear":true}`)
 	harness.reply_destroy(&reply, context.allocator)
@@ -77,22 +77,22 @@ sun_clear_restores_the_default_light :: proc(t: ^testing.T) {
 	)
 	testing.expectf(
 		t,
-		abs(state.debug.sun.azimuth - f32(math.to_degrees(default_azimuth))) < 0.001,
+		abs(state.debug.sun.azimuth_deg - f32(math.to_degrees(default_azimuth))) < 0.001,
 		"azimuth is %v",
-		state.debug.sun.azimuth,
+		state.debug.sun.azimuth_deg,
 	)
 	testing.expectf(
 		t,
-		abs(state.debug.sun.angular_diameter - f32(math.to_degrees(game.SUN_ANGULAR_DIAMETER))) < 0.0001,
+		abs(state.debug.sun.angular_diameter_deg - f32(math.to_degrees(game.SUN_ANGULAR_DIAMETER))) < 0.0001,
 		"diameter is %v",
-		state.debug.sun.angular_diameter,
+		state.debug.sun.angular_diameter_deg,
 	)
 }
 
 @(test)
 sun_clear_rejects_another_field :: proc(t: ^testing.T) {
 	_, error := harness.command_parse_string(
-		`{"cmd":"sun","clear":true,"azimuth":10}`,
+		`{"cmd":"sun","clear":true,"azimuth_deg":10}`,
 		context.allocator,
 	)
 	testing.expectf(t, error != "", "sun accepted clear and azimuth together")

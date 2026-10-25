@@ -2,6 +2,7 @@
 package harness
 
 import "core:fmt"
+import "core:math"
 import "core:os"
 import "core:path/filepath"
 import "core:strings"
@@ -48,12 +49,13 @@ session_record_start :: proc(session: ^Session, path: string) -> string {
 	if session.has_camera_override {
 		camera := session.camera_override
 		camera_line := fmt.aprintf(
-			`{{"cmd": "camera", "position": [%g, %g, %g], "yaw": %g, "pitch": %g}}`,
+			`{{"cmd": "camera", "position": [%g, %g, %g], "yaw_deg": %g, "pitch_deg": %g, "fov_deg": %g}}`,
 			camera.position.x,
 			camera.position.y,
 			camera.position.z,
-			camera.yaw,
-			camera.pitch,
+			math.to_degrees(camera.yaw),
+			math.to_degrees(camera.pitch),
+			math.to_degrees(camera.fov_x),
 			allocator = session.allocator,
 		)
 		append(&session.recorded, camera_line)

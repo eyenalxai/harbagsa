@@ -20,7 +20,7 @@ history_caps_at_64_and_a_new_edit_clears_redo :: proc(t: ^testing.T) {
 			prefab = .Block,
 			body_mode = .Static,
 			center = {f32(index) * 2.0, 0.5, -20.0},
-			yaw = 0,
+			yaw_rad = 0,
 		}, "place failed")
 	}
 	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT + 70)
@@ -37,7 +37,7 @@ history_caps_at_64_and_a_new_edit_clears_redo :: proc(t: ^testing.T) {
 		prefab = .Block,
 		body_mode = .Static,
 		center = {40, 0.5, -20},
-		yaw = 0,
+		yaw_rad = 0,
 	}, "place failed")
 	testing.expect_value(t, game.debug_history_depth(&dm), game.HISTORY_LIMIT)
 	testing.expect_value(t, game.debug_history_redo_depth(&dm), 0)
@@ -66,7 +66,7 @@ capacity_blocks_place_and_duplicate_without_history :: proc(t: ^testing.T) {
 		prefab = .Block,
 		body_mode = .Static,
 		center = {0, 1, 0},
-		yaw = 0,
+		yaw_rad = 0,
 	})
 	testing.expect_value(t, place.reason, game.Edit_Reason.Scene_Full)
 	testing.expect_value(t, game.simulation_object_count(&sim), game.MAX_PLACED_OBJECTS)

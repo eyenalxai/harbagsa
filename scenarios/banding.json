@@ -3,7 +3,7 @@
   "view": {"hud": false, "debug": false, "hint": false, "perf": false},
   "analysis": {"start": 0, "count": 1},
   "commands": [
-    {"cmd": "camera", "position": [0, 1.7, 0], "yaw": 0, "pitch": 1.2},
+    {"cmd": "camera", "position": [0, 1.7, 0], "yaw_deg": 0, "pitch_deg": 68.7549},
     {"cmd": "settle", "frames": 40},
     {"cmd": "capture", "name": "sky"}
   ],

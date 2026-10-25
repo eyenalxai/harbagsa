@@ -28,17 +28,17 @@ Placement_State :: struct {
 	prefab:   string    `json:"prefab"`,
 	position: Vec_State `json:"position"`,
 	height:   f32         `json:"height"`,
-	yaw:      f32         `json:"yaw"`,
+	yaw_deg:  f32         `json:"yaw_deg"`,
 	snap:     bool        `json:"snap"`,
 	light:    Light_State `json:"light"`,
 }
 
 Sun_State :: struct {
-	active:           bool      `json:"active" digest:"-"`,
-	position:         Vec_State `json:"position"`,
-	azimuth:          f32       `json:"azimuth" digest:"-"`,
-	elevation:        f32       `json:"elevation" digest:"-"`,
-	angular_diameter: f32       `json:"angular_diameter" digest:"-"`,
+	active:               bool      `json:"active" digest:"-"`,
+	position:             Vec_State `json:"position"`,
+	azimuth_deg:          f32       `json:"azimuth_deg" digest:"-"`,
+	elevation_deg:        f32       `json:"elevation_deg" digest:"-"`,
+	angular_diameter_deg: f32       `json:"angular_diameter_deg" digest:"-"`,
 }
 
 // The selected-object half of the debug inspector. Every number is in metres
@@ -48,7 +48,7 @@ Inspector_State :: struct {
 	body:     string    `json:"body"`,
 	size:     Vec_State `json:"size"`,
 	position: Vec_State   `json:"position"`,
-	yaw:      f32         `json:"yaw"`,
+	yaw_deg:  f32         `json:"yaw_deg"`,
 	snap:     bool        `json:"snap"`,
 	light:    Light_State `json:"light"`,
 }
@@ -77,7 +77,7 @@ debug_state_build :: proc(
 			prefab = game.prefab_name(debug.placement.prefab),
 			position = debug_placement_position(debug),
 			height = debug.placement.height,
-			yaw = debug.placement.yaw_degrees,
+			yaw_deg = debug.placement.yaw_degrees,
 			snap = debug.placement.snap,
 			light = placement_light_state(debug),
 		},
@@ -116,7 +116,7 @@ inspector_state :: proc(debug: ^game.Debug_Mode, sim: ^game.Simulation) -> Inspe
 	state.body = game.body_mode_name(object.body_mode)
 	state.size = vec_state(box.half_extents * 2.0)
 	state.position = vec_state(box.center)
-	state.yaw = game.simulation_object_yaw(sim, id) * 180.0 / math.PI
+	state.yaw_deg = game.simulation_object_yaw(sim, id) * 180.0 / math.PI
 	state.light = light_state(object.light)
 	return state
 }

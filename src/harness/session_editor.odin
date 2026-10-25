@@ -13,8 +13,8 @@ session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 	if command.has_camera {
 		session.debug.camera = {
 			position = command.camera.position,
-			yaw      = command.camera.yaw,
-			pitch    = command.camera.pitch,
+			yaw      = command.camera.yaw_rad,
+			pitch    = command.camera.pitch_rad,
 		}
 	}
 
@@ -78,7 +78,7 @@ session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 		}
 	}
 	if command.has_yaw {
-		if failure := apply_editor_action(session, game.Placement_Set_Yaw{yaw = command.yaw}); failure != "" {
+		if failure := apply_editor_action(session, game.Placement_Set_Yaw{yaw_deg = command.yaw_deg}); failure != "" {
 			return failure
 		}
 	}
@@ -131,7 +131,7 @@ session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 				prefab = command.place.prefab,
 				body_mode = command.place.body,
 				center = command.place.position,
-				yaw = command.place.yaw * math.PI / 180.0,
+				yaw_rad = command.place.yaw_deg * math.PI / 180.0,
 			},
 		); failure != "" {
 			return failure
@@ -148,7 +148,7 @@ session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 	if command.object.has_rotate {
 		if failure := apply_editor_action(
 			session,
-			game.Rotate_Selected{degrees = command.object.rotate},
+			game.Rotate_Selected{degrees = command.object.rotate_deg},
 		); failure != "" {
 			return failure
 		}

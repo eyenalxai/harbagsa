@@ -236,7 +236,7 @@ debug_hud_reports_the_armed_placement :: proc(t: ^testing.T) {
 	apply_expect(t, &debug, &sim, game.Palette_Select{index = 4}, "select failed")
 	apply_expect(t, &debug, &sim, game.Palette_Pick{}, "pick failed")
 	apply_expect(t, &debug, &sim, game.Placement_Set_Height{height = 0.5}, "height failed")
-	apply_expect(t, &debug, &sim, game.Placement_Set_Yaw{yaw = 90}, "yaw failed")
+	apply_expect(t, &debug, &sim, game.Placement_Set_Yaw{yaw_deg = 90}, "yaw failed")
 	apply_expect(t, &debug, &sim, game.Placement_Set_Snap{snap = true}, "snap failed")
 
 	scene := frame.build(

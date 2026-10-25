@@ -25,7 +25,7 @@ place_block :: proc(t: ^testing.T, sim: ^game.Simulation, dm: ^game.Debug_Mode, 
 		prefab = .Block,
 		body_mode = .Static,
 		center = center,
-		yaw = 0,
+		yaw_rad = 0,
 	}, "place failed")
 	return dm.selected_object_id
 }
@@ -204,7 +204,7 @@ ray_selection_and_drag_work_for_a_placed_static_prefab :: proc(t: ^testing.T) {
 		prefab = .Pillar,
 		body_mode = .Static,
 		center = {0, 1.5, 10},
-		yaw = 0,
+		yaw_rad = 0,
 	}, "pillar did not place")
 	pillar := dm.selected_object_id
 	apply_expect(t, &dm, &sim, game.Select_Object{id = 0}, "clear failed")

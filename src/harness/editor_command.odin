@@ -12,7 +12,7 @@ EDITOR_KEYS := [?]string {
 	"body",
 	"pick",
 	"height",
-	"yaw",
+	"yaw_deg",
 	"snap",
 	"cancel",
 	"camera",
@@ -20,7 +20,7 @@ EDITOR_KEYS := [?]string {
 	"sun",
 	"select_object",
 	"move",
-	"rotate",
+	"rotate_deg",
 	"delete",
 	"duplicate",
 	"undo",
@@ -43,14 +43,14 @@ EDITOR_KEYS := [?]string {
 
 Editor_Camera :: struct {
 	position: [3]f32,
-	yaw:      f32,
-	pitch:    f32,
+	yaw_rad:  f32,
+	pitch_rad: f32,
 }
 
 Editor_Place :: struct {
 	prefab:   game.Prefab_Id,
 	position: [3]f32,
-	yaw:      f32,
+	yaw_deg:  f32,
 	body:     game.Body_Mode,
 }
 
@@ -64,7 +64,7 @@ Editor_Command :: struct {
 	pick:       bool,
 	height:     f32,
 	has_height: bool,
-	yaw:        f32,
+	yaw_deg:    f32,
 	has_yaw:    bool,
 	snap:       bool,
 	has_snap:   bool,
@@ -128,12 +128,12 @@ parse_editor :: proc(object: json.Object) -> (Command, string) {
 		command.editor.height = f32(height)
 		command.editor.has_height = true
 	}
-	if value, has := json_get(object, "yaw"); has {
+	if value, has := json_get(object, "yaw_deg"); has {
 		yaw, ok := json_number(value)
 		if !ok {
-			return {}, "'yaw' must be a number"
+			return {}, "'yaw_deg' must be a number"
 		}
-		command.editor.yaw = f32(yaw)
+		command.editor.yaw_deg = f32(yaw)
 		command.editor.has_yaw = true
 	}
 	if value, has := json_get(object, "snap"); has {
@@ -203,7 +203,7 @@ parse_editor_place :: proc(value: json.Value) -> (Editor_Place, string) {
 	if !ok {
 		return {}, "'place' must be an object"
 	}
-	if key, unknown := json_unknown_key(object, {"prefab", "position", "yaw", "body"}); unknown {
+	if key, unknown := json_unknown_key(object, {"prefab", "position", "yaw_deg", "body"}); unknown {
 		return {}, format_error("unknown editor place key %q", key)
 	}
 	name, name_ok := string_field(object, "prefab")
@@ -224,12 +224,12 @@ parse_editor_place :: proc(value: json.Value) -> (Editor_Place, string) {
 		position = position,
 		body = game.prefab(prefab_id).body_mode,
 	}
-	if yaw_value, has := json_get(object, "yaw"); has {
+	if yaw_value, has := json_get(object, "yaw_deg"); has {
 		yaw, yaw_ok := json_number(yaw_value)
 		if !yaw_ok {
-			return {}, "editor 'place' yaw must be a number"
+			return {}, "editor 'place' yaw_deg must be a number"
 		}
-		place.yaw = f32(yaw)
+		place.yaw_deg = f32(yaw)
 	}
 	if body_value, has := json_get(object, "body"); has {
 		mode, body_error := parse_body_mode(body_value, "place.body")
