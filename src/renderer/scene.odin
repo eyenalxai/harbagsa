@@ -17,14 +17,14 @@ Camera :: struct {
 	fov_x:    f32,
 }
 
-AMBIENT_COLOR :: [3]f32{0.24, 0.25, 0.28}
 // The renderer accepts any sun the scene names, but a zero or absurd angular
 // diameter has no valid tangent and would break every shadow ray.
 SUN_ANGULAR_DIAMETER_LIMIT :: 45.0 * math.PI / 180.0
+// The scene has no ambient term, so the occlusion rays darken the direct light.
 // Crates are 1 m and the tunnel clearances are 0.9 to 1.35 m, so a 1.5 m ray
 // reaches the surfaces that should darken without reaching across the arena.
 AO_RADIUS :: 1.5
-AO_STRENGTH :: 1.0
+AO_STRENGTH :: 0.5
 AO_SAMPLES :: #config(AO_SAMPLES, 8) // The Makefile sets it and the shader reads the same value.
 
 Scene :: struct {
@@ -179,7 +179,6 @@ update_camera :: proc(r: ^Renderer, input: Render_Input) -> bool {
 			input.light_direction.z,
 			0,
 		},
-		ambient = {AMBIENT_COLOR.x, AMBIENT_COLOR.y, AMBIENT_COLOR.z, 0},
 		// The sun sample pattern rotates only while TAA can average it.
 		screen = {
 			srgb_gamma(r),
@@ -194,12 +193,7 @@ update_camera :: proc(r: ^Renderer, input: Render_Input) -> bool {
 			r.taa.debug.active && !r.taa.debug.light_shadows ? 0 : 1,
 		},
 		jitter = {input.jitter.x, input.jitter.y, 0, 0},
-		lighting = {
-			AO_RADIUS,
-			AO_STRENGTH,
-			input.ao ? 1.0 : 0.0,
-			input.sky ? 1.0 : 0.0,
-		},
+		occlusion = {AO_RADIUS, AO_STRENGTH, input.ao ? 1.0 : 0.0, 0},
 	}
 	return true
 }

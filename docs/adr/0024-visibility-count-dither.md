@@ -2,9 +2,9 @@
 
 ## Context
 
-The lit shader traces 16 sun rays and 8 ambient-occlusion rays. The visible
-fraction is a count over the sample count, so the sun term steps by 1/16 and the
-ambient term by 1/8. The output dither on the TAA resolve removes the 8-bit
+The lit shader traces 16 sun rays and 8 occlusion rays. The visible fraction is
+a count over the sample count, so the sun term steps by 1/16 and the occlusion
+term by 1/8. The output dither on the TAA resolve removes the 8-bit
 write band, not this larger lighting step. A smooth shadow gradient in shade,
 most visible on the floor below a ramp, shows the step as a contour band.
 
@@ -26,8 +26,9 @@ rounds that average away and keeps the count field per
 the output dither. With TAA off, or with the phase frozen, the offset is a fixed
 per-pixel pattern.
 
-The same rule applies to the sun and the ambient count. A fragment in full sun
-or full umbra is exact, so the stable gates do not see a flicker.
+The same rule applies to the sun and the occlusion count. A fragment in full
+sun, full umbra, or with a full or empty occlusion count is exact, so the
+stable gates do not see a flicker.
 
 ## Options considered
 
@@ -39,8 +40,8 @@ or full umbra is exact, so the stable gates do not see a flicker.
   the ray count from quantizing the lighting.
 - **Disable the TAA color clamp.** Measured; it does not change the field. The
   clamp is not the cause.
-- **Scale the ambient by a smooth function of the count.** It changes the value
-  at a partial count and biases the term.
+- **Scale the occlusion by a smooth function of the count.** It changes the
+  value at a partial count and biases the term.
 - **No dither.** The count remains a hard step. The output dither cannot hide a
   step that is many levels tall.
 
@@ -55,6 +56,10 @@ or full umbra is exact, so the stable gates do not see a flicker.
   `docs/adr/0027-32-bit-taa-history.md`. The ramp-foot region in
   `scenarios/ramp-shadow.json` sits where the steps are shallow, so it passed
   on the 16-bit history.
+- After the direct-light change in
+  [ADR 0028](0028-direct-light-with-surface-occlusion.md), the same
+  `ramp-shadow` region measures 0 steps and a 0.086 level maximum jump. The
+  scenario gate still passes; the shade is black rather than a lit gradient.
 - `capture.stats.steps` gates the class. It box-filters the luma 9x9, which
   removes the output dither and the sample noise, then counts adjacent jumps
   between 0.5 and 8 levels. A soft gradient has none; a visibility step leaves a

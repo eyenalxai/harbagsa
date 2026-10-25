@@ -76,7 +76,7 @@ serializes Make with `flock`.
 | read numeric image statistics | **Capture targets** (`stats`) |
 | read renderer state or the render digest | **Renderer state** |
 | change a renderer input for a diagnosis | **Renderer debug overrides** |
-| check the sky and the ambient occlusion | **Sky and ambient occlusion** |
+| check the sky and the direct-light occlusion | **Sky and ambient occlusion** |
 | test lighting inside the closed room | **Interior room** |
 | measure image stability or the period | **Analysis** |
 | compare two builds or revisions | **Cross-run diff** and **Cross-run compare** |
@@ -1123,8 +1123,8 @@ it. Any other build rejects it with a clear error.
 | `shadow_phase` | set a phase in [0, 63] and freeze it |
 | `light_shadows` | enable or disable the point-light shadow rays |
 | `synthetic_lights` | replace the frame's lights with 0 to 8 test lights |
-| `sky` | draw the sky pass and use the sky ambient in the lit pass |
-| `ao` | trace the ambient occlusion rays |
+| `sky` | draw the sky pass; the sky is a background, not a light |
+| `ao` | trace the occlusion rays; they scale the sun and point lights |
 | `clear` | reset every override and turn TAA, the sky, and the AO on |
 | any field set to `null` | restore that field's default |
 
@@ -1153,62 +1153,72 @@ side.
 ## Sky and ambient occlusion
 
 The sky is an analytic gradient. It draws after the lit pass and shades only the
-background pixels. The lit pass traces eight ambient occlusion rays per fragment
-and scales the ambient term by the visible fraction, but only where the sun does
-not reach the point. A sunlit fragment keeps the full ambient. Both features are
-on by default. Both are debug overrides, so the two terms can be measured apart.
-`{"cmd": "renderer_debug", "sky": false}` removes the sky pass and its ambient
-contribution; `{"cmd": "renderer_debug", "ao": false}` keeps the sky light but
-drops the occlusion term. `clear` turns both back on.
+background pixels. It is not a light: the scene has no ambient term, so a
+surface that the sun and the point lights do not reach is black.
 
-`scenarios/sky-ao.json` captures the arena with both on, both off, and split.
+The lit pass traces eight occlusion rays per fragment and scales the sun and
+point-light sum by the visible fraction, out to 1.5 m. The strength is 0.5. A
+lit corner darkens; a surface with no light stays black. Both the sky pass and
+the occlusion are debug overrides. `{"cmd": "renderer_debug", "sky": false}`
+removes the sky pass and leaves the clear colour. `{"cmd": "renderer_debug",
+"ao": false}` drops the occlusion and keeps the direct light. `clear` turns
+both back on.
+
+`scenarios/sky.json` captures the sky at the zenith and the horizon with the sky
+pass on and off. The horizon capture reads the top half of the frame, so the
+black walls below the horizon do not enter the mean.
 `scenarios/stairs-ao.json` captures the stairs at a 25° sun with the AO on and
-off, and checks that the sunlit floor keeps one value while the shaded wall
-still darkens. It declares `requires.renderer_debug`.
-`scenarios/ramp-shadow.json` looks at the shaded floor below the 20 degree ramp
+off, and checks that the AO darkens the sunlit floor and the shade. It declares
+`requires.renderer_debug`.
+`scenarios/ramp-shadow.json` looks at the dark floor below the 20 degree ramp
 and gates the visibility band metric. A partial ray count is offset inside its
-own step, so the shade
-does not show 1/8 or 1/16 contour bands; the full and empty counts stay exact.
+own step, so a contact band does not show 1/8 or 1/16 contour bands; the full
+and empty counts stay exact.
 `scenarios/ramp-shadow-crouch.json` repeats the gate from the crouched view
-under the ramp, where the 1/8 steps are widest; it also needs the 32-bit TAA
-history, because a 16-bit history rounds the accumulated update away and keeps
-the steps. The render digest covers both flags because they change the image.
-The design and the noise budget are in
-`docs/adr/0017-sky-ambient-and-ray-traced-ambient-occlusion.md`; the count
-dither is in `docs/adr/0024-visibility-count-dither.md`; the history width is
-in `docs/adr/0027-32-bit-taa-history.md`.
+under the ramp; it also needs the 32-bit TAA history, because a 16-bit history
+rounds the accumulated update away and keeps the steps.
+`scenarios/room-lighting.json` proves the dark base in the room. The chamber
+mean stays at the output dither floor under both sun azimuths, and a placed lamp
+is the only light inside. It also proves the four-turn light lock. The render
+digest covers both flags because they change the image. The design is in
+`docs/adr/0028-direct-light-with-surface-occlusion.md`; the count dither is in
+`docs/adr/0024-visibility-count-dither.md`; the history width is in
+`docs/adr/0027-32-bit-taa-history.md`.
 
 ## Interior room
 
 `scenarios/room-lighting.json` drives the closed room in the arena's +x/+z
-corner. The room is static arena geometry, not a placed object. The scenario:
+corner. The room is static arena geometry, not a placed object. It is 11 m
+square with a 3 m clear height and one west door. The door opens into a
+four-turn light lock: east, south, west, south, and east into the chamber.
 
-1. captures the outside, the one doorway, the sealed corner, and the ceiling;
-2. captures the sealed corner and the ceiling on the depth target and checks
-   that the maximum depth is below 1.0, so neither view contains a sky pixel;
-3. moves the sun behind the doorway and to the far side, and compares the same
-   floor region through the doorway;
+The scenario:
+
+1. captures the outside, the view out of the door, the first tunnel lane, and
+   the chamber;
+2. checks the first lane with the sun west and east, so the door is the only
+   sun path;
+3. checks the chamber at both sun azimuths; the mean stays at the output dither
+   floor and the depth target contains no sky pixel;
 4. places a warm lamp with `place` (no debug mode and no sun gizmo), then
-   removes it and compares the same interior view with the lamp on and off.
+   removes it and checks that the chamber returns to the dither floor.
 
-The sun elevation, lamp intensity, lamp range, and door patch are scenario
-parameters. Change them with `--param` without editing the file:
+The sun elevation, lamp intensity, and lamp range are scenario parameters.
+Change them with `--param` without editing the file:
 
 ```sh
 ./bin/harbagsa-agent run scenarios/room-lighting.json \
-  --param sun_elevation_deg=20 --param lamp_intensity=2
+  --param sun_elevation_deg=25 --param lamp_intensity=3
 ```
 
 The scenario sets `"analysis": false` because its captures are different views,
 not a steady series. `make lighting` runs it with the sky, AO, ramp, and sun
 angle scenarios.
 
-The depth check proves the room is closed. It does not prove the interior is
-dark: the ambient term is a normal ramp, not an integral of the visible sky, and
-the 1.5 m AO radius never reaches across the room. A room can therefore look
-brighter than a path tracer would make it, and the doorway sun patch does not
-bounce. Use the scenario to test those limits, not to assume global
-illumination.
+The chamber is black, not merely shaded. The depth check proves the room is
+closed. The four-turn check proves that no straight sun ray passes the door. The
+lamp is the only light inside, and the occlusion term darkens the corners it
+lights. There is no bounce and no ambient fill.
 
 ## Performance
 
@@ -1494,7 +1504,7 @@ frame-rate change.
   `scenarios/editor-ghost.json`, `scenarios/editor-sun.json`,
   `scenarios/editor-object.json`, `scenarios/editor-lamps.json`,
   `scenarios/debug-pop.json`, `scenarios/type-weight.json`,
-  `scenarios/repro-notice.json`, `scenarios/sky-ao.json`,
+  `scenarios/repro-notice.json`, `scenarios/sky.json`,
   `scenarios/stairs-ao.json`, `scenarios/ramp-shadow.json`,
   `scenarios/ramp-shadow-crouch.json`, `scenarios/banding.json`,
   `scenarios/banding-phase.json`, `scenarios/shadow-angle.json`,
