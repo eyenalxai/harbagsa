@@ -2,6 +2,8 @@
 #+vet !unused-procedures // @(test) procs are called by the test runner, not by name
 package harness_test
 
+import "core:encoding/json"
+import "core:strings"
 import "core:testing"
 
 import "src:harness"
@@ -159,4 +161,29 @@ capture_has_png_reads_the_format_and_the_sidecar_flag :: proc(t: ^testing.T) {
 		!harness.capture_has_png({format = "stats"}),
 		"a stats capture without a file is a png",
 	)
+}
+
+@(test)
+capture_region_is_recorded :: proc(t: ^testing.T) {
+	command, error := harness.command_parse_string(
+		`{"cmd":"capture","name":"s","format":"stats","region":{"x":1,"y":2,"w":3,"h":4}}`,
+		context.allocator,
+	)
+	defer harness.command_destroy(&command, context.allocator)
+	testing.expectf(t, error == "", "region parse failed: %s", error)
+	if region, has := command.capture.region.?; has {
+		testing.expect_value(t, region.x, 1)
+		testing.expect_value(t, region.w, 3)
+	} else {
+		testing.expect(t, false, "the region was dropped")
+	}
+}
+
+@(test)
+capture_result_marshals_the_region :: proc(t: ^testing.T) {
+	result := harness.Capture_Result{region = harness.Capture_Region{x = 1, y = 2, w = 3, h = 4}}
+	data, error := json.marshal(result, {}, context.allocator)
+	defer delete(data, context.allocator)
+	testing.expectf(t, error == nil, "marshal failed: %v", error)
+	testing.expect(t, strings.contains(string(data), `"region"`), "the region is missing")
 }

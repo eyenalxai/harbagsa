@@ -14,7 +14,7 @@ static_objects_do_not_fall :: proc(t: ^testing.T) {
 
 	id := game.simulation_create_object(
 		&sim,
-		{prefab = .Platform, body_mode = .Static, center = {20, 5, 0}, yaw = 0},
+		{prefab = .Platform, body_mode = .Static, center = {20, 5, 0}, yaw_rad = 0},
 	)
 	for _ in 0 ..< 120 {
 		game.simulation_step_world(&sim, game.SIMULATION_STEP)
@@ -30,7 +30,7 @@ dynamic_objects_fall_and_settle :: proc(t: ^testing.T) {
 
 	id := game.simulation_create_object(
 		&sim,
-		{prefab = .Small_Crate, body_mode = .Dynamic, center = {20, 5, 0}, yaw = 0},
+		{prefab = .Small_Crate, body_mode = .Dynamic, center = {20, 5, 0}, yaw_rad = 0},
 	)
 	for _ in 0 ..< 240 {
 		game.simulation_step_world(&sim, game.SIMULATION_STEP)
@@ -52,7 +52,7 @@ static_object_blocks_the_player :: proc(t: ^testing.T) {
 
 	_ = game.simulation_create_object(
 		&sim,
-		{prefab = .Wall, body_mode = .Static, center = {0, 1.5, 10}, yaw = 0},
+		{prefab = .Wall, body_mode = .Static, center = {0, 1.5, 10}, yaw_rad = 0},
 	)
 	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 120)
 
@@ -71,7 +71,7 @@ step_world_leaves_player_alone_and_settles_objects :: proc(t: ^testing.T) {
 
 	id := game.simulation_create_object(
 		&sim,
-		{prefab = .Crate, body_mode = .Dynamic, center = {20, 4, 0}, yaw = 0},
+		{prefab = .Crate, body_mode = .Dynamic, center = {20, 4, 0}, yaw_rad = 0},
 	)
 	before := sim.player
 

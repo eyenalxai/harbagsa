@@ -54,7 +54,7 @@ capacity_blocks_place_and_duplicate_without_history :: proc(t: ^testing.T) {
 	for game.simulation_object_count(&sim) < game.MAX_PLACED_OBJECTS {
 		_ = game.simulation_create_object(
 			&sim,
-			{prefab = .Block, body_mode = .Static, center = {0, -5, 0}, yaw = 0},
+			{prefab = .Block, body_mode = .Static, center = {0, -5, 0}, yaw_rad = 0},
 		)
 	}
 	id := game.simulation_objects(&sim)[0].id

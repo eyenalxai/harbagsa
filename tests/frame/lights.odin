@@ -27,7 +27,7 @@ frame_keeps_eight_nearest_lamps_and_the_rest_emissive :: proc(t: ^testing.T) {
 	for x in positions {
 		_ = game.simulation_create_object(
 			&sim,
-			{prefab = .Lamp, body_mode = .Static, center = {x, 1, 0}, yaw = 0},
+			{prefab = .Lamp, body_mode = .Static, center = {x, 1, 0}, yaw_rad = 0},
 		)
 	}
 

@@ -215,7 +215,7 @@ placement_at_capacity_is_a_no_op :: proc(t: ^testing.T) {
 	for game.simulation_object_count(&sim) < game.MAX_PLACED_OBJECTS {
 		_ = game.simulation_create_object(
 			&sim,
-			{prefab = .Block, body_mode = .Static, center = {0.0, -5.0, 0.0}, yaw = 0.0},
+			{prefab = .Block, body_mode = .Static, center = {0.0, -5.0, 0.0}, yaw_rad = 0.0},
 		)
 	}
 	placement_arm(t, &dm, &sim, .Crate)

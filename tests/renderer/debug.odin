@@ -143,7 +143,7 @@ spawn_pop_keeps_taa_history :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 	id := game.simulation_create_object(
 		&sim,
-		{prefab = .Block, body_mode = .Static, center = {0, 0.5, 9}, yaw = 0},
+		{prefab = .Block, body_mode = .Static, center = {0, 0.5, 9}, yaw_rad = 0},
 	)
 	testing.expect(t, id != game.INVALID_OBJECT_ID, "block did not create")
 

@@ -26,7 +26,7 @@ Object_Spawn :: struct {
 	prefab:    Prefab_Id,
 	body_mode: Body_Mode,
 	center:    b3.Vec3,
-	yaw:       f32,
+	yaw_rad:   f32,
 	light:     Light_Settings,
 }
 
@@ -214,7 +214,7 @@ simulation_reset_objects :: proc(sim: ^Simulation) {
 				prefab = .Crate,
 				body_mode = .Dynamic,
 				center = position,
-				yaw = 0.0,
+				yaw_rad = 0.0,
 			},
 			colors[index],
 			{},

@@ -34,6 +34,13 @@ session_queue_capture :: proc(
 	defer if owned_name {
 		delete(name, session.allocator)
 	}
+	if capture_name_in_use(session, name) {
+		return false, fmt.aprintf(
+			"capture name %q is already used in this run",
+			name,
+			allocator = context.allocator,
+		)
+	}
 	alpha := command.has_alpha ? command.alpha : session.alpha
 	request := Capture_Request {
 		name      = name,
@@ -66,6 +73,21 @@ session_queue_capture :: proc(
 		},
 	)
 	return false, ""
+}
+
+@(private)
+capture_name_in_use :: proc(session: ^Session, name: string) -> bool {
+	for capture in session.captures {
+		if capture.name == name {
+			return true
+		}
+	}
+	for pending in session.pending {
+		if pending.name == name {
+			return true
+		}
+	}
+	return false
 }
 
 @(private)

@@ -102,6 +102,11 @@ execute_sun :: proc(session: ^Session, command: Command, reply: ^Reply) -> strin
 }
 
 @(private)
+execute_scene :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
+	return session_scene(session, command.scene)
+}
+
+@(private)
 execute_debug_mode :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	if session.debug.active != command.debug_mode.active {
 		game.debug_mode_toggle(&session.debug, &session.sim)

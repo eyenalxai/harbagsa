@@ -186,6 +186,7 @@ backend_render :: proc(
 		debug_view    = session.view.debug,
 		captured      = !session.view.hint,
 		hud           = session.view.hud,
+		perf          = session.view.perf,
 	}
 	session.hud.perf.visible = session.view.perf
 	if session.hud.perf.visible {

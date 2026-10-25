@@ -25,6 +25,7 @@ Command_Kind :: enum {
 	Renderer_Debug,
 	Displays,
 	Rows,
+	Scene,
 	Quit,
 }
 
@@ -171,6 +172,7 @@ Command :: struct {
 	perf:           Perf_Command,
 	renderer_debug: Renderer_Debug_Command,
 	displays:       Displays_Command,
+	scene:          Scene_Command,
 }
 
 command_name :: proc(kind: Command_Kind) -> string {

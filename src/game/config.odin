@@ -1,4 +1,5 @@
 #+vet explicit-allocators
+#+vet !unused-procedures // the harness and the scene load use these names
 package game
 
 import "core:math"
@@ -164,6 +165,15 @@ stance_speed :: proc(stance: Stance, gait: Gait) -> f32 {
 
 stance_name :: proc(stance: Stance) -> string {
 	return STANCE_INFO[stance].name
+}
+
+stance_parse :: proc(name: string) -> (Stance, bool) {
+	for stance in Stance {
+		if STANCE_INFO[stance].name == name {
+			return stance, true
+		}
+	}
+	return .Standing, false
 }
 
 gait_name :: proc(gait: Gait) -> string {

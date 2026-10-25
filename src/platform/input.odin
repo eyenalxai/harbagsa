@@ -28,6 +28,7 @@ Events :: struct {
 	debug_mode_pressed:     bool,
 	taa_pressed:            bool,
 	perf_pressed:           bool,
+	repro_pressed:          bool,
 	cancel_pressed:         bool,
 	navigate_up_pressed:    bool,
 	navigate_down_pressed:  bool,
@@ -191,6 +192,8 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 			events.taa_pressed = true
 		case .F4:
 			events.perf_pressed = true
+		case .F5:
+			events.repro_pressed = true
 		}
 	case .MOUSE_MOTION:
 		events.pointer = pointer_for(window, event.motion.x, event.motion.y)
