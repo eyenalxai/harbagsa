@@ -4,7 +4,7 @@
   "renderer_debug": {"jitter": true, "shadow_phase": 0},
   "analysis": {"maps": true},
   "commands": [
-    {"cmd": "camera", "position": [-12, 1.7, 6.0], "yaw": 0, "pitch": -0.22},
+    {"cmd": "camera", "position": [-12, 1.7, 6.0], "yaw_deg": 0, "pitch_deg": -12.6051},
     {"cmd": "settle", "frames": 520},
     {"cmd": "step", "frames": 1},
     {"cmd": "capture", "name": "jitter000"},

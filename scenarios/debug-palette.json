@@ -2,7 +2,7 @@
   "view": {"hud": true, "debug": false, "hint": true},
   "commands": [
     {"cmd": "debug_mode", "active": true},
-    {"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw": 0, "pitch": -0.6}},
+    {"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw_deg": 0, "pitch_deg": -34.3775}},
     {"cmd": "editor", "open": true, "select": 4},
     {"cmd": "check", "field": "debug.active", "op": "eq", "value": true},
     {"cmd": "check", "field": "debug.palette.open", "op": "eq", "value": true},

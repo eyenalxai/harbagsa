@@ -70,7 +70,7 @@ edit_apply :: proc(
 		debug_placement_raise(dm, value.steps, value.large)
 		return edit_ok()
 	case Placement_Set_Yaw:
-		debug_placement_set_yaw(dm, value.yaw)
+		debug_placement_set_yaw(dm, value.yaw_deg)
 		return edit_ok()
 	case Placement_Turn:
 		debug_placement_turn(dm, value.steps, value.large)

@@ -13,7 +13,7 @@
     "ao": false
   },
   "commands": [
-    {"cmd": "camera", "position": [-12, 1.7, 6.0], "yaw": 0, "pitch": -0.22},
+    {"cmd": "camera", "position": [-12, 1.7, 6.0], "yaw_deg": 0, "pitch_deg": -12.6051},
     {"cmd": "check", "field": "renderer.debug.active", "op": "eq", "value": true},
     {"cmd": "check", "field": "renderer.debug.jitter", "op": "eq", "value": false},
     {"cmd": "check", "field": "renderer.debug.history_weight", "op": "eq", "value": 1},

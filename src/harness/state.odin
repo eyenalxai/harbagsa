@@ -2,6 +2,7 @@
 package harness
 
 import "core:fmt"
+import "core:math"
 import "core:mem"
 import "core:strings"
 
@@ -26,16 +27,16 @@ Player_State :: struct {
 	position: Vec_State `json:"position"`,
 	eye:      Vec_State `json:"eye"`,
 	velocity: Vec_State `json:"velocity"`,
-	yaw:      f32       `json:"yaw"`,
-	pitch:    f32       `json:"pitch"`,
+	yaw_deg:  f32       `json:"yaw_deg"`,
+	pitch_deg: f32      `json:"pitch_deg"`,
 	grounded: bool      `json:"grounded"`,
 }
 
 Camera_State :: struct {
 	position:   Vec_State `json:"position"`,
-	yaw:        f32       `json:"yaw"`,
-	pitch:      f32       `json:"pitch"`,
-	fov:        f32       `json:"fov"`,
+	yaw_deg:    f32       `json:"yaw_deg"`,
+	pitch_deg:  f32       `json:"pitch_deg"`,
+	fov_deg:    f32       `json:"fov_deg"`,
 	source:     string    `json:"source"`,
 	overridden: bool      `json:"overridden"`,
 }
@@ -175,8 +176,8 @@ state_build_sections :: proc(
 			position = vec_state(snapshot.position),
 			eye = vec_state(snapshot.eye_position),
 			velocity = vec_state(snapshot.velocity),
-			yaw = snapshot.yaw,
-			pitch = snapshot.pitch,
+			yaw_deg = f32(math.to_degrees(snapshot.yaw)),
+			pitch_deg = f32(math.to_degrees(snapshot.pitch)),
 			grounded = snapshot.grounded,
 		}
 	}

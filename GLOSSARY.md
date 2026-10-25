@@ -212,6 +212,16 @@ _Avoid_: IBL, environment light, ambient probe
 The maximum distance an ambient occlusion ray travels: 1.5 m. A surface beyond that distance does not count as an occluder.
 _Avoid_: AO distance, occlusion range
 
+**AO strength**:
+The multiplier on the ambient occlusion term. `0` leaves the ambient light
+unchanged and `1` applies the full occlusion.
+_Avoid_: AO amount, AO weight
+
+**Degree boundary**:
+The scenario, `state.json`, and `report.json` express every angle in degrees.
+Every angle key ends in `_deg`. The engine converts to radians at the edge.
+_Avoid_: mixed angle units, implicit units
+
 **Top-level acceleration structure (TLAS)**:
 The acceleration structure that holds the box instances for ray queries. The renderer rebuilds it each frame from the box transforms.
 _Avoid_: Scene BVH

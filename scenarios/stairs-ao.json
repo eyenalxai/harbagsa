@@ -3,8 +3,8 @@
   "size": "800x600",
   "view": {"hud": false, "debug": false, "hint": false, "perf": false},
   "commands": [
-    {"cmd": "sun", "azimuth": 52.1, "elevation": 25, "diameter": 0.53},
-    {"cmd": "camera", "position": [2.0, 1.7, -2.5], "yaw": 0.55, "pitch": -0.45},
+    {"cmd": "sun", "azimuth_deg": 52.1, "elevation_deg": 25, "diameter_deg": 0.53},
+    {"cmd": "camera", "position": [2.0, 1.7, -2.5], "yaw_deg": 31.5127, "pitch_deg": -25.7831},
     {"cmd": "settle", "frames": 120},
     {"cmd": "capture", "name": "sun-on", "format": "stats", "region": {"x": 300, "y": 400, "w": 120, "h": 60}},
     {"cmd": "renderer_debug", "ao": false},
