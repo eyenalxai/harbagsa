@@ -45,8 +45,8 @@ Object_State :: struct {
 	body:      string      `json:"body"`,
 	position:  Vec_State   `json:"position"`,
 	rotation:  Quat_State  `json:"rotation"`,
-	scale:     f32         `json:"scale"`,
-	spawn_age: f32         `json:"spawn_age"`,
+	scale:     f32         `json:"scale" digest:"-"`,
+	spawn_age: f32         `json:"spawn_age" digest:"-"`,
 	light:     Light_State `json:"light"`,
 }
 
@@ -65,9 +65,9 @@ Settings_State :: struct {
 Menu_State :: struct {
 	open:     bool   `json:"open"`,
 	selected: int    `json:"selected"`,
-	item:     string `json:"item"`,
-	status:   string `json:"status"`,
-	blocked:  bool   `json:"blocked"`,
+	item:     string `json:"item" digest:"-"`,
+	status:   string `json:"status" digest:"-"`,
+	blocked:  bool   `json:"blocked" digest:"-"`,
 }
 
 Settle_State :: struct {
@@ -78,17 +78,17 @@ Settle_State :: struct {
 State :: struct {
 	frame:         int            `json:"frame"`,
 	player:        Player_State   `json:"player"`,
-	camera:        Camera_State   `json:"camera"`,
+	camera:        Camera_State   `json:"camera" digest:"-"`,
 	objects:       []Object_State `json:"objects"`,
 	settings:      Settings_State `json:"settings"`,
-	debug:         Debug_State    `json:"debug"`,
+	debug:         Debug_State    `json:"debug" digest:"-"`,
 	sun:           Sun_State      `json:"sun"`,
 	menu:          Menu_State     `json:"menu"`,
-	rows:          Rows_State     `json:"rows"`,
-	settle:        Settle_State   `json:"settle"`,
-	renderer:      renderer.Renderer_Report `json:"renderer"`,
-	render_digest: string         `json:"render_digest"`,
-	digest:        string         `json:"digest"`,
+	rows:          Rows_State     `json:"rows" digest:"-"`,
+	settle:        Settle_State   `json:"settle" digest:"-"`,
+	renderer:      renderer.Renderer_Report `json:"renderer" digest:"-"`,
+	render_digest: string         `json:"render_digest" digest:"-"`,
+	digest:        string         `json:"digest" digest:"-"`,
 }
 
 State_Section :: enum {
@@ -160,16 +160,6 @@ state_build_sections :: proc(
 	sections: State_Sections,
 	allocator: mem.Allocator,
 ) -> State {
-	if .Menu in sections || .Rows in sections {
-		game.hud_state_update(
-			hud,
-			sim,
-			debug,
-			game.simulation_snapshot(sim),
-			false,
-			game.SIMULATION_STEP,
-		)
-	}
 	menu := &hud.menu
 	state := State {
 		frame = frame,
@@ -238,8 +228,9 @@ state_build_sections :: proc(
 		}
 	}
 	if .Debug in sections {
-		state.debug = debug_state_build(debug, sim)
-		state.sun = sun_state(debug)
+		sun := sun_state(debug)
+		state.sun = sun
+		state.debug = debug_state_build(debug, sim, sun)
 	}
 	if .Menu in sections {
 		state.menu = {

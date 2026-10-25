@@ -42,6 +42,10 @@ session_check_command :: proc(
 	command: Check_Command,
 	reply: ^Reply,
 ) -> string {
+	sections := check_sections(command.field)
+	if .Menu in sections || .Rows in sections {
+		session_refresh_hud(session)
+	}
 	state := state_build_sections(
 		&session.sim,
 		session.frame,
@@ -51,7 +55,7 @@ session_check_command :: proc(
 		session.renderer_report,
 		session.render_digest_text,
 		{frames = session.settle_frames, converged = session.settle_converged},
-		check_sections(command.field),
+		sections,
 		session.allocator,
 	)
 	window := check_capture_window(session.captures[:], command)
