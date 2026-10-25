@@ -89,7 +89,6 @@ Scene :: struct {
 scene_capture :: proc(
 	sim: ^game.Simulation,
 	debug: ^game.Debug_Mode,
-	hud: ^game.HUD_State,
 	view: Options,
 	camera_override: ^renderer.Camera,
 	allocator: mem.Allocator,
@@ -136,7 +135,7 @@ scene_capture :: proc(
 		}
 	}
 
-	settings := sim.settings
+	settings := &sim.settings
 	scene.settings = {
 		window_mode = strings.clone(game.window_mode_name(settings.window.mode), allocator),
 		display = settings.window.display,
@@ -168,7 +167,7 @@ scene_capture :: proc(
 		}
 	}
 
-	displays := &hud.menu.displays
+	displays := &sim.settings.display
 	scene.displays = make([]Scene_Display, displays.count, allocator)
 	for index in 0 ..< displays.count {
 		info := &displays.items[index]
