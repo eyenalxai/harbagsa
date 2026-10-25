@@ -61,6 +61,20 @@ scancodes_map_to_the_key_edges_the_input_module_reads :: proc(t: ^testing.T) {
 }
 
 @(test)
+sdl_modifiers_map_to_the_platform_bits :: proc(t: ^testing.T) {
+	testing.expect_value(t, platform.modifiers_from_sdl({.LSHIFT}), platform.Modifiers{.Shift})
+	testing.expect_value(t, platform.modifiers_from_sdl({.RSHIFT}), platform.Modifiers{.Shift})
+	testing.expect_value(t, platform.modifiers_from_sdl({.LCTRL}), platform.Modifiers{.Ctrl})
+	testing.expect_value(t, platform.modifiers_from_sdl({.RCTRL}), platform.Modifiers{.Ctrl})
+	testing.expect_value(
+		t,
+		platform.modifiers_from_sdl({.LSHIFT, .LCTRL}),
+		platform.Modifiers{.Shift, .Ctrl},
+	)
+	testing.expect_value(t, platform.modifiers_from_sdl({}), platform.Modifiers{})
+}
+
+@(test)
 normalized_pointer_maps_window_coordinates_to_unit_space :: proc(t: ^testing.T) {
 	testing.expect_value(t, platform.normalize_pointer(640, 360, 1280, 720), [2]f32{0.5, 0.5})
 	testing.expect_value(t, platform.normalize_pointer(0, 0, 1280, 720), [2]f32{0, 0})

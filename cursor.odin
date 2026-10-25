@@ -22,7 +22,9 @@ sync_palette_cursor :: proc(
 	state: ^Cursor_State,
 ) {
 	if !debug_active || menu_open {
-		state.palette_was_open = want_free
+		// The palette cannot be open outside debug mode, and opening the menu
+		// cancels editing. The old sync stored the post-cancel palette flag.
+		state.palette_was_open = false
 		return
 	}
 	if want_free == state.palette_was_open {

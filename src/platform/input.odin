@@ -2,6 +2,7 @@
 package platform
 
 import "core:c"
+import "core:log"
 import "vendor:sdl3"
 
 MAX_KEY_EDGES :: 16
@@ -139,7 +140,11 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 			return
 		}
 		key := key_from_scancode(event.key.scancode)
-		if key == .None || events.key_count >= MAX_KEY_EDGES {
+		if key == .None {
+			return
+		}
+		if events.key_count >= MAX_KEY_EDGES {
+			log.warn("platform: the key edge buffer is full")
 			return
 		}
 		events.keys[events.key_count] = {key, modifiers_from_sdl(event.key.mod)}
