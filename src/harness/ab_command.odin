@@ -23,6 +23,11 @@ ab_build_args :: proc(
 		case "-h", "--help":
 			append(&translated, "--help")
 			index += 1
+		case "--visual":
+			index += 1
+		case "--keep":
+			append(&translated, "--keep")
+			index += 1
 		case "--base", "--ref":
 			value, next, value_error := ab_option_value(args, index, allocator)
 			if value_error != "" {
@@ -62,7 +67,8 @@ cli_ab :: proc(args: []string) -> int {
 		print_ab_usage()
 		return EXIT_OK
 	}
-	script, script_error := ab_script_path(context.allocator)
+	script_name := ab_flag_present(args, "--visual") ? "visual-ab.sh" : "ab.sh"
+	script, script_error := ab_script_path(script_name, context.allocator)
 	if script_error != "" {
 		fmt.eprintf("harbagsa-agent ab: %s\n", script_error)
 		delete(script_error, context.allocator)
@@ -90,8 +96,13 @@ ab_option_value :: proc(
 
 @(private)
 ab_help_requested :: proc(argv: []string) -> bool {
+	return ab_flag_present(argv, "--help")
+}
+
+@(private)
+ab_flag_present :: proc(argv: []string, flag: string) -> bool {
 	for argument in argv {
-		if argument == "--help" {
+		if argument == flag {
 			return true
 		}
 	}
@@ -101,7 +112,7 @@ ab_help_requested :: proc(argv: []string) -> bool {
 // The agent may run from a subdirectory, so the script is located from the
 // working directory upward rather than from the build output.
 @(private)
-ab_script_path :: proc(allocator: mem.Allocator) -> (path: string, error: string) {
+ab_script_path :: proc(name: string, allocator: mem.Allocator) -> (path: string, error: string) {
 	directory, directory_error := os.get_working_directory(allocator)
 	if directory_error != nil {
 		return "", fmt.aprintf(
@@ -114,9 +125,9 @@ ab_script_path :: proc(allocator: mem.Allocator) -> (path: string, error: string
 
 	current := directory
 	for {
-		candidate, join_error := filepath.join({current, "tools", "ab.sh"}, allocator)
+		candidate, join_error := filepath.join({current, "tools", name}, allocator)
 		if join_error != nil {
-			return "", fmt.aprintf("cannot resolve tools/ab.sh: %v", join_error, allocator = allocator)
+			return "", fmt.aprintf("cannot resolve tools/%s: %v", name, join_error, allocator = allocator)
 		}
 		if os.is_file(candidate) {
 			return candidate, ""
@@ -128,7 +139,7 @@ ab_script_path :: proc(allocator: mem.Allocator) -> (path: string, error: string
 		}
 		current = parent
 	}
-	return "", fmt.aprintf("cannot find tools/ab.sh above %s", directory, allocator = allocator)
+	return "", fmt.aprintf("cannot find tools/%s above %s", name, directory, allocator = allocator)
 }
 
 @(private)
@@ -163,12 +174,14 @@ print_ab_usage :: proc() {
 	fmt.println("")
 	fmt.println("  --base REF        base git ref (default origin/main)")
 	fmt.println("  --ref REF         same as --base; passed through")
-	fmt.println("  --scenario PATH   perf scenario; repeatable (default scenarios/perf.json)")
+	fmt.println("  --scenario PATH   scenario to run; repeatable for perf (default scenarios/perf.json)")
 	fmt.println("  --size WxH        offscreen extent (default 2560x1440)")
 	fmt.println("  --runs N          pairs per scenario (default 5)")
 	fmt.println("  --prime SECONDS   time-based prime for every perf command (default 2.0)")
 	fmt.println("  --out DIR         output directory (default runs/ab)")
+	fmt.println("  --visual          run the scenario on both builds and write a compare panel")
+	fmt.println("  --keep            keep the base worktree")
 	fmt.println("  -h, --help        print this usage")
 	fmt.println("")
-	fmt.println("The run delegates to tools/ab.sh and needs python3 and flock.")
+	fmt.println("--visual delegates to tools/visual-ab.sh. The perf path needs python3; both need flock.")
 }

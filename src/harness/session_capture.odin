@@ -105,6 +105,7 @@ session_queue_capture_group :: proc(
 	for request, index in requests {
 		pending.requests[index] = request
 		pending.requests[index].name = strings.clone(request.name, session.allocator)
+		pending.requests[index].note = strings.clone(request.note, session.allocator)
 	}
 	append(&session.capture.pending, pending)
 	return false, ""

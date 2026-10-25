@@ -17,6 +17,9 @@ pending_capture_destroy :: proc(pending: ^Pending_Capture, allocator: mem.Alloca
 		if request.name != "" {
 			delete(request.name, allocator)
 		}
+		if request.note != "" {
+			delete(request.note, allocator)
+		}
 	}
 	delete(pending.requests, allocator)
 	pending^ = {}

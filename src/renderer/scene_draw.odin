@@ -64,6 +64,9 @@ record_scene :: proc(
 	debug := renderer_debug(r)
 	input.sky = debug.sky
 	input.ao = debug.ao
+	input.ao_radius = debug.ao_radius
+	input.ao_strength = debug.ao_strength
+	input.clip_height = debug.clip_height
 	r.render_digest = render_digest(input)
 	r.has_render_digest = true
 	if !update_camera(r, input) {

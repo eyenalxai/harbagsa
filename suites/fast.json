@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "name": "fast",
+  "description": "The short visual loop: smoke, interior light, ambient occlusion, and a lamp wall plane.",
+  "entries": [
+    "smoke",
+    "room-lighting",
+    "stairs-ao",
+    "lamp-wall-plane"
+  ]
+}
