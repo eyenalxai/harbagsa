@@ -79,6 +79,9 @@ begin_frame :: proc(
 		return {}, .Fatal
 	}
 	read_timing(r)
+	if counts := cast([^]u32)r.scene.cluster_counts_mapped[r.frame_index]; counts != nil {
+		r.cluster_overflow = counts[CLUSTER_COUNT]
+	}
 
 	image_index: u32
 	if r.target.kind == .Swapchain {

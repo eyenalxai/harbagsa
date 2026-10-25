@@ -70,8 +70,9 @@ write_perf_trace :: proc(path: string, samples: []perf.Sample) -> string {
 		if sample.gpu.available {
 			fmt.sbprintf(
 				&builder,
-				`,"gpu":{{"tlas":%.3f,"depth":%.3f,"scene":%.3f,"sky":%.3f,"taa":%.3f,"overlay":%.3f,"total":%.3f}}`,
+				`,"gpu":{{"tlas":%.3f,"cluster":%.3f,"depth":%.3f,"scene":%.3f,"sky":%.3f,"taa":%.3f,"overlay":%.3f,"total":%.3f}}`,
 				perf.milliseconds(sample.gpu.passes[.Tlas]),
+				perf.milliseconds(sample.gpu.passes[.Cluster]),
 				perf.milliseconds(sample.gpu.passes[.Depth]),
 				perf.milliseconds(sample.gpu.passes[.Scene]),
 				perf.milliseconds(sample.gpu.passes[.Sky]),

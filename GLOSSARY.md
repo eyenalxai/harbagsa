@@ -176,6 +176,14 @@ _Avoid_: Skybox, sun orbit
 A light with a position, colour, intensity, and range. The renderer holds every active point light in a growable buffer, and each costs one hard shadow ray per fragment. A lamp prefab owns one.
 _Avoid_: Lamp (the prefab), bulb
 
+**Cluster**:
+A cell of the camera frustum, 16 by 9 by 24 with logarithmic depth slices. A light belongs to a cluster when its range sphere overlaps the cell. The lit pass shades only the lights of the fragment's cluster.
+_Avoid_: Tile, bin
+
+**Clustered forward+**:
+The forward lighting path that builds a light index list per cluster in a compute pass, then reads that list in the lit pass. It keeps the per-pixel light loop proportional to the lights that can reach the surface.
+_Avoid_: Tiled forward, light grid
+
 **Lamp prefab**:
 A prefab with an active point light and an emissive box. The catalog has the Lamp, the Light panel, and the Beacon. A lamp is placed like any other object and can be static or dynamic.
 _Avoid_: Light object, bulb
