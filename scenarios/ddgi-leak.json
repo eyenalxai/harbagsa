@@ -86,8 +86,9 @@
     },
     {
       "field": "capture.named.lane-lit.stats.mean.y",
-      "op": "lt",
-      "value": 50
+      "op": "eq",
+      "other": "capture.named.lane-dark.stats.mean.y",
+      "tolerance": 0.05
     },
     {
       "field": "capture.named.chamber-lit.stats.mean.y",

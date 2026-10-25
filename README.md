@@ -6,10 +6,11 @@ mantle walls, a dive platform, a closed room with a four-turn light lock, and
 pushable crates. SDL3 provides the window and input, raw Vulkan 1.3 with
 ray-query shadows draws the scene, and Box3D runs the physics. A directional sun
 casts hard contact shadows and softer distant shadows from the walls and
-crates. The sun and the lamps are direct light. A DDGI probe volume adds one
-diffuse bounce inside the room, so a lit wall fills the corner beside it. A
-surface that no light and no probe reaches is black. An analytic sky gradient
-fills the background. Ray-traced ambient occlusion uses the same scene
+crates. The sun and the lamps are direct light. DDGI probe volumes add one
+diffuse bounce inside the room and sky fill across the open arena, so a lit wall
+fills the corner beside it and a shaded face outside the room is no longer
+black. A surface that no light and no probe reaches is black. An analytic sky
+gradient fills the background. Ray-traced ambient occlusion uses the same scene
 acceleration structure to darken the direct light in contact, corners, and
 tunnels.
 
@@ -980,7 +981,10 @@ lit. The lane and the chamber are connected by the light lock, so that scenario
 is not a sealed leak pair; the sealed pair is follow-up. `scenarios/ddgi-door.json`
 looks through the west door and checks the lamp lights the opening.
 `scenarios/ddgi-move.json` moves the lamp with the editor and checks the room
-stays lit. The result is in [docs/evidence/ddgi.md](docs/evidence/ddgi.md).
+stays lit. `scenarios/ddgi-arena.json` uses the `outside` camera, gates the
+room's shaded west face above the old black level, and checks that the sealed
+chamber stays dark with no sky depth pixel. The result is in
+[docs/evidence/ddgi.md](docs/evidence/ddgi.md).
 
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window

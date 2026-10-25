@@ -11,6 +11,7 @@
     "shadow-angle",
     "ddgi-leak",
     "ddgi-door",
-    "ddgi-move"
+    "ddgi-move",
+    "ddgi-arena"
   ]
 }
