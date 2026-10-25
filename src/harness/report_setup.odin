@@ -32,13 +32,19 @@ Setup_State :: struct {
 	renderer:       Renderer_Config_State `json:"renderer"`,
 }
 
-setup_build :: proc(options: Common_Options, view: View, backend: Backend) -> Setup_State {
+setup_build :: proc(
+	options: Common_Options,
+	view: View,
+	backend: Backend,
+	renderer_debug := false,
+) -> Setup_State {
 	setup := Setup_State {
 		target = "none",
 		width = options.width,
 		height = options.height,
 		revision = HARNESS_REVISION,
 		dirty = HARNESS_DIRTY,
+		renderer_debug = renderer_debug || renderer.RENDERER_DEBUG_ENABLED,
 		view = {hud = view.hud, debug = view.debug, hint = view.hint, perf = view.perf},
 		renderer = {
 			frames_in_flight = 0,
