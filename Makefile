@@ -10,7 +10,7 @@ AGENT_BIN := bin/harbagsa-agent
 AGENT := cmd/harbagsa-agent
 HARNESS_REVISION := $(shell git rev-parse --short HEAD 2>/dev/null || printf unknown)
 HARNESS_DIRTY := $(shell if git rev-parse --git-dir >/dev/null 2>&1 && git diff --quiet 2>/dev/null; then printf false; else printf true; fi)
-AGENT_DEFINES := -define:HARNESS_REVISION=$(HARNESS_REVISION) -define:HARNESS_DIRTY=$(HARNESS_DIRTY)
+AGENT_DEFINES := -define:HARNESS_REVISION='"$(HARNESS_REVISION)"' -define:HARNESS_DIRTY=$(HARNESS_DIRTY)
 AGENT_BUILD := $(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) $(AGENT_DEFINES) -out:$(AGENT_BIN)
 VALIDATE_AGENT_BIN := bin/harbagsa-agent-validate
 VALIDATE_SCENARIO ?= scenarios/smoke.json
