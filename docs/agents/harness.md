@@ -1120,7 +1120,12 @@ run never created a renderer, and `renderer.active` is `false`.
 | `reset_count` | history resets since renderer creation |
 | `last_reset` | the last reset reason |
 | `shadow_phase` | the sun sample phase the last frame used |
-| `light_count` | the point lights the last frame uploaded, at most 8 |
+| `light_count` | the point lights the last frame uploaded |
+| `cluster_overflow` | lights a cluster kept beyond its 256-index stride |
+| `probe_volume_count` | probe volumes the scene supplied |
+| `probe_count` | probes in the live atlas |
+| `probe_frame` | probe-update frames since the atlas was created |
+| `probe_energy` | mean RGB radiance across the probe atlas |
 | `atlas_weight` | the type weight the active coverage atlas holds |
 | `text_truncated_runs` | text runs cut at the 128-glyph cap |
 | `text_font_drops` | HarfBuzz fonts dropped at the 8-font cap |
@@ -1149,7 +1154,7 @@ The reset reasons are `none`, `create`, `extent`, `toggle`, `teleport`,
 
 The nested `debug` object repeats the active override values: `taa`, `jitter`,
 `history_weight`, `clamp`, `depth_trust`, `shadow_phase_frozen`,
-`shadow_phase`, `light_shadows`, `synthetic_lights`, `sky`, and `ao`.
+`shadow_phase`, `light_shadows`, `synthetic_lights`, `sky`, `gi`, and `ao`.
 
 The `debug.sun` object reports `active`, `position`, `azimuth_deg`,
 `elevation_deg`, and `angular_diameter_deg`. Every angle is in degrees, and the
@@ -1157,8 +1162,8 @@ position is the sky-dome point the light comes from.
 
 The render digest is FNV-1a over the target extent, the effective camera, the sun
 direction and angular diameter, every box, the box emissive strengths, the point
-lights, the jitter, the shadow phase, the applied atlas weight, the sky and AO
-flags, and the view flags. It changes when any of those change and stays the
+lights, the probe volumes, the jitter, the shadow phase, the applied atlas
+weight, the sky, GI, and AO flags, and the view flags. It changes when any of those change and stays the
 same when they do not. It is separate from the simulation digest: read
 `render_digest` for the render inputs and `digest` for the simulation.
 
@@ -1193,17 +1198,18 @@ it. Any other build rejects it with a clear error.
 | `shadow_phase` | set a phase in [0, 63] and freeze it |
 | `light_shadows` | enable or disable the point-light shadow rays |
 | `synthetic_lights` | replace the frame's lights with a generated test field of any non-negative count |
-| `sky` | draw the sky pass; the sky is a background, not a light |
+| `sky` | draw the sky pass; the sky is a background for the camera and a probe miss source |
+| `gi` | add the probe indirect term to the lit pass |
 | `ao` | trace the occlusion rays; they scale the sun and point lights |
 | `ao_radius` | set the occlusion ray length in [0.01, 50] m |
 | `ao_strength` | set the occlusion mix in [0, 1] |
 | `clip_height` | discard fragments above this world height in [0, 1000] m; a plan view |
-| `clear` | reset every override and turn TAA, the sky, and the AO on |
+| `clear` | reset every override and turn TAA, the sky, GI, and the AO on |
 | any field set to `null` | restore that field's default |
 
 An override starts from the current state. Set one field to `null` to restore
 that field's default without clearing the others: `{"history_weight": null}`
-returns the automatic weight and leaves TAA, sky, AO, and the rest alone. `clear`
+returns the automatic weight and leaves TAA, sky, GI, AO, and the rest alone. `clear`
 still resets every field. A scenario can put the same fields in a top-level
 `renderer_debug` object; it compiles to the command before the commands.
 
@@ -1300,10 +1306,18 @@ The scenario sets `"analysis": false` because its captures are different views,
 not a steady series. `make lighting` runs it with the sky, AO, ramp, and sun
 angle scenarios.
 
-The chamber is black, not merely shaded. The depth check proves the room is
-closed. The four-turn check proves that no straight sun ray passes the door. The
-lamp is the only light inside, and the occlusion term darkens the corners it
-lights. There is no bounce and no ambient fill.
+`scenarios/ddgi.json` isolates the probe term. It puts the camera in the chamber,
+turns the sun below the horizon, places one lamp, and captures the same view
+with the probe indirect on and off. It checks the probe count, the volume count,
+the atlas energy, and that the on frame is brighter. The off frame still shows
+the direct lamp, so the difference is the bounce.
+
+The chamber is black, not merely shaded, before the lamp exists. The depth check
+proves the room is closed. The four-turn check proves that no straight sun ray
+passes the door. With the lamp on, the probe volume adds one diffuse bounce and
+the occlusion term darkens the direct corners. `scenarios/ddgi.json` captures the
+same lamp view with the probe indirect term on and off; the on frame is brighter
+on the floor and the far wall, where no lamp ray reaches.
 
 ### Plan view and static boxes
 
@@ -1344,8 +1358,9 @@ What the numbers mean:
 - The frame interval is wall clock. A capture outside a perf run has no interval.
 - The GPU pass times come from Vulkan timestamps. They belong to the last
   completed frame, two frames behind the recording frame. The cluster
-  assignment, the depth prepass, the lit scene, and the sky are separate passes;
-  the lit pass does not include the depth prepass or the cluster assignment. Both sky timestamps are written even when the sky is off, so
+  assignment, the probe update, the depth prepass, the lit scene, and the sky are
+  separate passes; the lit pass does not include the depth prepass, the cluster
+  assignment, or the probe update. Both sky timestamps are written even when the sky is off, so
   that pass reads near zero and the set is always complete.
 - A device without timestamp support, a failed query pool, or a run without a
   device reports the CPU numbers and leaves the GPU fields empty.

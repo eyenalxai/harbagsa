@@ -28,6 +28,7 @@ perf_report_marshals_with_and_without_gpu :: proc(t: ^testing.T) {
 	report.gpu = harness.Perf_Gpu_Report {
 		tlas    = {p50 = 0.1, p95 = 0.1, mean = 0.1},
 		cluster = {p50 = 0.0, p95 = 0.0, mean = 0.0},
+		probe   = {p50 = 0.0, p95 = 0.0, mean = 0.0},
 		depth   = {p50 = 0.4, p95 = 0.5, mean = 0.45},
 		scene   = {p50 = 2.6, p95 = 2.7, mean = 2.65},
 		sky     = {p50 = 0.3, p95 = 0.3, mean = 0.3},
