@@ -71,11 +71,10 @@ The target is interiors with many local lights and no sun.
   doorway. `ddgi-door.json` and `ddgi-move.json` gate the static room door and
   the moving lamp.
 - The room volume covers the whole room, including internal walls. The sealed
-  pair has one volume across both rooms, so the shared wall sits between probes.
-  The gather gives a fully occluded probe zero weight, and the depth moment
-  rejects the bright probe behind the wall; a 5 percent weight floor used to leak
-  it. The sampler rejects back-facing probes with the surface normal, and the
-  probe positions are relocated out of boxes. A separate per-room classification
-  is still not needed for these two scenes.
+  pair has one volume per room, so a room B surface never samples a room A probe.
+  The gather keeps the reference 5 percent Chebyshev floor as a fallback inside
+  the room. The sampler rejects back-facing probes with the surface normal, and
+  the probe positions are relocated out of boxes. A larger building still needs
+  a volume authoring and classification scheme.
 - The pass order is now `Tlas -> Cluster -> Probe -> Depth -> Scene -> Sky ->
   Taa -> Overlay`.

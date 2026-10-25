@@ -28,7 +28,8 @@ ROOM_OUTER_HIGH :: [2]f32{
 }
 ROOM_TOP :: f32(game.ARENA_ROOM_HEIGHT + game.ARENA_ROOM_CEILING_THICKNESS)
 
-PAIR_VOLUME_INDEX :: 1
+PAIR_VOLUME_A_INDEX :: 1
+PAIR_VOLUME_B_INDEX :: 2
 PAIR_ROOM_AIR_LOW := [2][3]f32 {
 	{frame.SEALED_PAIR_X - 3.75, 0, frame.SEALED_PAIR_Z - 1.75},
 	{frame.SEALED_PAIR_X + 0.25, 0, frame.SEALED_PAIR_Z - 1.75},
@@ -106,35 +107,41 @@ room_volume_is_first :: proc(t: ^testing.T) {
 	testing.expect_value(t, room.counts, [3]u32{10, 3, 10})
 	testing.expect_value(t, room.spacing, f32(1.04))
 
-	pair := frame.PROBE_VOLUMES[PAIR_VOLUME_INDEX]
-	testing.expect_value(t, pair.min, frame.SEALED_PAIR_PROBE_MIN)
-	testing.expect_value(t, pair.counts, [3]u32{8, 3, 4})
-	testing.expect_value(t, pair.spacing, f32(1.0))
+	pair_a := frame.PROBE_VOLUMES[PAIR_VOLUME_A_INDEX]
+	testing.expect_value(t, pair_a.min, frame.SEALED_PAIR_PROBE_MIN_A)
+	testing.expect_value(t, pair_a.counts, [3]u32{4, 3, 4})
+	testing.expect_value(t, pair_a.spacing, f32(1.0))
+	pair_b := frame.PROBE_VOLUMES[PAIR_VOLUME_B_INDEX]
+	testing.expect_value(t, pair_b.min, frame.SEALED_PAIR_PROBE_MIN_B)
+	testing.expect_value(t, pair_b.counts, [3]u32{4, 3, 4})
+	testing.expect_value(t, pair_b.spacing, f32(1.0))
 }
 
 @(test)
 sealed_pair_probes_sit_in_room_air :: proc(t: ^testing.T) {
-	pair := frame.PROBE_VOLUMES[PAIR_VOLUME_INDEX]
 	probe_count := 0
-	for z in 0 ..< int(pair.counts.z) {
-		for y in 0 ..< int(pair.counts.y) {
-			for x in 0 ..< int(pair.counts.x) {
-				centre :=
-					pair.min +
-					([3]f32{f32(x), f32(y), f32(z)} + 0.5) * pair.spacing
-				probe_count += 1
-				testing.expectf(
-					t,
-					inside_pair_air(centre),
-					"pair probe %v is not in room air",
-					centre,
-				)
-				testing.expectf(
-					t,
-					abs(centre.x - frame.SEALED_PAIR_X) > 0.25,
-					"pair probe %v is inside the shared wall",
-					centre,
-				)
+	for pair_index in PAIR_VOLUME_A_INDEX ..= PAIR_VOLUME_B_INDEX {
+		pair := frame.PROBE_VOLUMES[pair_index]
+		for z in 0 ..< int(pair.counts.z) {
+			for y in 0 ..< int(pair.counts.y) {
+				for x in 0 ..< int(pair.counts.x) {
+					centre :=
+						pair.min +
+						([3]f32{f32(x), f32(y), f32(z)} + 0.5) * pair.spacing
+					probe_count += 1
+					testing.expectf(
+						t,
+						inside_pair_air(centre),
+						"pair probe %v is not in room air",
+						centre,
+					)
+					testing.expectf(
+						t,
+						abs(centre.x - frame.SEALED_PAIR_X) > 0.25,
+						"pair probe %v is inside the shared wall",
+						centre,
+					)
+				}
 			}
 		}
 	}
@@ -147,9 +154,8 @@ sealed_pair_interior_selects_the_pair_volume :: proc(t: ^testing.T) {
 		{(PAIR_ROOM_AIR_LOW[0].x + PAIR_ROOM_AIR_HIGH[0].x) * 0.5, 1.5, frame.SEALED_PAIR_Z},
 		{(PAIR_ROOM_AIR_LOW[1].x + PAIR_ROOM_AIR_HIGH[1].x) * 0.5, 1.5, frame.SEALED_PAIR_Z},
 	}
-	for point in points {
-		testing.expect_value(t, first_volume(point), PAIR_VOLUME_INDEX)
-	}
+	testing.expect_value(t, first_volume(points[0]), PAIR_VOLUME_A_INDEX)
+	testing.expect_value(t, first_volume(points[1]), PAIR_VOLUME_B_INDEX)
 
 	faces := [8][3]f32 {
 		{frame.SEALED_PAIR_X - 3.75, 1.5, frame.SEALED_PAIR_Z},
@@ -161,15 +167,16 @@ sealed_pair_interior_selects_the_pair_volume :: proc(t: ^testing.T) {
 		{frame.SEALED_PAIR_X - 2.0, 0.0, frame.SEALED_PAIR_Z},
 		{frame.SEALED_PAIR_X + 2.0, game.ARENA_ROOM_HEIGHT, frame.SEALED_PAIR_Z},
 	}
-	for point in faces {
-		testing.expect_value(t, first_volume(point), PAIR_VOLUME_INDEX)
+	for point, index in faces {
+		expected := index == 2 || index == 3 || index == 5 || index == 7 ? PAIR_VOLUME_B_INDEX : PAIR_VOLUME_A_INDEX
+		testing.expect_value(t, first_volume(point), expected)
 	}
 }
 
 @(test)
 arena_probe_centres_stay_out_of_the_room :: proc(t: ^testing.T) {
 	for volume, index in frame.PROBE_VOLUMES {
-		if index <= PAIR_VOLUME_INDEX {
+		if index <= PAIR_VOLUME_B_INDEX {
 			continue
 		}
 		for z in 0 ..< int(volume.counts.z) {
@@ -195,7 +202,7 @@ arena_probe_centres_stay_out_of_the_room :: proc(t: ^testing.T) {
 @(test)
 arena_bounds_stop_before_the_room_interior :: proc(t: ^testing.T) {
 	for volume, index in frame.PROBE_VOLUMES {
-		if index <= PAIR_VOLUME_INDEX || volume.min.y >= ROOM_HIGH.y {
+		if index <= PAIR_VOLUME_B_INDEX || volume.min.y >= ROOM_HIGH.y {
 			continue
 		}
 		high := volume_high(volume)

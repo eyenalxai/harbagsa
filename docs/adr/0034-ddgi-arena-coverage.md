@@ -18,15 +18,16 @@ visibility.
 
 ## Decision
 
-- Add a sealed-pair volume after the room: 8 x 3 x 4 probes at 1 m spacing over
-  the two placed test rooms at (-10, -8). It owns both interiors.
+- Add one sealed-pair volume per room after the room: two 4 x 3 x 4 grids at
+  1 m spacing over the two placed test rooms at (-10, -8). Each owns one
+  interior.
 - Add five arena probe volumes after the sealed pair:
   - a roof volume over the room footprint at the room ceiling height, which
     lights the roof exterior;
   - a west, an east, a south, and a north perimeter volume over the open floor.
-- The room volume stays first and the sealed pair stays second. The sampler picks
-  the first volume that contains the surface point, so an interior surface never
-  reads an arena probe.
+- The room volume stays first, the two sealed-pair volumes come next, and the
+  arena volumes follow. The sampler picks the first volume that contains the
+  surface point, so an interior surface never reads an arena probe.
 - The perimeter bounds stop 0.05 m inside the room's outer wall face. An
   exterior face fragment that rounds outward still selects the arena volume,
   and the 0.3 m wall keeps the arena grid at least 0.25 m from the room's inner
@@ -44,9 +45,8 @@ visibility.
 ## Why
 
 - The room volume first is what keeps the sky out of the room and the lane. The
-  room images were unchanged by this decision; the later sealed-pair gather fix
-  lowers the dark tail of the chamber and lane, and the chamber stays at the
-  dither floor.
+  room images were unchanged by this decision; the later sealed-pair split
+  keeps each room on its own grid, and the chamber stays at the dither floor.
 - A sky irradiance term with a per-pixel visibility ray would also work, but it
   adds a ray to every pixel and it double counts wherever the room probes
   already carry the sky through a door. The perimeter volumes keep one
@@ -59,9 +59,9 @@ visibility.
 
 ## Consequences
 
-- The scene supplies 7 volumes and 633 probes, up from 1 volume and 300 probes.
+- The scene supplies 8 volumes and 633 probes, up from 1 volume and 300 probes.
   The probe pass is 0.735 ms at 1280 x 720 with 64 synthetic lights, up from
-  0.413 ms. The sealed pair adds 96 probes.
+  0.413 ms. The sealed pair adds 96 probes in two 4 x 3 x 4 grids.
 - The arena grid is coarse, so the perimeter walls show soft blotches at 4 m.
   The shaded room face moves from 0.16 to 151.27 mean green, and the whole
   outside frame falls from 26.8 to 0.30 percent pure black. The remaining black
@@ -73,10 +73,10 @@ visibility.
   The shared wall stays at the dither floor with the lamp on, and removing the
   door segment admits light to the far wall.
 - `tests/frame/probe_volumes.odin` keeps the ordering and the bounds in the
-  build without a renderer: the room volume is first and the sealed pair second,
-  every pair probe centre is in room air, no arena probe centre is inside the
-  room footprint, the arena bounds stop before the room interior, and every
-  floor sample is covered.
-- Probe classification remains out of scope. The pair uses one grid across the
-  shared wall, so the visibility test, not classification, keeps the dark room
-  dark.
+  build without a renderer: the room volume is first, the two sealed-pair
+  volumes come next, every pair probe centre is in room air, no arena probe
+  centre is inside the room footprint, the arena bounds stop before the room
+  interior, and every floor sample is covered.
+- Probe classification remains out of scope for a larger building. The pair
+  uses one volume per room, so the dark room is dark without a cross-room probe. A
+  larger building needs a volume authoring and classification scheme.

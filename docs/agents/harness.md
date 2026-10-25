@@ -1122,7 +1122,7 @@ run never created a renderer, and `renderer.active` is `false`.
 | `shadow_phase` | the sun sample phase the last frame used |
 | `light_count` | the point lights the last frame uploaded |
 | `cluster_overflow` | lights a cluster kept beyond its 256-index stride |
-| `probe_volume_count` | probe volumes the scene supplied; 7 in the current scene |
+| `probe_volume_count` | probe volumes the scene supplied; 8 in the current scene |
 | `probe_count` | probes in the live atlas; 633 in the current scene |
 | `probe_frame` | probe-update frames since the atlas was created |
 | `probe_energy` | mean linear RGB irradiance across the probe atlas |
@@ -1328,14 +1328,15 @@ the `outside` camera from `room-lighting`, captures the whole frame, and measure
 the room's west face, which no sun ray reaches. The face mean must clear the old
 black level and its pure-black colour-key fraction must fall below 0.1. A second
 view at the chamber camera proves the sealed room stays at the dither floor and
-that its depth target holds no sky pixel. The scene supplies seven probe volumes:
-the room first, the sealed pair second, a roof volume, and four perimeter volumes
-that stop at the room's outer wall. The room and pair volumes win the sampler for
-their interior points, so the arena sky fill cannot light a room or a lane
-through a wall. The gather gives a fully occluded probe zero weight; a 5 percent
-floor used to leak a lit room across a solid wall.
+that its depth target holds no sky pixel. The scene supplies eight probe volumes:
+the room first, two sealed-pair volumes next, a roof volume, and four perimeter
+volumes that stop at the room's outer wall. The room and pair volumes win the
+sampler for their interior points, so the arena sky fill cannot light a room or
+a lane through a wall. The pair uses one volume per room, so a room B surface
+never samples a room A probe; the gather keeps the reference 5 percent Chebyshev
+floor as a fallback inside the room.
 `tests/frame/probe_volumes.odin` keeps that ordering in the build: it checks the
-first two volumes, that no pair probe centre is inside a wall, that no arena
+first three volumes, that no pair probe centre is inside a wall, that no arena
 probe centre is inside the room footprint, that the arena bounds stop before the
 room interior, and that the open floor is covered.
 

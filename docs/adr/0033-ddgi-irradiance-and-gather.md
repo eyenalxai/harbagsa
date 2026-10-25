@@ -37,9 +37,9 @@ from the light otherwise reads its own dark outgoing radiance and stays black.
   backface weight `(dot(to_probe, normal) + 1)^2 / 4 + 0.2`, Chebyshev
   visibility, decodes the gamma, multiplies the hemisphere factor `2 * pi`, and
   divides by `pi` for the diffuse BRDF so the term shares the lit pass scale.
-- The Chebyshev visibility weight has no floor. A fully occluded probe
-  contributes zero; the old 5 percent floor leaked a lit room across a solid
-  wall when one probe grid straddled that wall.
+- The Chebyshev visibility weight keeps the reference 5 percent floor. The
+  sealed pair uses one probe volume per room, so a probe across the shared wall
+  is not in the surface cage; the floor is only a fallback inside the room.
 - The ray stores a negative hit distance on a backface. The blend ignores that
   ray's radiance and skips a probe when more than a quarter of its rays hit
   backfaces. The depth blend uses the absolute distance.

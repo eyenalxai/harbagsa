@@ -193,7 +193,7 @@ The forward lighting path that builds a light index list per cluster in a comput
 _Avoid_: Tiled forward, light grid
 
 **Probe volume**:
-A box in world space with a probe spacing and a 3D count. The scene supplies them as data: the room network, the sealed pair, the roof over the room, and four perimeter strips over the open arena. The room volume comes first and the sealed pair comes second, so the sampler never picks an arena probe for an interior surface. The renderer allocates one probe per cell and samples the eight probes around a surface.
+A box in world space with a probe spacing and a 3D count. The scene supplies them as data: the room network, the sealed pair, the roof over the room, and four perimeter strips over the open arena. The room volume comes first, the two sealed-pair volumes come next, and the arena strips follow, so the sampler never picks an arena probe for an interior surface. The renderer allocates one probe per cell and samples the eight probes around a surface.
 _Avoid_: Light grid, lightmap
 
 **DDGI**:
