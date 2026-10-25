@@ -15,55 +15,44 @@ Capture_Format :: enum {
 	Profile,
 }
 
+Capture_Format_Info :: struct {
+	name:      string,
+	extension: string,
+}
+
+// One row per format. The name, the parser, and the extension read this table.
+CAPTURE_FORMAT_INFO := [Capture_Format]Capture_Format_Info {
+	.Png = {name = "png", extension = ".png"},
+	.Float = {name = "float", extension = ".f32"},
+	.Raw = {name = "raw", extension = ".bin"},
+	.Stats = {name = "stats"},
+	.Profile = {name = "profile"},
+}
+
 capture_format_name :: proc(format: Capture_Format) -> string {
-	switch format {
-	case .Png:
+	if int(format) < 0 || int(format) >= len(CAPTURE_FORMAT_INFO) {
 		return "png"
-	case .Float:
-		return "float"
-	case .Raw:
-		return "raw"
-	case .Stats:
-		return "stats"
-	case .Profile:
-		return "profile"
 	}
-	return "png"
+	return CAPTURE_FORMAT_INFO[format].name
 }
 
 capture_format_parse :: proc(name: string) -> (format: Capture_Format, ok: bool) {
-	switch name {
-	case "png":
-		return .Png, true
-	case "float":
-		return .Float, true
-	case "raw":
-		return .Raw, true
-	case "stats":
-		return .Stats, true
-	case "profile":
-		return .Profile, true
+	for candidate in Capture_Format {
+		if CAPTURE_FORMAT_INFO[candidate].name == name {
+			return candidate, true
+		}
 	}
 	return .Png, false
 }
 
 capture_format_extension :: proc(format: Capture_Format) -> string {
-	switch format {
-	case .Png:
-		return ".png"
-	case .Float:
-		return ".f32"
-	case .Raw:
-		return ".bin"
-	case .Stats, .Profile:
-		return ""
-	}
-	return ""
+	return CAPTURE_FORMAT_INFO[format].extension
 }
 
-Capture_Request :: struct {
+// The fields a command, a request, and a pending capture share. One
+// declaration, so a new capture option is one field and one parser block.
+Capture_Spec :: struct {
 	name:      string,
-	alpha:     f32,
 	target:    Capture_Target,
 	format:    Capture_Format,
 	png:       bool,
@@ -72,6 +61,11 @@ Capture_Request :: struct {
 	crop:      Maybe(Capture_Crop),
 	histogram: Maybe(int),
 	steps:     Maybe(Capture_Steps_Options),
+}
+
+Capture_Request :: struct {
+	using spec: Capture_Spec,
+	alpha:      f32,
 }
 
 Capture_Result :: struct {

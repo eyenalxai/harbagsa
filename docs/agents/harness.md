@@ -1239,6 +1239,8 @@ frame-rate change.
 - `src/harness/session_settle.odin`: the convergence wait.
 - `src/harness/state_schema.odin`: the reflection walk over `State` that resolves
   check paths. `State` and its `json` tags are the schema.
+- `src/harness/state_sections.odin`: the one table of conditional state
+  sections, their builders, and the field-to-section map.
 - `src/harness/cli_override.odin`: the CLI renderer override.
 - `src/harness/perf_run.odin`: the perf run and its prime loop.
 - `src/harness/perf_report.odin`: the perf report types and fill.
@@ -1440,10 +1442,11 @@ harness in the same change. Do not leave the automation behind the game.
 
 - New simulation input: add it to `game.Input_Snapshot`, the `input` command,
   and `tests/harness`.
-- New state field: add it to the `State` struct with its `json` tag and fill it
-  in `state_build_sections`. The JSON, the check resolver, and the digest read
-  the same field. Add `digest:"-"` when it must not enter the simulation digest.
-  Add the section to `check_sections` when it is a new namespace.
+- New state field: add it to the `State` struct with its `json` tag. A field in
+  an existing conditional section is filled by that section's builder in
+  `STATE_SECTION_ROWS`; a new namespace is one row in `STATE_SECTION_ROWS`. The
+  build, the check resolver, and the digest set read the table. Add `digest:"-"`
+  when it must not enter the simulation digest.
 - New setting or menu row: add it to `Settings` and `DEFAULT_SETTINGS`, then
   `Menu_Item`, `MENU_ITEM_COUNT`, `MENU_ITEM_NAMES`, `menu_view`, and
   `menu_change_setting`. Add it to `Settings_State` or `Menu_State`, the digest,
@@ -1460,15 +1463,15 @@ harness in the same change. Do not leave the automation behind the game.
 - New command: follow **Adding a command**, add the registry row test, a JSONL
   test, and a scenario example when it changes a normal workflow.
 - New capture target or format: add it to `Capture_Target` or `Capture_Format`,
-  the name/parse and extension helpers, `target_image`, `record_capture_copy`,
-  `read_capture_target`, and `capture_values`. Add it to the capture parser,
+  `CAPTURE_FORMAT_INFO` (name, parser, and extension in one row),
+  `target_image`, `record_capture_copy`, `read_capture_target`, and
+  `capture_values`. Add it to the capture parser,
   the README, this page, and a scenario. An unread target is not a tool.
 - New analysis field: add it to the `Analysis_*` types, `analysis_field`, the
   analysis report, the docs, and a unit test. `analysis_bands.odin` owns the
   flat-run metric.
-- New capture block: add it to `Capture_Command`, `Capture_Request`,
-  `Pending_Capture`, the backend, `capture_field`, the docs, and a synthetic
-  image test. A block that writes no file must still be readable by a check. A check must read the same value
+- New capture block: add it to `Capture_Spec`, the backend, `capture_field`,
+  the docs, and a synthetic image test. A block that writes no file must still be readable by a check. A check must read the same value
   the file records.
 - New render input: add the field to `Render_Input`, one row to
   `RENDER_DIGEST_FIELDS` (hashed, or an explicit exclusion with the reason), the

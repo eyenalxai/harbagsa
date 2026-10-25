@@ -71,14 +71,13 @@ parse_captures :: proc(object: json.Object, allocator: mem.Allocator) -> (Comman
 	for item, index in array {
 		output_object, output_ok := json_object(item)
 		if !output_ok {
-			return {}, fmt.aprintf("capture output %d must be an object", index, allocator = context.temp_allocator)
+			return {}, format_error("capture output %d must be an object", index)
 		}
 		if key, unknown := json_unknown_key(output_object, CAPTURE_OUTPUT_KEYS); unknown {
-			return {}, fmt.aprintf(
+			return {}, format_error(
 				"capture output %d has unknown key %q",
 				index,
 				key,
-				allocator = context.temp_allocator,
 			)
 		}
 		synthetic := make(json.Object, len(output_object) + 1, context.temp_allocator)

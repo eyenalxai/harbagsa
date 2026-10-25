@@ -10,6 +10,5 @@ View :: struct {
 
 Pending_Capture :: struct {
 	frame:    int,
-	alpha:    f32,
 	requests: []Capture_Request,
 }
