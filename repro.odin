@@ -31,7 +31,7 @@ write_repro :: proc(
 		log.error("repro: cannot encode the scene")
 		return false
 	}
-	if make_error := os.make_directory_all("runs/repro"); make_error != nil {
+	if make_error := os.make_directory_all("runs/repro"); make_error != nil && make_error != .Exist {
 		log.errorf("repro: cannot create runs/repro: %v", make_error)
 		return false
 	}
