@@ -7,14 +7,16 @@ one accent that means "this row". Nothing moves.
 The type has to carry the whole personality, because nothing else does.
 
 `src/ui/ui.odin` holds the data the game hands over, and `src/ui/layout.odin`,
-`src/ui/menu_layout.odin`, and `src/ui/palette_layout.odin` own the pure layout:
-rows, the slider rect, the hint grid, the settings panel, and the palette grid.
+`src/ui/menu_layout.odin`, `src/ui/notice_layout.odin`, and
+`src/ui/palette_layout.odin` own the pure layout: rows, the slider rect, the hint
+grid, the settings panel, the notice, and the palette grid.
 They take a target extent and a `ui.Text_Metrics` adapter, so they run without a
 renderer or an atlas. `src/renderer/ui_theme.odin` holds the tokens.
 `src/renderer/ui_layout.odin` adapts the theme and atlas to `ui.Text_Metrics`.
 `src/renderer/hud_rows.odin` emits rows, `src/renderer/hud_slider.odin` draws the
 slider row, `src/renderer/hud_menu.odin` builds the settings panel and its
-legend, and `src/renderer/hud.odin` draws the status panel, capture hint, and
+legend, `src/renderer/hud_notice.odin` draws the notice, and
+`src/renderer/hud.odin` draws the status panel, capture hint, and
 crosshair. `src/renderer/overlay.odin`,
 `src/renderer/overlay_draw.odin`, and `src/renderer/overlay_pipeline.odin` own
 the vertex stream, pass, and pipelines. `src/renderer/text.odin`,
@@ -55,9 +57,9 @@ startup; later changes use the worker. See [type.md](type.md).
   and the fixed-width number rule.
 - [colour.md](colour.md): the ramp, the contrast table, and the alpha rules.
 - [spacing.md](spacing.md): the spacing scale, panel anatomy, and hairlines.
-- [components.md](components.md): the eight components: the status panel, the
-  capture hint, the crosshair, the settings panel, the selection band, the
-  legend grid, the rows, and the slider row.
+- [components.md](components.md): the nine components: the status panel, the
+  capture hint, the notice, the crosshair, the settings panel, the selection
+  band, the legend grid, the rows, and the slider row.
 - [states.md](states.md): the six row inputs, the six drawn states, blocked
   rows, and the status note.
 
@@ -133,5 +135,5 @@ and returns its travel rect in the layout. The `Slider` does that in
 - A `Slider` is a settings control, not a selection state. Its filled track and
   knob show the value; `accent` still means selection.
 - The capture hint sits below the crosshair, never across it.
-- The status panel, the capture hint, and the crosshair are hidden while the
-  menu is open; the menu replaces them.
+- The status panel, the notice, the capture hint, and the crosshair are hidden
+  while the menu is open; the menu replaces them.

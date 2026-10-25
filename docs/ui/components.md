@@ -1,14 +1,14 @@
 # Components
 
-Eight sections. Each one exists for a reason; if a new component is not one of
+Nine sections. Each one exists for a reason; if a new component is not one of
 these, read [README.md](README.md#adding-a-surface) first.
 
 ## Status panel
 
 Use for the player's live state. It is the persistent overlay while the menu is
 closed. `build_hud` returns after building the menu, so the status panel, the
-capture hint, and the crosshair are all hidden while the menu is open. It draws
-in the top-left margin and never moves.
+notice, the capture hint, and the crosshair are all hidden while the menu is
+open. It draws in the top-left margin and never moves.
 
 Use instead when the game is paused: the settings panel. The capture hint may
 draw at the same time; it does not replace this panel.
@@ -57,6 +57,43 @@ box_y := height * 0.5 - box_height * 0.5
 ```
 
 The crosshair draws last, so it cuts through the text.
+
+## Notice
+
+Use after an action whose result is not on screen: the `F5` scene snapshot
+write. It is one line on the top-right margin, level with the status panel. The
+box is `surface_hud` with a `line_hairline` ring and `spacing.md` padding; the
+text is `type_body` in `text_primary`. It holds for two seconds of frame time,
+then disappears in one frame. A failed write says `failed` in the same colours.
+
+Use instead when the fact belongs to the player: a row in the status panel. When
+it is a blocked menu change: the menu's status note.
+
+```odin
+layout := ui.notice_layout(ctx.inputs, notice)
+```
+
+The layout right-aligns the box to the `spacing.md` margin and puts the text on
+`spacing.md` padding inside it. The text is bounded by the write path, so the
+box fits at 800x600.
+
+Incorrect: a colour for failure.
+
+```odin
+color := failed ? theme.accent : theme.text_primary
+```
+
+`accent` means selection, and a colour is never the only signal. The word
+carries the result.
+
+Incorrect: centring it over the scene.
+
+```odin
+box_x := (width - box_width) * 0.5
+```
+
+The notice never covers the crosshair or the status panel. It sits on the
+top-right margin, where no other surface lives.
 
 ## Crosshair
 

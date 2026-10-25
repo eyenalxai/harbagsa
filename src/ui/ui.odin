@@ -80,8 +80,15 @@ Palette :: struct {
 	hint_count:   int,
 }
 
+// A notice is one line about an action whose result is not on screen. It is not
+// a row: it appears, holds, and leaves, while the rows stay put.
+Notice :: struct {
+	text: string,
+}
+
 Hud :: struct {
-	rows: []Row,
+	rows:   []Row,
+	notice: Notice,
 }
 
 Slider_Rect :: struct {
