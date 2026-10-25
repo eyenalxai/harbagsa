@@ -374,16 +374,8 @@ The output a capture writes: PNG for color, `float` for RGBA f32 values, `raw` f
 _Avoid_: Export mode
 
 **Capture statistics**:
-The per-channel minimum, maximum, mean, standard deviation, and gradient of a capture over an optional region, plus the median screen motion in texels for a velocity capture over covered pixels. The gradient is the mean absolute difference between 4-neighbour pixels.
+The per-channel minimum, maximum, mean, standard deviation, and gradient of a capture over an optional region, plus the median screen motion in texels for a velocity capture over covered pixels. The gradient is the mean absolute difference between 4-neighbour pixels; a region with no neighbour pair reports zero.
 _Avoid_: Image metrics
-
-**Capture spread**:
-The per-channel population standard deviation of a capture's values over its region.
-_Avoid_: Variance, deviation
-
-**Capture gradient**:
-The per-channel mean absolute difference between neighbouring pixels over a capture's region. A region with no neighbour pair reports zero.
-_Avoid_: Edge metric, slope
 
 **Analysis report**:
 The `analysis.json` file from a run with color captures. It holds the capture window, the per-pair deltas, the summary, the dominant period, the worst unstable pixels' series, and the optional map paths.
