@@ -15,18 +15,31 @@ scenario_apply_parameters :: proc(
 	allocator: mem.Allocator,
 ) -> string {
 	parameters_value, has_parameters := object^["parameters"]
-	parameters: json.Object
+	declared: json.Object
 	if has_parameters {
 		parsed, parameters_ok := json_object(parameters_value)
 		if !parameters_ok {
 			return format_error("%s", "scenario 'parameters' must be an object")
 		}
-		parameters = parsed
-	} else if len(overrides) > 0 {
-		parameters = make(json.Object, allocator)
-		object^["parameters"] = json.Value(parameters)
-	} else {
+		declared = parsed
+	}
+	if !has_parameters && len(overrides) == 0 {
 		return ""
+	}
+
+	// Build the effective map before it enters the tree. A map header copied
+	// into a JSON value goes stale when the original resizes.
+	parameters := declared
+	parameters_owned := false
+	if len(overrides) > 0 {
+		parameters = make(json.Object, allocator)
+		parameters_owned = true
+		for name, value in declared {
+			parameters[strings.clone(name, allocator)] = json.clone_value(value, allocator)
+		}
+	}
+	defer if parameters_owned {
+		json.destroy_value(json.Value(parameters), allocator)
 	}
 	for name, value in parameters {
 		#partial switch entry in value {
@@ -47,10 +60,10 @@ scenario_apply_parameters :: proc(
 				allocator = allocator,
 			)
 		}
-		declared, has_declared := parameters[override.name]
+		declared_value, has_declared := parameters[override.name]
 		value, value_error := scenario_parameter_parse(
 			override.value,
-			declared,
+			declared_value,
 			has_declared,
 			override.name,
 			allocator,
@@ -60,8 +73,10 @@ scenario_apply_parameters :: proc(
 		}
 		if old, has_old := parameters[override.name]; has_old {
 			json.destroy_value(old, allocator)
+			parameters[override.name] = value
+		} else {
+			parameters[strings.clone(override.name, allocator)] = value
 		}
-		parameters[override.name] = value
 	}
 	for key, &entry in object^ {
 		if key == "parameters" || key == "extends" {
@@ -73,6 +88,16 @@ scenario_apply_parameters :: proc(
 		}
 		json.destroy_value(entry, allocator)
 		entry = resolved
+	}
+
+	if len(overrides) > 0 {
+		if has_parameters {
+			json.destroy_value(parameters_value, allocator)
+			object^["parameters"] = json.Value(parameters)
+		} else {
+			object^[strings.clone("parameters", allocator)] = json.Value(parameters)
+		}
+		parameters_owned = false
 	}
 	return ""
 }
