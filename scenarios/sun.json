@@ -14,8 +14,8 @@
         1.7,
         0
       ],
-      "yaw": 0,
-      "pitch": 0
+      "yaw_deg": 0,
+      "pitch_deg": 0
     },
     {
       "cmd": "settle",
@@ -27,9 +27,9 @@
     },
     {
       "cmd": "sun",
-      "azimuth": 120,
-      "elevation": 20,
-      "diameter": 1.5
+      "azimuth_deg": 120,
+      "elevation_deg": 20,
+      "diameter_deg": 1.5
     },
     {
       "cmd": "settle",
@@ -59,27 +59,27 @@
       "value": 0
     },
     {
-      "field": "sun.azimuth",
+      "field": "sun.azimuth_deg",
       "op": "gt",
       "value": 50
     },
     {
-      "field": "sun.azimuth",
+      "field": "sun.azimuth_deg",
       "op": "lt",
       "value": 54
     },
     {
-      "field": "sun.elevation",
+      "field": "sun.elevation_deg",
       "op": "gt",
       "value": 58
     },
     {
-      "field": "sun.angular_diameter",
+      "field": "sun.angular_diameter_deg",
       "op": "gt",
       "value": 0.5
     },
     {
-      "field": "sun.angular_diameter",
+      "field": "sun.angular_diameter_deg",
       "op": "lt",
       "value": 0.56
     }
