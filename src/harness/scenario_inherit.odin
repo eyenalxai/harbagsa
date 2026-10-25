@@ -18,6 +18,7 @@ scenario_resolve :: proc(
 	base_dir: string,
 	depth: int,
 	overrides: []Parameter_Override,
+	used: []bool,
 	allocator: mem.Allocator,
 ) -> (json.Value, string) {
 	if depth > SCENARIO_EXTENDS_MAX {
@@ -30,7 +31,7 @@ scenario_resolve :: proc(
 
 	merged := make(json.Object, allocator)
 	if extends_value, has_extends := object["extends"]; has_extends {
-		base_value, base_error := scenario_load_base(extends_value, base_dir, depth, overrides, allocator)
+		base_value, base_error := scenario_load_base(extends_value, base_dir, depth, overrides, used, allocator)
 		if base_error != "" {
 			json.destroy_value(json.Value(merged), allocator)
 			return {}, base_error
@@ -57,7 +58,7 @@ scenario_resolve :: proc(
 		merged[strings.clone(key, allocator)] = json.clone_value(entry, allocator)
 	}
 
-	if parameters_error := scenario_apply_parameters(&merged, overrides, depth == 0, allocator); parameters_error != "" {
+	if parameters_error := scenario_apply_parameters(&merged, overrides, used, depth == 0, allocator); parameters_error != "" {
 		json.destroy_value(json.Value(merged), allocator)
 		return {}, parameters_error
 	}
@@ -70,6 +71,7 @@ scenario_load_base :: proc(
 	base_dir: string,
 	depth: int,
 	overrides: []Parameter_Override,
+	used: []bool,
 	allocator: mem.Allocator,
 ) -> (json.Value, string) {
 	name, name_ok := json_string(extends_value)
@@ -105,6 +107,7 @@ scenario_load_base :: proc(
 		scenario_base_dir(path),
 		depth + 1,
 		overrides,
+		used,
 		allocator,
 	)
 	if resolve_error != "" {

@@ -62,7 +62,9 @@ scenario_parse_with_base :: proc(
 	}
 	defer json.destroy_value(value, allocator)
 
-	resolved, resolve_error := scenario_resolve(value, base_dir, 0, overrides, allocator)
+	used := make([]bool, len(overrides), allocator)
+	defer delete(used, allocator)
+	resolved, resolve_error := scenario_resolve(value, base_dir, 0, overrides, used, allocator)
 	if resolve_error != "" {
 		return {}, resolve_error
 	}
@@ -234,9 +236,12 @@ scenario_hash :: proc(
 ) -> string {
 	hash := digest.fnv()
 	digest.write_bytes(&hash, transmute([]u8)data)
+	digest.write_bytes(&hash, []u8{0})
 	for parameter in parameters {
 		digest.write_bytes(&hash, transmute([]u8)parameter.name)
+		digest.write_bytes(&hash, []u8{0})
 		digest.write_bytes(&hash, transmute([]u8)parameter.value)
+		digest.write_bytes(&hash, []u8{'\n'})
 	}
 	return digest.hex(hash, allocator)
 }

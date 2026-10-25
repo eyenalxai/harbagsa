@@ -154,6 +154,30 @@ scenario_parameter_override_can_declare_a_parameter :: proc(t: ^testing.T) {
 }
 
 @(test)
+scenario_parameter_override_reaches_an_extended_base :: proc(t: ^testing.T) {
+	base_path := "/tmp/opencode/harness-param-base.json"
+	base := `{"commands":[{"cmd":"step","frames":"${x}"}]}`
+	if write_error := os.write_entire_file(base_path, base); write_error != nil {
+		testing.expectf(t, false, "cannot write the base scenario: %v", write_error)
+		return
+	}
+	defer os.remove(base_path)
+
+	child := `{"extends":"/tmp/opencode/harness-param-base.json"}`
+	scenario, error := harness.scenario_parse(
+		child,
+		context.allocator,
+		[]harness.Parameter_Override{{name = "x", value = "2"}},
+	)
+	testing.expectf(t, error == "", "base override parse failed: %s", error)
+	defer harness.scenario_destroy(&scenario, context.allocator)
+	if error != "" {
+		return
+	}
+	testing.expect_value(t, scenario.commands[0].step.frames, 2)
+}
+
+@(test)
 scenario_parameter_override_changes_the_hash :: proc(t: ^testing.T) {
 	body := `{"parameters":{"x":20.0},"commands":[{"cmd":"camera","position":["${x}",0,0],"yaw":0,"pitch":0}]}`
 	first, first_error := harness.scenario_parse(
