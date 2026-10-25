@@ -198,13 +198,35 @@ parse_record :: proc(object: json.Object, allocator: mem.Allocator) -> (Command,
 
 @(private)
 parse_replay :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
+	path, path_error := parse_path_field(object, allocator, "replay")
+	if path_error != "" {
+		return {}, path_error
+	}
+	return {kind = .Replay, replay = {path = path}}, ""
+}
+
+@(private)
+parse_repro :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
+	path, path_error := parse_path_field(object, allocator, "repro")
+	if path_error != "" {
+		return {}, path_error
+	}
+	return {kind = .Repro, repro = {path = path}}, ""
+}
+
+@(private)
+parse_path_field :: proc(
+	object: json.Object,
+	allocator: mem.Allocator,
+	name: string,
+) -> (path: string, error: string) {
 	if key, unknown := json_unknown_key(object, {"cmd", "path"}); unknown {
-		return {}, format_error("unknown key %q", key)
+		return "", format_error("unknown key %q", key)
 	}
-	path, ok := string_field(object, "path")
-	if !ok || path == "" {
-		return {}, format_error("%s", "replay needs a non-empty 'path'")
+	value, ok := string_field(object, "path")
+	if !ok || value == "" {
+		return "", format_error("%s needs a non-empty 'path'", name)
 	}
-	return {kind = .Replay, replay = {path = strings.clone(path, allocator)}}, ""
+	return strings.clone(value, allocator), ""
 }
 
