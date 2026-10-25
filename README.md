@@ -974,7 +974,11 @@ static arena geometry: walk in through the west door and follow the four turns.
 chamber, turns the sun below the horizon, and places one lamp. It captures the
 same view with the probe indirect on and off, checks the probe count and atlas
 energy, and requires the on frame to be brighter. The off frame still shows the
-direct lamp, so the difference is the bounce. The result is in
+direct lamp, so the difference is the bounce. `scenarios/ddgi-leak.json` puts the
+lamp in the chamber and checks that it does not cross the solid wall into the
+lane. `scenarios/ddgi-door.json` looks through the west door and checks the
+lamp lights the opening. `scenarios/ddgi-move.json` moves the lamp with the
+editor and checks the room stays lit. The result is in
 [docs/evidence/ddgi.md](docs/evidence/ddgi.md).
 
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
