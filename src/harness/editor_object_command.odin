@@ -24,7 +24,7 @@ parse_editor_object :: proc(object: json.Object) -> (Editor_Object, string) {
 	if value, has := json_get(object, "select_object"); has {
 		id, ok := json_integer(value)
 		if !ok || id < 0 {
-			return {}, "'select_object' must be a non-negative integer object id"
+			return {}, format_error("%s", "'select_object' must be a non-negative integer object id")
 		}
 		editor.select_object = u32(id)
 		editor.has_select_object = true
@@ -32,7 +32,7 @@ parse_editor_object :: proc(object: json.Object) -> (Editor_Object, string) {
 	if _, has := json_get(object, "move"); has {
 		position, ok := vec3_field(object, "move")
 		if !ok {
-			return {}, "'move' must be a position of three numbers"
+			return {}, format_error("%s", "'move' must be a position of three numbers")
 		}
 		editor.move = position
 		editor.has_move = true
@@ -40,7 +40,7 @@ parse_editor_object :: proc(object: json.Object) -> (Editor_Object, string) {
 	if value, has := json_get(object, "rotate_deg"); has {
 		degrees, ok := json_number(value)
 		if !ok {
-			return {}, "'rotate_deg' must be a number of degrees"
+			return {}, format_error("%s", "'rotate_deg' must be a number of degrees")
 		}
 		editor.rotate_deg = f32(degrees)
 		editor.has_rotate = true

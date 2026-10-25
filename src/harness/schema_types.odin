@@ -161,18 +161,18 @@ schema_append_fields :: proc(
 	allocator: runtime.Allocator,
 ) {
 	for field in reflect.struct_fields_zipped(id) {
-		// A `using` field is flattened at the access level, and the parser
-		// accepts its keys at the top level, so the schema lists its fields in
-		// place of the container.
-		if field.is_using {
-			schema_append_fields(field.type.id, skip, fields, allocator)
-			continue
-		}
 		if string_in(field.name, skip) || strings.has_prefix(field.name, "has_") {
 			continue
 		}
 		json_name := reflect.struct_tag_get(field.tag, "json")
 		if json_name == "-" {
+			continue
+		}
+		// A `using` field is flattened at the access level, and the parser
+		// accepts its keys at the top level, so the schema lists its fields in
+		// place of the container.
+		if field.is_using {
+			schema_append_fields(field.type.id, skip, fields, allocator)
 			continue
 		}
 		if index := strings.index_byte(json_name, ','); index >= 0 {

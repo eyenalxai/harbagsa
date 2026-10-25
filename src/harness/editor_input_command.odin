@@ -30,7 +30,7 @@ parse_editor_input :: proc(object: json.Object) -> (Editor_Input, string) {
 	if value, has := json_get(object, "palette_step"); has {
 		step, ok := json_integer(value)
 		if !ok {
-			return {}, "'palette_step' must be an integer"
+			return {}, format_error("%s", "'palette_step' must be an integer")
 		}
 		input.palette_step = step
 		input.has_palette_step = true
@@ -38,7 +38,7 @@ parse_editor_input :: proc(object: json.Object) -> (Editor_Input, string) {
 	if value, has := json_get(object, "palette_number"); has {
 		number, ok := json_integer(value)
 		if !ok || number < 1 || number > 9 {
-			return {}, "'palette_number' must be an integer in [1, 9]"
+			return {}, format_error("%s", "'palette_number' must be an integer in [1, 9]")
 		}
 		input.palette_number = number
 		input.has_palette_number = true
@@ -52,7 +52,7 @@ parse_editor_input :: proc(object: json.Object) -> (Editor_Input, string) {
 	if value, has := json_get(object, "turn"); has {
 		steps, ok := json_integer(value)
 		if !ok {
-			return {}, "'turn' must be an integer number of steps"
+			return {}, format_error("%s", "'turn' must be an integer number of steps")
 		}
 		input.turn = steps
 		input.has_turn = true
@@ -60,7 +60,7 @@ parse_editor_input :: proc(object: json.Object) -> (Editor_Input, string) {
 	if value, has := json_get(object, "wheel"); has {
 		steps, ok := json_integer(value)
 		if !ok {
-			return {}, "'wheel' must be an integer number of steps"
+			return {}, format_error("%s", "'wheel' must be an integer number of steps")
 		}
 		input.wheel = steps
 		input.has_wheel = true
@@ -77,7 +77,7 @@ parse_editor_input :: proc(object: json.Object) -> (Editor_Input, string) {
 	if _, has := json_get(object, "drag_move"); has {
 		delta, ok := vec2_field(object, "drag_move")
 		if !ok {
-			return {}, "'drag_move' must be two numbers"
+			return {}, format_error("%s", "'drag_move' must be two numbers")
 		}
 		input.drag_move = delta
 		input.has_drag_move = true
