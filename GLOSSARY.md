@@ -166,7 +166,7 @@ The eight nearest lamps to the camera that upload as point lights. Lamps outside
 _Avoid_: Light cap, light count (that is the reported number)
 
 **Lamp shadow**:
-The hard point-light shadow. One ray runs from the shaded point to each active lamp per fragment, so the edge is sharp and the cost follows the covered pixels and the active light count.
+The hard point-light shadow. One ray runs from the shaded point to each active lamp per fragment, so the edge is sharp and the cost follows the covered pixels and the active light count. The ray stops one millimetre short of the light, so a surface the lamp sits on cannot shadow it.
 _Avoid_: Point shadow map, soft lamp shadow
 
 **Emissive box**:
