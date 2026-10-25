@@ -64,7 +64,6 @@ Menu_State :: struct {
 	rows:            [MENU_ROW_COUNT]ui.Row,
 	hints:           [MENU_HINT_COUNT]ui.Hint_Cell,
 	storage:         Line_Buffer,
-	displays:        display.List,
 	dragging_weight:  bool,
 	status:           string,
 	status_remaining: f32,
@@ -82,11 +81,8 @@ menu_close :: proc(menu: ^Menu_State) {
 	menu.view = {}
 }
 
-// The display snapshot belongs to the window, not to a menu session.
 menu_reset :: proc(menu: ^Menu_State) {
-	displays := menu.displays
 	menu^ = {}
-	menu.displays = displays
 }
 
 menu_move :: proc(menu: ^Menu_State, direction: int) {
@@ -129,13 +125,13 @@ menu_change_setting :: proc(
 	case .Window_Mode:
 		settings.window.mode = toggle_window_mode(settings.window.mode)
 	case .Display:
-		if menu.displays.count <= 1 {
+		if settings.display.count <= 1 {
 			menu_set_status(menu, MENU_STATUS_ONE_DISPLAY)
 			return .Blocked
 		}
 		change_display(menu, settings, direction)
 	case .Resolution:
-		info := display.info_at(&menu.displays, settings.window.display)
+		info := display.info_at(&settings.display, settings.window.display)
 		if info.mode_count == 0 {
 			menu_set_status(menu, MENU_STATUS_NO_MODES)
 			return .Blocked
@@ -192,15 +188,15 @@ menu_clear_status :: proc(menu: ^Menu_State) {
 	menu.status_remaining = 0
 }
 
-menu_view :: proc(menu: ^Menu_State, settings: Settings, debug_active: bool, delta_seconds: f32) {
+menu_view :: proc(menu: ^Menu_State, settings: ^Settings, debug_active: bool, delta_seconds: f32) {
 	if !menu.open {
 		menu.view = {}
 		return
 	}
 
-	resolution := settings_effective_resolution(settings, &menu.displays)
+	resolution := settings_effective_resolution(settings)
 	menu_setting_row(menu, 0, MENU_ITEM_NAMES[0], window_mode_name(settings.window.mode))
-	menu_setting_row(menu, 1, MENU_ITEM_NAMES[1], settings_display_name(settings, &menu.displays))
+	menu_setting_row(menu, 1, MENU_ITEM_NAMES[1], settings_display_name(settings))
 	menu_setting_row(
 		menu,
 		2,
@@ -223,8 +219,8 @@ menu_view :: proc(menu: ^Menu_State, settings: Settings, debug_active: bool, del
 	menu.rows[MENU_ROW_RESUME] = {kind = .Action, label = MENU_ITEM_NAMES[7]}
 	menu.rows[MENU_ROW_HEADER] = {kind = .Header, label = "Controls"}
 
-	info := display.info_at(&menu.displays, settings.window.display)
-	menu.rows[1].blocked = menu.displays.count <= 1
+	info := display.info_at(&settings.display, settings.window.display)
+	menu.rows[1].blocked = settings.display.count <= 1
 	menu.rows[2].blocked =
 		info.mode_count == 0 ||
 		(settings.window.mode == .Windowed && info.mode_count == 1)
@@ -265,17 +261,17 @@ menu_setting_row :: proc(menu: ^Menu_State, row: int, label, value: string, nume
 
 @(private)
 change_display :: proc(menu: ^Menu_State, settings: ^Settings, direction: int) {
-	current := display.clamp_index(&menu.displays, settings.window.display)
-	settings.window.display = (current + direction + menu.displays.count) % menu.displays.count
+	current := display.clamp_index(&settings.display, settings.window.display)
+	settings.window.display = (current + direction + settings.display.count) % settings.display.count
 	settings.window.resolution = display.snap_mode(
-		display.info_at(&menu.displays, settings.window.display),
+		display.info_at(&settings.display, settings.window.display),
 		settings.window.resolution,
 	)
 }
 
 @(private)
 change_resolution :: proc(menu: ^Menu_State, settings: ^Settings, direction: int) {
-	info := display.info_at(&menu.displays, settings.window.display)
+	info := display.info_at(&settings.display, settings.window.display)
 	// A desktop-sized borderless window has no smaller alternatives, so choosing
 	// a size always starts a window.
 	if settings.window.mode == .Borderless {

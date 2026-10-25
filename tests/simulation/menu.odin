@@ -99,7 +99,7 @@ menu_changes_the_window_mode :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 	menu: game.Menu_State
-	menu.displays = display.fallback_list()
+	sim.settings.display = display.fallback_list()
 	game.menu_open(&menu)
 	game.menu_select(&menu, 0)
 
@@ -114,7 +114,7 @@ resolution_starts_a_window_from_borderless :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 	menu: game.Menu_State
-	menu.displays = display.fallback_list()
+	sim.settings.display = display.fallback_list()
 	game.menu_open(&menu)
 	game.menu_select(&menu, 2)
 
@@ -130,7 +130,7 @@ resolution_cycles_in_the_pressed_direction :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 	sim.settings.window.mode = .Windowed
 	menu: game.Menu_State
-	menu.displays = display.fallback_list()
+	sim.settings.display = display.fallback_list()
 	game.menu_open(&menu)
 	game.menu_select(&menu, 2)
 
@@ -147,7 +147,7 @@ display_change_snaps_the_resolution :: proc(t: ^testing.T) {
 	sim.settings.window.mode = .Windowed
 	sim.settings.window.resolution = {1600, 900}
 	menu: game.Menu_State
-	menu.displays = display.fallback_list()
+	sim.settings.display = display.fallback_list()
 	game.menu_open(&menu)
 	game.menu_select(&menu, 1)
 
@@ -158,16 +158,18 @@ display_change_snaps_the_resolution :: proc(t: ^testing.T) {
 }
 
 @(test)
-menu_reset_keeps_the_display_snapshot :: proc(t: ^testing.T) {
+menu_reset_keeps_the_settings_display :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+	sim.settings.display = display.fallback_list()
 	menu: game.Menu_State
-	menu.displays = display.fallback_list()
 	game.menu_open(&menu)
 
 	game.menu_reset(&menu)
 
 	testing.expect(t, !menu.open, "menu reset left the menu open")
-	testing.expect_value(t, menu.displays.count, 2)
-	testing.expect_value(t, display.name(display.info_at(&menu.displays, 1)), "Display 2")
+	testing.expect_value(t, sim.settings.display.count, 2)
+	testing.expect_value(t, display.name(display.info_at(&sim.settings.display, 1)), "Display 2")
 }
 
 @(test)
@@ -216,9 +218,9 @@ menu_view_lists_the_settings_and_controls :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 	menu: game.Menu_State
-	menu.displays = display.fallback_list()
+	sim.settings.display = display.fallback_list()
 	game.menu_open(&menu)
-	game.menu_view(&menu, sim.settings, false, 0)
+	game.menu_view(&menu, &sim.settings, false, 0)
 
 	rows := menu.view.rows
 	testing.expect_value(t, len(rows), game.MENU_ROW_COUNT)
@@ -249,7 +251,7 @@ menu_view_lists_the_settings_and_controls :: proc(t: ^testing.T) {
 	testing.expect_value(t, menu.view.hints[14].keys, "F4")
 	testing.expect_value(t, menu.view.hints[14].action, "perf")
 
-	game.menu_view(&menu, sim.settings, true, 0)
+	game.menu_view(&menu, &sim.settings, true, 0)
 	testing.expect_value(t, len(menu.view.hints), game.MENU_HINT_COUNT)
 	testing.expect_value(t, menu.view.hints[0].keys, "WASD")
 	testing.expect_value(t, menu.view.hints[0].action, "fly")

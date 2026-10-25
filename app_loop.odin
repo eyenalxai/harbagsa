@@ -49,7 +49,7 @@ apply_frame_input :: proc(
 			events.captured = open_settings_menu(window, &loop.hud.menu, &loop.debug)
 			loop.accumulator = game.SIMULATION_STEP
 			input.clear_latches(&loop.resolver)
-			game.menu_view(&loop.hud.menu, loop.sim.settings, loop.debug.active, 0)
+			game.menu_view(&loop.hud.menu, &loop.sim.settings, loop.debug.active, 0)
 		}
 	}
 

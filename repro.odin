@@ -22,7 +22,7 @@ write_repro :: proc(
 		"runs/repro/repro-%d.json",
 		time.time_to_unix(time.now()),
 	)
-	absolute, write_error := frame.scene_write(sim, debug, hud, view, nil, path)
+	absolute, write_error := frame.scene_write(sim, debug, view, nil, path)
 	ok := write_error == ""
 	if ok {
 		log.infof("snapshot: %s", absolute)
