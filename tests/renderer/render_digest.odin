@@ -3,7 +3,6 @@
 package renderer_test
 
 import "core:reflect"
-import "core:strings"
 import "core:testing"
 
 import "src:digest"
@@ -153,33 +152,5 @@ render_input_gains_a_digest_row_with_every_field :: proc(t: ^testing.T) {
 			}
 		}
 		testing.expectf(t, found, "Render_Input.%s has no digest row", field.name)
-	}
-}
-
-@(test)
-renderer_report_has_one_row_for_every_tagged_field :: proc(t: ^testing.T) {
-	paths := make([dynamic]string, 0, len(renderer.REPORT_FIELDS), context.temp_allocator)
-	for field in reflect.struct_fields_zipped(renderer.Renderer_Report) {
-		name := reflect.struct_tag_get(field.tag, "json")
-		if name == "" {
-			name = field.name
-		}
-		if field.type.id == typeid_of(renderer.Debug_Report) {
-			for debug_field in reflect.struct_fields_zipped(renderer.Debug_Report) {
-				debug_name := reflect.struct_tag_get(debug_field.tag, "json")
-				if debug_name == "" {
-					debug_name = debug_field.name
-				}
-				append(&paths, strings.concatenate({"debug.", debug_name}, context.temp_allocator))
-			}
-			continue
-		}
-		append(&paths, strings.clone(name, context.temp_allocator))
-	}
-	testing.expect_value(t, len(renderer.REPORT_FIELDS), len(paths))
-	for path in paths {
-		report: renderer.Renderer_Report
-		_, found := renderer.report_field(&report, path)
-		testing.expectf(t, found, "report path %q has no row", path)
 	}
 }

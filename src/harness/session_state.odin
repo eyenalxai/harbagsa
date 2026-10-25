@@ -26,6 +26,7 @@ session_refresh_renderer :: proc(session: ^Session) {
 }
 
 session_state :: proc(session: ^Session) -> State {
+	session_refresh_hud(session)
 	return state_build(
 		&session.sim,
 		session.frame,

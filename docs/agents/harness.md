@@ -970,7 +970,8 @@ frame-rate change.
 - `src/harness/session_settle.odin`: the convergence wait.
 - `src/harness/state_field_leaves.odin`: the settings, menu, and player resolvers.
 - `src/harness/state_debug_fields.odin`: the debug palette, sun, and light resolvers.
-- `src/harness/state_fields.odin`: the top-level state field table.
+- `src/harness/state_schema.odin`: the reflection walk over `State` that resolves
+  check paths. `State` and its `json` tags are the schema.
 - `src/harness/cli_override.odin`: the CLI renderer override.
 - `src/harness/perf_run.odin`: the perf run and its prime loop.
 - `src/harness/perf_report.odin`: the perf report types and fill.
@@ -1127,9 +1128,10 @@ harness in the same change. Do not leave the automation behind the game.
 
 - New simulation input: add it to `game.Input_Snapshot`, the `input` command,
   and `tests/harness`.
-- New state field: add it to `State`, `state_build`, the table in
-  `state_fields.odin` and its leaf resolver, the report schema, and the docs.
-  Add it to `state_digest` only when it changes the simulation.
+- New state field: add it to the `State` struct with its `json` tag and fill it
+  in `state_build_sections`. The JSON, the check resolver, and the digest read
+  the same field. Add `digest:"-"` when it must not enter the simulation digest.
+  Add the section to `check_sections` when it is a new namespace.
 - New setting or menu row: add it to `Settings` and `DEFAULT_SETTINGS`, then
   `Menu_Item`, `MENU_ITEM_COUNT`, `MENU_ITEM_NAMES`, `menu_view`, and
   `menu_change_setting`. Add it to `Settings_State` or `Menu_State`, the digest,
@@ -1172,10 +1174,10 @@ harness in the same change. Do not leave the automation behind the game.
 - New scenario key or run option: add it to `scenario_parse` and its allowed
   key set, the CLI parser, the README, this page, and a parser test. A new
   top-level key also joins `scenario_build` and the inheritance merge.
-- New state object: one row in `STATE_FIELDS` in `src/harness/state_fields.odin`
-  and the sub-resolver case. A flat field is one case; an indexed object is one
-  resolver.
-- New check namespace: add it to `check_field` and to the resolver table.
+- New state object: one field in `State` with a `json` tag. The reflection walk
+  covers it, and `tests/harness/schema.odin` fails when a leaf does not resolve.
+- New capture or analysis namespace: add it to `check_field`; the state
+  namespaces come from the `State` struct.
 - Render state is not simulation state: render fields do not go into
   `state_digest`. Put them in the render digest and `Renderer_State` instead.
 - New renderer pass or target: keep it behind `Target` or `Render_Input`. Add a
