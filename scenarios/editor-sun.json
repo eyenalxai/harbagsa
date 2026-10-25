@@ -1,10 +1,13 @@
 {
   "view": {"hud": true, "debug": false, "hint": false},
   "commands": [
+    {"cmd": "capture", "name": "player"},
+    {"cmd": "check", "field": "renderer.debug_vertex_count", "op": "eq", "value": 0},
     {"cmd": "debug_mode", "active": true},
     {"cmd": "editor", "camera": {"position": [0, 1.7, 16], "yaw_deg": 0, "pitch_deg": 7.4485}},
     {"cmd": "check", "field": "debug.sun.active", "op": "eq", "value": false},
     {"cmd": "capture", "name": "sun-default"},
+    {"cmd": "check", "field": "renderer.debug_vertex_count", "op": "eq", "value": 0},
     {"cmd": "editor", "sun": {"active": true}},
     {"cmd": "check", "field": "debug.sun.active", "op": "eq", "value": true},
     {"cmd": "check", "field": "debug.sun.position.y", "op": "ge", "value": 2.5},
@@ -16,10 +19,12 @@
     {"cmd": "check", "field": "debug.sun.elevation_deg", "op": "gt", "value": 10},
     {"cmd": "check", "field": "debug.sun.elevation_deg", "op": "lt", "value": 15},
     {"cmd": "capture", "name": "sun-gizmo"},
+    {"cmd": "check", "field": "renderer.debug_vertex_count", "op": "gt", "value": 80},
     {"cmd": "editor", "sun": {"place": true}},
     {"cmd": "check", "field": "debug.sun.active", "op": "eq", "value": false},
     {"cmd": "check", "field": "debug.sun.position.y", "op": "gt", "value": 9.9},
     {"cmd": "check", "field": "debug.sun.position.y", "op": "lt", "value": 10.1},
-    {"cmd": "capture", "name": "sun-placed"}
+    {"cmd": "capture", "name": "sun-placed"},
+    {"cmd": "check", "field": "renderer.debug_vertex_count", "op": "eq", "value": 0}
   ]
 }
