@@ -1,0 +1,12 @@
+{
+  "view": {"hud": true, "debug": false, "hint": false},
+  "commands": [
+    {"cmd": "face", "yaw_deg": 0, "pitch_deg": 0},
+    {"cmd": "repro", "path": "runs/repro/notice.json"},
+    {"cmd": "check", "field": "notice.text", "op": "eq", "value": "Scene snapshot · runs/repro/notice.json"},
+    {"cmd": "capture", "name": "repro-notice"},
+    {"cmd": "settle", "frames": 130},
+    {"cmd": "check", "field": "notice.text", "op": "eq", "value": ""},
+    {"cmd": "capture", "name": "repro-notice-cleared"}
+  ]
+}

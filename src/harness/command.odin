@@ -21,6 +21,7 @@ Command_Kind :: enum {
 	Check,
 	Record,
 	Replay,
+	Repro,
 	Perf,
 	Renderer_Debug,
 	Displays,
@@ -126,6 +127,10 @@ Replay_Command :: struct {
 	path: string,
 }
 
+Repro_Command :: struct {
+	path: string,
+}
+
 Renderer_Debug_Command :: struct {
 	clear:                   bool,
 	taa:                     bool,
@@ -169,6 +174,7 @@ Command :: struct {
 	check:          Check_Command,
 	record:         Record_Command,
 	replay:         Replay_Command,
+	repro:          Repro_Command,
 	perf:           Perf_Command,
 	renderer_debug: Renderer_Debug_Command,
 	displays:       Displays_Command,

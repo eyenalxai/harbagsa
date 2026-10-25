@@ -245,6 +245,7 @@ and crops are pixels. `turn` and `wheel` are step counts.
 - `{"cmd": "displays", "clear": true}`
 - `{"cmd": "rows"}`
 - `{"cmd": "scene", "camera": {...}, "sun": {...}, "objects": [...], "settings": {...}, "view": {...}, "displays": [...]}`
+- `{"cmd": "repro", "path": "runs/repro/live.json"}`
 - `{"cmd": "debug_mode", "active": true}`
 - `{"cmd": "editor", "open": true, "select": 4, "pick": true, "height": 0.5}`
 - `{"cmd": "editor", "select": 8, "light_color": "cool", "light_intensity": 2.2, "light_range": 12}`
@@ -285,6 +286,11 @@ settings carry the window mode, display index, windowed resolution, input
 modes, and type weight. The display list replaces the menu list. `F5` writes one
 scene, and `record` starts with one, so a live view replays as a normal
 scenario. A scene load closes the settings menu.
+
+`repro` writes the same scene snapshot the `F5` key writes and sets the same
+notice. `path` is required and holds at most 64 bytes, so the notice can name
+the file. A write failure returns `ok: false` and leaves the failure notice set.
+The reply's `written` field carries the absolute path.
 
 `sun clear` restores the default direction and angular diameter.
 
@@ -560,6 +566,7 @@ The 2D layer is part of the feature, so its captures live next to it.
 | `scenarios/ui.json` | the settings panel with a numeric value selected, then an action row |
 | `scenarios/settings-menu.json` | the settings round trip and the menu digest |
 | `scenarios/blocked-note.json` | the blocked-change note and its clear on a successful change |
+| `scenarios/repro-notice.json` | the scene snapshot notice and its clear after two seconds |
 | `scenarios/window-settings.json` | the window rows after a display change |
 | `scenarios/type-weight.json` | the Type weight row at 400, 900, and 100 |
 
@@ -571,6 +578,7 @@ commit the PNGs; a run directory is the evidence.
 ./bin/harbagsa-agent run scenarios/hud-debug.json --out runs/ui/hud-debug
 ./bin/harbagsa-agent run scenarios/settings-menu.json --out runs/ui/menu
 ./bin/harbagsa-agent run scenarios/blocked-note.json --out runs/ui/blocked-note
+./bin/harbagsa-agent run scenarios/repro-notice.json --out runs/ui/repro-notice
 ./bin/harbagsa-agent run scenarios/window-settings.json --out runs/ui/window
 ./bin/harbagsa-agent run scenarios/type-weight.json --out runs/ui/weight
 ```
@@ -625,10 +633,14 @@ the scenario. Recording starts with `reset`, one `scene` snapshot of the current
 state, and the current `input`. Send the actions after the start command if you
 want them in the scenario. `replay PATH` resets and runs the scenario.
 
-The game has no control socket. `F5` writes `runs/repro/repro-<unix>.json` and
-logs its absolute path. The file is a normal scenario with one `scene` command,
-so `bin/harbagsa-agent run runs/repro/repro-....json` is the whole repro step.
-The key writes a file only; it does not open a command channel.
+The game has no control socket. `F5` writes `runs/repro/repro-<unix>.json`,
+logs its absolute path, and shows `Scene snapshot · <path>` in the top-right for
+two seconds. A failed write shows `Scene snapshot failed · <path>` instead. The
+file is a normal scenario with one `scene` command, so
+`bin/harbagsa-agent run runs/repro/repro-....json` is the whole repro step. The
+`repro` command writes the same file and sets the same notice, so a scenario can
+capture what the player sees. The key writes a file only; it does not open a
+command channel.
 
 ## Screenshots
 
@@ -912,8 +924,10 @@ sets the override; `clear` drops it and restores the player or debug view. The
 last wait's `frames` and `converged`. The `rows` object carries the HUD and menu
 rows. The `menu` object carries `status` and `blocked` beside `open`, `selected`,
 and `item`; the status stays until the next setting change, so a check can read
-the note after the frame that drew it. The angles describe the sun in the sky, so
-the default sun reads about 52 degrees of azimuth and 60 degrees of elevation.
+the note after the frame that drew it. The `notice` object carries `text`, which
+is empty when no notice is showing; it stays out of the simulation digest. The
+angles describe the sun in the sky, so the default sun reads about 52 degrees of
+azimuth and 60 degrees of elevation.
 The reset reasons are `none`, `create`, `extent`, `toggle`, `teleport`,
 `scene_change`, `debug_override`, `player_reset`, and `scene_reset`.
 
@@ -1174,6 +1188,8 @@ frame-rate change.
 - `src/harness/sweep.odin`: the `--param` parse, combinations, and labels.
 - `src/harness/sweep_run.odin`: the sweep runner and `sweep.json`.
 - `src/harness/session_rows.odin`: the HUD and menu row dump.
+- `src/harness/session_repro.odin`: the `repro` command, which writes a scene
+  snapshot and sets the notice.
 - `src/harness/session_displays.odin`: the scripted display list.
 - `src/harness/session_draw.odin`: the frame draw and the capture dispatch.
 - `src/harness/ab_command.odin`: the `ab` wrapper over `tools/ab.sh`.
@@ -1212,10 +1228,12 @@ frame-rate change.
 - `src/harness/suite_execute.odin`: the suite runner and list.
 - `src/harness/suite_report.odin`: the suite table and JSON.
 - `src/frame/scene.odin`: the scene type, the live capture, and the JSON text.
+- `src/frame/scene_write.odin`: the scene snapshot file writer that the key and
+  the harness share.
 - `src/harness/scene_command.odin`: the scene command and its blocks.
 - `src/harness/scene_objects.odin`: scene objects, lights, and displays.
 - `src/harness/session_scene.odin`: applies a scene to a session.
-- `repro.odin`: the `F5` file writer.
+- `repro.odin`: the `F5` key wrapper over the scene snapshot writer.
 - `suites/renderer.json`, `suites/offscreen.json`, and `suites/ui.json`: the
   first manifests.
 - `src/digest/digest.odin`: FNV-1a for the state and render digests.
@@ -1270,12 +1288,15 @@ frame-rate change.
 - `src/game/box_body.odin`: the one Box3D box-body creation path for the static
   arena and the placed objects.
 - `src/game/menu.odin`: the menu rows, settings text, and control list.
+- `src/game/notice.odin`: the transient notice state, its copy, and its hold.
 - `src/game/menu_hints.odin`: the control legend for the normal and debug modes.
 - `src/game/menu_input.odin`: the pure slider drag state machine.
 - `src/game/settings.odin`: the runtime window and input-mode settings.
 - `src/display/`: the display list, mode ordering, and window settings types.
 - `src/renderer/`: `Target` and `Platform` ports, swapchain/offscreen targets,
   TAA, HUD and menu overlay.
+- `src/ui/notice_layout.odin`: the notice box, text column, and baseline.
+- `src/renderer/hud_notice.odin`: the notice box, ring, and text draw.
 - `src/platform/`: SDL and headless adapters. `display.odin` queries displays and
   applies the window state.
 - `tests/harness/` (including `analysis.odin`, `renderer_debug.odin`,
@@ -1291,8 +1312,9 @@ frame-rate change.
   `scenarios/editor-ghost.json`, `scenarios/editor-sun.json`,
   `scenarios/editor-object.json`, `scenarios/editor-lamps.json`,
   `scenarios/debug-pop.json`, `scenarios/type-weight.json`,
-  `scenarios/sky-ao.json`, `scenarios/stairs-ao.json`,
-  `scenarios/ramp-shadow.json`, `scenarios/ramp-shadow-crouch.json`,
+  `scenarios/repro-notice.json`, `scenarios/sky-ao.json`,
+  `scenarios/stairs-ao.json`, `scenarios/ramp-shadow.json`,
+  `scenarios/ramp-shadow-crouch.json`,
   `scenarios/shadow-angle.json`, `scenarios/room-lighting.json`,
   `scenarios/perf-crates.json`, and
   `scenarios/perf-lamps.json`.

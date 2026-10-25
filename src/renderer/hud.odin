@@ -72,6 +72,7 @@ build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
 	}
 
 	build_status_panel(o, hud.view)
+	build_notice(o, width, hud.view.notice)
 	if hud.palette.open {
 		build_palette(o, width, height, hud.palette)
 	}

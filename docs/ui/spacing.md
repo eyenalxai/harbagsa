@@ -13,7 +13,7 @@ Values are pixels at density 1 and multiply by density. Tokens are in
 | `spacing.xxs` | 2 | 3 | band padding above and below a selected row |
 | `spacing.xs` | 4 | 6 | gap above a `Metric` or `Detail` row, key to action |
 | `spacing.sm` | 6 | 9 | gap above a `Setting`, `Action`, or `Slider` row, gap above a divider, slider tick height and track gap, menu label inset |
-| `spacing.md` | 8 | 12 | status panel margin, capture hint padding, slider knob |
+| `spacing.md` | 8 | 12 | status panel and notice margin, capture hint and notice padding, slider knob |
 | `spacing.lg` | 12 | 18 | status panel padding, gap above a section header, note gap, slider track zone |
 | `spacing.xl` | 16 | 24 | settings panel padding, label-to-value gutter, legend column gap |
 | `spacing.xxl` | 24 | 36 | reserved for a future full-bleed split |
@@ -92,6 +92,7 @@ edge on screen.
 | --- | --- | --- |
 | Status panel | `surface_hud` | `line_hairline` ring |
 | Capture hint | `surface_hud` | `line_hairline` ring |
+| Notice | `surface_hud` | `line_hairline` ring |
 | Settings panel | `surface_menu` over `scrim` | `line_hairline` ring |
 | Selected row | `surface_raised` | `accent` bar on the leading edge |
 

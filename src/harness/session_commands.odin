@@ -16,6 +16,7 @@ Reply :: struct {
 	capture:  ^Capture_Result `json:"capture,omitempty"`,
 	check:    ^Check_Result  `json:"check,omitempty"`,
 	recorded: string         `json:"recorded,omitempty"`,
+	written:  string         `json:"written,omitempty"`,
 	replay:   ^Replay_Summary `json:"replay,omitempty"`,
 	perf:     ^Perf_Report   `json:"perf,omitempty"`,
 	trace:    string         `json:"trace,omitempty"`,
@@ -39,6 +40,9 @@ reply_destroy :: proc(reply: ^Reply, allocator := context.allocator) {
 	}
 	if reply.recorded != "" {
 		delete(reply.recorded, allocator)
+	}
+	if reply.written != "" {
+		delete(reply.written, allocator)
 	}
 	if reply.replay != nil {
 		free(reply.replay, allocator)
