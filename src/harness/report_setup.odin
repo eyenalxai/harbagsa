@@ -25,10 +25,11 @@ Setup_State :: struct {
 	target:   string               `json:"target"`,
 	width:    u32                  `json:"width"`,
 	height:   u32                  `json:"height"`,
-	revision: string               `json:"revision"`,
-	dirty:    bool                 `json:"dirty"`,
-	view:     View_State           `json:"view"`,
-	renderer: Renderer_Config_State `json:"renderer"`,
+	revision:       string                `json:"revision"`,
+	dirty:          bool                  `json:"dirty"`,
+	renderer_debug: bool                  `json:"renderer_debug"`,
+	view:           View_State            `json:"view"`,
+	renderer:       Renderer_Config_State `json:"renderer"`,
 }
 
 setup_build :: proc(options: Common_Options, view: View, backend: Backend) -> Setup_State {

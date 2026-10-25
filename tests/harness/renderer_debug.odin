@@ -82,6 +82,32 @@ scenario_compiles_a_renderer_debug_block :: proc(t: ^testing.T) {
 }
 
 @(test)
+scenario_declares_the_renderer_debug_gate :: proc(t: ^testing.T) {
+	scenario, error := harness.scenario_parse(
+		`{"requires": {"renderer_debug": true}, "commands": [{"cmd": "step", "frames": 1}]}`,
+		context.allocator,
+	)
+	defer harness.scenario_destroy(&scenario, context.allocator)
+	testing.expectf(t, error == "", "scenario parse failed: %s", error)
+	if error == "" {
+		testing.expect(t, scenario.requires.renderer_debug, "the renderer debug gate was dropped")
+	}
+
+	bad := []string{
+		`{"requires": true, "commands": [{"cmd": "step", "frames": 1}]}`,
+		`{"requires": {"renderer_debug": 1}, "commands": [{"cmd": "step", "frames": 1}]}`,
+		`{"requires": {"nope": true}, "commands": [{"cmd": "step", "frames": 1}]}`,
+	}
+	for line in bad {
+		_, bad_error := harness.scenario_parse(line, context.allocator)
+		testing.expectf(t, bad_error != "", "bad requires block was accepted: %s", line)
+		if bad_error != "" {
+			delete(bad_error, context.allocator)
+		}
+	}
+}
+
+@(test)
 renderer_debug_needs_the_gate :: proc(t: ^testing.T) {
 	session, _ := harness.session_create(context.allocator)
 	defer harness.session_destroy(&session)

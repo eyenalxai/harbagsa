@@ -242,7 +242,8 @@ Options:
 - `--present`: render the real SDL window and capture the swapchain image
   before present. No compositor and no `grim`.
 - `--debug-renderer`: accept the renderer debug command. A build with
-  `-define:ENABLE_RENDERER_DEBUG=true` always accepts it.
+  `-define:ENABLE_RENDERER_DEBUG=true` always accepts it, and so does a
+  scenario that declares `"requires": {"renderer_debug": true}`.
 - `--no-analysis`: skip `analysis.json` and the analysis maps.
 
 `run -` reads the scenario from standard input. It leaves no throwaway file
@@ -629,8 +630,8 @@ wheel, relative turn, palette step, number key, snap toggle, and right-click
 clear through the same action set as the keyboard. `scenarios/lamp-wall-plane.json`
 places a lamp halfway into a wall, clear of the floor and the adjacent walls,
 and captures the view with the point-light shadows on and off. The two captures
-must match; a fan of shadows on the wall or the floor fails the check. Run it
-with `--debug-renderer`.
+must match; a fan of shadows on the wall or the floor fails the check. The
+scenario declares `requires.renderer_debug`, so it needs no flag.
 
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window
@@ -639,8 +640,8 @@ settings.
 `scenarios/renderer-state.json` settles a static scene, captures it, and checks
 the renderer state and render digest. `scenarios/renderer-reset.json` teleports
 the camera and checks that the history reset names the teleport. `report.json`
-also carries a `setup` block: target kind, extent, view flags, and renderer
-config, so a run is reproducible.
+also carries a `setup` block: target kind, extent, view flags, the renderer
+debug gate, and renderer config, so a run is reproducible.
 
 A capture can read an intermediate target. `"target": "velocity"` with
 `"format": "stats"` reports per-channel min, max, mean, `stddev`, and
@@ -652,10 +653,11 @@ texel bytes. A PNG capture is color only.
 
 `renderer_debug` changes renderer inputs for a diagnosis: TAA, jitter, history
 weight, clamp, depth trust, the shadow phase, the point-light shadow switch,
-the synthetic light count, the sky, and the ambient occlusion. Every build rejects it unless
-`--debug-renderer` is passed or the build used the `ENABLE_RENDERER_DEBUG`
-define. Changing an input resets history and records the `debug_override`
-reason.
+the synthetic light count, the sky, and the ambient occlusion. Every build
+rejects it unless `--debug-renderer` is passed, the build used the
+`ENABLE_RENDERER_DEBUG` define, or the scenario declares
+`"requires": {"renderer_debug": true}`. Changing an input resets history and
+records the `debug_override` reason.
 `scenarios/renderer-debug.json` covers the overrides, and
 `scenarios/renderer-debug-converge.json` shows the image converging with jitter
 off. `scenarios/renderer-debug-jitter.json` freezes the phase, lets jitter cycle,

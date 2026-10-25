@@ -35,6 +35,25 @@ scenario_renderer_debug :: proc(scenario: ^Scenario, value: json.Value) -> strin
 }
 
 @(private)
+scenario_requires :: proc(scenario: ^Scenario, value: json.Value) -> string {
+	object, object_ok := json_object(value)
+	if !object_ok {
+		return format_error("%s", "scenario 'requires' must be an object")
+	}
+	if key, unknown := json_unknown_key(object, {"renderer_debug"}); unknown {
+		return fmt.aprintf("unknown requirement %q", key, allocator = context.allocator)
+	}
+	if debug_value, has := json_get(object, "renderer_debug"); has {
+		flag, ok := json_boolean(debug_value)
+		if !ok {
+			return format_error("%s", "'requires.renderer_debug' must be a boolean")
+		}
+		scenario.requires.renderer_debug = flag
+	}
+	return ""
+}
+
+@(private)
 scenario_analysis :: proc(value: json.Value) -> (Analysis_Config, string) {
 	config := analysis_config_default()
 	if enabled, ok := json_boolean(value); ok {

@@ -14,9 +14,16 @@ Scenario_Source :: struct {
 	hash: string `json:"hash"`,
 }
 
+// A scenario declares the gated capabilities its commands need, and the runner
+// enables them for that run.
+Scenario_Requirements :: struct {
+	renderer_debug: bool `json:"renderer_debug"`,
+}
+
 Scenario :: struct {
 	commands: [dynamic]Command,
 	analysis: Analysis_Config,
+	requires: Scenario_Requirements,
 	source:   Scenario_Source,
 	has_size: bool,
 	size:     [2]u32,
@@ -104,7 +111,7 @@ scenario_build :: proc(value: json.Value, allocator: mem.Allocator) -> (Scenario
 	}
 	if key, unknown := json_unknown_key(
 		object,
-		{"version", "view", "checks", "commands", "renderer_debug", "analysis", "size", "extends", "parameters"},
+		{"version", "view", "checks", "commands", "renderer_debug", "requires", "analysis", "size", "extends", "parameters"},
 	); unknown {
 		return {}, fmt.aprintf("unknown scenario key %q", key, allocator = allocator)
 	}
@@ -148,6 +155,12 @@ scenario_build :: proc(value: json.Value, allocator: mem.Allocator) -> (Scenario
 	if debug_value, has_debug := json_get(object, "renderer_debug"); has_debug {
 		if debug_error := scenario_renderer_debug(&scenario, debug_value); debug_error != "" {
 			return {}, debug_error
+		}
+	}
+
+	if requires_value, has_requires := json_get(object, "requires"); has_requires {
+		if requires_error := scenario_requires(&scenario, requires_value); requires_error != "" {
+			return {}, requires_error
 		}
 	}
 
