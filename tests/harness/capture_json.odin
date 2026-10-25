@@ -12,7 +12,7 @@ capture_json_round_trips_every_option :: proc(t: ^testing.T) {
 		{
 			spec = {
 				name = "stats-shot",
-				note = "the statistics path",
+				note = "the statistics path\nwith a control byte",
 				target = .Color,
 				format = .Stats,
 				png = true,
@@ -77,4 +77,3 @@ capture_json_round_trips_every_option :: proc(t: ^testing.T) {
 		testing.expect_value(t, command.capture, expected)
 	}
 }
-

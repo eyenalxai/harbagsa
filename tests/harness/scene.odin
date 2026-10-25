@@ -166,6 +166,33 @@ scene_snapshot_keeps_every_renderer_debug_field :: proc(t: ^testing.T) {
 	testing.expect_value(t, fake.debug, expected)
 }
 
+@(test)
+scene_snapshot_omits_the_automatic_history_weight :: proc(t: ^testing.T) {
+	session, error := harness.session_create(context.allocator)
+	testing.expectf(t, error == "", "session create failed: %s", error)
+	defer harness.session_destroy(&session)
+	if error != "" {
+		return
+	}
+	debug := renderer.renderer_debug_default()
+	debug.active = true
+	scene := frame.scene_capture(
+		&session.sim,
+		&session.debug,
+		frame.Options{captured = true},
+		nil,
+		&debug,
+		context.temp_allocator,
+	)
+	defer frame.scene_destroy(&scene, context.temp_allocator)
+	text := frame.scene_json(scene, context.temp_allocator)
+	testing.expect(
+		t,
+		!strings.contains(text, `"history_weight"`),
+		"the automatic history weight entered the snapshot",
+	)
+}
+
 @(private)
 full_renderer_debug :: proc() -> renderer.Renderer_Debug {
 	debug := renderer.renderer_debug_default()

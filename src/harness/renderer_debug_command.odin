@@ -12,8 +12,9 @@ Debug_Field_Kind :: enum {
 	Number,
 }
 
-// One row per override. The key list, the parser, and the reset patch all read
-// this table, so an override is one row plus its renderer field.
+// One row per override: key, type, and range. The parser, the key list, and the
+// reset patch read the table; the patch setters and the renderer conversion
+// still name each field, because Odin has no typed field setter.
 Debug_Field_Row :: struct {
 	field:   Renderer_Debug_Field,
 	name:    string,
@@ -154,14 +155,10 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 			debug_patch_set_number(&command.patch, row.field, f32(number))
 		}
 	}
-	if command.clear && (!renderer_debug_patch_is_empty(command.patch) || command.reset != {}) {
+	if command.clear && (command.patch != {} || command.reset != {}) {
 		return {}, "'clear' cannot be combined with overrides"
 	}
 	return command, ""
-}
-
-renderer_debug_patch_is_empty :: proc(patch: renderer.Renderer_Debug_Patch) -> bool {
-	return patch == {}
 }
 
 @(private)

@@ -136,11 +136,25 @@ session_record_command :: proc(session: ^Session, command: Command, raw_line: st
 }
 
 @(private)
+record_capture_frame :: proc(
+	session: ^Session,
+	has_frame: bool,
+	frame: int,
+) -> (
+	relative: int,
+	resolved: int,
+) {
+	resolved = has_frame ? frame : session.frame
+	relative = max(resolved - session.recorder.start_frame, 0)
+	return
+}
+
+@(private)
 record_captures_line :: proc(session: ^Session, captures: Captures_Command) {
 	recorded := captures
 	recorded.has_frame = true
-	requested := captures.has_frame ? captures.frame : session.frame
-	recorded.frame = max(requested - session.recorder.start_frame, 0)
+	relative, _ := record_capture_frame(session, captures.has_frame, captures.frame)
+	recorded.frame = relative
 	line := captures_command_json(recorded, session.allocator)
 	append(&session.recorder.recorded, line)
 }
@@ -149,10 +163,10 @@ record_captures_line :: proc(session: ^Session, captures: Captures_Command) {
 record_capture_line :: proc(session: ^Session, capture: Capture_Command) {
 	recorded := capture
 	recorded.has_frame = true
-	requested := capture.has_frame ? capture.frame : session.frame
-	recorded.frame = max(requested - session.recorder.start_frame, 0)
+	relative, resolved := record_capture_frame(session, capture.has_frame, capture.frame)
+	recorded.frame = relative
 	if recorded.name == "" {
-		recorded.name = capture_name(session.frame, context.temp_allocator)
+		recorded.name = capture_name(resolved, context.temp_allocator)
 	}
 	line := capture_command_json(recorded, session.allocator)
 	append(&session.recorder.recorded, line)

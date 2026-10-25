@@ -93,13 +93,14 @@ record_keeps_the_relative_capture_frame :: proc(t: ^testing.T) {
 	testing.expectf(t, error == "", "session create failed: %s", error)
 	defer harness.session_destroy(&session)
 	session.render.enabled = false
+	session.frame = 5
 	line := strings.concatenate(
 		{`{"cmd":"record","path":"`, RECORD_TEST_PATH, `","actions":true}`},
 		context.temp_allocator,
 	)
 	reply := execute(t, &session, line)
 	harness.reply_destroy(&reply, context.allocator)
-	reply = execute(t, &session, `{"cmd":"capture","name":"later","format":"stats","frame":3}`)
+	reply = execute(t, &session, `{"cmd":"capture","format":"stats","frame":20}`)
 	harness.reply_destroy(&reply, context.allocator)
 	reply = execute(t, &session, `{"cmd":"record"}`)
 	harness.reply_destroy(&reply, context.allocator)
@@ -119,9 +120,10 @@ record_keeps_the_relative_capture_frame :: proc(t: ^testing.T) {
 	}
 	found := false
 	for command in scenario.commands {
-		if command.kind == .Capture && command.capture.name == "later" {
+		if command.kind == .Capture {
 			found = true
-			testing.expect_value(t, command.capture.frame, 3)
+			testing.expect_value(t, command.capture.name, "frame_0020")
+			testing.expect_value(t, command.capture.frame, 15)
 			testing.expect(t, command.capture.has_frame, "the capture frame was dropped")
 		}
 	}

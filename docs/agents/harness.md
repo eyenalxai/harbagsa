@@ -1854,12 +1854,12 @@ harness in the same change. Do not leave the automation behind the game.
   `Debug_Report`. The State reflection walk covers the JSON and check paths;
   there is no separate report table.
 - New renderer debug override: add it to `Renderer_Debug`, its default,
-  `Renderer_Debug_Patch`, `renderer_debug_apply_patch`, one
-  `RENDERER_DEBUG_FIELD_ROWS` row, the reset switch in
-  `renderer_debug_reset_patch`, the resolve push constants and shader, the
-  renderer state, the docs, and the gate test. The command parser, the scene
-  snapshot, and the schema read the table. Do not make it reachable without the
-  gate.
+  `Renderer_Debug_Patch`, `renderer_debug_patch`, `renderer_debug_apply_patch`,
+  one `RENDERER_DEBUG_FIELD_ROWS` row, the `debug_patch_set_*` arm, the reset
+  arm in `renderer_debug_reset_patch`, the resolve push constants and shader,
+  the renderer state, the docs, and the gate test. The parser, the key list, and
+  the scene snapshot read the same patch and table. Do not make it reachable
+  without the gate.
 - New point light input: add it to `Light`, the light buffer upload, the scene
   shader loop, `Render_Input`, and its digest row. Add a test to
   `tests/renderer/lights.odin`.
