@@ -127,17 +127,17 @@ sync_window :: proc(loop: ^Loop, window: ^platform.Window) {
 
 @(private)
 step_simulation :: proc(loop: ^Loop, delta: f32, intent: ^input.Frame_Input) {
-	frame := intent^
+	resolved := intent^
 	// Look is per frame. Action edges are latched so a press survives a frame
 	// with no step.
 	if !loop.hud.menu.open && !loop.debug.active {
-		game.simulation_look(&loop.sim, frame.look_delta)
+		game.simulation_look(&loop.sim, resolved.look_delta)
 	}
 
 	if !loop.hud.menu.open {
 		loop.accumulator += delta
 		steps := 0
-		snapshot := frame.snapshot
+		snapshot := resolved.snapshot
 		for loop.accumulator >= game.SIMULATION_STEP && steps < MAX_STEPS_PER_FRAME {
 			if loop.debug.active {
 				game.simulation_step_world(&loop.sim, game.SIMULATION_STEP)
@@ -163,8 +163,8 @@ step_simulation :: proc(loop: ^Loop, delta: f32, intent: ^input.Frame_Input) {
 		game.debug_mode_update(
 			&loop.debug,
 			&loop.sim,
-			frame.motion,
-			frame.actions[:frame.action_count],
+			resolved.motion,
+			resolved.actions[:resolved.action_count],
 			loop.hud.menu.open,
 			delta,
 		)

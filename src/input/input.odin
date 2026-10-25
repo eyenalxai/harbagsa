@@ -4,8 +4,6 @@ package input
 
 import "src:game"
 
-MAX_FRAME_ACTIONS :: 32
-
 // Focus is the whole frame's ownership: the game half from game.focus, and the
 // two platform facts the resolver cannot know.
 Focus :: struct {
@@ -28,7 +26,6 @@ Menu_Input :: struct {
 	right:           bool,
 	confirm:         bool,
 	pointer:         [2]f32,
-	pointer_moved:   bool,
 	pointer_pressed: bool,
 	pointer_down:    bool,
 }
@@ -50,7 +47,7 @@ Frame_Input :: struct {
 	snapshot:         game.Input_Snapshot,
 	look_delta:       [2]f32,
 	motion:           game.Debug_Motion,
-	actions:          [MAX_FRAME_ACTIONS]game.Edit_Action,
+	actions:          [game.MAX_EDIT_ACTIONS]game.Edit_Action,
 	action_count:     int,
 	menu:             Menu_Input,
 	view:             View_Intents,
