@@ -46,6 +46,10 @@ layout(set = 0, binding = 8) buffer ProbeDepth {
     vec2 depth[];
 } probe_depth;
 
+layout(set = 0, binding = 9) readonly buffer ProbePositions {
+    vec4 positions[];
+} probe_positions;
+
 layout(push_constant) uniform ProbePush {
     uint first_probe;
     uint probe_count;
@@ -195,13 +199,7 @@ void main() {
         return;
     }
 
-    uint local_index = probe_index - volume.counts_offset.w;
-    uvec3 counts = volume.counts_offset.xyz;
-    uint x = local_index % counts.x;
-    uint y = (local_index / counts.x) % counts.y;
-    uint z = local_index / (counts.x * counts.y);
-    vec3 probe_position = volume.min_spacing.xyz +
-        (vec3(float(x), float(y), float(z)) + 0.5) * volume.min_spacing.w;
+    vec3 probe_position = probe_positions.positions[probe_index].xyz;
 
     uint oct_x = texel % uint(PROBE_GRID_SIZE);
     uint oct_y = texel / uint(PROBE_GRID_SIZE);
