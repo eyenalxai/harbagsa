@@ -1,13 +1,15 @@
 # Sky and ambient occlusion evidence
 
-Captured on 2026-10-25 from the direct-light branch. GPU: AMD Radeon RX 9060 XT
-(RADV GFX1200). All runs are offscreen through `bin/harbagsa-agent`.
+Captured on 2026-10-25. The sky and AO numbers were re-taken on the coverage
+branch. GPU: AMD Radeon RX 9060 XT (RADV GFX1200). All runs are offscreen through
+`bin/harbagsa-agent`.
 
 ## What changed
 
-The scene has no ambient term. The sky is an analytic background, not a light.
-The flat `AMBIENT_COLOR` and the sky ambient ramp are gone. A surface that the
-sun and the point lights do not reach is black.
+The scene has no flat ambient term. The sky is an analytic background and the
+miss radiance of a probe ray. Probe volumes add the indirect term: the room grid
+and the arena grid. A surface that the sun, the point lights, and the probes do
+not reach is black.
 
 The eight ambient-occlusion rays stay. They now scale the sun and the point
 lights instead of an ambient term, so a lit corner keeps a contact darkening.
@@ -19,19 +21,19 @@ The strength is 0.5. The decision is in
 
 `scenarios/sky.json` at 1280x720 declares `requires.renderer_debug` because it
 sets the `sky` override. The horizon capture reads the top half of the frame, so
-the black walls below the horizon do not enter the mean.
+the walls below the horizon do not enter the mean.
 
 | Capture | Mean green | Gate | Passes |
 | --- | ---: | --- | --- |
-| `sky-zenith` | 135.83 | at most 138 | yes |
-| `sky-horizon` | 144.70 | at least 140 | yes |
-| `sky-horizon` against `sky-zenith` | +8.87 | greater | yes |
+| `sky-zenith` | 135.85 | at most 138 | yes |
+| `sky-horizon` | 164.19 | at least 140 | yes |
+| `sky-horizon` against `sky-zenith` | +28.34 | greater | yes |
 | `flat-zenith` | 178.83 | at least 170 | yes |
 
 The gates have teeth: with `sky: false` from the start, the zenith mean is
-178.83 and the 138 gate fails. The absolute values are lower than the old
-`sky-ao` run because the walls in the horizon view are no longer lit by an
-ambient term.
+178.83 and the 138 gate fails. The horizon mean rose from 144.70 with arena
+coverage, because the far wall in that view now receives the probe sky fill; the
+gate is unchanged. The zenith is above the walls, so it keeps its old value.
 
 Reproduce:
 
@@ -52,7 +54,9 @@ scenario captures the same views with `ao` on and off.
 
 The sunlit floor loses 0.98 levels, and the shade loses 3.80. The occlusion is
 local: it reaches 1.5 m and is scaled by 0.5, so it darkens a contact band
-rather than the whole wall.
+rather than the whole wall. The stairs scenario sets `renderer_debug.gi` off,
+so it measures the AO term alone. The arena sky fill is tested by
+`scenarios/ddgi-arena.json`, not by this AO ordering gate.
 
 Reproduce:
 
@@ -88,9 +92,9 @@ stats region at `(150, 420)` after 600 settle frames.
 | `ramp-steps` | 0 | 0.086 | at most 50 steps, max below 2 |
 | `ramp-crouch-steps` | 0 | 0.086 | at most 25 steps, max below 2 |
 
-The shade is black now, so the ramp-foot region has no lit gradient to band.
-The gate still proves that the sun penumbra and the occlusion dither do not add
-a contour band.
+The ramp shade is lit by the arena sky fill now, so the ramp-foot region has a
+soft gradient. The gate still proves that the sun penumbra and the occlusion
+dither do not add a contour band.
 
 ## Room proof
 
