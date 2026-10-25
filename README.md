@@ -423,7 +423,7 @@ both scenario paths, revisions, dirty flags, extents, and capture counts.
 `compare` uses the embedded font stack and writes PNGs, so it needs no
 ImageMagick or compositor. Keep the output under `runs/`; an image never enters
 the repository. `diff` stays the numeric command. `compare --delta` is also the
-labeled before/after/delta montage for visual review.
+labeled before/after/delta panel for visual review.
 
 ### Visual A/B
 

@@ -1039,7 +1039,7 @@ then calls `compare --delta` into `compare/`. `--keep` leaves the base worktree.
 Omit `--size` when the scenario declares its own size. A side that fails still
 leaves a report and any captures, so the panel and exit code show the difference.
 
-`compare --delta` is the labeled before/after/delta montage. Use it directly
+`compare --delta` is the labeled before/after/delta panel. Use it directly
 when the two runs already exist.
 
 ## Cross-run diff
@@ -1165,8 +1165,10 @@ same when they do not. It is separate from the simulation digest: read
 `report.json` carries a `setup` block: the target kind (`offscreen`,
 `swapchain`, or `none`), the extent, the view flags, the renderer debug gate,
 the device name, the frame count in flight, the TAA state, the jitter,
-history, and sample caps, and the AO sample count, radius, and strength. Use it
-to compare two runs before you compare their pixels.
+history, and sample caps, and the AO sample count, radius, and strength. The
+AO values are the build defaults; `state.renderer.debug` reports the effective
+override when one is active. Use the setup block to compare two runs before you
+compare their pixels.
 
 `scenarios/renderer-state.json` checks the steady state. `scenarios/renderer-reset.json`
 checks a teleport reset. A capture copies this report into
