@@ -39,6 +39,17 @@ record_scene :: proc(
 		return false
 	}
 	input.lights = lights[:r.light_count]
+	if !ensure_probe_resources(r, input.probe_volumes) {
+		return false
+	}
+	light_hash := probe_light_hash(input.lights)
+	sun_hash := probe_sun_hash(input.light_direction, input.sun_angular_diameter)
+	if !r.probe.has_hash || light_hash != r.probe.light_hash || sun_hash != r.probe.sun_hash {
+		r.probe.light_hash = light_hash
+		r.probe.sun_hash = sun_hash
+		r.probe.has_hash = true
+		r.probe.reset = true
+	}
 	if r.taa.has_prev_sun &&
 	   (r.taa.prev_light_direction != input.light_direction ||
 		   r.taa.prev_sun_angular_diameter != input.sun_angular_diameter) {
@@ -63,6 +74,7 @@ record_scene :: proc(
 	input.atlas_weight = text_atlas_applied_weight(r)
 	debug := renderer_debug(r)
 	input.sky = debug.sky
+	input.gi = debug.gi
 	input.ao = debug.ao
 	input.ao_radius = debug.ao_radius
 	input.ao_strength = debug.ao_strength

@@ -127,6 +127,7 @@ record_acceleration :: proc(
 		instance: vk.AccelerationStructureInstanceKHR
 		instance.transform = acceleration_transform(box_model_matrix(box))
 		instance.mask = box_instance_mask(box)
+		instance.instanceCustomIndex = u32(index)
 		instance.accelerationStructureReference = u64(r.acceleration.blas_address)
 		instances[index] = instance
 	}
@@ -166,7 +167,7 @@ record_acceleration :: proc(
 	vk.CmdPipelineBarrier(
 		command_buffer,
 		{.ACCELERATION_STRUCTURE_BUILD_KHR},
-		{.FRAGMENT_SHADER},
+		{.FRAGMENT_SHADER, .COMPUTE_SHADER},
 		{},
 		1,
 		&barrier,

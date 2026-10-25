@@ -184,6 +184,18 @@ _Avoid_: Tile, bin
 The forward lighting path that builds a light index list per cluster in a compute pass, then reads that list in the lit pass. It keeps the per-pixel light loop proportional to the lights that can reach the surface.
 _Avoid_: Tiled forward, light grid
 
+**Probe volume**:
+A box in world space with a probe spacing and a 3D count. One volume covers the room, its lanes, and the chamber. The renderer allocates one probe per cell and samples the eight probes around a surface.
+_Avoid_: Light grid, lightmap
+
+**DDGI**:
+Dynamic diffuse global illumination. Each probe traces 64 rays, stores an 8 by 8 octahedral irradiance map and a depth moment, and the lit pass blends the surrounding probes. It adds one diffuse bounce without a bake.
+_Avoid_: GI bake, irradiance volume (that is the static form)
+
+**Probe indirect**:
+The diffuse radiance the lit pass adds from the probe volume. It is separate from ambient occlusion: the occlusion scales direct light, and the probe term adds the bounce.
+_Avoid_: Ambient term, AO
+
 **Lamp prefab**:
 A prefab with an active point light and an emissive box. The catalog has the Lamp, the Light panel, and the Beacon. A lamp is placed like any other object and can be static or dynamic.
 _Avoid_: Light object, bulb
@@ -197,11 +209,11 @@ The hard point-light shadow. One ray runs from the shaded point to each active l
 _Avoid_: Point shadow map, soft lamp shadow
 
 **Emissive box**:
-A box whose colour adds to its shaded colour after the sun and point lights. It carries an emissive strength in the box data. Lamps are emissive so they glow even when their light is inactive.
+A box whose colour adds to its shaded colour after the sun, the point lights, and the probe indirect term. It carries an emissive strength in the box data. Lamps are emissive so they glow even when their light is inactive.
 _Avoid_: Glow shader, unlit material
 
 **Light mask**:
-The TLAS instance mask that decides which acceleration-structure ray queries see a box. Normal boxes use `0xFF`, lamps use `0x01`, the point-light shadow ray tests `0x02`, and the sun ray tests `0xFF`.
+The TLAS instance mask that decides which acceleration-structure ray queries see a box. Normal boxes use `0xFF`, lamps use `0x01`, the point-light shadow ray and the probe point-light shadow test `0x02`, and the sun ray and the probe radiance ray test `0xFF`.
 _Avoid_: Layer mask, collision mask
 
 **Synthetic light**:
@@ -224,11 +236,11 @@ The partly lit band between the umbra and the fully lit area. Its width grows wi
 _Avoid_: Soft edge, blur
 
 **Ambient occlusion**:
-The cosine-weighted fraction of the hemisphere at a surface point that visible geometry does not block. The scene has no ambient term, so it scales the direct sun and point light. It darkens a lit corner or contact band; it is not global illumination, because it adds no bounce light.
-_Avoid_: SSAO (that is one estimator), GI (that adds bounce light)
+The cosine-weighted fraction of the hemisphere at a surface point that visible geometry does not block. It scales the direct sun and point light. It darkens a lit corner or contact band; it is not global illumination, because it adds no bounce light. The probe volume adds that bounce separately.
+_Avoid_: SSAO (that is one estimator), GI (the probe volume owns that)
 
 **Sky**:
-The analytic gradient that fills the background: a horizon-to-zenith ramp, a darker ground color below the horizon, and a sun disk with a glow. It draws after the lit pass and shades only the pixels that no box covers. It is a background, not a light.
+The analytic gradient that fills the background: a horizon-to-zenith ramp, a darker ground color below the horizon, and a sun disk with a glow. It draws after the lit pass and shades only the pixels that no box covers. It is a background for the camera; a probe ray that escapes through an opening uses the same gradient as its miss radiance.
 _Avoid_: Skybox, cubemap, backdrop
 
 **AO radius**:
