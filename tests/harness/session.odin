@@ -119,7 +119,7 @@ settle_renders_every_step_without_capturing :: proc(t: ^testing.T) {
 	testing.expect(t, reply.ok, "settle failed")
 	testing.expect_value(t, session.frame, 5)
 	testing.expect_value(t, calls, 5)
-	testing.expect_value(t, len(session.captures), 0)
+	testing.expect_value(t, len(session.capture.captures), 0)
 }
 
 @(test)
@@ -131,7 +131,7 @@ settle_steps_without_a_backend :: proc(t: ^testing.T) {
 	defer harness.reply_destroy(&reply, context.allocator)
 	testing.expect(t, reply.ok, "settle without a backend failed")
 	testing.expect_value(t, session.frame, 3)
-	testing.expect_value(t, len(session.captures), 0)
+	testing.expect_value(t, len(session.capture.captures), 0)
 }
 
 @(test)
@@ -201,14 +201,14 @@ future_capture_queues_until_its_frame :: proc(t: ^testing.T) {
 
 	first := execute(t, &session, `{"cmd": "capture", "name": "later", "frame": 10}`)
 	harness.reply_destroy(&first, context.allocator)
-	testing.expect_value(t, len(session.captures), 0)
-	testing.expect_value(t, len(session.pending), 1)
+	testing.expect_value(t, len(session.capture.captures), 0)
+	testing.expect_value(t, len(session.capture.pending), 1)
 
 	step_reply := execute(t, &session, `{"cmd": "step", "frames": 10}`)
 	harness.reply_destroy(&step_reply, context.allocator)
 	testing.expect_value(t, calls, 1)
-	testing.expect_value(t, len(session.captures), 1)
-	testing.expect_value(t, session.captures[0].frame, 10)
+	testing.expect_value(t, len(session.capture.captures), 1)
+	testing.expect_value(t, session.capture.captures[0].frame, 10)
 }
 
 @(test)

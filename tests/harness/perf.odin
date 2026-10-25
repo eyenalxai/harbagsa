@@ -176,10 +176,10 @@ perf_names_accumulate_in_the_session :: proc(t: ^testing.T) {
 	defer harness.reply_destroy(&second, context.allocator)
 	testing.expectf(t, second.ok, "second perf failed: %s", second.error)
 
-	testing.expect_value(t, len(session.perf_reports), 2)
-	if len(session.perf_reports) == 2 {
-		testing.expect_value(t, session.perf_reports[0].name, "first")
-		testing.expect_value(t, session.perf_reports[1].name, "second")
+	testing.expect_value(t, len(session.perf.reports), 2)
+	if len(session.perf.reports) == 2 {
+		testing.expect_value(t, session.perf.reports[0].name, "first")
+		testing.expect_value(t, session.perf.reports[1].name, "second")
 	}
 	if second.perf != nil {
 		testing.expect_value(t, second.perf.name, "second")

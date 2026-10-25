@@ -24,7 +24,7 @@ renderer_state_is_reported_without_a_backend :: proc(t: ^testing.T) {
 renderer_state_reaches_the_state_and_checks :: proc(t: ^testing.T) {
 	session, _ := harness.session_create(context.allocator)
 	defer harness.session_destroy(&session)
-	session.renderer_report = renderer.Renderer_Report {
+	session.render.report = renderer.Renderer_Report {
 		active             = true,
 		frame_count        = 12,
 		taa_enabled        = true,

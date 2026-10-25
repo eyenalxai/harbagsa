@@ -8,22 +8,28 @@ import "core:strings"
 import "src:renderer"
 
 Reply :: struct {
-	ok:       bool           `json:"ok"`,
-	cmd:      string         `json:"cmd"`,
-	frame:    int            `json:"frame"`,
-	error:    string         `json:"error,omitempty"`,
-	state:    ^State         `json:"state,omitempty"`,
-	capture:  ^Capture_Result `json:"capture,omitempty"`,
-	check:    ^Check_Result  `json:"check,omitempty"`,
-	recorded: string         `json:"recorded,omitempty"`,
-	written:  string         `json:"written,omitempty"`,
-	placed:   u32            `json:"placed,omitempty"`,
-	get:      ^Get_Result    `json:"get,omitempty"`,
+	ok:     bool   `json:"ok"`,
+	cmd:    string `json:"cmd"`,
+	frame:  int    `json:"frame"`,
+	placed: u32    `json:"placed,omitempty"`,
+
+	// Owned strings; reply_destroy frees each one.
+	error:    string `json:"error,omitempty"`,
+	recorded: string `json:"recorded,omitempty"`,
+	written:  string `json:"written,omitempty"`,
+
+	// Owned pointers; reply_destroy frees each one.
+	state:    ^State          `json:"state,omitempty"`,
 	replay:   ^Replay_Summary `json:"replay,omitempty"`,
-	perf:     ^Perf_Report   `json:"perf,omitempty"`,
-	trace:    string         `json:"trace,omitempty"`,
-	rows:     ^Rows_State    `json:"rows,omitempty"`,
+	rows:     ^Rows_State     `json:"rows,omitempty"`,
 	displays: ^Displays_State `json:"displays,omitempty"`,
+	get:      ^Get_Result     `json:"get,omitempty"`,
+
+	// Borrowed from the session; valid until the next command.
+	capture: ^Capture_Result `json:"capture,omitempty"`,
+	check:   ^Check_Result   `json:"check,omitempty"`,
+	perf:    ^Perf_Report    `json:"perf,omitempty"`,
+	trace:   string          `json:"trace,omitempty"`,
 }
 
 Replay_Summary :: struct {
@@ -79,7 +85,7 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 	}
 	row := command_row_by_kind(command.kind)
 	reply := Reply{ok = true, cmd = row.name, frame = session.frame}
-	if row.backend != .None && session.render_enabled {
+	if row.backend != .None && session.render.enabled {
 		if error := session_ensure_backend(session); error != "" {
 			reply.ok = false
 			reply.error = strings.clone(error, session.allocator)
@@ -96,7 +102,7 @@ session_execute :: proc(session: ^Session, command: Command, raw_line: string) -
 		delete(command_error, context.allocator)
 		return reply
 	}
-	if session.recording && row.record != .Skip {
+	if session.recorder.recording && row.record != .Skip {
 		session_record_command(session, command, raw_line)
 	}
 	return reply
@@ -113,14 +119,14 @@ reply_error :: proc(session: ^Session, kind: Command_Kind, message: string) -> R
 
 session_record_command :: proc(session: ^Session, command: Command, raw_line: string) {
 	if command.kind == .Renderer_Debug {
-		session.recorded_renderer_debug = true
+		session.recorder.recorded_renderer_debug = true
 	}
 	row := command_row_by_kind(command.kind)
 	switch row.record {
 	case .Raw:
 		trimmed := strings.trim_space(raw_line)
 		if trimmed != "" {
-			append(&session.recorded, strings.clone(trimmed, session.allocator))
+			append(&session.recorder.recorded, strings.clone(trimmed, session.allocator))
 		}
 	case .Custom:
 		if command.kind == .Capture {
@@ -132,7 +138,7 @@ session_record_command :: proc(session: ^Session, command: Command, raw_line: st
 
 @(private)
 record_capture_line :: proc(session: ^Session, capture: Capture_Command) {
-	frame := session.frame - session.record_start_frame
+	frame := session.frame - session.recorder.start_frame
 	if frame < 0 {
 		frame = 0
 	}
@@ -173,5 +179,5 @@ record_capture_line :: proc(session: ^Session, capture: Capture_Command) {
 		format_part,
 		allocator = session.allocator,
 	)
-	append(&session.recorded, line)
+	append(&session.recorder.recorded, line)
 }

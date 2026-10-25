@@ -51,8 +51,8 @@ execute_state :: proc(session: ^Session, command: Command, reply: ^Reply) -> str
 @(private)
 execute_capture :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	immediate, capture_error := session_queue_capture(session, command.capture)
-	if capture_error == "" && immediate && len(session.captures) > 0 {
-		reply.capture = &session.captures[len(session.captures) - 1]
+	if capture_error == "" && immediate && len(session.capture.captures) > 0 {
+		reply.capture = &session.capture.captures[len(session.capture.captures) - 1]
 	}
 	return capture_error
 }
@@ -60,8 +60,8 @@ execute_capture :: proc(session: ^Session, command: Command, reply: ^Reply) -> s
 @(private)
 execute_captures :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	immediate, capture_error := session_queue_captures(session, command.captures)
-	if capture_error == "" && immediate && len(session.captures) > 0 {
-		reply.capture = &session.captures[len(session.captures) - 1]
+	if capture_error == "" && immediate && len(session.capture.captures) > 0 {
+		reply.capture = &session.capture.captures[len(session.capture.captures) - 1]
 	}
 	return capture_error
 }
@@ -185,8 +185,8 @@ execute_repro :: proc(session: ^Session, command: Command, reply: ^Reply) -> str
 @(private)
 execute_perf :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	perf_error := session_perf(session, command.perf)
-	if perf_error == "" {
-		reply.perf = &session.perf_report
+	if perf_error == "" && len(session.perf.reports) > 0 {
+		reply.perf = &session.perf.reports[len(session.perf.reports) - 1]
 	}
 	return perf_error
 }
@@ -214,7 +214,7 @@ execute_rows :: proc(session: ^Session, command: Command, reply: ^Reply) -> stri
 
 @(private)
 execute_quit :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
-	if session.recording {
+	if session.recorder.recording {
 		recorded, record_error := session_record_stop(session)
 		if recorded != "" {
 			delete(recorded, session.allocator)

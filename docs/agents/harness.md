@@ -1360,6 +1360,9 @@ frame-rate change.
 - `src/harness/ab_command.odin`: the `ab` wrapper over `tools/ab.sh`.
 - `src/harness/run_backend.odin`: the lazy run backend.
 - `src/harness/run_paths.odin`: the tag-aware run directory.
+- `src/harness/run_stages.odin`: the five run stages, their results, and the
+  state they share.
+- `src/harness/run.odin`: the run orchestrator and its exit-code precedence.
 - `src/harness/session_settle.odin`: the convergence wait.
 - `src/harness/state_schema.odin`: the reflection walk over `State` that resolves
   check paths. `State` and its `json` tags are the schema.
@@ -1522,7 +1525,7 @@ the row's error after copying it into the reply, so no command sets an ownership
 flag.
 
 `backend` is `None`, `Optional`, or `Required`. The batch run and the live
-session use the same policy through `Session.backend_provider`; a capture with
+session use the same policy through `Session.render.provider`; a capture with
 rendering disabled is skipped in both. A `Required` command without rendering
 fails in its own execute proc, so CPU-only `perf` still works.
 
