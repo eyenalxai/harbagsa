@@ -619,6 +619,16 @@ _Avoid_: Clear, flush
 The frames after a history reset while the sample count grows from 1 to 512. The first frames change the image quickly; later frames add small corrections.
 _Avoid_: Warmup
 
+**State schema**:
+The `State` struct and its JSON tags. The JSON writer, the check resolver, and
+the simulation digest read the same fields.
+_Avoid_: Field table, resolver table
+
+**State section**:
+The part of `State` that one check namespace needs. `state_build_sections`
+builds only that part; `digest` is the only check that needs every section.
+_Avoid_: State slice, partial document
+
 **Renderer state**:
 The harness state block that describes the last rendered frame: frame count, TAA state, jitter index, history validity, convergence frames, history read index and weight, reset count and reason, shadow phase, and active point-light count.
 _Avoid_: Render stats, GPU state

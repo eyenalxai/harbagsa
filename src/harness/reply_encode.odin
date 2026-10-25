@@ -4,6 +4,9 @@ package harness
 import "core:encoding/json"
 import "core:fmt"
 
+// The state and every nested object carry their JSON names in the struct tags.
+// The reply envelope owns its own optional fields, so a nil pointer is omitted
+// without asking json.marshal to dereference it.
 encode_reply :: proc(reply: Reply) -> []u8 {
 	out := make([dynamic]u8, 0, 256, context.allocator)
 	append(&out, `{"ok":`)
