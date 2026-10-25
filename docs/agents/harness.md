@@ -1125,7 +1125,7 @@ run never created a renderer, and `renderer.active` is `false`.
 | `probe_volume_count` | probe volumes the scene supplied |
 | `probe_count` | probes in the live atlas |
 | `probe_frame` | probe-update frames since the atlas was created |
-| `probe_energy` | mean RGB radiance across the probe atlas |
+| `probe_energy` | mean linear RGB irradiance across the probe atlas |
 | `atlas_weight` | the type weight the active coverage atlas holds |
 | `text_truncated_runs` | text runs cut at the 128-glyph cap |
 | `text_font_drops` | HarfBuzz fonts dropped at the 8-font cap |

@@ -87,7 +87,7 @@ init_scene :: proc(r: ^Renderer) -> Error {
 	if !create_cluster_pipeline(r) {
 		return .Create_Pipeline
 	}
-	if !create_probe_pipeline(r) {
+	if !create_probe_pipelines(r) {
 		return .Create_Pipeline
 	}
 	if !create_sky_pipeline(r) {

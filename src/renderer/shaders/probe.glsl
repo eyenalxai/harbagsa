@@ -4,9 +4,16 @@
 // The Odin mirror is in src/renderer/probe.odin. Change both together.
 #define PROBE_GRID_SIZE 8
 #define PROBE_TEXELS 64
-#define PROBE_RAYS 64
-#define PROBE_BOUNCE_ALPHA 0.25
-#define PROBE_INDIRECT_SCALE 1.0
+#define PROBE_RAYS 256
+#define PROBE_IRRADIANCE_ENCODING_GAMMA 5.0
+#define PROBE_DISTANCE_EXPONENT 50.0
+#define PROBE_HYSTERESIS 0.75
+#define PROBE_LARGE_CHANGE_THRESHOLD 0.25
+#define PROBE_BACKFACE_THRESHOLD 0.25
+#define PROBE_PI 3.14159265358979
+// The reference gather returns irradiance. The lit pass adds the sun as
+// albedo * NdotL, so the diffuse BRDF's 1/pi keeps both terms on one scale.
+#define PROBE_INDIRECT_SCALE (1.0 / PROBE_PI)
 
 vec2 oct_wrap(vec2 value) {
     return (1.0 - abs(value.yx)) * vec2(
@@ -15,8 +22,7 @@ vec2 oct_wrap(vec2 value) {
     );
 }
 
-// Unit vector to the [-1, 1] octahedral square. The square is mapped to [0, 1]
-// for texel lookup.
+// Unit vector to the [0, 1] octahedral square.
 vec2 oct_encode(vec3 direction) {
     direction /= abs(direction.x) + abs(direction.y) + abs(direction.z);
     if (direction.y < 0.0) {
@@ -32,6 +38,17 @@ vec3 oct_decode(vec2 uv) {
         direction.xz = oct_wrap(direction.xz);
     }
     return normalize(direction);
+}
+
+// A fixed spherical Fibonacci set. The ray and blend passes derive the same
+// direction from the ray index, so the ray buffer stores no directions.
+vec3 probe_ray_direction(uint index) {
+    float i = float(index) + 0.5;
+    float count = float(PROBE_RAYS);
+    float z = 1.0 - 2.0 * i / count;
+    float radius = sqrt(max(0.0, 1.0 - z * z));
+    float angle = i * 2.39996323;
+    return vec3(radius * cos(angle), z, radius * sin(angle));
 }
 
 #endif
