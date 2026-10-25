@@ -9,7 +9,7 @@ edit_placement_arm :: proc(dm: ^Debug_Mode, sim: ^Simulation, prefab_id: Prefab_
 	if !simulation_is_valid(sim) {
 		return edit_fail(.Failed)
 	}
-	debug_sun_cancel(dm)
+	take_tool(dm, .Placement)
 	// The palette is the one place that holds the next placement's body and
 	// light, so arming by prefab also selects it there.
 	_ = palette_select(&dm.palette, int(prefab_id))
