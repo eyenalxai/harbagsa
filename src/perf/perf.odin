@@ -37,6 +37,18 @@ PHASE_COUNT :: int(Phase.Present) + 1
 MARK_COUNT :: int(Mark.Present) + 1
 PASS_COUNT :: int(Pass.Overlay) + 1
 
+// The one recording order. The renderer walks it, and the timing reader uses
+// the same list, so a pass cannot be recorded without a timestamp or timed
+// without being recorded.
+PASS_ORDER := [?]Pass {
+	.Tlas,
+	.Depth,
+	.Scene,
+	.Sky,
+	.Taa,
+	.Overlay,
+}
+
 Gpu_Times :: struct {
 	available: bool,
 	frame:     u64,

@@ -223,18 +223,11 @@ record_present_barrier :: proc(
 	r: ^Renderer,
 	command_buffer: vk.CommandBuffer,
 	image_index: u32,
-	capture: bool,
 ) {
-	src_access: vk.AccessFlags = {.COLOR_ATTACHMENT_WRITE}
-	old_layout: vk.ImageLayout = .COLOR_ATTACHMENT_OPTIMAL
-	if capture {
-		src_access = {.TRANSFER_READ}
-		old_layout = .TRANSFER_SRC_OPTIMAL
-	}
 	to_present := vk.ImageMemoryBarrier {
 		sType = .IMAGE_MEMORY_BARRIER,
-		srcAccessMask = src_access,
-		oldLayout = old_layout,
+		srcAccessMask = {.COLOR_ATTACHMENT_WRITE},
+		oldLayout = .COLOR_ATTACHMENT_OPTIMAL,
 		newLayout = .PRESENT_SRC_KHR,
 		srcQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
 		dstQueueFamilyIndex = vk.QUEUE_FAMILY_IGNORED,
@@ -243,7 +236,7 @@ record_present_barrier :: proc(
 	}
 	vk.CmdPipelineBarrier(
 		command_buffer,
-		{.COLOR_ATTACHMENT_OUTPUT, .TRANSFER},
+		{.COLOR_ATTACHMENT_OUTPUT},
 		{.BOTTOM_OF_PIPE},
 		{},
 		0,

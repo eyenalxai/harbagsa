@@ -39,6 +39,11 @@ the sun rays.
   clears depth, then a color scope that loads depth and clears color and
   velocity. `docs/adr/0017-sky-ambient-and-ray-traced-ambient-occlusion.md` adds
   a third, the sky scope, after the lit scope.
+- Every scope is a `renderer.Pass` value: attachments, load and store, pipeline,
+  draws, and the barriers that pass needs. `record_pass` is the only
+  begin/end/viewport site, and `perf.PASS_ORDER` is the one order that recording
+  and timing read. A barrier belongs to the pass that needs it; the present
+  transition is its own pass after the capture copy.
 - The depth image is shared by every scope. A late-fragment-test to
   early-fragment-test barrier orders the prepass writes before the lit reads.
 - The lit pipeline writes no depth and compares `LESS_OR_EQUAL`. Coplanar

@@ -162,8 +162,6 @@ update_camera :: proc(r: ^Renderer, input: Render_Input) -> bool {
 	)
 	view_projection := mat4_multiply(projection, view)
 
-	taa_note_camera(r, input.camera)
-
 	previous := view_projection
 	if r.taa.has_prev_view_projection {
 		previous = r.taa.prev_view_projection

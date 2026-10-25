@@ -1128,8 +1128,9 @@ harness in the same change. Do not leave the automation behind the game.
   `platform.apply_window_state`.
 - New view toggle: add it to the `view` command, `frame.Options`, the README, and
   this page.
-- New CPU phase or GPU pass: add it to the `perf` enums, the renderer timing
-  boundaries, the formatters, the tests, and this page.
+- New CPU phase or GPU pass: add it to the `perf` enums, `perf.PASS_ORDER`, a
+  builder in `pass_builders.odin`, the formatters, the pass-order test, and this
+  page. The recorder owns begin, end, and viewport.
 - New perf field: add it to the perf report struct, the reply, the run report,
   the trace, and this page.
 - New command: follow **Adding a command**, add a JSONL test, and add a scenario
@@ -1167,7 +1168,8 @@ harness in the same change. Do not leave the automation behind the game.
 - New check namespace: add it to `check_field` and to the resolver table.
 - Render state is not simulation state: render fields do not go into
   `state_digest`. Put them in the render digest and `Renderer_State` instead.
-- New renderer pass or target: keep it behind `Target` or `Frame_View`. Add an
+- New renderer pass or target: keep it behind `Target` or `Render_Input`. Add a
+  `Pass` builder, a barrier proc on that pass, a pass-order test, and an
   offscreen test when the pass must match the game.
 - New screenshot or evidence path: update the README and this page.
 - New prefab: add it to `Prefab_Id` and `PREFABS` in `src/game/prefabs.odin`,
