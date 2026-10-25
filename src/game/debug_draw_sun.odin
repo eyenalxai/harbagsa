@@ -10,10 +10,12 @@ SUN_GIZMO_RING_SEGMENTS :: 24
 SUN_GIZMO_DASH_LENGTH :: 1.5
 SUN_GIZMO_DASH_GAP :: 1.0
 
-SUN_GIZMO_ACTIVE_COLOR :: [4]f32{1.0, 0.8, 0.2, 1.0}
-SUN_GIZMO_IDLE_COLOR :: [4]f32{1.0, 0.8, 0.2, 0.5}
+SUN_GIZMO_COLOR :: [4]f32{1.0, 0.8, 0.2, 1.0}
 
 collect_sun_editor_lines :: proc(dm: ^Debug_Mode, collector: ^Debug_Lines) {
+	if !dm.sun.active {
+		return
+	}
 	position := dm.sun.position
 	to_sun := position - SUN_DOME_CENTER
 	length := b3.Length(to_sun)
@@ -21,16 +23,12 @@ collect_sun_editor_lines :: proc(dm: ^Debug_Mode, collector: ^Debug_Lines) {
 		return
 	}
 
-	color := SUN_GIZMO_IDLE_COLOR
-	if dm.sun.active {
-		color = SUN_GIZMO_ACTIVE_COLOR
-	}
 	normal := to_sun * (1.0 / length)
 	side := b3.Perp(normal)
 	up := b3.Cross(normal, side)
-	append_sun_ring(collector, position, side, up, color)
-	append_sun_cross(collector, position, side, up, color)
-	append_sun_dashed_line(collector, SUN_DOME_CENTER, position, color)
+	append_sun_ring(collector, position, side, up, SUN_GIZMO_COLOR)
+	append_sun_cross(collector, position, side, up, SUN_GIZMO_COLOR)
+	append_sun_dashed_line(collector, SUN_DOME_CENTER, position, SUN_GIZMO_COLOR)
 }
 
 @(private)

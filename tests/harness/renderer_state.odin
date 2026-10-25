@@ -39,6 +39,7 @@ renderer_state_reaches_the_state_and_checks :: proc(t: ^testing.T) {
 		light_count        = 3,
 		debug              = {light_shadows = true},
 		atlas_weight       = 900,
+		debug_vertex_count = 92,
 	}
 	state := harness.session_state(&session)
 	defer harness.state_destroy(&state, context.allocator)
@@ -49,6 +50,7 @@ renderer_state_reaches_the_state_and_checks :: proc(t: ^testing.T) {
 	testing.expect_value(t, state.renderer.light_count, 3)
 	testing.expect(t, state.renderer.debug.light_shadows, "light shadow default was dropped")
 	testing.expect_value(t, state.renderer.atlas_weight, f32(900))
+	testing.expect_value(t, state.renderer.debug_vertex_count, 92)
 
 	command := harness.Check_Command {
 		field = "renderer.atlas_weight",
