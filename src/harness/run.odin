@@ -220,8 +220,7 @@ run_scenario :: proc(scenario: ^Scenario, options: Run_Options, out_dir: string)
 	}
 
 	rewrite_capture_paths(&session, absolute_out)
-	setup := setup_build(common, session.view, backend)
-	setup.renderer_debug = session.debug_renderer
+	setup := setup_build(common, session.view, backend, session.debug_renderer)
 	report_path := join_path({staging, "report.json"}, context.allocator)
 	defer delete(report_path, context.allocator)
 	report := Report {
