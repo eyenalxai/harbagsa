@@ -11,7 +11,8 @@ import "core:strings"
 scenario_apply_parameters :: proc(
 	object: ^json.Object,
 	overrides: []Parameter_Override,
-	check_usage: bool,
+	used: []bool,
+	is_top: bool,
 	allocator: mem.Allocator,
 ) -> string {
 	parameters_value, has_parameters := object^["parameters"]
@@ -52,14 +53,23 @@ scenario_apply_parameters :: proc(
 			)
 		}
 	}
-	for override in overrides {
-		if check_usage && !scenario_uses_parameter(object^, override.name) {
-			return fmt.aprintf(
-				"parameter %q has no placeholder in the scenario",
-				override.name,
-				allocator = allocator,
-			)
+	for override, index in overrides {
+		if scenario_uses_parameter(object^, override.name) && index < len(used) {
+			used[index] = true
 		}
+	}
+	if is_top {
+		for override, index in overrides {
+			if index < len(used) && !used[index] {
+				return fmt.aprintf(
+					"parameter %q has no placeholder in the scenario",
+					override.name,
+					allocator = allocator,
+				)
+			}
+		}
+	}
+	for override in overrides {
 		declared_value, has_declared := parameters[override.name]
 		value, value_error := scenario_parameter_parse(
 			override.value,
