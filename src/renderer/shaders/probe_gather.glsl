@@ -114,7 +114,10 @@ vec3 probe_indirect(vec3 world_position, vec3 normal) {
                     chebyshev = variance / (variance + difference * difference);
                     chebyshev = max(chebyshev * chebyshev * chebyshev, 0.0);
                 }
-                weight *= max(0.05, chebyshev);
+                // A fully occluded probe contributes nothing. A 5 percent
+                // floor leaked a lit room across a solid wall when the grid
+                // straddled that wall.
+                weight *= chebyshev;
                 weight = max(weight, 1e-6);
                 const float crush_threshold = 0.2;
                 if (weight < crush_threshold) {

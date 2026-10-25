@@ -15,6 +15,7 @@
     "perf-crates",
     "lamp-wall-plane",
     "room-lighting",
-    "ddgi-arena"
+    "ddgi-arena",
+    "ddgi-sealed"
   ]
 }
