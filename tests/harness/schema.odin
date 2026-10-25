@@ -150,7 +150,7 @@ an_unknown_state_path_names_the_path :: proc(t: ^testing.T) {
 
 @(test)
 state_build_does_not_touch_the_menu_or_the_hud :: proc(t: ^testing.T) {
-	sim := game.simulation_create()
+	sim := game.simulation_create(context.allocator)
 	defer game.simulation_destroy(&sim)
 	debug := game.debug_mode_create(context.allocator)
 	defer game.debug_mode_destroy(&debug)

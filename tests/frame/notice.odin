@@ -136,6 +136,7 @@ the_menu_hides_the_notice :: proc(t: ^testing.T) {
 @(test)
 the_frame_carries_the_notice_from_the_hud :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	game.hud_notice_scene_snapshot(&hud, "runs/repro/repro-1.json", true)
 	scene := frame.build(&sim, &debug, {alpha = 1.0, hud = true}, nil, &hud, &scratch)

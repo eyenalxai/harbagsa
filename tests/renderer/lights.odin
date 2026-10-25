@@ -71,15 +71,15 @@ point_light_lights_a_box_and_reaches_the_buffer :: proc(t: ^testing.T) {
 		testing.expect_value(t, uploaded[0].range, f32(10))
 	}
 
-	many := [10]renderer.Light{}
+	many := [96]renderer.Light{}
 	for &light in many {
 		light = lights[0]
 	}
 	view.lights = many[:]
 	_, _, _, many_ok := draw_scene(state, view)
-	testing.expect(t, many_ok, "the ten-light frame did not render")
-	testing.expect_value(t, renderer.renderer_report(state).light_count, renderer.MAX_POINT_LIGHTS)
-	testing.expect_value(t, len(renderer.lights_uploaded(state)), renderer.MAX_POINT_LIGHTS)
+	testing.expect(t, many_ok, "the 96-light frame did not render")
+	testing.expect_value(t, renderer.renderer_report(state).light_count, 96)
+	testing.expect_value(t, len(renderer.lights_uploaded(state)), 96)
 
 	view.lights = nil
 	dark_again_values, _, _, again_ok := draw_scene(state, view)

@@ -178,7 +178,7 @@ light_values_survive_a_history_restore_with_the_same_id :: proc(t: ^testing.T) {
 }
 
 @(test)
-the_eight_nearest_lamps_win_with_a_stable_order :: proc(t: ^testing.T) {
+every_lamp_is_collected_in_placement_order :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 
@@ -191,22 +191,17 @@ the_eight_nearest_lamps_win_with_a_stable_order :: proc(t: ^testing.T) {
 		)
 	}
 	testing.expect_value(t, game.simulation_lamp_count(&sim), 10)
-	testing.expect_value(t, game.simulation_active_light_count(&sim), game.MAX_ACTIVE_LIGHTS)
+	testing.expect_value(t, game.simulation_active_light_count(&sim), 10)
 
-	camera := b3.Vec3{0, 1, 0}
-	active := game.simulation_collect_lights(&sim, camera)
-	testing.expect_value(t, active.count, game.MAX_ACTIVE_LIGHTS)
-	for index in 0 ..< active.count {
-		testing.expect_value(t, active.lights[index].object_id, ids[index])
+	active := game.simulation_collect_lights(&sim)
+	testing.expect_value(t, len(active), 10)
+	for light, index in active {
+		testing.expect_value(t, light.object_id, ids[index])
 	}
 
-	again := game.simulation_collect_lights(&sim, camera)
-	for index in 0 ..< active.count {
-		testing.expect_value(t, again.lights[index].object_id, active.lights[index].object_id)
+	again := game.simulation_collect_lights(&sim)
+	testing.expect_value(t, len(again), 10)
+	for light, index in again {
+		testing.expect_value(t, light.object_id, active[index].object_id)
 	}
-
-	beside := game.simulation_collect_lights(&sim, b3.Vec3{6, 1, 0})
-	testing.expect_value(t, beside.lights[0].object_id, ids[9])
-	last := beside.lights[beside.count - 1]
-	testing.expectf(t, last.object_id == ids[3], "the close camera kept %v", last.object_id)
 }

@@ -13,7 +13,7 @@ import "src:renderer"
 import "src:ui"
 
 create_state :: proc(t: ^testing.T) -> (game.Simulation, game.Debug_Mode, game.HUD_State, frame.Scratch) {
-	sim := game.simulation_create()
+	sim := game.simulation_create(context.allocator)
 	testing.expect(t, game.simulation_is_valid(&sim), "simulation world is invalid")
 	return sim, game.debug_mode_create(context.allocator), {}, {}
 }
@@ -21,6 +21,7 @@ create_state :: proc(t: ^testing.T) -> (game.Simulation, game.Debug_Mode, game.H
 @(test)
 build_combines_arena_and_objects :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	scene := frame.build(&sim, &debug, {}, nil, &hud, &scratch)
 	expected := len(game.arena_static_boxes()) + game.simulation_object_count(&sim)
@@ -32,6 +33,7 @@ build_combines_arena_and_objects :: proc(t: ^testing.T) {
 @(test)
 placed_objects_render_after_the_arena :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	id := game.simulation_create_object(
 		&sim,
@@ -55,6 +57,7 @@ placed_objects_render_after_the_arena :: proc(t: ^testing.T) {
 @(test)
 settled_objects_render_at_full_size :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	scene := frame.build(&sim, &debug, {}, nil, &hud, &scratch)
 	arena_count := len(game.arena_static_boxes())
@@ -63,31 +66,28 @@ settled_objects_render_at_full_size :: proc(t: ^testing.T) {
 }
 
 @(test)
-scene_box_cap_fits_the_renderer :: proc(t: ^testing.T) {
-	testing.expect(
-		t,
-		game.MAX_SCENE_BOXES < renderer.MAX_SCENE_BOXES,
-		"the game scene cap reached the renderer box limit",
-	)
-}
-
-@(test)
-scene_fills_the_box_cap_without_writing_past_it :: proc(t: ^testing.T) {
+scene_grows_past_the_old_box_cap :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
-	for game.simulation_object_count(&sim) < game.MAX_PLACED_OBJECTS {
+	for _ in 0 ..< 300 {
 		_ = game.simulation_create_object(
 			&sim,
 			{prefab = .Block, body_mode = .Static, center = {0, -5, 0}, yaw_rad = 0},
 		)
 	}
 	scene := frame.build(&sim, &debug, {}, nil, &hud, &scratch)
-	testing.expect_value(t, len(scene.boxes), game.MAX_SCENE_BOXES)
+	testing.expect_value(
+		t,
+		len(scene.boxes),
+		len(game.arena_static_boxes()) + game.INITIAL_CRATE_COUNT + 300,
+	)
 }
 
 @(test)
 hud_can_be_enabled :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	scene := frame.build(
 		&sim,
@@ -106,6 +106,7 @@ hud_can_be_enabled :: proc(t: ^testing.T) {
 @(test)
 debug_hud_names_the_selected_prefab :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	id := game.simulation_create_object(
 		&sim,
@@ -131,6 +132,7 @@ debug_hud_names_the_selected_prefab :: proc(t: ^testing.T) {
 @(test)
 perf_pass_line_joins_the_hud :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	hud.perf.visible = true
 	stats := perf.Stats {
@@ -169,6 +171,7 @@ perf_pass_line_joins_the_hud :: proc(t: ^testing.T) {
 @(test)
 perf_line_joins_the_hud :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	hud.perf.visible = true
 	hud.perf.stats = perf.Stats {
@@ -192,6 +195,7 @@ perf_line_joins_the_hud :: proc(t: ^testing.T) {
 @(test)
 camera_interpolates_between_snapshots :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	game.simulation_step(&sim, game.Input_Snapshot{move_forward = 1.0}, game.SIMULATION_STEP)
 	snapshot := game.simulation_snapshot(&sim)
@@ -210,6 +214,7 @@ camera_interpolates_between_snapshots :: proc(t: ^testing.T) {
 @(test)
 camera_override_wins_over_the_player :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	override := renderer_camera()
 	scene := frame.build(&sim, &debug, {alpha = 1.0}, &override, &hud, &scratch)
@@ -221,6 +226,7 @@ camera_override_wins_over_the_player :: proc(t: ^testing.T) {
 @(test)
 debug_view_collects_world_lines :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	game.simulation_step(&sim, {}, game.SIMULATION_STEP)
 	scene := frame.build(&sim, &debug, {alpha = 1.0, debug_view = true}, nil, &hud, &scratch)
@@ -230,6 +236,7 @@ debug_view_collects_world_lines :: proc(t: ^testing.T) {
 @(test)
 debug_hud_reports_the_armed_placement :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	debug.active = true
 	debug.camera = {position = {0, 1.7, 14}, yaw = 0, pitch = -0.9}

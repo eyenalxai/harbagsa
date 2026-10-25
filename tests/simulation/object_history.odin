@@ -44,33 +44,33 @@ history_caps_at_64_and_a_new_edit_clears_redo :: proc(t: ^testing.T) {
 }
 
 @(test)
-capacity_blocks_place_and_duplicate_without_history :: proc(t: ^testing.T) {
+place_and_duplicate_grow_the_scene_past_the_old_cap :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 	dm := game.debug_mode_create(context.allocator)
 	dm.active = true
 	defer game.debug_mode_destroy(&dm)
 
-	for game.simulation_object_count(&sim) < game.MAX_PLACED_OBJECTS {
+	for _ in 0 ..< 300 {
 		_ = game.simulation_create_object(
 			&sim,
 			{prefab = .Block, body_mode = .Static, center = {0, -5, 0}, yaw_rad = 0},
 		)
 	}
+	before := game.simulation_object_count(&sim)
 	id := game.simulation_objects(&sim)[0].id
 	apply_expect(t, &dm, &sim, game.Select_Object{id = id}, "select failed")
 
-	duplicate := apply(&dm, &sim, game.Duplicate_Selected{})
-	testing.expect_value(t, duplicate.reason, game.Edit_Reason.Scene_Full)
-	place := apply(&dm, &sim, game.Place_Object {
+	apply_expect(t, &dm, &sim, game.Duplicate_Selected{}, "duplicate failed")
+	testing.expect_value(t, game.simulation_object_count(&sim), before + 1)
+	apply_expect(t, &dm, &sim, game.Place_Object {
 		prefab = .Block,
 		body_mode = .Static,
 		center = {0, 1, 0},
 		yaw_rad = 0,
-	})
-	testing.expect_value(t, place.reason, game.Edit_Reason.Scene_Full)
-	testing.expect_value(t, game.simulation_object_count(&sim), game.MAX_PLACED_OBJECTS)
-	testing.expect_value(t, game.debug_history_depth(&dm), 0)
+	}, "place failed")
+	testing.expect_value(t, game.simulation_object_count(&sim), before + 2)
+	testing.expect_value(t, game.debug_history_depth(&dm), 2)
 }
 
 @(test)

@@ -2,6 +2,7 @@
 package frame
 
 import "core:math"
+import "core:mem"
 
 import "src:game"
 import "src:geometry"
@@ -19,9 +20,32 @@ Options :: struct {
 }
 
 Scratch :: struct {
-	boxes:       [game.MAX_SCENE_BOXES]geometry.Box,
-	lights:      [game.MAX_ACTIVE_LIGHTS]renderer.Light,
+	allocator:   mem.Allocator,
+	boxes:       [dynamic]geometry.Box,
+	lights:      [dynamic]renderer.Light,
 	debug_lines: game.Debug_Lines,
+}
+
+scratch_destroy :: proc(scratch: ^Scratch) {
+	if scratch.boxes != nil {
+		delete(scratch.boxes)
+	}
+	if scratch.lights != nil {
+		delete(scratch.lights)
+	}
+	scratch^ = {}
+}
+
+scratch_prepare :: proc(scratch: ^Scratch) {
+	if scratch.allocator.procedure == nil {
+		scratch.allocator = context.allocator
+	}
+	if scratch.boxes == nil {
+		scratch.boxes = make([dynamic]geometry.Box, 0, 0, scratch.allocator)
+	}
+	if scratch.lights == nil {
+		scratch.lights = make([dynamic]renderer.Light, 0, 0, scratch.allocator)
+	}
 }
 
 build :: proc(
@@ -50,30 +74,28 @@ build :: proc(
 		}
 	}
 
-	box_count := 0
+	scratch_prepare(scratch)
+	clear(&scratch.boxes)
 	for box in game.arena_static_boxes() {
-		if !push_scene_box(scratch, &box_count, box) {
-			break
-		}
+		append(&scratch.boxes, box)
 	}
 	for object in game.simulation_objects(sim) {
 		box := game.simulation_object_visual_box(sim, object.id)
-		if !push_scene_box(scratch, &box_count, box) {
-			break
-		}
+		append(&scratch.boxes, box)
 	}
-	scene.boxes = scratch.boxes[:box_count]
+	scene.boxes = scratch.boxes[:]
 
-	active := game.simulation_collect_lights(sim, scene.camera.position)
-	for light, index in active.lights[:active.count] {
-		scratch.lights[index] = {
+	active := game.simulation_collect_lights(sim)
+	clear(&scratch.lights)
+	for light in active {
+		append(&scratch.lights, renderer.Light {
 			position  = light.position,
 			intensity = light.intensity,
 			color     = light.color,
 			range     = light.range,
-		}
+		})
 	}
-	scene.lights = scratch.lights[:active.count]
+	scene.lights = scratch.lights[:]
 
 	scratch.debug_lines.count = 0
 	if options.debug_view {
@@ -140,16 +162,6 @@ draw :: proc(
 		return begin_status
 	}
 	return renderer.end_frame(state, frame)
-}
-
-@(private)
-push_scene_box :: proc(scratch: ^Scratch, count: ^int, box: geometry.Box) -> bool {
-	if count^ >= len(scratch.boxes) {
-		return false
-	}
-	scratch.boxes[count^] = box
-	count^ += 1
-	return true
 }
 
 @(private)

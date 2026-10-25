@@ -11,6 +11,7 @@ import "src:renderer"
 @(test)
 build_leaves_the_frame_without_point_lights :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	scene := frame.build(&sim, &debug, {}, nil, &hud, &scratch)
 	testing.expect_value(t, len(scene.lights), 0)
@@ -20,9 +21,11 @@ build_leaves_the_frame_without_point_lights :: proc(t: ^testing.T) {
 }
 
 @(test)
-frame_keeps_eight_nearest_lamps_and_the_rest_emissive :: proc(t: ^testing.T) {
+frame_keeps_every_lamp_and_the_rest_emissive :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
+	defer frame.scratch_destroy(&scratch)
 	positions := []f32{1, -1, 2, -2, 3, -3, 4, -4, 5, 6}
 	for x in positions {
 		_ = game.simulation_create_object(
@@ -33,15 +36,14 @@ frame_keeps_eight_nearest_lamps_and_the_rest_emissive :: proc(t: ^testing.T) {
 
 	camera := renderer.Camera{position = {0, 1, 0}, fov_x = frame.PLAYER_FOV_X}
 	scene := frame.build(&sim, &debug, {}, &camera, &hud, &scratch)
-	testing.expect_value(t, len(scene.lights), game.MAX_ACTIVE_LIGHTS)
-	expected := []f32{1, -1, 2, -2, 3, -3, 4, -4}
+	testing.expect_value(t, len(scene.lights), len(positions))
 	for light, index in scene.lights {
-		testing.expect_value(t, light.position.x, expected[index])
+		testing.expect_value(t, light.position.x, positions[index])
 	}
 
 	arena_count := len(game.arena_static_boxes())
-	ninth := scene.boxes[arena_count + 8]
-	tenth := scene.boxes[arena_count + 9]
-	testing.expect(t, ninth.emissive > 0, "the ninth lamp stopped glowing")
-	testing.expect(t, tenth.emissive > 0, "the tenth lamp stopped glowing")
+	for index in 0 ..< len(positions) {
+		box := scene.boxes[arena_count + game.INITIAL_CRATE_COUNT + index]
+		testing.expect(t, box.emissive > 0, "a lamp stopped glowing")
+	}
 }

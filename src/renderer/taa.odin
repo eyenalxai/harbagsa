@@ -39,7 +39,7 @@ TAA :: struct {
 	last_reset:           History_Reset_Reason,
 	debug:                Renderer_Debug,
 
-	prev_models:              [MAX_SCENE_BOXES]Mat4,
+	prev_models:              [dynamic]Mat4,
 	prev_model_count:         int,
 	has_prev_models:          bool,
 	prev_view_projection:     Mat4,
@@ -76,6 +76,7 @@ TAA :: struct {
 
 init_taa :: proc(r: ^Renderer) -> Error {
 	r.taa.enabled = true
+	r.taa.prev_models = make([dynamic]Mat4, 0, 0, r.allocator)
 	r.taa.debug = renderer_debug_default()
 	if !check_taa_formats(r) {
 		return .Create_TAA
@@ -112,6 +113,9 @@ destroy_taa :: proc(r: ^Renderer) {
 		}
 	}
 	destroy_taa_targets(r)
+	if r.taa.prev_models != nil {
+		delete(r.taa.prev_models)
+	}
 }
 
 check_taa_formats :: proc(r: ^Renderer) -> bool {

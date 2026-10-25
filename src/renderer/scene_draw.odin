@@ -20,10 +20,6 @@ record_scene :: proc(
 		return false
 	}
 	box_count := len(input.boxes)
-	if box_count > MAX_SCENE_BOXES {
-		log.errorf("renderer: scene has %d boxes, the limit is %d", box_count, MAX_SCENE_BOXES)
-		return false
-	}
 
 	if !prepare_overlay(r, input.debug_lines, input.hud) {
 		log.error("renderer: overlay vertex upload failed")
@@ -33,6 +29,12 @@ record_scene :: proc(
 		reset_history(r, .Scene_Change)
 	}
 	lights := frame_lights(r, input.lights)
+	if !ensure_scene_capacity(r, box_count, len(lights)) {
+		return false
+	}
+	if !ensure_acceleration_capacity(r, box_count) {
+		return false
+	}
 	if !write_light_data(r, lights) {
 		return false
 	}

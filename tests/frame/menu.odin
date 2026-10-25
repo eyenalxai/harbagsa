@@ -14,6 +14,7 @@ import "src:ui"
 @(test)
 menu_maps_to_the_hud :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	sim.settings.display = display.fallback_list()
 	game.menu_open(&hud.menu)
@@ -40,6 +41,7 @@ menu_maps_to_the_hud :: proc(t: ^testing.T) {
 @(test)
 menu_renders_without_the_hud_flag :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	sim.settings.display = display.fallback_list()
 	game.menu_open(&hud.menu)

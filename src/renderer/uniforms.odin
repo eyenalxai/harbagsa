@@ -3,7 +3,9 @@ package renderer
 
 import vk "vendor:vulkan"
 
-MAX_SCENE_BOXES :: 256
+// Initial capacities. The buffers grow on demand; these are not limits.
+INITIAL_SCENE_OBJECT_CAPACITY :: 512
+INITIAL_POINT_LIGHT_CAPACITY :: 64
 
 // The uniform block mirrors camera.glsl. Mat4 is column-major, so the
 // matrices upload directly. screen carries the gamma flag in .x, the render
@@ -122,6 +124,22 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 		}
 	}
 
+	if !create_scene_frame_buffers(
+		r,
+		INITIAL_SCENE_OBJECT_CAPACITY,
+		INITIAL_POINT_LIGHT_CAPACITY,
+	) {
+		return false
+	}
+	write_scene_bindings(r)
+	return true
+}
+
+@(private)
+create_scene_frame_buffers :: proc(
+	r: ^Renderer,
+	object_capacity, light_capacity: int,
+) -> bool {
 	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
 		if !create_mapped_buffer(
 			r,
@@ -135,7 +153,7 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 		}
 		if !create_mapped_buffer(
 			r,
-			vk.DeviceSize(MAX_SCENE_BOXES * size_of(Object_Data)),
+			vk.DeviceSize(object_capacity * size_of(Object_Data)),
 			{.STORAGE_BUFFER},
 			&r.scene.object_buffers[i],
 			&r.scene.object_memory[i],
@@ -145,7 +163,7 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 		}
 		if !create_mapped_buffer(
 			r,
-			vk.DeviceSize(MAX_POINT_LIGHTS * size_of(Light)),
+			vk.DeviceSize(light_capacity * size_of(Light)),
 			{.STORAGE_BUFFER},
 			&r.scene.light_buffers[i],
 			&r.scene.light_memory[i],
@@ -153,7 +171,40 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 		) {
 			return false
 		}
+	}
+	r.scene.object_capacity = object_capacity
+	r.scene.light_capacity = light_capacity
+	return true
+}
 
+@(private)
+destroy_scene_frame_buffers :: proc(r: ^Renderer) {
+	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
+		if r.scene.camera_mapped[i] != nil {
+			vk.UnmapMemory(r.device, r.scene.camera_memory[i])
+			r.scene.camera_mapped[i] = nil
+		}
+		destroy_buffer(r, &r.scene.camera_buffers[i], &r.scene.camera_memory[i])
+
+		if r.scene.object_mapped[i] != nil {
+			vk.UnmapMemory(r.device, r.scene.object_memory[i])
+			r.scene.object_mapped[i] = nil
+		}
+		destroy_buffer(r, &r.scene.object_buffers[i], &r.scene.object_memory[i])
+
+		if r.scene.light_mapped[i] != nil {
+			vk.UnmapMemory(r.device, r.scene.light_memory[i])
+			r.scene.light_mapped[i] = nil
+		}
+		destroy_buffer(r, &r.scene.light_buffers[i], &r.scene.light_memory[i])
+	}
+	r.scene.object_capacity = 0
+	r.scene.light_capacity = 0
+}
+
+@(private)
+write_scene_bindings :: proc(r: ^Renderer) {
+	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
 		buffer_infos := [3]vk.DescriptorBufferInfo {
 			{
 				buffer = r.scene.camera_buffers[i],
@@ -163,12 +214,12 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 			{
 				buffer = r.scene.object_buffers[i],
 				offset = 0,
-				range = vk.DeviceSize(MAX_SCENE_BOXES * size_of(Object_Data)),
+				range = vk.DeviceSize(r.scene.object_capacity * size_of(Object_Data)),
 			},
 			{
 				buffer = r.scene.light_buffers[i],
 				offset = 0,
-				range = vk.DeviceSize(MAX_POINT_LIGHTS * size_of(Light)),
+				range = vk.DeviceSize(r.scene.light_capacity * size_of(Light)),
 			},
 		}
 		writes := [3]vk.WriteDescriptorSet {
@@ -199,6 +250,34 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 		}
 		vk.UpdateDescriptorSets(r.device, u32(len(writes)), &writes[0], 0, nil)
 	}
+}
 
+// A scene that grows past the current buffers reallocates them. Growth waits
+// for the device because a previous frame may still read the old buffer. It is
+// rare, and the alternative is a per-frame capacity check on every upload.
+ensure_scene_capacity :: proc(
+	r: ^Renderer,
+	object_count, light_count: int,
+) -> bool {
+	if object_count <= r.scene.object_capacity && light_count <= r.scene.light_capacity {
+		return true
+	}
+	object_capacity := max(r.scene.object_capacity, 1)
+	for object_capacity < object_count {
+		object_capacity *= 2
+	}
+	light_capacity := max(r.scene.light_capacity, 1)
+	for light_capacity < light_count {
+		light_capacity *= 2
+	}
+
+	if r.device != nil {
+		_ = vk.DeviceWaitIdle(r.device)
+	}
+	destroy_scene_frame_buffers(r)
+	if !create_scene_frame_buffers(r, object_capacity, light_capacity) {
+		return false
+	}
+	write_scene_bindings(r)
 	return true
 }

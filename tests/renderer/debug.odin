@@ -106,7 +106,7 @@ render_digest_is_stable_for_a_static_scene :: proc(t: ^testing.T) {
 	debug.taa = false
 	renderer.set_renderer_debug(state, debug)
 
-	sim := game.simulation_create()
+	sim := game.simulation_create(context.allocator)
 	if !game.simulation_is_valid(&sim) {
 		return
 	}
@@ -114,6 +114,7 @@ render_digest_is_stable_for_a_static_scene :: proc(t: ^testing.T) {
 	editor := game.debug_mode_create(context.allocator)
 	hud: game.HUD_State
 	scratch: frame.Scratch
+	defer frame.scratch_destroy(&scratch)
 	scene := frame.build(&sim, &editor, {alpha = 1.0, captured = true}, nil, &hud, &scratch)
 	if frame.draw(state, scene) != .Ok {
 		return
@@ -136,7 +137,7 @@ spawn_pop_keeps_taa_history :: proc(t: ^testing.T) {
 	defer close_test_device(&device)
 	state := &device.state
 
-	sim := game.simulation_create()
+	sim := game.simulation_create(context.allocator)
 	if !game.simulation_is_valid(&sim) {
 		return
 	}
@@ -150,6 +151,7 @@ spawn_pop_keeps_taa_history :: proc(t: ^testing.T) {
 	editor := game.debug_mode_create(context.allocator)
 	hud: game.HUD_State
 	scratch: frame.Scratch
+	defer frame.scratch_destroy(&scratch)
 	scene := frame.build(&sim, &editor, {alpha = 1.0}, nil, &hud, &scratch)
 	if frame.draw(state, scene) != .Ok {
 		return

@@ -83,6 +83,7 @@ Renderer :: struct {
 	frame_index:     int,
 	frame_count:     u32,
 	light_count:     int,
+	synthetic_lights: [dynamic]Light,
 	clear_color:     [4]f32,
 	timestamp_period:     f32,
 	timestamp_valid_bits: u32,
@@ -115,6 +116,7 @@ init :: proc(config: Config, allocator: mem.Allocator) -> (r: Renderer, err: Err
 	g_validation_failed = false
 	r.platform = config.platform
 	r.allocator = allocator
+	r.synthetic_lights = make([dynamic]Light, 0, 0, allocator)
 	r.recorder = config.recorder
 	r.clear_color = DEFAULT_CLEAR_COLOR
 	r.target.kind = config.target
@@ -166,6 +168,10 @@ init :: proc(config: Config, allocator: mem.Allocator) -> (r: Renderer, err: Err
 deinit :: proc(r: ^Renderer) {
 	if r.device != nil {
 		_ = vk.DeviceWaitIdle(r.device)
+	}
+
+	if r.synthetic_lights != nil {
+		delete(r.synthetic_lights)
 	}
 
 	destroy_overlay(r)

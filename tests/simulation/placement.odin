@@ -208,27 +208,23 @@ placement_place_creates_at_the_ghost_and_stays_armed :: proc(t: ^testing.T) {
 }
 
 @(test)
-placement_at_capacity_is_a_no_op :: proc(t: ^testing.T) {
+placement_past_the_old_cap_applies :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
 	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
-	for game.simulation_object_count(&sim) < game.MAX_PLACED_OBJECTS {
+	for _ in 0 ..< 300 {
 		_ = game.simulation_create_object(
 			&sim,
 			{prefab = .Block, body_mode = .Static, center = {0.0, -5.0, 0.0}, yaw_rad = 0.0},
 		)
 	}
+	before := game.simulation_object_count(&sim)
 	placement_arm(t, &dm, &sim, .Crate)
 	dm.selection = .Object
 	dm.selected_object_id = 1
 
-	result := apply(&dm, &sim, game.Placement_Place{})
-	testing.expect(t, !result.applied, "a full scene accepted a place")
-	testing.expect_value(t, result.reason, game.Edit_Reason.Scene_Full)
-	testing.expect_value(t, game.simulation_object_count(&sim), game.MAX_PLACED_OBJECTS)
-	testing.expect_value(t, dm.selection, game.Debug_Selection.Object)
-	testing.expect_value(t, dm.selected_object_id, game.Object_Id(1))
-	testing.expect(t, dm.placement.armed, "a rejected place disarmed the tool")
+	apply_expect(t, &dm, &sim, game.Placement_Place{}, "a grown scene refused a place")
+	testing.expect_value(t, game.simulation_object_count(&sim), before + 1)
 }
 
 @(test)

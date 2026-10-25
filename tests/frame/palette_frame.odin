@@ -13,6 +13,7 @@ import "src:ui"
 @(test)
 frame_fills_the_palette_from_the_prefab_catalog :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	debug.active = true
 	apply_expect(t, &debug, &sim, game.Palette_Open{}, "open failed")
@@ -35,7 +36,7 @@ frame_fills_the_palette_from_the_prefab_catalog :: proc(t: ^testing.T) {
 	testing.expect_value(t, palette.items[4].body, "static")
 	testing.expect_value(t, palette.items[4].key, "5")
 	testing.expect_value(t, palette.body, "static")
-	testing.expect_value(t, string(palette.count[:palette.count_length]), "3 / 128")
+	testing.expect_value(t, string(palette.count[:palette.count_length]), "3")
 	testing.expect(
 		t,
 		strings.contains(string(palette.size[:palette.size_length]), "4.0 × 0.5 × 4.0 m"),
@@ -48,6 +49,7 @@ frame_fills_the_palette_from_the_prefab_catalog :: proc(t: ^testing.T) {
 @(test)
 frame_fills_the_lamp_light_line_and_emissive_thumbnail :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	debug.active = true
 	apply_expect(t, &debug, &sim, game.Palette_Open{}, "open failed")
@@ -85,6 +87,7 @@ frame_fills_the_lamp_light_line_and_emissive_thumbnail :: proc(t: ^testing.T) {
 @(test)
 palette_needs_debug_mode_and_yields_to_the_menu :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
+	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	debug.palette.open = true
 

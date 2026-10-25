@@ -34,13 +34,14 @@ offscreen_target_reads_two_targets_from_one_frame :: proc(t: ^testing.T) {
 	}
 	defer renderer.deinit(&state)
 
-	sim := game.simulation_create()
+	sim := game.simulation_create(context.allocator)
 	testing.expect(t, game.simulation_is_valid(&sim), "simulation world is invalid")
 	defer game.simulation_destroy(&sim)
 	debug := game.debug_mode_create(context.allocator)
 	defer game.debug_mode_destroy(&debug)
 	hud: game.HUD_State
 	scratch: frame.Scratch
+	defer frame.scratch_destroy(&scratch)
 	scene := frame.build(&sim, &debug, {alpha = 1.0, captured = true}, nil, &hud, &scratch)
 	status := frame.draw(&state, scene, {targets = {.Color, .Scene_Color}})
 	testing.expectf(t, status == .Ok, "multi-target draw failed: %v", status)
