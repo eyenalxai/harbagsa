@@ -737,8 +737,11 @@ run never created a renderer, and `renderer.active` is `false`.
 | `text_font_drops` | fonts dropped at the 8-font shaper cap |
 
 The state also carries a `camera` object: `position`, `yaw`, `pitch`, `fov` in
-degrees, and `overridden`. A `camera` command sets it; `clear` restores the
-player view. The `sun` object is the debug sun placement: it carries `azimuth`,
+degrees, `source`, and `overridden`. It reports the view the renderer uses.
+`source` is `player`, `debug`, or `override`; `overridden` is true whenever that
+view is not the player. A `camera` command sets the override; `clear` drops it
+and restores the player or debug view. The `sun` object is the debug sun
+placement: it carries `azimuth`,
 `elevation`, and `angular_diameter`, in degrees. The `settle` object carries the
 last wait's `frames` and `converged`. The `rows` object carries the HUD and menu
 rows. The `menu` object carries `status` and `blocked` beside `open`, `selected`,

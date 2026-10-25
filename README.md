@@ -300,7 +300,7 @@ Check fields use the `state.json` shape, for example `player.position.y`,
 `settings.window_mode`, `settings.resolution`, `settings.type_weight`,
 `menu.open`, `menu.status`, `menu.blocked`, `debug.active`,
 `debug.placement.armed`, `debug.sun.angular_diameter`, `sun.elevation`,
-`sun.angular_diameter`, `camera.fov`, `camera.overridden`, `settle.converged`,
+`sun.angular_diameter`, `camera.fov`, `camera.source`, `camera.overridden`, `settle.converged`,
 `rows.menu.3.kind`, `renderer.taa_enabled`, `renderer.text_truncated_runs`, or
 `render_digest`. A capture check can also read `capture.target`,
 `capture.format`, `capture.stats.*`, `capture.region.*`, `capture.profile.*`,
@@ -352,7 +352,8 @@ The batch runner and the live session share one command set:
   the inspector (`prefab`, `body`, `size`, `position`, `yaw`, `snap`, `light`),
   the light budget (`lights.active`, `lights.lamps`), and the history (`depth`,
   `redo`). The sun angles and the angular diameter are degrees. `camera` reports
-  the effective position, yaw, pitch, fov, and whether an override is active.
+  the view the renderer uses: position, yaw, pitch, fov, `source` (`player`,
+  `debug`, or `override`), and whether an override is active.
   `rows` dumps the HUD and menu rows. The renderer object reports the frame
   count, TAA state, jitter index, history validity, convergence frames, history
   read index and weight, reset count and reason, shadow phase, the active light
