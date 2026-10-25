@@ -8,8 +8,8 @@ import "core:mem"
 
 import "src:ui"
 
-ROBOTO_CONDENSED :: #load("fonts/RobotoCondensed-Variable.ttf")
-ROBOTO_MONO :: #load("fonts/RobotoMono-Variable.ttf")
+GEIST :: #load("fonts/Geist-Variable.ttf")
+GEIST_MONO :: #load("fonts/GeistMono-Variable.ttf")
 
 // Glyphs rasterize at the device pixel size, so the atlas is a coverage map and
 // not a distance field. Four horizontal phases cover the sub-pixel positions a
@@ -25,7 +25,6 @@ TEXT_ATLAS_PACK_HEADROOM :: 1.5
 BASE_WEIGHT :: ui.TYPE_WEIGHT_DEFAULT
 MIN_WEIGHT :: ui.TYPE_WEIGHT_MIN
 MAX_WEIGHT :: ui.TYPE_WEIGHT_MAX
-MONO_MAX_WEIGHT :: ui.TYPE_WEIGHT_MONO_MAX
 
 Text_Face :: enum {
 	Sans,
@@ -88,8 +87,8 @@ Text_Atlas :: struct {
 }
 
 TEXT_FONTS := [TEXT_FACE_COUNT][]u8 {
-	ROBOTO_CONDENSED,
-	ROBOTO_MONO,
+	GEIST,
+	GEIST_MONO,
 }
 
 text_face_data :: proc(face: Text_Face) -> []u8 {
@@ -100,10 +99,6 @@ text_face_data :: proc(face: Text_Face) -> []u8 {
 // as a float, but the atlas keys and the settings row only need integers.
 text_weight_key :: proc(weight: f32) -> u16 {
 	return u16(math.round(clamp(weight, MIN_WEIGHT, MAX_WEIGHT)))
-}
-
-text_mono_weight :: proc(weight: f32) -> u16 {
-	return min(text_weight_key(weight), u16(MONO_MAX_WEIGHT))
 }
 
 @(private)

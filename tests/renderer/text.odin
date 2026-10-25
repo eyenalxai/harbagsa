@@ -24,8 +24,9 @@ text_measure_of_one_glyph_is_its_advance :: proc(t: ^testing.T) {
 	defer renderer.text_atlas_destroy(&atlas)
 
 	theme := renderer.ui_theme_init(720)
-	one := renderer.text_measure(&atlas, theme.type_body, "M")
-	two := renderer.text_measure(&atlas, theme.type_body, "MM")
+	// Geist kerns M-M, so use A, which has no self pair.
+	one := renderer.text_measure(&atlas, theme.type_body, "A")
+	two := renderer.text_measure(&atlas, theme.type_body, "AA")
 	testing.expect(t, one > 0, "the glyph must advance")
 	testing.expectf(
 		t,
@@ -82,8 +83,8 @@ text_kerning_tightens_a_pair :: proc(t: ^testing.T) {
 	)
 }
 
-// Roboto Condensed widens as the axis rises. The atlas key must carry the
-// weight, or the heavy atlas would silently reuse the regular advances.
+// Geist widens as the axis rises. The atlas key must carry the weight, or the
+// heavy atlas would silently reuse the regular advances.
 @(test)
 text_weight_changes_the_advance :: proc(t: ^testing.T) {
 	light_atlas, light_ok := build_weight_atlas(t, 100)

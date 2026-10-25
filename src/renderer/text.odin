@@ -64,7 +64,7 @@ text_theme_layer_set :: proc(theme: UI_Theme) -> Text_Layer_Set {
 			{face = style.face, weight = text_style_weight(style), px = text_layer_px(style)},
 		)
 	}
-	mono_weight := text_mono_weight(theme.type_body.weight)
+	mono_weight := text_weight_key(theme.type_body.weight)
 	text_layer_set_add(
 		&set,
 		{face = .Mono, weight = mono_weight, px = text_layer_px(theme.type_body)},

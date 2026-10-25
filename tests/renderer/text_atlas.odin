@@ -259,7 +259,7 @@ text_theme_uses_seven_layers :: proc(t: ^testing.T) {
 }
 
 @(test)
-text_theme_mono_clamps_at_seven_hundred :: proc(t: ^testing.T) {
+text_theme_mono_follows_the_full_axis :: proc(t: ^testing.T) {
 	theme := renderer.ui_theme_init(720, 900)
 	set := renderer.text_theme_layer_set(theme)
 	sans_nine_hundred, mono := false, false
@@ -269,7 +269,7 @@ text_theme_mono_clamps_at_seven_hundred :: proc(t: ^testing.T) {
 		}
 		if key.face == .Mono {
 			mono = true
-			testing.expectf(t, key.weight == 700, "mono clamped to %d", key.weight)
+			testing.expectf(t, key.weight == 900, "mono stopped at %d", key.weight)
 		}
 	}
 	testing.expect(t, sans_nine_hundred, "the sans face must reach 900")
