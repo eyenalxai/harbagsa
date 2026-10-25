@@ -345,6 +345,13 @@ _Avoid_: Game loop, engine
 One frame of player intent: movement axes, sprint, crouch, prone, jump, and reset. Look is a separate frame call.
 _Avoid_: Input state, controls
 
+**Frame input**:
+The resolved intent of one frame: the Input snapshot, the Editing actions, the
+menu intents, the view intents, and the pause and cursor state. `src/input` turns
+one `platform.Events` value into one `Frame_Input`. The resolver holds only the
+edge latches.
+_Avoid_: Input state, input command
+
 **Settings**:
 The runtime window and input-mode choices: window mode, display, resolution,
 and the sprint, crouch, and prone input modes. A new simulation starts Borderless
