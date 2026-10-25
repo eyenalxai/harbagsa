@@ -363,7 +363,7 @@ with no active mode is a no-op.
 | `light_intensity` | intensity in [0.2, 4.0], rounded to a tenth |
 | `light_range` | range in [2, 20] metres, rounded to a whole metre |
 | `cancel` | clear the armed tool without placing |
-| `camera` | `{"position", "yaw", "pitch"}` for the debug camera; yaw and pitch are radians |
+| `camera` | `{"position", "look_at"}` or `{"position", "yaw", "pitch"}` for the debug camera; angles are radians |
 | `place` | `{"prefab", "position", "yaw", "body"}` creates at an exact transform |
 | `select_object` | placed object id; 0 clears the selection |
 | `move` | `[x, y, z]` centre for the selected object; y clamps above the floor |
@@ -850,10 +850,11 @@ including a new shadow phase and a light change.
 `scenarios/renderer-debug-converge.json` turns jitter off and freezes the phase,
 so the image converges. `scenarios/renderer-debug-jitter.json` freezes the phase
 and lets jitter cycle, so the analysis can find the period.
-`scenarios/lamp-wall-plane.json` puts a lamp halfway into the wall plane and
-captures the same view with `light_shadows` on and off. The two images must
-match; a fan of shadows on the wall or the floor means the shadow ray counted
-the wall the light sits on.
+`scenarios/lamp-wall-plane.json` aims the debug camera at the wall, arms the
+Lamp, and clicks the ghost. It captures the same view with `light_shadows` on
+and off; the two images must match. A fan of shadows on the wall or the floor
+means the shadow ray counted the wall the light sits on. The scenario also
+checks the wall gradient directly, so the fan fails without the on/off pair.
 `scenarios/perf-lamps.json` injects eight synthetic lights, measures shadows on,
 then disables the point-light shadows and measures again. It writes one trace per
 side.

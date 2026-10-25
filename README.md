@@ -465,9 +465,10 @@ The batch runner and the live session share one command set:
   `turn` and `wheel` step the armed tool or the selection, `large` applies the
   Shift step, `primary` and `secondary` are the mouse buttons, and
   `drag_move`/`drag_release` drive one object drag.
-- `{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw": 0, "pitch": -0.6}}`:
-  set the debug camera. `yaw` and `pitch` are radians, as in the `camera`
-  command. The editor command accepts this alongside the other fields.
+- `{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "look_at": [0, 1.7, 4]}}`:
+  set the debug camera. It accepts `look_at` or `yaw` and `pitch`, never both;
+  the angles are radians, as in the `camera` command. The editor command accepts
+  this alongside the other fields.
 - `{"cmd": "editor", "place": {"prefab": "Block", "position": [0, 0.5, 10], "yaw": 0, "body": "static"}}`:
   create an object at an exact transform, bypassing the placement ray. `prefab`
   and `position` are required; `yaw` (degrees) defaults to 0 and `body` to the
@@ -686,10 +687,12 @@ pillar, then captures the lit scene, the point-light shadow, and the selected
 lamp edit with its undo. `scenarios/editor-input.json` drives the pointer,
 wheel, relative turn, palette step, number key, snap toggle, and right-click
 clear through the same action set as the keyboard. `scenarios/lamp-wall-plane.json`
-places a lamp halfway into a wall, clear of the floor and the adjacent walls,
-and captures the view with the point-light shadows on and off. The two captures
-must match; a fan of shadows on the wall or the floor fails the check. The
-scenario declares `requires.renderer_debug`, so it needs no flag.
+aims the debug camera at a wall, arms the Lamp, and clicks the ghost, so the
+anchor and `debug_placement_place` are part of the regression. It captures the
+view with the point-light shadows on and off; the two captures must match. A
+wall gradient check gates the shadow fan directly, without the on/off pair. The
+scenario declares `requires.renderer_debug`, so it needs no flag, and
+`make validate-offscreen` runs it.
 
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window
