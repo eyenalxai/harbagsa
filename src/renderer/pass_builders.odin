@@ -11,13 +11,11 @@ build_pass :: proc(
 	kind: perf.Pass,
 	image_index: u32,
 	boxes: []geometry.Box,
-	box_count: int,
 ) {
 	pass^ = {
 		name        = kind,
 		image_index = image_index,
 		boxes       = boxes,
-		box_count   = box_count,
 	}
 	switch kind {
 	case .Tlas:
@@ -37,7 +35,7 @@ build_pass :: proc(
 
 @(private)
 build_depth_pass :: proc(r: ^Renderer, pass: ^Pass) {
-	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
+	extent := target_extent_vk(r)
 	depth := r.taa.depth[r.frame_index]
 	pass.depth = make_depth_attachment(depth.view, .DEPTH_ATTACHMENT_OPTIMAL)
 	pass.rendering = {
@@ -62,7 +60,7 @@ depth_barriers :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pa
 
 @(private)
 build_scene_pass :: proc(r: ^Renderer, pass: ^Pass) {
-	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
+	extent := target_extent_vk(r)
 	frame := r.frame_index
 	color := r.taa.scene_color[frame]
 	velocity := r.taa.velocity[frame]
@@ -140,7 +138,7 @@ scene_barriers :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pa
 
 @(private)
 build_sky_pass :: proc(r: ^Renderer, pass: ^Pass) {
-	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
+	extent := target_extent_vk(r)
 	frame := r.frame_index
 	color := r.taa.scene_color[frame]
 	velocity := r.taa.velocity[frame]
@@ -179,7 +177,7 @@ build_sky_pass :: proc(r: ^Renderer, pass: ^Pass) {
 
 @(private)
 build_taa_pass :: proc(r: ^Renderer, pass: ^Pass) {
-	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
+	extent := target_extent_vk(r)
 	read_index := r.taa.history_read
 	write_index := (read_index + 1) % TAA_HISTORY_IMAGES
 	write := r.taa.history[write_index]
@@ -226,7 +224,7 @@ build_taa_pass :: proc(r: ^Renderer, pass: ^Pass) {
 
 @(private)
 build_overlay_pass :: proc(r: ^Renderer, pass: ^Pass) {
-	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
+	extent := target_extent_vk(r)
 	pass.attachments[0] = {
 		sType = .RENDERING_ATTACHMENT_INFO,
 		imageView = r.target.views[pass.image_index],
@@ -257,7 +255,7 @@ draw_box_pass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pas
 		command_buffer,
 		pass.layout,
 		pass.stages,
-		pass.box_count,
+		len(pass.boxes),
 	)
 }
 

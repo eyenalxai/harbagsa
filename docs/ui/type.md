@@ -50,9 +50,9 @@ mark the named instances. The value is the number only, right-aligned.
 - Left and Right step by 10 and clamp to 100..900.
 - A press on the track starts a drag. The cursor x maps onto the track, and the
   value follows it to the whole unit.
-- The menu content width freezes when the menu opens, at 5 % above its opening
-  value. The frozen value is a floor, not a cap; for this axis the headroom
-  covers the growth, so the track does not move under the cursor.
+- The menu content width is measured on every layout with 5 % headroom. There
+  is no frozen width; input and draw call the same `ui.menu_layout`, and a
+  weight change may resize the panel once on the next frame.
 - The weight applies to the menu and the HUD together. The first atlas builds
   synchronously at startup; later weight changes repack on a worker. The number
   and knob update immediately and the glyphs follow on the next swap.

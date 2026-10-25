@@ -20,48 +20,6 @@ edit_placement_arm :: proc(dm: ^Debug_Mode, sim: ^Simulation, prefab_id: Prefab_
 }
 
 @(private)
-edit_placement_cancel :: proc(dm: ^Debug_Mode) -> Edit_Result {
-	debug_placement_cancel(dm)
-	return edit_ok()
-}
-
-@(private)
-edit_placement_set_height :: proc(dm: ^Debug_Mode, height: f32) -> Edit_Result {
-	debug_placement_set_height(dm, height)
-	return edit_ok()
-}
-
-@(private)
-edit_placement_raise :: proc(dm: ^Debug_Mode, steps: int, large: bool) -> Edit_Result {
-	debug_placement_raise(dm, steps, large)
-	return edit_ok()
-}
-
-@(private)
-edit_placement_set_yaw :: proc(dm: ^Debug_Mode, yaw: f32) -> Edit_Result {
-	debug_placement_set_yaw(dm, yaw)
-	return edit_ok()
-}
-
-@(private)
-edit_placement_turn :: proc(dm: ^Debug_Mode, steps: int, large: bool) -> Edit_Result {
-	debug_placement_turn(dm, steps, large)
-	return edit_ok()
-}
-
-@(private)
-edit_placement_set_snap :: proc(dm: ^Debug_Mode, snap: bool) -> Edit_Result {
-	debug_placement_set_snap(dm, snap)
-	return edit_ok()
-}
-
-@(private)
-edit_placement_toggle_snap :: proc(dm: ^Debug_Mode) -> Edit_Result {
-	debug_placement_toggle_snap(dm)
-	return edit_ok()
-}
-
-@(private)
 edit_placement_place :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Result {
 	if !dm.placement.armed {
 		return edit_fail(.Not_Armed)
