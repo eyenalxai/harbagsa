@@ -1122,7 +1122,7 @@ it. Any other build rejects it with a clear error.
 | `freeze_shadow_phase` | freeze the sun sample phase |
 | `shadow_phase` | set a phase in [0, 63] and freeze it |
 | `light_shadows` | enable or disable the point-light shadow rays |
-| `synthetic_lights` | replace the frame's lights with 0 to 8 test lights |
+| `synthetic_lights` | replace the frame's lights with a generated test field of any non-negative count |
 | `sky` | draw the sky pass; the sky is a background, not a light |
 | `ao` | trace the occlusion rays; they scale the sun and point lights |
 | `clear` | reset every override and turn TAA, the sky, and the AO on |
@@ -1146,7 +1146,7 @@ Lamp, and clicks the ghost. A wall gradient check gates the fan of shadows that
 appears when the shadow ray counts the wall the light sits on, so no
 before/after pair is needed. A crate capture with `light_shadows` on and off
 still proves the point light casts.
-`scenarios/perf-lamps.json` injects eight synthetic lights, measures shadows on,
+`scenarios/perf-lamps.json` injects a synthetic light field, measures shadows on,
 then disables the point-light shadows and measures again. It writes one trace per
 side.
 
@@ -1267,7 +1267,7 @@ The before/after is in `docs/evidence/perf-scene-pass.md`.
 and measures them, so the box count is part of the probe.
 
 `scenarios/perf-lamps.json` measures the point-light path. The top-level
-`renderer_debug` block injects eight synthetic lights, the first `perf` command
+`renderer_debug` block injects synthetic lights, the first `perf` command
 measures them with hard shadows, then the command disables point-light shadows
 and the second `perf` measures again. Both traces stay in the run directory:
 `trace-shadows-on.jsonl` and `trace-shadows-off.jsonl`. Its `requires.renderer_debug` declaration enables
@@ -1446,7 +1446,7 @@ frame-rate change.
 - `src/game/objects.odin`: the placed-object list and the create, remove, move,
   yaw, convert, and reset API.
 - `src/game/lights.odin`: the light type, the colour cycle, the intensity and
-  range steps, the eight-nearest selection, and the light count.
+  range steps, the active light collection, and the light count.
 - `src/game/debug_light_tools.odin`: the keyboard and harness light edit target.
 - `src/game/edit_action.odin`: the action dispatcher and `edit_apply`.
 - `src/game/edit_types.odin`: the action union, results, and reasons.

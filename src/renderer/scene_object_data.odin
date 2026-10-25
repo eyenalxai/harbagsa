@@ -12,22 +12,31 @@ write_object_data :: proc(r: ^Renderer, boxes: []geometry.Box) -> bool {
 		log.error("renderer: object storage buffer is not mapped")
 		return false
 	}
+	if len(boxes) > r.scene.object_capacity {
+		log.errorf(
+			"renderer: %d boxes exceed the %d-slot object buffer",
+			len(boxes),
+			r.scene.object_capacity,
+		)
+		return false
+	}
 
-	models: [MAX_SCENE_BOXES]Mat4
+	if len(taa.prev_models) < len(boxes) {
+		resize(&taa.prev_models, len(boxes))
+	}
+
 	for box, index in boxes {
-		models[index] = box_model_matrix(box)
-		previous := models[index]
+		model := box_model_matrix(box)
+		previous := model
 		if index < taa.prev_model_count {
 			previous = taa.prev_models[index]
 		}
 		data[index] = Object_Data {
-			model = models[index],
+			model = model,
 			prev_model = previous,
 			color = {box.color.x, box.color.y, box.color.z, box.emissive},
 		}
-	}
-	for index in 0 ..< len(boxes) {
-		taa.prev_models[index] = models[index]
+		taa.prev_models[index] = model
 	}
 	taa.prev_model_count = len(boxes)
 	taa.has_prev_models = true

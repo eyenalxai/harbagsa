@@ -160,7 +160,6 @@ Edit_Reason :: enum {
 	No_Lamp,
 	Bad_Index,
 	Not_Armed,
-	Scene_Full,
 	Nothing_To_Undo,
 	Nothing_To_Redo,
 	No_Change,
@@ -214,8 +213,6 @@ edit_reason_message :: proc(reason: Edit_Reason) -> string {
 		return "the palette index is out of range"
 	case .Not_Armed:
 		return "the placement tool is not armed"
-	case .Scene_Full:
-		return "the scene is full"
 	case .Nothing_To_Undo:
 		return "nothing to undo"
 	case .Nothing_To_Redo:

@@ -23,6 +23,7 @@ Acceleration :: struct {
 	blas_buffer: vk.Buffer,
 	blas_memory: vk.DeviceMemory,
 	blas_address: vk.DeviceAddress,
+	capacity:    int,
 }
 
 buffer_address :: proc(r: ^Renderer, buffer: vk.Buffer) -> vk.DeviceAddress {
@@ -48,12 +49,52 @@ create_acceleration_resources :: proc(r: ^Renderer) -> bool {
 		return false
 	}
 	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		if !create_tlas(r, &r.acceleration.frames[i]) {
+		if !create_tlas(r, &r.acceleration.frames[i], INITIAL_SCENE_OBJECT_CAPACITY) {
 			return false
 		}
 	}
+	r.acceleration.capacity = INITIAL_SCENE_OBJECT_CAPACITY
 	write_acceleration_descriptors(r)
 	return true
+}
+
+// The TLAS instance capacity follows the box count. Growth waits for the device
+// because a previous frame may still read the old acceleration structure.
+ensure_acceleration_capacity :: proc(r: ^Renderer, box_count: int) -> bool {
+	if box_count <= r.acceleration.capacity {
+		return true
+	}
+	capacity := max(r.acceleration.capacity, 1)
+	for capacity < box_count {
+		capacity *= 2
+	}
+	if r.device != nil {
+		_ = vk.DeviceWaitIdle(r.device)
+	}
+	for &frame in r.acceleration.frames {
+		destroy_tlas_frame(r, &frame)
+		if !create_tlas(r, &frame, capacity) {
+			return false
+		}
+	}
+	r.acceleration.capacity = capacity
+	write_acceleration_descriptors(r)
+	return true
+}
+
+@(private)
+destroy_tlas_frame :: proc(r: ^Renderer, frame: ^Acceleration_Frame) {
+	if frame.tlas != 0 {
+		vk.DestroyAccelerationStructureKHR(r.device, frame.tlas, nil)
+		frame.tlas = 0
+	}
+	if frame.instances_mapped != nil {
+		vk.UnmapMemory(r.device, frame.instances_memory)
+		frame.instances_mapped = nil
+	}
+	destroy_buffer(r, &frame.instances_buffer, &frame.instances_memory)
+	destroy_buffer(r, &frame.tlas_buffer, &frame.tlas_memory)
+	destroy_buffer(r, &frame.scratch_buffer, &frame.scratch_memory)
 }
 
 write_acceleration_descriptors :: proc(r: ^Renderer) {
@@ -141,17 +182,7 @@ destroy_acceleration :: proc(r: ^Renderer) {
 		return
 	}
 	for &frame in r.acceleration.frames {
-		if frame.tlas != 0 {
-			vk.DestroyAccelerationStructureKHR(r.device, frame.tlas, nil)
-			frame.tlas = 0
-		}
-		if frame.instances_mapped != nil {
-			vk.UnmapMemory(r.device, frame.instances_memory)
-			frame.instances_mapped = nil
-		}
-		destroy_buffer(r, &frame.instances_buffer, &frame.instances_memory)
-		destroy_buffer(r, &frame.tlas_buffer, &frame.tlas_memory)
-		destroy_buffer(r, &frame.scratch_buffer, &frame.scratch_memory)
+		destroy_tlas_frame(r, &frame)
 	}
 	if r.acceleration.blas != 0 {
 		vk.DestroyAccelerationStructureKHR(r.device, r.acceleration.blas, nil)
