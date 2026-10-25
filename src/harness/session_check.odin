@@ -21,6 +21,8 @@ check_sections :: proc(field: string) -> State_Sections {
 		return {.Debug}
 	case "menu":
 		return {.Menu}
+	case "notice":
+		return {.Notice}
 	case "rows":
 		return {.Rows}
 	case "settle":
@@ -43,7 +45,7 @@ session_check_command :: proc(
 	reply: ^Reply,
 ) -> string {
 	sections := check_sections(command.field)
-	if .Menu in sections || .Rows in sections {
+	if .Menu in sections || .Notice in sections || .Rows in sections {
 		session_refresh_hud(session)
 	}
 	state := state_build_sections(
