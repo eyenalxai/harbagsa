@@ -18,6 +18,11 @@ scene.
 
 ## Decisions
 
+- One `Render_Input` carries the effective inputs. The frame builder fills the
+  camera, sun, boxes, lights, debug lines, HUD, and view flags; the recorder
+  fills the extent, jitter, shadow phase, applied atlas weight, and the sky and
+  AO overrides. The uniform packing, the digest, and the report all read that
+  value. There is no `Frame_View` copy and no separate digest input.
 - `renderer` holds the frame count, TAA state, jitter index, history validity,
   convergence frames, history read index, history weight, reset count, last
   reset reason, shadow phase, the active point-light count, and the applied
@@ -28,6 +33,14 @@ scene.
   the point lights, the jitter, the shadow phase, the applied atlas weight,
   the sky and AO flags, and the view flags. If a frame has the same digest,
   its render inputs and its projection match.
+- `RENDER_DIGEST_FIELDS` is the one digest table: one row per `Render_Input`
+  field, with an explicit `hashed` flag. `hud` and `debug_lines` are unhashed
+  because they draw after the resolve; the view flags already record whether
+  each is present. A reflection test fails when a field has no row.
+- `Renderer_Report` is the one report type, with JSON field tags. `Debug_Report`
+  is its nested debug block. `REPORT_FIELDS` is the one path table; the harness
+  check paths read it, and a reflection test pins every struct field and JSON
+  tag to a row. `last_reset` is the reason name string.
 - `history_weight` is the weight the next resolve would give the history,
   `count / (count + 1)`, from the renderer's convergence counter. A per-pixel
   count would need a readback; the scalar is enough to tell convergence from a
