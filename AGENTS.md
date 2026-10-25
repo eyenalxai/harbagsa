@@ -32,6 +32,12 @@ Write a comment only when it answers a hard "Why this way?" question. Do not nar
 - Do not name a thing `V2`, `New`, or `Enhanced`. Replace the old one and take its name.
 - Never weaken or delete a test to make a run pass.
 
+## CI
+
+CI checks and CI tests are not needed. Do not add a CI workflow for them, and do
+not wait for CI to merge a pull request. The local `make check` and `make test`
+are the gate.
+
 ## Agent skills
 
 ### Issue tracker
