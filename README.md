@@ -2,13 +2,14 @@
 
 A first-person movement demo. The player walks, sprints, crouches, crawls,
 jumps, dives, slides, and mantles in a fixed arena with stairs, ramps, tunnels,
-mantle walls, a dive platform, a closed room with one doorway, and pushable
-crates. SDL3 provides the window and input, raw Vulkan 1.3 with ray-query
-shadows draws the scene, and Box3D runs the physics. A directional sun casts
-hard contact shadows and softer distant shadows from the walls and crates. An
-analytic sky gradient fills the background. Ray-traced ambient occlusion uses
-the same scene acceleration structure to darken the ambient light in shade,
-corners, and tunnels. A sunlit surface keeps its full ambient.
+mantle walls, a dive platform, a closed room with a four-turn light lock, and
+pushable crates. SDL3 provides the window and input, raw Vulkan 1.3 with
+ray-query shadows draws the scene, and Box3D runs the physics. A directional sun
+casts hard contact shadows and softer distant shadows from the walls and
+crates. There is no ambient term: a surface that the sun and the lamps do not
+reach is black. An analytic sky gradient fills the background. Ray-traced
+ambient occlusion uses the same scene acceleration structure to darken the
+direct light in contact, corners, and tunnels.
 
 ## Requirements
 
@@ -661,8 +662,8 @@ The batch runner and the live session share one command set:
   pacing. A run without a device reports CPU numbers only.
 - `{"cmd": "renderer_debug", "jitter": false, "shadow_phase": 12}`: change
   renderer inputs. It needs `--debug-renderer` or a build with
-  `-define:ENABLE_RENDERER_DEBUG=true`. `sky` and `ao` turn the sky and the
-  ambient occlusion off, `light_shadows` turns the point-light shadows off, and
+  `-define:ENABLE_RENDERER_DEBUG=true`. `sky` turns the sky pass off, `ao` turns the
+  occlusion on direct light off, `light_shadows` turns the point-light shadows off, and
   `synthetic_lights` replaces the frame's lamps with 0 to 8 test lights. Set one
   field to `null` to restore that field's default without touching the others.
   `clear` resets every override. Changing an input resets history.
@@ -833,11 +834,11 @@ notice, steps past the two-second hold, and captures the cleared notice.
 `scenarios/type-weight.json` opens the menu, selects Type weight, captures 400,
 sets 900 and 100, captures both, and checks the stored value.
 
-`scenarios/sky-ao.json` captures the arena with the sky and the ambient
-occlusion on, off, and split, so the two terms can be compared at the same
-camera. `scenarios/stairs-ao.json` captures the dive stairs at a 25° sun and
-checks that the AO leaves the sunlit floor alone while the shaded wall still
-darkens. `scenarios/shadow-angle.json` puts the sun 15 degrees above the horizon
+`scenarios/sky.json` captures the sky at the zenith and the horizon with the
+sky pass on and off, so the gradient and the clear-colour fallback can be
+compared at the same camera. `scenarios/stairs-ao.json` captures the dive stairs
+at a 25° sun and checks that the AO darkens the sunlit floor and the shaded wall
+when it is on. `scenarios/shadow-angle.json` puts the sun 15 degrees above the horizon
 and captures a wall shadow twice: once with a 3-degree sun disk, then with the
 0.53-degree disk the build uses. The penumbra width follows the diameter, so
 the small disk gives a shadow edge about 5.7 times narrower.
@@ -877,14 +878,15 @@ light still casts. The scenario declares `requires.renderer_debug`, so it needs
 no flag, and `make validate-offscreen` runs it.
 
 `scenarios/room-lighting.json` enters the closed room in the arena's +x/+z
-corner. It captures the outside, the one doorway, the sealed corner, and the
-ceiling. Two depth captures prove the sealed views contain no sky pixel. It
-compares the sun through the doorway with the sun on the far side, then places a
-warm lamp with the `place` command and compares the same view with the lamp on
-and off. The sun elevation, lamp intensity, lamp range, and door patch are
-scenario parameters, so `--param sun_elevation_deg=20` and
+corner. The door opens into a four-turn light lock: east, south, west, south,
+and east into the chamber. Two depth captures prove the tunnel and the chamber
+contain no sky pixel. The first lane is captured with the sun west and east;
+only the west sun enters the door. The same chamber view is black at both sun
+azimuths, then a warm lamp is placed with `place` and the same view is compared
+with the lamp on and off. The sun elevation, lamp intensity, and lamp range are
+scenario parameters, so `--param sun_elevation_deg=25` and
 `--param lamp_intensity=2` run the same checks with another setup. The room is
-static arena geometry: walk in through the west doorway to see it.
+static arena geometry: walk in through the west door and follow the four turns.
 
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window
