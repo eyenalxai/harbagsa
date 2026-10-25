@@ -75,6 +75,10 @@ capture_stats_reports_channels_and_velocity_median :: proc(t: ^testing.T) {
 	testing.expect_value(t, stats.min[0], f32(0))
 	testing.expect_value(t, stats.max[0], f32(3))
 	testing.expect_value(t, stats.mean[0], f32(1.5))
+	testing.expectf(t, abs(stats.stddev[0] - 1.118034) < 1e-5, "stddev is %v", stats.stddev[0])
+	testing.expect_value(t, stats.gradient[0], f32(1.5))
+	testing.expect_value(t, stats.stddev[1], f32(0))
+	testing.expect_value(t, stats.gradient[1], f32(0))
 	median, has_median := stats.velocity_median_texels.?
 	testing.expect(t, has_median, "velocity median is missing")
 	if has_median {
@@ -84,6 +88,15 @@ capture_stats_reports_channels_and_velocity_median :: proc(t: ^testing.T) {
 	depth := harness.capture_stats(values, 2, 2, .Depth, nil, context.allocator)
 	_, has_depth_median := depth.velocity_median_texels.?
 	testing.expect(t, !has_depth_median, "depth stats reported a velocity median")
+}
+
+@(test)
+capture_stats_gradient_without_a_neighbour_is_zero :: proc(t: ^testing.T) {
+	values := []f32{0.25, 0.5, 0.75, 1}
+	region := harness.Capture_Region{x = 0, y = 0, w = 1, h = 1}
+	stats := harness.capture_stats(values, 1, 1, .Color, region, context.allocator)
+	testing.expect_value(t, stats.stddev[0], f32(0))
+	testing.expect_value(t, stats.gradient[0], f32(0))
 }
 
 @(test)
