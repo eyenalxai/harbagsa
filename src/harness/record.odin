@@ -16,6 +16,7 @@ session_record_start :: proc(session: ^Session, path: string) -> string {
 	session.recording = true
 	session.record_path = strings.clone(path, session.allocator)
 	session.record_start_frame = session.frame
+	session.recorded_renderer_debug = false
 	clear(&session.recorded)
 
 	append(&session.recorded, strings.clone(`{"cmd": "reset"}`, session.allocator))
@@ -60,16 +61,6 @@ session_record_start :: proc(session: ^Session, path: string) -> string {
 	return ""
 }
 
-@(private)
-session_records_renderer_debug :: proc(session: ^Session) -> bool {
-	for line in session.recorded {
-		if strings.contains(line, "\"cmd\"") && strings.contains(line, "renderer_debug") {
-			return true
-		}
-	}
-	return false
-}
-
 session_record_stop :: proc(session: ^Session) -> (path: string, error: string) {
 	if !session.recording {
 		return "", format_error("%s", "not recording")
@@ -79,7 +70,7 @@ session_record_stop :: proc(session: ^Session) -> (path: string, error: string) 
 	defer strings.builder_destroy(&builder)
 	fmt.sbprint(&builder, "{\n  \"version\": 1,\n")
 	// A recorded renderer debug command needs the gate when it replays.
-	if session_records_renderer_debug(session) {
+	if session.recorded_renderer_debug {
 		fmt.sbprint(&builder, "  \"requires\": {\"renderer_debug\": true},\n")
 	}
 	fmt.sbprint(&builder, "  \"commands\": [\n")
