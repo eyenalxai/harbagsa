@@ -181,7 +181,7 @@ parse_check_value :: proc(value: json.Value, allocator: mem.Allocator) -> (Check
 
 @(private)
 parse_record :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "path"}); unknown {
+	if key, unknown := json_unknown_key(object, {"cmd", "path", "actions"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 	command := Command{kind = .Record}
@@ -192,6 +192,13 @@ parse_record :: proc(object: json.Object, allocator: mem.Allocator) -> (Command,
 		}
 		command.record.path = strings.clone(path, allocator)
 		command.record.has_path = true
+	}
+	if value, has := json_get(object, "actions"); has {
+		actions, ok := json_boolean(value)
+		if !ok {
+			return {}, format_error("%s", "'actions' must be a boolean")
+		}
+		command.record.actions = actions
 	}
 	return command, ""
 }

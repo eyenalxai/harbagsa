@@ -9,6 +9,7 @@ Analysis_Config :: struct {
 	start:      int,
 	count:      int,
 	maps:       bool,
+	region:     Maybe(Capture_Region),
 }
 
 analysis_config_default :: proc() -> Analysis_Config {
@@ -33,10 +34,11 @@ Analysis_Period :: struct {
 // continuous before the resolve bands after it, and this metric names the run
 // the eye sees.
 Analysis_Bands :: struct {
-	longest_run: int `json:"longest_run"`,
-	median_run:  int `json:"median_run"`,
-	levels:      int `json:"levels"`,
-	columns:     int `json:"columns"`,
+	longest_run: int                    `json:"longest_run"`,
+	median_run:  int                    `json:"median_run"`,
+	levels:      int                    `json:"levels"`,
+	columns:     int                    `json:"columns"`,
+	region:      Maybe(Capture_Region)  `json:"region,omitempty"`,
 }
 
 Analysis_Summary :: struct {
@@ -216,7 +218,12 @@ session_refresh_analysis :: proc(session: ^Session) {
 			session.allocator,
 		)
 		if image_ok {
-			session.analysis.bands = analysis_bands(image, width, height)
+			if region, has_region := session.analysis_config.region.?;
+			   has_region && !capture_region_valid(region, width, height) {
+				delete(image, session.allocator)
+				return
+			}
+			session.analysis.bands = analysis_bands(image, width, height, session.analysis_config.region)
 			delete(image, session.allocator)
 		}
 	}

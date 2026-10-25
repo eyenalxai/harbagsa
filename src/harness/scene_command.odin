@@ -7,18 +7,20 @@ import "core:strings"
 
 import "src:frame"
 import "src:game"
-import "src:ui"
 
-SCENE_KEYS := [?]string{"cmd", "camera", "sun", "objects", "settings", "view", "displays"}
+SCENE_KEYS := [?]string{"cmd", "camera", "sun", "objects", "settings", "view", "displays", "renderer_debug"}
 
 Scene_Command :: struct {
-	scene:       frame.Scene,
-	has_camera:  bool,
-	has_sun:     bool,
-	has_objects: bool,
-	has_settings: bool,
-	has_view:    bool,
-	has_displays: bool,
+	scene:          frame.Scene,
+	settings:       Scene_Settings_Patch,
+	view:           Scene_View_Patch,
+	has_camera:     bool,
+	has_sun:        bool,
+	has_objects:    bool,
+	has_settings:   bool,
+	has_view:       bool,
+	has_displays:   bool,
+	renderer_debug: Maybe(Renderer_Debug_Command),
 }
 
 @(private)
@@ -60,7 +62,7 @@ parse_scene :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 		if settings_error != "" {
 			return {}, settings_error
 		}
-		command.scene.scene.settings = settings
+		command.scene.settings = settings
 		command.scene.has_settings = true
 	}
 	if value, has := json_get(object, "view"); has {
@@ -68,8 +70,22 @@ parse_scene :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 		if view_error != "" {
 			return {}, view_error
 		}
-		command.scene.scene.view = view
+		command.scene.view = view
 		command.scene.has_view = true
+	}
+	if value, has := json_get(object, "renderer_debug"); has {
+		debug_object, debug_ok := json_object(value)
+		if !debug_ok {
+			return {}, format_error("%s", "scene 'renderer_debug' must be an object")
+		}
+		if key, unknown := json_unknown_key(debug_object, RENDERER_DEBUG_BLOCK_KEYS); unknown {
+			return {}, format_error("unknown renderer_debug key %q", key)
+		}
+		fields, fields_error := renderer_debug_fields(debug_object)
+		if fields_error != "" {
+			return {}, fields_error
+		}
+		command.scene.renderer_debug = fields
 	}
 	if value, has := json_get(object, "displays"); has {
 		displays, displays_error := parse_scene_displays(value, allocator)
@@ -79,12 +95,14 @@ parse_scene :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 		command.scene.scene.displays = displays
 		command.scene.has_displays = true
 	}
+	_, has_renderer_debug := command.scene.renderer_debug.?
 	if !command.scene.has_camera &&
 	   !command.scene.has_sun &&
 	   !command.scene.has_objects &&
 	   !command.scene.has_settings &&
 	   !command.scene.has_view &&
-	   !command.scene.has_displays {
+	   !command.scene.has_displays &&
+	   !has_renderer_debug {
 		return {}, format_error("%s", "scene needs at least one block")
 	}
 	ok = true
@@ -94,6 +112,18 @@ parse_scene :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 @(private)
 destroy_scene :: proc(command: ^Command, allocator: mem.Allocator) {
 	frame.scene_destroy(&command.scene.scene, allocator)
+	if value, has := command.scene.settings.window_mode.?; has {
+		delete(value, allocator)
+	}
+	if value, has := command.scene.settings.sprint_mode.?; has {
+		delete(value, allocator)
+	}
+	if value, has := command.scene.settings.crouch_mode.?; has {
+		delete(value, allocator)
+	}
+	if value, has := command.scene.settings.prone_mode.?; has {
+		delete(value, allocator)
+	}
 	command^ = {}
 }
 
@@ -205,80 +235,4 @@ parse_scene_sun :: proc(value: json.Value) -> (frame.Scene_Sun, string) {
 		return {}, format_error("%s", "sun needs 'position' and a positive 'angular_diameter_deg'")
 	}
 	return {position = position, angular_diameter_deg = f32(diameter)}, ""
-}
-
-@(private)
-parse_scene_settings :: proc(value: json.Value, allocator: mem.Allocator) -> (frame.Scene_Settings, string) {
-	object, object_ok := json_object(value)
-	if !object_ok {
-		return {}, format_error("%s", "scene 'settings' must be an object")
-	}
-	if key, unknown := json_unknown_key(
-		object,
-		{"window_mode", "display", "resolution", "sprint_mode", "crouch_mode", "prone_mode", "type_weight"},
-	); unknown {
-		return {}, format_error("unknown settings key %q", key)
-	}
-	window_name, window_ok := string_field(object, "window_mode")
-	window_mode, window_parsed := game.window_mode_parse(window_name)
-	display_index, display_ok := json_integer(json_get_required(object, "display"))
-	resolution, resolution_ok := vec2_int_field(object, "resolution")
-	sprint_name, sprint_ok := string_field(object, "sprint_mode")
-	sprint, sprint_parsed := game.input_mode_parse(sprint_name)
-	crouch_name, crouch_ok := string_field(object, "crouch_mode")
-	crouch, crouch_parsed := game.input_mode_parse(crouch_name)
-	prone_name, prone_ok := string_field(object, "prone_mode")
-	prone, prone_parsed := game.input_mode_parse(prone_name)
-	type_weight, weight_ok := number_field(object, "type_weight")
-	if !window_ok || !window_parsed ||
-	   !display_ok || display_index < 0 ||
-	   !resolution_ok || resolution[0] <= 0 || resolution[1] <= 0 ||
-	   !sprint_ok || !sprint_parsed || !crouch_ok || !crouch_parsed ||
-	   !prone_ok || !prone_parsed ||
-	   !weight_ok || type_weight < f64(ui.TYPE_WEIGHT_MIN) || type_weight > f64(ui.TYPE_WEIGHT_MAX) {
-		return {}, format_error("%s", "settings needs a valid window_mode, display, resolution, input modes, and type_weight")
-	}
-	_ = window_mode
-	_ = sprint
-	_ = crouch
-	_ = prone
-	return {
-		window_mode = strings.clone(window_name, allocator),
-		display = int(display_index),
-		resolution = resolution,
-		sprint_mode = strings.clone(sprint_name, allocator),
-		crouch_mode = strings.clone(crouch_name, allocator),
-		prone_mode = strings.clone(prone_name, allocator),
-		type_weight = f32(type_weight),
-	}, ""
-}
-
-@(private)
-parse_scene_view :: proc(value: json.Value) -> (frame.Scene_View, string) {
-	object, object_ok := json_object(value)
-	if !object_ok {
-		return {}, format_error("%s", "scene 'view' must be an object")
-	}
-	if key, unknown := json_unknown_key(object, {"hud", "debug", "hint", "perf"}); unknown {
-		return {}, format_error("unknown view key %q", key)
-	}
-	view: frame.Scene_View
-	fields := [4]struct {
-		name:  string,
-		field: ^bool,
-	} {
-		{"hud", &view.hud},
-		{"debug", &view.debug},
-		{"hint", &view.hint},
-		{"perf", &view.perf},
-	}
-	for item in fields {
-		entry, has := json_get(object, item.name)
-		flag, flag_ok := json_boolean(entry)
-		if !has || !flag_ok {
-			return {}, format_error("scene view needs a boolean %q", item.name)
-		}
-		item.field^ = flag
-	}
-	return view, ""
 }

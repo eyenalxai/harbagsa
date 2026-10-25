@@ -3,6 +3,7 @@ package harness
 
 import "core:fmt"
 import "core:mem"
+import "core:strconv"
 import "core:strings"
 
 Suite_Options :: struct {
@@ -16,6 +17,9 @@ Suite_Options :: struct {
 	no_analysis:    bool,
 	debug_renderer: bool,
 	verbose:        bool,
+	quiet:          bool,
+	progress:       bool,
+	timeout_seconds: f64,
 }
 
 Suite_Row :: struct {
@@ -24,6 +28,7 @@ Suite_Row :: struct {
 	size:                   string `json:"size"`,
 	requires_renderer_debug: bool  `json:"requires_renderer_debug"`,
 	no_render:              bool   `json:"no_render"`,
+	seconds:                f64    `json:"seconds"`,
 	run_dir:                string `json:"run_dir,omitempty"`,
 	report:                 string `json:"report,omitempty"`,
 	state:                  string `json:"state,omitempty"`,
@@ -42,6 +47,7 @@ Suite_Report :: struct {
 	suite:    string      `json:"suite"`,
 	manifest: string      `json:"manifest"`,
 	run_dir:  string      `json:"run_dir"`,
+	seconds:  f64         `json:"seconds"`,
 	rows:     []Suite_Row `json:"rows"`,
 }
 
@@ -154,7 +160,7 @@ cli_suite :: proc(args: []string) -> int {
 	selector := ""
 	selectors := make([dynamic]string, 0, 4, context.allocator)
 	defer delete(selectors)
-	options: Suite_Options
+	options := Suite_Options{progress = true}
 	index := 0
 	for index < len(args) {
 		argument := args[index]
@@ -198,6 +204,22 @@ cli_suite :: proc(args: []string) -> int {
 		case argument == "--verbose":
 			options.verbose = true
 			index += 1
+		case argument == "--quiet":
+			options.quiet = true
+			index += 1
+		case argument == "--progress":
+			options.progress = true
+			index += 1
+		case argument == "--timeout":
+			if index + 1 >= len(args) {
+				return suite_cli_error("--timeout needs seconds")
+			}
+			seconds, ok := strconv.parse_f64(args[index + 1])
+			if !ok || seconds <= 0 {
+				return suite_cli_error("--timeout must be a positive number of seconds")
+			}
+			options.timeout_seconds = seconds
+			index += 2
 		case strings.has_prefix(argument, "-"):
 			return suite_cli_error(fmt.aprintf(
 				"unknown option %q",
@@ -229,5 +251,6 @@ suite_cli_error :: proc(message: string) -> int {
 print_suite_usage :: proc() {
 	fmt.eprintln("usage: harbagsa-agent suite <name|path> [scenario...] [--out DIR] [--tag NAME]")
 	fmt.eprintln("       [--list] [--json] [--fail-fast] [--present] [--no-render]")
-	fmt.eprintln("       [--no-analysis] [--debug-renderer] [--verbose]")
+	fmt.eprintln("       [--no-analysis] [--debug-renderer] [--verbose] [--quiet]")
+	fmt.eprintln("       [--progress] [--timeout SECONDS]")
 }

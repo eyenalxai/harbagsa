@@ -16,74 +16,26 @@ Capture_Target :: enum {
 	Scene_Color,
 }
 
+MAX_CAPTURE_TARGETS :: 5
+Capture_Targets :: bit_set[Capture_Target]
+
 Frame_Capture :: struct {
-	target:  Capture_Target,
-	enabled: bool,
+	targets: Capture_Targets,
 }
 
-capture_target_name :: proc(target: Capture_Target) -> string {
-	switch target {
-	case .Color:
-		return "color"
-	case .Velocity:
-		return "velocity"
-	case .History:
-		return "history"
-	case .Depth:
-		return "depth"
-	case .Scene_Color:
-		return "scene_color"
+capture_target_count :: proc(capture: Frame_Capture) -> int {
+	count := 0
+	for _ in capture.targets {
+		count += 1
 	}
-	return "color"
+	return count
 }
 
-capture_target_parse :: proc(name: string) -> (target: Capture_Target, ok: bool) {
-	switch name {
-	case "color":
-		return .Color, true
-	case "velocity":
-		return .Velocity, true
-	case "history":
-		return .History, true
-	case "depth":
-		return .Depth, true
-	case "scene_color":
-		return .Scene_Color, true
-	}
-	return .Color, false
-}
-
-Format_Info :: struct {
-	name:        string,
-	texel_bytes: int,
-}
-
-format_info :: proc(format: vk.Format) -> Format_Info {
-	#partial switch format {
-	case .R8G8B8A8_SRGB:
-		return {"R8G8B8A8_SRGB", 4}
-	case .B8G8R8A8_SRGB:
-		return {"B8G8R8A8_SRGB", 4}
-	case .R8G8B8A8_UNORM:
-		return {"R8G8B8A8_UNORM", 4}
-	case .B8G8R8A8_UNORM:
-		return {"B8G8R8A8_UNORM", 4}
-	case .R16G16B16A16_SFLOAT:
-		return {"R16G16B16A16_SFLOAT", 8}
-	case .R32G32B32A32_SFLOAT:
-		return {"R32G32B32A32_SFLOAT", 16}
-	case .D32_SFLOAT:
-		return {"D32_SFLOAT", 4}
-	}
-	return {"unknown", 0}
-}
-
-format_name :: proc(format: vk.Format) -> string {
-	return format_info(format).name
-}
-
-texel_bytes :: proc(format: vk.Format) -> int {
-	return format_info(format).texel_bytes
+@(private)
+capture_slot_stride :: proc(r: ^Renderer) -> vk.DeviceSize {
+	return vk.DeviceSize(r.target.config.width) *
+	       vk.DeviceSize(r.target.config.height) *
+	       vk.DeviceSize(MAX_CAPTURE_TEXEL_BYTES)
 }
 
 @(private)
@@ -114,8 +66,13 @@ record_capture_copy :: proc(
 	command_buffer: vk.CommandBuffer,
 	image_index: u32,
 	target: Capture_Target,
+	slot: int,
 ) -> bool {
 	if r.target.readback.buffer == 0 || r.target.readback.size == 0 {
+		return false
+	}
+	stride := capture_slot_stride(r)
+	if vk.DeviceSize(slot) * stride >= r.target.readback.size {
 		return false
 	}
 	image, format, ok := target_image(r, image_index, target)
@@ -153,7 +110,7 @@ record_capture_copy :: proc(
 	)
 
 	region := vk.BufferImageCopy {
-		bufferOffset = 0,
+		bufferOffset = vk.DeviceSize(slot) * stride,
 		bufferRowLength = 0,
 		bufferImageHeight = 0,
 		imageSubresource = {
@@ -208,6 +165,7 @@ record_capture_copy :: proc(
 read_capture_target :: proc(
 	r: ^Renderer,
 	target: Capture_Target,
+	slot := 0,
 ) -> (
 	pixels: []u8,
 	width, height: u32,
@@ -229,11 +187,13 @@ read_capture_target :: proc(
 	width = r.target.config.width
 	height = r.target.config.height
 	required := vk.DeviceSize(width) * vk.DeviceSize(height) * vk.DeviceSize(bytes_per_texel)
-	if required > r.target.readback.size {
+	offset := vk.DeviceSize(slot) * capture_slot_stride(r)
+	if offset + required > r.target.readback.size {
 		return nil, 0, 0, .UNDEFINED, false
 	}
 	size := int(required)
-	mem.copy(raw_data(r.target.readback.pixels), r.target.readback.mapped, size)
+	source := rawptr(uintptr(r.target.readback.mapped) + uintptr(offset))
+	mem.copy(raw_data(r.target.readback.pixels), source, size)
 	if target == .Color &&
 	   (format == .B8G8R8A8_SRGB || format == .B8G8R8A8_UNORM) {
 		for i := 0; i + 3 < size; i += 4 {

@@ -25,6 +25,7 @@ capture_stats :: proc(
 	width, height: u32,
 	target: Capture_Target,
 	region: Maybe(Capture_Region),
+	steps: Maybe(Capture_Steps_Options),
 	allocator: mem.Allocator,
 ) -> Capture_Stats {
 	stats := Capture_Stats {
@@ -80,8 +81,12 @@ capture_stats :: proc(
 			stats.gradient[channel] = f32(gradient_sums[channel] / f64(pairs))
 		}
 	}
-	if bounds, has_region := region.?; has_region && target == .Color {
-		stats.steps = capture_steps_build(values, width, height, bounds, allocator)
+	if bounds, has_region := region.?; has_region {
+		options := capture_steps_default()
+		if configured, has_steps := steps.?; has_steps {
+			options = configured
+		}
+		stats.steps = capture_steps_build(values, width, height, bounds, options, allocator)
 	}
 	if target == .Velocity {
 		lengths := make([]f32, count, allocator)

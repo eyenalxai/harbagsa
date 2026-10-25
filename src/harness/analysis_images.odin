@@ -2,11 +2,9 @@
 package harness
 
 import "core:c"
-import "core:fmt"
 import "core:math"
 import "core:mem"
 import "core:os"
-import "core:strings"
 
 import stb_image "vendor:stb/image"
 
@@ -64,23 +62,11 @@ analysis_write_png :: proc(
 	width, height: u32,
 	allocator: mem.Allocator,
 ) -> string {
-	path, path_error := capture_path(frames_dir, name, ".png", allocator)
-	if path_error != "" {
-		return path_error
+	path, error := write_png_file(frames_dir, name, width, height, pixels, allocator)
+	if error != "" {
+		return error
 	}
-	defer delete(path, allocator)
-	cpath := strings.clone_to_cstring(path, context.temp_allocator)
-	written := stb_image.write_png(
-		cpath,
-		c.int(width),
-		c.int(height),
-		4,
-		raw_data(pixels),
-		c.int(width * 4),
-	)
-	if written == 0 {
-		return fmt.aprintf("cannot write %s", path, allocator = allocator)
-	}
+	delete(path, allocator)
 	return ""
 }
 

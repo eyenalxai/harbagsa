@@ -2,6 +2,7 @@
 package harness
 
 import "core:fmt"
+import "core:strings"
 
 @(private)
 analysis_field :: proc(analysis: Analysis_Summary, path: string) -> (Check_Value, string) {
@@ -28,6 +29,13 @@ analysis_field :: proc(analysis: Analysis_Summary, path: string) -> (Check_Value
 		return {kind = .Number, number = f64(analysis.bands.levels)}, ""
 	case "bands.columns":
 		return {kind = .Number, number = f64(analysis.bands.columns)}, ""
+	}
+	if strings.has_prefix(path, "bands.region.") {
+		region, has_region := analysis.bands.region.?
+		if !has_region {
+			return {}, format_error("%s", "the analysis bands have no region")
+		}
+		return capture_region_field(region, path[len("bands.region."):])
 	}
 	return {}, fmt.aprintf("unknown analysis field %q", path, allocator = context.allocator)
 }

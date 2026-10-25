@@ -4,6 +4,7 @@ package harness
 import "core:fmt"
 import "core:mem"
 import "core:strings"
+import "core:time"
 
 import "src:digest"
 import "src:display"
@@ -47,6 +48,7 @@ Session :: struct {
 	render_failed:     bool,
 
 	renderer_report:   renderer.Renderer_Report,
+	renderer_debug:    renderer.Renderer_Debug,
 	render_digest:     digest.FNV,
 	has_render_digest: bool,
 	render_digest_text: string,
@@ -82,6 +84,11 @@ Session :: struct {
 
 	settle_frames:     int,
 	settle_converged:  bool,
+
+	has_timeout:     bool,
+	timeout_start:   time.Tick,
+	timeout:         time.Duration,
+	timeout_seconds: f64,
 }
 
 session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
@@ -120,8 +127,8 @@ session_destroy :: proc(session: ^Session) {
 	if game.simulation_is_valid(&session.sim) {
 		game.simulation_destroy(&session.sim)
 	}
-	for pending in session.pending {
-		delete(pending.name, session.allocator)
+	for &pending in session.pending {
+		session_pending_destroy(session, &pending)
 	}
 	delete(session.pending)
 	for &capture in session.captures {
@@ -198,8 +205,8 @@ session_reset :: proc(session: ^Session) -> string {
 }
 
 session_restart :: proc(session: ^Session) -> string {
-	for pending in session.pending {
-		delete(pending.name, session.allocator)
+	for &pending in session.pending {
+		session_pending_destroy(session, &pending)
 	}
 	clear(&session.pending)
 	session.frame = 0
@@ -209,6 +216,30 @@ session_restart :: proc(session: ^Session) -> string {
 }
 session_failure :: proc(session: ^Session, message: string) {
 	append(&session.failures, strings.clone(message, session.allocator))
+}
+
+session_set_timeout :: proc(session: ^Session, seconds: f64) {
+	if seconds <= 0 {
+		return
+	}
+	session.has_timeout = true
+	session.timeout_start = time.tick_now()
+	session.timeout_seconds = seconds
+	session.timeout = time.Duration(seconds * f64(time.Second))
+}
+
+session_check_timeout :: proc(session: ^Session) -> string {
+	if !session.has_timeout {
+		return ""
+	}
+	if time.tick_since(session.timeout_start) < session.timeout {
+		return ""
+	}
+	return fmt.aprintf(
+		"run timed out after %g seconds",
+		session.timeout_seconds,
+		allocator = context.allocator,
+	)
 }
 session_apply_input :: proc(session: ^Session, command: Input_Command) {
 	if command.has_forward {
@@ -233,6 +264,9 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 		return fmt.aprintf("menu is open; close the menu to step", allocator = context.allocator)
 	}
 	for index in 0 ..< frames {
+		if timeout := session_check_timeout(session); timeout != "" {
+			return timeout
+		}
 		input := session.input
 		if index > 0 {
 			input.jump_pressed = false
