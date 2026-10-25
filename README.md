@@ -758,7 +758,10 @@ the small disk gives a shadow edge about 5.7 times narrower.
 `scenarios/ramp-shadow.json` looks at the shaded floor below the 20 degree ramp
 and gates the step count in a region that holds no geometry edge. The step
 metric box-filters the luma, so the output dither drops out and a ray-count
-step remains.
+step remains. `scenarios/ramp-shadow-crouch.json` repeats the gate from the
+crouched view under the ramp, where the steps are widest. It also catches the
+TAA history precision: a 16-bit history keeps the count steps, and the 32-bit
+history reaches zero steps.
 
 `scenarios/editor-ghost.json` enters debug mode, picks the platform prefab, and
 captures the ghost on the floor and raised, then places a block and cancels the

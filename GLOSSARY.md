@@ -599,8 +599,12 @@ The subpixel camera offset applied each frame for TAA.
 _Avoid_: Shake, offset
 
 **History**:
-The previous resolved frame, with linear color, view depth, and sample count, that TAA blends into the current frame.
+The previous resolved frame, with linear color, view depth, and sample count, that TAA blends into the current frame. The color is 32-bit so the 1/513 update at the sample cap survives the round.
 _Avoid_: Accumulation buffer, cache
+
+**History precision**:
+The bit width of the resolved history. A 32-bit history holds the running average at 512 samples; a 16-bit history rounds the 1/513 update away and keeps the ray-count field.
+_Avoid_: Bit depth, accuracy
 
 **Sample count**:
 The number of frames accumulated into a history pixel. The resolve weights a new sample by one over the count plus one, and stops at 512.
@@ -773,9 +777,9 @@ visibility dither is a separate offset inside one ray-count step; see
 **Visibility dither**. **Avoid**: noise, grain.
 
 ### Visibility dither
-A per-pixel, per-frame offset inside one visibility step. A partial sun or
-ambient-occlusion count becomes a continuous fraction before TAA averages it;
-a full or empty count stays exact. **Avoid**: noise, jitter.
+A per-pixel, per-frame offset inside one visibility step. The offset breaks the
+step in one frame; the phase sequence and the 32-bit history average it into a
+continuous field. A full or empty count stays exact. **Avoid**: noise, jitter.
 
 ### Step
 A local jump in the box-filtered luma that a visibility count leaves at a band
