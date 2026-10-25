@@ -24,12 +24,13 @@ Quat_State :: struct {
 }
 
 Player_State :: struct {
-	position: Vec_State `json:"position"`,
-	eye:      Vec_State `json:"eye"`,
-	velocity: Vec_State `json:"velocity"`,
-	yaw_deg:  f32       `json:"yaw_deg"`,
-	pitch_deg: f32      `json:"pitch_deg"`,
-	grounded: bool      `json:"grounded"`,
+	position:  Vec_State `json:"position"`,
+	eye:       Vec_State `json:"eye"`,
+	velocity:  Vec_State `json:"velocity"`,
+	yaw_deg:   f32       `json:"yaw_deg"`,
+	pitch_deg: f32       `json:"pitch_deg"`,
+	stance:    string    `json:"stance"`,
+	grounded:  bool      `json:"grounded"`,
 }
 
 Camera_State :: struct {
@@ -178,6 +179,7 @@ state_build_sections :: proc(
 			velocity = vec_state(snapshot.velocity),
 			yaw_deg = f32(math.to_degrees(snapshot.yaw)),
 			pitch_deg = f32(math.to_degrees(snapshot.pitch)),
+			stance = game.stance_name(snapshot.stance),
 			grounded = snapshot.grounded,
 		}
 	}

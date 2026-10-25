@@ -427,7 +427,7 @@ field says otherwise. `look` deltas are pixels. `step.frames` and `perf.frames`
 are frames; `perf.prime` is seconds. Capture regions and crops are pixels.
 
 Check fields use the `state.json` shape, for example `player.position.y`,
-`player.grounded`, `objects.1.position.z`, `objects.count`,
+`player.grounded`, `player.stance`, `objects.1.position.z`, `objects.count`,
 `settings.window_mode`, `settings.resolution`, `settings.type_weight`,
 `menu.open`, `menu.status`, `menu.blocked`, `debug.active`,
 `debug.placement.armed`, `debug.sun.angular_diameter_deg`, `sun.elevation_deg`,
@@ -476,7 +476,7 @@ The batch runner and the live session share one command set:
   scenario with no captures, it is a plain step.
   `{"cmd":"settle","until":"converged"}` waits for the 512-sample cap and reports
   the frames and the result in `settle.frames` and `settle.converged`.
-- `{"cmd": "state"}`: player, eye, velocity, `yaw_deg`, `pitch_deg`, grounded, camera,
+- `{"cmd": "state"}`: player, eye, velocity, `yaw_deg`, `pitch_deg`, stance, grounded, camera,
   objects, window and input settings, debug mode, menu, rows, settle, renderer
   state, render digest, frame, and simulation digest. Each object entry carries
   its id, prefab, body mode, position, rotation, scale, spawn age, and light
@@ -687,10 +687,13 @@ rest through. It writes the same `summary.json` and `summary.md`.
 
 `scenarios/step-angle.json` walks from spawn to the 0.35 m step, turns, and
 climbs it at 60 degrees. It gates that an angled approach takes the step instead
-of sliding along the riser. The scenario needs no renderer:
+of sliding along the riser. `scenarios/ramp-headroom.json` puts a prone player
+under each ramp and tries to stand; it gates that the stance stays low instead
+of growing through the slab. Both scenarios need no renderer:
 
 ```sh
 ./bin/harbagsa-agent run scenarios/step-angle.json --no-render
+./bin/harbagsa-agent run scenarios/ramp-headroom.json --no-render
 ```
 
 ### Screenshot workflow
