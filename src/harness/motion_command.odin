@@ -2,10 +2,11 @@
 package harness
 
 import "core:encoding/json"
+import "core:mem"
 import "core:math"
 
 @(private)
-parse_look :: proc(object: json.Object) -> (Command, string) {
+parse_look :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(object, {"cmd", "dx", "dy"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
@@ -18,7 +19,7 @@ parse_look :: proc(object: json.Object) -> (Command, string) {
 }
 
 @(private)
-parse_face :: proc(object: json.Object) -> (Command, string) {
+parse_face :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(object, {"cmd", "yaw_deg", "pitch_deg"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
@@ -34,7 +35,7 @@ parse_face :: proc(object: json.Object) -> (Command, string) {
 }
 
 @(private)
-parse_input :: proc(object: json.Object) -> (Command, string) {
+parse_input :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(object, {"cmd", "forward", "right", "jump"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
@@ -62,19 +63,14 @@ parse_input_fields :: proc(object: json.Object) -> (input: Input_Command, error:
 		input.right = f32(right)
 		input.has_right = true
 	}
-	if value, has := json_get(object, "jump"); has {
-		jump, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'jump' must be a boolean")
-		}
-		input.jump = jump
-		input.has_jump = true
+	if field_error := json_take_bool(object, "jump", &input.jump, &input.has_jump); field_error != "" {
+		return {}, field_error
 	}
 	return input, ""
 }
 
 @(private)
-parse_camera :: proc(object: json.Object) -> (Command, string) {
+parse_camera :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(
 		object,
 		{"cmd", "position", "yaw_deg", "pitch_deg", "look_at", "fov_deg", "clear"},
@@ -82,12 +78,8 @@ parse_camera :: proc(object: json.Object) -> (Command, string) {
 		return {}, format_error("unknown key %q", key)
 	}
 	command := Command{kind = .Camera}
-	if value, has := json_get(object, "clear"); has {
-		clear, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'clear' must be a boolean")
-		}
-		command.camera.clear = clear
+	if field_error := json_bool(object, "clear", &command.camera.clear); field_error != "" {
+		return {}, field_error
 	}
 	if command.camera.clear {
 		for key, _ in object {

@@ -60,12 +60,8 @@ parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command
 	} else {
 		command.capture.format = command.capture.target == .Color ? .Png : .Stats
 	}
-	if value, has := json_get(object, "png"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'png' must be a boolean")
-		}
-		command.capture.png = flag
+	if field_error := json_bool(object, "png", &command.capture.png); field_error != "" {
+		return {}, field_error
 	}
 	if command.capture.format == .Png && command.capture.target != .Color {
 		return {}, format_error("%s", "a png capture needs the color target")

@@ -43,19 +43,11 @@ parse_editor_input :: proc(object: json.Object) -> (Editor_Input, string) {
 		input.palette_number = number
 		input.has_palette_number = true
 	}
-	if value, has := json_get(object, "flip_body"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, "'flip_body' must be a boolean"
-		}
-		input.flip_body = flag
+	if field_error := json_bool(object, "flip_body", &input.flip_body); field_error != "" {
+		return {}, field_error
 	}
-	if value, has := json_get(object, "snap_toggle"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, "'snap_toggle' must be a boolean"
-		}
-		input.snap_toggle = flag
+	if field_error := json_bool(object, "snap_toggle", &input.snap_toggle); field_error != "" {
+		return {}, field_error
 	}
 	if value, has := json_get(object, "turn"); has {
 		steps, ok := json_integer(value)
@@ -73,26 +65,14 @@ parse_editor_input :: proc(object: json.Object) -> (Editor_Input, string) {
 		input.wheel = steps
 		input.has_wheel = true
 	}
-	if value, has := json_get(object, "large"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, "'large' must be a boolean"
-		}
-		input.large = flag
+	if field_error := json_bool(object, "large", &input.large); field_error != "" {
+		return {}, field_error
 	}
-	if value, has := json_get(object, "primary"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, "'primary' must be a boolean"
-		}
-		input.primary = flag
+	if field_error := json_bool(object, "primary", &input.primary); field_error != "" {
+		return {}, field_error
 	}
-	if value, has := json_get(object, "secondary"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, "'secondary' must be a boolean"
-		}
-		input.secondary = flag
+	if field_error := json_bool(object, "secondary", &input.secondary); field_error != "" {
+		return {}, field_error
 	}
 	if _, has := json_get(object, "drag_move"); has {
 		delta, ok := vec2_field(object, "drag_move")
@@ -102,12 +82,8 @@ parse_editor_input :: proc(object: json.Object) -> (Editor_Input, string) {
 		input.drag_move = delta
 		input.has_drag_move = true
 	}
-	if value, has := json_get(object, "drag_release"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, "'drag_release' must be a boolean"
-		}
-		input.drag_release = flag
+	if field_error := json_bool(object, "drag_release", &input.drag_release); field_error != "" {
+		return {}, field_error
 	}
 	return input, ""
 }
