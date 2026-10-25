@@ -177,7 +177,12 @@ update_camera :: proc(r: ^Renderer, input: Render_Input) -> bool {
 			r.taa.debug.active && !r.taa.debug.light_shadows ? 0 : 1,
 		},
 		jitter = {input.jitter.x, input.jitter.y, 0, 0},
-		occlusion = {AO_RADIUS, AO_STRENGTH, input.ao ? 1.0 : 0.0, 0},
+		occlusion = {
+			input.ao_radius,
+			input.ao_strength,
+			input.ao ? 1.0 : 0.0,
+			input.clip_height,
+		},
 	}
 	return true
 }

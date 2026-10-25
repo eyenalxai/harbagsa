@@ -34,22 +34,32 @@ collect_editor_lines :: proc(dm: ^Debug_Mode, sim: ^Simulation, collector: ^Debu
 	collect_placement_lines(dm, collector)
 }
 
-append_debug_line :: proc "contextless" (collector: ^Debug_Lines, from, to: [3]f32, color: [4]f32) {
+append_debug_line :: proc "contextless" (
+	collector: ^Debug_Lines,
+	from, to: [3]f32,
+	color: [4]f32,
+	kind: geometry.Line_Kind = .World,
+) {
 	if collector.count >= len(collector.lines) {
 		return
 	}
-	collector.lines[collector.count] = {from = from, to = to, color = color}
+	collector.lines[collector.count] = {from = from, to = to, color = color, kind = kind}
 	collector.count += 1
 }
 
-append_box_edges :: proc "contextless" (collector: ^Debug_Lines, corners: [8][3]f32, color: [4]f32) {
+append_box_edges :: proc "contextless" (
+	collector: ^Debug_Lines,
+	corners: [8][3]f32,
+	color: [4]f32,
+	kind: geometry.Line_Kind = .World,
+) {
 	edges := [12][2]int {
 		{0, 1}, {1, 2}, {2, 3}, {3, 0},
 		{4, 5}, {5, 6}, {6, 7}, {7, 4},
 		{0, 4}, {1, 5}, {2, 6}, {3, 7},
 	}
 	for edge in edges {
-		append_debug_line(collector, corners[edge.x], corners[edge.y], color)
+		append_debug_line(collector, corners[edge.x], corners[edge.y], color, kind)
 	}
 }
 

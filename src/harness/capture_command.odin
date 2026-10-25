@@ -11,7 +11,7 @@ import "src:renderer"
 parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(
 		object,
-		{"cmd", "name", "frame", "alpha", "target", "format", "png", "region", "rect", "profile", "crop", "histogram", "steps"},
+		{"cmd", "name", "note", "frame", "alpha", "target", "format", "png", "region", "rect", "profile", "crop", "histogram", "steps", "color_key"},
 	); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
@@ -25,6 +25,13 @@ parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command
 		}
 		capture_name = name
 		has_capture_name = true
+	}
+	if value, has := json_get(object, "note"); has {
+		note, ok := json_string(value)
+		if !ok {
+			return {}, format_error("%s", "'note' must be a string")
+		}
+		command.capture.note = strings.clone(note, allocator)
 	}
 	if value, has := json_get(object, "frame"); has {
 		frame, ok := json_integer(value)
@@ -101,6 +108,13 @@ parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command
 		}
 		command.capture.steps = steps
 	}
+	if value, has := json_get(object, "color_key"); has {
+		color_key, color_error := parse_capture_color_key(value)
+		if color_error != "" {
+			return {}, color_error
+		}
+		command.capture.color_key = color_key
+	}
 	// A region and a histogram read the statistics path, a crop writes a PNG,
 	// and a profile decodes the color image.
 	_, has_region := command.capture.region.?
@@ -110,6 +124,13 @@ parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command
 	_, has_histogram := command.capture.histogram.?
 	if has_histogram && command.capture.format != .Stats {
 		return {}, format_error("%s", "'histogram' needs format 'stats'")
+	}
+	_, has_color_key := command.capture.color_key.?
+	if has_color_key && command.capture.format != .Stats {
+		return {}, format_error("%s", "'color_key' needs format 'stats'")
+	}
+	if has_color_key && command.capture.target != .Color {
+		return {}, format_error("%s", "'color_key' needs the color target")
 	}
 	_, has_crop := command.capture.crop.?
 	if has_crop && command.capture.format != .Png {

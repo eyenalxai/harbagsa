@@ -40,6 +40,10 @@ without a second build.
 - `sky` turns the sky pass on or off. The sky is a background, not a light.
   `ao` turns the occlusion rays on or off; they scale the sun and the point
   lights, so the contact term can be measured apart from the direct light.
+  `ao_radius` and `ao_strength` tune the same term without a rebuild.
+- `clip_height` discards fragments above a world height, so a top-down camera
+  can read a plan through the roof. The discard needs the Vulkan 1.3 shader
+  demote feature, which the device check requires and the logical device enables.
 - The resolve takes the overrides as push constants. A fixed weight replaces
   `count / (count + 1)`; a flag skips the clamp; a flag forces the depth trust.
 - The renderer report carries the override struct, so a scenario asserts the

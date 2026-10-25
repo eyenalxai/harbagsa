@@ -76,6 +76,7 @@ COMMAND_DESCRIPTIONS := [?]struct {
 
 SCENARIO_KEYS := []string {
 	"version",
+	"note",
 	"view",
 	"checks",
 	"commands",

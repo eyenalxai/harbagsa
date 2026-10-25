@@ -16,6 +16,7 @@ Scenario_Parameter :: struct {
 
 Scenario_Source :: struct {
 	path:       string               `json:"path"`,
+	note:       string               `json:"note,omitempty"`,
 	hash:       string               `json:"hash"`,
 	parameters: []Scenario_Parameter `json:"parameters,omitempty"`,
 }
@@ -133,7 +134,7 @@ scenario_build :: proc(value: json.Value, allocator: mem.Allocator) -> (Scenario
 	}
 	if key, unknown := json_unknown_key(
 		object,
-		{"version", "view", "checks", "commands", "renderer_debug", "requires", "analysis", "size", "extends", "parameters"},
+		{"version", "note", "view", "checks", "commands", "renderer_debug", "requires", "analysis", "size", "extends", "parameters"},
 	); unknown {
 		return {}, fmt.aprintf("unknown scenario key %q", key, allocator = allocator)
 	}
@@ -151,6 +152,14 @@ scenario_build :: proc(value: json.Value, allocator: mem.Allocator) -> (Scenario
 		if !version_ok || version != 1 {
 			return {}, format_error("%s", "scenario 'version' must be 1")
 		}
+	}
+
+	if note_value, has_note := json_get(object, "note"); has_note {
+		note, note_ok := json_string(note_value)
+		if !note_ok {
+			return {}, format_error("%s", "scenario 'note' must be a string")
+		}
+		scenario.source.note = strings.clone(note, allocator)
 	}
 
 	if size_value, has_size := json_get(object, "size"); has_size {
@@ -219,6 +228,9 @@ scenario_destroy :: proc(scenario: ^Scenario, allocator: mem.Allocator) {
 	delete(scenario.commands)
 	if scenario.source.path != "" {
 		delete(scenario.source.path, allocator)
+	}
+	if scenario.source.note != "" {
+		delete(scenario.source.note, allocator)
 	}
 	if scenario.source.hash != "" {
 		delete(scenario.source.hash, allocator)

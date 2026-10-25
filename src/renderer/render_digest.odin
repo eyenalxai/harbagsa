@@ -13,8 +13,9 @@ Render_Digest_Field :: struct {
 
 // The digest names the effective render inputs, not the game state. Two frames
 // with the same digest draw the same scene before the resolve. `hud` and
-// `debug_lines` are unhashed on purpose: they draw after the resolve, and the
-// view flags already record whether each is present.
+// `debug_lines` are unhashed on purpose: they draw after the resolve. The view
+// flags cover the HUD and the F1 world draw, but editor lines follow F2 and the
+// active tool, so `renderer.debug_vertices` is the count to check.
 RENDER_DIGEST_FIELDS := [?]Render_Digest_Field {
 	{"width", true, write_width, ""},
 	{"height", true, write_height, ""},
@@ -28,6 +29,9 @@ RENDER_DIGEST_FIELDS := [?]Render_Digest_Field {
 	{"atlas_weight", true, write_atlas_weight, ""},
 	{"sky", true, write_sky, ""},
 	{"ao", true, write_ao, ""},
+	{"ao_radius", true, write_ao_radius, ""},
+	{"ao_strength", true, write_ao_strength, ""},
+	{"clip_height", true, write_clip_height, ""},
 	{"view_flags", true, write_view_flags, ""},
 	{"debug_lines", false, nil, "draws after the resolve"},
 	{"hud", false, nil, "draws after the resolve"},
@@ -144,6 +148,21 @@ write_sky :: proc(hash: ^digest.FNV, input: Render_Input) {
 @(private)
 write_ao :: proc(hash: ^digest.FNV, input: Render_Input) {
 	digest.write_bool(hash, input.ao)
+}
+
+@(private)
+write_ao_radius :: proc(hash: ^digest.FNV, input: Render_Input) {
+	digest.write_f32(hash, input.ao_radius)
+}
+
+@(private)
+write_ao_strength :: proc(hash: ^digest.FNV, input: Render_Input) {
+	digest.write_f32(hash, input.ao_strength)
+}
+
+@(private)
+write_clip_height :: proc(hash: ^digest.FNV, input: Render_Input) {
+	digest.write_f32(hash, input.clip_height)
 }
 
 @(private)

@@ -56,6 +56,7 @@ session_draw_group :: proc(session: ^Session, requests: []Capture_Request) -> st
 		session_refresh_renderer(session)
 		for &result in results {
 			result.render_digest = strings.clone(session.render.digest_text, session.allocator)
+			result.renderer = session.render.report
 			append(&session.capture.captures, result)
 		}
 		session_refresh_analysis(session)

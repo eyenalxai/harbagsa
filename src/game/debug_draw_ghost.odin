@@ -13,14 +13,14 @@ collect_placement_lines :: proc(dm: ^Debug_Mode, collector: ^Debug_Lines) {
 	color := debug_ghost_color(dm)
 	footprint := [4]f32{color.x, color.y, color.z, GHOST_FOOTPRINT_COLOR.a}
 	corners := oriented_box_corners(ghost.center, ghost.half_extents, ghost.rotation)
-	append_box_edges(collector, corners, color)
+	append_box_edges(collector, corners, color, .Placement)
 
 	extent := oriented_aabb_half_extents(ghost.half_extents, ghost.rotation)
 	append_footprint(collector, ghost.bottom, extent, ghost.surface.y, footprint)
 
 	if ghost.bottom.y > ghost.surface.y {
 		guide := [3]f32{ghost.bottom.x, ghost.surface.y, ghost.bottom.z}
-		append_debug_line(collector, guide, ghost.bottom, color)
+		append_debug_line(collector, guide, ghost.bottom, color, .Placement)
 	}
 }
 
@@ -38,6 +38,6 @@ append_footprint :: proc(
 		{bottom.x - extent.x, height, bottom.z + extent.z},
 	}
 	for corner, index in corners {
-		append_debug_line(collector, corner, corners[(index + 1) % len(corners)], color)
+		append_debug_line(collector, corner, corners[(index + 1) % len(corners)], color, .Placement)
 	}
 }
