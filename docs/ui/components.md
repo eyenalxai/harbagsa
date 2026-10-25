@@ -41,9 +41,7 @@ literal that no longer matches the theme.
 ## Capture hint
 
 Use when the cursor is not captured and the player needs one instruction. It is
-transient: it disappears when capture is set. A short game note, such as
-`Repro saved`, uses the same box and position and takes precedence; it stays
-visible while the cursor is captured and clears on its own timer.
+transient: it disappears when capture is set.
 
 Use instead when the game is paused: the settings panel, which hides the hint.
 The status panel may draw at the same time.

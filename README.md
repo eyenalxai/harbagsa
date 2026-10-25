@@ -397,9 +397,8 @@ The scene carries the camera source and view, the player pose when the source is
 window and input settings, the type weight, the display list, the view flags,
 and the active renderer debug overrides. A file with overrides declares
 `"requires": {"renderer_debug": true}` itself, so it replays without a flag.
-`--repro-dir DIR` or `HARBAGSA_REPRO_DIR` moves the directory. The HUD shows a
-short `Repro saved` note beside the capture hint. Milliseconds in the name keep
-two presses apart.
+`--repro-dir DIR` or `HARBAGSA_REPRO_DIR` moves the directory. Milliseconds in
+the name keep two presses apart.
 
 `record` starts with the same scene, so a recording begins from the live state
 instead of a bare reset. A recorded scene is compact; the F5 file is pretty.
