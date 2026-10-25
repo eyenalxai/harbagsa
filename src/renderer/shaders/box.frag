@@ -188,7 +188,11 @@ void main() {
         ao = ambient_visibility(v_world_position, normal, camera.lighting.x, phase);
         ao = mix(1.0, ao, camera.lighting.y);
     }
-    vec3 lit = ambient * ao + diffuse * SUN_COLOR * visibility;
+    // The sky ambient is a fixed exposure, not the real sky-to-sun ratio, so a
+    // full AO band on a sunlit floor reads as dirt. Direct sun buries the sky
+    // term in life. Keep the occlusion where the sky is the only light.
+    float shade = 1.0 - visibility;
+    vec3 lit = ambient * mix(1.0, ao, shade) + diffuse * SUN_COLOR * visibility;
     lit += point_light_radiance(v_world_position, normal);
     vec3 color = v_color * lit + v_color * object.color.a;
 

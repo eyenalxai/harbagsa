@@ -864,15 +864,18 @@ side.
 
 The sky is an analytic gradient. It draws after the lit pass and shades only the
 background pixels. The lit pass traces eight ambient occlusion rays per fragment
-and scales the ambient term by the visible fraction. Both features are on by
-default. Both are debug overrides, so the two terms can be measured apart.
+and scales the ambient term by the visible fraction, but only where the sun does
+not reach the point. A sunlit fragment keeps the full ambient. Both features are
+on by default. Both are debug overrides, so the two terms can be measured apart.
 `{"cmd": "renderer_debug", "sky": false}` removes the sky pass and its ambient
 contribution; `{"cmd": "renderer_debug", "ao": false}` keeps the sky light but
 drops the occlusion term. `clear` turns both back on.
 
 `scenarios/sky-ao.json` captures the arena with both on, both off, and split.
-The render digest covers both flags because they change the image. The design
-and the noise budget are in
+`scenarios/stairs-ao.json` captures the stairs at a 25° sun with the AO on and
+off, and checks that the sunlit floor keeps one value while the shaded wall
+still darkens. It declares `requires.renderer_debug`. The render digest covers both flags because they change the
+image. The design and the noise budget are in
 `docs/adr/0017-sky-ambient-and-ray-traced-ambient-occlusion.md`.
 
 ## Performance
@@ -1119,8 +1122,9 @@ frame-rate change.
   `scenarios/editor-ghost.json`, `scenarios/editor-sun.json`,
   `scenarios/editor-object.json`, `scenarios/editor-lamps.json`,
   `scenarios/debug-pop.json`, `scenarios/type-weight.json`,
-  `scenarios/sky-ao.json`, `scenarios/shadow-angle.json`,
-  `scenarios/perf-crates.json`, and `scenarios/perf-lamps.json`.
+  `scenarios/sky-ao.json`, `scenarios/stairs-ao.json`,
+  `scenarios/shadow-angle.json`, `scenarios/perf-crates.json`, and
+  `scenarios/perf-lamps.json`.
 
 ## Adding a command
 
