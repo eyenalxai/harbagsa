@@ -547,10 +547,11 @@ The batch runner and the live session share one command set:
   `rows` dumps the HUD and menu rows. The renderer object reports the frame
   count, TAA state, jitter index, history validity, convergence frames, history
   read index and weight, reset count and reason, shadow phase, the active light
-  count, the applied atlas weight, text truncations and dropped fonts, and the
-  debug override values. `setup.renderer.shader_digest` is the FNV hash of the
-  SPIR-V embedded in the binary, so a shader edit is visible even when
-  `render_digest` stays the same. `render_digest` covers the target extent, the effective
+  count, the applied atlas weight, text truncations and dropped fonts, the
+  debug line vertex count, and the debug override values.
+  `setup.renderer.shader_digest` is the FNV hash of the SPIR-V embedded in the
+  binary, so a shader edit is visible even when `render_digest` stays the same.
+  `render_digest` covers the target extent, the effective
   camera, sun direction and angular diameter, boxes, point lights, emissive
   strengths, jitter, shadow phase, applied atlas weight, the sky and AO flags,
   and view flags.
@@ -858,9 +859,9 @@ tool. It checks the palette, placement, and object state without a window.
 captures the Platform and Ramp previews. Run it with `--size 800x600` to check
 that the bottom dock still fits and clears the crosshair.
 
-`scenarios/editor-sun.json` enters sun placement, captures the sun gizmo on the
-sky dome, sets a sun position through the dome projection, and captures the
-committed lighting.
+`scenarios/editor-sun.json` captures the player view and the idle sun with no
+debug lines, enters sun placement to capture the gizmo on the sky dome, sets a
+sun position through the dome projection, and captures the committed lighting.
 `scenarios/editor-object.json` edits a placed object, captures the inspector,
 then captures the undo and redo restores. `scenarios/editor-lamps.json` captures
 the three lamp previews, places a warm lamp, a cool panel, a red beacon, and a
