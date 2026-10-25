@@ -17,6 +17,13 @@ Trace_Record :: struct {
 	samples: []perf_pkg.Sample,
 }
 
+// One backend policy for the batch run and the live session. The provider is
+// called only when a row needs a renderer and rendering is enabled.
+Backend_Provider :: struct {
+	ctx:    rawptr,
+	ensure: proc(ctx: rawptr) -> string,
+}
+
 Session :: struct {
 	allocator: mem.Allocator,
 	sim:      game.Simulation,
@@ -33,6 +40,8 @@ Session :: struct {
 	frame: int,
 
 	backend:           ^Backend,
+	backend_provider:  Backend_Provider,
+	render_enabled:    bool,
 	present:           bool,
 	render_every_step: bool,
 	render_failed:     bool,
@@ -81,6 +90,7 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 		debug = game.debug_mode_create(allocator),
 		analysis_config = analysis_config_default(),
 		renderer_report = {last_reset = "none"},
+		render_enabled = true,
 	}
 	session.hud.menu.displays = display.fallback_list()
 	// The scratch holds the frame's debug lines, so it is too large for a local
@@ -239,4 +249,15 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 		}
 	}
 	return ""
+}
+
+@(private)
+session_ensure_backend :: proc(session: ^Session) -> string {
+	if session.backend != nil && session.backend.ready {
+		return ""
+	}
+	if session.backend_provider.ensure == nil {
+		return ""
+	}
+	return session.backend_provider.ensure(session.backend_provider.ctx)
 }

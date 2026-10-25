@@ -7,7 +7,7 @@ import "src:game"
 
 session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 	if !session.debug.active {
-		return "editor needs debug mode; send {\"cmd\": \"debug_mode\", \"active\": true} first"
+		return format_error("%s", "editor needs debug mode; send {\"cmd\": \"debug_mode\", \"active\": true} first")
 	}
 
 	if command.has_camera {

@@ -45,6 +45,11 @@ session_main :: proc(options: Session_Options) -> int {
 		trace_dir  = strings.clone(absolute_frames, context.allocator),
 	}
 	runtime.session.debug_renderer = options.debug_renderer
+	runtime.session.render_enabled = !options.no_render
+	runtime.session.backend_provider = {
+		ctx = &runtime,
+		ensure = runtime_provider_ensure,
+	}
 	if options.no_analysis {
 		runtime.session.analysis_config.enabled = false
 	}
@@ -84,7 +89,7 @@ runtime_ensure_backend :: proc(runtime: ^Session_Runtime, present: bool) -> stri
 		return ""
 	}
 	if runtime.options.no_render {
-		return "capture requires rendering"
+		return format_error("%s", "capture requires rendering")
 	}
 	backend, backend_error := backend_create(
 		runtime.options.width,
@@ -129,33 +134,6 @@ runtime_handle_line :: proc(runtime: ^Session_Runtime, line: string) -> []byte {
 		return data
 	}
 	defer command_destroy(&command, context.allocator)
-
-	backend_error := ""
-	if command.kind == .Capture ||
-	   (command.kind == .Perf && !runtime.options.no_render) ||
-	   (command.kind == .Settle && !runtime.options.no_render) {
-		backend_error = runtime_ensure_backend(runtime, false)
-	}
-	if command.kind == .Replay {
-		scenario, load_error := scenario_load(command.replay.path, context.allocator)
-		if load_error == "" {
-			defer scenario_destroy(&scenario, context.allocator)
-			if scenario_has_capture(scenario) ||
-			   (scenario_has_perf(scenario) && !runtime.options.no_render) {
-				backend_error = runtime_ensure_backend(runtime, false)
-			}
-		} else {
-			delete(load_error, context.allocator)
-		}
-	}
-	if backend_error != "" {
-		reply := Reply{ok = false, cmd = command_name(command.kind), frame = runtime.session.frame}
-		reply.error = strings.clone(backend_error, context.allocator)
-		data := encode_reply(reply)
-		reply_destroy(&reply, context.allocator)
-		runtime.had_error = true
-		return data
-	}
 
 	reply := session_execute(&runtime.session, command, trimmed)
 	if reply.ok && reply.perf != nil && runtime.session.has_trace {
@@ -254,6 +232,12 @@ serve_stream :: proc(runtime: ^Session_Runtime, input, output: ^os.File) -> stri
 	}
 	_ = consume_tail(runtime, &pending, sink)
 	return ""
+}
+
+@(private)
+runtime_provider_ensure :: proc(ctx: rawptr) -> string {
+	runtime := cast(^Session_Runtime)ctx
+	return runtime_ensure_backend(runtime, false)
 }
 
 @(private)

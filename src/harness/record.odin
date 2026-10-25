@@ -8,10 +8,10 @@ import "core:strings"
 
 session_record_start :: proc(session: ^Session, path: string) -> string {
 	if session.recording {
-		return "already recording; send 'record' without a path to stop"
+		return format_error("%s", "already recording; send 'record' without a path to stop")
 	}
 	if path == "" {
-		return "record needs a path to start"
+		return format_error("%s", "record needs a path to start")
 	}
 	session.recording = true
 	session.record_path = strings.clone(path, session.allocator)
@@ -62,7 +62,7 @@ session_record_start :: proc(session: ^Session, path: string) -> string {
 
 session_record_stop :: proc(session: ^Session) -> (path: string, error: string) {
 	if !session.recording {
-		return "", "not recording"
+		return "", format_error("%s", "not recording")
 	}
 
 	builder := strings.builder_make(allocator = context.temp_allocator)

@@ -70,7 +70,7 @@ backend_create :: proc(
 		if platform_error != .None {
 			delete(data.frames_dir, allocator)
 			free(data, allocator)
-			return {}, "platform init failed"
+			return {}, format_error("%s", "platform init failed")
 		}
 		data.window = window
 		renderer_config = {
@@ -83,7 +83,7 @@ backend_create :: proc(
 		if !platform.headless_init(&data.headless, width, height) {
 			delete(data.frames_dir, allocator)
 			free(data, allocator)
-			return {}, "headless Vulkan loader init failed"
+			return {}, format_error("%s", "headless Vulkan loader init failed")
 		}
 		renderer_config = {
 			platform = platform.headless_platform(&data.headless),
@@ -102,7 +102,7 @@ backend_create :: proc(
 		}
 		delete(data.frames_dir, allocator)
 		free(data, allocator)
-		return {}, "renderer init failed"
+		return {}, format_error("%s", "renderer init failed")
 	}
 	data.renderer = state
 	return {

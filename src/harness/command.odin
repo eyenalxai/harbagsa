@@ -173,78 +173,14 @@ Command :: struct {
 }
 
 command_name :: proc(kind: Command_Kind) -> string {
-	switch kind {
-	case .Reset:
-		return "reset"
-	case .Look:
-		return "look"
-	case .Face:
-		return "face"
-	case .Input:
-		return "input"
-	case .Step:
-		return "step"
-	case .Settle:
-		return "settle"
-	case .State:
-		return "state"
-	case .Capture:
-		return "capture"
-	case .Camera:
-		return "camera"
-	case .View:
-		return "view"
-	case .Sun:
-		return "sun"
-	case .Debug_Mode:
-		return "debug_mode"
-	case .Editor:
-		return "editor"
-	case .Menu:
-		return "menu"
-	case .Check:
-		return "check"
-	case .Record:
-		return "record"
-	case .Replay:
-		return "replay"
-	case .Perf:
-		return "perf"
-	case .Renderer_Debug:
-		return "renderer_debug"
-	case .Displays:
-		return "displays"
-	case .Rows:
-		return "rows"
-	case .Quit:
-		return "quit"
-	}
-	return "unknown"
+	return command_row_by_kind(kind).name
 }
 
 command_destroy :: proc(command: ^Command, allocator: mem.Allocator) {
-	#partial switch command.kind {
-	case .Capture:
-		delete(command.capture.name, allocator)
-	case .Check:
-		delete(command.check.field, allocator)
-		if command.check.has_other {
-			delete(command.check.other, allocator)
-		}
-		check_value_destroy(&command.check.value, allocator)
-	case .Record:
-		delete(command.record.path, allocator)
-	case .Replay:
-		delete(command.replay.path, allocator)
-	case .Perf:
-		if command.perf.has_trace {
-			delete(command.perf.trace, allocator)
-		}
-		if command.perf.has_name {
-			delete(command.perf.name, allocator)
-		}
-	case .Displays:
-		displays_command_destroy(&command.displays, allocator)
+	row := command_row_by_kind(command.kind)
+	if row.destroy != nil {
+		row.destroy(command, allocator)
+		return
 	}
 	command^ = {}
 }
