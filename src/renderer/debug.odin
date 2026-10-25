@@ -83,7 +83,7 @@ renderer_debug_patch :: proc(debug: Renderer_Debug) -> Renderer_Debug_Patch {
 		sky                 = debug.sky,
 		gi                  = debug.gi,
 		ao                  = debug.ao,
-		ao_radius          = debug.ao_radius,
+		ao_radius           = debug.ao_radius,
 		ao_strength         = debug.ao_strength,
 		clip_height         = debug.clip_height,
 	}

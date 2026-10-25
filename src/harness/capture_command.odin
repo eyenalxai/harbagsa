@@ -172,6 +172,15 @@ json_write_separator :: proc(builder: ^strings.Builder, has_previous: ^bool) {
 	has_previous^ = true
 }
 
+json_write_string :: proc(builder: ^strings.Builder, value: string) {
+	data, encode_error := json.marshal(value, {}, context.temp_allocator)
+	if encode_error != nil {
+		strings.write_string(builder, `""`)
+		return
+	}
+	strings.write_bytes(builder, data)
+}
+
 capture_json_fields :: proc(
 	builder: ^strings.Builder,
 	capture: Capture_Command,
@@ -180,11 +189,13 @@ capture_json_fields :: proc(
 ) {
 	if capture.name != "" {
 		json_write_separator(builder, has_previous)
-		fmt.sbprintf(builder, `"name": %q`, capture.name)
+		fmt.sbprint(builder, `"name": `)
+		json_write_string(builder, capture.name)
 	}
 	if capture.note != "" {
 		json_write_separator(builder, has_previous)
-		fmt.sbprintf(builder, `"note": %q`, capture.note)
+		fmt.sbprint(builder, `"note": `)
+		json_write_string(builder, capture.note)
 	}
 	if with_timing {
 		if capture.has_frame {
@@ -198,11 +209,13 @@ capture_json_fields :: proc(
 	}
 	if capture.target != .Color {
 		json_write_separator(builder, has_previous)
-		fmt.sbprintf(builder, `"target": %q`, renderer.capture_target_name(capture.target))
+		fmt.sbprint(builder, `"target": `)
+		json_write_string(builder, renderer.capture_target_name(capture.target))
 	}
 	if capture.format != .Png {
 		json_write_separator(builder, has_previous)
-		fmt.sbprintf(builder, `"format": %q`, capture_format_name(capture.format))
+		fmt.sbprint(builder, `"format": `)
+		json_write_string(builder, capture_format_name(capture.format))
 	}
 	if capture.png {
 		json_write_separator(builder, has_previous)
@@ -232,11 +245,13 @@ capture_json_fields :: proc(
 	}
 	if profile, has := capture.profile.?; has {
 		json_write_separator(builder, has_previous)
+		fmt.sbprint(builder, `"profile": {"axis": `)
+		json_write_string(builder, profile_axis_name(profile.axis))
+		fmt.sbprint(builder, `, "channel": `)
+		json_write_string(builder, profile_channel_name(profile.channel))
 		fmt.sbprintf(
 			builder,
-			`"profile": {{"axis": %q, "channel": %q, "at": %d, "from": %d, "to": %d`,
-			profile_axis_name(profile.axis),
-			profile_channel_name(profile.channel),
+			`, "at": %d, "from": %d, "to": %d`,
 			profile.at,
 			profile.from,
 			profile.to,
