@@ -45,33 +45,17 @@ parse_editor_object :: proc(object: json.Object) -> (Editor_Object, string) {
 		editor.rotate_deg = f32(degrees)
 		editor.has_rotate = true
 	}
-	if value, has := json_get(object, "delete"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, "'delete' must be a boolean"
-		}
-		editor.delete = flag
+	if field_error := json_bool(object, "delete", &editor.delete); field_error != "" {
+		return {}, field_error
 	}
-	if value, has := json_get(object, "duplicate"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, "'duplicate' must be a boolean"
-		}
-		editor.duplicate = flag
+	if field_error := json_bool(object, "duplicate", &editor.duplicate); field_error != "" {
+		return {}, field_error
 	}
-	if value, has := json_get(object, "undo"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, "'undo' must be a boolean"
-		}
-		editor.undo = flag
+	if field_error := json_bool(object, "undo", &editor.undo); field_error != "" {
+		return {}, field_error
 	}
-	if value, has := json_get(object, "redo"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, "'redo' must be a boolean"
-		}
-		editor.redo = flag
+	if field_error := json_bool(object, "redo", &editor.redo); field_error != "" {
+		return {}, field_error
 	}
 	return editor, ""
 }

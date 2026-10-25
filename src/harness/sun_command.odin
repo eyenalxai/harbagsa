@@ -2,6 +2,7 @@
 package harness
 
 import "core:encoding/json"
+import "core:mem"
 import "core:math"
 
 import "src:renderer"
@@ -10,17 +11,13 @@ import "src:renderer"
 // renderer consumes: azimuth from +z toward +x, and elevation above the
 // horizon. Every angle is in degrees; the session converts to radians.
 @(private)
-parse_sun :: proc(object: json.Object) -> (Command, string) {
+parse_sun :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(object, {"cmd", "azimuth_deg", "elevation_deg", "diameter_deg", "clear"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 	command := Command{kind = .Sun}
-	if value, has := json_get(object, "clear"); has {
-		clear, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'clear' must be a boolean")
-		}
-		command.sun.clear = clear
+	if field_error := json_bool(object, "clear", &command.sun.clear); field_error != "" {
+		return {}, field_error
 	}
 	if value, has := json_get(object, "azimuth_deg"); has {
 		azimuth, ok := json_number(value)
