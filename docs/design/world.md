@@ -64,7 +64,9 @@ keep the whole contact term.
 The ambient uses 8 rays and the sun 16. A partial count carries a per-pixel,
 per-frame offset inside its own step; a full or empty count stays exact. Without
 that offset the shade steps in eighths and the floor below a ramp shows contour
-bands. The output dither is a separate, last step for the 8-bit write.
+bands. The TAA history is 32-bit, so the resolve can average the offset over the
+phase sequence; a 16-bit history rounds that average away and keeps the count
+field. The output dither is a separate, last step for the 8-bit write.
 
 If a surface must look different, change its albedo. Do not add a lighting term.
 

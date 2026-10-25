@@ -149,3 +149,32 @@ Superseded by `docs/adr/0017-sky-ambient-and-ray-traced-ambient-occlusion.md`: t
 The moving crate shadow stays sharp. Against a no-TAA reference the count variant
 differs by 0.39/255 mean; the count does not keep the stale shadow for the length
 of the history.
+
+## History precision
+
+Captured on 2026-10-25 from `fix/shadow-banding-1`. The accumulation count caps
+at 512, so each new sample carries weight 1/513. The shaded floor below a ramp
+has a linear value near 0.03, where one fp16 step is about 3e-5; the update is
+below that step. The 16-bit history therefore cannot hold the running average,
+and the resolved field keeps the 1/8 ambient-occlusion steps.
+
+The history is now `R32G32B32A32_SFLOAT`; the scene color, velocity, and count
+targets stay 16-bit. `scenarios/ramp-shadow-crouch.json` is the image gate. At
+1280x720 in its 600x300 region, after 600 frames:
+
+| History | Steps | Max jump |
+| --- | ---: | ---: |
+| R16G16B16A16_SFLOAT | 275 | 0.638 |
+| R32G32B32A32_SFLOAT | 0 | 0.494 |
+
+Against the mean of 32 frozen sun phases rendered with TAA off, the 32-bit field
+is -0.000015 linear luma away with a 0.0014 deviation; the 16-bit field is
+-0.0031 with 0.0024. The shadow region moves 0.0022 luma between frames 180 and
+600 with 16-bit, and 0.0001 with 32-bit.
+
+`scenarios/perf.json` at 2560x1440, median of three runs: the TAA resolve rises
+from 0.222 to 0.393 ms and the GPU total from 1.530 to 1.705 ms. The scene pass
+is unchanged within the run spread. The two history images cost 59 MB more at
+1440p, and the capture readback buffer sizes for 16 bytes per texel.
+
+The decision and the options are in `docs/adr/0027-32-bit-taa-history.md`.

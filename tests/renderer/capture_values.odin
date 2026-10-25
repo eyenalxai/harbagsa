@@ -22,6 +22,26 @@ capture_values_decode_rgba16f :: proc(t: ^testing.T) {
 }
 
 @(test)
+capture_values_decode_rgba32f :: proc(t: ^testing.T) {
+	// 1.0, 2.0, 3.0, 4.0 as little-endian binary32.
+	bytes := []u8 {
+		0x00, 0x00, 0x80, 0x3F,
+		0x00, 0x00, 0x00, 0x40,
+		0x00, 0x00, 0x40, 0x40,
+		0x00, 0x00, 0x80, 0x40,
+	}
+	values := renderer.capture_values(bytes, .R32G32B32A32_SFLOAT, context.temp_allocator)
+	testing.expect_value(t, len(values), 4)
+	if len(values) != 4 {
+		return
+	}
+	testing.expect_value(t, values[0], f32(1))
+	testing.expect_value(t, values[1], f32(2))
+	testing.expect_value(t, values[2], f32(3))
+	testing.expect_value(t, values[3], f32(4))
+}
+
+@(test)
 capture_values_decode_depth_into_the_first_channel :: proc(t: ^testing.T) {
 	depth := f32(2.5)
 	bytes := slice_to_bytes(depth)

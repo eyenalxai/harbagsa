@@ -727,7 +727,9 @@ box-filters the luma 9x9, which removes the output dither and the sample noise,
 then counts adjacent jumps above half a level and below 8 levels. A soft shadow
 gradient reports no steps; a ray-count step leaves a run of them. Keep the
 region at least four pixels inside a flat boundary, because the filter reads
-that margin. `scenarios/ramp-shadow.json` is the worked example.
+that margin. `scenarios/ramp-shadow.json` and
+`scenarios/ramp-shadow-crouch.json` are the worked examples; the second looks
+from the crouched view under the ramp, where the steps are widest.
 
 A color capture accepts a `profile` block and `"format": "profile"` for an
 edge measurement, and a `crop` block to write a scaled PNG. Add `"png": true`
@@ -999,10 +1001,14 @@ still darkens. It declares `requires.renderer_debug`.
 and gates the visibility band metric. A partial ray count is offset inside its
 own step, so the shade
 does not show 1/8 or 1/16 contour bands; the full and empty counts stay exact.
-The render digest covers both flags because they change the image. The design
-and the noise budget are in
+`scenarios/ramp-shadow-crouch.json` repeats the gate from the crouched view
+under the ramp, where the 1/8 steps are widest; it also needs the 32-bit TAA
+history, because a 16-bit history rounds the accumulated update away and keeps
+the steps. The render digest covers both flags because they change the image.
+The design and the noise budget are in
 `docs/adr/0017-sky-ambient-and-ray-traced-ambient-occlusion.md`; the count
-dither is in `docs/adr/0024-visibility-count-dither.md`.
+dither is in `docs/adr/0024-visibility-count-dither.md`; the history width is
+in `docs/adr/0027-32-bit-taa-history.md`.
 
 ## Interior room
 
@@ -1286,8 +1292,9 @@ frame-rate change.
   `scenarios/editor-object.json`, `scenarios/editor-lamps.json`,
   `scenarios/debug-pop.json`, `scenarios/type-weight.json`,
   `scenarios/sky-ao.json`, `scenarios/stairs-ao.json`,
-  `scenarios/ramp-shadow.json`, `scenarios/shadow-angle.json`,
-  `scenarios/room-lighting.json`, `scenarios/perf-crates.json`, and
+  `scenarios/ramp-shadow.json`, `scenarios/ramp-shadow-crouch.json`,
+  `scenarios/shadow-angle.json`, `scenarios/room-lighting.json`,
+  `scenarios/perf-crates.json`, and
   `scenarios/perf-lamps.json`.
 
 ## Adding a command
