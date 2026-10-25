@@ -174,7 +174,12 @@ write_analysis :: proc(
 	}
 
 	summary := analysis_summary(window)
-	summary.bands = analysis_bands(last_pixels, first_width, first_height)
+	if region, has_region := config.region.?; has_region {
+		if !capture_region_valid(region, first_width, first_height) {
+			return "", format_error("analysis region must be inside the capture")
+		}
+	}
+	summary.bands = analysis_bands(last_pixels, first_width, first_height, config.region)
 	report := Analysis_Report {
 		window = {start = config.start, count = len(window)},
 		pairs = analysis_pairs(window, allocator),

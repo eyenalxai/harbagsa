@@ -79,6 +79,7 @@ serializes Make with `flock`.
 | test lighting inside the closed room | **Interior room** |
 | measure image stability or the period | **Analysis** |
 | compare two builds or revisions | **Cross-run diff** and **Cross-run compare** |
+| discover command fields and check paths | `harbagsa-agent schema` |
 | script the display list | **Commands** (`displays`) |
 | dump the HUD and menu rows | **Commands** (`rows`) |
 | measure an edge or a gradient | **Capture targets** and **Analysis** |
@@ -277,18 +278,21 @@ convergence count reaches the 512 cap and reports `settle.frames` and
 `settle.converged`. It needs a renderer.
 
 A `scene` command applies one exact scene. Its blocks are `camera`, `sun`,
-`objects`, `settings`, `view`, and `displays`, and every block is optional. The
-camera source is `player`, `debug`, or `override`; a player source carries a
-`player` block with the feet position, yaw, pitch, stance, velocity, grounded
-state, step smoothing, and eye height. An object carries
-its id, prefab, body, position, rotation quaternion, colour, and light. The
-settings carry the window mode, display index, windowed resolution, input
-modes, and type weight. The display list replaces the menu list. `F5` writes one
-scene, and `record` starts with one, so a live view replays as a normal
-scenario. A scene load closes the settings menu.
+`objects`, `settings`, `view`, `displays`, and `renderer_debug`, and every block
+is optional. A `settings` block may carry any subset of its fields; an omitted
+field keeps the live value. A `view` block may carry any subset of its four
+flags. A `renderer_debug` block uses the same keys as the command and needs the
+same gate. The camera source is `player`, `debug`, or `override`; a player source
+carries a `player` block with the feet position, yaw, pitch, stance, velocity,
+grounded state, step smoothing, and eye height. An object carries its id,
+prefab, body, position, rotation quaternion, colour, and light. The settings
+carry the window mode, display index, windowed resolution, input modes, and type
+weight. The display list replaces the menu list. `F5` writes one scene, and
+`record` starts with one, so a live view replays as a normal scenario. A scene
+load closes the settings menu.
 
 `repro` writes the same scene snapshot the `F5` key writes and sets the same
-notice. `path` is required and holds at most 64 bytes, so the notice can name
+notice. `path` is required and holds at most 160 bytes, so the notice can name
 the file. A write failure returns `ok: false` and leaves the failure notice set.
 The reply's `written` field carries the absolute path.
 
@@ -384,7 +388,11 @@ A suite never declares `requires` itself. It parses each scenario after
 `extends` and reads the merged `requires`, and `run_scenario` enables the gate.
 The suite exit code is the highest entry code, so one failure does not hide the
 other rows. `--fail-fast` stops at the first failure. `--list` parses every
-entry and prints its size, gate, and render mode without running it.
+entry and prints its size, gate, and render mode without running it. Each entry
+prints `suite: <label>` before it runs and its wall-clock time in `suite.json`;
+`--quiet` suppresses the progress lines. `--timeout SECONDS` applies one budget
+to each entry. Suite names and scenario names resolve from the repository root,
+so the command works from any directory.
 
 `harbagsa-agent suite offscreen` is the validation target. `make
 validate-offscreen` builds the validation agent and runs
@@ -392,6 +400,12 @@ validate-offscreen` builds the validation agent and runs
 SUITE=renderer` uses the normal agent. Positional selectors replace the
 manifest entries, so `make validate-offscreen SCENARIO=renderer-debug` still
 runs one scenario.
+
+`harbagsa-agent schema` prints the command fields, units, scenario and suite
+keys, capture targets and formats, check fields, and the state field tree as
+JSON. `schema capture --text` prints one command; `schema --text` prints the
+command table. `run`, `session`, `diff`, `compare`, `suite`, and `ab` accept
+`-h`/`--help`.
 
 ## Editor
 
@@ -630,17 +644,21 @@ ready line on standard output. Capture files go to `runs/session/frames/` unless
 
 `record PATH` starts recording. A second `record` with no path stops and writes
 the scenario. Recording starts with `reset`, one `scene` snapshot of the current
-state, and the current `input`. Send the actions after the start command if you
-want them in the scenario. `replay PATH` resets and runs the scenario.
+state, and the current `input`. `"actions": true` omits the scene snapshot and
+keeps the reset, so only the action sequence matters. Send the actions after the
+start command if you want them in the scenario. `replay PATH` resets and runs
+the scenario.
 
-The game has no control socket. `F5` writes `runs/repro/repro-<unix>.json`,
-logs its absolute path, and shows `Scene snapshot · <path>` in the top-right for
-two seconds. A failed write shows `Scene snapshot failed · <path>` instead. The
-file is a normal scenario with one `scene` command, so
-`bin/harbagsa-agent run runs/repro/repro-....json` is the whole repro step. The
-`repro` command writes the same file and sets the same notice, so a scenario can
-capture what the player sees. The key writes a file only; it does not open a
-command channel.
+The game has no control socket. `F5` writes
+`runs/repro/repro-<unix-ms>.json`, logs its absolute path, and shows
+`Scene snapshot · <path>` in the top-right for two seconds. A failed write shows
+`Scene snapshot failed · <path>` instead. The file is a normal scenario with one
+`scene` command, so `bin/harbagsa-agent run runs/repro/repro-....json` is the
+whole repro step. A scene with renderer debug overrides carries its own
+`"requires": {"renderer_debug": true}`. `--repro-dir DIR` or
+`HARBAGSA_REPRO_DIR` moves the directory. The `repro` command writes the same
+file and sets the same notice, so a scenario can capture what the player sees.
+The key writes a file only; it does not open a command channel.
 
 ## Screenshots
 
@@ -734,21 +752,33 @@ The statistics cover the region and the report echoes it; a check reads
 `capture.stats.region.x` and the other region fields. Add `"histogram": 8` for
 per-channel bin counts in `capture.histogram.x`, `.y`, `.z`, and `.w`.
 
-A color stats capture with a region also reports `capture.stats.steps`. It
-box-filters the luma 9x9, which removes the output dither and the sample noise,
-then counts adjacent jumps above half a level and below 8 levels. A soft shadow
-gradient reports no steps; a ray-count step leaves a run of them. Keep the
-region at least four pixels inside a flat boundary, because the filter reads
-that margin. `scenarios/ramp-shadow.json` and
+A stats capture with a region also reports `capture.stats.steps`. It
+box-filters the luma 9x9 by default, which removes the output dither and the
+sample noise, then counts adjacent jumps above half a level and below 8 levels.
+A soft shadow gradient reports no steps; a ray-count step leaves a run of them.
+Keep the region at least four pixels inside a flat boundary, because the filter
+reads that margin. `"steps": {"blur": 9, "min": 0.5, "max": 8}` tunes the kernel
+and thresholds; `blur` is an odd kernel size in [1, 31]. The result echoes
+`blur`, `min`, and `max_levels`. `scenarios/ramp-shadow.json` and
 `scenarios/ramp-shadow-crouch.json` are the worked examples; the second looks
 from the crouched view under the ramp, where the steps are widest.
 
-A color capture accepts a `profile` block and `"format": "profile"` for an
-edge measurement, and a `crop` block to write a scaled PNG. Add `"png": true`
-to a color `stats` or `profile` capture to write the image beside the numbers.
-One capture stays one result, so `capture.count` and named checks do not
-change. A sidecar joins the PNG delta series and the analysis window. A crop
-and a sidecar cannot be combined.
+A capture accepts a `profile` block and `"format": "profile"` for an edge
+measurement on the color target or an intermediate target. A color profile
+decodes sRGB; a float profile reads linear values and reports
+`profile.source` as `linear`. A color capture also accepts a `crop` block to
+write a scaled PNG. Add `"png": true` to a color `stats` or `profile` capture to
+write the image beside the numbers. One capture stays one result, so
+`capture.count` and named checks do not change. A sidecar joins the PNG delta
+series and the analysis window. A crop and a sidecar cannot be combined.
+
+`{"cmd":"captures","name":"pair","outputs":[...]}` renders one frame and writes
+one or more outputs from that frame. Each output carries one capture's `target`,
+`format`, `png`, `region`, `profile`, `crop`, `histogram`, and `steps`, plus an
+optional `name`; `frame` and `alpha` belong to the group. The outputs share the
+frame, so a PNG, history statistics, and a linear profile describe the same
+pixels. A group holds at most eight outputs and a name must be unique in the
+group and the run. `scenarios/capture-group.json` covers all six output forms.
 
 `png` with an intermediate target, or `float`/`raw` with color, is a scenario
 error. Capture deltas compare color PNG captures only; another target does not
@@ -758,8 +788,9 @@ A check reads the last capture in its window: `capture.target`,
 `capture.format`, and `capture.stats.min.x`, `capture.stats.max.x`,
 `capture.stats.mean.x`, `capture.stats.stddev.x`, `capture.stats.gradient.x`,
 `capture.stats.steps.count`, `capture.stats.steps.pairs`,
-`capture.stats.steps.max`, `capture.stats.velocity_median_texels`, and the same
-`.y`, `.z`, `.w` channels.
+`capture.stats.steps.max`, `capture.stats.steps.blur`,
+`capture.stats.steps.min`, `capture.stats.steps.max_levels`,
+`capture.stats.velocity_median_texels`, and the same `.y`, `.z`, `.w` channels.
 
 `scenarios/capture-targets.json` covers a static and a moving velocity capture,
 scene color, history, and depth.
@@ -784,9 +815,12 @@ and summary. The analysis is on by default. Disable it with `"analysis": false` 
 - `maps`: the diff and variance image paths, when `maps` is on.
 
 `analysis.bands` measures the identical-luma runs down the columns of the last
-analyzed frame: `longest_run`, `median_run`, `levels`, and `columns`. A gradient
-that is continuous in 16-bit and bands after the 8-bit resolve shows a long run.
-`scenarios/banding.json` gates the sky at `longest_run < 64`.
+analyzed frame: `longest_run`, `median_run`, `levels`, `columns`, and the
+optional `region`. A gradient that is continuous in 16-bit and bands after the
+8-bit resolve shows a long run. Add `"region": {"x","y","w","h"}` to the
+analysis object to keep a flat patch or an overlay out of the metric; checks
+read `analysis.bands.region.*`. `scenarios/banding.json` gates the sky at
+`longest_run < 64`.
 
 The dominant period is the lag with the strongest autocorrelation over the
 per-pair mean series. A periodic series correlates at every multiple of its
@@ -876,9 +910,14 @@ pixels so a dirty tree is not mistaken for a revision change.
 
 `compare` pairs the color PNG captures by name, like `diff`. It writes
 `compare.png` and `compare.json` under `runs/compare/<a>-vs-<b>/` by default.
-The panel names each run's scenario, revision, dirty flag, and run directory;
-each row names the capture, its extent, and the pixel delta. A missing pair,
-a size mismatch, or a decode failure is labeled in the panel and exits 1.
+The panel names each run's scenario, revision, dirty flag, extent, capture
+count, and run directory; each row names the capture, its extent, and the pixel
+delta. A missing pair, a size mismatch, or a decode failure is labeled in the
+panel and exits 1.
+
+`--pairs NAME,...` compares only the named captures; a name missing from both
+runs becomes a failed pair. `--scale N` allows up to N times upscaling, so a
+small capture fills its column. `--delta` adds an `A-B` difference column.
 
 A panel holds six pairs and splits into `compare-2.png`, `compare-3.png`, and
 so on. `compare.json` lists every page. The labels use the embedded font stack,
@@ -886,7 +925,9 @@ so no ImageMagick or compositor is needed. The command refuses an output path
 inside either run's `frames/` directory, because `diff` would read the panel as
 a capture.
 
-`diff` stays numeric. Use `compare` when the image is the evidence.
+`diff` reads the same run metadata and prints both scenario paths, revisions,
+dirty flags, extents, and capture counts. `diff` stays numeric. Use `compare`
+when the image is the evidence.
 
 ## Renderer state
 
@@ -1219,14 +1260,24 @@ frame-rate change.
 - `src/harness/report.odin`: the run report and summary types.
 - `src/harness/report_setup.odin`: the run's setup block.
 - `src/harness/compare.odin`: the compare CLI, report, and table.
-- `src/harness/compare_run.odin`: the run metadata loader and pair builder.
+- `src/harness/run_data.odin`: the shared run metadata and capture loader.
+- `src/harness/compare_pairs.odin`: the pair filter and builders.
 - `src/harness/compare_panel.odin`: the labeled panel layout.
 - `src/harness/compare_text.odin`: the CPU label blitter.
 - `src/harness/compare_image.odin`: the canvas, border, and scaled blit.
+- `src/harness/schema.odin`, `schema_types.odin`, and `schema_paths.odin`: the
+  schema command, field reflection, and state-path walk.
+- `src/harness/capture_group.odin` and `capture_options.odin`: the capture group
+  parser and its option blocks.
+- `src/harness/capture_write.odin`: the one PNG writer shared by captures and
+  analysis maps.
+- `src/harness/compare_cli.odin`: the compare options and help.
 - `src/harness/suite.odin`: the suite manifest and entries.
 - `src/harness/suite_run.odin`: the suite CLI and report types.
 - `src/harness/suite_execute.odin`: the suite runner and list.
 - `src/harness/suite_report.odin`: the suite table and JSON.
+- `src/harness/suite_paths.odin`: repository-root discovery for suites and
+  scenarios.
 - `src/frame/scene.odin`: the scene type, the live capture, and the JSON text.
 - `src/frame/scene_write.odin`: the scene snapshot file writer that the key and
   the harness share.
@@ -1245,6 +1296,7 @@ frame-rate change.
   lights, and upload.
 - `src/renderer/state.odin`: the renderer report and setup.
 - `src/renderer/render_digest.odin`: the render digest.
+- `src/renderer/shader_digest.odin`: the embedded SPIR-V digest.
 - `src/renderer/sky_draw.odin`: the sky pass and its pipeline.
 - `src/renderer/text_shaper.odin`: FreeType and HarfBuzz shaping for the 2D layer.
 - `src/renderer/capture.odin`: the target copy and RGBA f32 decode.

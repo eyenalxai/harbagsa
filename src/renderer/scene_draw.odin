@@ -87,8 +87,12 @@ record_scene :: proc(
 		record_pass(r, command_buffer, &pass)
 		write_timing(r, command_buffer, kind)
 	}
-	if capture.enabled && !record_capture_copy(r, command_buffer, image_index, capture.target) {
-		return false
+	slot := 0
+	for target in capture.targets {
+		if !record_capture_copy(r, command_buffer, image_index, target, slot) {
+			return false
+		}
+		slot += 1
 	}
 	if r.target.kind == .Swapchain {
 		record_present_pass(r, command_buffer, image_index)

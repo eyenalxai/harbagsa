@@ -1,0 +1,20 @@
+{
+  "size": "320x180",
+  "commands": [
+    {"cmd": "step", "frames": 2},
+    {"cmd": "captures", "name": "pair", "outputs": [
+      {"target": "color", "format": "png"},
+      {"target": "history", "format": "stats", "region": {"x": 0, "y": 0, "w": 160, "h": 90}},
+      {"target": "color", "format": "profile", "profile": {"axis": "x", "at": 90, "from": 0, "to": 319}},
+      {"target": "history", "format": "profile", "profile": {"axis": "x", "at": 90, "from": 0, "to": 319}},
+      {"target": "scene_color", "format": "float"},
+      {"target": "depth", "format": "raw"}
+    ]}
+  ],
+  "checks": [
+    {"field": "capture.count", "op": "eq", "value": 6},
+    {"field": "capture.named.pair-history-1.stats.steps.blur", "op": "eq", "value": 9},
+    {"field": "capture.named.pair-history-3.profile.source", "op": "eq", "value": "linear"},
+    {"field": "capture.named.pair-color-2.profile.source", "op": "eq", "value": "srgb"}
+  ]
+}

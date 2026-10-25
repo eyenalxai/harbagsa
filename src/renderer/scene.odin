@@ -25,7 +25,7 @@ SUN_ANGULAR_DIAMETER_LIMIT :: 45.0 * math.PI / 180.0
 // reaches the surfaces that should darken without reaching across the arena.
 AO_RADIUS :: 1.5
 AO_STRENGTH :: 1.0
-AO_SAMPLES :: 8 // Must match AO_SAMPLES in box.frag. The setup report reads it.
+AO_SAMPLES :: #config(AO_SAMPLES, 8) // The Makefile sets it and the shader reads the same value.
 
 Scene :: struct {
 	vertex_buffer: vk.Buffer,

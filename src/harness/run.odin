@@ -146,6 +146,7 @@ run_scenario :: proc(scenario: ^Scenario, options: Run_Options, out_dir: string)
 		return result
 	}
 	session.debug_renderer = options.debug_renderer || scenario.requires.renderer_debug
+	session_set_timeout(&session, common.timeout_seconds)
 	session.analysis_config = scenario.analysis
 	if options.no_analysis {
 		session.analysis_config.enabled = false

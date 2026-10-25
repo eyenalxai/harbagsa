@@ -391,8 +391,12 @@ A JSON document that compiles to one command list for the harness.
 _Avoid_: Script, test case
 
 **Capture**:
-One rendered frame written as a PNG by the harness.
+One rendered frame written as a PNG, a float or raw image, a statistics summary, or a profile by the harness.
 _Avoid_: Shot
+
+**Capture group**:
+One rendered frame that writes several capture outputs from the same pixels.
+_Avoid_: Batch, multi-shot
 
 **Capture target**:
 The image a capture reads: the final color, the velocity target, the history, the depth buffer, or the scene color.
@@ -405,6 +409,14 @@ _Avoid_: Export mode
 **Capture statistics**:
 The per-channel minimum, maximum, mean, standard deviation, and gradient of a capture over an optional region, plus the median screen motion in texels for a velocity capture over covered pixels. The gradient is the mean absolute difference between 4-neighbour pixels; a region with no neighbour pair reports zero.
 _Avoid_: Image metrics
+
+**Shader digest**:
+The FNV hash of the SPIR-V embedded in the binary, reported at `setup.renderer.shader_digest`. Unlike the render digest, it changes when a shader changes.
+_Avoid_: Build hash, shader version
+
+**Harness schema**:
+The JSON document from `harbagsa-agent schema` that names the command fields, units, scenario and suite keys, capture targets and formats, check fields, and state field tree.
+_Avoid_: Command list
 
 **Analysis report**:
 The `analysis.json` file from a run with color captures. It holds the capture window, the per-pair deltas, the summary, the dominant period, the worst unstable pixels' series, and the optional map paths.
@@ -864,13 +876,14 @@ run's scenario, revision, and dirty flag. It is evidence, not a numeric check.
 
 ### Scene snapshot
 One `scene` command that carries the exact camera, sun, placed objects,
-settings, display list, and view flags of a live view. `F5` writes one, and
-`record` starts with one. **Avoid**: state dump, replay file.
+settings, display list, view flags, and renderer debug overrides of a live
+view. `F5` writes one, and `record` starts with one. **Avoid**: state dump,
+replay file.
 
 ### Repro
 The `F5` action and its harness twin, the `repro` command: write one scene
 snapshot to a file and show the notice. The key writes
-`runs/repro/repro-<unix>.json`. **Avoid**: replay file, state dump.
+`runs/repro/repro-<unix-ms>.json`. **Avoid**: replay file, state dump.
 
 ### Display list
 The harness's scripted set of displays and modes. It replaces the compositor

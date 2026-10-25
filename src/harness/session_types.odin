@@ -9,14 +9,7 @@ View :: struct {
 }
 
 Pending_Capture :: struct {
-	name:      string,
-	frame:     int,
-	alpha:     f32,
-	target:    Capture_Target,
-	format:    Capture_Format,
-	png:       bool,
-	region:    Maybe(Capture_Region),
-	profile:   Maybe(Capture_Profile),
-	crop:      Maybe(Capture_Crop),
-	histogram: Maybe(int),
+	frame:    int,
+	alpha:    f32,
+	requests: []Capture_Request,
 }

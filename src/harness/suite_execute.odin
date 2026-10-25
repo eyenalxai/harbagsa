@@ -5,6 +5,7 @@ import "core:fmt"
 import "core:mem"
 import "core:os"
 import "core:strings"
+import "core:time"
 
 suite_execute :: proc(
 	entries: []Suite_Entry,
@@ -31,18 +32,34 @@ suite_execute :: proc(
 		run_dir  = strings.clone(absolute_base, context.allocator),
 	}
 	rows := make([dynamic]Suite_Row, 0, len(entries), context.allocator)
+	suite_start := time.tick_now()
 	for entry in entries {
+		label := suite_entry_label(entry, context.temp_allocator)
+		if options.progress && !options.quiet {
+			fmt.eprintf("suite: %s\n", label)
+		}
+		start := time.tick_now()
 		row := suite_run_entry(entry, absolute_base, options)
+		row.seconds = time.duration_seconds(time.tick_diff(start, time.tick_now()))
 		if !row.ok {
 			report.ok = false
 		}
 		report.exit_code = max(report.exit_code, row.exit_code)
 		append(&rows, row)
+		if options.progress && !options.quiet {
+			fmt.eprintf(
+				"suite: %s %s %.3fs\n",
+				row.label,
+				row.ok ? "ok" : "failed",
+				row.seconds,
+			)
+		}
 		if options.fail_fast && !row.ok {
 			break
 		}
 	}
 	report.rows = rows[:]
+	report.seconds = time.duration_seconds(time.tick_diff(suite_start, time.tick_now()))
 	return {report = report, base_dir = absolute_base}, ""
 }
 
@@ -93,6 +110,7 @@ suite_run_entry :: proc(entry: Suite_Entry, base_dir: string, options: Suite_Opt
 			no_analysis    = options.no_analysis,
 			debug_renderer = options.debug_renderer,
 			verbose        = options.verbose,
+			timeout_seconds = options.timeout_seconds,
 		},
 	}
 	if entry.has_size {

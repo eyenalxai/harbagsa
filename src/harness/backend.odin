@@ -23,8 +23,8 @@ Backend :: struct {
 	render:   proc(
 		ctx: rawptr,
 		session: ^Session,
-		request: Capture_Request,
-	) -> (Capture_Result, string),
+		requests: []Capture_Request,
+	) -> ([]Capture_Result, string),
 	gpu_times: proc(ctx: rawptr) -> perf.Gpu_Times,
 	snapshot:  proc(ctx: rawptr) -> Backend_Snapshot,
 	setup:     proc(ctx: rawptr) -> renderer.Setup_Report,
@@ -163,9 +163,9 @@ backend_gpu_times :: proc(ctx: rawptr) -> perf.Gpu_Times {
 backend_render :: proc(
 	ctx: rawptr,
 	session: ^Session,
-	request: Capture_Request,
+	requests: []Capture_Request,
 ) -> (
-	Capture_Result,
+	[]Capture_Result,
 	string,
 ) {
 	data := cast(^Backend_Data)ctx
@@ -173,15 +173,19 @@ backend_render :: proc(
 		events := platform.poll_events(&data.window)
 		if events.quit {
 			session.quit = true
-			return {}, ""
+			return nil, ""
 		}
 		if events.resized {
 			renderer.notify_resize(&data.renderer)
 		}
 	}
 
+	alpha := session.alpha
+	if len(requests) > 0 {
+		alpha = requests[0].alpha
+	}
 	options := frame.Options {
-		alpha         = request.alpha,
+		alpha         = alpha,
 		delta_seconds = game.SIMULATION_STEP,
 		debug_view    = session.view.debug,
 		captured      = !session.view.hint,
@@ -205,19 +209,20 @@ backend_render :: proc(
 		session.scratch,
 	)
 	perf.mark(&session.perf, .Build)
-	if request.enabled {
+	if len(requests) > 0 {
 		if !renderer.text_atlas_sync(&data.renderer, session.sim.settings.type_weight) {
-			return {}, format_error("text atlas sync failed")
+			return nil, format_error("text atlas sync failed")
 		}
 		if !renderer.text_atlas_wait(&data.renderer) {
-			return {}, format_error("text atlas did not settle")
+			return nil, format_error("text atlas did not settle")
 		}
 	}
 	data.renderer.recorder = &session.perf.recorder
-	capture_request := renderer.Frame_Capture {
-		target  = request.target,
-		enabled = request.enabled,
+	targets: renderer.Capture_Targets
+	for request in requests {
+		targets |= {request.target}
 	}
+	capture_request := renderer.Frame_Capture{targets = targets}
 	status: renderer.Frame_Status
 	for _ in 0 ..< 2 {
 		status = frame.draw(&data.renderer, scene, capture_request)
@@ -230,15 +235,38 @@ backend_render :: proc(
 	}
 	if status != .Ok {
 		if status == .Fatal {
-			return {}, format_error("render failed")
+			return nil, format_error("render failed")
 		}
-		return {}, format_error("frame skipped")
+		return nil, format_error("frame skipped")
 	}
-	if !request.enabled {
-		return {}, ""
+	if len(requests) == 0 {
+		return nil, ""
 	}
 
-	return backend_capture(data, session, request)
+	slot_of: [renderer.Capture_Target]int
+	for target in renderer.Capture_Target {
+		slot_of[target] = -1
+	}
+	slot := 0
+	for target in renderer.Capture_Target {
+		if target in targets {
+			slot_of[target] = slot
+			slot += 1
+		}
+	}
+	results := make([dynamic]Capture_Result, 0, len(requests), context.allocator)
+	for request in requests {
+		result, error := backend_capture(data, session, request, slot_of[request.target])
+		if error != "" {
+			for &written in results {
+				capture_result_destroy(&written, data.allocator)
+			}
+			delete(results)
+			return nil, error
+		}
+		append(&results, result)
+	}
+	return results[:], ""
 }
 
 @(private)

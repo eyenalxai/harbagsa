@@ -23,40 +23,42 @@ Command_Record :: enum {
 // One row per command. The parser, dispatcher, recorder, destroy path, and
 // backend policy all read this table; a new command is one row plus its test.
 Command_Row :: struct {
-	kind:     Command_Kind,
-	name:     string,
-	parse:    Command_Parse,
-	execute:  Command_Execute,
-	record:   Command_Record,
-	destroy:  Command_Destroy,
-	backend:  Command_Backend,
+	kind:       Command_Kind,
+	name:       string,
+	parse:      Command_Parse,
+	execute:    Command_Execute,
+	record:     Command_Record,
+	destroy:    Command_Destroy,
+	backend:    Command_Backend,
+	value_type: typeid,
 }
 
 COMMANDS := [?]Command_Row {
-	{.Reset, "reset", parse_no_fields, execute_reset, .Raw, nil, .None},
-	{.Look, "look", parse_look_row, execute_look, .Raw, nil, .None},
-	{.Face, "face", parse_face_row, execute_face, .Raw, nil, .None},
-	{.Input, "input", parse_input_row, execute_input, .Raw, nil, .None},
-	{.Step, "step", parse_step_row, execute_step, .Raw, nil, .None},
-	{.Settle, "settle", parse_settle_row, execute_settle, .Raw, nil, .Optional},
-	{.State, "state", parse_no_fields, execute_state, .Raw, nil, .None},
-	{.Capture, "capture", parse_capture, execute_capture, .Custom, destroy_capture, .Optional},
-	{.Camera, "camera", parse_camera_row, execute_camera, .Raw, nil, .None},
-	{.View, "view", parse_view_row, execute_view, .Raw, nil, .None},
-	{.Sun, "sun", parse_sun_row, execute_sun, .Raw, nil, .None},
-	{.Debug_Mode, "debug_mode", parse_debug_mode_row, execute_debug_mode, .Raw, nil, .None},
-	{.Editor, "editor", parse_editor_row, execute_editor, .Raw, nil, .None},
-	{.Menu, "menu", parse_menu_row, execute_menu, .Raw, nil, .None},
-	{.Check, "check", parse_check, execute_check, .Raw, destroy_check, .None},
-	{.Record, "record", parse_record, execute_record, .Skip, destroy_record, .None},
-	{.Replay, "replay", parse_replay, execute_replay, .Skip, destroy_replay, .Optional},
-	{.Repro, "repro", parse_repro, execute_repro, .Skip, destroy_repro, .None},
-	{.Perf, "perf", parse_perf, execute_perf, .Skip, destroy_perf, .Required},
-	{.Renderer_Debug, "renderer_debug", parse_renderer_debug_row, execute_renderer_debug, .Raw, nil, .Optional},
-	{.Displays, "displays", parse_displays, execute_displays, .Raw, destroy_displays, .None},
-	{.Rows, "rows", parse_no_fields, execute_rows, .Skip, nil, .None},
-	{.Scene, "scene", parse_scene, execute_scene, .Raw, destroy_scene, .None},
-	{.Quit, "quit", parse_no_fields, execute_quit, .Skip, nil, .None},
+	{.Reset, "reset", parse_no_fields, execute_reset, .Raw, nil, .None, No_Fields_Command},
+	{.Look, "look", parse_look_row, execute_look, .Raw, nil, .None, Look_Command},
+	{.Face, "face", parse_face_row, execute_face, .Raw, nil, .None, Face_Command},
+	{.Input, "input", parse_input_row, execute_input, .Raw, nil, .None, Input_Command},
+	{.Step, "step", parse_step_row, execute_step, .Raw, nil, .None, Step_Command},
+	{.Settle, "settle", parse_settle_row, execute_settle, .Raw, nil, .Optional, Settle_Command},
+	{.State, "state", parse_no_fields, execute_state, .Raw, nil, .None, No_Fields_Command},
+	{.Capture, "capture", parse_capture, execute_capture, .Custom, destroy_capture, .Optional, Capture_Command},
+	{.Captures, "captures", parse_captures, execute_captures, .Skip, destroy_captures, .Optional, Captures_Command},
+	{.Camera, "camera", parse_camera_row, execute_camera, .Raw, nil, .None, Camera_Command},
+	{.View, "view", parse_view_row, execute_view, .Raw, nil, .None, View_Command},
+	{.Sun, "sun", parse_sun_row, execute_sun, .Raw, nil, .None, Sun_Command},
+	{.Debug_Mode, "debug_mode", parse_debug_mode_row, execute_debug_mode, .Raw, nil, .None, Debug_Mode_Command},
+	{.Editor, "editor", parse_editor_row, execute_editor, .Raw, nil, .None, Editor_Command},
+	{.Menu, "menu", parse_menu_row, execute_menu, .Raw, nil, .None, Menu_Command},
+	{.Check, "check", parse_check, execute_check, .Raw, destroy_check, .None, Check_Command},
+	{.Record, "record", parse_record, execute_record, .Skip, destroy_record, .None, Record_Command},
+	{.Replay, "replay", parse_replay, execute_replay, .Skip, destroy_replay, .Optional, Replay_Command},
+	{.Repro, "repro", parse_repro, execute_repro, .Skip, destroy_repro, .None, Repro_Command},
+	{.Perf, "perf", parse_perf, execute_perf, .Skip, destroy_perf, .Required, Perf_Command},
+	{.Renderer_Debug, "renderer_debug", parse_renderer_debug_row, execute_renderer_debug, .Raw, nil, .Optional, Renderer_Debug_Command},
+	{.Displays, "displays", parse_displays, execute_displays, .Raw, destroy_displays, .None, Displays_Command},
+	{.Rows, "rows", parse_no_fields, execute_rows, .Skip, nil, .None, No_Fields_Command},
+	{.Scene, "scene", parse_scene, execute_scene, .Raw, destroy_scene, .None, Scene_Command},
+	{.Quit, "quit", parse_no_fields, execute_quit, .Skip, nil, .None, No_Fields_Command},
 }
 
 command_row_by_name :: proc(name: string) -> (^Command_Row, bool) {
@@ -148,6 +150,15 @@ parse_renderer_debug_row :: proc(object: json.Object, allocator: mem.Allocator) 
 @(private)
 destroy_capture :: proc(command: ^Command, allocator: mem.Allocator) {
 	delete(command.capture.name, allocator)
+	command^ = {}
+}
+
+@(private)
+destroy_captures :: proc(command: ^Command, allocator: mem.Allocator) {
+	for &output in command.captures.outputs {
+		delete(output.name, allocator)
+	}
+	delete(command.captures.outputs, allocator)
 	command^ = {}
 }
 

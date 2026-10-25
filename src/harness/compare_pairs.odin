@@ -1,110 +1,22 @@
 #+vet explicit-allocators
 package harness
 
-import "core:encoding/json"
 import "core:fmt"
 import "core:mem"
-import "core:os"
 import "core:strings"
-
-Compare_Run :: struct {
-	dir:       string,
-	captures:  []Diff_Capture,
-	scenario:  string,
-	revision:  string,
-	dirty:     bool,
-	width:     u32,
-	height:    u32,
-	has_report: bool,
-}
-
-compare_run_load :: proc(dir: string, allocator: mem.Allocator) -> (Compare_Run, string) {
-	if !os.is_dir(dir) {
-		return {}, fmt.aprintf("%s is not a run directory", dir, allocator = allocator)
-	}
-	captures, captures_error := diff_captures_load(dir, allocator)
-	if captures_error != "" {
-		return {}, captures_error
-	}
-	run := Compare_Run {
-		dir = strings.clone(dir, allocator),
-		captures = captures,
-		revision = strings.clone("unknown", allocator),
-		scenario = strings.clone("unknown", allocator),
-	}
-	report_path := join_path({dir, "report.json"}, allocator)
-	defer delete(report_path, allocator)
-	data, read_error := os.read_entire_file(report_path, allocator)
-	if read_error != nil {
-		return run, ""
-	}
-	defer delete(data, allocator)
-	value, parse_error := json.parse_string(string(data), .JSON, true, allocator)
-	if parse_error != .None {
-		return run, ""
-	}
-	defer json.destroy_value(value, allocator)
-	object, object_ok := json_object(value)
-	if !object_ok {
-		return run, ""
-	}
-	run.has_report = true
-	if scenario_value, has := json_get(object, "scenario"); has {
-		if scenario, scenario_ok := json_object(scenario_value); scenario_ok {
-			if path, path_ok := string_field(scenario, "path"); path_ok && path != "" {
-				delete(run.scenario, allocator)
-				run.scenario = strings.clone(path, allocator)
-			}
-		}
-	}
-	if setup_value, has := json_get(object, "setup"); has {
-		if setup, setup_ok := json_object(setup_value); setup_ok {
-			if revision, revision_ok := string_field(setup, "revision"); revision_ok && revision != "" {
-				delete(run.revision, allocator)
-				run.revision = strings.clone(revision, allocator)
-			}
-			if dirty, dirty_ok := json_get(setup, "dirty"); dirty_ok {
-				run.dirty, _ = json_boolean(dirty)
-			}
-			if width, width_ok := json_get(setup, "width"); width_ok {
-				if value, value_ok := json_integer(width); value_ok {
-					run.width = u32(value)
-				}
-			}
-			if height, height_ok := json_get(setup, "height"); height_ok {
-				if value, value_ok := json_integer(height); value_ok {
-					run.height = u32(value)
-				}
-			}
-		}
-	}
-	return run, ""
-}
-
-compare_run_destroy :: proc(run: ^Compare_Run, allocator: mem.Allocator) {
-	if run.dir != "" {
-		delete(run.dir, allocator)
-	}
-	if run.scenario != "" {
-		delete(run.scenario, allocator)
-	}
-	if run.revision != "" {
-		delete(run.revision, allocator)
-	}
-	if run.captures != nil {
-		diff_captures_destroy(run.captures, allocator)
-	}
-	run^ = {}
-}
 
 @(private)
 compare_pairs :: proc(
-	first, second: Compare_Run,
+	first, second: Run_Data,
+	only: []string,
 	allocator: mem.Allocator,
 ) -> ([]Compare_Pair, []string) {
 	pairs := make([dynamic]Compare_Pair, 0, len(first.captures), allocator)
 	errors := make([dynamic]string, 0, 4, allocator)
 	for capture in first.captures {
+		if len(only) > 0 && !string_in(capture.name, only) {
+			continue
+		}
 		other, found := diff_capture_find(second.captures, capture.name)
 		other_capture: Diff_Capture
 		if found {
@@ -122,11 +34,32 @@ compare_pairs :: proc(
 		append(&pairs, pair)
 	}
 	for capture in second.captures {
+		if len(only) > 0 && !string_in(capture.name, only) {
+			continue
+		}
 		if _, found := diff_capture_find(first.captures, capture.name); found {
 			continue
 		}
 		pair := compare_pair_build({}, capture, false, allocator)
 		append(&errors, fmt.aprintf("pair %q: %s", pair.name, pair.error, allocator = allocator))
+		append(&pairs, pair)
+	}
+	for name in only {
+		found := false
+		for pair in pairs {
+			if pair.name == name {
+				found = true
+				break
+			}
+		}
+		if found {
+			continue
+		}
+		pair := Compare_Pair {
+			name  = strings.clone(name, allocator),
+			error = strings.clone("missing from both runs", allocator),
+		}
+		append(&errors, fmt.aprintf("pair %q: %s", name, pair.error, allocator = allocator))
 		append(&pairs, pair)
 	}
 	return pairs[:], errors[:]
