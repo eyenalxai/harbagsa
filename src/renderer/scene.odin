@@ -55,6 +55,9 @@ Scene :: struct {
 	light_buffers: [MAX_FRAMES_IN_FLIGHT]vk.Buffer,
 	light_memory:  [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
 	light_mapped:  [MAX_FRAMES_IN_FLIGHT]rawptr,
+
+	object_capacity: int,
+	light_capacity:  int,
 }
 
 init_scene :: proc(r: ^Renderer) -> Error {
@@ -94,26 +97,7 @@ destroy_scene :: proc(r: ^Renderer) {
 		r.scene.descriptor_set_layout = 0
 	}
 
-	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		if r.scene.camera_mapped[i] != nil {
-			vk.UnmapMemory(r.device, r.scene.camera_memory[i])
-			r.scene.camera_mapped[i] = nil
-		}
-		destroy_buffer(r, &r.scene.camera_buffers[i], &r.scene.camera_memory[i])
-
-		if r.scene.object_mapped[i] != nil {
-			vk.UnmapMemory(r.device, r.scene.object_memory[i])
-			r.scene.object_mapped[i] = nil
-		}
-		destroy_buffer(r, &r.scene.object_buffers[i], &r.scene.object_memory[i])
-
-		if r.scene.light_mapped[i] != nil {
-			vk.UnmapMemory(r.device, r.scene.light_memory[i])
-			r.scene.light_mapped[i] = nil
-		}
-		destroy_buffer(r, &r.scene.light_buffers[i], &r.scene.light_memory[i])
-	}
-
+	destroy_scene_frame_buffers(r)
 	destroy_buffer(r, &r.scene.vertex_buffer, &r.scene.vertex_memory)
 	destroy_buffer(r, &r.scene.index_buffer, &r.scene.index_memory)
 	r.scene.index_count = 0
