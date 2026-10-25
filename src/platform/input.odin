@@ -4,65 +4,44 @@ package platform
 import "core:c"
 import "vendor:sdl3"
 
-// Jump, reset, debug, the stance edges, and the editor actions are key-down
-// edges so a held key does not repeat. Movement keys are polled, and the fly
-// axes are polled with the cursor free as well.
+MAX_KEY_EDGES :: 16
+
+Key_Edge :: struct {
+	key:  Key,
+	mods: Modifiers,
+}
+
+// One raw frame. It holds the held state, the pointer edges, and the key-down
+// edges. The input module decides what a key means; platform does not.
 Events :: struct {
-	quit:                   bool,
-	resized:                bool,
-	move_forward:           f32,
-	move_right:             f32,
-	sprint_held:            bool,
-	sprint_pressed:         bool,
-	crouch_held:            bool,
-	crouch_pressed:         bool,
-	prone_held:             bool,
-	prone_pressed:          bool,
-	look_delta:             [2]f32,
-	wheel_delta:            f32,
-	jump_pressed:           bool,
-	jump_held:              bool,
-	reset_pressed:          bool,
-	reset_scene_pressed:    bool,
-	debug_view_pressed:     bool,
-	debug_mode_pressed:     bool,
-	taa_pressed:            bool,
-	perf_pressed:           bool,
-	repro_pressed:          bool,
-	cancel_pressed:         bool,
-	navigate_up_pressed:    bool,
-	navigate_down_pressed:  bool,
-	navigate_left_pressed:  bool,
-	navigate_right_pressed: bool,
-	confirm_pressed:        bool,
-	palette_toggle_pressed: bool,
-	palette_number:         int,
-	flip_body_pressed:      bool,
-	toggle_snap_pressed:    bool,
-	rotate_left_pressed:    bool,
-	rotate_right_pressed:   bool,
-	sun_placement_pressed:  bool,
-	light_color_pressed:    bool,
-	light_intensity_down_pressed: bool,
-	light_intensity_up_pressed:   bool,
-	light_range_down_pressed:     bool,
-	light_range_up_pressed:       bool,
-	duplicate_pressed:      bool,
-	undo_pressed:           bool,
-	redo_pressed:           bool,
-	delete_pressed:         bool,
-	primary_pressed:        bool,
-	primary_released:       bool,
-	secondary_pressed:      bool,
-	secondary_released:     bool,
-	pointer:                [2]f32,
-	pointer_down:           bool,
-	pointer_released:       bool,
-	pointer_moved:          bool,
-	pointer_pressed:        bool,
-	fly_up:                 bool,
-	fly_down:               bool,
-	captured:               bool,
+	quit:    bool,
+	resized: bool,
+
+	move_forward: f32,
+	move_right:   f32,
+	sprint_held:  bool,
+	crouch_held:  bool,
+	prone_held:   bool,
+	jump_held:    bool,
+	fly_up:       bool,
+	fly_down:     bool,
+
+	look_delta:  [2]f32,
+	wheel_delta: f32,
+
+	pointer:         [2]f32,
+	pointer_down:    bool,
+	pointer_moved:   bool,
+	pointer_pressed: bool,
+
+	primary_pressed:   bool,
+	primary_released:  bool,
+	secondary_pressed: bool,
+
+	keys:      [MAX_KEY_EDGES]Key_Edge,
+	key_count: int,
+
+	captured: bool,
 }
 
 poll_events :: proc(window: ^Window) -> (events: Events) {
@@ -138,7 +117,7 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 				events.primary_pressed = true
 			} else {
 				events.pointer_pressed = true
-			events.pointer_down = true
+				events.pointer_down = true
 				if window.capture_on_click {
 					events.captured = set_cursor_capture(window, true)
 				}
@@ -150,9 +129,6 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 		if event.button.button == sdl3.BUTTON_LEFT {
 			events.primary_released = true
 			events.pointer_down = false
-			events.pointer_released = true
-		} else if event.button.button == sdl3.BUTTON_RIGHT {
-			events.secondary_released = true
 		}
 	case .MOUSE_WHEEL:
 		if events.captured {
@@ -162,39 +138,12 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 		if event.key.repeat {
 			return
 		}
-		key := editor_key_from_scancode(event.key.scancode)
-		apply_editor_command(
-			events,
-			editor_command(key, editor_modifiers(event.key.mod)),
-		)
-		#partial switch event.key.scancode {
-		case .SPACE:
-			events.jump_pressed = true
-		case .LSHIFT:
-			events.sprint_pressed = true
-		case .C:
-			events.crouch_pressed = true
-		case .Z:
-			if !(.LCTRL in event.key.mod) && !(.RCTRL in event.key.mod) {
-				events.prone_pressed = true
-			}
-		case .R:
-			if .LSHIFT in event.key.mod || .RSHIFT in event.key.mod {
-				events.reset_scene_pressed = true
-			} else {
-				events.reset_pressed = true
-			}
-		case .F1:
-			events.debug_view_pressed = true
-		case .F2:
-			events.debug_mode_pressed = true
-		case .F3:
-			events.taa_pressed = true
-		case .F4:
-			events.perf_pressed = true
-		case .F5:
-			events.repro_pressed = true
+		key := key_from_scancode(event.key.scancode)
+		if key == .None || events.key_count >= MAX_KEY_EDGES {
+			return
 		}
+		events.keys[events.key_count] = {key, modifiers_from_sdl(event.key.mod)}
+		events.key_count += 1
 	case .MOUSE_MOTION:
 		events.pointer = pointer_for(window, event.motion.x, event.motion.y)
 		events.pointer_moved = true

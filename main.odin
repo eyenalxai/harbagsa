@@ -7,6 +7,7 @@ import "core:time"
 
 import "src:frame"
 import "src:game"
+import "src:input"
 import "src:perf"
 import "src:platform"
 import "src:renderer"
@@ -45,6 +46,7 @@ run :: proc() -> bool {
 		log.error("harbagsa: window pixel size is zero")
 		return false
 	}
+
 	perf_state: perf.State
 	state, renderer_error := renderer.init(
 		renderer.Config {
@@ -62,40 +64,34 @@ run :: proc() -> bool {
 	}
 	defer renderer.deinit(&state)
 
-	sim := game.simulation_create()
-	if !game.simulation_is_valid(&sim) {
+	loop: Loop
+	loop.sim = game.simulation_create()
+	if !game.simulation_is_valid(&loop.sim) {
 		log.error("harbagsa: simulation init failed")
 		return false
 	}
-	defer game.simulation_destroy(&sim)
-
-	accumulator: f32 = 0
-	latches: Input_Latches
-	debug_view := false
-	debug := game.debug_mode_create(context.allocator)
-	defer game.debug_mode_destroy(&debug)
-	scratch: frame.Scratch
-	hud: game.HUD_State
-	menu_recapture := false
-	editor: Editor_State
-	last_time := time.now()
-
-	displays := platform.query_displays()
-	if displays.list.count == 0 {
+	defer game.simulation_destroy(&loop.sim)
+	loop.debug = game.debug_mode_create(context.allocator)
+	defer game.debug_mode_destroy(&loop.debug)
+	loop.renderer = &state
+	loop.displays = platform.query_displays()
+	if loop.displays.list.count == 0 {
 		log.warn("harbagsa: SDL reported no displays; keeping the created window")
 	}
-	hud.menu.displays = displays.list
-	initial_display := platform.display_index_for_window(&window, &displays)
+	loop.hud.menu.displays = loop.displays.list
+	initial_display := platform.display_index_for_window(&window, &loop.displays)
 	if initial_display >= 0 {
-		sim.settings.window.display = initial_display
+		loop.sim.settings.window.display = initial_display
 	} else {
 		log.warn("harbagsa: the launch display is not in the display list")
 	}
-	applied_window := sim.settings.window
-	if initial_display >= 0 && !platform.apply_window_state(&window, &displays, applied_window) {
+	loop.applied_window = loop.sim.settings.window
+	if initial_display >= 0 &&
+	   !platform.apply_window_state(&window, &loop.displays, loop.applied_window) {
 		log.warn("harbagsa: the initial window settings were not applied")
 	}
 	renderer.notify_resize(&state)
+	last_time := time.now()
 
 	for {
 		perf.begin_frame(&perf_state)
@@ -107,79 +103,20 @@ run :: proc() -> bool {
 			renderer.notify_resize(&state)
 		}
 
-		handle_editor_events(
-			&window,
-			&debug,
-			&sim,
-			&state,
-			hud.menu.open,
-			&events,
-			&editor,
-		)
-
-		handle_settings_menu_events(
-			&state,
-			&window,
-			&hud.menu,
-			&debug,
-			&sim.settings,
-			debug.active,
-			&events,
-			&accumulator,
-			&menu_recapture,
-			&latches,
-		)
-
-		if events.perf_pressed {
-			hud.perf.visible = !hud.perf.visible
+		focus := input.Focus {
+			game = game.focus(&loop.debug, &loop.hud.menu),
+			captured = events.captured,
+			pointer_available = loop.cursor.pointer_available,
 		}
-
-		if !hud.menu.open {
-			if events.debug_view_pressed {
-				debug_view = !debug_view
-			}
-			if events.debug_mode_pressed {
-				game.debug_mode_toggle(&debug, &sim)
-				editor_sync_cursor(&window, &debug, hud.menu.open, &editor)
-				clear_latches(&latches)
-			}
-			if events.taa_pressed {
-				renderer.toggle_taa(&state)
-			}
-			if events.repro_pressed {
-				_ = write_repro(
-					&sim,
-					&debug,
-					&hud,
-					frame.Options {
-						debug_view = debug_view,
-						captured = events.captured,
-						hud = true,
-						perf = hud.perf.visible,
-					},
-				)
-			}
-			if events.reset_scene_pressed {
-				game.debug_mode_reset_scene(&debug, &sim)
-				renderer.reset_history(&state, .Scene_Reset)
-				clear_latches(&latches)
-			} else if events.reset_pressed {
-				game.debug_mode_reset_player(&debug, &sim)
-				renderer.reset_history(&state, .Player_Reset)
-				clear_latches(&latches)
-			}
+		hit: input.Palette_Hit
+		if focus.game.tool == .Palette && loop.cursor.pointer_available {
+			palette_hit := renderer.palette_hit_test(&state, events.pointer, game.PREFAB_COUNT)
+			hit = {inside = palette_hit.inside, card = palette_hit.card}
 		}
+		intent := input.resolve(&loop.resolver, events, focus, hit)
 
-		if sim.settings.window != applied_window {
-			if platform.apply_window_state(&window, &displays, sim.settings.window) {
-				applied_window = sim.settings.window
-			} else {
-				log.warn("harbagsa: the window settings were not applied")
-				sim.settings.window = applied_window
-			}
-			renderer.notify_resize(&state)
-		}
-
+		apply_frame_input(&loop, &window, &events, intent)
+		sync_window(&loop, &window)
 		perf.mark(&perf_state, .Events)
 
 		width, height := platform.pixel_size(&window)
@@ -203,84 +140,27 @@ run :: proc() -> bool {
 		last_time = now
 		delta = clamp(delta, 0, MAX_FRAME_DELTA)
 
-		// Look is per frame. Action edges are latched so a press survives a
-		// frame with no step. Movement input is ignored in debug mode and while
-		// the cursor is free.
-		if !hud.menu.open && events.captured && !debug.active {
-			game.simulation_look(&sim, events.look_delta)
-			if events.jump_pressed {
-				latches.jump = true
-			}
-			if events.sprint_pressed {
-				latches.sprint = true
-			}
-			if events.crouch_pressed {
-				latches.crouch = true
-			}
-			if events.prone_pressed {
-				latches.prone = true
-			}
-		} else {
-			clear_latches(&latches)
+		step_simulation(&loop, delta, &intent)
+
+		if loop.hud.perf.visible {
+			loop.hud.perf.stats = perf.stats(&perf_state)
 		}
 
-		if !hud.menu.open {
-			accumulator += delta
-			steps := 0
-			for accumulator >= game.SIMULATION_STEP && steps < MAX_STEPS_PER_FRAME {
-				if debug.active {
-					game.simulation_step_world(&sim, game.SIMULATION_STEP)
-				} else {
-					game.simulation_step(
-						&sim,
-						player_input(events, latches),
-						game.SIMULATION_STEP,
-					)
-					clear_latches(&latches)
-				}
-				accumulator -= game.SIMULATION_STEP
-				steps += 1
-			}
-			if steps == MAX_STEPS_PER_FRAME && accumulator >= game.SIMULATION_STEP {
-				// Drop a backlog that cannot drain.
-				accumulator = 0
-			}
-		}
-
-		// Edit after the fixed steps so a dragged transform is the one rendered.
-		if debug.active && !hud.menu.open {
-			game.debug_mode_update(
-				&debug,
-				&sim,
-				editor_motion(events),
-				editor.actions[:editor.action_count],
-				hud.menu.open,
-				delta,
-			)
-		}
-		editor_sync_cursor(&window, &debug, hud.menu.open, &editor)
-
-		perf.mark(&perf_state, .Simulation)
-
-		if hud.perf.visible {
-			hud.perf.stats = perf.stats(&perf_state)
-		}
-
-		alpha := clamp(accumulator / game.SIMULATION_STEP, 0, 1)
+		alpha := clamp(loop.accumulator / game.SIMULATION_STEP, 0, 1)
 		scene := frame.build(
-			&sim,
-			&debug,
+			&loop.sim,
+			&loop.debug,
 			frame.Options {
 				alpha = alpha,
 				delta_seconds = delta,
-				debug_view = debug_view,
+				debug_view = loop.debug_view,
 				captured = events.captured,
 				hud = true,
-				perf = hud.perf.visible,
+				perf = loop.hud.perf.visible,
 			},
 			nil,
-			&hud,
-			&scratch,
+			&loop.hud,
+			&loop.scratch,
 		)
 		perf.mark(&perf_state, .Build)
 
