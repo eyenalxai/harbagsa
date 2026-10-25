@@ -87,6 +87,7 @@ serializes Make with `flock`.
 | read every check gate and margin | `harbagsa-agent checks runs/<stem>` |
 | run a scenario on two builds and write a panel | **Visual A/B** |
 | check the sky and the direct-light occlusion | **Sky and ambient occlusion** |
+| compare the probe field with a path-traced reference | **Path-traced reference** |
 | test lighting inside the closed room | **Interior room** |
 | measure image stability or the period | **Analysis** |
 | compare two builds or revisions | **Cross-run diff** and **Cross-run compare** |
@@ -128,6 +129,9 @@ serializes Make with `flock`.
   the placement tool, the sun, the inspector, the light budget, and the history.
 - `frames/<name>.png`, `.f32`, or `.bin`: captures. A color capture is a PNG;
   `float` and `raw` write the intermediate target.
+- `<name>-reference.json`, `<name>-reference.csv`, and
+  `frames/<name>-reference.png`: one path-traced comparison per `reference`
+  command. `report.json.references` carries the same numbers.
 - Each color PNG capture carries `delta_mean`, `delta_max`, and `delta_over_16`
   against the previous capture. The first capture has zeros.
 - `run.log`: log lines from the renderer, the session, and the runner.
@@ -289,6 +293,7 @@ and crops are pixels. `turn` and `wheel` are step counts.
 - `{"cmd": "renderer_debug", "light_shadows": false, "synthetic_lights": 8}`
 - `{"cmd": "renderer_debug", "sky": false, "ao": false}`
 - `{"cmd": "renderer_debug", "ao_radius": 2.0, "ao_strength": 0.25, "clip_height": 2.0}`
+- `{"cmd": "reference", "name": "chamber", "gi": "chamber-gi", "direct": "chamber-direct", "samples": 48, "bounces": 3, "stride": 16}`
 - `{"cmd": "record", "path": "runs/walk.json"}`
 - `{"cmd": "record"}`
 - `{"cmd": "replay", "path": "runs/walk.json"}`
@@ -1264,6 +1269,52 @@ digest covers both flags because they change the image. The design is in
 `docs/adr/0028-direct-light-with-surface-occlusion.md`; the count dither is in
 `docs/adr/0024-visibility-count-dither.md`; the history width is in
 `docs/adr/0027-32-bit-taa-history.md`.
+
+## Path-traced reference
+
+`{"cmd": "reference"}` compares the probe indirect term with a CPU path tracer.
+It reads two `scene_color` float captures of the same view that differ only in
+the gather toggle, traces a fixed grid of pixel centres with cosine-weighted
+diffuse bounces, and writes the comparison:
+
+```json
+{"cmd": "reference", "name": "chamber",
+ "gi": "chamber-gi", "direct": "chamber-direct",
+ "samples": 48, "bounces": 3, "stride": 16, "sun_samples": 16,
+ "tolerance": {"ratio_min": 0.8, "ratio_max": 1.25, "error_max": 0.3,
+               "colour_max": 0.1, "zero_fraction_max": 0.01}}
+```
+
+Rules:
+
+- The two captures must be `scene_color` float captures with the same extent,
+  and they must precede the command. The direct term cancels in their
+  difference, so the comparison isolates `albedo * probe_indirect`.
+- `renderer_debug` must set `taa`, `jitter`, and `ao` off. The reference has no
+  temporal filter and no AO term. The sky, the point-light shadows, the HUD, and
+  the menu must be in the state the estimator models; the command rejects a run
+  that is not.
+- `samples` is the paths per sample point, `bounces` the diffuse bounces after
+  the camera hit (2..8), `stride` the pixel grid step, and `sun_samples` the sun
+  disk samples at the camera hit. Bounce vertices use one centre sun ray, the
+  same as `probe_ray.comp`.
+- The estimator is deterministic. The seed names the grid index and the path
+  index, so a repeat run gives the same metrics.
+- The command writes `frames/<name>-reference.png` (the headless target at the
+  grid extent), `<name>-reference.json`, and `<name>-reference.csv` in the run
+  directory. Both scene reports join `report.json.references`.
+- A metric outside `tolerance` joins `report.json.failures` and the run exits 1.
+  The command itself still succeeds, so one run compares every scene it declares.
+
+`scenarios/ddgi-reference.json` is the worked example: the `ddgi` chamber with
+the lamp and sun below the horizon, then the `room-lighting` lane with the west
+sun. `make reference` runs it. The estimator, the scene, the tolerance, and the
+current numbers are in
+[`docs/evidence/ddgi-reference.md`](../evidence/ddgi-reference.md).
+
+The unit tests in `tests/reference` cover the estimator without a GPU: a cosine
+furnace plane, the sun and point-light terms, the lamp shadow mask, the camera
+basis, the sky miss, and the comparison math.
 
 ## Interior room
 

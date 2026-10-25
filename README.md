@@ -994,6 +994,16 @@ dark with no sky depth pixel. The result is in
 bounce on a 1 m test grid and a coarse 4 m arena grid. It is not a path-traced
 reference, and it does not claim modern-game parity.
 
+`scenarios/ddgi-reference.json` is the path-traced comparison. It captures the
+chamber and the room lane as `scene_color` float frames, then the `reference`
+command traces a three-bounce CPU estimator at an 80 x 45 pixel grid and writes
+`chamber-reference.json`, `chamber-reference.csv`, and
+`frames/chamber-reference.png` beside the lane files. The gate fails when the
+probe indirect term misses the stated luminance, colour, or coverage tolerance.
+`make reference` runs it. The estimator, the scene, the tolerance, and the
+current measured gap are in
+[docs/evidence/ddgi-reference.md](docs/evidence/ddgi-reference.md).
+
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window
 settings.
