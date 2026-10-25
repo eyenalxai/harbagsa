@@ -2,6 +2,7 @@
 package harness
 
 import "core:encoding/json"
+import "core:mem"
 
 import "src:renderer"
 
@@ -37,7 +38,7 @@ RENDERER_DEBUG_BLOCK_KEYS :: []string {
 }
 
 @(private)
-parse_renderer_debug :: proc(object: json.Object) -> (Command, string) {
+parse_renderer_debug :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(object, RENDERER_DEBUG_KEYS); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
@@ -50,28 +51,14 @@ parse_renderer_debug :: proc(object: json.Object) -> (Command, string) {
 
 renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, string) {
 	command: Renderer_Debug_Command
-	if value, has := json_get(object, "clear"); has {
-		clear, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'clear' must be a boolean")
-		}
-		command.clear = clear
+	if field_error := json_bool(object, "clear", &command.clear); field_error != "" {
+		return {}, field_error
 	}
-	if value, has := json_get(object, "taa"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'taa' must be a boolean")
-		}
-		command.taa = flag
-		command.has_taa = true
+	if field_error := json_optional_bool(object, "taa", &command.taa, &command.has_taa); field_error != "" {
+		return {}, field_error
 	}
-	if value, has := json_get(object, "jitter"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'jitter' must be a boolean")
-		}
-		command.jitter = flag
-		command.has_jitter = true
+	if field_error := json_optional_bool(object, "jitter", &command.jitter, &command.has_jitter); field_error != "" {
+		return {}, field_error
 	}
 	if value, has := json_get(object, "history_weight"); has {
 		weight, ok := json_number(value)
@@ -81,29 +68,19 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 		command.history_weight = f32(weight)
 		command.has_history_weight = true
 	}
-	if value, has := json_get(object, "clamp"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'clamp' must be a boolean")
-		}
-		command.clamp = flag
-		command.has_clamp = true
+	if field_error := json_optional_bool(object, "clamp", &command.clamp, &command.has_clamp); field_error != "" {
+		return {}, field_error
 	}
-	if value, has := json_get(object, "depth_trust"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'depth_trust' must be a boolean")
-		}
-		command.depth_trust = flag
-		command.has_depth_trust = true
+	if field_error := json_optional_bool(object, "depth_trust", &command.depth_trust, &command.has_depth_trust); field_error != "" {
+		return {}, field_error
 	}
-	if value, has := json_get(object, "freeze_shadow_phase"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'freeze_shadow_phase' must be a boolean")
-		}
-		command.freeze_shadow_phase = flag
-		command.has_freeze_shadow_phase = true
+	if field_error := json_optional_bool(
+		object,
+		"freeze_shadow_phase",
+		&command.freeze_shadow_phase,
+		&command.has_freeze_shadow_phase,
+	); field_error != "" {
+		return {}, field_error
 	}
 	if value, has := json_get(object, "shadow_phase"); has {
 		phase, ok := json_integer(value)
@@ -113,37 +90,22 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 		command.shadow_phase = int(phase)
 		command.has_shadow_phase = true
 	}
-	if value, has := json_get(object, "light_shadows"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, "'light_shadows' must be a boolean"
-		}
-		command.light_shadows = flag
-		command.has_light_shadows = true
+	if field_error := json_optional_bool(object, "light_shadows", &command.light_shadows, &command.has_light_shadows); field_error != "" {
+		return {}, field_error
 	}
 	if value, has := json_get(object, "synthetic_lights"); has {
 		count, ok := json_integer(value)
 		if !ok || count < 0 || count > renderer.MAX_POINT_LIGHTS {
-			return {}, "'synthetic_lights' must be an integer in [0, 8]"
+			return {}, format_error("%s", "'synthetic_lights' must be an integer in [0, 8]")
 		}
 		command.synthetic_lights = int(count)
 		command.has_synthetic_lights = true
 	}
-	if value, has := json_get(object, "sky"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, "'sky' must be a boolean"
-		}
-		command.sky = flag
-		command.has_sky = true
+	if field_error := json_optional_bool(object, "sky", &command.sky, &command.has_sky); field_error != "" {
+		return {}, field_error
 	}
-	if value, has := json_get(object, "ao"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, "'ao' must be a boolean"
-		}
-		command.ao = flag
-		command.has_ao = true
+	if field_error := json_optional_bool(object, "ao", &command.ao, &command.has_ao); field_error != "" {
+		return {}, field_error
 	}
 	if command.clear {
 		if command.has_taa ||
@@ -157,7 +119,7 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 		   command.has_synthetic_lights ||
 		   command.has_sky ||
 		   command.has_ao {
-			return {}, "'clear' cannot be combined with overrides"
+			return {}, format_error("%s", "'clear' cannot be combined with overrides")
 		}
 	}
 	return command, ""

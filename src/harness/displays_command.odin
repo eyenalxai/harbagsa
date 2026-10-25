@@ -13,12 +13,8 @@ parse_displays :: proc(object: json.Object, allocator: mem.Allocator) -> (Comman
 		return {}, format_error("unknown key %q", key)
 	}
 	command := Command{kind = .Displays}
-	if value, has := json_get(object, "clear"); has {
-		clear, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'clear' must be a boolean")
-		}
-		command.displays.clear = clear
+	if field_error := json_bool(object, "clear", &command.displays.clear); field_error != "" {
+		return {}, field_error
 	}
 	set_value, has_set := json_get(object, "set")
 	if command.displays.clear && has_set {

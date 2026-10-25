@@ -2,6 +2,7 @@
 package harness
 
 import "core:encoding/json"
+import "core:mem"
 
 Settle_Command :: struct {
 	frames:     int,
@@ -10,7 +11,7 @@ Settle_Command :: struct {
 }
 
 @(private)
-parse_settle :: proc(object: json.Object) -> (Command, string) {
+parse_settle :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(object, {"cmd", "frames", "until"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}

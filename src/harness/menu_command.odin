@@ -2,6 +2,7 @@
 package harness
 
 import "core:encoding/json"
+import "core:mem"
 import "core:fmt"
 import "core:strings"
 
@@ -21,19 +22,14 @@ Menu_Command :: struct {
 	has_set:       bool,
 }
 
-parse_menu :: proc(object: json.Object) -> (Command, string) {
+parse_menu :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(object, {"cmd", "open", "item", "activate", "direction", "set"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 
 	command := Command{kind = .Menu}
-	if value, has := json_get(object, "open"); has {
-		open, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'open' must be a boolean")
-		}
-		command.menu.open = open
-		command.menu.has_open = true
+	if field_error := json_optional_bool(object, "open", &command.menu.open, &command.menu.has_open); field_error != "" {
+		return {}, field_error
 	}
 	if value, has := json_get(object, "item"); has {
 		name, ok := json_string(value)
@@ -47,13 +43,8 @@ parse_menu :: proc(object: json.Object) -> (Command, string) {
 		command.menu.item = item
 		command.menu.has_item = true
 	}
-	if value, has := json_get(object, "activate"); has {
-		activate, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'activate' must be a boolean")
-		}
-		command.menu.activate = activate
-		command.menu.has_activate = true
+	if field_error := json_optional_bool(object, "activate", &command.menu.activate, &command.menu.has_activate); field_error != "" {
+		return {}, field_error
 	}
 	if value, has := json_get(object, "direction"); has {
 		direction, ok := json_integer(value)
