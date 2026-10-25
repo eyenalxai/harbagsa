@@ -93,7 +93,6 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 		renderer_report = {last_reset = "none"},
 		render_enabled = true,
 	}
-	session.hud.menu.displays = display.fallback_list()
 	// The scratch holds the frame's debug lines, so it is too large for a local
 	// Session on the stack.
 	session.scratch = new(frame.Scratch, allocator)
@@ -105,6 +104,7 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 		}
 		return {}, "simulation init failed"
 	}
+	session.sim.settings.display = display.fallback_list()
 	session.pending = make([dynamic]Pending_Capture, 0, 8, allocator)
 	session.captures = make([dynamic]Capture_Result, 0, 8, allocator)
 	session.checks = make([dynamic]Check_Result, 0, 8, allocator)
@@ -177,6 +177,7 @@ session_set_backend :: proc(session: ^Session, backend: ^Backend, present: bool)
 
 session_reset :: proc(session: ^Session) -> string {
 	game.menu_reset(&session.hud.menu)
+	displays := session.sim.settings.display
 	if game.simulation_is_valid(&session.sim) {
 		game.simulation_destroy(&session.sim)
 	}
@@ -184,6 +185,7 @@ session_reset :: proc(session: ^Session) -> string {
 	if !game.simulation_is_valid(&session.sim) {
 		return format_error("%s", "simulation init failed")
 	}
+	session.sim.settings.display = displays
 	session.input = {}
 	session.camera_override = {}
 	session.has_camera_override = false

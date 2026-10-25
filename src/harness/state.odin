@@ -208,16 +208,16 @@ state_build_sections :: proc(
 		}
 	}
 	if .Settings in sections {
-		resolution := game.settings_effective_resolution(sim.settings, &menu.displays)
+		resolution := game.settings_effective_resolution(&sim.settings)
 		window_resolution := sim.settings.window.resolution
 		state.settings = {
 			window_mode = game.window_mode_name(sim.settings.window.mode),
 			display = strings.clone(
-				game.settings_display_name(sim.settings, &menu.displays),
+				game.settings_display_name(&sim.settings),
 				allocator,
 			),
 			display_index = display.clamp_index(
-				&menu.displays,
+				&sim.settings.display,
 				sim.settings.window.display,
 			),
 			resolution = fmt.aprintf(

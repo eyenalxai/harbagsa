@@ -101,7 +101,6 @@ scene_text :: proc(t: ^testing.T, session: ^harness.Session, options: frame.Opti
 	scene := frame.scene_capture(
 		&session.sim,
 		&session.debug,
-		&session.hud,
 		options,
 		nil,
 		context.temp_allocator,

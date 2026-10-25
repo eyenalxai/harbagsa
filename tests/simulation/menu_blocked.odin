@@ -12,7 +12,7 @@ display_press_is_blocked_with_one_display :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 	menu: game.Menu_State
-	menu.displays = one_display({1920, 1080}, true)
+	sim.settings.display = one_display({1920, 1080}, true)
 	game.menu_open(&menu)
 	game.menu_select(&menu, 1)
 
@@ -21,7 +21,7 @@ display_press_is_blocked_with_one_display :: proc(t: ^testing.T) {
 	testing.expect_value(t, menu.status, game.MENU_STATUS_ONE_DISPLAY)
 	testing.expect_value(t, sim.settings.window.display, 0)
 
-	game.menu_view(&menu, sim.settings, false, 0)
+	game.menu_view(&menu, &sim.settings, false, 0)
 	testing.expect(t, menu.view.rows[1].blocked, "the Display row is not blocked")
 	testing.expect_value(t, menu.view.note, game.MENU_STATUS_ONE_DISPLAY)
 }
@@ -31,7 +31,7 @@ a_successful_change_clears_a_blocked_note :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 	menu: game.Menu_State
-	menu.displays = one_display({1920, 1080}, true)
+	sim.settings.display = one_display({1920, 1080}, true)
 	game.menu_open(&menu)
 	game.menu_select(&menu, 1)
 
@@ -45,7 +45,7 @@ a_successful_change_clears_a_blocked_note :: proc(t: ^testing.T) {
 	testing.expect_value(t, menu.status, "")
 	testing.expect_value(t, menu.status_remaining, 0)
 
-	game.menu_view(&menu, sim.settings, false, 0)
+	game.menu_view(&menu, &sim.settings, false, 0)
 	testing.expect_value(t, menu.view.note, game.MENU_NOTE)
 }
 
@@ -54,7 +54,7 @@ resolution_press_is_blocked_without_modes :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 	menu: game.Menu_State
-	menu.displays = one_display({}, false)
+	sim.settings.display = one_display({}, false)
 	game.menu_open(&menu)
 	game.menu_select(&menu, 2)
 
@@ -63,7 +63,7 @@ resolution_press_is_blocked_without_modes :: proc(t: ^testing.T) {
 	testing.expect_value(t, menu.status, game.MENU_STATUS_NO_MODES)
 	testing.expect_value(t, sim.settings.window.resolution, display.Mode{1280, 720})
 
-	game.menu_view(&menu, sim.settings, false, 0)
+	game.menu_view(&menu, &sim.settings, false, 0)
 	testing.expect(t, menu.view.rows[2].blocked, "the Resolution row is not blocked")
 }
 
@@ -74,7 +74,7 @@ windowed_resolution_press_is_blocked_with_one_mode :: proc(t: ^testing.T) {
 	sim.settings.window.mode = .Windowed
 	sim.settings.window.resolution = {1920, 1080}
 	menu: game.Menu_State
-	menu.displays = one_display({1920, 1080}, true)
+	sim.settings.display = one_display({1920, 1080}, true)
 	game.menu_open(&menu)
 	game.menu_select(&menu, 2)
 
@@ -83,13 +83,13 @@ windowed_resolution_press_is_blocked_with_one_mode :: proc(t: ^testing.T) {
 	testing.expect_value(t, menu.status, game.MENU_STATUS_ONE_MODE)
 	testing.expect_value(t, sim.settings.window.resolution, display.Mode{1920, 1080})
 
-	game.menu_view(&menu, sim.settings, false, 0)
+	game.menu_view(&menu, &sim.settings, false, 0)
 	testing.expect(t, menu.view.rows[2].blocked, "the Resolution row is not blocked")
 
 	sim.settings.window.mode = .Borderless
 	menu.status = ""
 	menu.status_remaining = 0
-	game.menu_view(&menu, sim.settings, false, 0)
+	game.menu_view(&menu, &sim.settings, false, 0)
 	testing.expect(t, !menu.view.rows[2].blocked, "a borderless resolution is blocked")
 
 	result = game.menu_change_setting(&menu, &sim.settings, 1)
@@ -110,7 +110,7 @@ weight_press_is_blocked_at_the_axis_limits :: proc(t: ^testing.T) {
 	testing.expect_value(t, result, game.Change_Result.Blocked)
 	testing.expect_value(t, menu.status, game.MENU_STATUS_MAX_WEIGHT)
 	testing.expect_value(t, sim.settings.type_weight, 900)
-	game.menu_view(&menu, sim.settings, false, 0)
+	game.menu_view(&menu, &sim.settings, false, 0)
 	testing.expect(t, !menu.view.rows[3].blocked, "the weight row is blocked at the maximum")
 
 	sim.settings.type_weight = 100
@@ -120,7 +120,7 @@ weight_press_is_blocked_at_the_axis_limits :: proc(t: ^testing.T) {
 	testing.expect_value(t, result, game.Change_Result.Blocked)
 	testing.expect_value(t, menu.status, game.MENU_STATUS_MIN_WEIGHT)
 	testing.expect_value(t, sim.settings.type_weight, 100)
-	game.menu_view(&menu, sim.settings, false, 0)
+	game.menu_view(&menu, &sim.settings, false, 0)
 	testing.expect(t, !menu.view.rows[3].blocked, "the weight row is blocked at the minimum")
 
 	result = game.menu_change_setting(&menu, &sim.settings, 1)
@@ -138,24 +138,24 @@ blocked_status_lasts_two_seconds :: proc(t: ^testing.T) {
 	sim.settings.type_weight = 900
 
 	_ = game.menu_change_setting(&menu, &sim.settings, 1)
-	game.menu_view(&menu, sim.settings, false, 0)
+	game.menu_view(&menu, &sim.settings, false, 0)
 	testing.expect_value(t, menu.view.note, game.MENU_STATUS_MAX_WEIGHT)
 	testing.expect_value(t, menu.status_remaining, game.MENU_STATUS_SECONDS)
 
-	game.menu_view(&menu, sim.settings, false, 1.0)
+	game.menu_view(&menu, &sim.settings, false, 1.0)
 	testing.expect_value(t, menu.view.note, game.MENU_STATUS_MAX_WEIGHT)
 
-	game.menu_view(&menu, sim.settings, false, 1.1)
+	game.menu_view(&menu, &sim.settings, false, 1.1)
 	testing.expect_value(t, menu.view.note, game.MENU_NOTE)
 	testing.expect_value(t, menu.status, "")
 
 	_ = game.menu_change_setting(&menu, &sim.settings, 1)
-	game.menu_view(&menu, sim.settings, false, 1.5)
+	game.menu_view(&menu, &sim.settings, false, 1.5)
 	testing.expect_value(t, menu.view.note, game.MENU_STATUS_MAX_WEIGHT)
 
 	_ = game.menu_change_setting(&menu, &sim.settings, 1)
 	testing.expect_value(t, menu.status_remaining, game.MENU_STATUS_SECONDS)
-	game.menu_view(&menu, sim.settings, false, 1.0)
+	game.menu_view(&menu, &sim.settings, false, 1.0)
 	testing.expect_value(t, menu.view.note, game.MENU_STATUS_MAX_WEIGHT)
 }
 
@@ -182,7 +182,7 @@ enter_on_a_blocked_row_keeps_the_menu_open :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 	menu: game.Menu_State
-	menu.displays = one_display({1920, 1080}, true)
+	sim.settings.display = one_display({1920, 1080}, true)
 	game.menu_open(&menu)
 	game.menu_select(&menu, 1)
 
