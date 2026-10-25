@@ -23,7 +23,9 @@ scenario_renderer_debug :: proc(scenario: ^Scenario, value: json.Value) -> strin
 	if !object_ok {
 		return format_error("%s", "scenario 'renderer_debug' must be an object")
 	}
-	if key, unknown := json_unknown_key(object, RENDERER_DEBUG_BLOCK_KEYS); unknown {
+	allowed := renderer_debug_keys(context.temp_allocator, false)
+	defer delete(allowed, context.temp_allocator)
+	if key, unknown := json_unknown_key(object, allowed); unknown {
 		return fmt.aprintf("unknown renderer_debug key %q", key, allocator = context.allocator)
 	}
 	fields, fields_error := renderer_debug_fields(object)

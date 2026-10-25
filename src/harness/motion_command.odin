@@ -2,8 +2,10 @@
 package harness
 
 import "core:encoding/json"
-import "core:mem"
+import "core:fmt"
 import "core:math"
+import "core:mem"
+import "core:strings"
 
 @(private)
 parse_look :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
@@ -67,6 +69,22 @@ parse_input_fields :: proc(object: json.Object) -> (input: Input_Command, error:
 		return {}, field_error
 	}
 	return input, ""
+}
+
+input_command_json :: proc(input: Input_Command, allocator: mem.Allocator) -> string {
+	builder := strings.builder_make(allocator)
+	fmt.sbprint(&builder, `{"cmd": "input"`)
+	if input.has_forward {
+		fmt.sbprintf(&builder, `, "forward": %g`, input.forward)
+	}
+	if input.has_right {
+		fmt.sbprintf(&builder, `, "right": %g`, input.right)
+	}
+	if input.has_jump {
+		fmt.sbprintf(&builder, `, "jump": %v`, input.jump)
+	}
+	fmt.sbprint(&builder, `}`)
+	return strings.to_string(builder)
 }
 
 @(private)

@@ -37,6 +37,10 @@ share one writer and one load path.
 - **The camera is exact.** A player scene stores the feet position, yaw, pitch,
   and stance, and sets the eye height from the stance. A debug scene stores the
   debug camera. An override scene stores the eye directly.
+- **The renderer debug block is one patch.** `renderer.Renderer_Debug_Patch` is
+  the JSON shape, the command patch, and the scene snapshot. A snapshot writes
+  every effective field, so a `repro` restores the override exactly; a command
+  may omit a field and keep the live value.
 
 ## Consequences
 
