@@ -289,6 +289,9 @@ run_publish :: proc(state: ^Run_State, results: []Stage_Result) -> Stage_Result 
 	if state.analysis_path != "" && !state.analysis_failed {
 		report.analysis = state.analysis_path
 	}
+	if len(state.session.references) > 0 {
+		report.references = state.session.references[:]
+	}
 	exit_code := run_exit_code(results)
 	report.ok = exit_code == EXIT_OK
 	report.exit_code = exit_code

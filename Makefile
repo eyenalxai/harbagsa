@@ -1,5 +1,5 @@
 ODIN ?= odin
-ODIN_FLAGS ?= -vet -vet-style -vet-semicolon -vet-tabs -vet-using-param -vet-unused-procedures -vet-packages:main,platform,renderer,font,game,geometry,frame,perf,harness,display,ui,input -strict-style -warnings-as-errors -disallow-do
+ODIN_FLAGS ?= -vet -vet-style -vet-semicolon -vet-tabs -vet-using-param -vet-unused-procedures -vet-packages:main,platform,renderer,font,game,geometry,frame,perf,harness,display,ui,input,reference -strict-style -warnings-as-errors -disallow-do
 ODIN_COLLECTIONS := -collection:libs=vendor -collection:src=src
 # Library checks and the renderer test cannot know which procedures another
 # package calls, so they omit -vet-unused-procedures. The main check still runs
@@ -14,7 +14,7 @@ HARNESS_REVISION := $(shell git rev-parse --short HEAD 2>/dev/null || printf unk
 HARNESS_DIRTY := $(shell if git rev-parse --git-dir >/dev/null 2>&1 && [ -z "$$(git status --porcelain 2>/dev/null)" ]; then printf false; else printf true; fi)
 AO_SAMPLES ?= 8
 RENDERER_DEFINES := -define:AO_SAMPLES=$(AO_SAMPLES)
-TEST_PACKAGES := display platform input physics simulation frame perf harness renderer docs
+TEST_PACKAGES := display platform input physics simulation frame perf harness renderer reference docs
 TEST_TARGETS := $(addprefix test-,$(TEST_PACKAGES))
 # These packages can see the whole program, so they keep the unused-procedure check.
 TEST_FULL_FLAGS := display physics simulation
@@ -92,7 +92,7 @@ VULKAN_LAYER_DIRS ?= \
 	/usr/share/vulkan/explicit_layer.d
 VALIDATION_LAYER := VK_LAYER_KHRONOS_validation
 
-.PHONY: all FORCE build agent check check-spirv check-lines test $(TEST_TARGETS) run shaders validate validate-offscreen validate-demo check-validation-layer check-references shot smoke quick ui lighting suite clean
+.PHONY: all FORCE build agent check check-spirv check-lines test $(TEST_TARGETS) run shaders validate validate-offscreen validate-demo check-validation-layer check-references shot smoke quick ui lighting reference suite clean
 
 FORCE:
 
@@ -190,6 +190,7 @@ check: check-lines check-spirv $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shad
 	$(ODIN) check src/harness $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/ui $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/input $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
+	$(ODIN) check src/reference $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 
 check-references:
 	@python3 tools/check-references.py
@@ -303,6 +304,9 @@ shot: agent
 		exit 1; \
 	fi; \
 	printf '%s\n' "$$paths"
+
+reference: agent
+	$(AGENT_BIN) run scenarios/ddgi-reference.json --out runs/ddgi-reference $(AGENT_FLAGS)
 
 quick: agent
 	$(AGENT_BIN) suite fast --out runs/fast $(AGENT_FLAGS)
