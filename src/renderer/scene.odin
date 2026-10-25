@@ -56,6 +56,17 @@ Scene :: struct {
 	light_memory:  [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
 	light_mapped:  [MAX_FRAMES_IN_FLIGHT]rawptr,
 
+	cluster_counts_buffers: [MAX_FRAMES_IN_FLIGHT]vk.Buffer,
+	cluster_counts_memory:  [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
+	cluster_counts_mapped:  [MAX_FRAMES_IN_FLIGHT]rawptr,
+
+	cluster_indices_buffers: [MAX_FRAMES_IN_FLIGHT]vk.Buffer,
+	cluster_indices_memory:  [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
+	cluster_indices_mapped:  [MAX_FRAMES_IN_FLIGHT]rawptr,
+
+	cluster_pipeline: vk.Pipeline,
+	cluster_layout:   vk.PipelineLayout,
+
 	object_capacity: int,
 	light_capacity:  int,
 }
@@ -68,6 +79,9 @@ init_scene :: proc(r: ^Renderer) -> Error {
 		return .Create_Scene
 	}
 	if !create_pipeline(r) {
+		return .Create_Pipeline
+	}
+	if !create_cluster_pipeline(r) {
 		return .Create_Pipeline
 	}
 	if !create_sky_pipeline(r) {
@@ -88,6 +102,7 @@ destroy_scene :: proc(r: ^Renderer) {
 	destroy_pipeline_pair(r, &r.scene.depth_pipeline, &r.scene.depth_layout)
 	destroy_pipeline_pair(r, &r.scene.pipeline, &r.scene.pipeline_layout)
 	destroy_pipeline_pair(r, &r.scene.sky_pipeline, &r.scene.sky_layout)
+	destroy_pipeline_pair(r, &r.scene.cluster_pipeline, &r.scene.cluster_layout)
 	if r.scene.descriptor_pool != 0 {
 		vk.DestroyDescriptorPool(r.device, r.scene.descriptor_pool, nil)
 		r.scene.descriptor_pool = 0

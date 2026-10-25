@@ -26,6 +26,7 @@ layout(set = 0, binding = 1) readonly buffer Objects {
 } scene;
 
 #include "camera.glsl"
+#include "cluster.glsl"
 
 layout(set = 0, binding = 2) uniform accelerationStructureEXT scene_tlas;
 
@@ -39,6 +40,14 @@ struct Light {
 layout(set = 0, binding = 3) readonly buffer Lights {
     Light lights[];
 } light_set;
+
+layout(set = 0, binding = 4) readonly buffer ClusterCounts {
+    uint counts[];
+} cluster_counts;
+
+layout(set = 0, binding = 5) readonly buffer ClusterIndices {
+    uint indices[];
+} cluster_indices;
 
 const vec3 SUN_COLOR = vec3(1.0, 0.98, 0.94);
 const int SUN_SAMPLES = 16;
@@ -129,11 +138,28 @@ float sun_visibility(vec3 world_position, vec3 normal, vec3 to_light) {
 }
 
 vec3 point_light_radiance(vec3 world_position, vec3 normal) {
-    int count = int(camera.sun.z);
+    float view_z = -(camera.view * vec4(world_position, 1.0)).z;
+    int cluster_x = clamp(
+        int(gl_FragCoord.x / camera.screen.y * float(CLUSTER_X)),
+        0,
+        CLUSTER_X - 1
+    );
+    int cluster_y = clamp(
+        int(gl_FragCoord.y / camera.screen.z * float(CLUSTER_Y)),
+        0,
+        CLUSTER_Y - 1
+    );
+    float slice = log2(max(view_z, CLUSTER_NEAR) / CLUSTER_NEAR) /
+                  log2(CLUSTER_FAR / CLUSTER_NEAR);
+    int cluster_z = clamp(int(slice * float(CLUSTER_Z)), 0, CLUSTER_Z - 1);
+    uint cluster = uint(cluster_x + CLUSTER_X * (cluster_y + CLUSTER_Y * cluster_z));
+
+    uint count = cluster_counts.counts[cluster];
     bool shadows = camera.sun.w > 0.5;
     vec3 sum = vec3(0.0);
-    for (int i = 0; i < count; ++i) {
-        Light light = light_set.lights[i];
+    for (uint index = 0; index < count; ++index) {
+        uint light_index = cluster_indices.indices[cluster * uint(CLUSTER_LIGHT_STRIDE) + index];
+        Light light = light_set.lights[light_index];
         vec3 offset = light.position.xyz - world_position;
         float distance = length(offset);
         if (distance <= 0.0 || distance >= light.color.w) {

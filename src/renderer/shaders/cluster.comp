@@ -1,0 +1,76 @@
+#version 460
+
+layout(local_size_x = 64) in;
+
+#include "camera.glsl"
+#include "cluster.glsl"
+
+// std430: position.xyz is the light position and position.w its intensity;
+// color.rgb is the light color and color.w its range.
+struct Light {
+    vec4 position;
+    vec4 color;
+};
+
+layout(set = 0, binding = 3) readonly buffer Lights {
+    Light lights[];
+} light_set;
+
+layout(set = 0, binding = 4) buffer ClusterCounts {
+    uint counts[];
+} cluster_counts;
+
+layout(set = 0, binding = 5) writeonly buffer ClusterIndices {
+    uint indices[];
+} cluster_indices;
+
+void main() {
+    uint cluster = gl_GlobalInvocationID.x;
+    if (cluster >= uint(CLUSTER_COUNT)) {
+        return;
+    }
+
+    int x = int(cluster) % CLUSTER_X;
+    int y = (int(cluster) / CLUSTER_X) % CLUSTER_Y;
+    int z = int(cluster) / (CLUSTER_X * CLUSTER_Y);
+
+    float ratio = CLUSTER_FAR / CLUSTER_NEAR;
+    float z_near = CLUSTER_NEAR * pow(ratio, float(z) / float(CLUSTER_Z));
+    float z_far = CLUSTER_NEAR * pow(ratio, float(z + 1) / float(CLUSTER_Z));
+
+    // The tile's four view-space corner rays, clipped to the slice. The far
+    // plane point is linear from the eye, so scaling it moves it to the slice.
+    mat4 inverse_projection = inverse(camera.projection);
+    vec3 min_view = vec3(1e30);
+    vec3 max_view = vec3(-1e30);
+    for (int corner = 0; corner < 4; ++corner) {
+        float nx = (float(x + (corner & 1)) / float(CLUSTER_X)) * 2.0 - 1.0;
+        float ny = (float(y + ((corner >> 1) & 1)) / float(CLUSTER_Y)) * 2.0 - 1.0;
+        vec4 far_h = inverse_projection * vec4(nx, ny, 1.0, 1.0);
+        vec3 far_view = far_h.xyz / far_h.w;
+        vec3 near_point = far_view * (z_near / CLUSTER_FAR);
+        vec3 far_point = far_view * (z_far / CLUSTER_FAR);
+        min_view = min(min_view, min(near_point, far_point));
+        max_view = max(max_view, max(near_point, far_point));
+    }
+
+    int count = 0;
+    int light_count = int(camera.sun.z);
+    for (int index = 0; index < light_count; ++index) {
+        vec3 center = (camera.view * vec4(light_set.lights[index].position.xyz, 1.0)).xyz;
+        float radius = light_set.lights[index].color.w;
+        vec3 closest = clamp(center, min_view, max_view);
+        vec3 delta = center - closest;
+        if (dot(delta, delta) <= radius * radius) {
+            // A cluster that overflows its stride keeps the first lights it
+            // tested. The cap is a buffer bound, not a scene bound.
+            if (count < CLUSTER_LIGHT_STRIDE) {
+                cluster_indices.indices[cluster * uint(CLUSTER_LIGHT_STRIDE) + uint(count)] = uint(index);
+                count += 1;
+            } else {
+                atomicAdd(cluster_counts.counts[CLUSTER_COUNT], 1u);
+            }
+        }
+    }
+    cluster_counts.counts[cluster] = uint(count);
+}

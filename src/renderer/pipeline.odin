@@ -5,6 +5,7 @@ import vk "vendor:vulkan"
 
 BOX_VERTEX_SPIRV :: #load("../../build/shaders/box.vert.spv")
 BOX_FRAGMENT_SPIRV :: #load("../../build/shaders/box.frag.spv")
+CLUSTER_COMPUTE_SPIRV :: #load("../../build/shaders/cluster.comp.spv")
 
 create_pipeline :: proc(r: ^Renderer) -> bool {
 	set_layouts := [1]vk.DescriptorSetLayout{r.scene.descriptor_set_layout}
@@ -79,5 +80,20 @@ create_pipeline :: proc(r: ^Renderer) -> bool {
 		},
 		&r.scene.depth_pipeline,
 		&r.scene.depth_layout,
+	)
+}
+
+@(private)
+create_cluster_pipeline :: proc(r: ^Renderer) -> bool {
+	set_layouts := [1]vk.DescriptorSetLayout{r.scene.descriptor_set_layout}
+	return create_compute_pipeline(
+		r,
+		{
+			spirv = CLUSTER_COMPUTE_SPIRV,
+			name = "cluster",
+			set_layouts = set_layouts[:],
+		},
+		&r.scene.cluster_pipeline,
+		&r.scene.cluster_layout,
 	)
 }
