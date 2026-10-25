@@ -36,6 +36,7 @@ Camera_State :: struct {
 	yaw:        f32       `json:"yaw"`,
 	pitch:      f32       `json:"pitch"`,
 	fov:        f32       `json:"fov"`,
+	source:     string    `json:"source"`,
 	overridden: bool      `json:"overridden"`,
 }
 
