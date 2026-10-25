@@ -153,6 +153,11 @@ commits the position, and `Esc` or a right click restores the sun from before
 the mode. It is separate from the object palette and object placement.
 _Avoid_: Sun drag, sun select
 
+**Sun gizmo**:
+The debug lines that mark the sun position: a ring, a cross, and a dashed line
+to the arena centre. It draws only while sun placement is active.
+_Avoid_: Sun marker, sun ray, sun line
+
 **Sky dome**:
 The 50 m sphere around the arena centre that holds the sun position. The aim
 point is projected onto it, and the height is clamped to 2.5 m above the arena
