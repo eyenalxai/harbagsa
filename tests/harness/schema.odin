@@ -100,9 +100,10 @@ schema_covers_every_command_and_the_new_fields :: proc(t: ^testing.T) {
 		testing.expectf(t, found, "command %q is missing from the schema", row.name)
 		if found {
 			testing.expect_value(t, command.name, row.name)
+			testing.expect_value(t, command.description, row.description)
 			testing.expectf(
 				t,
-				harness.schema_command_description(row.kind) != "",
+				row.description != "",
 				"command %q has no description",
 				row.name,
 			)
@@ -130,6 +131,19 @@ schema_covers_every_command_and_the_new_fields :: proc(t: ^testing.T) {
 			strings.contains(debug.description, "null"),
 			"the renderer_debug schema does not name the null reset",
 		)
+		for name in ([?]string{"taa", "depth_trust", "gi", "ao_radius"}) {
+			field, found := harness.schema_field_named(debug, name)
+			testing.expectf(t, found, "renderer_debug field %q is missing from the schema", name)
+			if found {
+				testing.expectf(
+					t,
+					strings.has_suffix(field.type, "?"),
+					"renderer_debug field %q is not optional: %s",
+					name,
+					field.type,
+				)
+			}
+		}
 	}
 	testing.expect(t, schema_contains(document.check_fields, "analysis.bands.region.x"), "the band region check is missing")
 	testing.expect(t, schema_contains(document.state_fields, "player.position.y"), "the state schema is missing")

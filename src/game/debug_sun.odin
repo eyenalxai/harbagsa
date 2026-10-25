@@ -136,7 +136,3 @@ sun_direction_from_angles :: proc(azimuth, elevation: f32) -> [3]f32 {
 sun_direction_from_light :: proc(light_direction: [3]f32) -> [3]f32 {
 	return {-light_direction.x, -light_direction.y, -light_direction.z}
 }
-
-light_direction_from_sun :: proc(sun_direction: [3]f32) -> [3]f32 {
-	return sun_direction_from_light(sun_direction)
-}

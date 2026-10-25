@@ -70,7 +70,6 @@ record_scene :: proc(
 	input.height = extent.height
 	input.jitter = taa_frame_jitter(r, extent)
 	input.shadow_phase = taa_shadow_phase(r)
-	r.taa.current_jitter = input.jitter
 	r.taa.shadow_phase = input.shadow_phase
 	input.atlas_weight = text_atlas_applied_weight(r)
 	debug := renderer_debug(r)

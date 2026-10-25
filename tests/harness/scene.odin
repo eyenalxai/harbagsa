@@ -7,6 +7,7 @@ import "core:testing"
 
 import "src:frame"
 import "src:harness"
+import "src:renderer"
 
 @(test)
 scene_round_trips_a_player_view :: proc(t: ^testing.T) {
@@ -123,6 +124,95 @@ scene_applies_renderer_debug_overrides :: proc(t: ^testing.T) {
 	testing.expect(t, state.debug.active, "the override is not active")
 	testing.expect(t, !state.debug.taa, "taa was not disabled")
 	testing.expect(t, !state.debug.sky, "sky was not disabled")
+}
+
+@(test)
+scene_snapshot_keeps_every_renderer_debug_field :: proc(t: ^testing.T) {
+	session, error := harness.session_create(context.allocator)
+	testing.expectf(t, error == "", "session create failed: %s", error)
+	defer harness.session_destroy(&session)
+	if error != "" {
+		return
+	}
+	expected := full_renderer_debug()
+	fake := Fake_Renderer_Debug{}
+	backend := harness.Backend {
+		ready       = true,
+		ctx         = &fake,
+		get_debug   = fake_get_debug,
+		set_debug   = fake_set_debug,
+		clear_debug = fake_clear_debug,
+		snapshot    = fake_snapshot,
+	}
+	harness.session_set_backend(&session, &backend, false)
+	session.debug_renderer = true
+
+	scene := frame.scene_capture(
+		&session.sim,
+		&session.debug,
+		frame.Options{captured = true},
+		nil,
+		&expected,
+		context.temp_allocator,
+	)
+	defer frame.scene_destroy(&scene, context.temp_allocator)
+	text := frame.scene_json(scene, context.temp_allocator)
+	testing.expectf(t, strings.contains(text, `"gi": false`), "the snapshot lost gi: %s", text)
+	testing.expectf(t, strings.contains(text, `"depth_trust": true`), "the snapshot lost depth trust")
+
+	reply := execute(t, &session, text)
+	defer harness.reply_destroy(&reply, context.allocator)
+	testing.expectf(t, reply.ok, "scene apply failed: %s", reply.error)
+	testing.expect_value(t, fake.debug, expected)
+}
+
+@(test)
+scene_snapshot_omits_the_automatic_history_weight :: proc(t: ^testing.T) {
+	session, error := harness.session_create(context.allocator)
+	testing.expectf(t, error == "", "session create failed: %s", error)
+	defer harness.session_destroy(&session)
+	if error != "" {
+		return
+	}
+	debug := renderer.renderer_debug_default()
+	debug.active = true
+	scene := frame.scene_capture(
+		&session.sim,
+		&session.debug,
+		frame.Options{captured = true},
+		nil,
+		&debug,
+		context.temp_allocator,
+	)
+	defer frame.scene_destroy(&scene, context.temp_allocator)
+	text := frame.scene_json(scene, context.temp_allocator)
+	testing.expect(
+		t,
+		!strings.contains(text, `"history_weight"`),
+		"the automatic history weight entered the snapshot",
+	)
+}
+
+@(private)
+full_renderer_debug :: proc() -> renderer.Renderer_Debug {
+	debug := renderer.renderer_debug_default()
+	debug.active = true
+	debug.taa = false
+	debug.jitter = false
+	debug.history_weight = 0.25
+	debug.clamp = false
+	debug.force_depth_trust = true
+	debug.freeze_shadow_phase = true
+	debug.shadow_phase = 9
+	debug.light_shadows = false
+	debug.synthetic_lights = 9
+	debug.sky = false
+	debug.gi = false
+	debug.ao = false
+	debug.ao_radius = 2.0
+	debug.ao_strength = 0.25
+	debug.clip_height = 3.0
+	return debug
 }
 
 @(private)

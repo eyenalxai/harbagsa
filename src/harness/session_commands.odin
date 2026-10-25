@@ -1,11 +1,7 @@
 #+vet explicit-allocators
 package harness
 
-import "core:fmt"
 import "core:strings"
-
-
-import "src:renderer"
 
 Reply :: struct {
 	ok:     bool   `json:"ok"`,
@@ -132,53 +128,46 @@ session_record_command :: proc(session: ^Session, command: Command, raw_line: st
 	case .Custom:
 		if command.kind == .Capture {
 			record_capture_line(session, command.capture)
+		} else if command.kind == .Captures {
+			record_captures_line(session, command.captures)
 		}
 	case .Skip:
 	}
 }
 
 @(private)
+record_capture_frame :: proc(
+	session: ^Session,
+	has_frame: bool,
+	frame: int,
+) -> (
+	relative: int,
+	resolved: int,
+) {
+	resolved = has_frame ? frame : session.frame
+	relative = max(resolved - session.recorder.start_frame, 0)
+	return
+}
+
+@(private)
+record_captures_line :: proc(session: ^Session, captures: Captures_Command) {
+	recorded := captures
+	recorded.has_frame = true
+	relative, _ := record_capture_frame(session, captures.has_frame, captures.frame)
+	recorded.frame = relative
+	line := captures_command_json(recorded, session.allocator)
+	append(&session.recorder.recorded, line)
+}
+
+@(private)
 record_capture_line :: proc(session: ^Session, capture: Capture_Command) {
-	frame := session.frame - session.recorder.start_frame
-	if frame < 0 {
-		frame = 0
+	recorded := capture
+	recorded.has_frame = true
+	relative, resolved := record_capture_frame(session, capture.has_frame, capture.frame)
+	recorded.frame = relative
+	if recorded.name == "" {
+		recorded.name = capture_name(resolved, context.temp_allocator)
 	}
-	name := capture.name
-	if name == "" {
-		name = capture_name(session.frame, context.temp_allocator)
-	}
-	alpha_part := ""
-	if capture.has_alpha {
-		alpha_part = fmt.aprintf(
-			", \"alpha\": %g",
-			capture.alpha,
-			allocator = context.temp_allocator,
-		)
-	}
-	target_part := ""
-	if capture.target != .Color {
-		target_part = fmt.aprintf(
-			`, "target": %q`,
-			renderer.capture_target_name(capture.target),
-			allocator = context.temp_allocator,
-		)
-	}
-	format_part := ""
-	if capture.format != .Png {
-		format_part = fmt.aprintf(
-			`, "format": %q`,
-			capture_format_name(capture.format),
-			allocator = context.temp_allocator,
-		)
-	}
-	line := fmt.aprintf(
-		`{{"cmd": "capture", "name": %q, "frame": %d%s%s%s}}`,
-		name,
-		frame,
-		alpha_part,
-		target_part,
-		format_part,
-		allocator = session.allocator,
-	)
+	line := capture_command_json(recorded, session.allocator)
 	append(&session.recorder.recorded, line)
 }

@@ -23,7 +23,15 @@ without a second build.
 
 - `Renderer_Debug` holds the override values. `active` is false by default, so
   the renderer ignores every field until the command sets it.
-- A first command copies the current effective state into the struct, so an
+- A command is a sparse `Renderer_Debug_Patch`, not a second override struct.
+  One table lists each key, its type, and its range; the parser, the key list,
+  and the reset patch read it. A `null` value adds that field to the reset set.
+  The scene snapshot, the command parser, the schema, and the reset path read
+  the same patch and table.
+- A scene snapshot writes every effective override field, including `gi`, so a
+  repro restores the exact debug state. `history_weight` stays out of a snapshot
+  when it is automatic, because there is no fixed value to restore.
+- A first command copies the current effective state into the patch, so an
   omitted field keeps its value.
 - A change to the override resets the history with reason `debug_override`. The
   shadow phase is included: a new phase changes the sun samples the resolve

@@ -4,6 +4,7 @@ package harness
 import "core:encoding/json"
 import "core:fmt"
 import "core:mem"
+import "core:strings"
 
 import "src:renderer"
 
@@ -136,5 +137,32 @@ capture_group_name :: proc(
 		index,
 		allocator = context.temp_allocator,
 	)
+}
+
+captures_command_json :: proc(command: Captures_Command, allocator: mem.Allocator) -> string {
+	builder := strings.builder_make(allocator)
+	fmt.sbprint(&builder, `{"cmd": "captures"`)
+	has_previous := true
+	if command.has_frame {
+		json_write_separator(&builder, &has_previous)
+		fmt.sbprintf(&builder, `"frame": %d`, command.frame)
+	}
+	if command.has_alpha {
+		json_write_separator(&builder, &has_previous)
+		fmt.sbprintf(&builder, `"alpha": %g`, command.alpha)
+	}
+	json_write_separator(&builder, &has_previous)
+	fmt.sbprint(&builder, `"outputs": [`)
+	for output, index in command.outputs {
+		if index > 0 {
+			fmt.sbprint(&builder, `, `)
+		}
+		fmt.sbprint(&builder, `{`)
+		output_previous := false
+		capture_json_fields(&builder, output, false, &output_previous)
+		fmt.sbprint(&builder, `}`)
+	}
+	fmt.sbprint(&builder, `]}`)
+	return strings.to_string(builder)
 }
 
