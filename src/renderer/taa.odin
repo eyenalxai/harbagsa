@@ -8,7 +8,11 @@ import vk "vendor:vulkan"
 
 SCENE_COLOR_FORMAT :: vk.Format.R16G16B16A16_SFLOAT
 VELOCITY_FORMAT :: vk.Format.R16G16B16A16_SFLOAT
-HISTORY_FORMAT :: vk.Format.R16G16B16A16_SFLOAT
+// The history is the only accumulated value. At the 512-sample cap a new
+// sample carries weight 1/513, below one fp16 step at the shaded floor's
+// linear value. Rounding then keeps the ray-count steps instead of the
+// average, so the history is 32-bit while the scene and velocity stay 16-bit.
+HISTORY_FORMAT :: vk.Format.R32G32B32A32_SFLOAT
 COUNT_FORMAT :: vk.Format.R16_SFLOAT
 
 TAA_TELEPORT_DISTANCE :: 2.0

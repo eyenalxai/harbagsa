@@ -8,18 +8,23 @@ ambient term by 1/8. The output dither on the TAA resolve removes the 8-bit
 write band, not this larger lighting step. A smooth shadow gradient in shade,
 most visible on the floor below a ramp, shows the step as a contour band.
 
-The TAA history averages the sample pattern, but the resolved field keeps the
-step. The color clamp is not the cause: a 600-frame run with `clamp: false` and
-the default produced the same field. `scenarios/ramp-shadow.json` measures 298
-steps in a 550x280 patch of the shadow floor on the old shader.
+The TAA history should average the sample pattern, but the resolved field kept
+the step. The color clamp was not the cause: a 600-frame run with `clamp: false`
+and the default produced the same field. The 16-bit history was the cause: at
+the 512-sample cap its update is below one fp16 step, so it rounds the sample
+mean away and keeps the ray-count field. `scenarios/ramp-shadow.json` measures
+298 steps in a 550x280 patch of the shadow floor on the old shader.
 
 ## Decision
 
 Offset a partial count by a per-pixel, per-frame hash inside one step before
 dividing by the sample count. A count of zero and a full count stay exact. The
-hash takes the shadow phase, so the offset changes each frame and the TAA
-history averages it. The history stays linear and never sees the output dither.
-With TAA off, or with the phase frozen, the offset is a fixed per-pixel pattern.
+hash takes the shadow phase, so the offset changes each frame. A 32-bit history
+lets the resolve average the offset over the phase sequence; an fp16 history
+rounds that average away and keeps the count field per
+`docs/adr/0027-32-bit-taa-history.md`. The history stays linear and never sees
+the output dither. With TAA off, or with the phase frozen, the offset is a fixed
+per-pixel pattern.
 
 The same rule applies to the sun and the ambient count. A fragment in full sun
 or full umbra is exact, so the stable gates do not see a flicker.
@@ -44,6 +49,12 @@ or full umbra is exact, so the stable gates do not see a flicker.
 - `scenarios/ramp-shadow.json` measures 298 steps and a 0.642 level maximum jump
   on the old shader, and 3 steps and 0.514 with the rounding. The gate is 50
   steps, so the old shader fails and the new one passes with margin.
+- The dither alone does not remove the converged step. With the 16-bit history,
+  `scenarios/ramp-shadow-crouch.json` measures 275 steps in the crouched view
+  under the ramp. With the 32-bit history it measures 0; see
+  `docs/adr/0027-32-bit-taa-history.md`. The ramp-foot region in
+  `scenarios/ramp-shadow.json` sits where the steps are shallow, so it passed
+  on the 16-bit history.
 - `capture.stats.steps` gates the class. It box-filters the luma 9x9, which
   removes the output dither and the sample noise, then counts adjacent jumps
   between 0.5 and 8 levels. A soft gradient has none; a visibility step leaves a
