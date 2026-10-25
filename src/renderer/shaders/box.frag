@@ -167,10 +167,14 @@ vec3 point_light_radiance(vec3 world_position, vec3 normal) {
     return sum;
 }
 
-// The shader constant must match AO_SAMPLES in scene.odin. A cosine-weighted
-// hemisphere sample already carries the cosine and the 1/pi of the AO
-// integral, so the visible fraction is the AO term.
-const int AO_SAMPLES = 8;
+// The Makefile compiles this with -DAO_SAMPLE_COUNT and passes the same value
+// to the Odin build. A cosine-weighted hemisphere sample already carries the
+// cosine and the 1/pi of the AO integral, so the visible fraction is the AO
+// term.
+#ifndef AO_SAMPLE_COUNT
+#define AO_SAMPLE_COUNT 8
+#endif
+const int AO_SAMPLES = AO_SAMPLE_COUNT;
 
 float ambient_visibility(vec3 position, vec3 normal, float radius, float phase) {
     vec3 origin = position + normal * 0.01;

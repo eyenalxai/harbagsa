@@ -29,7 +29,9 @@ make run
 `make run` builds the Box3D, FreeType, and HarfBuzz archives, compiles every
 shader with `glslc`, builds the demo, and starts it. The first build compiles the
 vendored font libraries and takes about a minute; later builds reuse them. The
-SPIR-V lives in `build/shaders/` and is embedded into the binary.
+SPIR-V lives in `build/shaders/` and is embedded into the binary. `AO_SAMPLES=N`
+sets the AO ray count in both the shader and the Odin report:
+`make agent AO_SAMPLES=64`. The default is 8.
 
 ## Controls
 
@@ -51,8 +53,9 @@ SPIR-V lives in `build/shaders/` and is embedded into the binary.
 - `F4`: toggle the perf overlay. It shows the frame interval, the CPU frame
   time, and the GPU pass times.
 - `F5`: write a repro scenario to `runs/repro/`. It holds the camera, sun,
-  placed objects, settings, view flags, and display list. A notice names the
-  file it wrote, or says the write failed.
+  placed objects, settings, view flags, display list, and active renderer debug
+  overrides. A notice names the file it wrote, or says the write failed.
+  `--repro-dir DIR` or `HARBAGSA_REPRO_DIR` moves the directory.
 - `Esc`: open the settings menu. The menu pauses the game and releases the
   cursor. Press `Esc` again to resume.
 
@@ -254,6 +257,10 @@ Options:
   `-define:ENABLE_RENDERER_DEBUG=true` always accepts it, and so does a
   scenario that declares `"requires": {"renderer_debug": true}`.
 - `--no-analysis`: skip `analysis.json` and the analysis maps.
+- `--timeout SECONDS`: stop the run when its wall-clock budget expires. The
+  budget is not part of the state digest. `run --help` and every other
+  subcommand accept `-h`/`--help`; `harbagsa-agent schema` prints the command
+  fields, units, check paths, and state shape as JSON.
 
 `run -` reads the scenario from standard input. It leaves no throwaway file
 behind:
@@ -341,7 +348,10 @@ the gate. The exit code is the highest entry code. The run directory holds
 build. `make ui` runs `suites/ui.json`. `make suite SUITE=renderer` runs the
 normal agent. `--list` shows each entry's size, gate, and render mode without
 running it. `--fail-fast` stops at the first failure; the default runs every
-entry.
+entry. A suite prints `suite: <entry>` before each run and the wall-clock time
+in `suite.json`; `--quiet` suppresses the progress lines. `--timeout SECONDS`
+applies one budget to each entry. Suite names and scenarios resolve from the
+repository root, so `harbagsa-agent suite renderer` works from any directory.
 
 ### Compare two runs
 
@@ -355,10 +365,16 @@ name:
 
 The default output is `runs/compare/<a>-vs-<b>/compare.png` with
 `compare.json` beside it. The header names each scenario, revision, dirty flag,
-and run directory. Each row names the capture, its frame and extent, and the
-pixel delta. A missing pair or a size mismatch is labeled in the panel and
-exits 1. A long comparison splits into `compare-2.png`, `compare-3.png`, and so
-on; `compare.json` lists every page.
+extent, capture count, and run directory. Each row names the capture, its
+extent, and the pixel delta. A missing pair or a size mismatch is labeled in the
+panel and exits 1. A long comparison splits into `compare-2.png`,
+`compare-3.png`, and so on; `compare.json` lists every page.
+
+`--pairs NAME,...` compares only the named captures; a name that is missing from
+both runs is reported as a pair failure. `--scale N` allows up to N times
+upscaling, so a 320x180 capture fills the column. `--delta` adds an `A-B`
+difference column. `diff` reads the same run metadata as `compare` and prints
+both scenario paths, revisions, dirty flags, extents, and capture counts.
 
 `compare` uses the embedded font stack and writes PNGs, so it needs no
 ImageMagick or compositor. Keep the output under `runs/`; an image never enters
@@ -366,20 +382,27 @@ the repository. `diff` stays the numeric command.
 
 ### Live repro
 
-`F5` in the game writes `runs/repro/repro-<unix>.json`, logs the absolute path,
-and shows `Scene snapshot · runs/repro/repro-<unix>.json` in the top-right for
-two seconds. A failed write shows `Scene snapshot failed` with the path instead.
-The file is a normal scenario with one `scene` command; run it directly:
+`F5` in the game writes `runs/repro/repro-<unix-ms>.json`, logs the absolute
+path, and shows `Scene snapshot · runs/repro/repro-<unix-ms>.json` in the
+top-right for two seconds. A failed write shows `Scene snapshot failed` with the
+path instead. `--repro-dir DIR` or `HARBAGSA_REPRO_DIR` moves the directory. The
+file is a normal scenario with one `scene` command; run it directly:
 
 ```sh
-./bin/harbagsa-agent run runs/repro/repro-1750000000.json
+./bin/harbagsa-agent run runs/repro/repro-1750000000123.json
 ```
 
 The scene carries the camera source and view, the player pose when the source is
 `player`, the sun, every placed object with its exact rotation and light, the
-window and input settings, the type weight, the display list, and the view
-flags. `record` starts with the same scene, so a recording begins from the live
-state instead of a bare reset.
+window and input settings, the type weight, the display list, the view flags,
+and the active renderer debug overrides. A file with overrides declares
+`"requires": {"renderer_debug": true}` itself, so it replays without a flag.
+`--repro-dir DIR` or `HARBAGSA_REPRO_DIR` moves the directory. The HUD shows a
+short `Repro saved` note beside the capture hint. Milliseconds in the name keep
+two presses apart.
+
+`record` starts with the same scene, so a recording begins from the live state
+instead of a bare reset. A recorded scene is compact; the F5 file is pretty.
 
 ### Scenario format
 
@@ -442,10 +465,12 @@ Check fields use the `state.json` shape, for example `player.position.y`,
 `capture.format`, `capture.stats.*`, `capture.region.*`, `capture.profile.*`,
 `capture.crop.*`, `capture.histogram.*`, `capture.png`, and
 `capture.render_digest` for the last capture in its window.
-`capture.stats.steps.count`, `.pairs`, and `.max` read the visibility-band
-metric; a stats capture must name a region. Add
-`"window": {"start": 2, "count": 8}` to aggregate over part of the captures;
-`warmup` stays the shorthand for skipping the first N.
+`capture.stats.steps.count`, `.pairs`, `.max`, `.blur`, `.min`, and
+`.max_levels` read the visibility-band metric; a stats capture must name a
+region. Tune it with `"steps": {"blur": 9, "min": 0.5, "max": 8}`; `blur` is an
+odd kernel size in [1, 31]. Add `"window": {"start": 2, "count": 8}` to
+aggregate over part of the captures; `warmup` stays the shorthand for skipping
+the first N.
 
 A run with captures writes `analysis.json`. It holds per-pair deltas, a
 summary, the dominant period, the worst unstable pixels' series, and optional
@@ -453,11 +478,13 @@ diff and variance maps. The pair and pixel analysis uses color captures; a run
 with only intermediate captures writes an empty summary. Checks read
 `analysis.period.frames`, `analysis.period.correlation`,
 `analysis.bands.longest_run`, `analysis.bands.median_run`,
-`analysis.bands.levels`, and the `analysis.worst_*` fields. `analysis.bands`
-measures the identical-luma runs down the columns, so a gradient that bands
-after the 8-bit write shows up as a long run. Disable it with
-`"analysis": false` or `--no-analysis`; select a window and maps with
-`"analysis": {"start": 2, "count": 8, "maps": true}`.
+`analysis.bands.levels`, `analysis.bands.region.*`, and the `analysis.worst_*`
+fields. `analysis.bands` measures the identical-luma runs down the columns, so
+a gradient that bands after the 8-bit write shows up as a long run. Disable it
+with `"analysis": false` or `--no-analysis`; select a window, maps, and a region
+with `"analysis": {"start": 2, "count": 8, "maps": true, "region": {"x": 0,
+"y": 0, "w": 640, "h": 720}}`. A region keeps a flat patch or an overlay out of
+the band metric.
 
 ### Commands
 
@@ -500,7 +527,9 @@ The batch runner and the live session share one command set:
   count, TAA state, jitter index, history validity, convergence frames, history
   read index and weight, reset count and reason, shadow phase, the active light
   count, the applied atlas weight, text truncations and dropped fonts, and the
-  debug override values. `render_digest` covers the target extent, the effective
+  debug override values. `setup.renderer.shader_digest` is the FNV hash of the
+  SPIR-V embedded in the binary, so a shader edit is visible even when
+  `render_digest` stays the same. `render_digest` covers the target extent, the effective
   camera, sun direction and angular diameter, boxes, point lights, emissive
   strengths, jitter, shadow phase, applied atlas weight, the sky and AO flags,
   and view flags.
@@ -509,14 +538,23 @@ The batch runner and the live session share one command set:
   `"target": "velocity"`, `"history"`, `"depth"`, or `"scene_color"` to read an
   intermediate image, and `"format": "float"`, `"raw"`, `"stats"`, or
   `"profile"` to choose the output. The default is a color PNG. A stats capture
-  accepts `"region": {"x","y","w","h"}` or `"rect": [x,y,w,h]` and an optional
-  `"histogram": 8`. A color capture accepts `"crop": {"x","y","w","h","scale"}`
-  to write a scaled PNG, and a `"profile"` block to measure an edge. Add
+  accepts `"region": {"x","y","w","h"}` or `"rect": [x,y,w,h]`, an optional
+  `"histogram": 8`, and a `"steps"` block. A color capture accepts
+  `"crop": {"x","y","w","h","scale"}` to write a scaled PNG, and a `"profile"`
+  block to measure an edge. A profile also reads an intermediate target; its
+  `source` is `srgb` for the color target and `linear` for a float target. Add
   `"png": true` to a color `stats` or `profile` capture to write the image
   beside the numbers. One capture stays one result. Region, profile, and crop
   do not change the capture extent; the crop reports `written_width` and
   `written_height`. A capture name is unique in one run; a second capture with
   the same name is an error.
+- `{"cmd": "captures", "name": "pair", "outputs": [...]}`: render one frame and
+  write several outputs from that frame. Each output takes the fields of one
+  `capture` except `frame` and `alpha`, which belong to the group. A missing
+  output name becomes `<name>-<target>-<index>` or
+  `capture-<target>-<index>`. This keeps a PNG, the history statistics, and a
+  profile on the same frame. A group holds at most eight outputs.
+  `scenarios/capture-group.json` demonstrates all six output forms.
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw_deg": 0, "pitch_deg": 0}`: inspection
   camera. It does not move the player. It accepts `look_at` instead of
   `yaw_deg`/`pitch_deg`, and `fov_deg` in degrees (1..170). `look_at` with
@@ -599,14 +637,19 @@ The batch runner and the live session share one command set:
   `synthetic_lights` replaces the frame's lamps with 0 to 8 test lights. `clear`
   resets every override. Changing an input resets history.
 - `{"cmd": "scene", ...}`: apply an exact scene with `camera`, `sun`, `objects`,
-  `settings`, `view`, and `displays` blocks. `F5` writes one and `record` starts
-  with one; see **Live repro**.
+  `settings`, `view`, `displays`, and `renderer_debug` blocks. Every block is
+  optional, and a `settings` or `view` block may carry only the fields it
+  changes; omitted fields keep their live value. A `renderer_debug` block uses
+  the same keys as the command and needs the same gate. `F5` writes one and
+  `record` starts with one; see **Live repro**.
 - `{"cmd": "repro", "path": "runs/repro/live.json"}`: write the live view as a
-  scene scenario and show the notice. It is the harness twin of `F5`. `path`
-  must hold at most 64 bytes, so the notice can name it. A write failure returns
+  scenario and show the notice. It is the harness twin of `F5`. `path` must
+  hold at most 160 bytes, so the notice can name it. A write failure returns
   `ok: false` and leaves the failure notice set.
-- `{"cmd": "record", "path": "scenarios/walk.json"}`: start recording. Send
-  `{"cmd": "record"}` to stop and write the scenario.
+- `{"cmd": "record", "path": "scenarios/walk.json", "actions": false}`: start
+  recording. Send `{"cmd": "record"}` to stop and write the scenario. `actions`
+  omits the initial scene and keeps the reset, so only the action sequence
+  matters.
 - `{"cmd": "replay", "path": "scenarios/walk.json"}`: reset and run a scenario.
 - `{"cmd": "quit"}`: stop the session.
 

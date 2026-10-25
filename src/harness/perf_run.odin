@@ -101,6 +101,9 @@ session_perf :: proc(session: ^Session, command: Perf_Command) -> string {
 
 @(private)
 session_perf_frame :: proc(session: ^Session) -> string {
+	if timeout := session_check_timeout(session); timeout != "" {
+		return timeout
+	}
 	perf.begin_frame(&session.perf)
 	perf.mark(&session.perf, .Events)
 	input := session.input
