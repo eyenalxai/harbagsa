@@ -1525,7 +1525,7 @@ the row's error after copying it into the reply, so no command sets an ownership
 flag.
 
 `backend` is `None`, `Optional`, or `Required`. The batch run and the live
-session use the same policy through `Session.backend_provider`; a capture with
+session use the same policy through `Session.render.provider`; a capture with
 rendering disabled is skipped in both. A `Required` command without rendering
 fails in its own execute proc, so CPU-only `perf` still works.
 

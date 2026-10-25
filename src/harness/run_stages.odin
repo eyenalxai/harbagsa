@@ -169,13 +169,13 @@ run_prepare :: proc(state: ^Run_State) -> Stage_Result {
 	state.session.debug_renderer =
 		state.options.debug_renderer || state.scenario.requires.renderer_debug
 	session_set_timeout(&state.session, state.options.timeout_seconds)
-	state.session.analysis_config = state.scenario.analysis
+	state.session.analysis.config = state.scenario.analysis
 	if state.options.no_analysis {
-		state.session.analysis_config.enabled = false
+		state.session.analysis.config.enabled = false
 	}
 
 	render_enabled := !state.options.no_render
-	state.session.render_enabled = render_enabled
+	state.session.render.enabled = render_enabled
 	state.run_backend = {
 		width      = state.options.width,
 		height     = state.options.height,
@@ -184,7 +184,7 @@ run_prepare :: proc(state: ^Run_State) -> Stage_Result {
 		backend    = &state.backend,
 		session    = &state.session,
 	}
-	state.session.backend_provider = {ctx = &state.run_backend, ensure = run_backend_ensure}
+	state.session.render.provider = {ctx = &state.run_backend, ensure = run_backend_ensure}
 	if state.options.present && render_enabled {
 		state.backend_error = run_backend_ensure(&state.run_backend)
 	}
@@ -210,10 +210,10 @@ run_collect :: proc(state: ^Run_State) -> Stage_Result {
 	if state.backend_error != "" {
 		result.exit_code = EXIT_RENDER
 	}
-	if state.session.render_failed {
+	if state.session.render.failed {
 		result.exit_code = EXIT_RENDER
 	}
-	if len(state.session.traces) > 0 {
+	if len(state.session.perf.traces) > 0 {
 		if trace_error := write_session_traces(&state.session, state.staging); trace_error != "" {
 			state.trace_failed = true
 			result.exit_code = EXIT_RENDER
@@ -230,8 +230,8 @@ run_collect :: proc(state: ^Run_State) -> Stage_Result {
 		state.frames_dir,
 		state.run_dir,
 		final_frames_dir,
-		state.session.captures[:],
-		state.session.analysis_config,
+		state.session.capture.captures[:],
+		state.session.analysis.config,
 		context.allocator,
 	)
 	state.analysis_path = analysis_path
@@ -269,18 +269,18 @@ run_publish :: proc(state: ^Run_State, results: []Stage_Result) -> Stage_Result 
 		frame       = state.state.frame,
 		state       = state.state,
 		setup       = state.setup,
-		captures = state.session.captures[:],
+		captures = state.session.capture.captures[:],
 		checks      = state.session.checks[:],
 		failures    = state.session.failures[:],
 		digest      = state.state.digest,
 		error       = state.backend_error,
 	}
-	if len(state.session.perf_reports) > 0 {
-		report.perf = state.session.perf_reports[:]
+	if len(state.session.perf.reports) > 0 {
+		report.perf = state.session.perf.reports[:]
 	}
-	if state.session.has_trace && !state.trace_failed {
+	if state.session.perf.has_trace && !state.trace_failed {
 		state.trace_path = perf_trace_path(
-			state.session.trace_name,
+			state.session.perf.trace_name,
 			state.run_dir,
 			context.allocator,
 		)

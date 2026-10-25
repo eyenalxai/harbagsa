@@ -47,13 +47,13 @@ session_main :: proc(options: Session_Options) -> int {
 	runtime.session.debug_renderer = options.debug_renderer
 	runtime.session.output_dir = absolute_frames
 	session_set_timeout(&runtime.session, options.timeout_seconds)
-	runtime.session.render_enabled = !options.no_render
-	runtime.session.backend_provider = {
+	runtime.session.render.enabled = !options.no_render
+	runtime.session.render.provider = {
 		ctx = &runtime,
 		ensure = runtime_provider_ensure,
 	}
 	if options.no_analysis {
-		runtime.session.analysis_config.enabled = false
+		runtime.session.analysis.config.enabled = false
 	}
 	defer {
 		if runtime.has_backend {
@@ -138,18 +138,18 @@ runtime_handle_line :: proc(runtime: ^Session_Runtime, line: string) -> []byte {
 	defer command_destroy(&command, context.allocator)
 
 	reply := session_execute(&runtime.session, command, trimmed)
-	if reply.ok && reply.perf != nil && runtime.session.has_trace {
+	if reply.ok && reply.perf != nil && runtime.session.perf.has_trace {
 		if trace_error := write_session_trace(&runtime.session, runtime.trace_dir); trace_error != "" {
 			reply.ok = false
 			reply.error = trace_error
 			runtime.had_error = true
 		} else {
-			reply.trace = runtime.session.trace_path
+			reply.trace = runtime.session.perf.trace_path
 		}
 	}
 	if !reply.ok {
 		runtime.had_error = true
-		if runtime.session.render_failed {
+		if runtime.session.render.failed {
 			runtime.exit_code = EXIT_RENDER
 		} else if runtime.exit_code == EXIT_OK {
 			runtime.exit_code = EXIT_CHECK
