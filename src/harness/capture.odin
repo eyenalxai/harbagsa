@@ -53,6 +53,7 @@ capture_format_extension :: proc(format: Capture_Format) -> string {
 // declaration, so a new capture option is one field and one parser block.
 Capture_Spec :: struct {
 	name:      string,
+	note:      string,
 	target:    Capture_Target,
 	format:    Capture_Format,
 	png:       bool,
@@ -61,6 +62,7 @@ Capture_Spec :: struct {
 	crop:      Maybe(Capture_Crop),
 	histogram: Maybe(int),
 	steps:     Maybe(Capture_Steps_Options),
+	color_key: Maybe(Capture_Color_Key),
 }
 
 Capture_Request :: struct {
@@ -70,6 +72,7 @@ Capture_Request :: struct {
 
 Capture_Result :: struct {
 	name:          string         `json:"name"`,
+	note:          string         `json:"note,omitempty"`,
 	path:          string         `json:"path,omitempty"`,
 	frame:         int            `json:"frame"`,
 	width:         u32            `json:"width"`,
@@ -80,6 +83,7 @@ Capture_Result :: struct {
 	png:           bool           `json:"png,omitempty"`,
 	hash:          string         `json:"hash,omitempty"`,
 	render_digest: string         `json:"render_digest,omitempty"`,
+	renderer:      renderer.Renderer_Report `json:"renderer"`,
 	stats:         Maybe(Capture_Stats) `json:"stats,omitempty"`,
 	region:        Maybe(Capture_Region) `json:"region,omitempty"`,
 	profile:       Maybe(Capture_Profile_Result) `json:"profile,omitempty"`,
@@ -185,6 +189,9 @@ capture_delta :: proc(previous, current: []u8) -> Capture_Delta {
 capture_result_destroy :: proc(result: ^Capture_Result, allocator: mem.Allocator) {
 	if result.name != "" {
 		delete(result.name, allocator)
+	}
+	if result.note != "" {
+		delete(result.note, allocator)
 	}
 	if result.path != "" {
 		delete(result.path, allocator)

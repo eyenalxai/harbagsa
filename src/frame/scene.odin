@@ -83,6 +83,9 @@ Scene_Renderer_Debug :: struct {
 	synthetic_lights:    Maybe(int)  `json:"synthetic_lights,omitempty"`,
 	sky:                 Maybe(bool) `json:"sky,omitempty"`,
 	ao:                  Maybe(bool) `json:"ao,omitempty"`,
+	ao_radius:           Maybe(f32)  `json:"ao_radius,omitempty"`,
+	ao_strength:         Maybe(f32)  `json:"ao_strength,omitempty"`,
+	clip_height:         Maybe(f32)  `json:"clip_height,omitempty"`,
 }
 
 Scene_Display :: struct {
@@ -195,6 +198,9 @@ scene_capture :: proc(
 			synthetic_lights    = renderer_debug.synthetic_lights,
 			sky                 = renderer_debug.sky,
 			ao                  = renderer_debug.ao,
+			ao_radius           = renderer_debug.ao_radius,
+			ao_strength         = renderer_debug.ao_strength,
+			clip_height         = renderer_debug.clip_height,
 		}
 		if renderer_debug.history_weight >= 0 {
 			debug.history_weight = renderer_debug.history_weight

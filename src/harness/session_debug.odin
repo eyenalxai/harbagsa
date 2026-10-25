@@ -56,6 +56,15 @@ session_renderer_debug :: proc(session: ^Session, command: Renderer_Debug_Comman
 	if command.has_ao {
 		debug.ao = command.ao
 	}
+	if command.has_ao_radius {
+		debug.ao_radius = command.ao_radius
+	}
+	if command.has_ao_strength {
+		debug.ao_strength = command.ao_strength
+	}
+	if command.has_clip_height {
+		debug.clip_height = command.clip_height
+	}
 	defaults := renderer.renderer_debug_default()
 	for field in command.reset {
 		switch field {
@@ -81,6 +90,12 @@ session_renderer_debug :: proc(session: ^Session, command: Renderer_Debug_Comman
 			debug.sky = defaults.sky
 		case .AO:
 			debug.ao = defaults.ao
+		case .AO_Radius:
+			debug.ao_radius = defaults.ao_radius
+		case .AO_Strength:
+			debug.ao_strength = defaults.ao_strength
+		case .Clip_Height:
+			debug.clip_height = defaults.clip_height
 		}
 	}
 	session.render.backend.set_debug(session.render.backend.ctx, debug)

@@ -35,8 +35,11 @@ scene.
   its render inputs and its projection match.
 - `RENDER_DIGEST_FIELDS` is the one digest table: one row per `Render_Input`
   field, with an explicit `hashed` flag. `hud` and `debug_lines` are unhashed
-  because they draw after the resolve; the view flags already record whether
-  each is present. A reflection test fails when a field has no row.
+  because they draw after the resolve. The view flags record the HUD and the
+  F1 world draw, but editor lines follow F2 and the active tool, so
+  `renderer.debug_vertices` counts them by source. That count is what a check
+  reads for debug line presence. A reflection test fails when a field has no
+  row.
 - `Renderer_Report` is the one report type, with JSON field tags. `Debug_Report`
   is its nested debug block. The state schema's reflection walk (ADR-0022)
   resolves `renderer.*` from the same struct and tags, so there is no separate

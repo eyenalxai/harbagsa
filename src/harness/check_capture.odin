@@ -167,6 +167,28 @@ capture_histogram_field :: proc(
 
 @(private)
 capture_stats_field :: proc(stats: Capture_Stats, path: string) -> (Check_Value, string) {
+	if strings.has_prefix(path, "color_key.") {
+		key, has_key := stats.color_key.?
+		if !has_key {
+			return {}, format_error("%s", "the last capture has no color key")
+		}
+		tail := path[len("color_key."):]
+		switch tail {
+		case "r":
+			return {kind = .Number, number = f64(key.r)}, ""
+		case "g":
+			return {kind = .Number, number = f64(key.g)}, ""
+		case "b":
+			return {kind = .Number, number = f64(key.b)}, ""
+		case "tolerance":
+			return {kind = .Number, number = f64(key.tolerance)}, ""
+		case "matches":
+			return {kind = .Number, number = f64(key.matches)}, ""
+		case "fraction":
+			return {kind = .Number, number = f64(key.fraction)}, ""
+		}
+		return {}, fmt.aprintf("unknown color_key field %q", tail, allocator = context.allocator)
+	}
 	if path == "velocity_median_texels" {
 		median, has_median := stats.velocity_median_texels.?
 		if !has_median {
@@ -222,41 +244,26 @@ capture_stats_field :: proc(stats: Capture_Stats, path: string) -> (Check_Value,
 	if !has_tail {
 		return {}, fmt.aprintf("unknown capture statistics field %q", path, allocator = context.allocator)
 	}
-	channel, channel_ok := capture_channel_index(tail)
-	if !channel_ok {
-		return {}, fmt.aprintf("unknown capture statistics channel %q", tail, allocator = context.allocator)
-	}
-	value: f32
+	channels: Capture_Channels
 	switch head {
 	case "min":
-		value = stats.min[channel]
+		channels = stats.min
 	case "max":
-		value = stats.max[channel]
+		channels = stats.max
 	case "mean":
-		value = stats.mean[channel]
+		channels = stats.mean
 	case "stddev":
-		value = stats.stddev[channel]
+		channels = stats.stddev
 	case "gradient":
-		value = stats.gradient[channel]
+		channels = stats.gradient
 	case:
 		return {}, fmt.aprintf("unknown capture statistics field %q", path, allocator = context.allocator)
 	}
-	return {kind = .Number, number = f64(value)}, ""
-}
-
-@(private)
-capture_channel_index :: proc(axis: string) -> (int, bool) {
-	switch axis {
-	case "x":
-		return 0, true
-	case "y":
-		return 1, true
-	case "z":
-		return 2, true
-	case "w":
-		return 3, true
+	value, channel_ok := capture_channel_value(channels, tail)
+	if !channel_ok {
+		return {}, fmt.aprintf("unknown capture statistics channel %q", tail, allocator = context.allocator)
 	}
-	return 0, false
+	return {kind = .Number, number = f64(value)}, ""
 }
 
 check_capture_window :: proc(captures: []Capture_Result, command: Check_Command) -> []Capture_Result {

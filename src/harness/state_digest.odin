@@ -90,6 +90,11 @@ quat_state :: proc(value: [4]f32) -> Quat_State {
 }
 
 @(private)
+color_state :: proc(value: [4]f32) -> Color_State {
+	return {r = value[0], g = value[1], b = value[2], a = value[3]}
+}
+
+@(private)
 sun_state :: proc(debug: ^game.Debug_Mode) -> Sun_State {
 	azimuth, elevation := game.debug_mode_sun_angles(debug)
 	return {
