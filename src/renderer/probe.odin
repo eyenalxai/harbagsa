@@ -7,6 +7,12 @@ import vk "vendor:vulkan"
 
 PROBE_GRID_SIZE :: 8
 PROBE_TEXELS :: PROBE_GRID_SIZE * PROBE_GRID_SIZE
+PROBE_RAYS :: 256
+PROBE_RAY_LOCAL_SIZE :: 64
+PROBE_IRRADIANCE_ENCODING_GAMMA :: f32(5.0)
+PROBE_DISTANCE_EXPONENT :: f32(50.0)
+PROBE_HYSTERESIS :: f32(0.75)
+PROBE_LARGE_CHANGE_THRESHOLD :: f32(0.25)
 
 // The shader mirror is in shaders/probe.glsl.
 Probe_Volume :: struct {
@@ -21,38 +27,34 @@ Probe_Volume :: struct {
 Probe_Push :: struct {
 	first_probe: u32,
 	probe_count: u32,
-	frame:       u32,
 	reset:       u32,
+	pad:         u32,
 }
 
 #assert(size_of(Probe_Push) == 16)
+
+Probe_Buffer :: struct {
+	buffer: vk.Buffer,
+	memory: vk.DeviceMemory,
+	mapped: rawptr,
+	bytes:  vk.DeviceSize,
+}
 
 Probe :: struct {
 	allocator: mem.Allocator,
 	volumes:   [dynamic]Probe_Volume,
 
-	volume_buffer: vk.Buffer,
-	volume_memory: vk.DeviceMemory,
-	volume_mapped: rawptr,
-	volume_bytes:  vk.DeviceSize,
+	volume: Probe_Buffer,
 
-	irradiance_buffers: [MAX_FRAMES_IN_FLIGHT]vk.Buffer,
-	irradiance_memory:  [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
-	irradiance_mapped:  [MAX_FRAMES_IN_FLIGHT]rawptr,
-	irradiance_bytes:   vk.DeviceSize,
+	irradiance: [MAX_FRAMES_IN_FLIGHT]Probe_Buffer,
+	depth:      [MAX_FRAMES_IN_FLIGHT]Probe_Buffer,
+	positions:  [MAX_FRAMES_IN_FLIGHT]Probe_Buffer,
+	rays:       [MAX_FRAMES_IN_FLIGHT]Probe_Buffer,
 
-	depth_buffers: [MAX_FRAMES_IN_FLIGHT]vk.Buffer,
-	depth_memory:  [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
-	depth_mapped:  [MAX_FRAMES_IN_FLIGHT]rawptr,
-	depth_bytes:   vk.DeviceSize,
-
-	position_buffers: [MAX_FRAMES_IN_FLIGHT]vk.Buffer,
-	position_memory:  [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
-	position_mapped:  [MAX_FRAMES_IN_FLIGHT]rawptr,
-	position_bytes:   vk.DeviceSize,
-
-	pipeline: vk.Pipeline,
-	layout:   vk.PipelineLayout,
+	ray_pipeline:   vk.Pipeline,
+	ray_layout:     vk.PipelineLayout,
+	blend_pipeline: vk.Pipeline,
+	blend_layout:   vk.PipelineLayout,
 
 	volume_count: u32,
 	probe_count:  u32,
@@ -64,7 +66,8 @@ Probe :: struct {
 	has_hash:     bool,
 }
 
-PROBE_UPDATE_SPIRV :: #load("../../build/shaders/probe_update.comp.spv")
+PROBE_RAY_SPIRV :: #load("../../build/shaders/probe_ray.comp.spv")
+PROBE_BLEND_SPIRV :: #load("../../build/shaders/probe_blend.comp.spv")
 
 create_probe_resources :: proc(r: ^Renderer) -> bool {
 	r.probe.allocator = r.allocator
@@ -72,129 +75,116 @@ create_probe_resources :: proc(r: ^Renderer) -> bool {
 	return create_probe_buffers(r)
 }
 
-create_probe_pipeline :: proc(r: ^Renderer) -> bool {
+create_probe_pipelines :: proc(r: ^Renderer) -> bool {
 	set_layouts := [1]vk.DescriptorSetLayout{r.scene.descriptor_set_layout}
+	push_constant := vk.PushConstantRange {
+		stageFlags = {.COMPUTE},
+		offset = 0,
+		size = u32(size_of(Probe_Push)),
+	}
+	if !create_compute_pipeline(
+		r,
+		{
+			spirv = PROBE_RAY_SPIRV,
+			name = "probe rays",
+			set_layouts = set_layouts[:],
+			push_constant = push_constant,
+		},
+		&r.probe.ray_pipeline,
+		&r.probe.ray_layout,
+	) {
+		return false
+	}
 	return create_compute_pipeline(
 		r,
 		{
-			spirv = PROBE_UPDATE_SPIRV,
-			name = "probe update",
+			spirv = PROBE_BLEND_SPIRV,
+			name = "probe blend",
 			set_layouts = set_layouts[:],
-			push_constant = vk.PushConstantRange {
-				stageFlags = {.COMPUTE},
-				offset = 0,
-				size = u32(size_of(Probe_Push)),
-			},
+			push_constant = push_constant,
 		},
-		&r.probe.pipeline,
-		&r.probe.layout,
+		&r.probe.blend_pipeline,
+		&r.probe.blend_layout,
 	)
+}
+
+create_probe_buffer :: proc(
+	r: ^Renderer,
+	size: vk.DeviceSize,
+	target: ^Probe_Buffer,
+) -> bool {
+	if !create_mapped_buffer(
+		r,
+		size,
+		{.STORAGE_BUFFER},
+		&target.buffer,
+		&target.memory,
+		&target.mapped,
+	) {
+		return false
+	}
+	mem.set(target.mapped, 0, int(size))
+	target.bytes = size
+	return true
 }
 
 create_probe_buffers :: proc(r: ^Renderer) -> bool {
 	volume_slots := max(int(r.probe.volume_count), 1)
-	r.probe.volume_bytes = vk.DeviceSize(volume_slots * size_of(Probe_Volume))
-	if !create_mapped_buffer(
-		r,
-		r.probe.volume_bytes,
-		{.STORAGE_BUFFER},
-		&r.probe.volume_buffer,
-		&r.probe.volume_memory,
-		&r.probe.volume_mapped,
-	) {
+	volume_bytes := vk.DeviceSize(volume_slots * size_of(Probe_Volume))
+	if !create_probe_buffer(r, volume_bytes, &r.probe.volume) {
 		return false
 	}
-	mem.set(r.probe.volume_mapped, 0, int(r.probe.volume_bytes))
-	volume_data := cast([^]Probe_Volume)r.probe.volume_mapped
+	volume_data := cast([^]Probe_Volume)r.probe.volume.mapped
 	for volume, index in r.probe.volumes {
 		volume_data[index] = volume
 	}
 
 	probe_slots := max(int(r.probe.probe_count), 1)
-	r.probe.irradiance_bytes = vk.DeviceSize(
-		probe_slots * PROBE_TEXELS * size_of([4]f32),
-	)
-	r.probe.depth_bytes = vk.DeviceSize(
-		probe_slots * PROBE_TEXELS * size_of([2]f32),
-	)
-	r.probe.position_bytes = vk.DeviceSize(probe_slots * size_of([4]f32))
+	sizes := [4]vk.DeviceSize {
+		vk.DeviceSize(probe_slots * PROBE_TEXELS * size_of([4]f32)),
+		vk.DeviceSize(probe_slots * PROBE_TEXELS * size_of([2]f32)),
+		vk.DeviceSize(probe_slots * size_of([4]f32)),
+		vk.DeviceSize(probe_slots * PROBE_RAYS * size_of([4]f32)),
+	}
 	for frame in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		if !create_mapped_buffer(
-			r,
-			r.probe.irradiance_bytes,
-			{.STORAGE_BUFFER},
-			&r.probe.irradiance_buffers[frame],
-			&r.probe.irradiance_memory[frame],
-			&r.probe.irradiance_mapped[frame],
-		) {
-			return false
+		targets := [4]^Probe_Buffer {
+			&r.probe.irradiance[frame],
+			&r.probe.depth[frame],
+			&r.probe.positions[frame],
+			&r.probe.rays[frame],
 		}
-		mem.set(r.probe.irradiance_mapped[frame], 0, int(r.probe.irradiance_bytes))
-		if !create_mapped_buffer(
-			r,
-			r.probe.depth_bytes,
-			{.STORAGE_BUFFER},
-			&r.probe.depth_buffers[frame],
-			&r.probe.depth_memory[frame],
-			&r.probe.depth_mapped[frame],
-		) {
-			return false
+		for target, index in targets {
+			if !create_probe_buffer(r, sizes[index], target) {
+				return false
+			}
 		}
-		mem.set(r.probe.depth_mapped[frame], 0, int(r.probe.depth_bytes))
-		if !create_mapped_buffer(
-			r,
-			r.probe.position_bytes,
-			{.STORAGE_BUFFER},
-			&r.probe.position_buffers[frame],
-			&r.probe.position_memory[frame],
-			&r.probe.position_mapped[frame],
-		) {
-			return false
-		}
-		mem.set(r.probe.position_mapped[frame], 0, int(r.probe.position_bytes))
 	}
 	return true
 }
 
+destroy_probe_buffer :: proc(r: ^Renderer, target: ^Probe_Buffer) {
+	if target.mapped != nil {
+		vk.UnmapMemory(r.device, target.memory)
+		target.mapped = nil
+	}
+	destroy_buffer(r, &target.buffer, &target.memory)
+	target.bytes = 0
+}
+
 destroy_probe_buffers :: proc(r: ^Renderer) {
-	if r.probe.volume_mapped != nil {
-		vk.UnmapMemory(r.device, r.probe.volume_memory)
-		r.probe.volume_mapped = nil
-	}
-	destroy_buffer(r, &r.probe.volume_buffer, &r.probe.volume_memory)
-	r.probe.volume_bytes = 0
-
+	destroy_probe_buffer(r, &r.probe.volume)
 	for frame in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		if r.probe.irradiance_mapped[frame] != nil {
-			vk.UnmapMemory(r.device, r.probe.irradiance_memory[frame])
-			r.probe.irradiance_mapped[frame] = nil
-		}
-		destroy_buffer(
-			r,
-			&r.probe.irradiance_buffers[frame],
-			&r.probe.irradiance_memory[frame],
-		)
-
-		if r.probe.depth_mapped[frame] != nil {
-			vk.UnmapMemory(r.device, r.probe.depth_memory[frame])
-			r.probe.depth_mapped[frame] = nil
-		}
-		destroy_buffer(r, &r.probe.depth_buffers[frame], &r.probe.depth_memory[frame])
-
-		if r.probe.position_mapped[frame] != nil {
-			vk.UnmapMemory(r.device, r.probe.position_memory[frame])
-			r.probe.position_mapped[frame] = nil
-		}
-		destroy_buffer(r, &r.probe.position_buffers[frame], &r.probe.position_memory[frame])
+		destroy_probe_buffer(r, &r.probe.irradiance[frame])
+		destroy_probe_buffer(r, &r.probe.depth[frame])
+		destroy_probe_buffer(r, &r.probe.positions[frame])
+		destroy_probe_buffer(r, &r.probe.rays[frame])
 	}
-	r.probe.irradiance_bytes = 0
-	r.probe.depth_bytes = 0
-	r.probe.position_bytes = 0
 }
 
 destroy_probe :: proc(r: ^Renderer) {
 	if r.device != nil {
-		destroy_pipeline_pair(r, &r.probe.pipeline, &r.probe.layout)
+		destroy_pipeline_pair(r, &r.probe.ray_pipeline, &r.probe.ray_layout)
+		destroy_pipeline_pair(r, &r.probe.blend_pipeline, &r.probe.blend_layout)
 		destroy_probe_buffers(r)
 	}
 	if r.probe.volumes != nil {
@@ -257,34 +247,76 @@ draw_probes :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass)
 	if r.probe.probe_count == 0 {
 		return
 	}
-	first := u32(0)
-	count := r.probe.probe_count
 	push := Probe_Push {
-		first_probe = first,
-		probe_count = count,
-		frame       = r.probe.frame,
+		first_probe = 0,
+		probe_count = r.probe.probe_count,
 		reset       = r.probe.reset ? 1 : 0,
 	}
-	vk.CmdBindPipeline(command_buffer, .COMPUTE, r.probe.pipeline)
+	descriptor_set := &r.scene.descriptor_sets[r.frame_index]
+
+	vk.CmdBindPipeline(command_buffer, .COMPUTE, r.probe.ray_pipeline)
 	vk.CmdBindDescriptorSets(
 		command_buffer,
 		.COMPUTE,
-		r.probe.layout,
+		r.probe.ray_layout,
 		0,
 		1,
-		&r.scene.descriptor_sets[r.frame_index],
+		descriptor_set,
 		0,
 		nil,
 	)
 	vk.CmdPushConstants(
 		command_buffer,
-		r.probe.layout,
+		r.probe.ray_layout,
 		{.COMPUTE},
 		0,
 		u32(size_of(Probe_Push)),
 		&push,
 	)
-	vk.CmdDispatch(command_buffer, count, 1, 1)
+	ray_groups := r.probe.probe_count * PROBE_RAYS / PROBE_RAY_LOCAL_SIZE
+	vk.CmdDispatch(command_buffer, ray_groups, 1, 1)
+
+	ray_barrier := vk.BufferMemoryBarrier {
+		sType = .BUFFER_MEMORY_BARRIER,
+		srcAccessMask = {.SHADER_WRITE},
+		dstAccessMask = {.SHADER_READ},
+		buffer = r.probe.rays[r.frame_index].buffer,
+		offset = 0,
+		size = r.probe.rays[r.frame_index].bytes,
+	}
+	vk.CmdPipelineBarrier(
+		command_buffer,
+		{.COMPUTE_SHADER},
+		{.COMPUTE_SHADER},
+		{},
+		0,
+		nil,
+		1,
+		&ray_barrier,
+		0,
+		nil,
+	)
+
+	vk.CmdBindPipeline(command_buffer, .COMPUTE, r.probe.blend_pipeline)
+	vk.CmdBindDescriptorSets(
+		command_buffer,
+		.COMPUTE,
+		r.probe.blend_layout,
+		0,
+		1,
+		descriptor_set,
+		0,
+		nil,
+	)
+	vk.CmdPushConstants(
+		command_buffer,
+		r.probe.blend_layout,
+		{.COMPUTE},
+		0,
+		u32(size_of(Probe_Push)),
+		&push,
+	)
+	vk.CmdDispatch(command_buffer, r.probe.probe_count, 1, 1)
 	r.probe.frame += 1
 	r.probe.reset = false
 }
@@ -311,22 +343,23 @@ probe_after :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass)
 	if r.probe.probe_count == 0 {
 		return
 	}
+	frame := r.frame_index
 	barriers := [2]vk.BufferMemoryBarrier {
 		{
 			sType = .BUFFER_MEMORY_BARRIER,
 			srcAccessMask = {.SHADER_WRITE},
 			dstAccessMask = {.SHADER_READ},
-			buffer = r.probe.irradiance_buffers[r.frame_index],
+			buffer = r.probe.irradiance[frame].buffer,
 			offset = 0,
-			size = r.probe.irradiance_bytes,
+			size = r.probe.irradiance[frame].bytes,
 		},
 		{
 			sType = .BUFFER_MEMORY_BARRIER,
 			srcAccessMask = {.SHADER_WRITE},
 			dstAccessMask = {.SHADER_READ},
-			buffer = r.probe.depth_buffers[r.frame_index],
+			buffer = r.probe.depth[frame].buffer,
 			offset = 0,
-			size = r.probe.depth_bytes,
+			size = r.probe.depth[frame].bytes,
 		},
 	}
 	vk.CmdPipelineBarrier(

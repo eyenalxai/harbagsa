@@ -970,16 +970,17 @@ scenario parameters, so `--param sun_elevation_deg=25` and
 `--param lamp_intensity=2` run the same checks with another setup. The room is
 static arena geometry: walk in through the west door and follow the four turns.
 
-`scenarios/ddgi.json` isolates the new indirect term. It puts the camera in the
+`scenarios/ddgi.json` isolates the indirect term. It puts the camera in the
 chamber, turns the sun below the horizon, and places one lamp. It captures the
 same view with the probe indirect on and off, checks the probe count and atlas
 energy, and requires the on frame to be brighter. The off frame still shows the
 direct lamp, so the difference is the bounce. `scenarios/ddgi-leak.json` puts the
-lamp in the chamber and checks that it does not cross the solid wall into the
-lane. `scenarios/ddgi-door.json` looks through the west door and checks the
-lamp lights the opening. `scenarios/ddgi-move.json` moves the lamp with the
-editor and checks the room stays lit. The result is in
-[docs/evidence/ddgi.md](docs/evidence/ddgi.md).
+lamp in the chamber and checks that the lane stays dark while the chamber is
+lit. The lane and the chamber are connected by the light lock, so that scenario
+is not a sealed leak pair; the sealed pair is follow-up. `scenarios/ddgi-door.json`
+looks through the west door and checks the lamp lights the opening.
+`scenarios/ddgi-move.json` moves the lamp with the editor and checks the room
+stays lit. The result is in [docs/evidence/ddgi.md](docs/evidence/ddgi.md).
 
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window

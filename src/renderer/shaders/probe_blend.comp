@@ -1,0 +1,110 @@
+#version 460
+
+layout(local_size_x = 64) in;
+
+#include "probe.glsl"
+
+struct ProbeVolume {
+    vec4 min_spacing;
+    uvec4 counts_offset;
+};
+
+layout(set = 0, binding = 6) readonly buffer ProbeVolumes {
+    ProbeVolume volumes[];
+} probe_volumes;
+
+layout(set = 0, binding = 7) buffer ProbeIrradiance {
+    vec4 irradiance[];
+} probe_irradiance;
+
+layout(set = 0, binding = 8) buffer ProbeDepth {
+    vec2 depth[];
+} probe_depth;
+
+layout(set = 0, binding = 10) readonly buffer ProbeRays {
+    vec4 rays[];
+} probe_rays;
+
+layout(push_constant) uniform ProbePush {
+    uint first_probe;
+    uint probe_count;
+    uint reset;
+    uint pad;
+} push;
+
+void main() {
+    uint local_probe = gl_GlobalInvocationID.x / uint(PROBE_TEXELS);
+    if (local_probe >= push.probe_count) {
+        return;
+    }
+    uint probe_index = push.first_probe + local_probe;
+    uint texel = gl_GlobalInvocationID.x % uint(PROBE_TEXELS);
+
+    ProbeVolume volume;
+    bool found = false;
+    for (int index = 0; index < probe_volumes.volumes.length(); ++index) {
+        uint offset = probe_volumes.volumes[index].counts_offset.w;
+        uvec3 counts = probe_volumes.volumes[index].counts_offset.xyz;
+        if (probe_index >= offset && probe_index < offset + counts.x * counts.y * counts.z) {
+            volume = probe_volumes.volumes[index];
+            found = true;
+            break;
+        }
+    }
+    if (!found) {
+        return;
+    }
+    float max_distance = length(vec3(volume.min_spacing.w)) * 1.5;
+
+    uint oct_x = texel % uint(PROBE_GRID_SIZE);
+    uint oct_y = texel / uint(PROBE_GRID_SIZE);
+    vec2 oct_uv = (vec2(float(oct_x), float(oct_y)) + 0.5) / float(PROBE_GRID_SIZE);
+    vec3 texel_normal = oct_decode(oct_uv);
+
+    vec3 irradiance_sum = vec3(0.0);
+    float cosine_sum = 0.0;
+    float distance_sum = 0.0;
+    float distance2_sum = 0.0;
+    float distance_weight = 0.0;
+    uint first_ray = probe_index * uint(PROBE_RAYS);
+    for (uint ray_index = 0; ray_index < uint(PROBE_RAYS); ++ray_index) {
+        vec3 ray_direction = probe_ray_direction(ray_index);
+        float cosine = max(dot(texel_normal, ray_direction), 0.0);
+        vec4 ray = probe_rays.rays[first_ray + ray_index];
+        irradiance_sum += ray.rgb * cosine;
+        cosine_sum += cosine;
+
+        float weight = pow(cosine, PROBE_DISTANCE_EXPONENT);
+        float hit_distance = min(ray.a, max_distance);
+        distance_sum += hit_distance * weight;
+        distance2_sum += hit_distance * hit_distance * weight;
+        distance_weight += weight;
+    }
+
+    vec3 new_irradiance = pow(
+        irradiance_sum / (2.0 * max(cosine_sum, 1e-9)),
+        vec3(1.0 / PROBE_IRRADIANCE_ENCODING_GAMMA)
+    );
+    vec2 new_depth = vec2(distance_sum, distance2_sum) /
+        (2.0 * max(distance_weight, 1e-9));
+
+    uint probe_texel = probe_index * uint(PROBE_TEXELS) + texel;
+    vec4 previous = probe_irradiance.irradiance[probe_texel];
+    float alpha = 1.0 - PROBE_HYSTERESIS;
+    if (push.reset != 0 || previous.a < 0.5) {
+        alpha = 1.0;
+    } else {
+        vec3 delta = abs(new_irradiance - previous.rgb);
+        if (max(max(delta.r, delta.g), delta.b) > PROBE_LARGE_CHANGE_THRESHOLD) {
+            alpha = 1.0;
+        }
+    }
+    probe_irradiance.irradiance[probe_texel] = vec4(
+        mix(previous.rgb, new_irradiance, alpha),
+        1.0
+    );
+
+    vec2 previous_depth = probe_depth.depth[probe_texel];
+    float depth_alpha = previous_depth.x > 0.0 ? alpha : 1.0;
+    probe_depth.depth[probe_texel] = mix(previous_depth, new_depth, depth_alpha);
+}

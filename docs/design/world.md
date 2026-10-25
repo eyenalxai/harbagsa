@@ -64,18 +64,21 @@ applies to the sun and the lamps, at strength 0.5.
 ## Probe volume
 
 The room, its lanes, and the chamber share one probe volume. Probes sit at
-1.04 m spacing, inside the wall faces. Each probe traces 64 rays, one per
-octahedral texel, and stores irradiance plus a depth moment. The lit pass samples
-the eight probes around the surface, weights them by facing and distance, and
-rejects a probe behind a wall with its depth moment.
+1.04 m spacing, inside the wall faces. Each probe traces 256 deterministic rays,
+and a blend pass accumulates them into 64 octahedral irradiance texels with a
+cosine kernel plus 64 depth texels. The lit pass samples the eight probes around
+the surface, reads irradiance in the surface-normal direction and depth in the
+direction to the probe, then weights them by facing, distance, and depth
+visibility. A probe behind a wall is rejected by its depth moment.
 
-A lamp change clears the blend on the next frame, so a removed lamp does not
-leave its bounce behind. A moving crate does not reset the probes yet; the leak
-ticket owns that dirty state. `renderer_debug.gi` turns the indirect term off
-for a paired capture.
+A lamp change resets the blend on the next frame, and a large texel change skips
+the hysteresis, so a removed lamp does not leave its bounce behind. A moving
+crate does not reset the probes yet; the leak ticket owns that dirty state.
+`renderer_debug.gi` turns the indirect term off for a paired capture.
 
-The probe pass updates every probe every frame. The room has 300 probes, and the
-pass costs about 0.12 ms with 64 synthetic lights at 1280 x 720.
+The probe pass runs the ray trace and the blend every frame. The room has 300
+probes, and the pass costs about 0.41 ms with 256 rays and 64 synthetic lights
+at 1280 x 720. The same pass costs 0.23 ms at 64 rays.
 
 The occlusion uses 8 rays and the sun 16. A partial count carries a per-pixel,
 per-frame offset inside its own step; a full or empty count stays exact. Without

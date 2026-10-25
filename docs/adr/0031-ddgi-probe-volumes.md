@@ -1,5 +1,10 @@
 # DDGI probe volumes
 
+Superseded in part by
+[ADR 0033](0033-ddgi-irradiance-and-gather.md). The probe volume, relocation,
+the atlas layout, and the pass order stay. The update and the gather now follow
+the DDGI irradiance formulation.
+
 ## Context
 
 The renderer had no indirect diffuse term. Sunlight and point lights were direct
