@@ -6,10 +6,12 @@ mantle walls, a dive platform, a closed room with a four-turn light lock, and
 pushable crates. SDL3 provides the window and input, raw Vulkan 1.3 with
 ray-query shadows draws the scene, and Box3D runs the physics. A directional sun
 casts hard contact shadows and softer distant shadows from the walls and
-crates. There is no ambient term: a surface that the sun and the lamps do not
-reach is black. An analytic sky gradient fills the background. Ray-traced
-ambient occlusion uses the same scene acceleration structure to darken the
-direct light in contact, corners, and tunnels.
+crates. The sun and the lamps are direct light. A DDGI probe volume adds one
+diffuse bounce inside the room, so a lit wall fills the corner beside it. A
+surface that no light and no probe reaches is black. An analytic sky gradient
+fills the background. Ray-traced ambient occlusion uses the same scene
+acceleration structure to darken the direct light in contact, corners, and
+tunnels.
 
 ## Requirements
 
@@ -187,8 +189,8 @@ open.
 The summary row holds frames per second, the frame interval, the CPU frame
 time, the p95 interval, the spike count, and the GPU total with the costliest
 pass. The pass row holds the last completed frame's GPU pass times: the TLAS
-build, the cluster assignment, the depth prepass, the lit scene pass, the sky
-pass, the TAA resolve, and the overlay pass.
+build, the cluster assignment, the probe update, the depth prepass, the lit scene
+pass, the sky pass, the TAA resolve, and the overlay pass.
 
 The GPU numbers belong to the last completed frame, so they are two frames
 behind the frame being recorded. A device without timestamp support shows the
@@ -739,8 +741,9 @@ The batch runner and the live session share one command set:
 - `{"cmd": "renderer_debug", "jitter": false, "shadow_phase": 12}`: change
   renderer inputs. It needs `--debug-renderer` or a build with
   `-define:ENABLE_RENDERER_DEBUG=true`. `sky` turns the sky pass off, `ao` turns the
-  occlusion on direct light off, `light_shadows` turns the point-light shadows off, and
-  `synthetic_lights` replaces the frame's lamps with a generated test field. Set a
+  occlusion on direct light off, `light_shadows` turns the point-light shadows off,
+  `gi` turns the probe indirect term off, and `synthetic_lights` replaces the
+  frame's lamps with a generated test field. Set a
   count to choose how many lights it holds. `ao_radius` (0.01..50 m) and
   `ao_strength` (0..1) tune the contact darkening, and `clip_height` (0..1000 m)
   discards fragments above that world height for a plan view. Set one field to
@@ -808,8 +811,8 @@ session never creates a Vulkan device.
 A `perf` command steps the simulation and draws one frame per measurement. The
 reply and `report.json` carry the interval distribution, `p50`/`p95`/`mean` for
 every CPU phase and GPU pass, and the prime frame count. The GPU passes are the
-TLAS build, the cluster assignment, the depth prepass, the lit scene, the sky,
-the TAA resolve, and the overlay. The sky has its own timestamps. `prime` (seconds, default 2.0) warms the
+TLAS build, the cluster assignment, the probe update, the depth prepass, the lit
+scene, the sky, the TAA resolve, and the overlay. The sky has its own timestamps. `prime` (seconds, default 2.0) warms the
 device clock before the measured window. `name` labels the result and
 `report.json` keeps every named result in a `perf` array. Add
 `"trace": "trace.jsonl"` to write one JSON object per measured frame under the
@@ -966,6 +969,13 @@ with the lamp on and off. The sun elevation, lamp intensity, and lamp range are
 scenario parameters, so `--param sun_elevation_deg=25` and
 `--param lamp_intensity=2` run the same checks with another setup. The room is
 static arena geometry: walk in through the west door and follow the four turns.
+
+`scenarios/ddgi.json` isolates the new indirect term. It puts the camera in the
+chamber, turns the sun below the horizon, and places one lamp. It captures the
+same view with the probe indirect on and off, checks the probe count and atlas
+energy, and requires the on frame to be brighter. The off frame still shows the
+direct lamp, so the difference is the bounce. The result is in
+[docs/evidence/ddgi.md](docs/evidence/ddgi.md).
 
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window

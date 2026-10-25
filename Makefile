@@ -39,10 +39,11 @@ SPIRV_VAL ?= spirv-val
 VULKANINFO ?= vulkaninfo
 SHADER_SRC := src/renderer/shaders
 SHADER_OUT := build/shaders
-SHADER_INCLUDES := $(SHADER_SRC)/gamma.glsl $(SHADER_SRC)/camera.glsl $(SHADER_SRC)/cluster.glsl $(SHADER_SRC)/sky.glsl
+SHADER_INCLUDES := $(SHADER_SRC)/gamma.glsl $(SHADER_SRC)/camera.glsl $(SHADER_SRC)/cluster.glsl $(SHADER_SRC)/probe.glsl $(SHADER_SRC)/sky.glsl
 AO_STAMP := $(SHADER_OUT)/ao_samples
 SHADERS := $(SHADER_OUT)/box.vert.spv $(SHADER_OUT)/box.frag.spv \
 	$(SHADER_OUT)/cluster.comp.spv \
+	$(SHADER_OUT)/probe_update.comp.spv \
 	$(SHADER_OUT)/debug.vert.spv $(SHADER_OUT)/debug.frag.spv \
 	$(SHADER_OUT)/hud.vert.spv $(SHADER_OUT)/hud.frag.spv \
 	$(SHADER_OUT)/taa.vert.spv $(SHADER_OUT)/taa.frag.spv \

@@ -19,6 +19,7 @@ RENDERER_DEBUG_KEYS :: []string {
 	"light_shadows",
 	"synthetic_lights",
 	"sky",
+	"gi",
 	"ao",
 	"ao_radius",
 	"ao_strength",
@@ -37,6 +38,7 @@ RENDERER_DEBUG_BLOCK_KEYS :: []string {
 	"light_shadows",
 	"synthetic_lights",
 	"sky",
+	"gi",
 	"ao",
 	"ao_radius",
 	"ao_strength",
@@ -138,6 +140,9 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 	if error := debug_bool(object, "sky", .Sky, &command.sky, &command.has_sky, &command.reset); error != "" {
 		return {}, error
 	}
+	if error := debug_bool(object, "gi", .GI, &command.gi, &command.has_gi, &command.reset); error != "" {
+		return {}, error
+	}
 	if error := debug_bool(object, "ao", .AO, &command.ao, &command.has_ao, &command.reset); error != "" {
 		return {}, error
 	}
@@ -187,6 +192,7 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 	   command.has_light_shadows ||
 	   command.has_synthetic_lights ||
 	   command.has_sky ||
+	   command.has_gi ||
 	   command.has_ao ||
 	   command.has_ao_radius ||
 	   command.has_ao_strength ||

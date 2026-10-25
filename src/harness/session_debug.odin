@@ -53,6 +53,9 @@ session_renderer_debug :: proc(session: ^Session, command: Renderer_Debug_Comman
 	if command.has_sky {
 		debug.sky = command.sky
 	}
+	if command.has_gi {
+		debug.gi = command.gi
+	}
 	if command.has_ao {
 		debug.ao = command.ao
 	}
@@ -88,6 +91,8 @@ session_renderer_debug :: proc(session: ^Session, command: Renderer_Debug_Comman
 			debug.synthetic_lights = defaults.synthetic_lights
 		case .Sky:
 			debug.sky = defaults.sky
+		case .GI:
+			debug.gi = defaults.gi
 		case .AO:
 			debug.ao = defaults.ao
 		case .AO_Radius:

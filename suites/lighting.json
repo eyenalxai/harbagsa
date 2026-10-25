@@ -1,9 +1,10 @@
 {
   "version": 1,
   "name": "lighting",
-  "description": "Interior light, sky and ambient occlusion, ramps, and sun shadow angles.",
+  "description": "Interior light, probe GI, sky and ambient occlusion, ramps, and sun shadow angles.",
   "entries": [
     "room-lighting",
+    "ddgi",
     "sky",
     "stairs-ao",
     "ramp-shadow",

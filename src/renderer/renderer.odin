@@ -96,6 +96,7 @@ Renderer :: struct {
 
 	target:       Target,
 	scene:        Scene,
+	probe:        Probe,
 	acceleration: Acceleration,
 	taa:          TAA,
 	overlay:      Overlay,
@@ -177,6 +178,7 @@ deinit :: proc(r: ^Renderer) {
 
 	destroy_overlay(r)
 	destroy_taa(r)
+	destroy_probe(r)
 	destroy_scene(r)
 	destroy_target(r)
 	destroy_timing(r)
