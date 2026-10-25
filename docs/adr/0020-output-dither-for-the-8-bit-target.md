@@ -2,7 +2,7 @@
 
 ## Context
 
-The scene colour and the TAA history are 16-bit floats. The sky gradient is
+The scene colour is 16-bit and the TAA history is 32-bit. The sky gradient is
 continuous there. The resolve writes the 8-bit sRGB target, and that write has
 no dither. A gradient that crosses one level every 80 rows becomes a run of
 identical rows. The AO gradient on a wall has the same defect.

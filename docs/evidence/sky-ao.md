@@ -142,6 +142,31 @@ The decision is in
 `docs/adr/0024-visibility-count-dither.md`. The same offset covers the sun
 penumbra, so `shadow-angle` and `edge-profile` also exercise the rule.
 
+### History precision
+
+Captured on 2026-10-25 from `fix/shadow-banding-1`. The ramp-foot region above
+sits where the steps are shallow. The crouched view under the ramp shows them
+at full width, and it exposed a second defect: the 16-bit TAA history could not
+hold the 1/513 update at the 512-sample cap, so the converged field kept the
+ray-count steps.
+
+`scenarios/ramp-shadow-crouch.json` looks from `(4.094, 1.055, -4.172)` under
+the 20 degree ramp, settles 600 frames, and reads the 600x300 region at
+`(450, 350)`.
+
+| History | Steps | Max jump | Mean against the 32-phase reference |
+| --- | ---: | ---: | ---: |
+| R16G16B16A16_SFLOAT | 275 | 0.638 | -1.9 levels |
+| R32G32B32A32_SFLOAT | 0 | 0.494 | +0.5 levels |
+
+The gate is 25 steps and a maximum below 2. The 180-to-600-frame change in the
+shadow region is 0.0022 luma with the 16-bit history and 0.0001 with 32-bit.
+The decision is in `docs/adr/0027-32-bit-taa-history.md`.
+
+```sh
+./bin/harbagsa-agent run scenarios/ramp-shadow-crouch.json --out runs/ramp-shadow-crouch
+```
+
 ## TAA stability
 
 `scenarios/taa-motion.json` at 1280x720, after the post-motion hold:
@@ -179,7 +204,8 @@ The harness suite passes at 1280x720:
 ```text
 smoke, taa-static, taa-motion, capture-targets, renderer-state, renderer-reset,
 renderer-debug, renderer-debug-converge, renderer-debug-jitter, settings-menu,
-sky-ao, stairs-ao, ramp-shadow, banding, shadow-angle, edge-profile
+sky-ao, stairs-ao, ramp-shadow, ramp-shadow-crouch, banding, shadow-angle,
+edge-profile
 ```
 
 `taa-motion`, `renderer-debug`, `renderer-debug-converge`, and
@@ -205,6 +231,8 @@ All are under `runs/` and are not committed:
 - `runs/sky-ao`, `runs/sky-ao-nosky`, `runs/sky-ao-noao`
 - `runs/stairs-ao` and `runs/stairs-ao-before`
 - `runs/ramp-shadow` and the old-shader before run
+- `runs/ramp-shadow-crouch`, the 16-bit before run, and the 32-phase reference
+  captures
 - `runs/taa-motion`, and the 4-ray and 16-ray calibration runs were temporary
   copies of the same scenario. The alternating base and feature perf runs are
   under `/tmp/opencode/ab-*`; the current runs are also in `runs/perf-*`.

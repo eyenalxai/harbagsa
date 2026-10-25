@@ -1,0 +1,21 @@
+{
+  "size": "1280x720",
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "analysis": false,
+  "commands": [
+    {"cmd": "camera",
+     "position": [4.09399128, 1.05499995, -4.17171907],
+     "yaw_deg": -156.68086243,
+     "pitch_deg": -27.94889069,
+     "fov_deg": 90.0},
+    {"cmd": "settle", "frames": 600},
+    {"cmd": "capture", "name": "ramp-shadow-crouch"},
+    {"cmd": "capture", "name": "ramp-crouch-steps", "format": "stats",
+     "region": {"x": 450, "y": 350, "w": 600, "h": 300}}
+  ],
+  "checks": [
+    {"field": "capture.count", "op": "eq", "value": 2},
+    {"field": "capture.1.stats.steps.count", "op": "le", "value": 25},
+    {"field": "capture.1.stats.steps.max", "op": "lt", "value": 2}
+  ]
+}
