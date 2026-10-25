@@ -597,9 +597,10 @@ Movement scenarios run with `--no-render` and gate the simulation state.
 | `scenarios/ramp-headroom.json` | a stand attempt under each ramp stays low instead of growing through the slab |
 
 `ramp-headroom.json` sets a prone player under each ramp, presses jump as the
-stand attempt, and checks `player.stance`. A prone player that asks to stand
-must land on the tallest stance that fits, and the rotated slab must count as an
-overhead shape.
+stand attempt, and checks that the stance stays Prone. The jump is refused
+because the slab crosses the standing capsule.
+`tests/simulation/headroom.odin` also releases prone and checks that the stance
+falls to the tallest one that fits.
 
 ## Live session
 

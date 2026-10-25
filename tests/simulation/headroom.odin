@@ -32,41 +32,37 @@ headroom_drops_the_player_under_each_tunnel :: proc(t: ^testing.T) {
 @(test)
 headroom_refuses_a_taller_stance_under_a_ramp :: proc(t: ^testing.T) {
 	Ramp :: struct {
-		x:      f32,
-		z:      f32,
-		stance: game.Stance,
+		name: string,
+		feet: [3]f32,
+		want: game.Stance,
 	}
-	// The z values sit under a slab that clears the prone capsule but not the
-	// next stance up.
+	// Each z sits under a slab that clears the expected stance but not the one
+	// above it.
 	ramps := [3]Ramp {
-		{game.ARENA_RAMP_20_X, -4.5, .Crouching},
-		{game.ARENA_RAMP_40_X, -2.0, .Crouching},
-		{game.ARENA_RAMP_50_X, -1.2, .Prone},
+		{"20 degree", game.ARENA_RAMP_20_UNDER, .Crouching},
+		{"40 degree", game.ARENA_RAMP_40_UNDER, .Crouching},
+		{"50 degree", game.ARENA_RAMP_50_UNDER, .Prone},
 	}
 	for ramp in ramps {
 		sim := create(t)
-		feet := b3.Vec3{ramp.x, game.GROUND_OFFSET, ramp.z}
 		testing.expectf(
 			t,
-			!game.has_headroom(&sim, feet, .Standing),
-			"standing headroom reported under the ramp at x=%v z=%v",
-			ramp.x,
-			ramp.z,
+			!game.has_headroom(&sim, ramp.feet, .Standing),
+			"standing headroom reported under the %s ramp",
+			ramp.name,
 		)
 
-		game.player_place(&sim.player, feet, 0.0, 0.0)
+		game.player_place(&sim.player, ramp.feet, 0.0, 0.0)
 		game.commit_stance(&sim.player, .Prone)
-		step(&sim, {}, 1)
-		game.simulation_step(&sim, game.Input_Snapshot{prone_pressed = true}, game.SIMULATION_STEP)
+		step(&sim, game.Input_Snapshot{prone_pressed = true}, 1)
 
 		testing.expectf(
 			t,
-			sim.player.stance == ramp.stance,
-			"under the ramp at x=%v z=%v: stance %v, want %v",
-			ramp.x,
-			ramp.z,
+			sim.player.stance == ramp.want,
+			"under the %s ramp: stance %v, want %v",
+			ramp.name,
 			sim.player.stance,
-			ramp.stance,
+			ramp.want,
 		)
 		game.simulation_destroy(&sim)
 	}
@@ -74,36 +70,48 @@ headroom_refuses_a_taller_stance_under_a_ramp :: proc(t: ^testing.T) {
 
 @(test)
 headroom_keeps_the_standing_stance_on_a_ramp :: proc(t: ^testing.T) {
-	approaches := [2][3]f32 {
-		game.ARENA_RAMP_20_APPROACH,
-		game.ARENA_RAMP_40_APPROACH,
+	Approach :: struct {
+		name:     string,
+		position: [3]f32,
+	}
+	approaches := [2]Approach {
+		{"20 degree", game.ARENA_RAMP_20_APPROACH},
+		{"40 degree", game.ARENA_RAMP_40_APPROACH},
 	}
 	for approach in approaches {
 		sim := create(t)
-		sim.player.position = approach
+		sim.player.position = approach.position
 		sim.player.velocity = {}
 		sim.player.yaw = 0
-		for frame in 0 ..< 120 {
+		for frame in 0 ..< 60 {
 			step(&sim, game.Input_Snapshot{move_forward = 1.0}, 1)
 			if sim.player.stance != .Standing {
 				testing.expectf(
 					t,
 					false,
-					"the ramp dropped the stance on frame %v at y=%v",
+					"the %s ramp dropped the stance on frame %v at y=%v",
+					approach.name,
 					frame,
 					sim.player.position.y,
 				)
 				break
 			}
 		}
+		testing.expectf(
+			t,
+			sim.player.position.y > 0.5,
+			"the %s ramp did not lift the player: y=%v",
+			approach.name,
+			sim.player.position.y,
+		)
 		game.simulation_destroy(&sim)
 	}
 }
 
-// A floor-level side obstacle only touches the lower body. It must not block a
-// taller stance, or the player cannot stand beside a wall or a step.
+// A side obstacle that only grazes the capsule must not block a taller stance,
+// or the player cannot stand beside a wall, a crate, or a step.
 @(test)
-headroom_allows_a_side_obstacle_at_the_feet :: proc(t: ^testing.T) {
+headroom_allows_a_side_obstacle :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 
@@ -113,6 +121,14 @@ headroom_allows_a_side_obstacle_at_the_feet :: proc(t: ^testing.T) {
 		0.0,
 	}
 	testing.expect(t, game.has_headroom(&sim, wall, .Standing), "a wall blocked standing")
+
+	crate_center := game.INITIAL_CRATE_POSITIONS[0]
+	crate := b3.Vec3 {
+		crate_center[0] + 0.5 + game.PLAYER_RADIUS,
+		game.GROUND_OFFSET,
+		crate_center[2],
+	}
+	testing.expect(t, game.has_headroom(&sim, crate, .Standing), "a crate blocked standing")
 
 	step_face := b3.Vec3 {
 		game.ARENA_STEP_035_X + game.ARENA_STEP_HALF + game.PLAYER_RADIUS,

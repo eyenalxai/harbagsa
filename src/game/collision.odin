@@ -103,11 +103,11 @@ is_grounded :: proc(sim: ^Simulation, probe: Ground_Probe) -> bool {
 }
 
 @(private)
-player_capsule :: proc(stance: Stance) -> b3.Capsule {
+player_capsule :: proc(stance: Stance, radius: f32 = PLAYER_RADIUS) -> b3.Capsule {
 	return {
-		center1 = {0.0, PLAYER_RADIUS, 0.0},
-		center2 = {0.0, stance_height(stance) - PLAYER_RADIUS, 0.0},
-		radius = PLAYER_RADIUS,
+		center1 = {0.0, radius, 0.0},
+		center2 = {0.0, max(stance_height(stance) - radius, radius), 0.0},
+		radius = radius,
 	}
 }
 

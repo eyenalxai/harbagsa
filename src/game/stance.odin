@@ -14,20 +14,19 @@ headroom_overlap :: proc "c" (_: b3.ShapeId, ctx: rawptr) -> bool {
 
 // Headroom is a clear-space check, not a full-capsule overlap. The probe keeps
 // the stance height but is inset from the capsule side and lifted off the floor,
-// so a floor, a step, or a wall that only touches the lower body does not block
-// a taller stance. Any shape that crosses the inset probe is overhead, including
-// a rotated overhang such as a ramp underside whose AABB starts below the feet.
+// so a floor, a step, or a wall that only grazes the side does not block a taller
+// stance. Any shape that crosses the inset probe does, including a rotated
+// overhang such as a ramp underside whose AABB starts below the feet.
 has_headroom :: proc(sim: ^Simulation, feet: b3.Vec3, stance: Stance) -> bool {
-	height := stance_height(stance)
-	radius := f32(PLAYER_RADIUS - HEADROOM_SIDE_INSET)
+	capsule := player_capsule(stance, PLAYER_RADIUS - HEADROOM_SIDE_INSET)
 	points: [2]b3.Vec3
-	points[0] = {0.0, radius, 0.0}
-	points[1] = {0.0, max(height - radius, radius), 0.0}
+	points[0] = capsule.center1
+	points[1] = capsule.center2
 
 	proxy := b3.ShapeProxy {
 		points = raw_data(points[:]),
 		count = c.int(2),
-		radius = radius,
+		radius = capsule.radius,
 	}
 	blocked := false
 	origin := feet + b3.Vec3{0.0, HEADROOM_PROBE_LIFT, 0.0}
