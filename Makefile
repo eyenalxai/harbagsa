@@ -14,7 +14,7 @@ AGENT_DEFINES := -define:HARNESS_REVISION=$(HARNESS_REVISION) -define:HARNESS_DI
 AGENT_BUILD := $(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) $(AGENT_DEFINES) -out:$(AGENT_BIN)
 VALIDATE_AGENT_BIN := bin/harbagsa-agent-validate
 VALIDATE_SCENARIO ?= scenarios/smoke.json
-VALIDATE_OFFSCREEN_SCENARIOS ?= smoke type-weight settings-menu ui shadow-angle perf-crates
+VALIDATE_OFFSCREEN_SCENARIOS ?= smoke type-weight settings-menu ui shadow-angle perf-crates lamp-wall-plane
 VALIDATE_OUT := build/validate
 AGENT_FLAGS ?=
 SCENARIO ?=

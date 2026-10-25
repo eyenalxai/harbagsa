@@ -99,27 +99,13 @@ parse_camera :: proc(object: json.Object) -> (Command, string) {
 		return {}, format_error("%s", "camera needs 'position'")
 	}
 	command.camera.position = position
-	look_at, look_at_ok := vec3_field(object, "look_at")
-	yaw, yaw_ok := number_field(object, "yaw")
-	pitch, pitch_ok := number_field(object, "pitch")
-	if look_at_ok && (yaw_ok || pitch_ok) {
-		return {}, format_error("%s", "camera takes 'look_at' or 'yaw' and 'pitch', not both")
+	angles, angles_error := camera_angles_from_fields(object, position, "camera")
+	if angles_error != "" {
+		return {}, angles_error
 	}
-	if look_at_ok {
-		angles, angles_ok := camera_look_at_angles(position, look_at)
-		if !angles_ok {
-			return {}, format_error("%s", "camera 'look_at' must differ from 'position'")
-		}
-		command.camera.yaw = angles.yaw
-		command.camera.pitch = angles.pitch
-		command.camera.has_angles = true
-	} else if yaw_ok && pitch_ok {
-		command.camera.yaw = f32(yaw)
-		command.camera.pitch = f32(pitch)
-		command.camera.has_angles = true
-	} else {
-		return {}, format_error("%s", "camera needs 'look_at' or 'yaw' and 'pitch'")
-	}
+	command.camera.yaw = angles.yaw
+	command.camera.pitch = angles.pitch
+	command.camera.has_angles = true
 	if value, has := json_get(object, "fov"); has {
 		fov, fov_ok := json_number(value)
 		if !fov_ok || fov < 1 || fov > 170 {
@@ -148,4 +134,30 @@ camera_look_at_angles :: proc(position, target: [3]f32) -> (angles: Camera_Angle
 	angles.pitch = math.asin(clamp(direction.y, -1, 1))
 	angles.yaw = math.atan2(-direction.x, -direction.z)
 	return angles, true
+}
+
+// The camera command and the editor camera share the field rules; the label
+// names which command owns the error.
+camera_angles_from_fields :: proc(
+	object: json.Object,
+	position: [3]f32,
+	label: string,
+) -> (angles: Camera_Angles, error: string) {
+	look_at, look_at_ok := vec3_field(object, "look_at")
+	yaw, yaw_ok := number_field(object, "yaw")
+	pitch, pitch_ok := number_field(object, "pitch")
+	if look_at_ok && (yaw_ok || pitch_ok) {
+		return {}, format_error("%s takes 'look_at' or 'yaw' and 'pitch', not both", label)
+	}
+	if look_at_ok {
+		computed, ok := camera_look_at_angles(position, look_at)
+		if !ok {
+			return {}, format_error("%s 'look_at' must differ from 'position'", label)
+		}
+		return computed, ""
+	}
+	if !yaw_ok || !pitch_ok {
+		return {}, format_error("%s needs 'look_at' or 'yaw' and 'pitch'", label)
+	}
+	return {yaw = f32(yaw), pitch = f32(pitch)}, ""
 }

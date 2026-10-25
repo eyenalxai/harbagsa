@@ -1,4 +1,5 @@
 {
+  "requires": {"renderer_debug": true},
   "commands": [
     {"cmd": "view", "hud": false, "debug": false, "hint": false, "perf": false},
     {"cmd": "camera", "position": [0, 1.7, 0], "yaw": 0, "pitch": 1.2},

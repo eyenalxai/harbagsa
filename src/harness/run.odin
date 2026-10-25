@@ -4,44 +4,42 @@ package harness
 import "core:fmt"
 import "core:log"
 import "core:os"
+import "core:strings"
 
 EXIT_OK :: 0
 EXIT_CHECK :: 1
 EXIT_SCENARIO :: 2
 EXIT_RENDER :: 3
 
-Run_Backend :: struct {
-	width:     u32,
-	height:    u32,
-	present:   bool,
-	frames_dir: string,
-	backend:   ^Backend,
-	session:   ^Session,
-}
-
-run_backend_ensure :: proc(ctx: rawptr) -> string {
-	run := cast(^Run_Backend)ctx
-	if run.backend.ready {
-		return ""
-	}
-	created, create_error := backend_create(
-		run.width,
-		run.height,
-		run.present,
-		run.frames_dir,
-		context.allocator,
-	)
-	if create_error != "" {
-		log.errorf("harness: %s", create_error)
-		return create_error
-	}
-	run.backend^ = created
-	session_set_backend(run.session, run.backend, run.present)
-	return ""
+// One scenario run's result, so a sweep can keep the summary without printing
+// one JSON line per combination.
+Run_Result :: struct {
+	exit_code: int,
+	summary:   Run_Summary,
 }
 
 run_batch :: proc(options: Run_Options) -> int {
-	scenario, load_error := scenario_load(options.scenario, context.allocator)
+	file, read_error := scenario_file_read(options.scenario, context.allocator)
+	if read_error != "" {
+		print_summary_failure(read_error, EXIT_SCENARIO)
+		delete(read_error, context.allocator)
+		return EXIT_SCENARIO
+	}
+	defer scenario_file_destroy(&file, context.allocator)
+
+	parameter_array := options.parameters
+	parameters := parameter_array[:options.parameter_count]
+	combinations := sweep_combination_count(parameters)
+	if combinations > 1 {
+		return run_sweep(&file, options, combinations)
+	}
+
+	buffer: [MAX_SWEEP_PARAMETERS]Parameter_Override
+	overrides: []Parameter_Override
+	if len(parameters) > 0 {
+		overrides = sweep_combination(parameters, 0, buffer[:])
+	}
+	scenario, load_error := scenario_file_parse(&file, overrides, context.allocator)
 	if load_error != "" {
 		print_summary_failure(load_error, EXIT_SCENARIO)
 		delete(load_error, context.allocator)
@@ -49,14 +47,37 @@ run_batch :: proc(options: Run_Options) -> int {
 	}
 	defer scenario_destroy(&scenario, context.allocator)
 
+	result := run_scenario(&scenario, options, "")
+	defer run_result_destroy(&result)
+	print_summary(result.summary)
+	return result.exit_code
+}
+
+run_result_destroy :: proc(result: ^Run_Result) {
+	summary_destroy(&result.summary)
+	result^ = {}
+}
+
+@(private)
+failed_result :: proc(message: string, exit_code: int) -> Run_Result {
+	return {
+		exit_code = exit_code,
+		summary = {
+			ok = false,
+			exit_code = exit_code,
+			error = strings.clone(message, context.allocator),
+		},
+	}
+}
+
+run_scenario :: proc(scenario: ^Scenario, options: Run_Options, out_dir: string) -> Run_Result {
 	common := options.common
 	if scenario.has_size {
 		if common.has_size {
-			print_summary_failure(
+			return failed_result(
 				"the scenario declares 'size', so run --size cannot override it",
 				EXIT_SCENARIO,
 			)
-			return EXIT_SCENARIO
 		}
 		common.width = scenario.size[0]
 		common.height = scenario.size[1]
@@ -64,21 +85,29 @@ run_batch :: proc(options: Run_Options) -> int {
 	if common.debug_override_count > 0 {
 		command, command_error := build_renderer_debug_command(common, context.allocator)
 		if command_error != "" {
-			print_summary_failure(command_error, EXIT_SCENARIO)
+			result := failed_result(command_error, EXIT_SCENARIO)
 			delete(command_error, context.allocator)
-			return EXIT_SCENARIO
+			return result
 		}
-		inject_command(&scenario, command)
+		inject_command(scenario, command)
 	}
 
-	out_dir, owned_out := run_output_dir(options.scenario, options.out_dir, common.tag, context.allocator)
-	absolute_out, abs_error := absolute_path(out_dir, context.allocator)
-	if abs_error != nil {
-		print_summary_failure("cannot resolve the output directory", EXIT_SCENARIO)
-		return EXIT_SCENARIO
+	target_dir := out_dir
+	owned_out := false
+	if target_dir == "" {
+		target_dir, owned_out = run_output_dir(
+			options.scenario,
+			options.out_dir,
+			common.tag,
+			context.allocator,
+		)
 	}
+	absolute_out, abs_error := absolute_path(target_dir, context.allocator)
 	if owned_out {
-		delete(out_dir, context.allocator)
+		delete(target_dir, context.allocator)
+	}
+	if abs_error != nil {
+		return failed_result("cannot resolve the output directory", EXIT_SCENARIO)
 	}
 	defer delete(absolute_out, context.allocator)
 
@@ -86,8 +115,7 @@ run_batch :: proc(options: Run_Options) -> int {
 	defer delete(staging, context.allocator)
 	_ = os.remove_all(staging)
 	if mkdir_error := os.make_directory_all(staging); mkdir_error != nil {
-		print_summary_failure("cannot create the run directory", EXIT_SCENARIO)
-		return EXIT_SCENARIO
+		return failed_result("cannot create the run directory", EXIT_SCENARIO)
 	}
 	frames_dir := join_path({staging, "frames"}, context.allocator)
 	defer delete(frames_dir, context.allocator)
@@ -97,8 +125,7 @@ run_batch :: proc(options: Run_Options) -> int {
 	defer delete(log_path, context.allocator)
 	log_file, log_error := os.create(log_path)
 	if log_error != nil {
-		print_summary_failure("cannot create run.log", EXIT_SCENARIO)
-		return EXIT_SCENARIO
+		return failed_result("cannot create run.log", EXIT_SCENARIO)
 	}
 	logger := log.create_file_logger(
 		log_file,
@@ -114,10 +141,11 @@ run_batch :: proc(options: Run_Options) -> int {
 
 	session, session_error := session_create(context.allocator)
 	if session_error != "" {
-		print_summary_failure(session_error, EXIT_RENDER)
-		return EXIT_RENDER
+		result := failed_result(session_error, EXIT_RENDER)
+		delete(session_error, context.allocator)
+		return result
 	}
-	session.debug_renderer = options.debug_renderer
+	session.debug_renderer = options.debug_renderer || scenario.requires.renderer_debug
 	session.analysis_config = scenario.analysis
 	if options.no_analysis {
 		session.analysis_config.enabled = false
@@ -128,12 +156,12 @@ run_batch :: proc(options: Run_Options) -> int {
 	session.render_enabled = render_enabled
 	backend: Backend
 	run_backend := Run_Backend {
-		width = common.width,
-		height = common.height,
-		present = options.present,
+		width      = common.width,
+		height     = common.height,
+		present    = options.present,
 		frames_dir = frames_dir,
-		backend = &backend,
-		session = &session,
+		backend    = &backend,
+		session    = &session,
 	}
 	session.backend_provider = {ctx = &run_backend, ensure = run_backend_ensure}
 	backend_error := ""
@@ -145,7 +173,7 @@ run_batch :: proc(options: Run_Options) -> int {
 	}
 
 	log.infof("harness: %d commands", len(scenario.commands))
-	failure := execute_commands(&session, scenario)
+	failure := execute_commands(&session, scenario^)
 	if failure != "" {
 		session_failure(&session, failure)
 	}
@@ -192,6 +220,7 @@ run_batch :: proc(options: Run_Options) -> int {
 	}
 
 	rewrite_capture_paths(&session, absolute_out)
+	setup := setup_build(common, session.view, backend, session.debug_renderer)
 	report_path := join_path({staging, "report.json"}, context.allocator)
 	defer delete(report_path, context.allocator)
 	report := Report {
@@ -199,7 +228,7 @@ run_batch :: proc(options: Run_Options) -> int {
 		run_dir     = absolute_out,
 		frame       = state.frame,
 		state       = state,
-		setup       = setup_build(common, session.view, backend),
+		setup       = setup,
 		screenshots = session.captures[:],
 		checks      = session.checks[:],
 		failures    = session.failures[:],
@@ -246,18 +275,20 @@ run_batch :: proc(options: Run_Options) -> int {
 	}
 
 	summary := build_summary(report, absolute_out)
-	defer summary_destroy(&summary)
-
 	if swap_error := swap_run_dir(absolute_out, staging); swap_error != "" {
-		print_summary_failure(swap_error, EXIT_RENDER)
-		return EXIT_RENDER
+		summary_destroy(&summary)
+		result := failed_result(swap_error, EXIT_RENDER)
+		delete(swap_error, context.allocator)
+		if failure != "" {
+			delete(failure, context.allocator)
+		}
+		return result
 	}
 	if options.verbose {
 		print_verbose_summary(report)
 	}
-	print_summary(summary)
 	if failure != "" {
 		delete(failure, context.allocator)
 	}
-	return exit_code
+	return {exit_code = exit_code, summary = summary}
 }

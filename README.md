@@ -232,6 +232,9 @@ Options:
 - `--out DIR`: replace this run directory atomically. Default: `runs/<stem>`.
 - `--tag NAME`: append NAME to the run directory, so `runs/smoke/before` and
   `runs/smoke/after` coexist. The report records the final directory.
+- `--param NAME=VALUE[,VALUE...]`: override a scenario parameter. A comma list
+  runs one scenario per value; repeat the flag for every parameter and the
+  runner takes the cartesian product. See **Parameter sweep**.
 - `--size WxH`: capture size. Default: `1280x720`. A scenario `size` and
   `--size` together are an error.
 - `--renderer-debug KEY=VALUE`: apply a gated renderer override before the
@@ -242,7 +245,8 @@ Options:
 - `--present`: render the real SDL window and capture the swapchain image
   before present. No compositor and no `grim`.
 - `--debug-renderer`: accept the renderer debug command. A build with
-  `-define:ENABLE_RENDERER_DEBUG=true` always accepts it.
+  `-define:ENABLE_RENDERER_DEBUG=true` always accepts it, and so does a
+  scenario that declares `"requires": {"renderer_debug": true}`.
 - `--no-analysis`: skip `analysis.json` and the analysis maps.
 
 `run -` reads the scenario from standard input. It leaves no throwaway file
@@ -256,6 +260,59 @@ The harness view starts with the HUD off, the debug draw off, and the capture
 hint off. Only a `capture` command writes a PNG. A scenario with no capture and
 no perf run never creates a Vulkan device unless `--present` asks for the
 window.
+
+### Parameter sweep
+
+A scenario declares its knobs and uses `${name}`:
+
+```json
+"parameters": {"lamp_x": 20.0},
+"commands": [
+  {"cmd": "editor", "place": {"prefab": "Lamp",
+   "position": ["${lamp_x}", 2.0, -19.5]}}
+]
+```
+
+`--param` overrides a value. A comma list runs one scenario per value:
+
+```sh
+./bin/harbagsa-agent run scenarios/lamp-threshold.json \
+  --param lamp_x=20,19.999,19.99,19.9 --out runs/lamp-threshold
+```
+
+Each value gets its own run directory, and the parent gets `sweep.json`:
+
+```text
+runs/lamp-threshold/
+  sweep.json
+  lamp_x=20/report.json
+  lamp_x=19.999/report.json
+  lamp_x=19.99/report.json
+  lamp_x=19.9/report.json
+```
+
+Repeat `--param` for more parameters; the runner takes the cartesian product,
+with the last parameter changing fastest. A value cannot hold a comma, and a
+sweep holds at most 256 runs. One value is a plain run, so
+`--param lamp_x=19.999` writes the usual run directory and no `sweep.json`.
+
+`sweep.json` lists each combination's parameters, run directory, report, state,
+digest, exit code, and error. The process exit code is the highest of the runs,
+so one bad combination fails the sweep while the rest still run. An override
+must match a `${name}` in the scenario, and it must parse as the declared type.
+
+Read the per-value metrics from the reports:
+
+```sh
+for report in runs/lamp-threshold/*/report.json; do
+  jq -r '[.scenario.parameters[0].value,
+          .screenshots[0].stats.gradient[1]] | @tsv' "$report"
+done
+```
+
+The report stores statistics as arrays in RGBA order. A check names the same
+channels `x`, `y`, `z`, and `w`, so `capture.named.wall.stats.gradient.y` is
+green.
 
 ### Scenario format
 
@@ -280,7 +337,9 @@ A scenario may declare `"size": "1280x720"` to pin its pixels. It may extend
 another scenario with `"extends": "base.json"`, which merges the base object and
 lets the child win. A `parameters` block substitutes `${name}` in any command
 value; a parameter must be a string, number, or boolean. The base path resolves
-against the extending file.
+against the extending file. A placeholder is always a JSON string, so a number
+in an array is written `["${lamp_x}", 2.0, -19.5]`; substitution puts the
+parameter's own type in its place.
 
 The `commands` array runs verbatim, and `record` writes this form. Only a
 `capture` command writes a PNG; a scenario without one renders nothing unless
@@ -294,13 +353,15 @@ with `value`, or with another field with `other`:
 `{"cmd":"check","field":"capture.1.stats.mean.y","op":"gt","other":"capture.0.stats.mean.y"}`.
 A type mismatch or a missing field is a check error. `capture.N.*` names one
 capture in the window; `capture.first` and `capture.last` are aliases.
+`capture.named.<name>.*` names a capture by its `name`; a missing name is a
+check error.
 
 Check fields use the `state.json` shape, for example `player.position.y`,
 `player.grounded`, `objects.1.position.z`, `objects.count`,
 `settings.window_mode`, `settings.resolution`, `settings.type_weight`,
 `menu.open`, `menu.status`, `menu.blocked`, `debug.active`,
 `debug.placement.armed`, `debug.sun.angular_diameter`, `sun.elevation`,
-`sun.angular_diameter`, `camera.fov`, `camera.overridden`, `settle.converged`,
+`sun.angular_diameter`, `camera.fov`, `camera.source`, `camera.overridden`, `settle.converged`,
 `rows.menu.3.kind`, `renderer.taa_enabled`, `renderer.text_truncated_runs`, or
 `render_digest`. A capture check can also read `capture.target`,
 `capture.format`, `capture.stats.*`, `capture.region.*`, `capture.profile.*`,
@@ -352,7 +413,8 @@ The batch runner and the live session share one command set:
   the inspector (`prefab`, `body`, `size`, `position`, `yaw`, `snap`, `light`),
   the light budget (`lights.active`, `lights.lamps`), and the history (`depth`,
   `redo`). The sun angles and the angular diameter are degrees. `camera` reports
-  the effective position, yaw, pitch, fov, and whether an override is active.
+  the view the renderer uses: position, yaw, pitch, fov, `source` (`player`,
+  `debug`, or `override`), and whether an override is active.
   `rows` dumps the HUD and menu rows. The renderer object reports the frame
   count, TAA state, jitter index, history validity, convergence frames, history
   read index and weight, reset count and reason, shadow phase, the active light
@@ -403,9 +465,10 @@ The batch runner and the live session share one command set:
   `turn` and `wheel` step the armed tool or the selection, `large` applies the
   Shift step, `primary` and `secondary` are the mouse buttons, and
   `drag_move`/`drag_release` drive one object drag.
-- `{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw": 0, "pitch": -0.6}}`:
-  set the debug camera. `yaw` and `pitch` are radians, as in the `camera`
-  command. The editor command accepts this alongside the other fields.
+- `{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "look_at": [0, 1.7, 4]}}`:
+  set the debug camera. It accepts `look_at` or `yaw` and `pitch`, never both;
+  the angles are radians, as in the `camera` command. The editor command accepts
+  this alongside the other fields.
 - `{"cmd": "editor", "place": {"prefab": "Block", "position": [0, 0.5, 10], "yaw": 0, "body": "static"}}`:
   create an object at an exact transform, bypassing the placement ray. `prefab`
   and `position` are required; `yaw` (degrees) defaults to 0 and `body` to the
@@ -624,10 +687,12 @@ pillar, then captures the lit scene, the point-light shadow, and the selected
 lamp edit with its undo. `scenarios/editor-input.json` drives the pointer,
 wheel, relative turn, palette step, number key, snap toggle, and right-click
 clear through the same action set as the keyboard. `scenarios/lamp-wall-plane.json`
-places a lamp halfway into a wall, clear of the floor and the adjacent walls,
-and captures the view with the point-light shadows on and off. The two captures
-must match; a fan of shadows on the wall or the floor fails the check. Run it
-with `--debug-renderer`.
+aims the debug camera at a wall, arms the Lamp, and clicks the ghost, so the
+anchor and `debug_placement_place` are part of the regression. A wall gradient
+check gates the shadow fan directly, without a before/after pair. It also
+captures a crate with the point-light shadows on and off to prove the point
+light still casts. The scenario declares `requires.renderer_debug`, so it needs
+no flag, and `make validate-offscreen` runs it.
 
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window
@@ -636,21 +701,24 @@ settings.
 `scenarios/renderer-state.json` settles a static scene, captures it, and checks
 the renderer state and render digest. `scenarios/renderer-reset.json` teleports
 the camera and checks that the history reset names the teleport. `report.json`
-also carries a `setup` block: target kind, extent, view flags, and renderer
-config, so a run is reproducible.
+also carries a `setup` block: target kind, extent, view flags, the renderer
+debug gate, and renderer config, so a run is reproducible.
 
 A capture can read an intermediate target. `"target": "velocity"` with
-`"format": "stats"` reports per-channel min, max, and mean plus the median
-screen motion in texels. `"format": "float"` writes a `.f32` file and `"raw"`
-writes the exact texel bytes. A PNG capture is color only.
+`"format": "stats"` reports per-channel min, max, mean, `stddev`, and
+`gradient`, plus the median screen motion in texels for a velocity target. The
+gradient is the mean absolute difference between 4-neighbour pixels over the
+region. `"format": "float"` writes a `.f32` file and `"raw"` writes the exact
+texel bytes. A PNG capture is color only.
 `scenarios/capture-targets.json` covers every target.
 
 `renderer_debug` changes renderer inputs for a diagnosis: TAA, jitter, history
 weight, clamp, depth trust, the shadow phase, the point-light shadow switch,
-the synthetic light count, the sky, and the ambient occlusion. Every build rejects it unless
-`--debug-renderer` is passed or the build used the `ENABLE_RENDERER_DEBUG`
-define. Changing an input resets history and records the `debug_override`
-reason.
+the synthetic light count, the sky, and the ambient occlusion. Every build
+rejects it unless `--debug-renderer` is passed, the build used the
+`ENABLE_RENDERER_DEBUG` define, or the scenario declares
+`"requires": {"renderer_debug": true}`. Changing an input resets history and
+records the `debug_override` reason.
 `scenarios/renderer-debug.json` covers the overrides, and
 `scenarios/renderer-debug-converge.json` shows the image converging with jitter
 off. `scenarios/renderer-debug-jitter.json` freezes the phase, lets jitter cycle,
