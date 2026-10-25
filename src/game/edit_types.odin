@@ -105,7 +105,7 @@ Placement_Raise :: struct {
 	large: bool,
 }
 Placement_Set_Yaw :: struct {
-	yaw: f32,
+	yaw_deg: f32,
 }
 Placement_Turn :: struct {
 	steps: int,
@@ -120,7 +120,7 @@ Place_Object :: struct {
 	prefab:    Prefab_Id,
 	body_mode: Body_Mode,
 	center:    b3.Vec3,
-	yaw:       f32,
+	yaw_rad:   f32,
 }
 Light_Adjust :: struct {
 	change: Light_Change,

@@ -1,7 +1,7 @@
 {
   "view": {"hud": false, "debug": false, "hint": false},
   "commands": [
-    {"cmd": "camera", "position": [-12, 1.7, 6.0], "yaw": 0, "pitch": -0.22},
+    {"cmd": "camera", "position": [-12, 1.7, 6.0], "yaw_deg": 0, "pitch_deg": -12.6051},
     {"cmd": "settle", "frames": 8},
 
     {"cmd": "capture", "name": "velocity-static", "target": "velocity", "format": "stats"},
@@ -23,7 +23,7 @@
     {"cmd": "check", "field": "capture.stats.mean.x", "op": "gt", "value": 0},
     {"cmd": "check", "field": "capture.stats.mean.x", "op": "lt", "value": 200},
 
-    {"cmd": "camera", "position": [-12, 1.7, 5.5], "yaw": 0, "pitch": -0.22},
+    {"cmd": "camera", "position": [-12, 1.7, 5.5], "yaw_deg": 0, "pitch_deg": -12.6051},
     {"cmd": "capture", "name": "velocity-moving", "target": "velocity", "format": "stats"},
     {"cmd": "check", "field": "capture.stats.velocity_median_texels", "op": "gt", "value": 1}
   ],

@@ -44,7 +44,7 @@ edit_place_object :: proc(dm: ^Debug_Mode, sim: ^Simulation, place: Place_Object
 		prefab    = place.prefab,
 		body_mode = place.body_mode,
 		center    = place.center,
-		yaw       = place.yaw,
+		yaw       = place.yaw_rad,
 		light     = placement_light_for(dm, place.prefab),
 	}
 	return place_object(dm, sim, spawn)
