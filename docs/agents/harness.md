@@ -199,6 +199,8 @@ Rules:
 - A check compares with `value` or with `other`:
   `{"cmd":"check","field":"capture.1.stats.mean.y","op":"gt","other":"capture.0.stats.mean.y"}`.
   `capture.N.*`, `capture.first.*`, and `capture.last.*` name one capture.
+  `capture.named.<name>.*` names a capture by its `name`; a missing name is a
+  check error.
 
 ## Commands
 

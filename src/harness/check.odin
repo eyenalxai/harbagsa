@@ -152,6 +152,17 @@ capture_path_field :: proc(captures: []Capture_Result, path: string) -> (Check_V
 			return capture_one_field(captures[0], tail)
 		case "last":
 			return capture_one_field(captures[len(captures) - 1], tail)
+		case "named":
+			name, rest, has_rest := split_field(tail)
+			if !has_rest {
+				return {}, format_error("%s", "capture.named needs <name>.<field>")
+			}
+			for capture in captures {
+				if capture.name == name {
+					return capture_one_field(capture, rest)
+				}
+			}
+			return {}, fmt.aprintf("no capture named %q", name, allocator = context.allocator)
 		}
 		if index, parse_ok := strconv.parse_int(head); parse_ok {
 			if index < 0 || index >= len(captures) {
