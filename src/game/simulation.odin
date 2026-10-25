@@ -2,6 +2,8 @@
 #+vet !unused-procedures // the harness calls simulation_face; the game binary does not
 package game
 
+import "core:mem"
+
 import b3 "libs:box3d"
 
 import "src:geometry"
@@ -38,17 +40,21 @@ Render_Snapshot :: struct {
 }
 
 Simulation :: struct {
+	allocator:      mem.Allocator,
 	world_id:       b3.WorldId,
 	player:         Player,
-	objects:        [MAX_PLACED_OBJECTS]Placed_Object,
-	object_count:   int,
+	objects:        [dynamic]Placed_Object,
+	light_scratch:  [dynamic]Active_Light,
 	next_object_id: Object_Id,
 	time:           f32,
 	settings:       Settings,
 }
 
-simulation_create :: proc() -> Simulation {
+simulation_create :: proc(allocator: mem.Allocator) -> Simulation {
 	sim: Simulation
+	sim.allocator = allocator
+	sim.objects = make([dynamic]Placed_Object, 0, 0, allocator)
+	sim.light_scratch = make([dynamic]Active_Light, 0, 0, allocator)
 	sim.settings = settings_default()
 
 	world_def := b3.DefaultWorldDef()
@@ -67,6 +73,12 @@ simulation_create :: proc() -> Simulation {
 simulation_destroy :: proc(sim: ^Simulation) {
 	if b3.World_IsValid(sim.world_id) {
 		b3.DestroyWorld(sim.world_id)
+	}
+	if sim.objects != nil {
+		delete(sim.objects)
+	}
+	if sim.light_scratch != nil {
+		delete(sim.light_scratch)
 	}
 	sim^ = {}
 }

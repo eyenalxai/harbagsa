@@ -55,9 +55,8 @@ hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_
 		value   = line_format(
 			&hud.storage,
 			1,
-			"% 3d / %d",
+			"% 3d",
 			simulation_object_count(sim),
-			MAX_PLACED_OBJECTS,
 		),
 		numeric = true,
 	}
@@ -194,9 +193,8 @@ hud_placement_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^De
 		value   = line_format(
 			&hud.storage,
 			6,
-			"% 3d / %d",
+			"% 3d",
 			simulation_object_count(sim),
-			MAX_PLACED_OBJECTS,
 		),
 		numeric = true,
 	}
