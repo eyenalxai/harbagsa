@@ -261,5 +261,11 @@ draw_box_pass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pas
 
 @(private)
 draw_sky :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
+	// The sky flag reaches the lit pass through the camera uniform. The pass
+	// itself still has to skip the draw, or the background keeps the gradient
+	// while the boxes fall back to the flat ambient.
+	if !renderer_debug(r).sky {
+		return
+	}
 	vk.CmdDraw(command_buffer, 3, 1, 0, 0)
 }
