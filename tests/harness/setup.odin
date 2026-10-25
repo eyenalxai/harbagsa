@@ -9,6 +9,14 @@ import "core:testing"
 import "src:harness"
 
 @(test)
+trim_revision_keeps_an_all_digit_hash_a_string :: proc(t: ^testing.T) {
+	testing.expect_value(t, harness.trim_revision(`"3051c3c"`), "3051c3c")
+	testing.expect_value(t, harness.trim_revision(`"1234567"`), "1234567")
+	testing.expect_value(t, harness.trim_revision("1234567"), "1234567")
+	testing.expect_value(t, harness.trim_revision("unknown"), "unknown")
+}
+
+@(test)
 setup_reports_the_build_revision_and_dirty_fallback :: proc(t: ^testing.T) {
 	setup := harness.setup_build({width = 1280, height = 720}, {}, {})
 	testing.expect_value(t, setup.revision, "unknown")

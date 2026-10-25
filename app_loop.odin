@@ -153,6 +153,7 @@ step_simulation :: proc(loop: ^Loop, delta: f32, intent: ^input.Frame_Input) {
 				snapshot.crouch_pressed = false
 				snapshot.prone_pressed = false
 			}
+			game.hud_notice_update(&loop.hud, game.SIMULATION_STEP)
 			loop.accumulator -= game.SIMULATION_STEP
 			steps += 1
 		}

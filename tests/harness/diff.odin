@@ -93,7 +93,7 @@ diff_captures_prefers_the_report_and_falls_back_to_frames :: proc(t: ^testing.T)
 	}
 
 	report_path := "/tmp/opencode/harbagsa-diff-captures/report.json"
-	report := `{"screenshots": [
+	report := `{"captures": [
 		{"name": "first", "path": "/nonexistent/first.png", "format": "png"},
 		{"name": "second", "format": "png"}
 	]}`
@@ -135,7 +135,7 @@ diff_captures_prefers_the_supplied_run_directory :: proc(t: ^testing.T) {
 	second := write_test_png(t, second_frames, "shot", second_pixels[:])
 	defer harness.capture_result_destroy(&second, context.allocator)
 
-	report := `{"screenshots": [{"name": "shot", "path": "/tmp/opencode/harbagsa-diff-first/frames/shot.png", "format": "png"}]}`
+	report := `{"captures": [{"name": "shot", "path": "/tmp/opencode/harbagsa-diff-first/frames/shot.png", "format": "png"}]}`
 	report_path := "/tmp/opencode/harbagsa-diff-second/report.json"
 	testing.expectf(t, os.write_entire_file(report_path, report) == nil, "cannot write the copied report")
 
@@ -188,7 +188,7 @@ diff_pairs_a_stats_capture_with_a_png_sidecar :: proc(t: ^testing.T) {
 	written := write_test_png(t, frames, "ao", pixels[:])
 	defer harness.capture_result_destroy(&written, context.allocator)
 
-	report := `{"screenshots": [{"name": "ao", "path": "", "format": "stats", "png": true}]}`
+	report := `{"captures": [{"name": "ao", "path": "", "format": "stats", "png": true}]}`
 	report_path := "/tmp/opencode/harbagsa-diff-sidecar/report.json"
 	testing.expectf(t, os.write_entire_file(report_path, report) == nil, "cannot write the report")
 

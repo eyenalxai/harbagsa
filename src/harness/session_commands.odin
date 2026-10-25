@@ -17,6 +17,8 @@ Reply :: struct {
 	check:    ^Check_Result  `json:"check,omitempty"`,
 	recorded: string         `json:"recorded,omitempty"`,
 	written:  string         `json:"written,omitempty"`,
+	placed:   u32            `json:"placed,omitempty"`,
+	get:      ^Get_Result    `json:"get,omitempty"`,
 	replay:   ^Replay_Summary `json:"replay,omitempty"`,
 	perf:     ^Perf_Report   `json:"perf,omitempty"`,
 	trace:    string         `json:"trace,omitempty"`,
@@ -43,6 +45,14 @@ reply_destroy :: proc(reply: ^Reply, allocator := context.allocator) {
 	}
 	if reply.written != "" {
 		delete(reply.written, allocator)
+	}
+	if reply.get != nil {
+		delete(reply.get.field, allocator)
+		if reply.get.value.kind == .String {
+			delete(reply.get.value.text, allocator)
+		}
+		free(reply.get, allocator)
+		reply.get = nil
 	}
 	if reply.replay != nil {
 		free(reply.replay, allocator)

@@ -17,9 +17,21 @@ backend_capture :: proc(
 	Capture_Result,
 	string,
 ) {
-	pixels, width, height, format, ok := renderer.read_capture_target(&data.renderer, request.target, slot)
-	if !ok {
-		return {}, format_error("capture readback failed")
+	pixels, width, height, format, readback_error := renderer.read_capture_target(
+		&data.renderer,
+		request.target,
+		slot,
+	)
+	if readback_error != "" {
+		return {}, readback_error
+	}
+	region: Maybe(Capture_Region)
+	if spec, has_region := request.region.?; has_region {
+		resolved, region_error := capture_region_resolve(spec, width, height)
+		if region_error != "" {
+			return {}, region_error
+		}
+		region = resolved
 	}
 	result := Capture_Result {
 		name          = strings.clone(request.name, data.allocator),
@@ -29,13 +41,7 @@ backend_capture :: proc(
 		target        = renderer.capture_target_name(request.target),
 		format        = capture_format_name(request.format),
 		target_format = renderer.format_name(format),
-		region        = request.region,
-	}
-	if region, has_region := request.region.?; has_region {
-		if !capture_region_valid(region, width, height) {
-			capture_result_destroy(&result, data.allocator)
-			return {}, format_error("capture region must be inside the target")
-		}
+		region        = region,
 	}
 	switch request.format {
 	case .Png:
@@ -45,7 +51,7 @@ backend_capture :: proc(
 	case .Raw:
 		return backend_capture_raw(data, request, result, pixels)
 	case .Stats:
-		return backend_capture_stats(data, session, request, result, pixels, width, height, format)
+		return backend_capture_stats(data, session, request, result, pixels, width, height, format, region)
 	case .Profile:
 		return backend_capture_profile(data, session, request, result, pixels, width, height, format)
 	}
@@ -120,6 +126,7 @@ backend_capture_stats :: proc(
 	pixels: []u8,
 	width, height: u32,
 	format: vk.Format,
+	region: Maybe(Capture_Region),
 ) -> (
 	Capture_Result,
 	string,
@@ -135,19 +142,19 @@ backend_capture_stats :: proc(
 		width,
 		height,
 		request.target,
-		request.region,
+		region,
 		request.steps,
 		data.allocator,
 	)
 	if histogram, has_histogram := request.histogram.?; has_histogram {
-		region := Capture_Region{x = 0, y = 0, w = int(width), h = int(height)}
-		if bounds, has_region := request.region.?; has_region {
-			region = bounds
+		bounds := Capture_Region{x = 0, y = 0, w = int(width), h = int(height)}
+		if configured, has_region := region.?; has_region {
+			bounds = configured
 		}
 		result.histogram = capture_histogram_build(
 			pixels,
 			width,
-			region,
+			bounds,
 			histogram,
 			data.allocator,
 		)
@@ -164,7 +171,6 @@ backend_capture_stats :: proc(
 			height,
 		)
 		if write_error != "" {
-			capture_result_destroy(&result, data.allocator)
 			return {}, write_error
 		}
 		return written, ""
@@ -217,7 +223,6 @@ backend_capture_profile :: proc(
 			height,
 		)
 		if write_error != "" {
-			capture_result_destroy(&result, data.allocator)
 			return {}, write_error
 		}
 		return written, ""

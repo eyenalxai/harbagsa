@@ -30,11 +30,11 @@ draw_scene :: proc(
 	if renderer.end_frame(state, frame) != .Ok {
 		return nil, 0, 0, false
 	}
-	pixels, pixel_width, pixel_height, format, read_ok := renderer.read_capture_target(
+	pixels, pixel_width, pixel_height, format, read_error := renderer.read_capture_target(
 		state,
 		.Scene_Color,
 	)
-	if !read_ok {
+	if read_error != "" {
 		return nil, 0, 0, false
 	}
 	decoded := renderer.capture_values(pixels, format, context.temp_allocator)

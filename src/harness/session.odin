@@ -38,7 +38,8 @@ Session :: struct {
 	camera_override:     renderer.Camera,
 	has_camera_override: bool,
 
-	frame: int,
+	frame:      int,
+	output_dir: string,
 
 	backend:           ^Backend,
 	backend_provider:  Backend_Provider,
@@ -276,6 +277,7 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 		} else {
 			game.simulation_step(&session.sim, input, game.SIMULATION_STEP)
 		}
+		game.hud_notice_update(&session.hud, game.SIMULATION_STEP)
 		session.input.jump_pressed = false
 		session.frame += 1
 		if render_error := session_finish_frame(session); render_error != "" {

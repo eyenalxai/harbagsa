@@ -78,6 +78,7 @@ destroy_target :: proc(r: ^Renderer) {
 	r.target.config = {}
 }
 
+@(private)
 create_readback :: proc(r: ^Renderer, width, height: u32, slots: u32 = 1) -> bool {
 	count := max(slots, 1)
 	size := vk.DeviceSize(width) * vk.DeviceSize(height) * MAX_CAPTURE_TEXEL_BYTES * vk.DeviceSize(count)

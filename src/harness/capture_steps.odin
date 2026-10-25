@@ -2,6 +2,7 @@
 package harness
 
 import "core:mem"
+import "core:slice"
 
 // A step is a local jump in the box-filtered luma. A visibility count changes
 // the ambient in one step of 1/8 or 1/16, and that step survives as a contour
@@ -11,6 +12,7 @@ import "core:mem"
 STEP_BLUR :: 9
 STEP_MIN_LEVELS :: 0.5
 STEP_MAX_LEVELS :: 8.0
+STEP_TOP_JUMPS :: 8
 
 Capture_Steps_Options :: struct {
 	blur: int,
@@ -22,13 +24,22 @@ capture_steps_default :: proc() -> Capture_Steps_Options {
 	return {blur = STEP_BLUR, min = STEP_MIN_LEVELS, max = STEP_MAX_LEVELS}
 }
 
+Step_Jump :: struct {
+	x:      int    `json:"x"`,
+	y:      int    `json:"y"`,
+	axis:   string `json:"axis"`,
+	levels: f32    `json:"levels"`,
+}
+
 Capture_Steps :: struct {
-	count: int   `json:"count"`,
-	pairs: int   `json:"pairs"`,
-	max:   f32   `json:"max"`,
-	blur:  int   `json:"blur"`,
-	floor: f32   `json:"min"`,
-	cap:   f32   `json:"max_levels"`,
+	count:    int         `json:"count"`,
+	pairs:    int         `json:"pairs"`,
+	max:      f32         `json:"max"`,
+	over_cap: int         `json:"over_cap"`,
+	blur:     int         `json:"blur"`,
+	floor:    f32         `json:"min"`,
+	cap:      f32         `json:"max_levels"`,
+	top:      []Step_Jump `json:"top"`,
 }
 
 capture_steps_build :: proc(
@@ -77,28 +88,79 @@ capture_steps_build :: proc(
 		floor = options.min,
 		cap   = options.max,
 	}
+	top: [STEP_TOP_JUMPS]Step_Jump
+	top_count := 0
 	for row in 0 ..< region.h {
 		for column in 0 ..< region.w {
 			index := row * region.w + column
 			if column > 0 {
 				jump := abs(blurred[index] - blurred[index - 1])
-				result.pairs += 1
-				result.max = max(result.max, jump)
-				if jump > options.min && jump < options.max {
-					result.count += 1
-				}
+				step_count(&result, &top, &top_count, jump, {
+					x      = region.x + column,
+					y      = region.y + row,
+					axis   = "x",
+					levels = jump,
+				}, options)
 			}
 			if row > 0 {
 				jump := abs(blurred[index] - blurred[index - region.w])
-				result.pairs += 1
-				result.max = max(result.max, jump)
-				if jump > options.min && jump < options.max {
-					result.count += 1
-				}
+				step_count(&result, &top, &top_count, jump, {
+					x      = region.x + column,
+					y      = region.y + row,
+					axis   = "y",
+					levels = jump,
+				}, options)
 			}
 		}
 	}
+	slice.sort_by(top[:top_count], proc(a, b: Step_Jump) -> bool {
+		return a.levels > b.levels
+	})
+	result.top = make([]Step_Jump, top_count, allocator)
+	copy(result.top, top[:top_count])
 	return result
+}
+
+@(private)
+step_count :: proc(
+	steps: ^Capture_Steps,
+	top: ^[STEP_TOP_JUMPS]Step_Jump,
+	top_count: ^int,
+	jump: f32,
+	location: Step_Jump,
+	options: Capture_Steps_Options,
+) {
+	steps.pairs += 1
+	steps.max = max(steps.max, jump)
+	if jump >= options.max {
+		steps.over_cap += 1
+		return
+	}
+	if jump <= options.min {
+		return
+	}
+	steps.count += 1
+	if top_count^ < STEP_TOP_JUMPS {
+		top^[top_count^] = location
+		top_count^ += 1
+		return
+	}
+	smallest := 0
+	for index in 1 ..< STEP_TOP_JUMPS {
+		if top^[index].levels < top^[smallest].levels {
+			smallest = index
+		}
+	}
+	if jump > top^[smallest].levels {
+		top^[smallest] = location
+	}
+}
+
+capture_steps_destroy :: proc(steps: ^Capture_Steps, allocator: mem.Allocator) {
+	if steps.top != nil {
+		delete(steps.top, allocator)
+	}
+	steps^ = {}
 }
 
 @(private)

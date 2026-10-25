@@ -30,6 +30,9 @@ Command_Kind :: enum {
 	Displays,
 	Rows,
 	Scene,
+	Place,
+	Remove,
+	Get,
 	Quit,
 }
 
@@ -136,8 +139,25 @@ Repro_Command :: struct {
 	path: string,
 }
 
+Renderer_Debug_Field :: enum {
+	TAA,
+	Jitter,
+	History_Weight,
+	Clamp,
+	Depth_Trust,
+	Freeze_Shadow_Phase,
+	Shadow_Phase,
+	Light_Shadows,
+	Synthetic_Lights,
+	Sky,
+	AO,
+}
+
+Renderer_Debug_Resets :: bit_set[Renderer_Debug_Field]
+
 Renderer_Debug_Command :: struct {
 	clear:                   bool,
+	reset:                   Renderer_Debug_Resets,
 	taa:                     bool,
 	jitter:                  bool,
 	history_weight:          f32,
@@ -185,6 +205,9 @@ Command :: struct {
 	renderer_debug: Renderer_Debug_Command,
 	displays:       Displays_Command,
 	scene:          Scene_Command,
+	place:          Place_Command,
+	remove:         Remove_Command,
+	get:            Get_Command,
 }
 
 command_name :: proc(kind: Command_Kind) -> string {

@@ -40,6 +40,24 @@ encode_reply :: proc(reply: Reply) -> []u8 {
 		append(&out, `,"written":`)
 		append_json(&out, reply.written)
 	}
+	if reply.placed != 0 {
+		append(&out, `,"placed":`)
+		append_json(&out, reply.placed)
+	}
+	if reply.get != nil {
+		append(&out, `,"field":`)
+		append_json(&out, reply.get.field)
+		append(&out, `,"value":`)
+		switch reply.get.value.kind {
+		case .Number:
+			number := fmt.aprintf("%g", reply.get.value.number, allocator = context.temp_allocator)
+			append(&out, number)
+		case .Bool:
+			append_json(&out, reply.get.value.boolean)
+		case .String:
+			append_json(&out, reply.get.value.text)
+		}
+	}
 	if reply.replay != nil {
 		append(&out, `,"replay":`)
 		append_json(&out, reply.replay^)

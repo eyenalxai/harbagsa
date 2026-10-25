@@ -109,6 +109,15 @@ schema_covers_every_command_and_the_new_fields :: proc(t: ^testing.T) {
 		_, found := harness.schema_field_named(capture, "steps")
 		testing.expect(t, found, "capture.steps is missing")
 	}
+	debug, debug_found := harness.schema_find_command(document, "renderer_debug")
+	testing.expect(t, debug_found, "renderer_debug is missing from the schema")
+	if debug_found {
+		testing.expect(
+			t,
+			strings.contains(debug.description, "null"),
+			"the renderer_debug schema does not name the null reset",
+		)
+	}
 	testing.expect(t, schema_contains(document.check_fields, "analysis.bands.region.x"), "the band region check is missing")
 	testing.expect(t, schema_contains(document.state_fields, "player.position.y"), "the state schema is missing")
 }

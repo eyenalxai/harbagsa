@@ -21,6 +21,7 @@ steps_ignore_a_soft_gradient :: proc(t: ^testing.T) {
 	image := build_image(64, 64, proc(x, y: int) -> u8 { return u8(x / 4) })
 	defer delete(image, context.allocator)
 	steps := steps_of(image, 64, 64, {x = 0, y = 0, w = 64, h = 64})
+	defer harness.capture_steps_destroy(&steps, context.allocator)
 	testing.expect_value(t, steps.count, 0)
 	testing.expect_value(t, steps.pairs, 2 * 64 * 63)
 }
@@ -35,8 +36,15 @@ steps_find_a_band_edge :: proc(t: ^testing.T) {
 	})
 	defer delete(image, context.allocator)
 	steps := steps_of(image, 64, 64, {x = 0, y = 0, w = 64, h = 64})
+	defer harness.capture_steps_destroy(&steps, context.allocator)
 	testing.expect(t, steps.count > 0, "a 30 level edge left no step")
 	testing.expect(t, steps.max > harness.STEP_MIN_LEVELS, "the step height is below the floor")
+	testing.expect(t, len(steps.top) > 0, "the step list is empty")
+	testing.expect_value(t, steps.over_cap, 0)
+	if len(steps.top) > 0 {
+		testing.expect_value(t, steps.top[0].axis, "y")
+		testing.expect(t, steps.top[0].levels > harness.STEP_MIN_LEVELS, "the top step is below the floor")
+	}
 }
 
 @(test)
@@ -49,8 +57,11 @@ steps_skip_a_geometry_edge :: proc(t: ^testing.T) {
 	})
 	defer delete(image, context.allocator)
 	steps := steps_of(image, 64, 64, {x = 0, y = 0, w = 64, h = 64})
+	defer harness.capture_steps_destroy(&steps, context.allocator)
 	testing.expect_value(t, steps.count, 0)
 	testing.expect(t, steps.max > harness.STEP_MAX_LEVELS, "the edge height is not reported")
+	testing.expect(t, steps.over_cap > 0, "the geometry edge did not reach the cap")
+	testing.expect_value(t, len(steps.top), 0)
 }
 
 @(test)
@@ -71,6 +82,7 @@ steps_honour_the_blur_and_thresholds :: proc(t: ^testing.T) {
 		options,
 		context.allocator,
 	)
+	defer harness.capture_steps_destroy(&steps, context.allocator)
 	testing.expect_value(t, steps.blur, 3)
 	testing.expect_value(t, steps.floor, f32(0))
 	testing.expect_value(t, steps.cap, f32(100))
@@ -99,5 +111,6 @@ steps_stay_inside_the_region :: proc(t: ^testing.T) {
 	})
 	defer delete(image, context.allocator)
 	steps := steps_of(image, 64, 64, {x = 8, y = 40, w = 16, h = 16})
+	defer harness.capture_steps_destroy(&steps, context.allocator)
 	testing.expect_value(t, steps.count, 0)
 }

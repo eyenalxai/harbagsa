@@ -116,6 +116,21 @@ execute_scene :: proc(session: ^Session, command: Command, reply: ^Reply) -> str
 }
 
 @(private)
+execute_place :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
+	return session_place(session, command.place, reply)
+}
+
+@(private)
+execute_remove :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
+	return session_remove(session, command.remove)
+}
+
+@(private)
+execute_get :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
+	return session_get(session, command.get, reply)
+}
+
+@(private)
 execute_debug_mode :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	if session.debug.active != command.debug_mode.active {
 		game.debug_mode_toggle(&session.debug, &session.sim)

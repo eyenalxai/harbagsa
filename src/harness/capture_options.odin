@@ -23,7 +23,10 @@ parse_capture_region :: proc(object: json.Object, command: ^Capture_Command) -> 
 			}
 			values[index] = int(value)
 		}
-		command.region = Capture_Region{values[0], values[1], values[2], values[3]}
+		if values[2] < 1 || values[3] < 1 {
+			return format_error("%s", "a region needs a positive w and h")
+		}
+		command.region = capture_region_spec_pixels({values[0], values[1], values[2], values[3]})
 		return ""
 	}
 	if !has_region {
@@ -37,7 +40,7 @@ parse_capture_region :: proc(object: json.Object, command: ^Capture_Command) -> 
 	return ""
 }
 
-parse_region_value :: proc(value: json.Value) -> (Capture_Region, string) {
+parse_region_value :: proc(value: json.Value) -> (Capture_Region_Spec, string) {
 	if array, array_ok := json_array(value); array_ok {
 		if len(array) != 4 {
 			return {}, format_error("%s", "a region array must be [x, y, w, h]")
@@ -53,14 +56,36 @@ parse_region_value :: proc(value: json.Value) -> (Capture_Region, string) {
 		if values[2] < 1 || values[3] < 1 {
 			return {}, format_error("%s", "a region needs a positive w and h")
 		}
-		return {values[0], values[1], values[2], values[3]}, ""
+		return capture_region_spec_pixels({values[0], values[1], values[2], values[3]}), ""
 	}
 	fields, fields_ok := json_object(value)
 	if !fields_ok {
 		return {}, format_error("%s", "a region must be an object with x, y, w, h")
 	}
-	if key, unknown := json_unknown_key(fields, {"x", "y", "w", "h"}); unknown {
+	if key, unknown := json_unknown_key(fields, {"x", "y", "w", "h", "unit"}); unknown {
 		return {}, format_error("unknown region key %q", key)
+	}
+	unit_name, has_unit := string_field(fields, "unit")
+	if has_unit && unit_name == "normalized" {
+		x, x_ok := number_field(fields, "x")
+		y, y_ok := number_field(fields, "y")
+		w, w_ok := number_field(fields, "w")
+		h, h_ok := number_field(fields, "h")
+		if !x_ok || !y_ok || !w_ok || !h_ok ||
+		   x < 0 || y < 0 || w <= 0 || h <= 0 ||
+		   x + w > 1.000001 || y + h > 1.000001 {
+			return {}, format_error(
+				"%s",
+				"a normalized region needs x, y in [0, 1], positive w, h, and x+w, y+h at most 1",
+			)
+		}
+		return {
+			unit = .Normalized,
+			normalized = {f32(x), f32(y), f32(w), f32(h)},
+		}, ""
+	}
+	if has_unit && unit_name != "pixels" {
+		return {}, format_error("%s", "region 'unit' must be 'pixels' or 'normalized'")
 	}
 	x, x_ok := integer_field(fields, "x")
 	y, y_ok := integer_field(fields, "y")
@@ -69,7 +94,7 @@ parse_region_value :: proc(value: json.Value) -> (Capture_Region, string) {
 	if !x_ok || !y_ok || !w_ok || !h_ok || w < 1 || h < 1 {
 		return {}, format_error("%s", "a region needs integer x, y and positive w, h")
 	}
-	return {int(x), int(y), int(w), int(h)}, ""
+	return capture_region_spec_pixels({int(x), int(y), int(w), int(h)}), ""
 }
 
 @(private)

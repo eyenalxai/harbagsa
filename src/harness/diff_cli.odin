@@ -111,13 +111,13 @@ diff_runs :: proc(options: Diff_Options, allocator: mem.Allocator) -> (Diff_Repo
 		scenario_a    = strings.clone(first.metadata.scenario, allocator),
 		width_a       = first.metadata.width,
 		height_a      = first.metadata.height,
-		screenshots_a = first.metadata.screenshots,
+		captures_a = first.metadata.captures,
 		revision_b    = strings.clone(second.metadata.revision, allocator),
 		dirty_b       = second.metadata.dirty,
 		scenario_b    = strings.clone(second.metadata.scenario, allocator),
 		width_b       = second.metadata.width,
 		height_b      = second.metadata.height,
-		screenshots_b = second.metadata.screenshots,
+		captures_b = second.metadata.captures,
 	}
 	pairs := make([dynamic]Diff_Pair, 0, len(first.captures), allocator)
 	errors := make([dynamic]string, 0, 4, allocator)
@@ -240,7 +240,7 @@ diff_print_table :: proc(report: Diff_Report) {
 		report.dirty_a ? " dirty" : "",
 		report.width_a,
 		report.height_a,
-		report.screenshots_a,
+		report.captures_a,
 		report.run_a,
 	)
 	fmt.printf(
@@ -250,7 +250,7 @@ diff_print_table :: proc(report: Diff_Report) {
 		report.dirty_b ? " dirty" : "",
 		report.width_b,
 		report.height_b,
-		report.screenshots_b,
+		report.captures_b,
 		report.run_b,
 	)
 	fmt.printf(
