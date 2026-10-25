@@ -7,7 +7,8 @@ input, raw Vulkan 1.3 with ray-query shadows draws the scene, and Box3D runs the
 physics. A directional sun casts hard contact shadows and softer distant
 shadows from the walls and crates. An analytic sky gradient fills the
 background. Ray-traced ambient occlusion uses the same scene acceleration
-structure to darken the ambient light in corners and tunnels.
+structure to darken the ambient light in shade, corners, and tunnels. A sunlit
+surface keeps its full ambient.
 
 ## Requirements
 
@@ -664,7 +665,9 @@ sets 900 and 100, captures both, and checks the stored value.
 
 `scenarios/sky-ao.json` captures the arena with the sky and the ambient
 occlusion on, off, and split, so the two terms can be compared at the same
-camera. `scenarios/shadow-angle.json` puts the sun 15 degrees above the horizon
+camera. `scenarios/stairs-ao.json` captures the dive stairs at a 25° sun and
+checks that the AO leaves the sunlit floor alone while the shaded wall still
+darkens. `scenarios/shadow-angle.json` puts the sun 15 degrees above the horizon
 and captures a wall shadow twice: once with a 3-degree sun disk, then with the
 0.53-degree disk the build uses. The penumbra width follows the diameter, so
 the small disk gives a shadow edge about 5.7 times narrower.
