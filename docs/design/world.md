@@ -14,24 +14,25 @@ space. This is the opposite of the 2D layer, which authors sRGB hex
 | Surface | Linear RGBA | Source |
 | --- | --- | --- |
 | Sky | `0.10 0.45 0.75` | `src/renderer/renderer.odin:18` |
-| Floor | `0.42 0.43 0.46` | `src/game/arena.odin:29` |
-| Wall | `0.55 0.34 0.26` | `src/game/arena.odin:30` |
+| Floor | `0.42 0.43 0.46` | `src/game/arena.odin:18` |
+| Wall | `0.55 0.34 0.26` | `src/game/arena.odin:19` |
 | Stairs, ramps, steps | `0.30 0.55 0.85` | `src/game/arena_props.odin:86` |
 | Tunnel | `0.85 0.50 0.20` | `src/game/arena_props.odin:87` |
 | Dive set | `0.25 0.75 0.40` | `src/game/arena_props.odin:88` |
 | Slide lane | `0.90 0.80 0.20` | `src/game/arena_props.odin:89` |
 | Mantle wall | `0.60 0.35 0.80` | `src/game/arena_props.odin:90` |
-| Crate, green | `0.30 0.68 0.38` | `src/game/arena.odin:32` |
-| Crate, orange | `0.86 0.56 0.20` | `src/game/arena.odin:33` |
-| Crate, blue | `0.26 0.48 0.84` | `src/game/arena.odin:34` |
-| Sun light | `1.00 0.98 0.94` | `src/renderer/shaders/box.frag:32` |
+| Room | `0.38 0.60 0.56` | `src/game/arena_room.odin:20` |
+| Crate, green | `0.30 0.68 0.38` | `src/game/prefabs.odin:44` |
+| Crate, orange | `0.86 0.56 0.20` | `src/game/prefabs.odin:45` |
+| Crate, blue | `0.26 0.48 0.84` | `src/game/prefabs.odin:46` |
+| Sun light | `1.00 0.98 0.94` | `src/renderer/shaders/box.frag:44` |
 | Ambient | `0.24 0.25 0.28` | `src/renderer/scene.odin:20` |
 | Debug selection | `1.00 0.80 0.20` | `src/game/debug_draw_objects.odin:6` |
 
 Rules:
 
 - A new arena feature takes a hue that is not already in use. The arena carries
-  seven, and the hue is how a player names the feature.
+  eight, and the hue is how a player names the feature.
 - Crates use their own high-chroma palette, never a wall hue, so a pushed crate
   reads against every surface.
 - The debug selection amber is `1.00 0.80 0.20` in linear space. The UI accent is
@@ -89,8 +90,13 @@ cloud.
 - Every shape is a box. A ramp is a thin box rotated about X.
 - No rounded, bevelled, or non-box primitive. A curve in the world would be the
   only curve on screen.
-- The arena is 40 m square with 4 m walls: 51 static boxes and 3 crates at
-  spawn. The floor is 1 m thick, the walls 0.5 m, and a crate 1 m.
+- The arena is 40 m square with 4 m walls: 58 static boxes and 3 crates at
+  spawn. The floor is 1 m thick, the arena walls 0.5 m, and a crate 1 m. The
+  closed room in the +x/+z corner is 7 m square with 3 m walls, a 0.3 m
+  ceiling, and one 1.6 m by 2.2 m doorway.
+- The room's interior is the lighting test. The sun enters only through the
+  doorway, the sky ambient still applies as a normal ramp, and a placed lamp
+  adds the point-light term. There is no sky visibility term and no bounce.
 - The player has no body and casts no shadow.
 - No fog and no depth cue beyond perspective. The near plane is 0.05 m and the
   far plane 200 m.
