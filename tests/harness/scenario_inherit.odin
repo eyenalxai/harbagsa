@@ -99,6 +99,103 @@ scenario_parameters_substitute_values :: proc(t: ^testing.T) {
 }
 
 @(test)
+scenario_parameter_override_reaches_a_command :: proc(t: ^testing.T) {
+	body := `{
+		"parameters": {"x": 20.0, "label": "wall"},
+		"commands": [
+			{"cmd":"editor","place":{"prefab":"Block","position":["${x}",0,0]}},
+			{"cmd":"capture","name":"${label}"}
+		]
+	}`
+	overrides := []harness.Parameter_Override {
+		{name = "x", value = "19.999"},
+		{name = "label", value = "ceiling"},
+	}
+	scenario, error := harness.scenario_parse(body, context.allocator, overrides)
+	testing.expectf(t, error == "", "override scenario parse failed: %s", error)
+	defer harness.scenario_destroy(&scenario, context.allocator)
+	if error != "" {
+		return
+	}
+	testing.expect_value(t, len(scenario.commands), 2)
+	if len(scenario.commands) != 2 {
+		return
+	}
+	testing.expect(t, abs(scenario.commands[0].editor.place.position.x - 19.999) < 1e-5, "the numeric override was dropped")
+	testing.expect_value(t, scenario.commands[1].capture.name, "ceiling")
+	testing.expect_value(t, len(scenario.source.parameters), 2)
+	if len(scenario.source.parameters) == 2 {
+		testing.expect_value(t, scenario.source.parameters[0].name, "label")
+		testing.expect_value(t, scenario.source.parameters[0].value, "ceiling")
+		testing.expect_value(t, scenario.source.parameters[1].name, "x")
+		testing.expect_value(t, scenario.source.parameters[1].value, "19.999")
+	}
+}
+
+@(test)
+scenario_parameter_override_changes_the_hash :: proc(t: ^testing.T) {
+	body := `{"parameters":{"x":20.0},"commands":[{"cmd":"camera","position":["${x}",0,0],"yaw":0,"pitch":0}]}`
+	first, first_error := harness.scenario_parse(
+		body,
+		context.allocator,
+		[]harness.Parameter_Override{{name = "x", value = "20"}},
+	)
+	testing.expectf(t, first_error == "", "first override parse failed: %s", first_error)
+	defer harness.scenario_destroy(&first, context.allocator)
+	second, second_error := harness.scenario_parse(
+		body,
+		context.allocator,
+		[]harness.Parameter_Override{{name = "x", value = "19.999"}},
+	)
+	testing.expectf(t, second_error == "", "second override parse failed: %s", second_error)
+	defer harness.scenario_destroy(&second, context.allocator)
+	if first_error != "" || second_error != "" {
+		return
+	}
+	testing.expect(t, first.source.hash != second.source.hash, "the hash ignores the parameter")
+}
+
+@(test)
+scenario_parameter_override_needs_a_placeholder :: proc(t: ^testing.T) {
+	body := `{"parameters":{"x":20.0},"commands":[{"cmd":"step","frames":1}]}`
+	_, error := harness.scenario_parse(
+		body,
+		context.allocator,
+		[]harness.Parameter_Override{{name = "x", value = "21"}},
+	)
+	testing.expect(t, error != "", "an unused parameter override was accepted")
+	if error != "" {
+		testing.expect(t, strings.contains(error, "placeholder"), "the error does not name the placeholder")
+		delete(error, context.allocator)
+	}
+}
+
+@(test)
+scenario_parameter_override_needs_the_declared_type :: proc(t: ^testing.T) {
+	body := `{"parameters":{"flag":false},"commands":[{"cmd":"input","jump":"${flag}"}]}`
+	scenario, error := harness.scenario_parse(
+		body,
+		context.allocator,
+		[]harness.Parameter_Override{{name = "flag", value = "true"}},
+	)
+	testing.expectf(t, error == "", "boolean override parse failed: %s", error)
+	defer harness.scenario_destroy(&scenario, context.allocator)
+	if error == "" {
+		testing.expect_value(t, scenario.commands[0].input.jump, true)
+	}
+
+	_, bad_error := harness.scenario_parse(
+		body,
+		context.allocator,
+		[]harness.Parameter_Override{{name = "flag", value = "yes"}},
+	)
+	testing.expect(t, bad_error != "", "a non-boolean override was accepted")
+	if bad_error != "" {
+		delete(bad_error, context.allocator)
+	}
+}
+
+@(test)
 scenario_extends_rejects_a_cycle :: proc(t: ^testing.T) {
 	cycle_a := `{"extends":"/tmp/opencode/harness-cycle-b.json","commands":[{"cmd":"step","frames":1}]}`
 	cycle_b := `{"extends":"/tmp/opencode/harness-cycle-a.json","commands":[{"cmd":"step","frames":1}]}`

@@ -790,6 +790,18 @@ An `extends` path that merges a base scenario object with a child that wins.
 A gated capability a scenario declares in `requires`, such as the renderer
 debug gate. The runner enables it for that run. **Avoid**: precondition, flag.
 
+### Scenario parameter
+A named value a scenario declares in `parameters` and uses as `${name}`. The
+declared value sets the type. **Avoid**: variable, argument.
+
+### Parameter sweep
+One scenario run per value of one or more scenario parameters, with each run in
+its own directory. **Avoid**: matrix run, batch.
+
+### Sweep label
+The run directory name built from a sweep's parameter values.
+**Avoid**: run name, suffix.
+
 ### Run tag
 A directory name appended to the run path so two runs coexist. **Avoid**:
 label, suffix.

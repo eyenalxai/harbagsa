@@ -115,6 +115,8 @@ Standard output is one JSON summary. Standard error holds logs.
 
 `run -` reads the scenario from standard input. `--tag NAME` appends a directory
 to the run path, so `runs/smoke/before` and `runs/smoke/after` coexist.
+`--param NAME=VALUE[,VALUE...]` overrides a scenario parameter, and a comma
+list runs a sweep. See **Parameter sweep**.
 `--renderer-debug KEY=VALUE` applies one gated override before the commands;
 repeat the flag for more fields.
 
@@ -198,7 +200,8 @@ Rules:
 - A top-level `"extends": "base.json"` merges the base object and lets the child
   win; a relative path resolves against the extending file. A `parameters` block
   substitutes `${name}` in any command value. A parameter must be a string,
-  number, or boolean.
+  number, or boolean. A placeholder is a JSON string, so `["${x}", 0, 0]` puts a
+  numeric parameter in an array.
 - A check compares with `value` or with `other`:
   `{"cmd":"check","field":"capture.1.stats.mean.y","op":"gt","other":"capture.0.stats.mean.y"}`.
   `capture.N.*`, `capture.first.*`, and `capture.last.*` name one capture.
@@ -286,6 +289,38 @@ fallback list.
 
 `rows` replies with the HUD and menu rows: kind, label, value, blocked, ratio,
 and ticks. A check reads them as `rows.hud.N.*` and `rows.menu.N.*`.
+
+## Parameter sweep
+
+A scenario declares its knobs in `parameters` and uses `${name}`. `--param`
+overrides one value; a comma list runs the scenario once per value:
+
+```sh
+./bin/harbagsa-agent run scenarios/lamp-threshold.json \
+  --param lamp_x=20,19.999,19.99,19.9 --out runs/lamp-threshold
+```
+
+Repeat `--param` for every parameter. The runner takes the cartesian product in
+flag order and the last parameter changes fastest. Values cannot hold a comma.
+With one value the run is a plain run into the usual directory; with more than
+one, each run gets a directory named by its values and the parent gets
+`sweep.json`.
+
+`sweep.json` holds `ok`, `exit_code`, `scenario`, and one entry per combination:
+`parameters`, `run_dir`, `report`, `state`, `digest`, `exit_code`, `ok`, and
+`error`. The process exit code is the highest of the runs, so every combination
+still runs after a check failure. A scenario parse error for one value is
+recorded for that value and the sweep continues.
+
+An override must match a `${name}` used outside the `parameters` block. The
+declared default sets the type: a string stays text, a boolean must parse as
+`true` or `false`, and a number accepts both `20` and `19.999`. A parameter
+the flag does not name keeps its declared value.
+
+The effective parameters are in `report.scenario.parameters`, sorted by name,
+and they join the scenario hash, so two sweep runs of one file are distinct
+scenarios. `scenarios/lamp-threshold.json` is the worked example; it measures
+the wall gradient at each lamp position and writes no check.
 
 ## Editor
 
@@ -974,6 +1009,8 @@ frame-rate change.
 - `src/harness/capture_profile.odin`: the edge profile and its 10%-90% width.
 - `src/harness/analysis_bands.odin`: the identical-run band metric.
 - `src/harness/scenario_inherit.odin`: `extends` and `parameters`.
+- `src/harness/sweep.odin`: the `--param` sweep, combinations, labels, and
+  `sweep.json`.
 - `src/harness/session_rows.odin`: the HUD and menu row dump.
 - `src/harness/session_displays.odin`: the scripted display list.
 - `src/harness/session_draw.odin`: the frame draw and the capture dispatch.
