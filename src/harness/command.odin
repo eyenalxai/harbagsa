@@ -59,6 +59,7 @@ Capture_Command :: struct {
 	has_alpha: bool,
 	target:    Capture_Target,
 	format:    Capture_Format,
+	png:       bool,
 	region:    Maybe(Capture_Region),
 	profile:   Maybe(Capture_Profile),
 	crop:      Maybe(Capture_Crop),

@@ -24,6 +24,7 @@ session_finish_frame :: proc(session: ^Session) -> string {
 			target    = pending.target,
 			format    = pending.format,
 			enabled   = true,
+			png       = pending.png,
 			region    = pending.region,
 			profile   = pending.profile,
 			crop      = pending.crop,

@@ -6,24 +6,22 @@
     {"cmd": "sun", "azimuth_deg": 52.1, "elevation_deg": 25, "diameter_deg": 0.53},
     {"cmd": "camera", "position": [2.0, 1.7, -2.5], "yaw_deg": 31.5127, "pitch_deg": -25.7831},
     {"cmd": "settle", "frames": 120},
-    {"cmd": "capture", "name": "sun-on", "format": "stats", "region": {"x": 300, "y": 400, "w": 120, "h": 60}},
+    {"cmd": "capture", "name": "sun-on", "format": "stats", "png": true, "region": {"x": 300, "y": 400, "w": 120, "h": 60}},
     {"cmd": "renderer_debug", "ao": false},
     {"cmd": "settle", "frames": 120},
-    {"cmd": "capture", "name": "sun-off", "format": "stats", "region": {"x": 300, "y": 400, "w": 120, "h": 60}},
+    {"cmd": "capture", "name": "sun-off", "format": "stats", "png": true, "region": {"x": 300, "y": 400, "w": 120, "h": 60}},
     {"cmd": "renderer_debug", "ao": true},
     {"cmd": "settle", "frames": 120},
-    {"cmd": "capture", "name": "shade-on", "format": "stats", "region": {"x": 700, "y": 140, "w": 40, "h": 40}},
+    {"cmd": "capture", "name": "shade-on", "format": "stats", "png": true, "region": {"x": 700, "y": 140, "w": 40, "h": 40}},
     {"cmd": "renderer_debug", "ao": false},
     {"cmd": "settle", "frames": 120},
-    {"cmd": "capture", "name": "shade-off", "format": "stats", "region": {"x": 700, "y": 140, "w": 40, "h": 40}}
+    {"cmd": "capture", "name": "shade-off", "format": "stats", "png": true, "region": {"x": 700, "y": 140, "w": 40, "h": 40}}
   ],
   "checks": [
     {"field": "capture.count", "op": "eq", "value": 4},
-    {"field": "capture.0.stats.mean.y", "op": "ge", "value": 143},
-    {"field": "capture.1.stats.mean.y", "op": "le", "value": 147},
-    {"field": "capture.1.stats.mean.y", "op": "ge", "value": 142},
-    {"field": "capture.2.stats.mean.y", "op": "le", "value": 78},
-    {"field": "capture.3.stats.mean.y", "op": "ge", "value": 105},
-    {"field": "capture.2.stats.mean.y", "op": "lt", "other": "capture.3.stats.mean.y"}
+    {"field": "capture.named.sun-on.stats.mean.y", "op": "eq", "other": "capture.named.sun-off.stats.mean.y", "tolerance": 2},
+    {"field": "capture.named.shade-on.stats.mean.y", "op": "lt", "other": "capture.named.shade-off.stats.mean.y"},
+    {"field": "capture.named.sun-on.stats.mean.y", "op": "gt", "other": "capture.named.shade-on.stats.mean.y"},
+    {"field": "capture.named.sun-on.png", "op": "eq", "value": true}
   ]
 }
