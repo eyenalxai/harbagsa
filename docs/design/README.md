@@ -15,8 +15,8 @@ Two constraints produce that look, and both are deliberate:
 - The scene has one shader and one mesh. Every object is the same unit cube,
   scaled and rotated.
 - The overlay rasterizes text at the device pixel size from a coverage atlas
-  built from variable Roboto Condensed and Roboto Mono, not from a distance
-  field. ADR 0007 records why.
+  built from variable Geist and Geist Mono, not from a distance field. ADR 0007
+  records why.
 
 ## The signature
 
