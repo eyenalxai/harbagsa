@@ -24,10 +24,12 @@ RENDER_DIGEST_FIELDS := [?]Render_Digest_Field {
 	{"sun_angular_diameter", true, write_sun_angular_diameter, ""},
 	{"boxes", true, write_boxes, ""},
 	{"lights", true, write_lights, ""},
+	{"probe_volumes", true, write_probe_volumes, ""},
 	{"jitter", true, write_jitter, ""},
 	{"shadow_phase", true, write_shadow_phase, ""},
 	{"atlas_weight", true, write_atlas_weight, ""},
 	{"sky", true, write_sky, ""},
+	{"gi", true, write_gi, ""},
 	{"ao", true, write_ao, ""},
 	{"ao_radius", true, write_ao_radius, ""},
 	{"ao_strength", true, write_ao_strength, ""},
@@ -123,6 +125,20 @@ write_lights :: proc(hash: ^digest.FNV, input: Render_Input) {
 }
 
 @(private)
+write_probe_volumes :: proc(hash: ^digest.FNV, input: Render_Input) {
+	digest.write_u64(hash, u64(len(input.probe_volumes)))
+	for volume in input.probe_volumes {
+		digest.write_f32(hash, volume.min.x)
+		digest.write_f32(hash, volume.min.y)
+		digest.write_f32(hash, volume.min.z)
+		digest.write_f32(hash, volume.spacing)
+		digest.write_u32(hash, volume.counts.x)
+		digest.write_u32(hash, volume.counts.y)
+		digest.write_u32(hash, volume.counts.z)
+	}
+}
+
+@(private)
 write_jitter :: proc(hash: ^digest.FNV, input: Render_Input) {
 	digest.write_f32(hash, input.jitter.x)
 	digest.write_f32(hash, input.jitter.y)
@@ -143,6 +159,11 @@ write_atlas_weight :: proc(hash: ^digest.FNV, input: Render_Input) {
 @(private)
 write_sky :: proc(hash: ^digest.FNV, input: Render_Input) {
 	digest.write_bool(hash, input.sky)
+}
+
+@(private)
+write_gi :: proc(hash: ^digest.FNV, input: Render_Input) {
+	digest.write_bool(hash, input.gi)
 }
 
 @(private)
