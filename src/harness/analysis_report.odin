@@ -174,12 +174,15 @@ write_analysis :: proc(
 	}
 
 	summary := analysis_summary(window)
-	if region, has_region := config.region.?; has_region {
-		if !capture_region_valid(region, first_width, first_height) {
-			return "", format_error("analysis region must be inside the capture")
+	bands_region: Maybe(Capture_Region)
+	if spec, has_region := config.region.?; has_region {
+		resolved, region_error := capture_region_resolve(spec, first_width, first_height)
+		if region_error != "" {
+			return "", region_error
 		}
+		bands_region = resolved
 	}
-	summary.bands = analysis_bands(last_pixels, first_width, first_height, config.region)
+	summary.bands = analysis_bands(last_pixels, first_width, first_height, bands_region)
 	report := Analysis_Report {
 		window = {start = config.start, count = len(window)},
 		pairs = analysis_pairs(window, allocator),

@@ -9,7 +9,7 @@ Analysis_Config :: struct {
 	start:      int,
 	count:      int,
 	maps:       bool,
-	region:     Maybe(Capture_Region),
+	region:     Maybe(Capture_Region_Spec),
 }
 
 analysis_config_default :: proc() -> Analysis_Config {
@@ -218,12 +218,16 @@ session_refresh_analysis :: proc(session: ^Session) {
 			session.allocator,
 		)
 		if image_ok {
-			if region, has_region := session.analysis_config.region.?;
-			   has_region && !capture_region_valid(region, width, height) {
-				delete(image, session.allocator)
-				return
+			bands_region: Maybe(Capture_Region)
+			if spec, has_region := session.analysis_config.region.?; has_region {
+				resolved, region_error := capture_region_resolve(spec, width, height)
+				if region_error != "" {
+					delete(image, session.allocator)
+					return
+				}
+				bands_region = resolved
 			}
-			session.analysis.bands = analysis_bands(image, width, height, session.analysis_config.region)
+			session.analysis.bands = analysis_bands(image, width, height, bands_region)
 			delete(image, session.allocator)
 		}
 	}

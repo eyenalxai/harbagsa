@@ -223,11 +223,12 @@ true}` the frames directory also holds `analysis-diff.png` and
 `analysis-variance.png`.
 
 `report.json` holds the pass/fail result, the final state, the setup block,
-absolute screenshot paths, checks, the state digest, and the named perf reports
-when perf ran. `state.json` holds the final state alone.
-`analysis.json` holds the per-run image analysis when the run captured frames.
-The pair and pixel analysis uses color captures. `run.log` holds the log lines.
-Standard output is one JSON summary.
+a `captures` array (name, target, format, PNG flag, and path when it wrote a
+file), checks, the state digest, and the named perf reports when perf ran.
+`state.json` holds the final state alone. `analysis.json` holds the per-run
+image analysis when the run captured frames. The pair and pixel analysis uses
+color captures. `run.log` holds the log lines. Standard output is one JSON
+summary.
 
 Exit codes:
 
@@ -257,10 +258,14 @@ Options:
   `-define:ENABLE_RENDERER_DEBUG=true` always accepts it, and so does a
   scenario that declares `"requires": {"renderer_debug": true}`.
 - `--no-analysis`: skip `analysis.json` and the analysis maps.
+- `--summary`: print the check table and every capture path to standard error.
+- `--verbose`: print the setup, every capture, the checks, the failures, and
+  the perf reports to standard error.
 - `--timeout SECONDS`: stop the run when its wall-clock budget expires. The
   budget is not part of the state digest. `run --help` and every other
-  subcommand accept `-h`/`--help`; `harbagsa-agent schema` prints the command
-  fields, units, check paths, and state shape as JSON.
+  subcommand accept `-h`/`--help`; `harbagsa-agent help <command>` prints the
+  CLI options or the scenario command's field table; `harbagsa-agent schema`
+  prints the command fields, units, check paths, and state shape as JSON.
 
 `run -` reads the scenario from standard input. It leaves no throwaway file
 behind:
@@ -319,7 +324,7 @@ Read the per-value metrics from the reports:
 ```sh
 for report in runs/lamp-threshold/*/report.json; do
   jq -r '[.scenario.parameters[0].value,
-          .screenshots[0].stats.gradient[1]] | @tsv' "$report"
+          .captures[0].stats.gradient[1]] | @tsv' "$report"
 done
 ```
 
@@ -329,8 +334,9 @@ green.
 
 ### Suites
 
-A suite manifest names scenarios to run in order. The first manifests are
-`suites/renderer.json`, `suites/offscreen.json`, and `suites/ui.json`:
+A suite manifest names scenarios to run in order. The manifests are
+`suites/renderer.json`, `suites/offscreen.json`, `suites/ui.json`, and
+`suites/lighting.json`:
 
 ```sh
 ./bin/harbagsa-agent suite renderer
@@ -345,9 +351,9 @@ the gate. The exit code is the highest entry code. The run directory holds
 `suite.json` beside one directory per entry.
 
 `make validate-offscreen` runs `suites/offscreen.json` with the validation
-build. `make ui` runs `suites/ui.json`. `make suite SUITE=renderer` runs the
-normal agent. `--list` shows each entry's size, gate, and render mode without
-running it. `--fail-fast` stops at the first failure; the default runs every
+build. `make ui` runs `suites/ui.json`; `make lighting` runs
+`suites/lighting.json`; `make suite SUITE=renderer` runs the normal agent.
+`--list` shows each entry's size, gate, and render mode without running it. `--fail-fast` stops at the first failure; the default runs every
 entry. A suite prints `suite: <entry>` before each run and the wall-clock time
 in `suite.json`; `--quiet` suppresses the progress lines. `--timeout SECONDS`
 applies one budget to each entry. Suite names and scenarios resolve from the
@@ -400,6 +406,12 @@ and the active renderer debug overrides. A file with overrides declares
 `--repro-dir DIR` or `HARBAGSA_REPRO_DIR` moves the directory. Milliseconds in
 the name keep two presses apart.
 
+The harness `repro` command writes a relative path under the run directory (or
+the `session --out` directory), so `"path": "live.json"` in a run lands at
+`runs/<run>/live.json` and a `--tag` run cannot overwrite another. An absolute
+path stays absolute. The notice names the path as written; the reply's
+`written` field is the absolute file.
+
 `record` starts with the same scene, so a recording begins from the live state
 instead of a bare reset. A recorded scene is compact; the F5 file is pretty.
 
@@ -450,7 +462,9 @@ check error.
 Every angle in a scenario, `state.json`, and `report.json` is in degrees, and
 every angle key ends in `_deg`. Positions and distances are metres unless a
 field says otherwise. `look` deltas are pixels. `step.frames` and `perf.frames`
-are frames; `perf.prime` is seconds. Capture regions and crops are pixels.
+are frames; `perf.prime` is seconds. A capture or analysis region is pixels by
+default; add `"unit": "normalized"` to keep it a fraction of the frame. Crops
+are pixels.
 
 Check fields use the `state.json` shape, for example `player.position.y`,
 `player.grounded`, `player.stance`, `objects.1.position.z`, `objects.count`,
@@ -464,12 +478,13 @@ Check fields use the `state.json` shape, for example `player.position.y`,
 `capture.format`, `capture.stats.*`, `capture.region.*`, `capture.profile.*`,
 `capture.crop.*`, `capture.histogram.*`, `capture.png`, and
 `capture.render_digest` for the last capture in its window.
-`capture.stats.steps.count`, `.pairs`, `.max`, `.blur`, `.min`, and
-`.max_levels` read the visibility-band metric; a stats capture must name a
-region. Tune it with `"steps": {"blur": 9, "min": 0.5, "max": 8}`; `blur` is an
-odd kernel size in [1, 31]. Add `"window": {"start": 2, "count": 8}` to
-aggregate over part of the captures; `warmup` stays the shorthand for skipping
-the first N.
+`capture.stats.steps.count`, `.pairs`, `.max`, `.over_cap`, `.blur`, `.min`,
+and `.max_levels` read the visibility-band metric; a stats capture must name a
+region. `.top.N.x`, `.top.N.y`, `.top.N.axis`, and `.top.N.levels` name the
+largest counted jumps, and `over_cap` counts jumps at or above the cap. Tune it
+with `"steps": {"blur": 9, "min": 0.5, "max": 8}`; `blur` is an odd kernel size
+in [1, 31]. Add `"window": {"start": 2, "count": 8}` to aggregate over part of
+the captures; `warmup` stays the shorthand for skipping the first N.
 
 A run with captures writes `analysis.json`. It holds per-pair deltas, a
 summary, the dominant period, the worst unstable pixels' series, and optional
@@ -482,8 +497,8 @@ fields. `analysis.bands` measures the identical-luma runs down the columns, so
 a gradient that bands after the 8-bit write shows up as a long run. Disable it
 with `"analysis": false` or `--no-analysis`; select a window, maps, and a region
 with `"analysis": {"start": 2, "count": 8, "maps": true, "region": {"x": 0,
-"y": 0, "w": 640, "h": 720}}`. A region keeps a flat patch or an overlay out of
-the band metric.
+"y": 0, "w": 0.5, "h": 1, "unit": "normalized"}}`. A region keeps a flat patch
+or an overlay out of the band metric.
 
 ### Commands
 
@@ -506,6 +521,13 @@ The batch runner and the live session share one command set:
   scenario with no captures, it is a plain step.
   `{"cmd":"settle","until":"converged"}` waits for the 512-sample cap and reports
   the frames and the result in `settle.frames` and `settle.converged`.
+- `{"cmd": "place", "prefab": "Lamp", "position": [13.5, 2.75, 10.5], "yaw_deg": 0, "body": "static", "light": {"color": "warm", "intensity": 1.5, "range": 8}}`:
+  create one object from a prefab without debug mode. `prefab` and `position`
+  are required; `body` defaults to the prefab's body; `yaw_deg` is degrees. A
+  `light` block is allowed only for a prefab with a light, and its omitted
+  fields keep the prefab defaults. The reply carries the new object id in
+  `placed`.
+- `{"cmd": "remove", "id": 4}`: delete one object by id without debug mode.
 - `{"cmd": "state"}`: player, eye, velocity, `yaw_deg`, `pitch_deg`, stance, grounded, camera,
   objects, window and input settings, debug mode, menu, notice, rows, settle,
   renderer state, render digest, frame, and simulation digest. Each object entry
@@ -538,12 +560,16 @@ The batch runner and the live session share one command set:
   intermediate image, and `"format": "float"`, `"raw"`, `"stats"`, or
   `"profile"` to choose the output. The default is a color PNG. A stats capture
   accepts `"region": {"x","y","w","h"}` or `"rect": [x,y,w,h]`, an optional
-  `"histogram": 8`, and a `"steps"` block. A color capture accepts
+  `"histogram": 8`, and a `"steps"` block. Add
+  `"unit": "normalized"` to a region to give `x`, `y`, `w`, and `h` as
+  fractions of the frame. A color capture accepts
   `"crop": {"x","y","w","h","scale"}` to write a scaled PNG, and a `"profile"`
   block to measure an edge. A profile also reads an intermediate target; its
   `source` is `srgb` for the color target and `linear` for a float target. Add
   `"png": true` to a color `stats` or `profile` capture to write the image
-  beside the numbers. One capture stays one result. Region, profile, and crop
+  beside the numbers, for example
+  `{"cmd":"capture","name":"ao","format":"stats","png":true,"region":{"x":0,"y":0,"w":8,"h":8}}`.
+  One capture stays one result. Region, profile, and crop
   do not change the capture extent; the crop reports `written_width` and
   `written_height`. A capture name is unique in one run; a second capture with
   the same name is an error.
@@ -616,6 +642,9 @@ The batch runner and the live session share one command set:
   when `hud` is off.
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`:
   evaluate a predicate now. Use `other` to compare two fields.
+- `{"cmd": "get", "field": "notice.text"}`: resolve one state, capture, or
+  analysis field and reply with `field` and a typed `value`. It builds only the
+  state sections the path needs and never adds a check.
 - `{"cmd": "displays", "set": [{"name": "Solo", "desktop": "1280x720", "modes": ["1280x720"]}]}`:
   script the display list; `{"cmd":"displays","clear":true}` restores the
   fallback list. A display may have zero modes, which blocks the menu's
@@ -633,18 +662,20 @@ The batch runner and the live session share one command set:
   renderer inputs. It needs `--debug-renderer` or a build with
   `-define:ENABLE_RENDERER_DEBUG=true`. `sky` and `ao` turn the sky and the
   ambient occlusion off, `light_shadows` turns the point-light shadows off, and
-  `synthetic_lights` replaces the frame's lamps with 0 to 8 test lights. `clear`
-  resets every override. Changing an input resets history.
+  `synthetic_lights` replaces the frame's lamps with 0 to 8 test lights. Set one
+  field to `null` to restore that field's default without touching the others.
+  `clear` resets every override. Changing an input resets history.
 - `{"cmd": "scene", ...}`: apply an exact scene with `camera`, `sun`, `objects`,
   `settings`, `view`, `displays`, and `renderer_debug` blocks. Every block is
   optional, and a `settings` or `view` block may carry only the fields it
   changes; omitted fields keep their live value. A `renderer_debug` block uses
   the same keys as the command and needs the same gate. `F5` writes one and
   `record` starts with one; see **Live repro**.
-- `{"cmd": "repro", "path": "runs/repro/live.json"}`: write the live view as a
-  scenario and show the notice. It is the harness twin of `F5`. `path` must
-  hold at most 160 bytes, so the notice can name it. A write failure returns
-  `ok: false` and leaves the failure notice set.
+- `{"cmd": "repro", "path": "live.json"}`: write the live view as a scenario and
+  show the notice. It is the harness twin of `F5`. A relative path joins the run
+  directory, or the `session --out` directory; an absolute path stays absolute.
+  The final path must hold at most 160 bytes, so the notice can name it. A write
+  failure returns `ok: false` and leaves the failure notice set.
 - `{"cmd": "record", "path": "scenarios/walk.json", "actions": false}`: start
   recording. Send `{"cmd": "record"}` to stop and write the scenario. `actions`
   omits the initial scene and keeps the reset, so only the action sequence
@@ -762,7 +793,7 @@ make ui
 make smoke
 ```
 
-Read `runs/smoke/report.json` and use the absolute paths in `screenshots`. The
+Read `runs/smoke/report.json` and use the absolute paths in `captures`. The
 PNG is RGBA, sRGB, and `1280x720` by default. Evidence is a run directory plus a
 scenario: point at the run, not at a checked-in image. To capture the owner's
 real window instead:
@@ -796,7 +827,7 @@ crouch input mode, closes the menu, and checks the saved state.
 captures the status note, sets the weight to 400, and captures the cleared note.
 
 `scenarios/repro-notice.json` writes a scene snapshot, checks and captures the
-notice, settles past the two-second hold, and captures the cleared notice.
+notice, steps past the two-second hold, and captures the cleared notice.
 
 `scenarios/type-weight.json` opens the menu, selects Type weight, captures 400,
 sets 900 and 100, captures both, and checks the stored value.
@@ -815,7 +846,9 @@ metric box-filters the luma, so the output dither drops out and a ray-count
 step remains. `scenarios/ramp-shadow-crouch.json` repeats the gate from the
 crouched view under the ramp, where the steps are widest. It also catches the
 TAA history precision: a 16-bit history keeps the count steps, and the 32-bit
-history reaches zero steps.
+history reaches zero steps. `scenarios/banding-phase.json` captures one frozen
+sun phase as `scene_color` float; the banding recipe in
+`docs/agents/harness.md` runs 32 phases and averages them.
 
 `scenarios/editor-ghost.json` enters debug mode, picks the platform prefab, and
 captures the ghost on the floor and raised, then places a block and cancels the
@@ -844,10 +877,13 @@ no flag, and `make validate-offscreen` runs it.
 
 `scenarios/room-lighting.json` enters the closed room in the arena's +x/+z
 corner. It captures the outside, the one doorway, the sealed corner, and the
-ceiling. Two depth captures prove the sealed views contain no sky pixel. It compares the
-sun through the doorway with the sun on the far side, then places a warm lamp
-and compares the same view with the lamp on and off. The room is static arena
-geometry: walk in through the west doorway to see it.
+ceiling. Two depth captures prove the sealed views contain no sky pixel. It
+compares the sun through the doorway with the sun on the far side, then places a
+warm lamp with the `place` command and compares the same view with the lamp on
+and off. The sun elevation, lamp intensity, lamp range, and door patch are
+scenario parameters, so `--param sun_elevation_deg=20` and
+`--param lamp_intensity=2` run the same checks with another setup. The room is
+static arena geometry: walk in through the west doorway to see it.
 
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window
@@ -908,9 +944,14 @@ make test
 strict compiler checks on the game, the agent, and every library package. If
 `spirv-val` is not installed, the shader check prints a skip message and does
 not fail the build. `make check-spirv` runs only the shader check. `make test`
-runs the display, platform, physics, simulation, frame, perf, harness, renderer,
-and docs tests headless. The offscreen render test logs a skip when no Vulkan
-device is available.
+runs the display, platform, input, physics, simulation, frame, perf, harness,
+renderer, and docs tests headless. The offscreen render test logs a skip when
+no Vulkan device is available.
+
+Each package also has one target for a tight loop:
+`make test-display`, `test-platform`, `test-input`, `test-physics`,
+`test-simulation`, `test-frame`, `test-perf`, `test-harness`,
+`test-renderer`, and `test-docs`. `make test` stays the aggregate.
 
 If more than one agent or terminal can build in this checkout, use the
 wrapper. It serializes Make with `flock` and needs `flock` from util-linux.

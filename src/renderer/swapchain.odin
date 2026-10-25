@@ -131,11 +131,6 @@ create_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 		}
 	}
 
-	if !create_readback(r, extent.width, extent.height) {
-		log.error("renderer: could not create the capture readback buffer")
-		return .Fatal
-	}
-
 	log.infof(
 		"renderer: swapchain %vx%v with %d images, format %v",
 		extent.width,

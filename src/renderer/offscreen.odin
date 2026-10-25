@@ -48,11 +48,6 @@ init_offscreen_target :: proc(r: ^Renderer, width, height: u32) -> Error {
 	r.target.views = make([]vk.ImageView, 1, r.allocator)
 	r.target.views[0] = color.view
 
-	if !create_readback(r, width, height) {
-		log.error("renderer: could not create the offscreen readback buffer")
-		return .Create_Target
-	}
-
 	log.infof("renderer: offscreen target %vx%v, format %v", width, height, format)
 	return .None
 }
