@@ -13,7 +13,7 @@
     {"cmd": "check", "field": "camera.yaw", "op": "gt", "value": 1.56},
     {"cmd": "settle", "frames": 4},
     {"cmd": "capture", "name": "left"},
-    {"cmd": "check", "field": "capture.1.delta_mean", "op": "gt", "other": "capture.0.delta_mean"},
+    {"cmd": "check", "field": "capture.named.left.delta_mean", "op": "gt", "other": "capture.named.forward.delta_mean"},
     {"cmd": "camera", "clear": true},
     {"cmd": "check", "field": "camera.overridden", "op": "eq", "value": false},
     {"cmd": "check", "field": "camera.fov", "op": "gt", "value": 89}
