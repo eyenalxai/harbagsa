@@ -27,8 +27,11 @@ while GI stays on.
 make shot SCENARIO=ddgi OUT=runs/ddgi
 ```
 
-The room has one probe volume: 10 x 3 x 10 probes at 1.04 m spacing. Probes
-inside a box are pushed out along the shallowest local axis before the rays run.
+The room volume is 10 x 3 x 10 probes at 1.04 m spacing. Five arena volumes
+follow it: a roof volume and four perimeter strips at a 4 m cell, with a 2.775 m
+cell for the north strip. Probes inside a box are pushed out along the shallowest
+local axis before the rays run. The layout and the leak argument are in
+`docs/adr/0034-ddgi-arena-coverage.md`.
 
 ## Result
 
@@ -41,8 +44,9 @@ inside a box are pushed out along the shallowest local axis before the rays run.
 
 The scenario checks `probe_count`, `probe_volume_count`, `probe_energy`, the
 GI on/off order, and the AO on/off order: 10 checks, 0 failed. The probe energy
-is 0.177 in linear irradiance. The four captures are deterministic: a repeat run
-produces the same PNG hashes.
+is 0.137 over the whole atlas with the lamp on, down from 0.177 for the room grid
+alone; the arena sky fill is dimmer than the lamp-lit room. The four captures are
+deterministic: a repeat run produces the same PNG hashes.
 
 The room gate is `scenarios/room-lighting.json`: 19 checks, 0 failed. The first
 lane is 39.75 mean green under the west sun and 8.08 under the east sun. The
@@ -53,18 +57,21 @@ end of the lock.
 
 ## Leak pair
 
-`scenarios/ddgi-leak.json` puts the camera in the first lane, with the sun below
-the horizon. It captures the lane before the lamp and after a lamp is placed in
-the chamber.
+`scenarios/ddgi-leak.json` puts the camera in the first lane at the door,
+looking out into the arena, with the sun below the horizon. It captures the view
+before the lamp and after a lamp is placed in the chamber.
 
 | Capture | Mean green |
 | --- | ---: |
-| `lane-dark` | 49.38 |
-| `lane-lit` | 49.39 |
+| `lane-dark` | 105.74 |
+| `lane-lit` | 105.74 |
 | `chamber-lit` | 183.11 |
 
-The lane moves by 0.005, inside the gate's 50.0 absolute ceiling, and the
-chamber is bright. The scenario has 3 checks, 0 failed.
+The camera looks out of the room door, so the frame holds the sky-lit arena and
+the mean rose with coverage from 49.38. The lane moves by 0.0035 when the lamp
+turns on, inside the gate's 0.05 tolerance, and the chamber is bright. The gate
+is now the lane delta rather than an absolute ceiling, because the outdoor part
+of the frame is no longer black. The scenario has 3 checks, 0 failed.
 
 This is not a sealed leak pair. The chamber and the lane are connected by the
 four-turn light lock, so light through the lock is transport, not a bug. The
@@ -80,6 +87,37 @@ Five checks pass, including the placed lamp identity.
 editor. Both views stay above 120 mean green: 189.55 before and 173.72 after.
 The object position checks and both light checks pass; 4 checks.
 
+## Arena and roof
+
+`scenarios/ddgi-arena.json` uses the `outside` camera from `room-lighting`. The
+room's west face is in full shade, so the only term that can lift it is indirect.
+The scenario measures a 140 x 80 pixel window inside that face with a pure-black
+colour key, writes a 4x crop, and then repeats the chamber view from
+`room-lighting`.
+
+| Capture | Before | After |
+| --- | ---: | ---: |
+| `outside` pure-black pixels | 26.8% | 0.30% |
+| shaded face pure-black pixels | 83.8% | 0.0% |
+| shaded face mean green | 0.16 | 151.27 |
+| chamber mean green | 0.26 | 0.26 |
+
+The remaining 0.30% of the frame is the room doorway, which is the unlit
+interior. The shaded face is a smooth sky gradient with soft 4 m probe blotches,
+not the old black. The chamber keeps its value because the room volume comes
+first and the arena bounds stop at the room's outer wall; the arena probes add
+no light to a room or a lane through a wall.
+
+The scenario has 7 checks, 0 failed:
+
+```sh
+make shot SCENARIO=ddgi-arena OUT=runs/ddgi-arena
+```
+
+```sh
+./bin/harbagsa-agent checks runs/ddgi-arena
+```
+
 ## Contact term
 
 Ambient occlusion multiplies direct light only. The indirect term has its own
@@ -92,26 +130,27 @@ the probe atlas is unchanged. The decision is recorded in
 
 `scenarios/perf-probes.json` uses 64 synthetic lights and the chamber camera at
 1280 x 720. The probe pass covers the ray trace and the blend. It costs 0.232 ms
-with 64 rays and 0.413 ms with 256 rays. The 256-ray full GPU pass set is:
+with 64 rays, 0.413 ms with 256 rays and 300 room probes, and 0.672 ms with 256
+rays and 537 probes after arena coverage. The 537-probe full GPU pass set is:
 
 | Pass | ms |
 | --- | ---: |
-| TLAS | 0.281 |
-| Cluster | 0.033 |
-| Probe | 0.413 |
+| TLAS | 0.291 |
+| Cluster | 0.034 |
+| Probe | 0.672 |
 | Depth | 0.016 |
-| Scene | 2.874 |
+| Scene | 2.767 |
 | Sky | 0.004 |
-| TAA | 0.232 |
+| TAA | 0.231 |
 | Overlay | 0.002 |
-| Total | 3.855 |
+| Total | 4.017 |
 
 ## Limits
 
-The volume covers the room, its lane network, and the chamber as one grid. It
-does not classify probes into disconnected rooms. The open arena and the sky
-have no probe volume, so the arena indirect term is still zero; that is issue
-#321. The sealed two-room leak pair is issue #322.
+The room, its lane network, and the chamber share one grid, and that grid does
+not classify probes into disconnected rooms. The arena grid is coarse, so the
+perimeter walls show soft 4 m blotches. The sealed two-room leak pair is issue
+#322.
 
 The probe atlas stores encoded irradiance and depth moments. Moving geometry
 relocates probe centres but does not reset the irradiance blend; a crate that

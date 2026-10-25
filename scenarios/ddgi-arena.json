@@ -1,0 +1,36 @@
+{
+  "size": "1280x720",
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "analysis": false,
+  "note": "Arena sky fill: the room's shaded west face must not be black, and the sealed chamber must stay dark.",
+  "parameters": {
+    "sun_elevation_deg": 20
+  },
+  "commands": [
+    {"cmd": "camera", "position": [1.5, 5.0, 18.0], "look_at": [12.0, 1.0, 11.0], "fov_deg": 90},
+    {"cmd": "settle", "frames": 30},
+    {"cmd": "capture", "name": "arena"},
+
+    {"cmd": "capture", "name": "arena-shade", "format": "stats", "png": true,
+     "region": {"x": 330, "y": 390, "w": 140, "h": 80},
+     "color_key": {"r": 0, "g": 0, "b": 0, "tolerance": 0},
+     "note": "the room's west face, which the sun never reaches"},
+    {"cmd": "capture", "name": "arena-shade-zoom",
+     "crop": {"x": 330, "y": 390, "w": 140, "h": 80, "scale": 4}},
+
+    {"cmd": "sun", "azimuth_deg": 270, "elevation_deg": "${sun_elevation_deg}", "diameter_deg": 0.53},
+    {"cmd": "camera", "position": [15.5, 1.7, 5.0], "look_at": [11.0, 1.5, 11.0], "fov_deg": 90},
+    {"cmd": "settle", "frames": 40},
+    {"cmd": "capture", "name": "chamber", "format": "stats", "png": true},
+    {"cmd": "capture", "name": "chamber-depth", "target": "depth", "format": "stats"}
+  ],
+  "checks": [
+    {"field": "renderer.probe_volume_count", "op": "eq", "value": 6},
+    {"field": "capture.named.arena-shade.stats.mean.y", "op": "gt", "value": 20},
+    {"field": "capture.named.arena-shade.stats.color_key.fraction", "op": "lt", "value": 0.1},
+    {"field": "capture.named.arena-shade-zoom.written_width", "op": "eq", "value": 560},
+    {"field": "capture.named.arena-shade-zoom.written_height", "op": "eq", "value": 320},
+    {"field": "capture.named.chamber.stats.mean.y", "op": "lt", "value": 0.5},
+    {"field": "capture.named.chamber-depth.stats.max.x", "op": "lt", "value": 0.999}
+  ]
+}
