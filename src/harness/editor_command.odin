@@ -2,6 +2,7 @@
 package harness
 
 import "core:encoding/json"
+import "core:mem"
 
 import "src:game"
 
@@ -80,19 +81,14 @@ Editor_Command :: struct {
 	input:      Editor_Input,
 }
 
-parse_editor :: proc(object: json.Object) -> (Command, string) {
+parse_editor :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(object, EDITOR_KEYS[:]); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 
 	command := Command{kind = .Editor}
-	if value, has := json_get(object, "open"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, "'open' must be a boolean"
-		}
-		command.editor.open = flag
-		command.editor.has_open = true
+	if field_error := json_take_bool(object, "open", &command.editor.open, &command.editor.has_open); field_error != "" {
+		return {}, field_error
 	}
 	if value, has := json_get(object, "select"); has {
 		selected, ok := json_integer(value)
@@ -113,12 +109,8 @@ parse_editor :: proc(object: json.Object) -> (Command, string) {
 		command.editor.body = mode
 		command.editor.has_body = true
 	}
-	if value, has := json_get(object, "pick"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, "'pick' must be a boolean"
-		}
-		command.editor.pick = flag
+	if field_error := json_bool(object, "pick", &command.editor.pick); field_error != "" {
+		return {}, field_error
 	}
 	if value, has := json_get(object, "height"); has {
 		height, ok := json_number(value)
@@ -136,20 +128,11 @@ parse_editor :: proc(object: json.Object) -> (Command, string) {
 		command.editor.yaw_deg = f32(yaw)
 		command.editor.has_yaw = true
 	}
-	if value, has := json_get(object, "snap"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, "'snap' must be a boolean"
-		}
-		command.editor.snap = flag
-		command.editor.has_snap = true
+	if field_error := json_take_bool(object, "snap", &command.editor.snap, &command.editor.has_snap); field_error != "" {
+		return {}, field_error
 	}
-	if value, has := json_get(object, "cancel"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, "'cancel' must be a boolean"
-		}
-		command.editor.cancel = flag
+	if field_error := json_bool(object, "cancel", &command.editor.cancel); field_error != "" {
+		return {}, field_error
 	}
 	if value, has := json_get(object, "camera"); has {
 		camera, camera_error := parse_editor_camera(value)

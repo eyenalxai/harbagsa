@@ -2,13 +2,14 @@
 package harness
 
 import "core:encoding/json"
+import "core:mem"
 
 Debug_Mode_Command :: struct {
 	active: bool,
 }
 
 @(private)
-parse_debug_mode :: proc(object: json.Object) -> (Command, string) {
+parse_debug_mode :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(object, {"cmd", "active"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
