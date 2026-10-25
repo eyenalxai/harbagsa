@@ -10,7 +10,7 @@
     "renderer-debug-jitter",
     "taa-static",
     "taa-motion",
-    "sky-ao",
+    "sky",
     "stairs-ao",
     "banding",
     "capture-targets",
