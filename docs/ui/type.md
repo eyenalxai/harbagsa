@@ -1,7 +1,7 @@
 # Type
 
-Five roles, two faces, one axis. The faces are Roboto Condensed and Roboto Mono,
-both variable, subset to ASCII plus `·`, `×`, and `…`. Each face is one file; the
+Five roles, two faces, one axis. The faces are Geist and Geist Mono, both
+variable, subset to ASCII plus `·`, `×`, and `…`. Each face is one file; the
 weight is a coordinate, not a separate asset. Both are SIL OFL 1.1;
 `src/renderer/fonts/PROVENANCE.md` records how they were cut.
 
@@ -15,9 +15,9 @@ back.
 
 ## The axis
 
-Roboto Condensed runs from Thin 100 to Black 900. The named instances are Thin
-100, ExtraLight 200, Light 300, Regular 400, Medium 500, SemiBold 600, Bold 700,
-ExtraBold 800, and Black 900. Roboto Mono runs from Thin 100 to Bold 700.
+Geist and Geist Mono both run from Thin 100 to Black 900. The named instances
+are Thin 100, ExtraLight 200, Light 300, Regular 400, Medium 500, SemiBold 600,
+Bold 700, ExtraBold 800, and Black 900.
 
 The base weight defaults to 400 and is stored as a whole unit in
 `Settings.type_weight`, clamped to 100..900. Every role derives from it:
@@ -31,8 +31,8 @@ The base weight defaults to 400 and is stored as a whole unit in
 | Section header | `type_caption_caps` | 14 | 1.45 | base + 100 | +0.06 em |
 
 The strong offset clamps at 900. At base 900 the title and labels reach the
-body's weight; size and colour still separate the roles. Mono uses
-`min(base, 700)`, so above 700 the numbers stop gaining weight.
+body's weight; size and colour still separate the roles. Mono follows the base
+weight without a separate clamp.
 
 Never add a size outside this table. If a surface needs one, add a token, a
 rationale, and a line here.
@@ -68,8 +68,8 @@ merge with the body and the count drops to five:
 - label 15 at base + 100
 - detail 14 at base
 - section header 14 at base + 100
-- mono 15 at `min(base, 700)`
-- mono 14 at `min(base, 700)`
+- mono 15 at base
+- mono 14 at base
 
 `TEXT_LAYER_MAX` is 8. A style that names a layer the atlas does not have falls
 back to the same face, then the nearest weight, then the nearest size.
@@ -107,11 +107,12 @@ the 6 px row gap. The slider row is 40.5 px tall.
 
 Any number that changes while the player moves uses two things together:
 
-1. `Row.numeric = true`, which swaps the value to Roboto Mono and clamps the
-   mono weight to 700.
+1. `Row.numeric = true`, which swaps the value to Geist Mono.
 2. A fixed-width field, so a value cannot change the string's width.
 
-Roboto's default digits are tabular, so the digits stay equal inside a field.
+Geist Mono's digits are tabular at 600 units of a 1000-unit em, so the digits
+stay equal inside a field. Geist Sans uses proportional figures, so a changing
+number must not use the sans face.
 
 | Value | Format | Example |
 | --- | --- | --- |
