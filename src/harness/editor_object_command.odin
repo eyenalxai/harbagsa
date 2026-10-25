@@ -10,7 +10,7 @@ Editor_Object :: struct {
 	has_select_object: bool,
 	move:              [3]f32,
 	has_move:          bool,
-	rotate:            f32,
+	rotate_deg:        f32,
 	has_rotate:        bool,
 	delete:            bool,
 	duplicate:         bool,
@@ -37,12 +37,12 @@ parse_editor_object :: proc(object: json.Object) -> (Editor_Object, string) {
 		editor.move = position
 		editor.has_move = true
 	}
-	if value, has := json_get(object, "rotate"); has {
+	if value, has := json_get(object, "rotate_deg"); has {
 		degrees, ok := json_number(value)
 		if !ok {
-			return {}, "'rotate' must be a number of degrees"
+			return {}, "'rotate_deg' must be a number of degrees"
 		}
-		editor.rotate = f32(degrees)
+		editor.rotate_deg = f32(degrees)
 		editor.has_rotate = true
 	}
 	if value, has := json_get(object, "delete"); has {

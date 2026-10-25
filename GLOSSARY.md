@@ -212,6 +212,16 @@ _Avoid_: IBL, environment light, ambient probe
 The maximum distance an ambient occlusion ray travels: 1.5 m. A surface beyond that distance does not count as an occluder.
 _Avoid_: AO distance, occlusion range
 
+**AO strength**:
+The multiplier on the ambient occlusion term. `0` leaves the ambient light
+unchanged and `1` applies the full occlusion.
+_Avoid_: AO amount, AO weight
+
+**Degree boundary**:
+The scenario, `state.json`, and `report.json` express every angle in degrees.
+Every angle key ends in `_deg`. The engine converts to radians at the edge.
+_Avoid_: mixed angle units, implicit units
+
 **Top-level acceleration structure (TLAS)**:
 The acceleration structure that holds the box instances for ray queries. The renderer rebuilds it each frame from the box transforms.
 _Avoid_: Scene BVH
@@ -797,6 +807,15 @@ debug gate. The runner enables it for that run. **Avoid**: precondition, flag.
 A named value a scenario declares in `parameters` and uses as `${name}`. The
 declared value sets the type. **Avoid**: variable, argument.
 
+### Suite
+A JSON manifest of scenario entries that runs in manifest order. Each entry
+keeps its scenario's `requires`, and the suite exit code is the highest entry
+code. **Avoid**: batch, group, list.
+
+### Suite entry
+One scenario in a suite, with an optional label, size, parameter values, and
+render mode. The label names the run directory. **Avoid**: job, item.
+
 ### Parameter sweep
 One scenario run per value of one or more scenario parameters, with each run in
 its own directory. **Avoid**: matrix run, batch.
@@ -808,6 +827,16 @@ The run directory name built from a sweep's parameter values.
 ### Run tag
 A directory name appended to the run path so two runs coexist. **Avoid**:
 label, suffix.
+
+### Compare panel
+A labeled PNG that puts the same capture from two runs side by side, with each
+run's scenario, revision, and dirty flag. It is evidence, not a numeric check.
+**Avoid**: montage, contact sheet.
+
+### Scene snapshot
+One `scene` command that carries the exact camera, sun, placed objects,
+settings, display list, and view flags of a live view. `F5` writes one, and
+`record` starts with one. **Avoid**: state dump, replay file.
 
 ### Display list
 The harness's scripted set of displays and modes. It replaces the compositor

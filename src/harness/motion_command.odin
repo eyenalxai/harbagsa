@@ -19,15 +19,18 @@ parse_look :: proc(object: json.Object) -> (Command, string) {
 
 @(private)
 parse_face :: proc(object: json.Object) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "yaw", "pitch"}); unknown {
+	if key, unknown := json_unknown_key(object, {"cmd", "yaw_deg", "pitch_deg"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
-	yaw, yaw_ok := number_field(object, "yaw")
-	pitch, pitch_ok := number_field(object, "pitch")
+	yaw, yaw_ok := number_field(object, "yaw_deg")
+	pitch, pitch_ok := number_field(object, "pitch_deg")
 	if !yaw_ok || !pitch_ok {
-		return {}, format_error("%s", "face needs numeric 'yaw' and 'pitch'")
+		return {}, format_error("%s", "face needs numeric 'yaw_deg' and 'pitch_deg'")
 	}
-	return {kind = .Face, face = {yaw = f32(yaw), pitch = f32(pitch)}}, ""
+	return {
+		kind = .Face,
+		face = {yaw_rad = f32(math.to_radians(yaw)), pitch_rad = f32(math.to_radians(pitch))},
+	}, ""
 }
 
 @(private)
@@ -74,7 +77,7 @@ parse_input_fields :: proc(object: json.Object) -> (input: Input_Command, error:
 parse_camera :: proc(object: json.Object) -> (Command, string) {
 	if key, unknown := json_unknown_key(
 		object,
-		{"cmd", "position", "yaw", "pitch", "look_at", "fov", "clear"},
+		{"cmd", "position", "yaw_deg", "pitch_deg", "look_at", "fov_deg", "clear"},
 	); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
@@ -103,23 +106,23 @@ parse_camera :: proc(object: json.Object) -> (Command, string) {
 	if angles_error != "" {
 		return {}, angles_error
 	}
-	command.camera.yaw = angles.yaw
-	command.camera.pitch = angles.pitch
+	command.camera.yaw_rad = angles.yaw_rad
+	command.camera.pitch_rad = angles.pitch_rad
 	command.camera.has_angles = true
-	if value, has := json_get(object, "fov"); has {
+	if value, has := json_get(object, "fov_deg"); has {
 		fov, fov_ok := json_number(value)
 		if !fov_ok || fov < 1 || fov > 170 {
-			return {}, format_error("%s", "'fov' must be a number in [1, 170]")
+			return {}, format_error("%s", "'fov_deg' must be a number in [1, 170]")
 		}
-		command.camera.fov = f32(fov)
+		command.camera.fov_deg = f32(fov)
 		command.camera.has_fov = true
 	}
 	return command, ""
 }
 
 Camera_Angles :: struct {
-	yaw:   f32,
-	pitch: f32,
+	yaw_rad:   f32,
+	pitch_rad: f32,
 }
 
 // The camera forward is (-sin yaw cos pitch, sin pitch, -cos yaw cos pitch).
@@ -131,8 +134,8 @@ camera_look_at_angles :: proc(position, target: [3]f32) -> (angles: Camera_Angle
 		return {}, false
 	}
 	direction := delta / length
-	angles.pitch = math.asin(clamp(direction.y, -1, 1))
-	angles.yaw = math.atan2(-direction.x, -direction.z)
+	angles.pitch_rad = math.asin(clamp(direction.y, -1, 1))
+	angles.yaw_rad = math.atan2(-direction.x, -direction.z)
 	return angles, true
 }
 
@@ -144,10 +147,10 @@ camera_angles_from_fields :: proc(
 	label: string,
 ) -> (angles: Camera_Angles, error: string) {
 	look_at, look_at_ok := vec3_field(object, "look_at")
-	yaw, yaw_ok := number_field(object, "yaw")
-	pitch, pitch_ok := number_field(object, "pitch")
+	yaw, yaw_ok := number_field(object, "yaw_deg")
+	pitch, pitch_ok := number_field(object, "pitch_deg")
 	if look_at_ok && (yaw_ok || pitch_ok) {
-		return {}, format_error("%s takes 'look_at' or 'yaw' and 'pitch', not both", label)
+		return {}, format_error("%s takes 'look_at' or 'yaw_deg' and 'pitch_deg', not both", label)
 	}
 	if look_at_ok {
 		computed, ok := camera_look_at_angles(position, look_at)
@@ -157,7 +160,10 @@ camera_angles_from_fields :: proc(
 		return computed, ""
 	}
 	if !yaw_ok || !pitch_ok {
-		return {}, format_error("%s needs 'look_at' or 'yaw' and 'pitch'", label)
+		return {}, format_error("%s needs 'look_at' or 'yaw_deg' and 'pitch_deg'", label)
 	}
-	return {yaw = f32(yaw), pitch = f32(pitch)}, ""
+	return {
+		yaw_rad = f32(math.to_radians(yaw)),
+		pitch_rad = f32(math.to_radians(pitch)),
+	}, ""
 }

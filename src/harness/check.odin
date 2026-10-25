@@ -11,11 +11,12 @@ CHECK_EPSILON :: 1e-6
 Check_Result :: struct {
 	field:    string `json:"field"`,
 	op:       string `json:"op"`,
-	expected: string `json:"value"`,
-	other:    string `json:"other,omitempty"`,
-	actual:   string `json:"actual,omitempty"`,
-	ok:       bool   `json:"ok"`,
-	error:    string `json:"error,omitempty"`,
+	expected:  string     `json:"value"`,
+	other:     string     `json:"other,omitempty"`,
+	actual:    string     `json:"actual,omitempty"`,
+	tolerance: Maybe(f64) `json:"tolerance,omitempty"`,
+	ok:        bool       `json:"ok"`,
+	error:     string     `json:"error,omitempty"`,
 }
 
 check_evaluate :: proc(
@@ -28,6 +29,7 @@ check_evaluate :: proc(
 	result := Check_Result {
 		field = command.field,
 		op = check_op_name(command.op),
+		tolerance = command.tolerance,
 	}
 	actual, field_error := check_field(state, captures, analysis, command.field)
 	if field_error != "" {
@@ -43,7 +45,7 @@ check_evaluate :: proc(
 			return result
 		}
 		result.expected = check_value_display(other, allocator)
-		ok, compare_error := check_compare(actual, command.op, other)
+		ok, compare_error := check_compare(actual, command.op, other, command.tolerance)
 		if compare_error != "" {
 			result.error = compare_error
 			return result
@@ -52,7 +54,7 @@ check_evaluate :: proc(
 		return result
 	}
 	result.expected = check_value_display(command.value, allocator)
-	ok, compare_error := check_compare(actual, command.op, command.value)
+	ok, compare_error := check_compare(actual, command.op, command.value, command.tolerance)
 	if compare_error != "" {
 		result.error = compare_error
 		return result
@@ -86,6 +88,13 @@ check_field :: proc(
 	return state_field(state, path)
 }
 
+check_tolerance_note :: proc(check: Check_Result, allocator: mem.Allocator) -> string {
+	if value, has := check.tolerance.?; has {
+		return fmt.aprintf(" tolerance %g", value, allocator = allocator)
+	}
+	return ""
+}
+
 check_result_destroy :: proc(result: ^Check_Result, allocator: mem.Allocator) {
 	if result.expected != "" {
 		delete(result.expected, allocator)
@@ -99,20 +108,34 @@ check_result_destroy :: proc(result: ^Check_Result, allocator: mem.Allocator) {
 	result^ = {}
 }
 
-check_compare :: proc(actual: Check_Value, op: Check_Op, expected: Check_Value) -> (bool, string) {
+check_compare :: proc(
+	actual: Check_Value,
+	op: Check_Op,
+	expected: Check_Value,
+	tolerance: Maybe(f64) = nil,
+) -> (bool, string) {
 	if actual.kind != expected.kind {
 		return false, format_error("%s", "check value type does not match the field type")
 	}
 	switch actual.kind {
 	case .Number:
-		return compare_number(actual.number, op, expected.number)
+		if _, has := tolerance.?; has && op != .Eq && op != .Ne {
+			return false, format_error("%s", "a tolerance applies only to 'eq' and 'ne'")
+		}
+		return compare_number(actual.number, op, expected.number, tolerance)
 	case .Bool:
+		if _, has := tolerance.?; has {
+			return false, format_error("%s", "a tolerance applies only to numbers")
+		}
 		if op != .Eq && op != .Ne {
 			return false, format_error("%s", "boolean checks support only 'eq' and 'ne'")
 		}
 		equal := actual.boolean == expected.boolean
 		return equal if op == .Eq else !equal, ""
 	case .String:
+		if _, has := tolerance.?; has {
+			return false, format_error("%s", "a tolerance applies only to numbers")
+		}
 		if op != .Eq && op != .Ne {
 			return false, format_error("%s", "string checks support only 'eq' and 'ne'")
 		}
@@ -123,12 +146,21 @@ check_compare :: proc(actual: Check_Value, op: Check_Op, expected: Check_Value) 
 }
 
 @(private)
-compare_number :: proc(actual: f64, op: Check_Op, expected: f64) -> (bool, string) {
+compare_number :: proc(
+	actual: f64,
+	op: Check_Op,
+	expected: f64,
+	tolerance: Maybe(f64),
+) -> (bool, string) {
+	limit := CHECK_EPSILON
+	if value, has := tolerance.?; has {
+		limit = value
+	}
 	switch op {
 	case .Eq:
-		return abs(actual - expected) <= CHECK_EPSILON, ""
+		return abs(actual - expected) <= limit, ""
 	case .Ne:
-		return abs(actual - expected) > CHECK_EPSILON, ""
+		return abs(actual - expected) > limit, ""
 	case .Lt:
 		return actual < expected, ""
 	case .Le:
@@ -195,6 +227,8 @@ capture_one_field :: proc(capture: Capture_Result, path: string) -> (Check_Value
 		return {kind = .Number, number = f64(capture.written_height)}, ""
 	case "render_digest":
 		return {kind = .String, text = capture.render_digest}, ""
+	case "png":
+		return {kind = .Bool, boolean = capture.png}, ""
 	}
 	return capture_field(capture_summary([]Capture_Result{capture}), path)
 }

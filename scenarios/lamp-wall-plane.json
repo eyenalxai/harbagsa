@@ -11,7 +11,7 @@
     {"cmd": "step", "frames": 1},
     {"cmd": "editor", "primary": true},
     {"cmd": "editor", "cancel": true},
-    {"cmd": "editor", "camera": {"position": [17.5, 1.7, -17.2], "yaw": -0.827, "pitch": -0.259}},
+    {"cmd": "editor", "camera": {"position": [17.5, 1.7, -17.2], "yaw_deg": -47.3836, "pitch_deg": -14.8396}},
     {"cmd": "settle", "frames": 20},
     {"cmd": "capture", "name": "lamp-on-wall"},
     {"cmd": "capture", "name": "wall-stats", "format": "stats", "region": {"x": 0, "y": 0, "w": 580, "h": 680}},

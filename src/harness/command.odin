@@ -25,6 +25,7 @@ Command_Kind :: enum {
 	Renderer_Debug,
 	Displays,
 	Rows,
+	Scene,
 	Quit,
 }
 
@@ -34,8 +35,8 @@ Look_Command :: struct {
 }
 
 Face_Command :: struct {
-	yaw:   f32,
-	pitch: f32,
+	yaw_rad:   f32,
+	pitch_rad: f32,
 }
 
 Input_Command :: struct {
@@ -59,6 +60,7 @@ Capture_Command :: struct {
 	has_alpha: bool,
 	target:    Capture_Target,
 	format:    Capture_Format,
+	png:       bool,
 	region:    Maybe(Capture_Region),
 	profile:   Maybe(Capture_Profile),
 	crop:      Maybe(Capture_Crop),
@@ -68,9 +70,9 @@ Capture_Command :: struct {
 Camera_Command :: struct {
 	position:     [3]f32,
 	look_at:      [3]f32,
-	yaw:          f32,
-	pitch:        f32,
-	fov:          f32,
+	yaw_rad:      f32,
+	pitch_rad:    f32,
+	fov_deg:      f32,
 	has_look_at:  bool,
 	has_fov:      bool,
 	has_angles:   bool,
@@ -78,9 +80,9 @@ Camera_Command :: struct {
 }
 
 Sun_Command :: struct {
-	azimuth:       f32,
-	elevation:     f32,
-	diameter:      f32,
+	azimuth_deg:   f32,
+	elevation_deg: f32,
+	diameter_deg:  f32,
 	has_azimuth:   bool,
 	has_elevation: bool,
 	has_diameter:  bool,
@@ -170,6 +172,7 @@ Command :: struct {
 	perf:           Perf_Command,
 	renderer_debug: Renderer_Debug_Command,
 	displays:       Displays_Command,
+	scene:          Scene_Command,
 }
 
 command_name :: proc(kind: Command_Kind) -> string {

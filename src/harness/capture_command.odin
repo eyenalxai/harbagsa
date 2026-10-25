@@ -11,7 +11,7 @@ import "src:renderer"
 parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(
 		object,
-		{"cmd", "name", "frame", "alpha", "target", "format", "region", "rect", "profile", "crop", "histogram"},
+		{"cmd", "name", "frame", "alpha", "target", "format", "png", "region", "rect", "profile", "crop", "histogram"},
 	); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
@@ -60,12 +60,27 @@ parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command
 	} else {
 		command.capture.format = command.capture.target == .Color ? .Png : .Stats
 	}
+	if value, has := json_get(object, "png"); has {
+		flag, ok := json_boolean(value)
+		if !ok {
+			return {}, format_error("%s", "'png' must be a boolean")
+		}
+		command.capture.png = flag
+	}
 	if command.capture.format == .Png && command.capture.target != .Color {
 		return {}, format_error("%s", "a png capture needs the color target")
 	}
 	if (command.capture.format == .Float || command.capture.format == .Raw) &&
 	   command.capture.target == .Color {
 		return {}, format_error("%s", "a float or raw capture needs an intermediate target")
+	}
+	if command.capture.png {
+		if command.capture.target != .Color {
+			return {}, format_error("%s", "a png sidecar needs the color target")
+		}
+		if command.capture.format != .Stats && command.capture.format != .Profile {
+			return {}, format_error("%s", "'png' writes a sidecar for format 'stats' or 'profile'")
+		}
 	}
 	if region_error := parse_capture_region(object, &command.capture); region_error != "" {
 		return {}, region_error
@@ -100,6 +115,9 @@ parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command
 	_, has_profile := command.capture.profile.?
 	if command.capture.format == .Profile && !has_profile {
 		return {}, format_error("%s", "format 'profile' needs a 'profile' block")
+	}
+	if has_profile && command.capture.format != .Profile {
+		return {}, format_error("%s", "a profile block needs format 'profile'")
 	}
 	if has_profile && command.capture.target != .Color {
 		return {}, format_error("%s", "a profile reads the color target")

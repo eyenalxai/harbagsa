@@ -77,14 +77,15 @@ serializes Make with `flock`.
 | change a renderer input for a diagnosis | **Renderer debug overrides** |
 | check the sky and the ambient occlusion | **Sky and ambient occlusion** |
 | measure image stability or the period | **Analysis** |
-| compare two builds or revisions | **Cross-run diff** |
+| compare two builds or revisions | **Cross-run diff** and **Cross-run compare** |
 | script the display list | **Commands** (`displays`) |
 | dump the HUD and menu rows | **Commands** (`rows`) |
 | measure an edge or a gradient | **Capture targets** and **Analysis** |
 | compare two builds | **Performance** and `ab` |
 | measure frame time | **Performance** |
 | prove a capture-free sequence is deterministic | **Screenshots** and `scenarios/capture-free.json` |
-| understand a design choice | `docs/adr/0008` to `docs/adr/0023` |
+| reproduce a live view | **Live session** and `docs/adr/0025` |
+| understand a design choice | `docs/adr/0008` to `docs/adr/0026` |
 
 ## What one run writes
 
@@ -159,11 +160,12 @@ Rules:
 - A capture frame is a zero-based frame number. A past frame is an error; a
   future frame queues.
 - A check uses the `state.json` shape. Operators: `eq`, `ne`, `lt`, `le`, `gt`,
-  `ge`. Examples: `player.position.y`, `objects.count`, `settings.window_mode`,
+  `ge`. A numeric check takes an optional absolute `tolerance`; it applies to
+  `eq` and `ne`. A tolerance on an ordering op or a non-number is an error. Examples: `player.position.y`, `objects.count`, `settings.window_mode`,
   `settings.resolution`, `settings.sprint_mode`, `settings.type_weight`,
   `menu.open`, `debug.active`, `debug.palette.open`, `debug.placement.armed`,
-  `debug.placement.prefab`, `debug.sun.active`, `debug.sun.angular_diameter`,
-  `debug.inspector.body`, `debug.inspector.size.x`, `debug.inspector.yaw`,
+  `debug.placement.prefab`, `debug.sun.active`, `debug.sun.angular_diameter_deg`,
+  `debug.inspector.body`, `debug.inspector.size.x`, `debug.inspector.yaw_deg`,
   `debug.inspector.snap`, and `debug.history.depth`.
 - An object check addresses a placed object by id: `objects.7.position.z`,
   `objects.7.rotation.w`, `objects.7.prefab`, `objects.7.body`,
@@ -171,8 +173,9 @@ Rules:
   exists. `objects.count` is the list length.
 - A capture check reads the capture summary. Fields: `capture.count`,
   `capture.worst_mean_delta`, `capture.worst_max_delta`,
-  `capture.worst_over_16`, and `capture.worst_over_16_fraction`. The fraction
-  scales with the capture size. Each capture after the first compares its
+  `capture.worst_over_16`, and `capture.worst_over_16_fraction`. A check can read
+  `capture.png` to tell whether a result wrote an image. The fraction scales
+  with the capture size. Each capture after the first compares its
   pixels with the previous capture. `warmup` skips that many captures before
   the summary, so a scenario can ignore TAA convergence.
 - A check window selects captures instead: `"window": {"start": 2, "count": 8}`.
@@ -207,13 +210,22 @@ Rules:
   `{"cmd":"check","field":"capture.1.stats.mean.y","op":"gt","other":"capture.0.stats.mean.y"}`.
   `capture.N.*`, `capture.first.*`, and `capture.last.*` name one capture.
   `capture.named.<name>.*` names a capture by its `name`; a missing name is a
-  check error.
+  check error. A check with `tolerance` compares two numbers within that
+  absolute distance.
+
+## Units
+
+Every angle in a scenario, `state.json`, and `report.json` is in degrees, and
+every angle key ends in `_deg`. The engine converts to radians at the edge.
+Positions, heights, and light ranges are metres. `look` deltas are pixels.
+`step` and `perf` counts are frames; `perf.prime` is seconds. Capture regions
+and crops are pixels. `turn` and `wheel` are step counts.
 
 ## Commands
 
 - `{"cmd": "reset"}`
 - `{"cmd": "look", "dx": 220, "dy": 0}`
-- `{"cmd": "face", "yaw": 0, "pitch": 0}`
+- `{"cmd": "face", "yaw_deg": 0, "pitch_deg": 0}`
 - `{"cmd": "input", "forward": 1, "right": 0, "jump": false}`
 - `{"cmd": "step", "frames": 60}`
 - `{"cmd": "settle", "until": "converged"}`: wait for the 512-sample cap; the
@@ -222,19 +234,20 @@ Rules:
 - `{"cmd": "state"}`
 - `{"cmd": "rows"}`
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`
-- `{"cmd": "camera", "position": [0, 2, 12], "yaw": 0, "pitch": 0}`
-- `{"cmd": "camera", "position": [0, 2, 12], "look_at": [0, 1, 0], "fov": 75}`
+- `{"cmd": "camera", "position": [0, 2, 12], "yaw_deg": 0, "pitch_deg": 0}`
+- `{"cmd": "camera", "position": [0, 2, 12], "look_at": [0, 1, 0], "fov_deg": 75}`
 - `{"cmd": "camera", "clear": true}`
 - `{"cmd": "view", "hud": true, "debug": false, "hint": false, "perf": false}`
-- `{"cmd": "sun", "azimuth": 52.1, "elevation": 15, "diameter": 0.53}`
+- `{"cmd": "sun", "azimuth_deg": 52.1, "elevation_deg": 15, "diameter_deg": 0.53}`
 - `{"cmd": "sun", "clear": true}`
 - `{"cmd": "displays", "set": [{"name": "Solo", "desktop": "1280x720", "modes": ["1280x720"]}]}`
 - `{"cmd": "displays", "clear": true}`
 - `{"cmd": "rows"}`
+- `{"cmd": "scene", "camera": {...}, "sun": {...}, "objects": [...], "settings": {...}, "view": {...}, "displays": [...]}`
 - `{"cmd": "debug_mode", "active": true}`
 - `{"cmd": "editor", "open": true, "select": 4, "pick": true, "height": 0.5}`
 - `{"cmd": "editor", "select": 8, "light_color": "cool", "light_intensity": 2.2, "light_range": 12}`
-- `{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw": 0, "pitch": -0.6}}`
+- `{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw_deg": 0, "pitch_deg": -34.3775}}`
 - `{"cmd": "editor", "place": {"prefab": "Block", "position": [0, 0.5, 10], "body": "static"}}`
 - `{"cmd": "editor", "sun": {"active": true, "position": [0, 40, -30]}}`
 - `{"cmd": "editor", "sun": {"place": true}}`
@@ -252,14 +265,25 @@ Rules:
 - `{"cmd": "replay", "path": "scenarios/walk.json"}`
 - `{"cmd": "quit"}`
 
-`camera` accepts `look_at` instead of `yaw`/`pitch`, and `fov` in degrees
-(1..170). Both angle forms together are an error, and so is a `look_at` equal to
-the position. `state.camera` reports the effective view and whether an override
+`camera` accepts `look_at` instead of `yaw_deg`/`pitch_deg`, and `fov_deg` in
+degrees (1..170). Both angle forms together are an error, and so is a `look_at`
+equal to the position. `state.camera` reports the effective view and whether an override
 is active.
 
 `settle` also takes `{"cmd":"settle","until":"converged"}`. It renders until the
 convergence count reaches the 512 cap and reports `settle.frames` and
 `settle.converged`. It needs a renderer.
+
+A `scene` command applies one exact scene. Its blocks are `camera`, `sun`,
+`objects`, `settings`, `view`, and `displays`, and every block is optional. The
+camera source is `player`, `debug`, or `override`; a player source carries a
+`player` block with the feet position, yaw, pitch, stance, velocity, grounded
+state, step smoothing, and eye height. An object carries
+its id, prefab, body, position, rotation quaternion, colour, and light. The
+settings carry the window mode, display index, windowed resolution, input
+modes, and type weight. The display list replaces the menu list. `F5` writes one
+scene, and `record` starts with one, so a live view replays as a normal
+scenario. A scene load closes the settings menu.
 
 `sun clear` restores the default direction and angular diameter.
 
@@ -279,7 +303,8 @@ Sprint mode, Crouch mode, Prone mode, or Resume. `item`, `activate`, and `set`
 need an open menu. `direction` is `-1` or `1` (default `1`) and needs
 `activate`. `set` is a Type weight in 100..900.
 
-A capture names its target and format. See **Capture targets**. A region
+A capture names its target and format. A capture name is unique in one run; a
+second capture with the same name is an error. See **Capture targets**. A region
 limits the statistics to a rectangle, a profile measures an edge or a gradient,
 a crop writes a scaled PNG, and a histogram counts the region's channels.
 
@@ -323,16 +348,55 @@ and they join the scenario hash, so two sweep runs of one file are distinct
 scenarios. `scenarios/lamp-threshold.json` is the worked example; it measures
 the wall gradient at each lamp position and writes no check.
 
+## Suites
+
+`suites/<name>.json` is a manifest of scenario entries. `harbagsa-agent suite
+<name|path>` runs them in order and writes `suite.json` beside one run
+directory per entry.
+
+```json
+{
+  "version": 1,
+  "name": "renderer",
+  "description": "Renderer state and temporal stability",
+  "entries": [
+    "renderer-state",
+    {"scenario": "taa-motion", "label": "taa-motion-800", "size": "800x600"},
+    {"scenario": "smoke", "no_render": true}
+  ]
+}
+```
+
+An entry is a scenario name or an object. The object keys are `scenario`,
+`label`, `size`, `params`, and `no_render`. A name without a path resolves
+under `scenarios/`. `params` holds one scalar per name; a comma list is not
+allowed because a suite entry is one run. `label` names the run directory and
+must use only letters, digits, `-`, and `_`.
+
+A suite never declares `requires` itself. It parses each scenario after
+`extends` and reads the merged `requires`, and `run_scenario` enables the gate.
+The suite exit code is the highest entry code, so one failure does not hide the
+other rows. `--fail-fast` stops at the first failure. `--list` parses every
+entry and prints its size, gate, and render mode without running it.
+
+`harbagsa-agent suite offscreen` is the validation target. `make
+validate-offscreen` builds the validation agent and runs
+`suites/offscreen.json`; `make ui` runs `suites/ui.json`; `make suite
+SUITE=renderer` uses the normal agent. Positional selectors replace the
+manifest entries, so `make validate-offscreen SCENARIO=renderer-debug` still
+runs one scenario.
+
 ## Editor
 
 The `editor` command drives the debug placement tool, the lamp light, and the sun
 placement. It needs debug mode; send `{"cmd": "debug_mode", "active": true}`
 first. Every field is optional, and one command may combine fields. They apply
 in this order: `camera`, `open`, `select`, `palette_step`, `palette_number`,
-`select_object`, `body`, `flip_body`, `height`, `yaw`, `snap`, `snap_toggle`,
-`light_color`, `light_intensity`, `light_range`, `pick`, `cancel`, `place`,
-`move`, `rotate`, `turn`, `wheel`, `primary`, `secondary`, `drag_move`,
-`drag_release`, `delete`, `duplicate`, `undo`, `redo`, `sun`.
+`select_object`, `body`, `flip_body`, `height`, `yaw_deg`, `snap`,
+`snap_toggle`, `light_color`, `light_intensity`, `light_range`, `pick`,
+`cancel`, `place`, `move`, `rotate_deg`, `turn`, `wheel`, `primary`,
+`secondary`, `drag_move`, `drag_release`, `delete`, `duplicate`, `undo`,
+`redo`, `sun`.
 
 The keyboard and the harness both build `game.Edit_Action` values and call
 `game.edit_apply`; the rules live there once. A rejected edit returns `ok: false`
@@ -358,17 +422,17 @@ with no active mode is a no-op.
 | `drag_release` | left mouse release: end the object drag |
 | `pick` | arm the selected prefab, close the palette, cast the placement ray |
 | `height` | offset above the surface in metres; clamped at 0 |
-| `yaw` | rotation in degrees |
+| `yaw_deg` | rotation in degrees |
 | `snap` | round the X/Z bottom anchor to a 0.25 m grid |
 | `light_color` | `warm`, `cool`, `red`, `green`, or `blue` |
 | `light_intensity` | intensity in [0.2, 4.0], rounded to a tenth |
 | `light_range` | range in [2, 20] metres, rounded to a whole metre |
 | `cancel` | clear the armed tool without placing |
-| `camera` | `{"position", "look_at"}` or `{"position", "yaw", "pitch"}` for the debug camera; angles are radians |
-| `place` | `{"prefab", "position", "yaw", "body"}` creates at an exact transform |
+| `camera` | `{"position", "look_at"}` or `{"position", "yaw_deg", "pitch_deg"}` for the debug camera; angles are degrees |
+| `place` | `{"prefab", "position", "yaw_deg", "body"}` creates at an exact transform |
 | `select_object` | placed object id; 0 clears the selection |
 | `move` | `[x, y, z]` centre for the selected object; y clamps above the floor |
-| `rotate` | degrees to turn the selected object; negative turns the other way |
+| `rotate_deg` | degrees to turn the selected object; negative turns the other way |
 | `delete` | remove the selected object |
 | `duplicate` | copy the selected object one half extent along +X, select the copy, and play the pop; a no-op at the cap |
 | `undo` | restore the previous object-list snapshot |
@@ -388,8 +452,8 @@ reports the next placement light, `debug.inspector.light` the selected lamp, and
 `debug.lights` the active and total lamp counts. The state and the HUD read
 `debug.placement.light` from `game.next_placement_light`.
 
-`place` requires `prefab` and `position`. Its `yaw` defaults to 0 and its `body`
-to the prefab default. It bypasses the ray and leaves the armed tool unchanged.
+`place` requires `prefab` and `position`. Its `yaw_deg` defaults to 0 and its
+`body` to the prefab default. It bypasses the ray and leaves the armed tool unchanged.
 A lamp uses the tuned next-placement light when it is the palette-selected
 prefab, and its catalog default otherwise. At the 128-object cap it returns an
 error and creates nothing.
@@ -409,17 +473,17 @@ position. `place` commits and leaves the mode. `cancel` restores the sun from
 before the mode. `active: false` leaves the mode and keeps the current sun.
 
 The state carries `debug.palette` (`open`, `selected`, `body`),
-`debug.placement` (`armed`, `prefab`, `position`, `height`, `yaw`, `snap`,
-`light`), `debug.sun` (`active`, `position`, `azimuth`, `elevation`),
-`debug.inspector` (`prefab`, `body`, `size`, `position`, `yaw`, `snap`,
-`light`), `debug.lights` (`active`, `lamps`), and `debug.history`
-(`depth`, `redo`). The sun angles and the inspector yaw are degrees. A light
-value carries `active`, `color`, `intensity`, and `range`.
+`debug.placement` (`armed`, `prefab`, `position`, `height`, `yaw_deg`, `snap`,
+`light`), `debug.sun` (`active`, `position`, `azimuth_deg`, `elevation_deg`,
+`angular_diameter_deg`), `debug.inspector` (`prefab`, `body`, `size`,
+`position`, `yaw_deg`, `snap`, `light`), `debug.lights` (`active`, `lamps`),
+and `debug.history` (`depth`, `redo`). Every angle field ends in `_deg` and is
+in degrees. A light value carries `active`, `color`, `intensity`, and `range`.
 `debug.selection` is `none` or `object`, and `debug.selected_id` is the selected
 placed object's id or 0. `debug.inspector` reports zeroes and empty strings when
 nothing is selected. `debug.history.depth` is the undo count, from 0 to 64, and
 `debug.history.redo` is the redo count. `debug.placement.height` is metres,
-`debug.placement.yaw` is degrees, and `debug.placement.position` is the ghost
+`debug.placement.yaw_deg` is degrees, and `debug.placement.position` is the ghost
 centre (zero when not armed). The ghost is drawn as debug lines while armed: the
 oriented box, the footprint on the surface, and the height guide.
 
@@ -541,9 +605,14 @@ ready line on standard output. Capture files go to `runs/session/frames/` unless
 `--out` selects another directory.
 
 `record PATH` starts recording. A second `record` with no path stops and writes
-the scenario. Recording starts with a fresh reset, so send the actions after the
-start command if you want them in the scenario. `replay PATH` resets and runs the
-scenario.
+the scenario. Recording starts with `reset`, one `scene` snapshot of the current
+state, and the current `input`. Send the actions after the start command if you
+want them in the scenario. `replay PATH` resets and runs the scenario.
+
+The game has no control socket. `F5` writes `runs/repro/repro-<unix>.json` and
+logs its absolute path. The file is a normal scenario with one `scene` command,
+so `bin/harbagsa-agent run runs/repro/repro-....json` is the whole repro step.
+The key writes a file only; it does not open a command channel.
 
 ## Screenshots
 
@@ -624,7 +693,8 @@ Formats:
   `.x` and the other channels are zero. Color values stay in 0..255.
 - `raw`: intermediate targets only. Writes `<name>.bin` with the exact texel
   bytes. `target_format` in the report names the Vulkan format.
-- `stats`: any target. Writes no file. The report holds per-channel `min`,
+- `stats`: any target. Writes no file unless the capture adds `"png": true`.
+  The report holds per-channel `min`,
   `max`, `mean`, `stddev`, and `gradient`, and for `velocity` the median screen
   motion in texels over covered pixels. `stddev` is the population standard
   deviation over the region. `gradient` is the mean absolute difference between
@@ -644,8 +714,11 @@ region at least four pixels inside a flat boundary, because the filter reads
 that margin. `scenarios/ramp-shadow.json` is the worked example.
 
 A color capture accepts a `profile` block and `"format": "profile"` for an
-edge measurement, and a `crop` block to write a scaled PNG. A profile over a
-PNG capture is allowed and reported beside the PNG.
+edge measurement, and a `crop` block to write a scaled PNG. Add `"png": true`
+to a color `stats` or `profile` capture to write the image beside the numbers.
+One capture stays one result, so `capture.count` and named checks do not
+change. A sidecar joins the PNG delta series and the analysis window. A crop
+and a sidecar cannot be combined.
 
 `png` with an intermediate target, or `float`/`raw` with color, is a scenario
 error. Capture deltas compare color PNG captures only; another target does not
@@ -664,9 +737,9 @@ scene color, history, and depth.
 ## Analysis
 
 A run with captures writes `analysis.json` beside `report.json`, and
-`report.json` links it in `analysis`. The pair and pixel analysis uses color PNG
-captures; a run with only intermediate captures writes an empty window and
-summary. The analysis is on by default. Disable it with `"analysis": false` or
+`report.json` links it in `analysis`. The pair and pixel analysis uses color PNG captures, including a stats or
+profile sidecar; a run with only intermediate captures writes an empty window
+and summary. The analysis is on by default. Disable it with `"analysis": false` or
 `--no-analysis`.
 
 `analysis.json` holds:
@@ -746,7 +819,8 @@ falls back to `frames/<name>.png`. The frame fallback skips the derived
 `analysis-diff.png` and `analysis-variance.png` maps.
 
 Each pair reports `name`, `width`, `height`, `different_pixels`, `max_delta`,
-`mean_delta`, `over_16`, and `identical`. A pixel differs when an RGB channel
+`mean_delta`, `over_16`, and `identical`. A stats or profile capture with a
+PNG sidecar is paired like a plain PNG capture. A pixel differs when an RGB channel
 changes; alpha is ignored. `mean_delta` is the mean over pixels of the largest
 RGB channel delta, so it matches the per-capture deltas in `report.json`.
 
@@ -762,6 +836,27 @@ Without `--max-pixels`, differences are reported but do not fail the command.
 instead of the table. `errors` lists missing pairs, size mismatches, decode
 failures, and limit hits. Check `setup.revision` and `setup.dirty` before the
 pixels so a dirty tree is not mistaken for a revision change.
+
+## Cross-run compare
+
+```sh
+./bin/harbagsa-agent compare runs/before runs/after
+./bin/harbagsa-agent compare runs/before runs/after --out runs/compare/stairs --json
+```
+
+`compare` pairs the color PNG captures by name, like `diff`. It writes
+`compare.png` and `compare.json` under `runs/compare/<a>-vs-<b>/` by default.
+The panel names each run's scenario, revision, dirty flag, and run directory;
+each row names the capture, its extent, and the pixel delta. A missing pair,
+a size mismatch, or a decode failure is labeled in the panel and exits 1.
+
+A panel holds six pairs and splits into `compare-2.png`, `compare-3.png`, and
+so on. `compare.json` lists every page. The labels use the embedded font stack,
+so no ImageMagick or compositor is needed. The command refuses an output path
+inside either run's `frames/` directory, because `diff` would read the panel as
+a capture.
+
+`diff` stays numeric. Use `compare` when the image is the evidence.
 
 ## Renderer state
 
@@ -789,13 +884,13 @@ run never created a renderer, and `renderer.active` is `false`.
 | `text_truncated_runs` | runs cut at the 128-glyph cap |
 | `text_font_drops` | fonts dropped at the 8-font shaper cap |
 
-The state also carries a `camera` object: `position`, `yaw`, `pitch`, `fov` in
-degrees, `source`, and `overridden`. It reports the view the renderer uses.
-`source` is `player`, `debug`, or `override`; `overridden` is true whenever that
-view is not the player. A `camera` command sets the override; `clear` drops it
-and restores the player or debug view. The `sun` object is the debug sun
-placement: it carries `azimuth`,
-`elevation`, and `angular_diameter`, in degrees. The `settle` object carries the
+The state also carries a `camera` object: `position`, `yaw_deg`, `pitch_deg`,
+`fov_deg`, `source`, and `overridden`. Every angle is in degrees. It reports
+the view the renderer uses. `source` is `player`, `debug`, or `override`;
+`overridden` is true whenever that view is not the player. A `camera` command
+sets the override; `clear` drops it and restores the player or debug view. The
+`sun` object is the debug sun placement: it carries `azimuth_deg`,
+`elevation_deg`, and `angular_diameter_deg`. The `settle` object carries the
 last wait's `frames` and `converged`. The `rows` object carries the HUD and menu
 rows. The `menu` object carries `status` and `blocked` beside `open`, `selected`,
 and `item`; the status stays until the next setting change, so a check can read
@@ -808,8 +903,8 @@ The nested `debug` object repeats the active override values: `taa`, `jitter`,
 `history_weight`, `clamp`, `depth_trust`, `shadow_phase_frozen`,
 `shadow_phase`, `light_shadows`, `synthetic_lights`, `sky`, and `ao`.
 
-The `debug.sun` object reports `active`, `position`, `azimuth`, `elevation`,
-and `angular_diameter`. The angles and the diameter are degrees, and the
+The `debug.sun` object reports `active`, `position`, `azimuth_deg`,
+`elevation_deg`, and `angular_diameter_deg`. Every angle is in degrees, and the
 position is the sky-dome point the light comes from.
 
 The render digest is FNV-1a over the target extent, the effective camera, the sun
@@ -821,9 +916,9 @@ same when they do not. It is separate from the simulation digest: read
 
 `report.json` carries a `setup` block: the target kind (`offscreen`,
 `swapchain`, or `none`), the extent, the view flags, the renderer debug gate,
-the device name, the frame count in flight, the TAA state, and the jitter,
-history, and sample caps. Use it to compare two runs before you compare their
-pixels.
+the device name, the frame count in flight, the TAA state, the jitter,
+history, and sample caps, and the AO sample count, radius, and strength. Use it
+to compare two runs before you compare their pixels.
 
 `scenarios/renderer-state.json` checks the steady state. `scenarios/renderer-reset.json`
 checks a teleport reset.
@@ -1065,6 +1160,22 @@ frame-rate change.
 - `src/harness/check_analysis.odin`: analysis check fields.
 - `src/harness/report.odin`: the run report and summary types.
 - `src/harness/report_setup.odin`: the run's setup block.
+- `src/harness/compare.odin`: the compare CLI, report, and table.
+- `src/harness/compare_run.odin`: the run metadata loader and pair builder.
+- `src/harness/compare_panel.odin`: the labeled panel layout.
+- `src/harness/compare_text.odin`: the CPU label blitter.
+- `src/harness/compare_image.odin`: the canvas, border, and scaled blit.
+- `src/harness/suite.odin`: the suite manifest and entries.
+- `src/harness/suite_run.odin`: the suite CLI and report types.
+- `src/harness/suite_execute.odin`: the suite runner and list.
+- `src/harness/suite_report.odin`: the suite table and JSON.
+- `src/frame/scene.odin`: the scene type, the live capture, and the JSON text.
+- `src/harness/scene_command.odin`: the scene command and its blocks.
+- `src/harness/scene_objects.odin`: scene objects, lights, and displays.
+- `src/harness/session_scene.odin`: applies a scene to a session.
+- `repro.odin`: the `F5` file writer.
+- `suites/renderer.json`, `suites/offscreen.json`, and `suites/ui.json`: the
+  first manifests.
 - `src/digest/digest.odin`: FNV-1a for the state and render digests.
 - `src/perf/`: the perf sample, ring, statistics, and text formatting.
 - `src/renderer/timing.odin`: the timestamp pools, the pass boundaries, and the
@@ -1125,8 +1236,8 @@ frame-rate change.
   TAA, HUD and menu overlay.
 - `src/platform/`: SDL and headless adapters. `display.odin` queries displays and
   applies the window state.
-- `tests/harness/` (including `analysis.odin`, `renderer_debug.odin`, and
-  `renderer_state.odin`), `tests/frame/`, `tests/display/display.odin`,
+- `tests/harness/` (including `analysis.odin`, `renderer_debug.odin`,
+  `renderer_state.odin`, `suite.odin`, `scene.odin`, and `compare.odin`), `tests/frame/`, `tests/display/display.odin`,
   `tests/renderer/` (including `target.odin`, `render_digest.odin`,
   `capture_values.odin`, and `debug.odin`).
 - `scenarios/smoke.json`, `scenarios/taa-static.json`,
@@ -1180,24 +1291,25 @@ tools/make.sh build
 
 `make smoke` runs the smoke scenario with the normal agent and needs no
 validation layer. `make shot SCENARIO=...` runs one scenario and prints the
-capture paths. `make ui` runs the four UI scenarios into `runs/ui-*`.
+capture paths. `make ui` runs `suites/ui.json` into `runs/ui/<entry>`.
 
 `make validate` builds the agent with validation enabled and runs
 `scenarios/smoke.json` offscreen, then with `--present` when a display is
 available. Both validation targets accept `SCENARIO=...` (one path, one stem,
 or a list) and `AGENT_FLAGS=...`; each scenario gets its own output directory.
-`make validate-offscreen` is the headless target: it runs `smoke`, `type-weight`,
-`settings-menu`, `ui`, `shadow-angle`, and `perf-crates` offscreen, each into its
-own output directory, and stops on the first failure:
+`make validate-offscreen` is the headless target: it runs
+`suites/offscreen.json` offscreen, each entry into its own directory, and exits
+with the highest entry code. `SCENARIO=...` replaces the manifest entries:
 
 ```sh
 make validate-offscreen SCENARIO=renderer-debug AGENT_FLAGS=--debug-renderer
 ```
 
 `make shot SCENARIO=scenarios/ui.json` builds, runs, and prints the capture
-paths. `make ui` runs the four UI scenarios into `runs/ui-*`. `make smoke` is the
-short end-to-end gate and needs no validation layers. `make validate-demo` runs
-the game with validation enabled.
+paths. `make ui` runs `suites/ui.json` into `runs/ui/<entry>`. `make suite
+SUITE=renderer` runs a suite with the normal agent. `make smoke` is the short
+end-to-end gate and needs no validation layers. `make validate-demo` runs the
+game with validation enabled.
 
 ## Keep the harness current
 

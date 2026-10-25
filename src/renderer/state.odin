@@ -84,6 +84,7 @@ Setup_Report :: struct {
 	max_samples:     int,
 	ao_samples:      int,
 	ao_radius:       f32,
+	ao_strength:     f32,
 }
 
 renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
@@ -140,5 +141,6 @@ setup_report :: proc(r: ^Renderer) -> Setup_Report {
 		max_samples = TAA_MAX_SAMPLES,
 		ao_samples = AO_SAMPLES,
 		ao_radius = AO_RADIUS,
+		ao_strength = AO_STRENGTH,
 	}
 }
