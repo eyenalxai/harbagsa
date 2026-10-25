@@ -24,9 +24,10 @@ without a second build.
 - `Renderer_Debug` holds the override values. `active` is false by default, so
   the renderer ignores every field until the command sets it.
 - A command is a sparse `Renderer_Debug_Patch`, not a second override struct.
-  One table lists each key, its type, and its range. A `null` value adds that
-  field to the reset set. The scene snapshot, the command parser, the schema, and
-  the reset path read the same patch and table.
+  One table lists each key, its type, and its range; the parser, the key list,
+  and the reset patch read it. A `null` value adds that field to the reset set.
+  The scene snapshot, the command parser, the schema, and the reset path read
+  the same patch and table.
 - A scene snapshot writes every effective override field, including `gi`, so a
   repro restores the exact debug state. `history_weight` stays out of a snapshot
   when it is automatic, because there is no fixed value to restore.
