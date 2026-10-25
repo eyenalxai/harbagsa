@@ -49,20 +49,14 @@ scenario captures the same views with `ao` on and off.
 
 | Region | AO on | AO off | Gate | Passes |
 | --- | ---: | ---: | --- | --- |
-| Sunlit floor | 147.64 | 148.46 | on below off | yes |
-| Shaded wall | 149.79 | 152.73 | on below off | yes |
+| Sunlit floor | 116.02 | 117.00 | on below off | yes |
+| Shaded wall | 45.91 | 49.71 | on below off | yes |
 
-The sunlit floor loses 0.82 levels, and the shade loses 2.95. The occlusion is
+The sunlit floor loses 0.98 levels, and the shade loses 3.80. The occlusion is
 local: it reaches 1.5 m and is scaled by 0.5, so it darkens a contact band
-rather than the whole wall.
-
-The arena sky fill from [issue #321](https://github.com/eyenalxai/harbagsa/issues/321)
-lifts both regions from the old 116.02 and 45.91; the shade is no longer black.
-The scenario still gates that AO darkens both regions, and it now also gates
-that the sunlit floor stays above 120 and the shade above 30. The old ordering
-"sunlit floor above shade" encoded the black shade and no longer holds: a
-vertical face toward the bright sky can be brighter than a floor under a low
-sun.
+rather than the whole wall. The stairs scenario sets `renderer_debug.gi` off,
+so it measures the AO term alone. The arena sky fill is tested by
+`scenarios/ddgi-arena.json`, not by this AO ordering gate.
 
 Reproduce:
 
