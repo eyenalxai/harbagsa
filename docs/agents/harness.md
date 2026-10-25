@@ -1280,9 +1280,9 @@ diffuse bounces, and writes the comparison:
 ```json
 {"cmd": "reference", "name": "chamber",
  "gi": "chamber-gi", "direct": "chamber-direct",
- "samples": 48, "bounces": 3, "stride": 16, "sun_samples": 16,
+ "samples": 48, "bounces": 1, "stride": 16, "sun_samples": 16,
  "tolerance": {"ratio_min": 0.8, "ratio_max": 1.25, "error_max": 0.3,
-               "colour_max": 0.1, "zero_fraction_max": 0.01}}
+               "colour_max": 0.1, "zero_fraction_max": 0.01}, "advisory": false}
 ```
 
 Rules:
@@ -1295,16 +1295,19 @@ Rules:
   the menu must be in the state the estimator models; the command rejects a run
   that is not.
 - `samples` is the paths per sample point, `bounces` the diffuse bounces after
-  the camera hit (2..8), `stride` the pixel grid step, and `sun_samples` the sun
-  disk samples at the camera hit. Bounce vertices use one centre sun ray, the
-  same as `probe_ray.comp`.
+  the camera hit (1..8), `stride` the pixel grid step, and `sun_samples` the sun
+  disk samples at the camera hit. One bounce matches the probe update; more
+  bounces report the missing transport. Bounce vertices use one centre sun ray,
+  the same as `probe_ray.comp`.
 - The estimator is deterministic. The seed names the grid index and the path
   index, so a repeat run gives the same metrics.
 - The command writes `frames/<name>-reference.png` (the headless target at the
   grid extent), `<name>-reference.json`, and `<name>-reference.csv` in the run
   directory. Both scene reports join `report.json.references`.
-- A metric outside `tolerance` joins `report.json.failures` and the run exits 1.
-  The command itself still succeeds, so one run compares every scene it declares.
+- A metric outside `tolerance` joins `report.json.failures` and the run exits 1,
+  unless the command has `"advisory": true`. An advisory report still writes its
+  files and records `ok: false`; it does not fail the run. The command itself
+  still succeeds, so one run compares every scene it declares.
 
 `scenarios/ddgi-reference.json` is the worked example: the `ddgi` chamber with
 the lamp and sun below the horizon, then the `room-lighting` lane with the west
