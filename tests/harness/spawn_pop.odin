@@ -57,7 +57,7 @@ spawn_pop_phase_stays_out_of_the_digest :: proc(t: ^testing.T) {
 		prefab    = .Block,
 		body_mode = .Static,
 		center    = {4, 0.5, 9},
-		yaw       = 0,
+		yaw_rad   = 0,
 	}
 	popped := game.simulation_create_object(&first.sim, spawn)
 	restored := game.simulation_restore_object(&second.sim, spawn)

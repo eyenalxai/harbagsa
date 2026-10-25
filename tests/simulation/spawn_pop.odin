@@ -91,7 +91,7 @@ new_objects_pop_while_initial_crates_stay_settled :: proc(t: ^testing.T) {
 
 	id := game.simulation_create_object(
 		&sim,
-		{prefab = .Block, body_mode = .Static, center = {20, 0.5, 20}, yaw = 0},
+		{prefab = .Block, body_mode = .Static, center = {20, 0.5, 20}, yaw_rad = 0},
 	)
 	testing.expect(t, id != game.INVALID_OBJECT_ID, "block did not create")
 	expect_near(t, game.simulation_object_scale(&sim, id), 0.01, 0.0001, "start scale")
@@ -120,7 +120,7 @@ restored_objects_do_not_pop :: proc(t: ^testing.T) {
 
 	id := game.simulation_restore_object(
 		&sim,
-		{prefab = .Wall, body_mode = .Static, center = {20, 1.5, 20}, yaw = 0.4},
+		{prefab = .Wall, body_mode = .Static, center = {20, 1.5, 20}, yaw_rad = 0.4},
 	)
 	testing.expect(t, id != game.INVALID_OBJECT_ID, "wall did not restore")
 	testing.expect_value(t, game.simulation_object_scale(&sim, id), 1.0)
@@ -144,7 +144,7 @@ spawn_pop_keeps_the_aabb_bottom_fixed :: proc(t: ^testing.T) {
 
 	id := game.simulation_create_object(
 		&sim,
-		{prefab = .Ramp, body_mode = .Static, center = {20, 5, 20}, yaw = 0.3},
+		{prefab = .Ramp, body_mode = .Static, center = {20, 5, 20}, yaw_rad = 0.3},
 	)
 	base := game.simulation_object_box(&sim, id)
 	anchor := lowest_corner_y(base)
@@ -171,7 +171,7 @@ pop_scales_the_visual_box_only :: proc(t: ^testing.T) {
 
 	id := game.simulation_create_object(
 		&sim,
-		{prefab = .Block, body_mode = .Static, center = {20, 1.5, 20}, yaw = 0},
+		{prefab = .Block, body_mode = .Static, center = {20, 1.5, 20}, yaw_rad = 0},
 	)
 	full := game.simulation_object_box(&sim, id)
 	visual := game.simulation_object_visual_box(&sim, id)
@@ -216,7 +216,7 @@ spawn_pop_is_deterministic :: proc(t: ^testing.T) {
 		prefab    = .Ramp,
 		body_mode = .Static,
 		center    = {20, 5, 20},
-		yaw       = 0.3,
+		yaw_rad   = 0.3,
 	}
 	first_id := game.simulation_create_object(&first, spawn)
 	second_id := game.simulation_create_object(&second, spawn)

@@ -169,3 +169,32 @@ write_test_png :: proc(
 	testing.expectf(t, error == "", "cannot write %s: %s", name, error)
 	return result
 }
+
+@(test)
+diff_pairs_a_stats_capture_with_a_png_sidecar :: proc(t: ^testing.T) {
+	dir := "/tmp/opencode/harbagsa-diff-sidecar"
+	frames := "/tmp/opencode/harbagsa-diff-sidecar/frames"
+	_ = os.remove_all(dir)
+	testing.expectf(t, os.make_directory_all(frames) == nil, "cannot create the test directory")
+	defer os.remove_all(dir)
+
+	pixels: [16 * 4]u8
+	for pixel in 0 ..< 16 {
+		pixels[pixel * 4 + 3] = 255
+	}
+	written := write_test_png(t, frames, "ao", pixels[:])
+	defer harness.capture_result_destroy(&written, context.allocator)
+
+	report := `{"screenshots": [{"name": "ao", "path": "", "format": "stats", "png": true}]}`
+	report_path := "/tmp/opencode/harbagsa-diff-sidecar/report.json"
+	testing.expectf(t, os.write_entire_file(report_path, report) == nil, "cannot write the report")
+
+	captures, error := harness.diff_captures_load(dir, context.allocator)
+	testing.expectf(t, error == "", "sidecar load failed: %s", error)
+	defer harness.diff_captures_destroy(captures, context.allocator)
+	testing.expect_value(t, len(captures), 1)
+	if len(captures) == 1 {
+		testing.expect_value(t, captures[0].name, "ao")
+		testing.expect(t, os.is_file(captures[0].path), "the sidecar path did not resolve")
+	}
+}

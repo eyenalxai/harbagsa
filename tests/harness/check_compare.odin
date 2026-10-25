@@ -12,14 +12,14 @@ compare_reads_two_fields_with_the_same_resolver :: proc(t: ^testing.T) {
 	command := harness.Check_Command {
 		field     = "frame",
 		op        = .Lt,
-		other     = "camera.fov",
+		other     = "camera.fov_deg",
 		has_other = true,
 	}
-	state.camera.fov = 90
+	state.camera.fov_deg = 90
 	result := harness.check_evaluate(command, state, nil, nil, context.allocator)
 	defer harness.check_result_destroy(&result, context.allocator)
 	testing.expectf(t, result.ok, "compare failed: %s", result.error)
-	testing.expect_value(t, result.other, "camera.fov")
+	testing.expect_value(t, result.other, "camera.fov_deg")
 }
 
 @(test)
@@ -95,5 +95,76 @@ compare_parses_other_instead_of_value :: proc(t: ^testing.T) {
 	testing.expect(t, both_error != "", "a check accepted both value and other")
 	if both_error != "" {
 		delete(both_error, context.allocator)
+	}
+}
+
+@(test)
+compare_applies_a_tolerance_to_equality :: proc(t: ^testing.T) {
+	captures := []harness.Capture_Result {
+		{name = "on", stats = harness.Capture_Stats{mean = {0, 143, 0, 1}}},
+		{name = "off", stats = harness.Capture_Stats{mean = {0, 145, 0, 1}}},
+	}
+	command, error := harness.command_parse_string(
+		`{"cmd":"check","field":"capture.named.on.stats.mean.y","op":"eq","other":"capture.named.off.stats.mean.y","tolerance":2}`,
+		context.allocator,
+	)
+	testing.expectf(t, error == "", "tolerance parse failed: %s", error)
+	defer harness.command_destroy(&command, context.allocator)
+	if error != "" {
+		return
+	}
+	result := harness.check_evaluate(command.check, {}, captures, nil, context.allocator)
+	defer harness.check_result_destroy(&result, context.allocator)
+	testing.expectf(t, result.ok, "two levels apart did not pass: %s", result.error)
+	if value, has := result.tolerance.?; has {
+		testing.expect_value(t, value, f64(2))
+	} else {
+		testing.expect(t, false, "the result did not record the tolerance")
+	}
+}
+
+@(test)
+compare_rejects_a_tolerance_on_an_ordering_op :: proc(t: ^testing.T) {
+	command, error := harness.command_parse_string(
+		`{"cmd":"check","field":"frame","op":"lt","value":10,"tolerance":2}`,
+		context.allocator,
+	)
+	testing.expectf(t, error == "", "tolerance parse failed: %s", error)
+	defer harness.command_destroy(&command, context.allocator)
+	if error != "" {
+		return
+	}
+	state := harness.State{frame = 5}
+	result := harness.check_evaluate(command.check, state, nil, nil, context.allocator)
+	defer harness.check_result_destroy(&result, context.allocator)
+	testing.expect(t, result.error != "", "an ordering op accepted a tolerance")
+}
+
+@(test)
+compare_rejects_a_tolerance_on_a_boolean :: proc(t: ^testing.T) {
+	command, error := harness.command_parse_string(
+		`{"cmd":"check","field":"menu.open","op":"eq","value":true,"tolerance":1}`,
+		context.allocator,
+	)
+	testing.expectf(t, error == "", "tolerance parse failed: %s", error)
+	defer harness.command_destroy(&command, context.allocator)
+	if error != "" {
+		return
+	}
+	state := harness.State{menu = {open = true}}
+	result := harness.check_evaluate(command.check, state, nil, nil, context.allocator)
+	defer harness.check_result_destroy(&result, context.allocator)
+	testing.expect(t, result.error != "", "a boolean check accepted a tolerance")
+}
+
+@(test)
+compare_rejects_a_negative_tolerance :: proc(t: ^testing.T) {
+	_, error := harness.command_parse_string(
+		`{"cmd":"check","field":"frame","op":"eq","value":1,"tolerance":-1}`,
+		context.allocator,
+	)
+	testing.expect(t, error != "", "a negative tolerance was accepted")
+	if error != "" {
+		delete(error, context.allocator)
 	}
 }

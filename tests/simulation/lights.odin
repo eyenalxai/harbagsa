@@ -18,7 +18,7 @@ place_lamp :: proc(
 		prefab = .Lamp,
 		body_mode = .Static,
 		center = center,
-		yaw = 0,
+		yaw_rad = 0,
 	}, "lamp did not place")
 	return dm.selected_object_id
 }
@@ -187,7 +187,7 @@ the_eight_nearest_lamps_win_with_a_stable_order :: proc(t: ^testing.T) {
 	for x, index in positions {
 		ids[index] = game.simulation_create_object(
 			&sim,
-			{prefab = .Lamp, body_mode = .Static, center = {x, 1.0, 0.0}, yaw = 0},
+			{prefab = .Lamp, body_mode = .Static, center = {x, 1.0, 0.0}, yaw_rad = 0},
 		)
 	}
 	testing.expect_value(t, game.simulation_lamp_count(&sim), 10)

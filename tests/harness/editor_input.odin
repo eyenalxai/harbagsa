@@ -14,7 +14,7 @@ editor_pointer_and_relative_fields_drive_one_edit_set :: proc(t: ^testing.T) {
 	reply := execute(
 		t,
 		&session,
-		`{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw": 0, "pitch": -0.2}}`,
+		`{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw_deg": 0, "pitch_deg": -11.4592}}`,
 	)
 	harness.reply_destroy(&reply, context.allocator)
 	reply = execute(t, &session, `{"cmd": "editor", "primary": true}`)
@@ -47,7 +47,7 @@ editor_pointer_and_relative_fields_drive_one_edit_set :: proc(t: ^testing.T) {
 	testing.expectf(t, reply.ok, "large turn failed: %s", reply.error)
 	harness.reply_destroy(&reply, context.allocator)
 	turned := harness.session_state(&session)
-	testing.expect(t, abs(turned.debug.inspector.yaw + 30.0) < 0.25, "the relative turns did not compose")
+	testing.expect(t, abs(turned.debug.inspector.yaw_deg + 30.0) < 0.25, "the relative turns did not compose")
 	harness.state_destroy(&turned, context.allocator)
 
 	reply = execute(t, &session, `{"cmd": "editor", "open": true, "select": 0}`)

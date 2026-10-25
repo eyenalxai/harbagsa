@@ -153,7 +153,7 @@ reset_scene_restores_objects_sun_and_player :: proc(t: ^testing.T) {
 	_ = game.simulation_remove_object(&sim, game.simulation_objects(&sim)[0].id)
 	_ = game.simulation_create_object(
 		&sim,
-		{prefab = .Crate, body_mode = .Dynamic, center = {5, 5, 5}, yaw = 0.0},
+		{prefab = .Crate, body_mode = .Dynamic, center = {5, 5, 5}, yaw_rad = 0.0},
 	)
 	dm.sun.position = {0.0, 50.0, 0.0}
 	dm.sun.active = true

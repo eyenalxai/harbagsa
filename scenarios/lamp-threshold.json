@@ -6,7 +6,7 @@
   "commands": [
     {"cmd": "renderer_debug", "taa": false, "ao": false},
     {"cmd": "debug_mode", "active": true},
-    {"cmd": "editor", "camera": {"position": [17.5, 1.7, -17.2], "yaw": -0.827, "pitch": -0.259}},
+    {"cmd": "editor", "camera": {"position": [17.5, 1.7, -17.2], "yaw_deg": -47.3836, "pitch_deg": -14.8396}},
     {"cmd": "editor", "select": 8, "light_color": "warm", "light_intensity": 4.0, "light_range": 10},
     {"cmd": "editor", "place": {"prefab": "Lamp", "position": ["${lamp_x}", 2.0, -19.5], "body": "static"}},
     {"cmd": "settle", "frames": 20},

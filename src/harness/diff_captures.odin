@@ -92,11 +92,15 @@ diff_captures_report :: proc(
 			continue
 		}
 		format, _ := string_field(entry, "format")
-		if format != "" && format != "png" {
+		png := false
+		if png_value, has := json_get(entry, "png"); has {
+			png, _ = json_boolean(png_value)
+		}
+		path, _ := string_field(entry, "path")
+		if format != "" && format != "png" && !png {
 			continue
 		}
 		name, _ := string_field(entry, "name")
-		path, _ := string_field(entry, "path")
 		if name == "" && path != "" {
 			name = filepath.stem(filepath.base(path))
 		}

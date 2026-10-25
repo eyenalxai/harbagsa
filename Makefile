@@ -14,7 +14,6 @@ AGENT_DEFINES := -define:HARNESS_REVISION='"$(HARNESS_REVISION)"' -define:HARNES
 AGENT_BUILD := $(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) $(AGENT_DEFINES) -out:$(AGENT_BIN)
 VALIDATE_AGENT_BIN := bin/harbagsa-agent-validate
 VALIDATE_SCENARIO ?= scenarios/smoke.json
-VALIDATE_OFFSCREEN_SCENARIOS ?= smoke type-weight settings-menu ui shadow-angle ramp-shadow perf-crates lamp-wall-plane
 VALIDATE_OUT := build/validate
 AGENT_FLAGS ?=
 SCENARIO ?=
@@ -25,7 +24,6 @@ JQ ?= jq
 scenario_path = $(if $(or $(findstring /,$(1)),$(filter %.json,$(1))),$(1),scenarios/$(1).json)
 scenario_paths = $(foreach selector,$(1),$(call scenario_path,$(selector)))
 validation_scenarios = $(if $(strip $(SCENARIO)),$(SCENARIO),$(VALIDATE_SCENARIO))
-offscreen_scenarios = $(if $(strip $(SCENARIO)),$(SCENARIO),$(VALIDATE_OFFSCREEN_SCENARIOS))
 
 GLSLC ?= glslc
 SPIRV_VAL ?= spirv-val
@@ -82,7 +80,7 @@ VULKAN_LAYER_DIRS ?= \
 	/usr/share/vulkan/explicit_layer.d
 VALIDATION_LAYER := VK_LAYER_KHRONOS_validation
 
-.PHONY: all build agent check check-spirv check-lines test run shaders validate validate-offscreen validate-demo check-validation-layer shot smoke ui clean
+.PHONY: all build agent check check-spirv check-lines test run shaders validate validate-offscreen validate-demo check-validation-layer shot smoke ui suite clean
 
 all: build
 
@@ -243,23 +241,14 @@ validate: check-validation-layer $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) sh
 	fi; \
 	exit $$status
 
-# The offscreen loop never opens a window, so it is the validation target an
-# agent can run. Each scenario owns its output directory and the loop stops on
-# the first failure.
+# The suite never opens a window, so it is the validation target an agent can
+# run. SCENARIO=... replaces the manifest entries with those selectors.
 validate-offscreen: check-validation-layer $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	@mkdir -p $(dir $(VALIDATE_AGENT_BIN))
 	$(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) \
 		$(AGENT_DEFINES) -define:ENABLE_VALIDATION_LAYERS=true -out:$(VALIDATE_AGENT_BIN)
-	@status=0; \
-	for selector in $(call scenario_paths,$(offscreen_scenarios)); do \
-		stem=$$(basename "$$selector" .json); \
-		printf '%s\n' "validate-offscreen: $$selector"; \
-		if ! $(VALIDATE_AGENT_BIN) run "$$selector" $(AGENT_FLAGS) --out $(VALIDATE_OUT)/offscreen/$$stem; then \
-			status=1; \
-			break; \
-		fi; \
-	done; \
-	exit $$status
+	$(VALIDATE_AGENT_BIN) suite offscreen $(call scenario_paths,$(SCENARIO)) \
+		$(AGENT_FLAGS) --out $(VALIDATE_OUT)/offscreen
 
 # Evidence targets run the normal agent, never the validation build. They share
 # bin/harbagsa-agent so a capture always comes from the same code path.
@@ -298,17 +287,11 @@ smoke: agent
 	$(AGENT_BIN) run scenarios/smoke.json --out "$$out"
 
 ui: agent
-	@status=0; \
-	for selector in scenarios/ui.json scenarios/settings-menu.json scenarios/type-weight.json scenarios/hud.json; do \
-		stem=$$(basename "$$selector" .json); \
-		out=runs/ui-$$stem; \
-		printf '%s\n' "make ui: $$selector -> $$out"; \
-		if ! $(AGENT_BIN) run "$$selector" --out "$$out"; then \
-			status=1; \
-			break; \
-		fi; \
-	done; \
-	exit $$status
+	$(AGENT_BIN) suite ui --out runs/ui
+
+SUITE ?= offscreen
+suite: agent
+	$(AGENT_BIN) suite $(SUITE) --out runs/$(SUITE)
 
 validate-demo: check-validation-layer $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ENABLE_VALIDATION_LAYERS=true

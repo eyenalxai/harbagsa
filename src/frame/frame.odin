@@ -15,6 +15,7 @@ Options :: struct {
 	debug_view:    bool,
 	captured:      bool,
 	hud:           bool,
+	perf:          bool,
 }
 
 Scratch :: struct {

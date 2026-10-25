@@ -53,7 +53,7 @@ object_yaw_round_trips :: proc(t: ^testing.T) {
 
 	id := game.simulation_create_object(
 		&sim,
-		{prefab = .Ramp, body_mode = .Static, center = {0, 5, 0}, yaw = 0},
+		{prefab = .Ramp, body_mode = .Static, center = {0, 5, 0}, yaw_rad = 0},
 	)
 	testing.expect(t, id != game.INVALID_OBJECT_ID, "ramp did not create")
 	expect_near(t, game.simulation_object_yaw(&sim, id), 0.0, 0.0001, "initial yaw")
@@ -73,7 +73,7 @@ convert_object_recreates_the_body :: proc(t: ^testing.T) {
 
 	id := game.simulation_create_object(
 		&sim,
-		{prefab = .Crate, body_mode = .Dynamic, center = {3, 5, 3}, yaw = 0.3},
+		{prefab = .Crate, body_mode = .Dynamic, center = {3, 5, 3}, yaw_rad = 0.3},
 	)
 	body := game.simulation_object_body(&sim, id)
 	b3.Body_SetLinearVelocity(body, {3, 4, 5})
@@ -100,7 +100,7 @@ reset_scene_restores_starting_objects_and_player :: proc(t: ^testing.T) {
 	_ = game.simulation_remove_object(&sim, game.simulation_objects(&sim)[0].id)
 	_ = game.simulation_create_object(
 		&sim,
-		{prefab = .Block, body_mode = .Static, center = {5, 5, 5}, yaw = 0},
+		{prefab = .Block, body_mode = .Static, center = {5, 5, 5}, yaw_rad = 0},
 	)
 	sim.player.position = {1, 2, 3}
 

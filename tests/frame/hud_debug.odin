@@ -47,7 +47,7 @@ debug_inspector_width_survives_every_selection :: proc(t: ^testing.T) {
 				prefab = prefab,
 				body_mode = game.prefab(prefab).body_mode,
 				center = {f32(int(prefab)) * 3.0, 2.0, -20.0},
-				yaw = f32(int(prefab)) * 0.3,
+				yaw_rad = f32(int(prefab)) * 0.3,
 			},
 		)
 	}
@@ -83,7 +83,7 @@ debug_inspector_shows_the_lamp_light_and_budget :: proc(t: ^testing.T) {
 
 	id := game.simulation_create_object(
 		&sim,
-		{prefab = .Lamp, body_mode = .Static, center = {2, 1, 6}, yaw = 0},
+		{prefab = .Lamp, body_mode = .Static, center = {2, 1, 6}, yaw_rad = 0},
 	)
 	apply_expect(t, &debug, &sim, game.Select_Object{id = id}, "select failed")
 	snapshot := game.simulation_snapshot(&sim)

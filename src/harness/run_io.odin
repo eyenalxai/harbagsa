@@ -49,6 +49,17 @@ build_summary :: proc(report: Report, out_dir: string) -> Run_Summary {
 		digest    = strings.clone(report.digest, context.allocator),
 		error     = strings.clone(report.error, context.allocator),
 	}
+	summary.checks_total = len(report.checks)
+	for check in report.checks {
+		if !check.ok {
+			summary.checks_failed += 1
+		}
+	}
+	if len(report.failures) > 0 {
+		summary.failure = strings.clone(report.failures[0], context.allocator)
+	} else if report.error != "" {
+		summary.failure = strings.clone(report.error, context.allocator)
+	}
 	count := 0
 	for capture in report.screenshots {
 		if capture.path != "" {
@@ -74,6 +85,9 @@ summary_destroy :: proc(summary: ^Run_Summary) {
 	delete(summary.digest, context.allocator)
 	if summary.error != "" {
 		delete(summary.error, context.allocator)
+	}
+	if summary.failure != "" {
+		delete(summary.failure, context.allocator)
 	}
 	for path in summary.screenshots {
 		delete(path, context.allocator)

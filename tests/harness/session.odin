@@ -151,10 +151,10 @@ look_uses_the_real_sensitivity :: proc(t: ^testing.T) {
 face_sets_the_view_directly :: proc(t: ^testing.T) {
 	session, _ := harness.session_create(context.allocator)
 	defer harness.session_destroy(&session)
-	reply := execute(t, &session, `{"cmd": "face", "yaw": 1.25, "pitch": -0.5}`)
+	reply := execute(t, &session, `{"cmd": "face", "yaw_deg": 71.6197, "pitch_deg": -28.6479}`)
 	defer harness.reply_destroy(&reply, context.allocator)
-	testing.expect(t, abs(session.sim.player.yaw - 1.25) < 0.0001, "yaw not set")
-	testing.expect(t, abs(session.sim.player.pitch + 0.5) < 0.0001, "pitch not set")
+	testing.expect(t, abs(session.sim.player.yaw - math.to_radians(f32(71.6197))) < 0.0001, "yaw not set")
+	testing.expect(t, abs(session.sim.player.pitch - math.to_radians(f32(-28.6479))) < 0.0001, "pitch not set")
 }
 
 @(test)

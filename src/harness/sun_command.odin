@@ -8,10 +8,10 @@ import "src:renderer"
 
 // The command describes the sun in the sky, not the light direction the
 // renderer consumes: azimuth from +z toward +x, and elevation above the
-// horizon. Diameter is the angle the sun disk subtends.
+// horizon. Every angle is in degrees; the session converts to radians.
 @(private)
 parse_sun :: proc(object: json.Object) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "azimuth", "elevation", "diameter", "clear"}); unknown {
+	if key, unknown := json_unknown_key(object, {"cmd", "azimuth_deg", "elevation_deg", "diameter_deg", "clear"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 	command := Command{kind = .Sun}
@@ -22,29 +22,29 @@ parse_sun :: proc(object: json.Object) -> (Command, string) {
 		}
 		command.sun.clear = clear
 	}
-	if value, has := json_get(object, "azimuth"); has {
+	if value, has := json_get(object, "azimuth_deg"); has {
 		azimuth, ok := json_number(value)
 		if !ok {
-			return {}, format_error("%s", "'azimuth' must be a number")
+			return {}, format_error("%s", "'azimuth_deg' must be a number")
 		}
-		command.sun.azimuth = f32(azimuth)
+		command.sun.azimuth_deg = f32(azimuth)
 		command.sun.has_azimuth = true
 	}
-	if value, has := json_get(object, "elevation"); has {
+	if value, has := json_get(object, "elevation_deg"); has {
 		elevation, ok := json_number(value)
 		if !ok || elevation < -90 || elevation > 90 {
-			return {}, format_error("%s", "'elevation' must be a number in [-90, 90]")
+			return {}, format_error("%s", "'elevation_deg' must be a number in [-90, 90]")
 		}
-		command.sun.elevation = f32(elevation)
+		command.sun.elevation_deg = f32(elevation)
 		command.sun.has_elevation = true
 	}
-	if value, has := json_get(object, "diameter"); has {
+	if value, has := json_get(object, "diameter_deg"); has {
 		limit := math.to_degrees(renderer.SUN_ANGULAR_DIAMETER_LIMIT)
 		diameter, ok := json_number(value)
 		if !ok || diameter <= 0 || diameter >= f64(limit) {
-			return {}, format_error("'diameter' must be a number in (0, %v)", limit)
+			return {}, format_error("'diameter_deg' must be a number in (0, %v)", limit)
 		}
-		command.sun.diameter = f32(diameter)
+		command.sun.diameter_deg = f32(diameter)
 		command.sun.has_diameter = true
 	}
 	if command.sun.clear {
@@ -54,7 +54,7 @@ parse_sun :: proc(object: json.Object) -> (Command, string) {
 		return command, ""
 	}
 	if !command.sun.has_azimuth && !command.sun.has_elevation && !command.sun.has_diameter {
-		return {}, format_error("%s", "sun needs 'azimuth', 'elevation', 'diameter', or 'clear'")
+		return {}, format_error("%s", "sun needs 'azimuth_deg', 'elevation_deg', 'diameter_deg', or 'clear'")
 	}
 	return command, ""
 }

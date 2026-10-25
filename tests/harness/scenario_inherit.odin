@@ -179,7 +179,7 @@ scenario_parameter_override_reaches_an_extended_base :: proc(t: ^testing.T) {
 
 @(test)
 scenario_parameter_override_changes_the_hash :: proc(t: ^testing.T) {
-	body := `{"parameters":{"x":20.0},"commands":[{"cmd":"camera","position":["${x}",0,0],"yaw":0,"pitch":0}]}`
+	body := `{"parameters":{"x":20.0},"commands":[{"cmd":"camera","position":["${x}",0,0],"yaw_deg":0,"pitch_deg":0}]}`
 	first, first_error := harness.scenario_parse(
 		body,
 		context.allocator,

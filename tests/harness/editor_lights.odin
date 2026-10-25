@@ -16,7 +16,7 @@ editor_light_fields_tune_the_next_placement_and_reach_the_state :: proc(t: ^test
 	reply := execute(
 		t,
 		&session,
-		`{"cmd": "editor", "open": true, "select": 8, "camera": {"position": [0, 1.7, 14], "yaw": 0, "pitch": -0.6}}`,
+		`{"cmd": "editor", "open": true, "select": 8, "camera": {"position": [0, 1.7, 14], "yaw_deg": 0, "pitch_deg": -34.3775}}`,
 	)
 	harness.reply_destroy(&reply, context.allocator)
 	reply = execute(

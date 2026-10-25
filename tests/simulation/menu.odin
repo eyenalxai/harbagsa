@@ -253,8 +253,8 @@ menu_view_lists_the_settings_and_controls :: proc(t: ^testing.T) {
 	testing.expect_value(t, len(menu.view.hints), game.MENU_HINT_COUNT)
 	testing.expect_value(t, menu.view.hints[0].keys, "WASD")
 	testing.expect_value(t, menu.view.hints[0].action, "fly")
-	testing.expect_value(t, menu.view.hints[18].keys, "Ctrl+D")
-	testing.expect_value(t, menu.view.hints[20].action, "redo")
+	testing.expect_value(t, menu.view.hints[19].keys, "Ctrl+D")
+	testing.expect_value(t, menu.view.hints[21].action, "redo")
 }
 
 @(test)

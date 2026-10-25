@@ -2,6 +2,8 @@
 #+vet !unused-procedures // @(test) procs are called by the test runner, not by name
 package harness_test
 
+import "core:encoding/json"
+import "core:strings"
 import "core:testing"
 
 import "src:harness"
@@ -111,4 +113,77 @@ capture_summary_uses_the_capture_extent :: proc(t: ^testing.T) {
 pixel_hash_hashes_every_byte :: proc(t: ^testing.T) {
 	hash := harness.pixel_hash([]u8{0x00, 0xFF, 0x80}, context.temp_allocator)
 	testing.expect_value(t, hash, "d6c4781869e88da0")
+}
+
+@(test)
+capture_stats_sidecar_keeps_the_stats_and_the_png :: proc(t: ^testing.T) {
+	command, error := harness.command_parse_string(
+		`{"cmd": "capture", "name": "ao", "format": "stats", "region": {"x": 0, "y": 0, "w": 8, "h": 8}, "png": true}`,
+		context.allocator,
+	)
+	defer harness.command_destroy(&command, context.allocator)
+	testing.expectf(t, error == "", "sidecar capture parse failed: %s", error)
+	if error != "" {
+		return
+	}
+	testing.expect(t, command.capture.format == .Stats, "the stats format changed")
+	testing.expect(t, command.capture.png, "the png sidecar flag was dropped")
+}
+
+@(test)
+capture_rejects_bad_png_sidecars :: proc(t: ^testing.T) {
+	lines := []string {
+		`{"cmd": "capture", "name": "shot", "format": "png", "png": true}`,
+		`{"cmd": "capture", "name": "shot", "format": "float", "target": "depth", "png": true}`,
+		`{"cmd": "capture", "name": "shot", "format": "stats", "crop": {"x": 0, "y": 0, "w": 2, "h": 2, "scale": 2}, "png": true}`,
+		`{"cmd": "capture", "name": "shot", "format": "png", "profile": {"axis": "y", "at": 0, "from": 0, "to": 4}}`,
+		`{"cmd": "capture", "name": "shot", "format": "stats", "profile": {"axis": "y", "at": 0, "from": 0, "to": 4}}`,
+	}
+	for line in lines {
+		_, error := harness.command_parse_string(line, context.allocator)
+		testing.expectf(t, error != "", "invalid sidecar was accepted: %s", line)
+		if error != "" {
+			delete(error, context.allocator)
+		}
+	}
+}
+
+@(test)
+capture_has_png_reads_the_format_and_the_sidecar_flag :: proc(t: ^testing.T) {
+	testing.expect(t, harness.capture_has_png({path = "a.png", format = "png"}), "a png capture is not a png")
+	testing.expect(
+		t,
+		harness.capture_has_png({path = "a.png", format = "stats", png = true}),
+		"a stats sidecar is not a png",
+	)
+	testing.expect(
+		t,
+		!harness.capture_has_png({format = "stats"}),
+		"a stats capture without a file is a png",
+	)
+}
+
+@(test)
+capture_region_is_recorded :: proc(t: ^testing.T) {
+	command, error := harness.command_parse_string(
+		`{"cmd":"capture","name":"s","format":"stats","region":{"x":1,"y":2,"w":3,"h":4}}`,
+		context.allocator,
+	)
+	defer harness.command_destroy(&command, context.allocator)
+	testing.expectf(t, error == "", "region parse failed: %s", error)
+	if region, has := command.capture.region.?; has {
+		testing.expect_value(t, region.x, 1)
+		testing.expect_value(t, region.w, 3)
+	} else {
+		testing.expect(t, false, "the region was dropped")
+	}
+}
+
+@(test)
+capture_result_marshals_the_region :: proc(t: ^testing.T) {
+	result := harness.Capture_Result{region = harness.Capture_Region{x = 1, y = 2, w = 3, h = 4}}
+	data, error := json.marshal(result, {}, context.allocator)
+	defer delete(data, context.allocator)
+	testing.expectf(t, error == nil, "marshal failed: %v", error)
+	testing.expect(t, strings.contains(string(data), `"region"`), "the region is missing")
 }

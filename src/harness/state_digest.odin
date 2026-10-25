@@ -95,9 +95,9 @@ sun_state :: proc(debug: ^game.Debug_Mode) -> Sun_State {
 	return {
 		active = debug.sun.active,
 		position = vec_state(debug.sun.position),
-		azimuth = math.to_degrees(azimuth),
-		elevation = math.to_degrees(elevation),
-		angular_diameter = math.to_degrees(debug.sun_angular_diameter),
+		azimuth_deg = f32(math.to_degrees(azimuth)),
+		elevation_deg = f32(math.to_degrees(elevation)),
+		angular_diameter_deg = f32(math.to_degrees(debug.sun_angular_diameter)),
 	}
 }
 

@@ -48,9 +48,9 @@ session_camera :: proc(session: ^Session) -> Camera_State {
 		camera := session.camera_override
 		return {
 			position = vec_state(camera.position),
-			yaw = camera.yaw,
-			pitch = camera.pitch,
-			fov = math.to_degrees(camera.fov_x),
+			yaw_deg = f32(math.to_degrees(camera.yaw)),
+			pitch_deg = f32(math.to_degrees(camera.pitch)),
+			fov_deg = f32(math.to_degrees(camera.fov_x)),
 			source = "override",
 			overridden = true,
 		}
@@ -59,9 +59,9 @@ session_camera :: proc(session: ^Session) -> Camera_State {
 		camera := session.debug.camera
 		return {
 			position = vec_state(camera.position),
-			yaw = camera.yaw,
-			pitch = camera.pitch,
-			fov = math.to_degrees(frame.PLAYER_FOV_X),
+			yaw_deg = f32(math.to_degrees(camera.yaw)),
+			pitch_deg = f32(math.to_degrees(camera.pitch)),
+			fov_deg = f32(math.to_degrees(frame.PLAYER_FOV_X)),
 			source = "debug",
 			overridden = true,
 		}
@@ -69,9 +69,9 @@ session_camera :: proc(session: ^Session) -> Camera_State {
 	snapshot := game.simulation_snapshot(&session.sim)
 	return {
 		position = vec_state(snapshot.eye_position),
-		yaw = snapshot.yaw,
-		pitch = snapshot.pitch,
-		fov = math.to_degrees(frame.PLAYER_FOV_X),
+		yaw_deg = f32(math.to_degrees(snapshot.yaw)),
+		pitch_deg = f32(math.to_degrees(snapshot.pitch)),
+		fov_deg = f32(math.to_degrees(frame.PLAYER_FOV_X)),
 		source = "player",
 	}
 }

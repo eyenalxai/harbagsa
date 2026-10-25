@@ -35,7 +35,7 @@ placed_objects_render_after_the_arena :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 	id := game.simulation_create_object(
 		&sim,
-		{prefab = .Platform, body_mode = .Static, center = {0, 5, 0}, yaw = 0},
+		{prefab = .Platform, body_mode = .Static, center = {0, 5, 0}, yaw_rad = 0},
 	)
 	scene := frame.build(&sim, &debug, {}, nil, &hud, &scratch)
 	arena_count := len(game.arena_static_boxes())
@@ -78,7 +78,7 @@ scene_fills_the_box_cap_without_writing_past_it :: proc(t: ^testing.T) {
 	for game.simulation_object_count(&sim) < game.MAX_PLACED_OBJECTS {
 		_ = game.simulation_create_object(
 			&sim,
-			{prefab = .Block, body_mode = .Static, center = {0, -5, 0}, yaw = 0},
+			{prefab = .Block, body_mode = .Static, center = {0, -5, 0}, yaw_rad = 0},
 		)
 	}
 	scene := frame.build(&sim, &debug, {}, nil, &hud, &scratch)
@@ -109,7 +109,7 @@ debug_hud_names_the_selected_prefab :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 	id := game.simulation_create_object(
 		&sim,
-		{prefab = .Platform, body_mode = .Static, center = {0, 5, 0}, yaw = 0},
+		{prefab = .Platform, body_mode = .Static, center = {0, 5, 0}, yaw_rad = 0},
 	)
 	debug.active = true
 	debug.selection = .Object
@@ -236,7 +236,7 @@ debug_hud_reports_the_armed_placement :: proc(t: ^testing.T) {
 	apply_expect(t, &debug, &sim, game.Palette_Select{index = 4}, "select failed")
 	apply_expect(t, &debug, &sim, game.Palette_Pick{}, "pick failed")
 	apply_expect(t, &debug, &sim, game.Placement_Set_Height{height = 0.5}, "height failed")
-	apply_expect(t, &debug, &sim, game.Placement_Set_Yaw{yaw = 90}, "yaw failed")
+	apply_expect(t, &debug, &sim, game.Placement_Set_Yaw{yaw_deg = 90}, "yaw failed")
 	apply_expect(t, &debug, &sim, game.Placement_Set_Snap{snap = true}, "snap failed")
 
 	scene := frame.build(

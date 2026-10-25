@@ -54,6 +54,7 @@ COMMANDS := [?]Command_Row {
 	{.Renderer_Debug, "renderer_debug", parse_renderer_debug_row, execute_renderer_debug, .Raw, nil, .Optional},
 	{.Displays, "displays", parse_displays, execute_displays, .Raw, destroy_displays, .None},
 	{.Rows, "rows", parse_no_fields, execute_rows, .Skip, nil, .None},
+	{.Scene, "scene", parse_scene, execute_scene, .Raw, destroy_scene, .None},
 	{.Quit, "quit", parse_no_fields, execute_quit, .Skip, nil, .None},
 }
 

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "name": "offscreen",
+  "description": "The cheap headless validation gate.",
+  "entries": [
+    "smoke",
+    "type-weight",
+    "settings-menu",
+    "ui",
+    "shadow-angle",
+    "ramp-shadow",
+    "perf-crates",
+    "lamp-wall-plane"
+  ]
+}

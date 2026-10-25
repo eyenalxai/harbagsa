@@ -15,7 +15,7 @@ editor_sun_enters_and_aims_at_the_dome :: proc(t: ^testing.T) {
 	reply := execute(
 		t,
 		&session,
-		`{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw": 0, "pitch": 0.5}}`,
+		`{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw_deg": 0, "pitch_deg": 28.6479}}`,
 	)
 	harness.reply_destroy(&reply, context.allocator)
 	reply = execute(t, &session, `{"cmd": "editor", "sun": {"active": true}}`)
@@ -52,15 +52,15 @@ editor_sun_position_drives_the_angles_and_the_digest :: proc(t: ^testing.T) {
 	defer harness.state_destroy(&after, context.allocator)
 	expected := game.sun_dome_point({0, 50, 5})
 	testing.expect_value(t, after.debug.sun.position.y, expected.y)
-	testing.expect(t, abs(after.debug.sun.azimuth) < 0.001, "the azimuth did not follow the position")
+	testing.expect(t, abs(after.debug.sun.azimuth_deg) < 0.001, "the azimuth did not follow the position")
 	testing.expect(
 		t,
-		abs(after.debug.sun.elevation - f32(84.2894)) < 0.01,
+		abs(after.debug.sun.elevation_deg - f32(84.2894)) < 0.01,
 		"the elevation did not follow the position",
 	)
 	testing.expect(t, after.digest != before.digest, "the sun position did not reach the digest")
 
-	reply = execute(t, &session, `{"cmd": "check", "field": "debug.sun.elevation", "op": "gt", "value": 84}`)
+	reply = execute(t, &session, `{"cmd": "check", "field": "debug.sun.elevation_deg", "op": "gt", "value": 84}`)
 	testing.expectf(t, reply.ok, "sun elevation check failed: %s", reply.error)
 	harness.reply_destroy(&reply, context.allocator)
 }
@@ -145,7 +145,7 @@ sun_command_sets_azimuth_elevation_and_diameter :: proc(t: ^testing.T) {
 		return
 	}
 
-	reply := execute(t, &session, `{"cmd": "sun", "azimuth": 0, "elevation": 15, "diameter": 0.53}`)
+	reply := execute(t, &session, `{"cmd": "sun", "azimuth_deg": 0, "elevation_deg": 15, "diameter_deg": 0.53}`)
 	testing.expect(t, reply.ok, "the sun command failed")
 	harness.reply_destroy(&reply, context.allocator)
 
@@ -167,17 +167,17 @@ sun_command_sets_azimuth_elevation_and_diameter :: proc(t: ^testing.T) {
 	}
 
 	state := harness.session_state(&session)
-	testing.expectf(t, abs(state.debug.sun.elevation - 15) < 1e-3, "elevation %v", state.debug.sun.elevation)
-	testing.expectf(t, abs(state.debug.sun.azimuth) < 1e-3, "azimuth %v", state.debug.sun.azimuth)
+	testing.expectf(t, abs(state.debug.sun.elevation_deg - 15) < 1e-3, "elevation %v", state.debug.sun.elevation_deg)
+	testing.expectf(t, abs(state.debug.sun.azimuth_deg) < 1e-3, "azimuth %v", state.debug.sun.azimuth_deg)
 	testing.expectf(
 		t,
-		abs(state.debug.sun.angular_diameter - 0.53) < 1e-3,
+		abs(state.debug.sun.angular_diameter_deg - 0.53) < 1e-3,
 		"diameter %v",
-		state.debug.sun.angular_diameter,
+		state.debug.sun.angular_diameter_deg,
 	)
 	harness.state_destroy(&state, context.allocator)
 
-	reply = execute(t, &session, `{"cmd": "check", "field": "debug.sun.angular_diameter", "op": "lt", "value": 0.54}`)
+	reply = execute(t, &session, `{"cmd": "check", "field": "debug.sun.angular_diameter_deg", "op": "lt", "value": 0.54}`)
 	testing.expect(t, reply.ok, "sun.angular_diameter was not checkable")
 	harness.reply_destroy(&reply, context.allocator)
 }
@@ -191,17 +191,17 @@ sun_command_keeps_omitted_fields :: proc(t: ^testing.T) {
 		return
 	}
 
-	reply := execute(t, &session, `{"cmd": "sun", "azimuth": 90, "elevation": 30}`)
+	reply := execute(t, &session, `{"cmd": "sun", "azimuth_deg": 90, "elevation_deg": 30}`)
 	testing.expect(t, reply.ok, "the first sun command failed")
 	harness.reply_destroy(&reply, context.allocator)
-	reply = execute(t, &session, `{"cmd": "sun", "diameter": 1.0}`)
+	reply = execute(t, &session, `{"cmd": "sun", "diameter_deg": 1.0}`)
 	testing.expect(t, reply.ok, "the diameter-only sun command failed")
 	harness.reply_destroy(&reply, context.allocator)
 
 	state := harness.session_state(&session)
-	testing.expectf(t, abs(state.debug.sun.azimuth - 90) < 1e-3, "azimuth changed: %v", state.debug.sun.azimuth)
-	testing.expectf(t, abs(state.debug.sun.elevation - 30) < 1e-3, "elevation changed: %v", state.debug.sun.elevation)
-	testing.expectf(t, abs(state.debug.sun.angular_diameter - 1.0) < 1e-3, "diameter %v", state.debug.sun.angular_diameter)
+	testing.expectf(t, abs(state.debug.sun.azimuth_deg - 90) < 1e-3, "azimuth changed: %v", state.debug.sun.azimuth_deg)
+	testing.expectf(t, abs(state.debug.sun.elevation_deg - 30) < 1e-3, "elevation changed: %v", state.debug.sun.elevation_deg)
+	testing.expectf(t, abs(state.debug.sun.angular_diameter_deg - 1.0) < 1e-3, "diameter %v", state.debug.sun.angular_diameter_deg)
 	harness.state_destroy(&state, context.allocator)
 }
 
@@ -214,7 +214,7 @@ sun_command_reset_restores_the_default_sun :: proc(t: ^testing.T) {
 		return
 	}
 
-	reply := execute(t, &session, `{"cmd": "sun", "azimuth": 0, "elevation": 5, "diameter": 3}`)
+	reply := execute(t, &session, `{"cmd": "sun", "azimuth_deg": 0, "elevation_deg": 5, "diameter_deg": 3}`)
 	harness.reply_destroy(&reply, context.allocator)
 	reply = execute(t, &session, `{"cmd": "reset"}`)
 	harness.reply_destroy(&reply, context.allocator)
@@ -222,9 +222,9 @@ sun_command_reset_restores_the_default_sun :: proc(t: ^testing.T) {
 	state := harness.session_state(&session)
 	testing.expectf(
 		t,
-		abs(state.debug.sun.angular_diameter - math.to_degrees(f32(game.SUN_ANGULAR_DIAMETER))) < 1e-3,
+		abs(state.debug.sun.angular_diameter_deg - math.to_degrees(f32(game.SUN_ANGULAR_DIAMETER))) < 1e-3,
 		"diameter %v",
-		state.debug.sun.angular_diameter,
+		state.debug.sun.angular_diameter_deg,
 	)
 	harness.state_destroy(&state, context.allocator)
 
@@ -255,12 +255,12 @@ sun_command_rejects_bad_input :: proc(t: ^testing.T) {
 	cases := []string {
 		`{"cmd": "sun"}`,
 		`{"cmd": "sun", "height": 10}`,
-		`{"cmd": "sun", "azimuth": "left"}`,
-		`{"cmd": "sun", "elevation": 91}`,
-		`{"cmd": "sun", "elevation": -91}`,
-		`{"cmd": "sun", "diameter": 0}`,
-		`{"cmd": "sun", "diameter": -1}`,
-		`{"cmd": "sun", "diameter": 45}`,
+		`{"cmd": "sun", "azimuth_deg": "left"}`,
+		`{"cmd": "sun", "elevation_deg": 91}`,
+		`{"cmd": "sun", "elevation_deg": -91}`,
+		`{"cmd": "sun", "diameter_deg": 0}`,
+		`{"cmd": "sun", "diameter_deg": -1}`,
+		`{"cmd": "sun", "diameter_deg": 45}`,
 	}
 	for line in cases {
 		_, parse_error := harness.command_parse_string(line, context.allocator)

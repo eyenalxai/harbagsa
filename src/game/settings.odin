@@ -1,4 +1,5 @@
 #+vet explicit-allocators
+#+vet !unused-procedures // the harness and the scene load use these names
 package game
 
 import "src:display"
@@ -34,12 +35,32 @@ input_mode_name :: proc(mode: Input_Mode) -> string {
 	return mode == .Hold ? "Hold" : "Toggle"
 }
 
+input_mode_parse :: proc(name: string) -> (Input_Mode, bool) {
+	switch name {
+	case "Hold":
+		return .Hold, true
+	case "Toggle":
+		return .Toggle, true
+	}
+	return .Hold, false
+}
+
 toggle_input_mode :: proc(mode: Input_Mode) -> Input_Mode {
 	return mode == .Hold ? .Toggle : .Hold
 }
 
 window_mode_name :: proc(mode: display.Window_Mode) -> string {
 	return mode == .Borderless ? "Borderless" : "Windowed"
+}
+
+window_mode_parse :: proc(name: string) -> (display.Window_Mode, bool) {
+	switch name {
+	case "Borderless":
+		return .Borderless, true
+	case "Windowed":
+		return .Windowed, true
+	}
+	return .Borderless, false
 }
 
 toggle_window_mode :: proc(mode: display.Window_Mode) -> display.Window_Mode {

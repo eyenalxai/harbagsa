@@ -95,7 +95,7 @@ ramp_prefab_applies_its_base_pitch :: proc(t: ^testing.T) {
 
 	id := game.simulation_create_object(
 		&sim,
-		{prefab = .Ramp, body_mode = .Static, center = {0, 5, 0}, yaw = 0},
+		{prefab = .Ramp, body_mode = .Static, center = {0, 5, 0}, yaw_rad = 0},
 	)
 	rotation := game.simulation_object_box(&sim, id).rotation
 	expected := b3.MakeQuatFromAxisAngle({1, 0, 0}, game.RAMP_BASE_PITCH)
@@ -114,7 +114,7 @@ every_prefab_creates_the_requested_body :: proc(t: ^testing.T) {
 			center := b3.Vec3{f32(created) * 3.0 + 20.0, 20.0, 0.0}
 			id := game.simulation_create_object(
 				&sim,
-				{prefab = prefab, body_mode = mode, center = center, yaw = 0.25},
+				{prefab = prefab, body_mode = mode, center = center, yaw_rad = 0.25},
 			)
 			testing.expectf(t, id != game.INVALID_OBJECT_ID, "prefab %v did not create", prefab)
 			if id == game.INVALID_OBJECT_ID {
@@ -159,7 +159,7 @@ create_object_past_cap_is_ignored :: proc(t: ^testing.T) {
 				prefab = .Block,
 				body_mode = .Static,
 				center = {0, -5, 0},
-				yaw = 0,
+				yaw_rad = 0,
 			},
 		)
 	}
@@ -167,7 +167,7 @@ create_object_past_cap_is_ignored :: proc(t: ^testing.T) {
 
 	id := game.simulation_create_object(
 		&sim,
-		{prefab = .Crate, body_mode = .Dynamic, center = {0, 50, 0}, yaw = 0},
+		{prefab = .Crate, body_mode = .Dynamic, center = {0, 50, 0}, yaw_rad = 0},
 	)
 	testing.expect_value(t, id, game.INVALID_OBJECT_ID)
 	testing.expect_value(t, game.simulation_object_count(&sim), game.MAX_PLACED_OBJECTS)

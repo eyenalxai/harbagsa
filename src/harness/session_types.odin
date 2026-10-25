@@ -14,6 +14,7 @@ Pending_Capture :: struct {
 	alpha:     f32,
 	target:    Capture_Target,
 	format:    Capture_Format,
+	png:       bool,
 	region:    Maybe(Capture_Region),
 	profile:   Maybe(Capture_Profile),
 	crop:      Maybe(Capture_Crop),
