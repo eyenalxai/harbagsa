@@ -1,8 +1,6 @@
 #+vet explicit-allocators
 package renderer
 
-import "core:mem"
-
 import vk "vendor:vulkan"
 
 // Initial capacities. The buffers grow on demand; these are not limits.
@@ -27,6 +25,8 @@ CLUSTER_COUNTS_SIZE :: (CLUSTER_COUNT + 1) * size_of(u32)
 // writes the same depth as the velocity clear, sun.z the point light count,
 // and sun.w the point-light shadow flag. occlusion.x is the AO radius in
 // metres, y the strength, z the enabled flag, and w the plan-view clip height.
+// probe.x is the probe volume count, probe.y the total probe count, and probe.z
+// the probe indirect flag.
 Camera_Uniform :: struct {
 	view:                 Mat4,
 	projection:           Mat4,
@@ -36,6 +36,7 @@ Camera_Uniform :: struct {
 	sun:                  [4]f32,
 	jitter:               [4]f32,
 	occlusion:            [4]f32,
+	probe:                [4]f32,
 }
 
 // color.rgb is the box colour and color.a the emissive strength.
@@ -58,7 +59,7 @@ TAA_Params :: struct {
 	force_trust:    f32,
 }
 
-#assert(size_of(Camera_Uniform) == 272)
+#assert(size_of(Camera_Uniform) == 288)
 #assert(size_of(Object_Data) == 144)
 #assert(size_of(Object_Index) == 4)
 #assert(size_of(TAA_Params) == 24)
@@ -69,9 +70,12 @@ ACCELERATION_BINDING :: 2
 LIGHT_BINDING :: 3
 CLUSTER_COUNTS_BINDING :: 4
 CLUSTER_INDICES_BINDING :: 5
+PROBE_VOLUMES_BINDING :: 6
+PROBE_IRRADIANCE_BINDING :: 7
+PROBE_DEPTH_BINDING :: 8
 
 create_scene_resources :: proc(r: ^Renderer) -> bool {
-	bindings := [6]vk.DescriptorSetLayoutBinding {
+	bindings := [9]vk.DescriptorSetLayoutBinding {
 		{
 			binding = CAMERA_BINDING,
 			descriptorType = .UNIFORM_BUFFER,
@@ -82,13 +86,13 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 			binding = OBJECT_BINDING,
 			descriptorType = .STORAGE_BUFFER,
 			descriptorCount = 1,
-			stageFlags = {.VERTEX, .FRAGMENT},
+			stageFlags = {.VERTEX, .FRAGMENT, .COMPUTE},
 		},
 		{
 			binding = ACCELERATION_BINDING,
 			descriptorType = .ACCELERATION_STRUCTURE_KHR,
 			descriptorCount = 1,
-			stageFlags = {.FRAGMENT},
+			stageFlags = {.FRAGMENT, .COMPUTE},
 		},
 		{
 			binding = LIGHT_BINDING,
@@ -108,6 +112,24 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 			descriptorCount = 1,
 			stageFlags = {.FRAGMENT, .COMPUTE},
 		},
+		{
+			binding = PROBE_VOLUMES_BINDING,
+			descriptorType = .STORAGE_BUFFER,
+			descriptorCount = 1,
+			stageFlags = {.FRAGMENT, .COMPUTE},
+		},
+		{
+			binding = PROBE_IRRADIANCE_BINDING,
+			descriptorType = .STORAGE_BUFFER,
+			descriptorCount = 1,
+			stageFlags = {.FRAGMENT, .COMPUTE},
+		},
+		{
+			binding = PROBE_DEPTH_BINDING,
+			descriptorType = .STORAGE_BUFFER,
+			descriptorCount = 1,
+			stageFlags = {.FRAGMENT, .COMPUTE},
+		},
 	}
 	layout_info := vk.DescriptorSetLayoutCreateInfo {
 		sType = .DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -123,7 +145,7 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 
 	pool_sizes := [3]vk.DescriptorPoolSize {
 		{type = .UNIFORM_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT},
-		{type = .STORAGE_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT * 4},
+		{type = .STORAGE_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT * 7},
 		{type = .ACCELERATION_STRUCTURE_KHR, descriptorCount = MAX_FRAMES_IN_FLIGHT},
 	}
 	pool_info := vk.DescriptorPoolCreateInfo {
@@ -156,221 +178,6 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 		INITIAL_SCENE_OBJECT_CAPACITY,
 		INITIAL_POINT_LIGHT_CAPACITY,
 	) {
-		return false
-	}
-	write_scene_bindings(r)
-	return true
-}
-
-@(private)
-create_scene_frame_buffers :: proc(
-	r: ^Renderer,
-	object_capacity, light_capacity: int,
-) -> bool {
-	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		if !create_mapped_buffer(
-			r,
-			vk.DeviceSize(size_of(Camera_Uniform)),
-			{.UNIFORM_BUFFER},
-			&r.scene.camera_buffers[i],
-			&r.scene.camera_memory[i],
-			&r.scene.camera_mapped[i],
-		) {
-			return false
-		}
-		if !create_mapped_buffer(
-			r,
-			vk.DeviceSize(object_capacity * size_of(Object_Data)),
-			{.STORAGE_BUFFER},
-			&r.scene.object_buffers[i],
-			&r.scene.object_memory[i],
-			&r.scene.object_mapped[i],
-		) {
-			return false
-		}
-		if !create_mapped_buffer(
-			r,
-			vk.DeviceSize(light_capacity * size_of(Light)),
-			{.STORAGE_BUFFER},
-			&r.scene.light_buffers[i],
-			&r.scene.light_memory[i],
-			&r.scene.light_mapped[i],
-		) {
-			return false
-		}
-		if !create_mapped_buffer(
-			r,
-			vk.DeviceSize(CLUSTER_COUNTS_SIZE),
-			{.STORAGE_BUFFER, .TRANSFER_DST},
-			&r.scene.cluster_counts_buffers[i],
-			&r.scene.cluster_counts_memory[i],
-			&r.scene.cluster_counts_mapped[i],
-		) {
-			return false
-		}
-		counts := cast([^]u32)r.scene.cluster_counts_mapped[i]
-		mem.set(rawptr(counts), 0, CLUSTER_COUNTS_SIZE)
-		if !create_mapped_buffer(
-			r,
-			vk.DeviceSize(CLUSTER_COUNT * CLUSTER_LIGHT_STRIDE * size_of(u32)),
-			{.STORAGE_BUFFER},
-			&r.scene.cluster_indices_buffers[i],
-			&r.scene.cluster_indices_memory[i],
-			&r.scene.cluster_indices_mapped[i],
-		) {
-			return false
-		}
-	}
-	r.scene.object_capacity = object_capacity
-	r.scene.light_capacity = light_capacity
-	return true
-}
-
-@(private)
-destroy_scene_frame_buffers :: proc(r: ^Renderer) {
-	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		if r.scene.camera_mapped[i] != nil {
-			vk.UnmapMemory(r.device, r.scene.camera_memory[i])
-			r.scene.camera_mapped[i] = nil
-		}
-		destroy_buffer(r, &r.scene.camera_buffers[i], &r.scene.camera_memory[i])
-
-		if r.scene.object_mapped[i] != nil {
-			vk.UnmapMemory(r.device, r.scene.object_memory[i])
-			r.scene.object_mapped[i] = nil
-		}
-		destroy_buffer(r, &r.scene.object_buffers[i], &r.scene.object_memory[i])
-
-		if r.scene.light_mapped[i] != nil {
-			vk.UnmapMemory(r.device, r.scene.light_memory[i])
-			r.scene.light_mapped[i] = nil
-		}
-		destroy_buffer(r, &r.scene.light_buffers[i], &r.scene.light_memory[i])
-
-		if r.scene.cluster_counts_mapped[i] != nil {
-			vk.UnmapMemory(r.device, r.scene.cluster_counts_memory[i])
-			r.scene.cluster_counts_mapped[i] = nil
-		}
-		destroy_buffer(
-			r,
-			&r.scene.cluster_counts_buffers[i],
-			&r.scene.cluster_counts_memory[i],
-		)
-
-		if r.scene.cluster_indices_mapped[i] != nil {
-			vk.UnmapMemory(r.device, r.scene.cluster_indices_memory[i])
-			r.scene.cluster_indices_mapped[i] = nil
-		}
-		destroy_buffer(
-			r,
-			&r.scene.cluster_indices_buffers[i],
-			&r.scene.cluster_indices_memory[i],
-		)
-	}
-	r.scene.object_capacity = 0
-	r.scene.light_capacity = 0
-}
-
-@(private)
-write_scene_bindings :: proc(r: ^Renderer) {
-	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		buffer_infos := [5]vk.DescriptorBufferInfo {
-			{
-				buffer = r.scene.camera_buffers[i],
-				offset = 0,
-				range = vk.DeviceSize(size_of(Camera_Uniform)),
-			},
-			{
-				buffer = r.scene.object_buffers[i],
-				offset = 0,
-				range = vk.DeviceSize(r.scene.object_capacity * size_of(Object_Data)),
-			},
-			{
-				buffer = r.scene.light_buffers[i],
-				offset = 0,
-				range = vk.DeviceSize(r.scene.light_capacity * size_of(Light)),
-			},
-			{
-				buffer = r.scene.cluster_counts_buffers[i],
-				offset = 0,
-				range = vk.DeviceSize(CLUSTER_COUNTS_SIZE),
-			},
-			{
-				buffer = r.scene.cluster_indices_buffers[i],
-				offset = 0,
-				range = vk.DeviceSize(CLUSTER_COUNT * CLUSTER_LIGHT_STRIDE * size_of(u32)),
-			},
-		}
-		writes := [5]vk.WriteDescriptorSet {
-			{
-				sType = .WRITE_DESCRIPTOR_SET,
-				dstSet = r.scene.descriptor_sets[i],
-				dstBinding = CAMERA_BINDING,
-				descriptorCount = 1,
-				descriptorType = .UNIFORM_BUFFER,
-				pBufferInfo = &buffer_infos[0],
-			},
-			{
-				sType = .WRITE_DESCRIPTOR_SET,
-				dstSet = r.scene.descriptor_sets[i],
-				dstBinding = OBJECT_BINDING,
-				descriptorCount = 1,
-				descriptorType = .STORAGE_BUFFER,
-				pBufferInfo = &buffer_infos[1],
-			},
-			{
-				sType = .WRITE_DESCRIPTOR_SET,
-				dstSet = r.scene.descriptor_sets[i],
-				dstBinding = LIGHT_BINDING,
-				descriptorCount = 1,
-				descriptorType = .STORAGE_BUFFER,
-				pBufferInfo = &buffer_infos[2],
-			},
-			{
-				sType = .WRITE_DESCRIPTOR_SET,
-				dstSet = r.scene.descriptor_sets[i],
-				dstBinding = CLUSTER_COUNTS_BINDING,
-				descriptorCount = 1,
-				descriptorType = .STORAGE_BUFFER,
-				pBufferInfo = &buffer_infos[3],
-			},
-			{
-				sType = .WRITE_DESCRIPTOR_SET,
-				dstSet = r.scene.descriptor_sets[i],
-				dstBinding = CLUSTER_INDICES_BINDING,
-				descriptorCount = 1,
-				descriptorType = .STORAGE_BUFFER,
-				pBufferInfo = &buffer_infos[4],
-			},
-		}
-		vk.UpdateDescriptorSets(r.device, u32(len(writes)), &writes[0], 0, nil)
-	}
-}
-
-// A scene that grows past the current buffers reallocates them. Growth waits
-// for the device because a previous frame may still read the old buffer. It is
-// rare, and the alternative is a per-frame capacity check on every upload.
-ensure_scene_capacity :: proc(
-	r: ^Renderer,
-	object_count, light_count: int,
-) -> bool {
-	if object_count <= r.scene.object_capacity && light_count <= r.scene.light_capacity {
-		return true
-	}
-	object_capacity := max(r.scene.object_capacity, 1)
-	for object_capacity < object_count {
-		object_capacity *= 2
-	}
-	light_capacity := max(r.scene.light_capacity, 1)
-	for light_capacity < light_count {
-		light_capacity *= 2
-	}
-
-	if r.device != nil {
-		_ = vk.DeviceWaitIdle(r.device)
-	}
-	destroy_scene_frame_buffers(r)
-	if !create_scene_frame_buffers(r, object_capacity, light_capacity) {
 		return false
 	}
 	write_scene_bindings(r)

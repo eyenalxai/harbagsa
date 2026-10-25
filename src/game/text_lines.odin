@@ -4,7 +4,7 @@ package game
 import "core:fmt"
 
 LINE_BUFFER_MAX_LINES :: 16
-LINE_BUFFER_LINE_BYTES :: 96
+LINE_BUFFER_LINE_BYTES :: 160
 
 Line_Buffer :: struct {
 	storage: [LINE_BUFFER_MAX_LINES][LINE_BUFFER_LINE_BYTES]u8,
