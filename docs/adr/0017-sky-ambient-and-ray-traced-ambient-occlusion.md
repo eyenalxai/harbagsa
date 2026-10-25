@@ -10,10 +10,11 @@ covers. It writes the velocity of the direction at infinity, so TAA reprojects
 the sky when the camera turns. The lit pass uses `sky_ambient(normal)` as the
 ambient term: a two-colour hemisphere ramp on the surface normal, scaled to the
 scene exposure. The same pass traces 8 cosine-weighted ambient occlusion rays
-per fragment against the scene TLAS, out to 1.5 m, at strength 1.0. The ray
-pattern rotates per pixel and per frame, and TAA accumulates the result. Both
-features are on by default. The gated overrides `sky` and `ao` turn them off for
-diagnosis.
+per fragment against the scene TLAS, out to 1.5 m, at strength 1.0. The visible
+fraction scales the ambient term only where the sun does not reach the point.
+The ray pattern rotates per pixel and per frame, and TAA accumulates the result.
+Both features are on by default. The gated overrides `sky` and `ao` turn them
+off for diagnosis.
 
 ## Why
 
@@ -31,6 +32,12 @@ diagnosis.
 - A screen-space estimator cannot see an occluder outside the view. A player who
   faces a corner has the other wall behind the camera, and that wall is the one
   that should darken the corner.
+- A sunlit surface in life is dominated by the direct sun, so the sky it loses
+  is invisible. Our ambient is a fixed exposure at about a quarter of the sun,
+  so the same occlusion reads as a dirty band on a sunlit floor. Gate the
+  occlusion by the sun shadow fraction: the shade keeps the contact term and
+  the sun keeps the full ambient. The gate reuses the sun visibility, so it
+  adds no ray.
 - The prepass leaves depth 1.0 where no box covers the pixel. A sky draw with
   `EQUAL` at 1.0 therefore costs only the background. Drawn before the lit pass,
   the sky would shade every pixel, and the boxes would overwrite most of that
@@ -85,13 +92,16 @@ diagnosis.
   first rays carry a fixed traversal cost. Hemisphere rays are incoherent: each
   ray leaves the pixel in a new direction across the hemisphere. The 16 sun
   rays stay inside the 0.53° disk, so they stay coherent.
-- A pixel that faces the sun now traces 24 rays: 16 sun rays and 8 AO rays. The
-  AO pattern is stochastic. TAA averages it. With TAA off, the ambient term is
-  noisy.
-- AO scales the ambient term only. It never dims the sun. A corner darkens while
-  its sunlit face keeps the same value. The sky pixels take no AO.
-- One diffuse bounce is still absent. AO is visibility, not transport. A deep
-  tunnel gets darker as it gets deeper. That is deliberate, not a bug.
+- A pixel that faces the sun still traces 24 rays: 16 sun rays and 8 AO rays,
+  but the AO term is discarded in full sun. The AO pattern is stochastic. TAA
+  averages it. With TAA off, the ambient term is noisy in shade.
+- AO scales the ambient term only, and only in shade. It never dims the sun. A
+  sunlit face keeps its full ambient; a corner in shade darkens. The gate uses
+  the fraction of sun rays that reach the point, so a penumbra fades the
+  occlusion in with the shadow. The sky pixels take no AO.
+- One diffuse bounce is still absent. AO is visibility, not transport, and the
+  sun gate does not add bounce. A deep tunnel gets darker as it gets deeper.
+  That is deliberate, not a bug.
 - The sky ambient is scaled to the scene exposure, not to the visible sky
   radiance. The visible gradient is zenith (0.10, 0.20, 0.42) and horizon
   (0.52, 0.62, 0.74), with a sun disk and a glow at the sun's angular
@@ -105,15 +115,21 @@ diagnosis.
   jump at the skyline.
 - The AO pattern changes the converged frame-to-frame mean.
   `scenarios/taa-motion.json` moves `capture.worst_mean_delta` from 0.03 to
-  0.07. The measured value is 0.0567 of 255, or 0.022 percent. The
+  0.07. The measured value is 0.0433 of 255, or 0.017 percent. The
   `capture.worst_over_16_fraction` gate stays at 5e-06 and measures 2.17e-06
-  at 1280x720. The mean gate is wider because the AO samples are stochastic.
-- `scenarios/sky-ao.json` gates the image. Mean green: zenith 135.9 against a
-  gate of at most 145, horizon 154.7 against a gate of at least 145, corner with
-  AO off 69.8 against a gate of at least 60, and corner with AO on 53.4 against
-  a gate of at most 60. With `sky: false` the zenith mean is 179. With the AO
-  never re-enabled the corner mean stays 69.8. Either case makes the scenario
-  exit 1. The scenario needs `--debug-renderer`.
+  at 1280x720. The mean gate is wider because the AO samples are stochastic;
+  the shade-only gate removes the AO noise from the sunlit part.
+- `scenarios/sky-ao.json` gates the image. Mean green: zenith 135.8 against a
+  gate of at most 140, horizon 156.2 against a gate of at least 150, corner with
+  AO off 69.9 against a gate of at least 64, and corner with AO on 53.5 against
+  a gate of at most 58. With `sky: false` the zenith mean is 179. With the AO
+  never re-enabled the corner mean stays 69.9. Either case makes the scenario
+  exit 1. The scenario declares `requires.renderer_debug`.
+- `scenarios/stairs-ao.json` gates the sun gate. At a 25° sun the sunlit floor
+  is 144.5 with AO on and 144.5 with AO off, against a gate of at least 143 with
+  AO on. The pre-fix value is 142.1, so the scenario fails on the old shader. The
+  shaded wall is 75.2 with AO on and 109.4 with AO off, which proves the shade
+  still gets the occlusion. The scenario declares `requires.renderer_debug`.
 - `TAA_Debug` is now `Renderer_Debug`. The struct holds renderer inputs, not
   only TAA inputs.
 - The render digest hashes `sky` and `ao`. A run that turns either off cannot

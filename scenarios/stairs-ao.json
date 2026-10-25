@@ -1,0 +1,29 @@
+{
+  "requires": {"renderer_debug": true},
+  "size": "800x600",
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "sun", "azimuth": 52.1, "elevation": 25, "diameter": 0.53},
+    {"cmd": "camera", "position": [2.0, 1.7, -2.5], "yaw": 0.55, "pitch": -0.45},
+    {"cmd": "settle", "frames": 120},
+    {"cmd": "capture", "name": "sun-on", "format": "stats", "region": {"x": 300, "y": 400, "w": 120, "h": 60}},
+    {"cmd": "renderer_debug", "ao": false},
+    {"cmd": "settle", "frames": 120},
+    {"cmd": "capture", "name": "sun-off", "format": "stats", "region": {"x": 300, "y": 400, "w": 120, "h": 60}},
+    {"cmd": "renderer_debug", "ao": true},
+    {"cmd": "settle", "frames": 120},
+    {"cmd": "capture", "name": "shade-on", "format": "stats", "region": {"x": 700, "y": 140, "w": 40, "h": 40}},
+    {"cmd": "renderer_debug", "ao": false},
+    {"cmd": "settle", "frames": 120},
+    {"cmd": "capture", "name": "shade-off", "format": "stats", "region": {"x": 700, "y": 140, "w": 40, "h": 40}}
+  ],
+  "checks": [
+    {"field": "capture.count", "op": "eq", "value": 4},
+    {"field": "capture.0.stats.mean.y", "op": "ge", "value": 143},
+    {"field": "capture.1.stats.mean.y", "op": "le", "value": 147},
+    {"field": "capture.1.stats.mean.y", "op": "ge", "value": 142},
+    {"field": "capture.2.stats.mean.y", "op": "le", "value": 78},
+    {"field": "capture.3.stats.mean.y", "op": "ge", "value": 105},
+    {"field": "capture.2.stats.mean.y", "op": "lt", "other": "capture.3.stats.mean.y"}
+  ]
+}
