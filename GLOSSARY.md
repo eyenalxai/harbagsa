@@ -204,6 +204,14 @@ _Avoid_: GI bake, irradiance volume (that is the static form)
 The diffuse radiance the lit pass adds from the probe volumes. It is separate from ambient occlusion: the occlusion scales direct light, and the probe term adds the bounce. In the open arena the same term carries the sky fill.
 _Avoid_: Ambient term, AO
 
+**Path-traced reference**:
+The CPU estimator that traces cosine-weighted diffuse paths from a fixed grid of pixel centres and compares the result with the probe field. The `reference` harness command runs it on two `scene_color` captures of one view and writes a JSON and CSV comparison plus one headless image per scene. `scenarios/ddgi-reference.json` is the chamber and the room lane.
+_Avoid_: Ground truth, CPU renderer (it traces a sample grid, not a frame)
+
+**Reference tolerance**:
+The four limits a reference comparison must meet: the median luminance ratio, the median per-point error, the per-channel colour spread, and the fraction of lit sample points with zero probe indirect. A miss is a run failure, not a tuned constant.
+_Avoid_: Threshold, slack
+
 **Lamp prefab**:
 A prefab with an active point light and an emissive box. The catalog has the Lamp, the Light panel, and the Beacon. A lamp is placed like any other object and can be static or dynamic.
 _Avoid_: Light object, bulb

@@ -63,7 +63,7 @@ visibility.
   The probe pass is 0.735 ms at 1280 x 720 with 64 synthetic lights, up from
   0.413 ms. The sealed pair adds 96 probes in two 4 x 3 x 4 grids.
 - The arena grid is coarse, so the perimeter walls show soft blotches at 4 m.
-  The shaded room face moves from 0.16 to 151.27 mean green, and the whole
+  The shaded room face moves from 0.16 to 119.25 mean green, and the whole
   outside frame falls from 26.8 to 0.30 percent pure black. The remaining black
   pixels are the room doorway, which is the unlit interior.
 - `scenarios/ddgi-arena.json` is the coverage gate. It measures the room's

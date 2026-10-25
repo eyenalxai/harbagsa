@@ -61,6 +61,7 @@ COMMANDS := [?]Command_Row {
 	{.Place, "place", parse_place, execute_place, .Raw, nil, .None, Place_Command},
 	{.Remove, "remove", parse_remove, execute_remove, .Raw, nil, .None, Remove_Command},
 	{.Get, "get", parse_get, execute_get, .Raw, destroy_get, .None, Get_Command},
+	{.Reference, "reference", parse_reference, execute_reference, .Raw, destroy_reference, .None, Reference_Command},
 	{.Quit, "quit", parse_no_fields, execute_quit, .Skip, nil, .None, No_Fields_Command},
 }
 

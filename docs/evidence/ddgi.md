@@ -41,22 +41,22 @@ argument are in `docs/adr/0034-ddgi-arena-coverage.md`.
 
 | Capture | Mean green |
 | --- | ---: |
-| `gi-on` | 183.12 |
+| `gi-on` | 164.79 |
 | `gi-off` | 123.78 |
-| `ao-on` | 183.11 |
-| `ao-off` | 186.26 |
+| `ao-on` | 164.78 |
+| `ao-off` | 168.34 |
 
 The scenario checks `probe_count`, `probe_volume_count`, `probe_energy`, the
 GI on/off order, and the AO on/off order: 10 checks, 0 failed. The probe energy
-is 0.127 over the whole atlas with the lamp on. The arena sky fill is dimmer than
+is 0.082 over the whole atlas with the lamp on. The arena sky fill is dimmer than
 the lamp-lit room. The four captures are deterministic: a repeat run produces
 the same PNG hashes.
 
 The room gate is `scenarios/room-lighting.json`: 19 checks, 0 failed. The first
-lane is 39.75 mean green under the west sun and 8.08 under the east sun. The
+lane is 40.45 mean green under the west sun and 9.59 under the east sun. The
 east value is transport through the connected four-turn light lock, not a wall
-leak. The chamber is 0.18 to 0.26 under the sun alone, 183.10 with the lamp, and
-0.26 after the lamp is removed. A backface ray no longer leaks into the sealed
+leak. The chamber is 0.18 to 0.24 under the sun alone, 164.77 with the lamp, and
+0.24 after the lamp is removed. A backface ray no longer leaks into the sealed
 end of the lock.
 
 ## Sealed pair
@@ -74,25 +74,26 @@ cage; the reference 5 percent Chebyshev floor kept part of it:
 
 | Capture | One cross-room grid | One volume per room |
 | --- | ---: | ---: |
-| `sealed-wall` mean green | 0.168 | 0.168 |
+| `sealed-wall` mean green | 0.168 | 0.17 |
 | `sealed-wall` max green | 1 | 1 |
-| `sealed-lamp` mean green | 0.415 | 0.165 |
+| `sealed-lamp` mean green | 0.415 | 0.17 |
 | `sealed-lamp` max green | 84 | 1 |
 | `sealed-depth` max depth | 0.9827 | 0.9827 |
-| `sealed-far` mean green | 0.165 | 0.165 |
+| `sealed-far` mean green | 0.165 | 0.17 |
 
 With one volume per room the lamp adds nothing to room B: the sealed wall and
 far wall both sit at the dither floor, and the depth target stays below 0.999.
 The lamp changes the room A probes, not room B. The 5 percent floor stays in the
-gather.
+gather. The cross-room column was measured before the hit-albedo fix; both
+changes move the dark room toward the floor.
 
 Removing the door segment is transport, and the same run gates it:
 
 | Capture | Mean green |
 | --- | ---: |
-| `sealed-far` | 0.165 |
-| `door-far` | 85.20 |
-| `door-near` | 155.14 |
+| `sealed-far` | 0.17 |
+| `door-far` | 52.28 |
+| `door-near` | 133.70 |
 
 The far wall is in the shadow of the remaining shared wall: the direct lamp line
 crosses the solid part, so the far-wall lift comes through the opening and the
@@ -107,11 +108,11 @@ tested a solid wall.
 ## Doorway and moving lamp
 
 `scenarios/ddgi-door.json` looks through the room's west door with the sun below
-the horizon. The doorway admits the lamp: mean green rises from 96.08 to 142.81.
+the horizon. The doorway admits the lamp: mean green rises from 95.68 to 138.98.
 Five checks pass, including the placed lamp identity.
 
 `scenarios/ddgi-move.json` places the lamp in the chamber, then moves it with the
-editor. Both views stay above 120 mean green: 189.55 before and 173.72 after.
+editor. Both views stay above 120 mean green: 173.06 before and 154.81 after.
 The object position checks and both light checks pass; 4 checks.
 
 ## Arena and roof
@@ -126,8 +127,8 @@ colour key, writes a 4x crop, and then repeats the chamber view from
 | --- | ---: | ---: |
 | `outside` pure-black pixels | 26.8% | 0.30% |
 | shaded face pure-black pixels | 83.8% | 0.0% |
-| shaded face mean green | 0.16 | 151.27 |
-| chamber mean green | 0.26 | 0.26 |
+| shaded face mean green | 0.16 | 119.25 |
+| chamber mean green | 0.26 | 0.24 |
 
 The remaining 0.30% of the frame is the room doorway, which is the unlit
 interior. The shaded face is a smooth sky gradient with soft 4 m probe blotches,
@@ -149,7 +150,7 @@ make shot SCENARIO=ddgi-arena OUT=runs/ddgi-arena
 
 Ambient occlusion multiplies direct light only. The indirect term has its own
 probe visibility, so multiplying it by AO would count the corner twice. In the
-same chamber view, turning AO off raises mean green from 183.11 to 186.26 while
+same chamber view, turning AO off raises mean green from 164.78 to 168.34 while
 the probe atlas is unchanged. The decision is recorded in
 `docs/adr/0032-direct-ao-and-probe-indirect.md`.
 
@@ -185,8 +186,9 @@ The probe atlas stores encoded irradiance and depth moments. Moving geometry
 relocates probe centres but does not reset the irradiance blend; a crate that
 moves inside a lit room keeps its old indirect until the blend converges.
 
-There is no path-traced reference in this change. It needs a scene and a
-tolerance design that compares a multi-bounce reference with the one-bounce
-probe field. It is a follow-up on issue #320. The probe field is one diffuse
-bounce; it is not a path-traced renderer and it does not claim modern-game
-parity.
+The path-traced reference is [`docs/evidence/ddgi-reference.md`](ddgi-reference.md).
+It measures the probe field against a 3-bounce CPU estimator and fails the
+current tree: the probe ray omits the hit surface albedo, and the room volume's
+high z bound sits one ULP below the north wall, so that face reads zero. The
+probe field is one diffuse bounce; it is not a path-traced renderer and does not
+claim modern-game parity.
