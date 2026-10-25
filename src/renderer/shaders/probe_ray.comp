@@ -116,6 +116,7 @@ vec3 hit_radiance(vec3 origin, vec3 direction, float distance, out float hit_dis
     vec3 local_hit = local_origin + local_direction * t;
     vec3 normal = hit_normal(object_to_world, local_hit);
     vec3 hit_position = origin + direction * t;
+    bool backface = dot(normal, direction) > 0.0;
 
     ObjectData object = scene.objects[instance_index];
     vec3 radiance = object.color.rgb * object.color.a;
@@ -159,7 +160,7 @@ vec3 hit_radiance(vec3 origin, vec3 direction, float distance, out float hit_dis
         radiance += light.color.rgb * (light.position.w * light_diffuse * falloff);
     }
 
-    hit_distance = t;
+    hit_distance = backface ? -t : t;
     return radiance;
 }
 

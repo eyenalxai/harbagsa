@@ -66,19 +66,27 @@ void main() {
     float distance_sum = 0.0;
     float distance2_sum = 0.0;
     float distance_weight = 0.0;
+    uint backfaces = 0;
     uint first_ray = probe_index * uint(PROBE_RAYS);
     for (uint ray_index = 0; ray_index < uint(PROBE_RAYS); ++ray_index) {
         vec3 ray_direction = probe_ray_direction(ray_index);
         float cosine = max(dot(texel_normal, ray_direction), 0.0);
         vec4 ray = probe_rays.rays[first_ray + ray_index];
-        irradiance_sum += ray.rgb * cosine;
-        cosine_sum += cosine;
+        if (ray.a < 0.0) {
+            backfaces++;
+        } else {
+            irradiance_sum += ray.rgb * cosine;
+            cosine_sum += cosine;
+        }
 
         float weight = pow(cosine, PROBE_DISTANCE_EXPONENT);
-        float hit_distance = min(ray.a, max_distance);
+        float hit_distance = min(abs(ray.a), max_distance);
         distance_sum += hit_distance * weight;
         distance2_sum += hit_distance * hit_distance * weight;
         distance_weight += weight;
+    }
+    if (float(backfaces) > float(PROBE_RAYS) * PROBE_BACKFACE_THRESHOLD) {
+        return;
     }
 
     vec3 new_irradiance = pow(
