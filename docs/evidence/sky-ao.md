@@ -112,6 +112,36 @@ Reproduce:
 ./bin/harbagsa-agent run scenarios/stairs-ao.json
 ```
 
+## Visibility banding
+
+Captured on 2026-10-25 from `fix/shadow-banding`. The shaded floor below the
+20 degree ramp showed contour bands. The ambient count is 8 rays and the sun
+count is 16, so the lighting steps by 1/8 and 1/16. The output dither removes
+the 8-bit write band, not that lighting step.
+
+The fix offsets a partial count inside its own step with a per-pixel, per-frame
+hash. A full or empty count stays exact. `scenarios/ramp-shadow.json` at
+1280x720 looks from `(2.9, 0.8, -2.5)` at the ramp foot, settles 600 frames, and
+reads the 550x280 stats region at `(150, 420)`.
+
+| Shader | Steps | Max jump |
+| --- | ---: | ---: |
+| Old | 298 | 0.642 |
+| New | 3 | 0.514 |
+
+The gate is 50 steps. The old shader fails it and the new one passes with
+margin. The max gate of 2 proves the region holds no geometry edge. The step
+metric box-filters the luma 9x9, so the output dither drops out and a ray-count
+step remains.
+
+```sh
+./bin/harbagsa-agent run scenarios/ramp-shadow.json --out runs/ramp-shadow
+```
+
+The decision is in
+`docs/adr/0024-visibility-count-dither.md`. The same offset covers the sun
+penumbra, so `shadow-angle` and `edge-profile` also exercise the rule.
+
 ## TAA stability
 
 `scenarios/taa-motion.json` at 1280x720, after the post-motion hold:
@@ -149,7 +179,7 @@ The harness suite passes at 1280x720:
 ```text
 smoke, taa-static, taa-motion, capture-targets, renderer-state, renderer-reset,
 renderer-debug, renderer-debug-converge, renderer-debug-jitter, settings-menu,
-sky-ao, stairs-ao
+sky-ao, stairs-ao, ramp-shadow, banding, shadow-angle, edge-profile
 ```
 
 `taa-motion`, `renderer-debug`, `renderer-debug-converge`, and
@@ -174,6 +204,7 @@ All are under `runs/` and are not committed:
 - `runs/perf-1080`, `runs/perf-1440`, `runs/perf-arena`, `runs/perf-backface`
 - `runs/sky-ao`, `runs/sky-ao-nosky`, `runs/sky-ao-noao`
 - `runs/stairs-ao` and `runs/stairs-ao-before`
+- `runs/ramp-shadow` and the old-shader before run
 - `runs/taa-motion`, and the 4-ray and 16-ray calibration runs were temporary
   copies of the same scenario. The alternating base and feature perf runs are
   under `/tmp/opencode/ab-*`; the current runs are also in `runs/perf-*`.

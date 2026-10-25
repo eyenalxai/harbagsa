@@ -367,9 +367,10 @@ Check fields use the `state.json` shape, for example `player.position.y`,
 `render_digest`. A capture check can also read `capture.target`,
 `capture.format`, `capture.stats.*`, `capture.region.*`, `capture.profile.*`,
 `capture.crop.*`, `capture.histogram.*`, and `capture.render_digest` for the
-last capture in its window. Add `"window": {"start": 2, "count": 8}` to
-aggregate over part of the captures; `warmup` stays the shorthand for skipping
-the first N.
+last capture in its window. `capture.stats.steps.count`, `.pairs`, and `.max`
+read the visibility-band metric; a stats capture must name a region. Add
+`"window": {"start": 2, "count": 8}` to aggregate over part of the captures;
+`warmup` stays the shorthand for skipping the first N.
 
 A run with captures writes `analysis.json`. It holds per-pair deltas, a
 summary, the dominant period, the worst unstable pixels' series, and optional
@@ -671,6 +672,10 @@ darkens. `scenarios/shadow-angle.json` puts the sun 15 degrees above the horizon
 and captures a wall shadow twice: once with a 3-degree sun disk, then with the
 0.53-degree disk the build uses. The penumbra width follows the diameter, so
 the small disk gives a shadow edge about 5.7 times narrower.
+`scenarios/ramp-shadow.json` looks at the shaded floor below the 20 degree ramp
+and gates the step count in a region that holds no geometry edge. The step
+metric box-filters the luma, so the output dither drops out and a ray-count
+step remains.
 
 `scenarios/editor-ghost.json` enters debug mode, picks the platform prefab, and
 captures the ghost on the floor and raised, then places a block and cancels the
