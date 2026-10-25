@@ -4,7 +4,6 @@ package renderer
 import "core:mem"
 
 import "src:geometry"
-import "src:ui"
 import vk "vendor:vulkan"
 
 MAX_DEBUG_VERTICES :: 32768
@@ -44,11 +43,6 @@ Overlay :: struct {
 	hud_mapped:   [MAX_FRAMES_IN_FLIGHT]rawptr,
 
 	theme: UI_Theme,
-
-	// The rect the last menu draw published. Input measures with
-	// menu_slider_rect so it also has one before the first draw.
-	menu_slider:        ui.Slider_Rect,
-	menu_frozen_width:  f32,
 
 	atlas:                Text_Atlas,
 	atlas_applied_weight: f32,
@@ -132,10 +126,6 @@ prepare_overlay :: proc(r: ^Renderer, debug_lines: []geometry.Line, hud: HUD_Fra
 	o := &r.overlay
 	o.debug_count = 0
 	o.hud_count = 0
-	o.menu_slider = {}
-	if !hud.menu_open {
-		o.menu_frozen_width = 0
-	}
 
 	for line in debug_lines {
 		append_debug_vertex(o, line.from, line.color)

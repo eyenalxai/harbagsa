@@ -34,11 +34,11 @@ Placement_State :: struct {
 }
 
 Sun_State :: struct {
-	active:    bool      `json:"active"`,
-	position:  Vec_State `json:"position"`,
-	azimuth:          f32 `json:"azimuth"`,
-	elevation:        f32 `json:"elevation"`,
-	angular_diameter: f32 `json:"angular_diameter"`,
+	active:           bool      `json:"active" digest:"-"`,
+	position:         Vec_State `json:"position"`,
+	azimuth:          f32       `json:"azimuth" digest:"-"`,
+	elevation:        f32       `json:"elevation" digest:"-"`,
+	angular_diameter: f32       `json:"angular_diameter" digest:"-"`,
 }
 
 // The selected-object half of the debug inspector. Every number is in metres
@@ -58,8 +58,11 @@ History_State :: struct {
 	redo:  int `json:"redo"`,
 }
 
-debug_state_build :: proc(debug: ^game.Debug_Mode, sim: ^game.Simulation) -> Debug_State {
-	azimuth, elevation := game.debug_mode_sun_angles(debug)
+debug_state_build :: proc(
+	debug: ^game.Debug_Mode,
+	sim: ^game.Simulation,
+	sun: Sun_State,
+) -> Debug_State {
 	state := Debug_State {
 		active = debug.active,
 		selection = game.debug_selection_name(debug.selection),
@@ -78,13 +81,7 @@ debug_state_build :: proc(debug: ^game.Debug_Mode, sim: ^game.Simulation) -> Deb
 			snap = debug.placement.snap,
 			light = placement_light_state(debug),
 		},
-		sun = {
-			active = debug.sun.active,
-			position = vec_state(debug.sun.position),
-			azimuth = azimuth * 180.0 / math.PI,
-			elevation = elevation * 180.0 / math.PI,
-			angular_diameter = debug.sun_angular_diameter * 180.0 / math.PI,
-		},
+		sun = sun,
 		history = {
 			depth = game.debug_history_depth(debug),
 			redo = game.debug_history_redo_depth(debug),
@@ -95,22 +92,10 @@ debug_state_build :: proc(debug: ^game.Debug_Mode, sim: ^game.Simulation) -> Deb
 	return state
 }
 
-// The next placement light belongs to the prefab the placement tool will use:
-// the armed prefab, or the palette selection while the tool is idle.
+// The state and the HUD read the next placement light through the same proc.
 @(private)
 placement_light_state :: proc(debug: ^game.Debug_Mode) -> Light_State {
-	prefab := debug.placement.prefab
-	if !debug.placement.armed {
-		prefab = game.palette_selected(debug.palette)
-	}
-	if !game.prefab_has_light(prefab) {
-		return {}
-	}
-	settings := debug.palette.light
-	if !settings.active {
-		settings = game.prefab_light(prefab)
-	}
-	return light_state(settings)
+	return light_state(game.next_placement_light(debug))
 }
 
 @(private)

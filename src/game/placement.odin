@@ -49,6 +49,7 @@ placement_geometry :: proc(placement: Placement) -> Placement_Geometry {
 	}
 }
 
+@(private)
 debug_placement_arm :: proc(dm: ^Debug_Mode, sim: ^Simulation, prefab_id: Prefab_Id) -> bool {
 	if !simulation_is_valid(sim) {
 		return false
@@ -56,13 +57,14 @@ debug_placement_arm :: proc(dm: ^Debug_Mode, sim: ^Simulation, prefab_id: Prefab
 	debug_sun_cancel(dm)
 	// The palette is the one place that holds the next placement's body and
 	// light, so arming by prefab also selects it there.
-	_ = debug_palette_select(dm, int(prefab_id))
+	_ = palette_select(&dm.palette, int(prefab_id))
 	dm.placement.armed = true
 	dm.placement.prefab = prefab_id
 	debug_placement_refresh(dm, sim)
 	return true
 }
 
+@(private)
 debug_placement_refresh :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	if !dm.placement.armed || !simulation_is_valid(sim) {
 		return
@@ -70,32 +72,39 @@ debug_placement_refresh :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	dm.placement.anchor = placement_anchor(dm, sim)
 }
 
+@(private)
 debug_placement_cancel :: proc(dm: ^Debug_Mode) {
 	dm.placement.armed = false
 }
 
+@(private)
 debug_placement_set_height :: proc(dm: ^Debug_Mode, height: f32) {
 	dm.placement.height = max(height, 0.0)
 }
 
+@(private)
 debug_placement_raise :: proc(dm: ^Debug_Mode, steps: int, large: bool) {
 	step: f32 = large ? PLACEMENT_HEIGHT_STEP_LARGE : PLACEMENT_HEIGHT_STEP
 	debug_placement_set_height(dm, dm.placement.height + f32(steps) * step)
 }
 
+@(private)
 debug_placement_set_yaw :: proc(dm: ^Debug_Mode, degrees: f32) {
 	dm.placement.yaw_degrees = degrees - 360.0 * math.floor(degrees / 360.0)
 }
 
+@(private)
 debug_placement_turn :: proc(dm: ^Debug_Mode, steps: int, large: bool) {
 	step: f32 = large ? PLACEMENT_YAW_STEP_LARGE : PLACEMENT_YAW_STEP
 	debug_placement_set_yaw(dm, dm.placement.yaw_degrees + f32(steps) * step)
 }
 
+@(private)
 debug_placement_set_snap :: proc(dm: ^Debug_Mode, snap: bool) {
 	dm.placement.snap = snap
 }
 
+@(private)
 debug_placement_toggle_snap :: proc(dm: ^Debug_Mode) {
 	dm.placement.snap = !dm.placement.snap
 }
@@ -121,73 +130,11 @@ debug_ghost_box :: proc(dm: ^Debug_Mode) -> (geometry.Box, bool) {
 }
 
 debug_ghost_color :: proc(dm: ^Debug_Mode) -> [4]f32 {
-	if prefab_has_light(dm.placement.prefab) {
-		return light_color4(dm.palette.light.color)
+	light := placement_light_for(dm, dm.placement.prefab)
+	if light.active {
+		return light_color4(light.color)
 	}
 	return GHOST_COLOR
-}
-
-@(private)
-debug_placement_input :: proc(dm: ^Debug_Mode, sim: ^Simulation, input: Debug_Input) {
-	if input.secondary_pressed {
-		debug_placement_cancel(dm)
-		return
-	}
-	if !input.captured {
-		return
-	}
-	if input.primary_pressed {
-		_ = debug_placement_place(dm, sim)
-	}
-	if input.wheel_delta != 0.0 {
-		debug_placement_raise(dm, int(math.round(input.wheel_delta)), input.large_step)
-	}
-	if input.rotate_left {
-		debug_placement_turn(dm, -1, input.large_step)
-	}
-	if input.rotate_right {
-		debug_placement_turn(dm, 1, input.large_step)
-	}
-}
-
-debug_placement_place :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Object_Id {
-	if !dm.placement.armed {
-		return INVALID_OBJECT_ID
-	}
-	ghost, ok := debug_ghost_geometry(dm)
-	if !ok {
-		return INVALID_OBJECT_ID
-	}
-	return debug_place_object(
-		dm,
-		sim,
-		{
-			prefab = dm.placement.prefab,
-			body_mode = dm.palette.body_mode,
-			center = ghost.center,
-			yaw = dm.placement.yaw_degrees * math.PI / 180.0,
-			light = dm.palette.light,
-		},
-	)
-}
-
-debug_place_object :: proc(
-	dm: ^Debug_Mode,
-	sim: ^Simulation,
-	spawn: Object_Spawn,
-) -> Object_Id {
-	if simulation_object_count(sim) >= MAX_PLACED_OBJECTS {
-		return INVALID_OBJECT_ID
-	}
-	object_history_record(debug_history(dm), sim)
-	id := simulation_create_object(sim, spawn)
-	if id == INVALID_OBJECT_ID {
-		return id
-	}
-	debug_mode_end_drag(dm)
-	dm.selection = .Object
-	dm.selected_object_id = id
-	return id
 }
 
 @(private)

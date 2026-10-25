@@ -131,3 +131,23 @@ vec3_field :: proc(object: json.Object, key: string) -> (value: [3]f32, ok: bool
 	}
 	return value, true
 }
+
+@(private)
+vec2_field :: proc(object: json.Object, key: string) -> (value: [2]f32, ok: bool) {
+	value_json, has := json_get(object, key)
+	if !has {
+		return {}, false
+	}
+	array, array_ok := json_array(value_json)
+	if !array_ok || len(array) != 2 {
+		return {}, false
+	}
+	for index in 0 ..< 2 {
+		number, number_ok := json_number(array[index])
+		if !number_ok {
+			return {}, false
+		}
+		value[index] = f32(number)
+	}
+	return value, true
+}

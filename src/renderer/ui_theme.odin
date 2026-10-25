@@ -4,6 +4,8 @@ package renderer
 
 import "core:math"
 
+import "src:ui"
+
 // The 2D layer reads its colour, type, and spacing from here and nowhere else.
 // Colours are authored as sRGB hex because that is what a person can reason
 // about, and converted to linear once, because that is what the renderer blends
@@ -46,15 +48,7 @@ Text_Type :: struct {
 	caps:        bool,
 }
 
-UI_Spacing :: struct {
-	xxs: f32,
-	xs:  f32,
-	sm:  f32,
-	md:  f32,
-	lg:  f32,
-	xl:  f32,
-	xxl: f32,
-}
+UI_Spacing :: ui.Spacing
 
 UI_Theme :: struct {
 	density: f32,
