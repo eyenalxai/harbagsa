@@ -35,6 +35,7 @@ backend_capture :: proc(
 	}
 	result := Capture_Result {
 		name          = strings.clone(request.name, data.allocator),
+		note          = strings.clone(request.note, data.allocator),
 		frame         = session.frame,
 		width         = width,
 		height        = height,
@@ -144,6 +145,7 @@ backend_capture_stats :: proc(
 		request.target,
 		region,
 		request.steps,
+		request.color_key,
 		data.allocator,
 	)
 	if histogram, has_histogram := request.histogram.?; has_histogram {

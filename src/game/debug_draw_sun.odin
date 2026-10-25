@@ -47,7 +47,7 @@ append_sun_ring :: proc(
 		to := position +
 			side * (math.cos(next) * SUN_GIZMO_RING_RADIUS) +
 			up * (math.sin(next) * SUN_GIZMO_RING_RADIUS)
-		append_debug_line(collector, from, to, color)
+		append_debug_line(collector, from, to, color, .Sun)
 	}
 }
 
@@ -58,8 +58,8 @@ append_sun_cross :: proc(
 	color: [4]f32,
 ) {
 	arm: f32 = SUN_GIZMO_RING_RADIUS
-	append_debug_line(collector, position - side * arm, position + side * arm, color)
-	append_debug_line(collector, position - up * arm, position + up * arm, color)
+	append_debug_line(collector, position - side * arm, position + side * arm, color, .Sun)
+	append_debug_line(collector, position - up * arm, position + up * arm, color, .Sun)
 }
 
 @(private)
@@ -78,7 +78,7 @@ append_sun_dashed_line :: proc(
 	for cursor < length {
 		start := from + direction * cursor
 		end := from + direction * min(cursor + SUN_GIZMO_DASH_LENGTH, length)
-		append_debug_line(collector, start, end, color)
+		append_debug_line(collector, start, end, color, .Sun)
 		cursor += SUN_GIZMO_DASH_LENGTH + SUN_GIZMO_DASH_GAP
 	}
 }

@@ -3,8 +3,11 @@ package harness
 
 import "core:fmt"
 import "core:mem"
+import "core:path/filepath"
 import "core:strconv"
 import "core:strings"
+
+MAX_SUITE_FILTERS :: 16
 
 Suite_Options :: struct {
 	out_dir:        string,
@@ -20,6 +23,10 @@ Suite_Options :: struct {
 	quiet:          bool,
 	progress:       bool,
 	timeout_seconds: f64,
+	only:            [MAX_SUITE_FILTERS]string,
+	only_count:      int,
+	skip:            [MAX_SUITE_FILTERS]string,
+	skip_count:      int,
 }
 
 Suite_Row :: struct {
@@ -81,6 +88,18 @@ suite_run_command :: proc(selector: string, selectors: []string, options: Suite_
 		delete(owned_entries, context.allocator)
 	}
 
+	options_copy := options
+	filtered, filter_error := suite_entries_filter(entries, &options_copy, context.allocator)
+	if filter_error != "" {
+		fmt.eprintf("harbagsa-agent suite: %s\n", filter_error)
+		delete(filter_error, context.allocator)
+		return EXIT_SCENARIO
+	}
+	defer if filtered.allocated {
+		delete(filtered.entries, context.allocator)
+	}
+	entries = filtered.entries
+
 	if options.list {
 		rows, list_error := suite_list(entries, context.allocator)
 		defer suite_rows_destroy(rows, context.allocator)
@@ -118,6 +137,76 @@ suite_run_command :: proc(selector: string, selectors: []string, options: Suite_
 		suite_print_table(execution.report)
 	}
 	return execution.report.exit_code
+}
+
+Suite_Filtered_Entries :: struct {
+	entries:   []Suite_Entry,
+	allocated: bool,
+}
+
+// A filter names an entry's scenario, scenario stem, or label, so
+// `--only taa-motion` and `--only taa-motion-800` both work.
+suite_entries_filter :: proc(
+	entries: []Suite_Entry,
+	options: ^Suite_Options,
+	allocator: mem.Allocator,
+) -> (
+	Suite_Filtered_Entries,
+	string,
+) {
+	if options.only_count == 0 && options.skip_count == 0 {
+		return {entries = entries}, ""
+	}
+	only_hits: [MAX_SUITE_FILTERS]bool
+	skip_hits: [MAX_SUITE_FILTERS]bool
+	kept := make([dynamic]Suite_Entry, 0, len(entries), allocator)
+	for entry in entries {
+		only_match := options.only_count == 0
+		for filter, index in options.only[:options.only_count] {
+			if suite_entry_matches(entry, filter) {
+				only_match = true
+				only_hits[index] = true
+			}
+		}
+		skip_match := false
+		for filter, index in options.skip[:options.skip_count] {
+			if suite_entry_matches(entry, filter) {
+				skip_match = true
+				skip_hits[index] = true
+			}
+		}
+		if only_match && !skip_match {
+			append(&kept, entry)
+		}
+	}
+	for filter, index in options.only[:options.only_count] {
+		if !only_hits[index] {
+			delete(kept)
+			return {}, fmt.aprintf("--only %q matches no suite entry", filter, allocator = allocator)
+		}
+	}
+	for filter, index in options.skip[:options.skip_count] {
+		if !skip_hits[index] {
+			delete(kept)
+			return {}, fmt.aprintf("--skip %q matches no suite entry", filter, allocator = allocator)
+		}
+	}
+	if len(kept) == 0 {
+		delete(kept)
+		return {}, format_error("%s", "the suite filters leave no entry to run")
+	}
+	entries_out := make([]Suite_Entry, len(kept), allocator)
+	copy(entries_out, kept[:])
+	delete(kept)
+	return {entries = entries_out, allocated = true}, ""
+}
+
+@(private)
+suite_entry_matches :: proc(entry: Suite_Entry, filter: string) -> bool {
+	if entry.scenario == filter || entry.label == filter {
+		return true
+	}
+	return filepath.stem(filepath.base(entry.scenario)) == filter
 }
 
 suite_rows_ok :: proc(rows: []Suite_Row) -> bool {
@@ -220,6 +309,30 @@ cli_suite :: proc(args: []string) -> int {
 			}
 			options.timeout_seconds = seconds
 			index += 2
+		case argument == "--only":
+			if index + 1 >= len(args) {
+				return suite_cli_error("--only needs a scenario or label")
+			}
+			if filter_error := suite_filter_add(
+				&options.only,
+				&options.only_count,
+				args[index + 1],
+			); filter_error != "" {
+				return suite_cli_error(filter_error)
+			}
+			index += 2
+		case argument == "--skip":
+			if index + 1 >= len(args) {
+				return suite_cli_error("--skip needs a scenario or label")
+			}
+			if filter_error := suite_filter_add(
+				&options.skip,
+				&options.skip_count,
+				args[index + 1],
+			); filter_error != "" {
+				return suite_cli_error(filter_error)
+			}
+			index += 2
 		case strings.has_prefix(argument, "-"):
 			return suite_cli_error(fmt.aprintf(
 				"unknown option %q",
@@ -241,6 +354,21 @@ cli_suite :: proc(args: []string) -> int {
 }
 
 @(private)
+suite_filter_add :: proc(filters: ^[MAX_SUITE_FILTERS]string, count: ^int, list: string) -> string {
+	for filter in strings.split(list, ",", context.temp_allocator) {
+		if filter == "" {
+			return format_error("%s", "a suite filter needs a name")
+		}
+		if count^ >= len(filters) {
+			return format_error("%s", "a suite accepts at most 16 --only and --skip filters")
+		}
+		filters[count^] = filter
+		count^ += 1
+	}
+	return ""
+}
+
+@(private)
 suite_cli_error :: proc(message: string) -> int {
 	fmt.eprintf("harbagsa-agent suite: %s\n", message)
 	print_suite_usage()
@@ -250,7 +378,7 @@ suite_cli_error :: proc(message: string) -> int {
 @(private)
 print_suite_usage :: proc() {
 	fmt.eprintln("usage: harbagsa-agent suite <name|path> [scenario...] [--out DIR] [--tag NAME]")
-	fmt.eprintln("       [--list] [--json] [--fail-fast] [--present] [--no-render]")
-	fmt.eprintln("       [--no-analysis] [--debug-renderer] [--verbose] [--quiet]")
-	fmt.eprintln("       [--progress] [--timeout SECONDS]")
+	fmt.eprintln("       [--only NAME,...] [--skip NAME,...] [--list] [--json] [--fail-fast]")
+	fmt.eprintln("       [--present] [--no-render] [--no-analysis] [--debug-renderer]")
+	fmt.eprintln("       [--verbose] [--quiet] [--progress] [--timeout SECONDS]")
 }

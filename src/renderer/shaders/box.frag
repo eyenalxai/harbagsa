@@ -198,6 +198,12 @@ float surface_occlusion(vec3 position, vec3 normal, float radius, float phase) {
 }
 
 void main() {
+    // A plan view lowers the clip to drop the roof and the upper walls. The
+    // default keeps every fragment, so a normal run pays one compare.
+    if (v_world_position.y > camera.occlusion.w) {
+        discard;
+    }
+
     ObjectData object = scene.objects[draw.object_index];
 
     vec3 normal = normalize(v_normal);

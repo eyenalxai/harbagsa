@@ -13,7 +13,7 @@ INITIAL_POINT_LIGHT_CAPACITY :: 64
 // of the sun angular radius, sun.y the camera far plane, so the sky pass
 // writes the same depth as the velocity clear, sun.z the point light count,
 // and sun.w the point-light shadow flag. occlusion.x is the AO radius in
-// metres, y the strength, and z the enabled flag.
+// metres, y the strength, z the enabled flag, and w the plan-view clip height.
 Camera_Uniform :: struct {
 	view:                 Mat4,
 	projection:           Mat4,

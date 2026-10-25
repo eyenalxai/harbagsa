@@ -30,9 +30,10 @@ Overlay :: struct {
 	hud_layout:      vk.PipelineLayout,
 	hud_pipeline:    vk.Pipeline,
 
-	debug_vertices: []Debug_Vertex,
-	debug_count:    int,
-	debug_buffers:  [MAX_FRAMES_IN_FLIGHT]vk.Buffer,
+	debug_vertices:      []Debug_Vertex,
+	debug_count:         int,
+	debug_kind_vertices: [geometry.LINE_KIND_COUNT]int,
+	debug_buffers:       [MAX_FRAMES_IN_FLIGHT]vk.Buffer,
 	debug_memory:   [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
 	debug_mapped:   [MAX_FRAMES_IN_FLIGHT]rawptr,
 
@@ -126,10 +127,15 @@ prepare_overlay :: proc(r: ^Renderer, debug_lines: []geometry.Line, hud: HUD_Fra
 	o := &r.overlay
 	o.debug_count = 0
 	o.hud_count = 0
+	o.debug_kind_vertices = {}
 
 	for line in debug_lines {
+		before := o.debug_count
 		append_debug_vertex(o, line.from, line.color)
 		append_debug_vertex(o, line.to, line.color)
+		if int(line.kind) < len(o.debug_kind_vertices) {
+			o.debug_kind_vertices[int(line.kind)] += o.debug_count - before
+		}
 	}
 
 	requested_weight := hud.weight

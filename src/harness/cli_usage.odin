@@ -76,6 +76,12 @@ cli_help :: proc(args: []string) -> int {
 	case "schema":
 		print_schema_usage()
 		return EXIT_OK
+	case "boxes":
+		print_boxes_usage()
+		return EXIT_OK
+	case "checks":
+		print_checks_usage()
+		return EXIT_OK
 	case "help":
 		print_usage()
 		return EXIT_OK
@@ -102,6 +108,8 @@ print_usage :: proc() {
 	fmt.eprintln("  harbagsa-agent suite <name|path> [scenario...] [options]")
 	fmt.eprintln("  harbagsa-agent ab [options]")
 	fmt.eprintln("  harbagsa-agent schema [command] [--text]")
+	fmt.eprintln("  harbagsa-agent boxes [--json]")
+	fmt.eprintln("  harbagsa-agent checks <run-dir> [--json]")
 	fmt.eprintln("  harbagsa-agent help [command] | -h | --help")
 	fmt.eprintln("")
 	fmt.eprintln("Run 'help <command>' or '<command> --help' for one command.")

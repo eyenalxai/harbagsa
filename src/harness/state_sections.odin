@@ -27,6 +27,7 @@ State_Context :: struct {
 
 STATE_SECTION_ROWS := [?]State_Section_Row {
 	{.Player, "player", build_state_player},
+	{.Static_Boxes, "static_boxes", build_state_static_boxes},
 	{.Objects, "objects", build_state_objects},
 	{.Settings, "settings", build_state_settings},
 	{.Debug, "debug", build_state_debug},
@@ -72,6 +73,22 @@ build_state_player :: proc(state: ^State, ctx: ^State_Context) {
 		pitch_deg = f32(math.to_degrees(snapshot.pitch)),
 		stance = game.stance_name(snapshot.stance),
 		grounded = snapshot.grounded,
+	}
+}
+
+@(private)
+build_state_static_boxes :: proc(state: ^State, ctx: ^State_Context) {
+	boxes := game.arena_static_boxes()
+	state.static_boxes = make([]Static_Box_State, len(boxes), ctx.allocator)
+	for box, index in boxes {
+		state.static_boxes[index] = {
+			center = vec_state(box.center),
+			half_extents = vec_state(box.half_extents),
+			color = color_state(box.color),
+			rotation = quat_state(box.rotation),
+			emissive = box.emissive,
+			visual_only = box.visual_only,
+		}
 	}
 }
 

@@ -33,4 +33,7 @@ Render_Input :: struct {
 	atlas_weight:         f32,
 	sky:                  bool,
 	ao:                   bool,
+	ao_radius:            f32,
+	ao_strength:          f32,
+	clip_height:          f32,
 }

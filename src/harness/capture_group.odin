@@ -9,6 +9,7 @@ import "src:renderer"
 
 CAPTURE_OUTPUT_KEYS := []string {
 	"name",
+	"note",
 	"target",
 	"format",
 	"png",
@@ -18,6 +19,7 @@ CAPTURE_OUTPUT_KEYS := []string {
 	"crop",
 	"histogram",
 	"steps",
+	"color_key",
 }
 
 @(private)
@@ -64,6 +66,9 @@ parse_captures :: proc(object: json.Object, allocator: mem.Allocator) -> (Comman
 		for &output in outputs {
 			if output.name != "" {
 				delete(output.name, allocator)
+			}
+			if output.note != "" {
+				delete(output.note, allocator)
 			}
 		}
 		delete(outputs, allocator)
