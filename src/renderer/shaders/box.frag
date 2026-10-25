@@ -71,6 +71,8 @@ layout(set = 0, binding = 9) readonly buffer ProbePositions {
     vec4 positions[];
 } probe_positions;
 
+#include "probe_gather.glsl"
+
 const vec3 SUN_COLOR = vec3(1.0, 0.98, 0.94);
 const int SUN_SAMPLES = 16;
 const float GOLDEN_ANGLE = 2.39996323;
@@ -157,94 +159,6 @@ float sun_visibility(vec3 world_position, vec3 normal, vec3 to_light) {
         }
     }
     return dithered_visibility(visible, SUN_SAMPLES);
-}
-
-vec3 probe_indirect(vec3 world_position, vec3 normal) {
-    int volume_count = int(camera.probe.x);
-    if (camera.probe.z < 0.5 || volume_count <= 0 || camera.probe.y <= 0.0) {
-        return vec3(0.0);
-    }
-
-    int volume_index = -1;
-    for (int index = 0; index < volume_count; ++index) {
-        ProbeVolume volume = probe_volumes.volumes[index];
-        vec3 high = volume.min_spacing.xyz +
-                    vec3(volume.counts_offset.xyz) * volume.min_spacing.w;
-        if (all(greaterThanEqual(world_position, volume.min_spacing.xyz)) &&
-            all(lessThanEqual(world_position, high))) {
-            volume_index = index;
-            break;
-        }
-    }
-    if (volume_index < 0) {
-        return vec3(0.0);
-    }
-
-    ProbeVolume volume = probe_volumes.volumes[volume_index];
-    uvec3 counts = volume.counts_offset.xyz;
-    vec3 local = (world_position - volume.min_spacing.xyz) / volume.min_spacing.w - 0.5;
-    vec3 base = floor(local);
-    vec3 fraction = local - base;
-
-    vec3 sum = vec3(0.0);
-    float total_weight = 0.0;
-    for (int z = 0; z < 2; ++z) {
-        for (int y = 0; y < 2; ++y) {
-            for (int x = 0; x < 2; ++x) {
-                ivec3 cell = clamp(
-                    ivec3(base) + ivec3(x, y, z),
-                    ivec3(0),
-                    ivec3(counts) - 1
-                );
-                float weight_x = x == 0 ? 1.0 - fraction.x : fraction.x;
-                float weight_y = y == 0 ? 1.0 - fraction.y : fraction.y;
-                float weight_z = z == 0 ? 1.0 - fraction.z : fraction.z;
-
-                uint probe_index = volume.counts_offset.w + uint(
-                    (cell.z * int(counts.y) + cell.y) * int(counts.x) + cell.x
-                );
-                vec3 probe_position = probe_positions.positions[probe_index].xyz;
-                vec3 to_surface = world_position - probe_position;
-                float distance2 = dot(to_surface, to_surface);
-                if (distance2 < 1e-6) {
-                    continue;
-                }
-                float distance = sqrt(distance2);
-                vec3 direction = to_surface / distance;
-                float facing = max(dot(normal, -direction), 0.0);
-                if (facing <= 0.0) {
-                    continue;
-                }
-
-                vec2 oct = oct_encode(direction);
-                ivec2 texel = clamp(
-                    ivec2(oct * float(PROBE_GRID_SIZE)),
-                    ivec2(0),
-                    ivec2(PROBE_GRID_SIZE - 1)
-                );
-                uint sample_index = probe_index * uint(PROBE_TEXELS) +
-                    uint(texel.y * PROBE_GRID_SIZE + texel.x);
-                vec3 radiance = probe_irradiance_set.irradiance[sample_index].rgb;
-                vec2 moments = probe_depth_set.depth[sample_index];
-                float mean = moments.x;
-                float variance = max(moments.y - mean * mean, 0.0001);
-                float chebyshev = 1.0;
-                if (distance > mean) {
-                    float difference = distance - mean;
-                    chebyshev = variance / (variance + difference * difference);
-                }
-
-                float weight = weight_x * weight_y * weight_z * facing *
-                    chebyshev / (distance2 + 0.05);
-                sum += radiance * weight;
-                total_weight += weight;
-            }
-        }
-    }
-    if (total_weight <= 0.0) {
-        return vec3(0.0);
-    }
-    return sum / total_weight;
 }
 
 vec3 point_light_radiance(vec3 world_position, vec3 normal) {
