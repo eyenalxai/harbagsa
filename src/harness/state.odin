@@ -91,6 +91,36 @@ State :: struct {
 	digest:        string         `json:"digest"`,
 }
 
+State_Section :: enum {
+	Frame,
+	Player,
+	Camera,
+	Objects,
+	Settings,
+	Debug,
+	Menu,
+	Rows,
+	Settle,
+	Renderer,
+	Render_Digest,
+}
+
+State_Sections :: bit_set[State_Section]
+
+ALL_STATE_SECTIONS :: State_Sections {
+	.Frame,
+	.Player,
+	.Camera,
+	.Objects,
+	.Settings,
+	.Debug,
+	.Menu,
+	.Rows,
+	.Settle,
+	.Renderer,
+	.Render_Digest,
+}
+
 state_build :: proc(
 	sim: ^game.Simulation,
 	frame: int,
@@ -102,23 +132,84 @@ state_build :: proc(
 	settle: Settle_State,
 	allocator: mem.Allocator,
 ) -> State {
-	game.hud_state_update(hud, sim, debug, game.simulation_snapshot(sim), false, game.SIMULATION_STEP)
+	return state_build_sections(
+		sim,
+		frame,
+		hud,
+		debug,
+		camera,
+		renderer_state,
+		render_digest,
+		settle,
+		ALL_STATE_SECTIONS,
+		allocator,
+	)
+}
+
+// A check names one namespace, so the command builds only that namespace. The
+// digest needs every section; every other check is a partial document.
+state_build_sections :: proc(
+	sim: ^game.Simulation,
+	frame: int,
+	hud: ^game.HUD_State,
+	debug: ^game.Debug_Mode,
+	camera: Camera_State,
+	renderer_state: renderer.Renderer_Report,
+	render_digest: string,
+	settle: Settle_State,
+	sections: State_Sections,
+	allocator: mem.Allocator,
+) -> State {
+	if .Menu in sections || .Rows in sections {
+		game.hud_state_update(
+			hud,
+			sim,
+			debug,
+			game.simulation_snapshot(sim),
+			false,
+			game.SIMULATION_STEP,
+		)
+	}
 	menu := &hud.menu
-	snapshot := game.simulation_snapshot(sim)
-	resolution := game.settings_effective_resolution(sim.settings, &menu.displays)
-	window_resolution := sim.settings.window.resolution
 	state := State {
 		frame = frame,
-		player = {
+		camera = camera,
+		settle = settle,
+		renderer = renderer_state,
+	}
+
+	if .Player in sections {
+		snapshot := game.simulation_snapshot(sim)
+		state.player = {
 			position = vec_state(snapshot.position),
 			eye = vec_state(snapshot.eye_position),
 			velocity = vec_state(snapshot.velocity),
 			yaw = snapshot.yaw,
 			pitch = snapshot.pitch,
 			grounded = snapshot.grounded,
-		},
-		camera = camera,
-		settings = {
+		}
+	}
+	if .Objects in sections {
+		objects := game.simulation_objects(sim)
+		state.objects = make([]Object_State, len(objects), allocator)
+		for object, index in objects {
+			box := game.simulation_object_box(sim, object.id)
+			state.objects[index] = {
+				id        = u32(object.id),
+				prefab    = game.prefab_name(object.prefab),
+				body      = game.body_mode_name(object.body_mode),
+				position  = vec_state(box.center),
+				rotation  = quat_state(box.rotation),
+				scale     = game.simulation_object_scale(sim, object.id),
+				spawn_age = game.simulation_object_spawn_age(sim, object.id),
+				light     = light_state(object.light),
+			}
+		}
+	}
+	if .Settings in sections {
+		resolution := game.settings_effective_resolution(sim.settings, &menu.displays)
+		window_resolution := sim.settings.window.resolution
+		state.settings = {
 			window_mode = game.window_mode_name(sim.settings.window.mode),
 			display = strings.clone(
 				game.settings_display_name(sim.settings, &menu.displays),
@@ -144,37 +235,30 @@ state_build :: proc(
 			crouch_mode = game.input_mode_name(sim.settings.crouch_mode),
 			prone_mode = game.input_mode_name(sim.settings.prone_mode),
 			type_weight = sim.settings.type_weight,
-		},
-		debug = debug_state_build(debug, sim),
-		sun = sun_state(debug),
-		menu = {
+		}
+	}
+	if .Debug in sections {
+		state.debug = debug_state_build(debug, sim)
+		state.sun = sun_state(debug)
+	}
+	if .Menu in sections {
+		state.menu = {
 			open = menu.open,
 			selected = int(menu.selected),
 			item = game.menu_selected_name(menu),
 			status = menu.status,
 			blocked = menu_selected_blocked(menu),
-		},
-		rows = rows_state_build(hud, allocator),
-		settle = settle,
-		renderer = renderer_state,
-		render_digest = render_digest == "" ? "" : strings.clone(render_digest, allocator),
-	}
-	objects := game.simulation_objects(sim)
-	state.objects = make([]Object_State, len(objects), allocator)
-	for object, index in objects {
-		box := game.simulation_object_box(sim, object.id)
-		state.objects[index] = {
-			id        = u32(object.id),
-			prefab    = game.prefab_name(object.prefab),
-			body      = game.body_mode_name(object.body_mode),
-			position  = vec_state(box.center),
-			rotation  = quat_state(box.rotation),
-			scale     = game.simulation_object_scale(sim, object.id),
-			spawn_age = game.simulation_object_spawn_age(sim, object.id),
-			light     = light_state(object.light),
 		}
 	}
-	state.digest = state_digest(state, allocator)
+	if .Rows in sections {
+		state.rows = rows_state_build(hud, allocator)
+	}
+	if .Render_Digest in sections && render_digest != "" {
+		state.render_digest = strings.clone(render_digest, allocator)
+	}
+	if sections == ALL_STATE_SECTIONS {
+		state.digest = state_digest(state, allocator)
+	}
 	return state
 }
 
