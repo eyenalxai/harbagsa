@@ -43,15 +43,15 @@ session_get :: proc(session: ^Session, command: Get_Command, reply: ^Reply) -> s
 		&session.hud,
 		&session.debug,
 		session_camera(session),
-		session.renderer_report,
-		session.render_digest_text,
-		{frames = session.settle_frames, converged = session.settle_converged},
+		session.render.report,
+		session.render.digest_text,
+		{frames = session.settle.frames, converged = session.settle.converged},
 		sections,
 		session.allocator,
 	)
 	defer state_destroy(&state, session.allocator)
-	analysis := session.has_analysis ? &session.analysis : nil
-	value, field_error := check_field(state, session.captures[:], analysis, command.field)
+	analysis := session.analysis.has_summary ? &session.analysis.summary : nil
+	value, field_error := check_field(state, session.capture.captures[:], analysis, command.field)
 	if field_error != "" {
 		return field_error
 	}

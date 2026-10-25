@@ -21,14 +21,14 @@ session_check_command :: proc(
 		&session.hud,
 		&session.debug,
 		session_camera(session),
-		session.renderer_report,
-		session.render_digest_text,
-		{frames = session.settle_frames, converged = session.settle_converged},
+		session.render.report,
+		session.render.digest_text,
+		{frames = session.settle.frames, converged = session.settle.converged},
 		sections,
 		session.allocator,
 	)
-	window := check_capture_window(session.captures[:], command)
-	analysis := session.has_analysis ? &session.analysis : nil
+	window := check_capture_window(session.capture.captures[:], command)
+	analysis := session.analysis.has_summary ? &session.analysis.summary : nil
 	result := check_evaluate(command, state, window, analysis, session.allocator)
 	state_destroy(&state, session.allocator)
 	append(&session.checks, result)

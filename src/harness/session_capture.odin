@@ -60,7 +60,7 @@ session_queue_capture_group :: proc(
 	immediate: bool,
 	error: string,
 ) {
-	if !session.render_enabled {
+	if !session.render.enabled {
 		log.warn("harness: capture skipped because rendering is disabled")
 		return true, ""
 	}
@@ -106,18 +106,18 @@ session_queue_capture_group :: proc(
 		pending.requests[index] = request
 		pending.requests[index].name = strings.clone(request.name, session.allocator)
 	}
-	append(&session.pending, pending)
+	append(&session.capture.pending, pending)
 	return false, ""
 }
 
 @(private)
 capture_name_in_use :: proc(session: ^Session, name: string) -> bool {
-	for capture in session.captures {
+	for capture in session.capture.captures {
 		if capture.name == name {
 			return true
 		}
 	}
-	for pending in session.pending {
+	for pending in session.capture.pending {
 		for request in pending.requests {
 			if request.name == name {
 				return true
@@ -125,16 +125,6 @@ capture_name_in_use :: proc(session: ^Session, name: string) -> bool {
 		}
 	}
 	return false
-}
-
-session_pending_destroy :: proc(session: ^Session, pending: ^Pending_Capture) {
-	for request in pending.requests {
-		if request.name != "" {
-			delete(request.name, session.allocator)
-		}
-	}
-	delete(pending.requests, session.allocator)
-	pending^ = {}
 }
 
 @(private)

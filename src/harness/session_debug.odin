@@ -9,15 +9,15 @@ session_renderer_debug :: proc(session: ^Session, command: Renderer_Debug_Comman
 			"renderer debug needs a build with ENABLE_RENDERER_DEBUG or the --debug-renderer flag",
 		)
 	}
-	if session.backend == nil || session.backend.set_debug == nil {
+	if session.render.backend == nil || session.render.backend.set_debug == nil {
 		return format_error("renderer debug requires rendering; add a capture or a perf run")
 	}
 	if command.clear {
-		session.backend.clear_debug(session.backend.ctx)
+		session.render.backend.clear_debug(session.render.backend.ctx)
 		session_refresh_renderer(session)
 		return ""
 	}
-	debug := session.backend.get_debug(session.backend.ctx)
+	debug := session.render.backend.get_debug(session.render.backend.ctx)
 	debug.active = true
 	if command.has_taa {
 		debug.taa = command.taa
@@ -41,7 +41,7 @@ session_renderer_debug :: proc(session: ^Session, command: Renderer_Debug_Comman
 	if command.has_freeze_shadow_phase {
 		debug.freeze_shadow_phase = command.freeze_shadow_phase
 		if command.freeze_shadow_phase && !command.has_shadow_phase {
-			debug.shadow_phase = session.renderer_report.shadow_phase
+			debug.shadow_phase = session.render.report.shadow_phase
 		}
 	}
 	if command.has_light_shadows {
@@ -83,7 +83,7 @@ session_renderer_debug :: proc(session: ^Session, command: Renderer_Debug_Comman
 			debug.ao = defaults.ao
 		}
 	}
-	session.backend.set_debug(session.backend.ctx, debug)
+	session.render.backend.set_debug(session.render.backend.ctx, debug)
 	session_refresh_renderer(session)
 	return ""
 }

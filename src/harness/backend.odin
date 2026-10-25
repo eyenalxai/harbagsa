@@ -194,7 +194,7 @@ backend_render :: proc(
 	}
 	session.hud.perf.visible = session.view.perf
 	if session.hud.perf.visible {
-		session.hud.perf.stats = perf.stats(&session.perf)
+		session.hud.perf.stats = perf.stats(&session.perf.state)
 	}
 	camera_override: ^renderer.Camera
 	if session.has_camera_override {
@@ -208,7 +208,7 @@ backend_render :: proc(
 		&session.hud,
 		session.scratch,
 	)
-	perf.mark(&session.perf, .Build)
+	perf.mark(&session.perf.state, .Build)
 	if len(requests) > 0 {
 		if !renderer.text_atlas_sync(&data.renderer, session.sim.settings.type_weight) {
 			return nil, format_error("text atlas sync failed")
@@ -217,7 +217,7 @@ backend_render :: proc(
 			return nil, format_error("text atlas did not settle")
 		}
 	}
-	data.renderer.recorder = &session.perf.recorder
+	data.renderer.recorder = &session.perf.state.recorder
 	targets: renderer.Capture_Targets
 	for request in requests {
 		targets |= {request.target}
