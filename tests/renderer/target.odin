@@ -62,12 +62,13 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 		"the offscreen target allocated a readback before a capture",
 	)
 
-	sim := game.simulation_create()
+	sim := game.simulation_create(context.allocator)
 	testing.expect(t, game.simulation_is_valid(&sim), "simulation world is invalid")
 	defer game.simulation_destroy(&sim)
 	debug := game.debug_mode_create(context.allocator)
 	hud: game.HUD_State
 	scratch: frame.Scratch
+	defer frame.scratch_destroy(&scratch)
 	scene := frame.build(&sim, &debug, {alpha = 1.0, captured = true}, nil, &hud, &scratch)
 	status := frame.draw(&state, scene, {targets = {.Color}})
 	testing.expectf(t, status == .Ok, "offscreen draw failed: %v", status)
@@ -275,7 +276,7 @@ render_offscreen_sequence :: proc() -> (
 	defer close_test_device(&device)
 	state := &device.state
 
-	sim := game.simulation_create()
+	sim := game.simulation_create(context.allocator)
 	if !game.simulation_is_valid(&sim) {
 		return nil, 0, false, true
 	}
@@ -283,6 +284,7 @@ render_offscreen_sequence :: proc() -> (
 	debug := game.debug_mode_create(context.allocator)
 	hud: game.HUD_State
 	scratch: frame.Scratch
+	defer frame.scratch_destroy(&scratch)
 	scene := frame.build(&sim, &debug, {alpha = 1.0, captured = true}, nil, &hud, &scratch)
 	for _ in 0 ..< 12 {
 		if frame.draw(state, scene) != .Ok {

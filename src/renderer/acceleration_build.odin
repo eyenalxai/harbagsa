@@ -99,8 +99,8 @@ create_blas :: proc(r: ^Renderer) -> bool {
 	return end_immediate_command(r, command_buffer)
 }
 
-create_tlas :: proc(r: ^Renderer, frame: ^Acceleration_Frame) -> bool {
-	instances_size := vk.DeviceSize(MAX_SCENE_BOXES * size_of(vk.AccelerationStructureInstanceKHR))
+create_tlas :: proc(r: ^Renderer, frame: ^Acceleration_Frame, capacity: int) -> bool {
+	instances_size := vk.DeviceSize(capacity * size_of(vk.AccelerationStructureInstanceKHR))
 	if !create_mapped_buffer(
 		r,
 		instances_size,
@@ -132,7 +132,7 @@ create_tlas :: proc(r: ^Renderer, frame: ^Acceleration_Frame) -> bool {
 		geometryCount = 1,
 		pGeometries = &geometry,
 	}
-	max_instance_counts := [1]u32{MAX_SCENE_BOXES}
+	max_instance_counts := [1]u32{u32(capacity)}
 	sizes := vk.AccelerationStructureBuildSizesInfoKHR {
 		sType = .ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR,
 	}

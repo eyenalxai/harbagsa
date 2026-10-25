@@ -14,7 +14,7 @@ renderer_debug_parses_every_override :: proc(t: ^testing.T) {
 	command, error := harness.command_parse_string(
 		`{"cmd": "renderer_debug", "taa": false, "jitter": false, "history_weight": 0.25,
 		  "clamp": false, "depth_trust": true, "freeze_shadow_phase": true,
-		  "shadow_phase": 9, "light_shadows": false, "synthetic_lights": 8,
+		  "shadow_phase": 9, "light_shadows": false, "synthetic_lights": 9,
 		  "sky": false, "ao": false}`,
 		context.allocator,
 	)
@@ -33,7 +33,7 @@ renderer_debug_parses_every_override :: proc(t: ^testing.T) {
 	testing.expect(t, debug.has_freeze_shadow_phase, "freeze was not parsed")
 	testing.expect(t, debug.has_shadow_phase && debug.shadow_phase == 9, "phase was not parsed")
 	testing.expect(t, debug.has_light_shadows && !debug.light_shadows, "light shadows were not parsed")
-	testing.expect(t, debug.has_synthetic_lights && debug.synthetic_lights == 8, "synthetic lights were not parsed")
+	testing.expect(t, debug.has_synthetic_lights && debug.synthetic_lights == 9, "synthetic lights were not parsed")
 	testing.expect(t, debug.has_sky && !debug.sky, "sky was not parsed")
 	testing.expect(t, debug.has_ao && !debug.ao, "ao was not parsed")
 }
@@ -46,7 +46,6 @@ renderer_debug_rejects_bad_fields :: proc(t: ^testing.T) {
 		`{"cmd": "renderer_debug", "clear": true, "jitter": false}`,
 		`{"cmd": "renderer_debug", "clear": true, "synthetic_lights": 2}`,
 		`{"cmd": "renderer_debug", "clear": true, "taa": null}`,
-		`{"cmd": "renderer_debug", "synthetic_lights": 9}`,
 		`{"cmd": "renderer_debug", "light_shadows": 1}`,
 		`{"cmd": "renderer_debug", "speed": 2}`,
 	}

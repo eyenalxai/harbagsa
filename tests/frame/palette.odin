@@ -52,7 +52,7 @@ palette_fixture :: proc(filled: int) -> ui.Palette {
 		palette.hints[index] = hint
 	}
 	palette.size_length = write_palette_text(palette.size[:], "1.0 × 1.0 × 1.0 m")
-	palette.count_length = write_palette_text(palette.count[:], "3 / 128")
+	palette.count_length = write_palette_text(palette.count[:], "3")
 	return palette
 }
 

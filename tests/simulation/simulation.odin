@@ -22,7 +22,7 @@ DIRECTIONS :: [8][2]f32 {
 
 @(private)
 create :: proc(t: ^testing.T) -> game.Simulation {
-	sim := game.simulation_create()
+	sim := game.simulation_create(context.allocator)
 	testing.expect(t, game.simulation_is_valid(&sim), "simulation world is invalid")
 	return sim
 }

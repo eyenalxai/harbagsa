@@ -32,11 +32,11 @@ Object_Spawn :: struct {
 
 // Read-only view for iteration. Every mutation takes an Object_Id.
 simulation_objects :: proc(sim: ^Simulation) -> []Placed_Object {
-	return sim.objects[:sim.object_count]
+	return sim.objects[:]
 }
 
 simulation_object_count :: proc(sim: ^Simulation) -> int {
-	return sim.object_count
+	return len(sim.objects)
 }
 
 simulation_object_find :: proc(sim: ^Simulation, id: Object_Id) -> (Placed_Object, bool) {
@@ -98,11 +98,10 @@ simulation_remove_object :: proc(sim: ^Simulation, id: Object_Id) -> bool {
 	}
 
 	b3.DestroyBody(sim.objects[index].body)
-	for next in index ..< sim.object_count - 1 {
+	for next in index ..< len(sim.objects) - 1 {
 		sim.objects[next] = sim.objects[next + 1]
 	}
-	sim.object_count -= 1
-	sim.objects[sim.object_count] = {}
+	resize(&sim.objects, len(sim.objects) - 1)
 	return true
 }
 
@@ -202,8 +201,7 @@ simulation_reset_objects :: proc(sim: ^Simulation) {
 			b3.DestroyBody(object.body)
 		}
 	}
-	sim.objects = {}
-	sim.object_count = 0
+	clear(&sim.objects)
 	sim.next_object_id = 1
 
 	colors := INITIAL_CRATE_COLORS

@@ -4,8 +4,6 @@ package harness
 import "core:encoding/json"
 import "core:mem"
 
-import "src:renderer"
-
 RENDERER_DEBUG_KEYS :: []string {
 	"cmd",
 	"clear",
@@ -122,7 +120,7 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 		"synthetic_lights",
 		.Synthetic_Lights,
 		0,
-		renderer.MAX_POINT_LIGHTS,
+		max(int),
 		&command.synthetic_lights,
 		&command.has_synthetic_lights,
 		&command.reset,

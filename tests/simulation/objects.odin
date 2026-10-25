@@ -148,11 +148,11 @@ every_prefab_creates_the_requested_body :: proc(t: ^testing.T) {
 }
 
 @(test)
-create_object_past_cap_is_ignored :: proc(t: ^testing.T) {
+create_object_grows_the_scene_past_the_old_cap :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 
-	for game.simulation_object_count(&sim) < game.MAX_PLACED_OBJECTS {
+	for _ in 0 ..< 300 {
 		_ = game.simulation_create_object(
 			&sim,
 			{
@@ -163,12 +163,20 @@ create_object_past_cap_is_ignored :: proc(t: ^testing.T) {
 			},
 		)
 	}
-	testing.expect_value(t, game.simulation_object_count(&sim), game.MAX_PLACED_OBJECTS)
+	testing.expect_value(
+		t,
+		game.simulation_object_count(&sim),
+		game.INITIAL_CRATE_COUNT + 300,
+	)
 
 	id := game.simulation_create_object(
 		&sim,
 		{prefab = .Crate, body_mode = .Dynamic, center = {0, 50, 0}, yaw_rad = 0},
 	)
-	testing.expect_value(t, id, game.INVALID_OBJECT_ID)
-	testing.expect_value(t, game.simulation_object_count(&sim), game.MAX_PLACED_OBJECTS)
+	testing.expect(t, id != game.INVALID_OBJECT_ID, "the scene refused an object past the old cap")
+	testing.expect_value(
+		t,
+		game.simulation_object_count(&sim),
+		game.INITIAL_CRATE_COUNT + 301,
+	)
 }

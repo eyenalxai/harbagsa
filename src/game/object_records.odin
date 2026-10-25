@@ -67,8 +67,7 @@ simulation_apply_snapshot :: proc(sim: ^Simulation, snapshot: Object_Snapshot) -
 			b3.DestroyBody(object.body)
 		}
 	}
-	sim.objects = {}
-	sim.object_count = 0
+	clear(&sim.objects)
 
 	next_id := snapshot.next_object_id
 	for record in snapshot.objects {
@@ -116,9 +115,6 @@ create_object_rotated :: proc(
 	light: Light_Settings,
 	settled: bool,
 ) -> Object_Id {
-	if sim.object_count >= MAX_PLACED_OBJECTS {
-		return INVALID_OBJECT_ID
-	}
 	id := sim.next_object_id
 	if !spawn_object(sim, id, spawn, rotation, color, light, settled) {
 		return INVALID_OBJECT_ID
@@ -137,9 +133,6 @@ spawn_object :: proc(
 	light: Light_Settings,
 	settled: bool,
 ) -> bool {
-	if sim.object_count >= MAX_PLACED_OBJECTS {
-		return false
-	}
 	box_color := color
 	if light.active {
 		box_color = light_color4(light.color)
@@ -157,7 +150,7 @@ spawn_object :: proc(
 		return false
 	}
 
-	sim.objects[sim.object_count] = {
+	append(&sim.objects, Placed_Object {
 		id         = id,
 		prefab     = spawn.prefab,
 		body_mode  = spawn.body_mode,
@@ -166,7 +159,6 @@ spawn_object :: proc(
 		light      = light,
 		spawn_time = sim.time,
 		settled    = settled,
-	}
-	sim.object_count += 1
+	})
 	return true
 }

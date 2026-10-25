@@ -68,7 +68,8 @@ run :: proc() -> bool {
 	defer renderer.deinit(&state)
 
 	loop: Loop
-	loop.sim = game.simulation_create()
+	defer frame.scratch_destroy(&loop.scratch)
+	loop.sim = game.simulation_create(context.allocator)
 	if !game.simulation_is_valid(&loop.sim) {
 		log.error("harbagsa: simulation init failed")
 		return false

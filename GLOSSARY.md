@@ -173,7 +173,7 @@ floor so the sun never sits below the horizon.
 _Avoid_: Skybox, sun orbit
 
 **Point light**:
-A light with a position, colour, intensity, and range. The renderer holds up to 8 per frame, and each costs one hard shadow ray per fragment. A lamp prefab owns one.
+A light with a position, colour, intensity, and range. The renderer holds every active point light in a growable buffer, and each costs one hard shadow ray per fragment. A lamp prefab owns one.
 _Avoid_: Lamp (the prefab), bulb
 
 **Lamp prefab**:
@@ -181,7 +181,7 @@ A prefab with an active point light and an emissive box. The catalog has the Lam
 _Avoid_: Light object, bulb
 
 **Light budget**:
-The eight nearest lamps to the camera that upload as point lights. Lamps outside the budget stay emissive but add no light. The inspector shows the active count against the lamp count.
+The set of active point lights. Every placed lamp with an active light is in the budget; the renderer no longer keeps a nearest subset. The inspector shows the active count against the lamp count.
 _Avoid_: Light cap, light count (that is the reported number)
 
 **Lamp shadow**:
@@ -189,7 +189,7 @@ The hard point-light shadow. One ray runs from the shaded point to each active l
 _Avoid_: Point shadow map, soft lamp shadow
 
 **Emissive box**:
-A box whose colour adds to its shaded colour after the sun and point lights. It carries an emissive strength in the box data. Lamps are emissive so they glow even when their light is not in the active eight.
+A box whose colour adds to its shaded colour after the sun and point lights. It carries an emissive strength in the box data. Lamps are emissive so they glow even when their light is inactive.
 _Avoid_: Glow shader, unlit material
 
 **Light mask**:
@@ -197,8 +197,8 @@ The TLAS instance mask that decides which acceleration-structure ray queries see
 _Avoid_: Layer mask, collision mask
 
 **Synthetic light**:
-A fixed test light that the renderer debug override injects, so a perf run can
-fill the light budget without placing lamps.
+A generated test light that the renderer debug override injects, so a perf run can
+fill the frame with an arbitrary light count without placing lamps.
 _Avoid_: Fake light
 
 **Sun angular diameter**:

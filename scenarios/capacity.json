@@ -1,0 +1,20 @@
+{
+  "requires": {"renderer_debug": true},
+  "size": "640x360",
+  "view": {"hud": false, "debug": false, "hint": false},
+  "renderer_debug": {"synthetic_lights": 32},
+  "commands": [
+    {"cmd": "camera", "position": [0, 2.2, 12], "yaw_deg": 0, "pitch_deg": -8.5944},
+    {"cmd": "settle", "frames": 8},
+    {"cmd": "check", "field": "renderer.light_count", "op": "eq", "value": 32},
+    {"cmd": "capture", "name": "thirty-two-lights", "format": "stats"},
+    {"cmd": "renderer_debug", "synthetic_lights": 64},
+    {"cmd": "settle", "frames": 8},
+    {"cmd": "check", "field": "renderer.light_count", "op": "eq", "value": 64},
+    {"cmd": "capture", "name": "sixty-four-lights", "format": "stats"}
+  ],
+  "checks": [
+    {"field": "capture.named.thirty-two-lights.stats.mean.x", "op": "gt", "value": 0},
+    {"field": "capture.named.sixty-four-lights.stats.mean.x", "op": "gt", "value": 0}
+  ]
+}

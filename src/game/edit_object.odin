@@ -161,9 +161,6 @@ edit_duplicate_selected :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Resul
 	if !ok {
 		return edit_fail(.No_Selection)
 	}
-	if simulation_object_count(sim) >= MAX_PLACED_OBJECTS {
-		return edit_fail(.Scene_Full)
-	}
 
 	history := debug_history(dm)
 	snapshot := object_snapshot_capture(sim, history.allocator)
