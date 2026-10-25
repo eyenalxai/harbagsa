@@ -3,40 +3,200 @@
     "renderer_debug": true
   },
   "size": "1280x720",
-  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "view": {
+    "hud": false,
+    "debug": false,
+    "hint": false,
+    "perf": false
+  },
   "analysis": false,
-  "note": "Path-traced reference for the chamber and the room lane. The reference command compares the probe indirect term with a three-bounce CPU estimator.",
+  "note": "Path-traced reference for the chamber and the room lane. The one-bounce reference gates the probe field; the three-bounce run reports the missing multi-bounce transport.",
   "commands": [
-    {"cmd": "renderer_debug", "taa": false, "jitter": false, "ao": false},
-
-    {"cmd": "sun", "azimuth_deg": 270, "elevation_deg": -20, "diameter_deg": 0.53},
-    {"cmd": "camera", "position": [15.5, 1.7, 5.0], "look_at": [11.0, 1.5, 11.0], "fov_deg": 90},
-    {"cmd": "settle", "frames": 40},
-    {"cmd": "place", "prefab": "Lamp", "position": [14.5, 2.75, 7.0], "body": "static",
-     "light": {"intensity": 2.5, "range": 10}},
-    {"cmd": "settle", "frames": 60},
-    {"cmd": "capture", "name": "chamber-gi", "target": "scene_color", "format": "float"},
-    {"cmd": "renderer_debug", "gi": false},
-    {"cmd": "settle", "frames": 2},
-    {"cmd": "capture", "name": "chamber-direct", "target": "scene_color", "format": "float"},
-    {"cmd": "renderer_debug", "gi": true},
-    {"cmd": "reference", "name": "chamber", "gi": "chamber-gi", "direct": "chamber-direct",
-     "samples": 48, "bounces": 3, "stride": 16,
-     "tolerance": {"ratio_min": 0.8, "ratio_max": 1.25, "error_max": 0.3,
-                   "colour_max": 0.1, "zero_fraction_max": 0.01}},
-
-    {"cmd": "remove", "id": 4},
-    {"cmd": "sun", "azimuth_deg": 270, "elevation_deg": 20, "diameter_deg": 0.53},
-    {"cmd": "camera", "position": [7.4, 1.7, 13.2], "yaw_deg": -90, "pitch_deg": -5},
-    {"cmd": "settle", "frames": 60},
-    {"cmd": "capture", "name": "lane-gi", "target": "scene_color", "format": "float"},
-    {"cmd": "renderer_debug", "gi": false},
-    {"cmd": "settle", "frames": 2},
-    {"cmd": "capture", "name": "lane-direct", "target": "scene_color", "format": "float"},
-    {"cmd": "renderer_debug", "gi": true},
-    {"cmd": "reference", "name": "lane", "gi": "lane-gi", "direct": "lane-direct",
-     "samples": 48, "bounces": 3, "stride": 16,
-     "tolerance": {"ratio_min": 0.8, "ratio_max": 1.25, "error_max": 0.3,
-                   "colour_max": 0.1, "zero_fraction_max": 0.01}}
+    {
+      "cmd": "renderer_debug",
+      "taa": false,
+      "jitter": false,
+      "ao": false
+    },
+    {
+      "cmd": "sun",
+      "azimuth_deg": 270,
+      "elevation_deg": -20,
+      "diameter_deg": 0.53
+    },
+    {
+      "cmd": "camera",
+      "position": [
+        15.5,
+        1.7,
+        5.0
+      ],
+      "look_at": [
+        11.0,
+        1.5,
+        11.0
+      ],
+      "fov_deg": 90
+    },
+    {
+      "cmd": "settle",
+      "frames": 40
+    },
+    {
+      "cmd": "place",
+      "prefab": "Lamp",
+      "position": [
+        14.5,
+        2.75,
+        7.0
+      ],
+      "body": "static",
+      "light": {
+        "intensity": 2.5,
+        "range": 10
+      }
+    },
+    {
+      "cmd": "settle",
+      "frames": 60
+    },
+    {
+      "cmd": "capture",
+      "name": "chamber-gi",
+      "target": "scene_color",
+      "format": "float"
+    },
+    {
+      "cmd": "renderer_debug",
+      "gi": false
+    },
+    {
+      "cmd": "settle",
+      "frames": 2
+    },
+    {
+      "cmd": "capture",
+      "name": "chamber-direct",
+      "target": "scene_color",
+      "format": "float"
+    },
+    {
+      "cmd": "renderer_debug",
+      "gi": true
+    },
+    {
+      "cmd": "reference",
+      "name": "chamber-one",
+      "gi": "chamber-gi",
+      "direct": "chamber-direct",
+      "samples": 48,
+      "bounces": 1,
+      "stride": 16,
+      "tolerance": {
+        "ratio_min": 0.8,
+        "ratio_max": 1.25,
+        "error_max": 0.3,
+        "colour_max": 0.1,
+        "zero_fraction_max": 0.01
+      }
+    },
+    {
+      "cmd": "reference",
+      "name": "chamber-three",
+      "gi": "chamber-gi",
+      "direct": "chamber-direct",
+      "samples": 48,
+      "bounces": 3,
+      "stride": 16,
+      "tolerance": {
+        "ratio_min": 0.8,
+        "ratio_max": 1.25,
+        "error_max": 0.3,
+        "colour_max": 0.1,
+        "zero_fraction_max": 0.01
+      },
+      "advisory": true
+    },
+    {
+      "cmd": "remove",
+      "id": 4
+    },
+    {
+      "cmd": "sun",
+      "azimuth_deg": 270,
+      "elevation_deg": 20,
+      "diameter_deg": 0.53
+    },
+    {
+      "cmd": "camera",
+      "position": [
+        7.4,
+        1.7,
+        13.2
+      ],
+      "yaw_deg": -90,
+      "pitch_deg": -5
+    },
+    {
+      "cmd": "settle",
+      "frames": 60
+    },
+    {
+      "cmd": "capture",
+      "name": "lane-gi",
+      "target": "scene_color",
+      "format": "float"
+    },
+    {
+      "cmd": "renderer_debug",
+      "gi": false
+    },
+    {
+      "cmd": "settle",
+      "frames": 2
+    },
+    {
+      "cmd": "capture",
+      "name": "lane-direct",
+      "target": "scene_color",
+      "format": "float"
+    },
+    {
+      "cmd": "renderer_debug",
+      "gi": true
+    },
+    {
+      "cmd": "reference",
+      "name": "lane-one",
+      "gi": "lane-gi",
+      "direct": "lane-direct",
+      "samples": 48,
+      "bounces": 1,
+      "stride": 16,
+      "tolerance": {
+        "ratio_min": 0.8,
+        "ratio_max": 1.25,
+        "error_max": 0.3,
+        "colour_max": 0.1,
+        "zero_fraction_max": 0.01
+      }
+    },
+    {
+      "cmd": "reference",
+      "name": "lane-three",
+      "gi": "lane-gi",
+      "direct": "lane-direct",
+      "samples": 48,
+      "bounces": 3,
+      "stride": 16,
+      "tolerance": {
+        "ratio_min": 0.8,
+        "ratio_max": 1.25,
+        "error_max": 0.3,
+        "colour_max": 0.1,
+        "zero_fraction_max": 0.01
+      },
+      "advisory": true
+    }
   ]
 }

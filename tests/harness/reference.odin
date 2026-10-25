@@ -10,7 +10,7 @@ import "src:harness"
 reference_parse_defaults_and_tolerance :: proc(t: ^testing.T) {
 	command, error := harness.command_parse_string(
 		`{"cmd":"reference","name":"chamber","gi":"gi-on","direct":"gi-off",
-		  "tolerance":{"ratio_min":0.8,"ratio_max":1.25}}`,
+		  "tolerance":{"ratio_min":0.8,"ratio_max":1.25},"advisory":true}`,
 		context.allocator,
 	)
 	defer harness.command_destroy(&command, context.allocator)
@@ -28,6 +28,7 @@ reference_parse_defaults_and_tolerance :: proc(t: ^testing.T) {
 	testing.expect_value(t, command.reference.settings.sun_samples, 16)
 	testing.expect_value(t, command.reference.tolerance.ratio_min, 0.8)
 	testing.expect_value(t, command.reference.tolerance.ratio_max, 1.25)
+	testing.expect(t, command.reference.advisory, "advisory was not parsed")
 	testing.expect_value(t, command.reference.tolerance.error_max, 0.35)
 }
 
@@ -35,7 +36,7 @@ reference_parse_defaults_and_tolerance :: proc(t: ^testing.T) {
 reference_parse_rejects_a_bad_field :: proc(t: ^testing.T) {
 	lines := [?]string{
 		`{"cmd":"reference","name":"a","gi":"b"}`,
-		`{"cmd":"reference","name":"a","gi":"b","direct":"c","bounces":1}`,
+		`{"cmd":"reference","name":"a","gi":"b","direct":"c","bounces":0}`,
 		`{"cmd":"reference","name":"a","gi":"b","direct":"c","samples":0}`,
 		`{"cmd":"reference","name":"a","gi":"b","direct":"c","colour":"x"}`,
 		`{"cmd":"reference","name":"a","gi":"b","direct":"c",

@@ -995,10 +995,9 @@ bounce on a 1 m test grid and a coarse 4 m arena grid. It is not a path-traced
 reference, and it does not claim modern-game parity.
 
 `scenarios/ddgi-reference.json` is the path-traced comparison. It captures the
-chamber and the room lane as `scene_color` float frames, then the `reference`
-command traces a three-bounce CPU estimator at an 80 x 45 pixel grid and writes
-`chamber-reference.json`, `chamber-reference.csv`, and
-`frames/chamber-reference.png` beside the lane files. The gate fails when the
+chamber and the room lane as `scene_color` float frames. A one-bounce CPU
+reference at an 80 x 45 pixel grid gates the probe field; a three-bounce run is
+advisory and reports the missing multi-bounce transport. The gate fails when the
 probe indirect term misses the stated luminance, colour, or coverage tolerance.
 `make reference` runs it. The estimator, the scene, the tolerance, and the
 current measured gap are in

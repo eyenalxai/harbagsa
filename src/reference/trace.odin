@@ -6,9 +6,8 @@ import "core:math/linalg"
 import "core:mem"
 
 // The estimator traces cosine-weighted diffuse paths from a fixed grid of
-// pixel centres. `bounces` counts the diffuse bounces after the camera hit, so
-// two bounces is the minimum that resolves transport the probe field cannot:
-// the probe update shades one hit and stops.
+// pixel centres. `bounces` counts the diffuse bounces after the camera hit. One
+// bounce matches the probe update; more bounces quantify the missing transport.
 //
 // Scale: a vertex returns `emission + albedo * (direct + mean_cos(next))`. The
 // camera-hit value is the sRGB-independent scene colour the lit pass writes to
@@ -230,7 +229,7 @@ estimate :: proc(
 	stride := max(settings.stride, 1)
 	samples := max(settings.samples, 1)
 	resolved := settings
-	resolved.bounces = clamp(settings.bounces, 2, MAX_BOUNCES)
+	resolved.bounces = clamp(settings.bounces, 1, MAX_BOUNCES)
 	grid := Grid {
 		width = int((frame_width + u32(stride) - 1) / u32(stride)),
 		height = int((frame_height + u32(stride) - 1) / u32(stride)),

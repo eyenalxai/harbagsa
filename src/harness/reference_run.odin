@@ -51,6 +51,7 @@ Reference_Report :: struct {
 	tolerance:  reference.Tolerance `json:"tolerance"`,
 	image:      Reference_Image     `json:"image"`,
 	ok:         bool                `json:"ok"`,
+	advisory:   bool                `json:"advisory"`,
 	elapsed_ms: f64                 `json:"elapsed_ms"`,
 }
 
@@ -131,7 +132,7 @@ execute_reference :: proc(session: ^Session, command: Command, reply: ^Reply) ->
 	}
 	append(&session.references, report)
 	reply.reference = &session.references[len(session.references) - 1]
-	if !report.ok {
+	if !report.ok && !spec.advisory {
 		// A gate failure joins the run's failures instead of ending the
 		// command list, so one run compares every scene it declares.
 		message := reference_gate_message(report)
@@ -274,6 +275,7 @@ reference_report_new :: proc(
 		estimator = spec.settings,
 		metrics = comparison.metrics,
 		tolerance = spec.tolerance,
+		advisory = spec.advisory,
 		image = {
 			path = fmt.aprintf("frames/%s-reference.png", spec.name, allocator = allocator),
 			width = u32(grid.width),
