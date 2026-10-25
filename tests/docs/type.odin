@@ -10,7 +10,7 @@ import "src:renderer"
 
 TYPE_ROWS :: 5
 
-WEIGHT_WORDINGS := [?]string{"base", "base + 100", "min(base, 700)"}
+WEIGHT_WORDINGS := [?]string{"base", "base + 100"}
 
 @(test)
 type_tokens_match_theme :: proc(t: ^testing.T) {
@@ -154,7 +154,7 @@ check_type_row :: proc(
 	testing.expectf(
 		t,
 		weight_ok,
-		"%s:%d says %s weight is %q, want \"base\", \"base + 100\", or \"min(base, 700)\"",
+		"%s:%d says %s weight is %q, want \"base\" or \"base + 100\"",
 		doc_path,
 		line,
 		token,
@@ -217,8 +217,6 @@ weight_from_wording :: proc(wording: string, base: f32) -> (weight: f32, ok: boo
 		return base, true
 	case "base + 100":
 		return min(base + 100, renderer.MAX_WEIGHT), true
-	case "min(base, 700)":
-		return min(base, renderer.MONO_MAX_WEIGHT), true
 	}
 	return 0, false
 }

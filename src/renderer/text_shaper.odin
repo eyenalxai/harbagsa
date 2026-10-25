@@ -114,9 +114,6 @@ text_shaper_font :: proc(
 }
 
 text_style_weight :: proc(style: Text_Type) -> u16 {
-	if style.face == .Mono {
-		return text_mono_weight(style.weight)
-	}
 	return text_weight_key(style.weight)
 }
 

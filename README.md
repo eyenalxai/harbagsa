@@ -103,8 +103,8 @@ fully visible; the display's desktop mode is always kept.
 `Type weight` sets the UI text weight on the variable axis from 100 to 900. The
 number is the weight; the nine ticks mark Thin 100 through Black 900. Left and
 Right step by 10, and the track above the scale can be dragged for any value. The
-weight applies to the menu and the HUD. Roboto Mono stops at 700, so numbers stop
-gaining weight above 700 while the prose continues to Black.
+weight applies to the menu and the HUD. Both Geist faces run to Black 900, so the
+numbers keep pace with the prose.
 
 The display list and its modes come from SDL at startup. The choices last for
 the current run. A new run starts Borderless, with 1280x720 as the Windowed
