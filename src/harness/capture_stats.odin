@@ -14,6 +14,7 @@ Capture_Stats :: struct {
 	mean:                   [4]f32 `json:"mean"`,
 	stddev:                 [4]f32 `json:"stddev"`,
 	gradient:               [4]f32 `json:"gradient"`,
+	steps:                  Maybe(Capture_Steps) `json:"steps,omitempty"`,
 	velocity_median_texels: Maybe(f32) `json:"velocity_median_texels,omitempty"`,
 }
 
@@ -78,6 +79,9 @@ capture_stats :: proc(
 		if pairs > 0 {
 			stats.gradient[channel] = f32(gradient_sums[channel] / f64(pairs))
 		}
+	}
+	if bounds, has_region := region.?; has_region && target == .Color {
+		stats.steps = capture_steps_build(values, width, height, bounds, allocator)
 	}
 	if target == .Velocity {
 		lengths := make([]f32, count, allocator)

@@ -64,6 +64,30 @@ float interleaved_gradient_noise(vec2 pixel) {
     return fract(52.9829189 * fract(dot(pixel, vec2(0.06711056, 0.00583715))));
 }
 
+// A visibility count is a coarse fraction: eight AO rays step the ambient by
+// one eighth, and that step survives the TAA average as a band. Offset the
+// count inside its own step so the resolve sees a continuous value. The hash
+// takes the shadow phase, so the offset changes each frame and TAA averages it.
+float visibility_rounding(uint frame) {
+    uint hash = uint(gl_FragCoord.x) * 1973u + uint(gl_FragCoord.y) * 9277u + frame * 26699u;
+    hash = (hash ^ 61u) ^ (hash >> 16u);
+    hash *= 9u;
+    hash ^= hash >> 4u;
+    hash *= 0x27d4eb2du;
+    hash ^= hash >> 15u;
+    return float(hash) / 4294967295.0;
+}
+
+// A fully lit or fully occluded pixel is exact. Only the partial counts carry
+// the one-step offset, so a surface in full sun does not flicker each frame.
+float dithered_visibility(int visible, int count) {
+    if (visible <= 0 || visible >= count) {
+        return float(visible) / float(count);
+    }
+    float fraction = float(visible) + visibility_rounding(uint(camera.screen.w)) - 0.5;
+    return clamp(fraction / float(count), 0.0, 1.0);
+}
+
 vec3 sun_direction(vec3 to_light, int index, int count, float phase) {
     vec3 up = abs(to_light.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
     vec3 tangent = normalize(cross(up, to_light));
@@ -101,7 +125,7 @@ float sun_visibility(vec3 world_position, vec3 normal, vec3 to_light) {
             visible += 1;
         }
     }
-    return float(visible) / float(SUN_SAMPLES);
+    return dithered_visibility(visible, SUN_SAMPLES);
 }
 
 vec3 point_light_radiance(vec3 world_position, vec3 normal) {
@@ -163,7 +187,7 @@ float ambient_visibility(vec3 position, vec3 normal, float radius, float phase) 
             visible += 1;
         }
     }
-    return float(visible) / float(AO_SAMPLES);
+    return dithered_visibility(visible, AO_SAMPLES);
 }
 
 void main() {
