@@ -161,7 +161,7 @@ Rules:
   future frame queues.
 - A check uses the `state.json` shape. Operators: `eq`, `ne`, `lt`, `le`, `gt`,
   `ge`. A numeric check takes an optional absolute `tolerance`; it applies to
-  `eq` and `ne`. A tolerance on an ordering op or a non-number is an error. Examples: `player.position.y`, `objects.count`, `settings.window_mode`,
+  `eq` and `ne`. A tolerance on an ordering op or a non-number is an error. Examples: `player.position.y`, `player.stance`, `objects.count`, `settings.window_mode`,
   `settings.resolution`, `settings.sprint_mode`, `settings.type_weight`,
   `menu.open`, `debug.active`, `debug.palette.open`, `debug.placement.armed`,
   `debug.placement.prefab`, `debug.sun.active`, `debug.sun.angular_diameter_deg`,
@@ -586,6 +586,20 @@ agree. A capture at another size exercises the density path:
 ```sh
 ./bin/harbagsa-agent run scenarios/settings-menu.json --size 2560x1440 --out /tmp/menu-2x
 ```
+
+## Movement scenarios
+
+Movement scenarios run with `--no-render` and gate the simulation state.
+
+| Scenario | Proves |
+| --- | --- |
+| `scenarios/step-angle.json` | the step-up climbs the 0.35 m step from a 60 degree approach |
+| `scenarios/ramp-headroom.json` | a stand attempt under each ramp stays low instead of growing through the slab |
+
+`ramp-headroom.json` sets a prone player under each ramp, presses jump as the
+stand attempt, and checks `player.stance`. A prone player that asks to stand
+must land on the tallest stance that fits, and the rotated slab must count as an
+overhead shape.
 
 ## Live session
 
