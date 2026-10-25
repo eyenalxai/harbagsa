@@ -39,6 +39,9 @@ repro_writes_a_scene_and_sets_the_notice :: proc(t: ^testing.T) {
 			strings.contains(string(data), `"cmd": "scene"`),
 			"the snapshot is not a scene command",
 		)
+		scenario, parse_error := harness.scenario_parse(string(data), context.allocator)
+		testing.expectf(t, parse_error == "", "the snapshot is not a runnable scenario: %s", parse_error)
+		harness.scenario_destroy(&scenario, context.allocator)
 	}
 
 	state := harness.session_state(&session)
