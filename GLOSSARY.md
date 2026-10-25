@@ -828,6 +828,16 @@ The run directory name built from a sweep's parameter values.
 A directory name appended to the run path so two runs coexist. **Avoid**:
 label, suffix.
 
+### Compare panel
+A labeled PNG that puts the same capture from two runs side by side, with each
+run's scenario, revision, and dirty flag. It is evidence, not a numeric check.
+**Avoid**: montage, contact sheet.
+
+### Scene snapshot
+One `scene` command that carries the exact camera, sun, placed objects,
+settings, display list, and view flags of a live view. `F5` writes one, and
+`record` starts with one. **Avoid**: state dump, replay file.
+
 ### Display list
 The harness's scripted set of displays and modes. It replaces the compositor
 snapshot for a scenario. **Avoid**: monitor list.

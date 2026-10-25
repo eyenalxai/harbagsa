@@ -8,6 +8,11 @@ json_get :: proc(object: json.Object, key: string) -> (value: json.Value, ok: bo
 	return
 }
 
+json_get_required :: proc(object: json.Object, key: string) -> json.Value {
+	value, _ := json_get(object, key)
+	return value
+}
+
 json_number :: proc(value: json.Value) -> (result: f64, ok: bool) {
 	#partial switch number in value {
 	case json.Integer:
@@ -128,6 +133,25 @@ vec3_field :: proc(object: json.Object, key: string) -> (value: [3]f32, ok: bool
 			return {}, false
 		}
 		value[index] = f32(number)
+	}
+	return value, true
+}
+
+vec2_int_field :: proc(object: json.Object, key: string) -> (value: [2]i32, ok: bool) {
+	value_json, has := json_get(object, key)
+	if !has {
+		return {}, false
+	}
+	array, array_ok := json_array(value_json)
+	if !array_ok || len(array) != 2 {
+		return {}, false
+	}
+	for index in 0 ..< 2 {
+		number, number_ok := json_integer(array[index])
+		if !number_ok {
+			return {}, false
+		}
+		value[index] = i32(number)
 	}
 	return value, true
 }
