@@ -9,7 +9,9 @@ PALETTE_PREVIEW_LABELS := [4]string{"Size", "Body", "Light", "Objects"}
 build_palette :: proc(o: ^Overlay, width, height: f32, palette: ui.Palette) {
 	theme := o.theme
 	view := palette
-	layout := palette_layout(theme, width, height, view.item_count)
+	ctx: Layout_Context
+	layout_context_init(&ctx, theme, &o.atlas, width, height)
+	layout := ui.palette_layout(ctx.inputs, view.item_count)
 
 	hud_emit_rect(
 		o,
@@ -42,7 +44,7 @@ build_palette :: proc(o: ^Overlay, width, height: f32, palette: ui.Palette) {
 	for item, index in view.items[:count] {
 		build_palette_card(o, layout.cards[index], item, index == view.selected)
 	}
-	for index in count ..< PALETTE_SLOTS {
+	for index in count ..< ui.PALETTE_SLOTS {
 		card := layout.cards[index]
 		hud_emit_frame(o, card.x, card.y, card.width, card.height, theme.hairline, theme.line_hairline)
 	}
@@ -55,7 +57,7 @@ build_palette :: proc(o: ^Overlay, width, height: f32, palette: ui.Palette) {
 }
 
 @(private)
-build_palette_card :: proc(o: ^Overlay, card: HUD_Rect, item: ui.Palette_Item, selected: bool) {
+build_palette_card :: proc(o: ^Overlay, card: ui.Rect, item: ui.Palette_Item, selected: bool) {
 	theme := o.theme
 	fill := theme.surface_menu
 	if selected {
@@ -68,7 +70,7 @@ build_palette_card :: proc(o: ^Overlay, card: HUD_Rect, item: ui.Palette_Item, s
 	}
 
 	name_height := theme.type_caption.line_height
-	thumbnail := HUD_Rect {
+	thumbnail := ui.Rect {
 		x      = card.x + theme.spacing.xs,
 		y      = card.y + theme.spacing.sm,
 		width  = card.width - theme.spacing.xs * 2,
@@ -102,7 +104,7 @@ build_palette_card :: proc(o: ^Overlay, card: HUD_Rect, item: ui.Palette_Item, s
 }
 
 @(private)
-build_palette_iso :: proc(o: ^Overlay, item: ui.Palette_Item, rect: HUD_Rect) {
+build_palette_iso :: proc(o: ^Overlay, item: ui.Palette_Item, rect: ui.Rect) {
 	box := palette_project_box(item.half_extents, item.base_pitch)
 	transform := palette_fit_transform(box, rect)
 	outline := palette_emissive_outline(item.color)
@@ -134,7 +136,7 @@ build_palette_iso :: proc(o: ^Overlay, item: ui.Palette_Item, rect: HUD_Rect) {
 @(private)
 build_palette_preview :: proc(
 	o: ^Overlay,
-	layout: Palette_Layout,
+	layout: ui.Palette_Layout,
 	item: ui.Palette_Item,
 	palette: ^ui.Palette,
 ) {
@@ -151,7 +153,7 @@ build_palette_preview :: proc(
 	)
 
 	box_height := min(PALETTE_PREVIEW_BOX * theme.density, layout.preview.height * 0.36)
-	box_rect := HUD_Rect{layout.preview.x, layout.preview.y, layout.preview.width, box_height}
+	box_rect := ui.Rect{layout.preview.x, layout.preview.y, layout.preview.width, box_height}
 	build_palette_iso(o, item, box_rect)
 
 	name_style := Text_Style{type = theme.type_body_strong, color = theme.text_primary}
@@ -240,7 +242,7 @@ palette_preview_line :: proc(
 }
 
 @(private)
-build_palette_footer :: proc(o: ^Overlay, layout: Palette_Layout, hints: []ui.Hint_Cell) {
+build_palette_footer :: proc(o: ^Overlay, layout: ui.Palette_Layout, hints: []ui.Hint_Cell) {
 	theme := o.theme
 	hud_emit_rect(
 		o,
@@ -263,5 +265,26 @@ build_palette_footer :: proc(o: ^Overlay, layout: Palette_Layout, hints: []ui.Hi
 		x += text_measure(&o.atlas, key_style.type, hint.keys) + theme.spacing.xs
 		text_emit(o, x, baseline, action_style, hint.action)
 		x += text_measure(&o.atlas, action_style.type, hint.action) + theme.spacing.xl
+	}
+}
+
+Palette_Hit :: struct {
+	inside: bool,
+	card:   int,
+}
+
+// The game loop asks the renderer where a normalized pointer lands. The layout
+// and the hit test stay together, so a card cannot move under the pointer
+// unnoticed.
+palette_hit_test :: proc(r: ^Renderer, pointer: [2]f32, item_count: int) -> Palette_Hit {
+	width, height := target_extent(r)
+	ctx: Layout_Context
+	layout_context_init(&ctx, ui_theme_init(height), nil, f32(width), f32(height))
+	layout := ui.palette_layout(ctx.inputs, item_count)
+	x := pointer.x * f32(width)
+	y := pointer.y * f32(height)
+	return {
+		inside = ui.rect_contains(layout.panel, x, y),
+		card = ui.palette_card_at(layout, pointer),
 	}
 }

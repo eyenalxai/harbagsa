@@ -9,6 +9,7 @@ import "src:display"
 import "src:frame"
 import "src:game"
 import "src:renderer"
+import "src:ui"
 
 @(test)
 menu_maps_to_the_hud :: proc(t: ^testing.T) {
@@ -85,12 +86,9 @@ blocked_row_keeps_its_band_and_draws_the_value_secondary :: proc(t: ^testing.T) 
 	theme := overlay.theme
 	panel := widest_quad(overlay, theme.surface_menu)
 	testing.expect(t, panel.width > 0, "the panel is missing")
-	layout := renderer.rows_measure(
-		&overlay.atlas,
-		theme,
-		hud.menu.view.rows,
-		{value_align = .Right},
-	)
+	ctx: renderer.Layout_Context
+	renderer.layout_context_init(&ctx, theme, &overlay.atlas, 0, 0)
+	layout := ui.rows_layout(ctx.inputs, hud.menu.view.rows, {value_align = .Right})
 	value_x := panel.x + theme.spacing.xl + theme.spacing.sm + layout.value_column
 
 	secondary: [256]Rect
@@ -141,7 +139,10 @@ menu_slider_track_stays_inside_the_panel :: proc(t: ^testing.T) {
 	defer destroy_overlay_scratch(&overlay)
 
 	panel := widest_quad(overlay, overlay.theme.surface_menu)
-	slider := overlay.menu_slider
+	ctx: renderer.Layout_Context
+	renderer.layout_context_init(&ctx, overlay.theme, &overlay.atlas, 1280, 720)
+	layout := ui.menu_layout(ctx.inputs, hud.menu.view)
+	slider := layout.slider
 	padding := overlay.theme.spacing.xl
 	knob := overlay.theme.spacing.md
 	expected_track := panel.width - padding * 2
@@ -195,9 +196,24 @@ menu_slider_rect_matches_the_drawn_track_before_the_first_draw :: proc(t: ^testi
 		target = {config = {width = 1280, height = 720}},
 		overlay = overlay,
 	}
-	measured := renderer.menu_slider_rect(&r, hud.menu.view)
+	measured := renderer.menu_layout_for(&r, hud.menu.view).slider
 	renderer.build_menu(&overlay, 1280, 720, hud.menu.view)
 
-	testing.expect(t, overlay.menu_slider.width > 0, "the draw published no slider")
-	testing.expect_value(t, measured, overlay.menu_slider)
+	testing.expect(t, measured.width > 0, "the layout has no slider")
+	track := widest_quad(overlay, overlay.theme.slider_track)
+	testing.expect(t, track.width > 0, "the draw published no track")
+	testing.expect(t, math.abs(measured.x - track.x) < 0.01, "the track x moved")
+	testing.expect(t, math.abs(measured.width - track.width) < 0.01, "the track width moved")
+	testing.expect(
+		t,
+		track.y >= measured.y && track.y + track.height <= measured.y + measured.height,
+		"the drawn track leaves the layout rect",
+	)
+
+	pointer := [2]f32 {
+		measured.x + measured.width * 0.5,
+		measured.y + measured.height * 0.5,
+	}
+	game.menu_weight_input(&hud.menu, &sim.settings, measured, pointer, true, true)
+	testing.expect(t, hud.menu.dragging_weight, "the opening-frame press did not start a drag")
 }

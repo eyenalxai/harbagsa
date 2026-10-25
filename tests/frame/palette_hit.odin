@@ -5,13 +5,16 @@ package frame_test
 import "core:testing"
 
 import "src:renderer"
+import "src:ui"
 
 @(test)
 palette_hit_test_separates_panel_and_cards :: proc(t: ^testing.T) {
 	state := renderer.Renderer {
 		target = {config = {width = 800, height = 600}},
 	}
-	layout := renderer.palette_layout(renderer.ui_theme_init(600), 800, 600, 8)
+	ctx: renderer.Layout_Context
+	renderer.layout_context_init(&ctx, renderer.ui_theme_init(600), nil, 800, 600)
+	layout := ui.palette_layout(ctx.inputs, 8)
 
 	card := layout.cards[2]
 	card_point := [2]f32 {
@@ -22,7 +25,7 @@ palette_hit_test_separates_panel_and_cards :: proc(t: ^testing.T) {
 	testing.expect(t, hit.inside, "a card must be inside the panel")
 	testing.expect_value(t, hit.card, 2)
 
-	empty := layout.cards[11]
+	empty := layout.cards[ui.PALETTE_SLOTS - 1]
 	empty_point := [2]f32 {
 		(empty.x + empty.width * 0.5) / 800.0,
 		(empty.y + empty.height * 0.5) / 600.0,

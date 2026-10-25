@@ -7,6 +7,7 @@ import "core:testing"
 
 import "src:game"
 import "src:renderer"
+import "src:ui"
 
 @(private)
 inspector_width :: proc(
@@ -20,7 +21,9 @@ inspector_width :: proc(
 	snapshot := game.simulation_snapshot(sim)
 	game.hud_state_update(hud, sim, debug, snapshot, true, 0)
 	testing.expect_value(t, len(hud.view.rows), game.HUD_INSPECTOR_ROW_COUNT)
-	layout := renderer.rows_measure(atlas, theme, hud.view.rows, {value_align = .Left})
+	ctx: renderer.Layout_Context
+	renderer.layout_context_init(&ctx, theme, atlas, 0, 0)
+	layout := ui.rows_layout(ctx.inputs, hud.view.rows, {value_align = .Left})
 	values = {}
 	for row, index in hud.view.rows {
 		values[index] = row.value

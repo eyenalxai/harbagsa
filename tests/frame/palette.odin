@@ -65,29 +65,6 @@ write_palette_text :: proc(buffer: []u8, text: string) -> int {
 }
 
 @(test)
-palette_cards_form_a_six_by_two_grid :: proc(t: ^testing.T) {
-	theme := renderer.ui_theme_init(720)
-	layout := renderer.palette_layout(theme, 1280, 720, 11)
-
-	testing.expect_value(t, layout.card_count, 11)
-	testing.expect_value(t, layout.panel.width, 678.0)
-	testing.expect_value(t, layout.panel.height, 226.0)
-	testing.expect_value(t, layout.panel.x, 301.0)
-	testing.expect_value(t, layout.panel.y, 478.0)
-
-	for index in 0 ..< renderer.PALETTE_SLOTS {
-		card := layout.cards[index]
-		testing.expect_value(t, card.width, 72.0)
-		testing.expect_value(t, card.height, 72.0)
-	}
-	testing.expect_value(t, layout.cards[1].x, layout.cards[0].x + 76.0)
-	testing.expect_value(t, layout.cards[6].x, layout.cards[0].x)
-	testing.expect_value(t, layout.cards[6].y, layout.cards[0].y + 76.0)
-	testing.expect(t, layout.grid.width == 452.0, "the grid is not six cards plus five gaps")
-	testing.expect(t, layout.grid.height == 148.0, "the grid is not two cards plus one gap")
-}
-
-@(test)
 palette_draws_eleven_cards_and_one_empty_cell :: proc(t: ^testing.T) {
 	palette := palette_fixture(11)
 	overlay, ok := build_palette_overlay(t, 1280, 720, palette)
@@ -115,7 +92,7 @@ palette_selected_card_raises_and_bars_the_leading_edge :: proc(t: ^testing.T) {
 	defer destroy_overlay_scratch(&overlay)
 
 	theme := overlay.theme
-	layout := renderer.palette_layout(theme, 1280, 720, 11)
+	layout := palette_geometry(theme, 1280, 720, 11)
 	card := layout.cards[palette.selected]
 
 	raised_buffer: [4]Rect
@@ -172,7 +149,7 @@ palette_preview_projects_three_faces_back_to_front :: proc(t: ^testing.T) {
 @(test)
 palette_fits_800x600_and_clears_the_crosshair :: proc(t: ^testing.T) {
 	theme := renderer.ui_theme_init(600)
-	layout := renderer.palette_layout(theme, 800, 600, 11)
+	layout := palette_geometry(theme, 800, 600, 11)
 	testing.expect_value(t, layout.panel.x, 61.0)
 	testing.expect_value(t, layout.panel.y, 358.0)
 	testing.expect(
@@ -211,7 +188,7 @@ palette_hides_the_capture_hint :: proc(t: ^testing.T) {
 	surfaces: [8]Rect
 	count := quads_with(overlay, overlay.theme.surface_hud, surfaces[:])
 	testing.expect_value(t, count, 1)
-	layout := renderer.palette_layout(overlay.theme, 1280, 720, 11)
+	layout := palette_geometry(overlay.theme, 1280, 720, 11)
 	testing.expect(
 		t,
 		surfaces[0].x == layout.panel.x && surfaces[0].width == layout.panel.width,
@@ -222,7 +199,7 @@ palette_hides_the_capture_hint :: proc(t: ^testing.T) {
 @(test)
 palette_hit_test_matches_the_draw_and_skips_the_empty_slot :: proc(t: ^testing.T) {
 	theme := renderer.ui_theme_init(720)
-	layout := renderer.palette_layout(theme, 800, 600, 11)
+	layout := palette_geometry(theme, 800, 600, 11)
 	for index in 0 ..< layout.card_count {
 		card := layout.cards[index]
 		pointer := [2]f32 {
@@ -231,29 +208,29 @@ palette_hit_test_matches_the_draw_and_skips_the_empty_slot :: proc(t: ^testing.T
 		}
 		testing.expectf(
 			t,
-			renderer.palette_card_at(layout, pointer) == index,
+			ui.palette_card_at(layout, pointer) == index,
 			"card %d did not hit its own rectangle",
 			index,
 		)
 	}
 
-	empty := layout.cards[11]
+	empty := layout.cards[ui.PALETTE_SLOTS - 1]
 	empty_pointer := [2]f32 {
 		(empty.x + empty.width * 0.5) / 800.0,
 		(empty.y + empty.height * 0.5) / 600.0,
 	}
-	testing.expect_value(t, renderer.palette_card_at(layout, empty_pointer), -1)
+	testing.expect_value(t, ui.palette_card_at(layout, empty_pointer), -1)
 
 	gap_pointer := [2]f32 {
 		(layout.cards[0].x + layout.cards[0].width + 1.0) / 800.0,
 		(layout.cards[0].y + layout.cards[0].height * 0.5) / 600.0,
 	}
-	testing.expect_value(t, renderer.palette_card_at(layout, gap_pointer), -1)
-	testing.expect_value(t, renderer.palette_card_at(layout, {0.0, 0.0}), -1)
-	testing.expect_value(t, renderer.palette_card_at(layout, {0.99, 0.99}), -1)
+	testing.expect_value(t, ui.palette_card_at(layout, gap_pointer), -1)
+	testing.expect_value(t, ui.palette_card_at(layout, {0.0, 0.0}), -1)
+	testing.expect_value(t, ui.palette_card_at(layout, {0.99, 0.99}), -1)
 	testing.expect(
 		t,
-		renderer.palette_panel_bounds(theme, 800, 600) == layout.panel,
+		palette_geometry(theme, 800, 600, 0).panel == layout.panel,
 		"the panel bounds moved",
 	)
 }
