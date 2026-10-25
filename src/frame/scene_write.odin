@@ -22,7 +22,6 @@ SNAPSHOT_PATH_BYTES :: 64
 scene_write :: proc(
 	sim: ^game.Simulation,
 	debug: ^game.Debug_Mode,
-	hud: ^game.HUD_State,
 	view: Options,
 	camera_override: ^renderer.Camera,
 	path: string,
@@ -34,7 +33,7 @@ scene_write :: proc(
 			allocator = context.allocator,
 		)
 	}
-	scene := scene_capture(sim, debug, hud, view, camera_override, context.temp_allocator)
+	scene := scene_capture(sim, debug, view, camera_override, context.temp_allocator)
 	defer scene_destroy(&scene, context.temp_allocator)
 	text := scene_json(scene, context.temp_allocator)
 	if text == "" {

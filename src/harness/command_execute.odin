@@ -176,7 +176,7 @@ execute_renderer_debug :: proc(session: ^Session, command: Command, reply: ^Repl
 execute_displays :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	session_displays(session, command.displays)
 	reply.displays = new(Displays_State, session.allocator)
-	reply.displays^ = displays_state_build(&session.hud.menu.displays, session.allocator)
+	reply.displays^ = displays_state_build(&session.sim.settings.display, session.allocator)
 	return ""
 }
 

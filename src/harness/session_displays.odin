@@ -19,7 +19,7 @@ Displays_State :: struct {
 
 session_displays :: proc(session: ^Session, command: Displays_Command) {
 	if command.clear {
-		session.hud.menu.displays = display.fallback_list()
+		session.sim.settings.display = display.fallback_list()
 		return
 	}
 	list: display.List
@@ -38,7 +38,7 @@ session_displays :: proc(session: ^Session, command: Displays_Command) {
 		display.sort_modes(info)
 		list.count += 1
 	}
-	session.hud.menu.displays = list
+	session.sim.settings.display = list
 }
 
 displays_state_build :: proc(list: ^display.List, allocator: mem.Allocator) -> Displays_State {
