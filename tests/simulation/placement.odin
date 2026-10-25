@@ -20,7 +20,7 @@ placement_setup :: proc(t: ^testing.T) -> (game.Simulation, game.Debug_Mode) {
 
 @(private)
 placement_arm :: proc(t: ^testing.T, dm: ^game.Debug_Mode, sim: ^game.Simulation, id: game.Prefab_Id) {
-	testing.expectf(t, game.debug_placement_arm(dm, sim, id), "arm %v failed", id)
+	apply_expect(t, dm, sim, game.Placement_Arm{prefab = id}, "arm failed")
 }
 
 @(test)
@@ -29,10 +29,10 @@ palette_pick_arms_the_selected_prefab :: proc(t: ^testing.T) {
 	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
-	game.debug_palette_open(&dm)
+	apply_expect(t, &dm, &sim, game.Palette_Open{}, "open failed")
 	testing.expect(t, dm.palette.open, "palette did not open")
-	testing.expect(t, game.debug_palette_select(&dm, 4), "platform select failed")
-	testing.expect(t, game.debug_palette_pick(&dm, &sim), "pick failed")
+	apply_expect(t, &dm, &sim, game.Palette_Select{index = 4}, "platform select failed")
+	apply_expect(t, &dm, &sim, game.Palette_Pick{}, "pick failed")
 
 	testing.expect(t, !dm.palette.open, "pick left the palette open")
 	testing.expect(t, dm.placement.armed, "pick did not arm the placement")
@@ -43,20 +43,21 @@ palette_pick_arms_the_selected_prefab :: proc(t: ^testing.T) {
 @(test)
 palette_body_defaults_from_the_prefab_and_sticks_until_changed :: proc(t: ^testing.T) {
 	dm := game.debug_mode_create(context.allocator)
+	dm.active = true
 	defer game.debug_mode_destroy(&dm)
 	testing.expect_value(t, dm.palette.body_mode, game.Body_Mode.Dynamic)
 
-	game.debug_palette_flip_body(&dm)
+	apply_expect(t, &dm, nil, game.Flip_Body{}, "flip failed")
 	testing.expect_value(t, dm.palette.body_mode, game.Body_Mode.Static)
-	testing.expect(t, game.debug_palette_select(&dm, 5), "ramp select failed")
+	apply_expect(t, &dm, nil, game.Palette_Select{index = 5}, "ramp select failed")
 	testing.expect_value(t, dm.palette.body_mode, game.Body_Mode.Static)
 
-	testing.expect(t, game.debug_palette_select(&dm, 0), "crate select failed")
+	apply_expect(t, &dm, nil, game.Palette_Select{index = 0}, "crate select failed")
 	testing.expect_value(t, dm.palette.body_mode, game.Body_Mode.Dynamic)
-	game.debug_palette_flip_body(&dm)
-	testing.expect(t, game.debug_palette_select(&dm, 0), "repeat select failed")
+	apply_expect(t, &dm, nil, game.Flip_Body{}, "flip failed")
+	apply_expect(t, &dm, nil, game.Palette_Select{index = 0}, "repeat select failed")
 	testing.expect_value(t, dm.palette.body_mode, game.Body_Mode.Static)
-	testing.expect(t, !game.debug_palette_select(&dm, game.PREFAB_COUNT), "bad index accepted")
+	testing.expect(t, !apply(&dm, nil, game.Palette_Select{index = game.PREFAB_COUNT}).applied, "bad index accepted")
 }
 
 @(test)
@@ -104,12 +105,12 @@ placement_height_steps_and_clamps_to_the_surface :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 	placement_arm(t, &dm, &sim, .Crate)
 
-	game.debug_placement_raise(&dm, 1, false)
+	apply_expect(t, &dm, &sim, game.Placement_Raise{steps = 1})
 	expect_near(t, dm.placement.height, 0.25, 0.0001, "single height step")
-	game.debug_placement_raise(&dm, 1, true)
+	apply_expect(t, &dm, &sim, game.Placement_Raise{steps = 1, large = true})
 	expect_near(t, dm.placement.height, 1.25, 0.0001, "large height step")
 
-	game.debug_placement_raise(&dm, -100, true)
+	apply_expect(t, &dm, &sim, game.Placement_Raise{steps = -100, large = true})
 	expect_near(t, dm.placement.height, 0.0, 0.0001, "height floor")
 	ghost, _ := game.debug_ghost_geometry(&dm)
 	testing.expect(t, ghost.bottom.y >= ghost.surface.y, "ghost sank below its surface")
@@ -122,13 +123,13 @@ placement_yaw_steps_fifteen_and_forty_five_degrees :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 	placement_arm(t, &dm, &sim, .Crate)
 
-	game.debug_placement_turn(&dm, 1, false)
+	apply_expect(t, &dm, &sim, game.Placement_Turn{steps = 1})
 	expect_near(t, dm.placement.yaw_degrees, 15.0, 0.0001, "yaw step")
-	game.debug_placement_turn(&dm, 1, true)
+	apply_expect(t, &dm, &sim, game.Placement_Turn{steps = 1, large = true})
 	expect_near(t, dm.placement.yaw_degrees, 60.0, 0.0001, "large yaw step")
-	game.debug_placement_turn(&dm, -4, false)
+	apply_expect(t, &dm, &sim, game.Placement_Turn{steps = -4})
 	expect_near(t, dm.placement.yaw_degrees, 0.0, 0.0001, "yaw back to zero")
-	game.debug_placement_turn(&dm, -1, false)
+	apply_expect(t, &dm, &sim, game.Placement_Turn{steps = -1})
 	expect_near(t, dm.placement.yaw_degrees, 345.0, 0.0001, "yaw wrap")
 }
 
@@ -138,7 +139,7 @@ placement_rotation_composes_yaw_and_base_pitch :: proc(t: ^testing.T) {
 	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	placement_arm(t, &dm, &sim, .Ramp)
-	game.debug_placement_set_yaw(&dm, 90.0)
+	apply_expect(t, &dm, &sim, game.Placement_Set_Yaw{yaw = 90.0})
 
 	ghost, _ := game.debug_ghost_geometry(&dm)
 	expected := b3.MulQuat(
@@ -160,7 +161,7 @@ placement_snap_rounds_the_bottom_to_a_quarter_metre_grid :: proc(t: ^testing.T) 
 	testing.expect(t, !dm.placement.snap, "snap must start off")
 	dm.placement.anchor = {0.13, 0.0, 11.37}
 	dm.placement.height = 0.7
-	game.debug_placement_toggle_snap(&dm)
+	apply_expect(t, &dm, &sim, game.Placement_Toggle_Snap{})
 	testing.expect(t, dm.placement.snap, "snap toggle did not turn on")
 
 	ghost, _ := game.debug_ghost_geometry(&dm)
@@ -168,7 +169,7 @@ placement_snap_rounds_the_bottom_to_a_quarter_metre_grid :: proc(t: ^testing.T) 
 	expect_near(t, ghost.bottom.z, 11.25, 0.0001, "snapped z")
 	expect_near(t, ghost.bottom.y, 0.7, 0.0001, "snap must not move the height")
 
-	game.debug_placement_set_snap(&dm, false)
+	apply_expect(t, &dm, &sim, game.Placement_Set_Snap{snap = false})
 	ghost, _ = game.debug_ghost_geometry(&dm)
 	expect_near(t, ghost.bottom.x, 0.13, 0.0001, "unsnapped x")
 	expect_near(t, ghost.bottom.z, 11.37, 0.0001, "unsnapped z")
@@ -179,15 +180,17 @@ placement_place_creates_at_the_ghost_and_stays_armed :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
 	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
-	game.debug_palette_select(&dm, 3)
-	testing.expect(t, game.debug_palette_pick(&dm, &sim), "pick failed")
-	game.debug_placement_set_yaw(&dm, 30.0)
-	game.debug_placement_set_height(&dm, 0.5)
+	apply_expect(t, &dm, &sim, game.Palette_Select{index = 3}, "select failed")
+	apply_expect(t, &dm, &sim, game.Palette_Pick{}, "pick failed")
+	apply_expect(t, &dm, &sim, game.Placement_Set_Yaw{yaw = 30.0}, "yaw failed")
+	apply_expect(t, &dm, &sim, game.Placement_Set_Height{height = 0.5}, "height failed")
 
 	ghost, _ := game.debug_ghost_geometry(&dm)
 	before := game.simulation_object_count(&sim)
-	id := game.debug_placement_place(&dm, &sim)
-	testing.expect(t, id != game.INVALID_OBJECT_ID, "place failed")
+	result := apply(&dm, &sim, game.Placement_Place{})
+	testing.expectf(t, result.applied, "place failed: %s", game.edit_reason_message(result.reason))
+	id := dm.selected_object_id
+	testing.expect(t, id != game.INVALID_OBJECT_ID, "place selected nothing")
 	testing.expect_value(t, game.simulation_object_count(&sim), before + 1)
 
 	object, found := game.simulation_object_find(&sim, id)
@@ -219,8 +222,9 @@ placement_at_capacity_is_a_no_op :: proc(t: ^testing.T) {
 	dm.selection = .Object
 	dm.selected_object_id = 1
 
-	id := game.debug_placement_place(&dm, &sim)
-	testing.expect_value(t, id, game.INVALID_OBJECT_ID)
+	result := apply(&dm, &sim, game.Placement_Place{})
+	testing.expect(t, !result.applied, "a full scene accepted a place")
+	testing.expect_value(t, result.reason, game.Edit_Reason.Scene_Full)
 	testing.expect_value(t, game.simulation_object_count(&sim), game.MAX_PLACED_OBJECTS)
 	testing.expect_value(t, dm.selection, game.Debug_Selection.Object)
 	testing.expect_value(t, dm.selected_object_id, game.Object_Id(1))
@@ -235,10 +239,10 @@ placement_cancel_clears_the_armed_tool :: proc(t: ^testing.T) {
 	placement_arm(t, &dm, &sim, .Crate)
 	before := game.simulation_object_count(&sim)
 
-	game.debug_placement_cancel(&dm)
+	apply_expect(t, &dm, &sim, game.Placement_Cancel{}, "cancel failed")
 	testing.expect(t, !dm.placement.armed, "cancel kept the tool armed")
 	testing.expect_value(t, game.simulation_object_count(&sim), before)
-	testing.expect_value(t, game.debug_placement_place(&dm, &sim), game.INVALID_OBJECT_ID)
+	testing.expect(t, !apply(&dm, &sim, game.Placement_Place{}).applied, "disarmed place applied")
 }
 
 @(test)
@@ -247,13 +251,13 @@ placement_ghost_lines_draw_the_outline_footprint_and_height_guide :: proc(t: ^te
 	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 	placement_arm(t, &dm, &sim, .Block)
-	game.debug_placement_set_height(&dm, 0.5)
+	apply_expect(t, &dm, &sim, game.Placement_Set_Height{height = 0.5})
 
 	lines: game.Debug_Lines
 	game.collect_placement_lines(&dm, &lines)
 	testing.expect_value(t, lines.count, 17)
 
-	game.debug_placement_cancel(&dm)
+	apply_expect(t, &dm, &sim, game.Placement_Cancel{}, "cancel failed")
 	lines.count = 0
 	game.collect_placement_lines(&dm, &lines)
 	testing.expect_value(t, lines.count, 0)
@@ -269,7 +273,7 @@ editor_lines_include_the_armed_ghost :: proc(t: ^testing.T) {
 	game.collect_editor_lines(&dm, &sim, &lines)
 	base := lines.count
 	placement_arm(t, &dm, &sim, .Block)
-	game.debug_placement_set_height(&dm, 0.5)
+	apply_expect(t, &dm, &sim, game.Placement_Set_Height{height = 0.5})
 	lines.count = 0
 	game.collect_editor_lines(&dm, &sim, &lines)
 	testing.expect_value(t, lines.count, base + 17)

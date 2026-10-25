@@ -123,9 +123,9 @@ stairs.
 - `Q` / `E`: turn the ghost or the selected object left or right in 15 degree
   steps. Hold `Shift` for 45 degree steps.
 - `G`: toggle the 0.25 m grid snap.
-- `M`: flip the body mode for the next placement while the palette is open.
-  With the palette closed, it flips the selected object between static and
-  dynamic.
+- `M`: flip the body mode for the next placement while the palette is open or
+  the placement tool is armed. Otherwise it flips the selected object between
+  static and dynamic.
 - `Ctrl+D`: duplicate the selected object one prefab half extent along +X, and
   select the copy. A duplicate at the object cap does nothing.
 - `Delete` or `X`: remove the selected object.
@@ -395,7 +395,13 @@ The batch runner and the live session share one command set:
   [2, 20]. The light fields tune the next lamp placement, or the selected lamp
   when neither the palette nor the placement tool owns the editor. `cancel`
   clears the armed tool. Every field is optional; fields apply in that order,
-  and the `sun` group applies last.
+  and the `sun` group applies last. A rejected edit returns `ok: false` with a
+  reason.
+  The pointer and relative fields mirror the keyboard: `palette_step` and
+  `palette_number` select a card, `flip_body` is `M`, `snap_toggle` is `G`,
+  `turn` and `wheel` step the armed tool or the selection, `large` applies the
+  Shift step, `primary` and `secondary` are the mouse buttons, and
+  `drag_move`/`drag_release` drive one object drag.
 - `{"cmd": "editor", "camera": {"position": [0, 1.7, 14], "yaw": 0, "pitch": -0.6}}`:
   set the debug camera. `yaw` and `pitch` are radians, as in the `camera`
   command. The editor command accepts this alongside the other fields.
@@ -406,14 +412,14 @@ The batch runner and the live session share one command set:
 - `{"cmd": "editor", "select_object": 1, "move": [1, 0.5, 7], "rotate": 15, "body": "static", "delete": false, "duplicate": true, "undo": false, "redo": false}`:
   edit a placed object by id. `select_object` is the object id, and 0 clears the
   selection. `move` sets the centre, `rotate` turns the object by degrees, and
-  `body` flips between `static` and `dynamic` when the palette is closed. With
-  the palette open, `body` still sets the next placement. `delete`, `duplicate`,
+  `body` flips between `static` and `dynamic`. The open palette or the armed
+  placement tool owns it; otherwise it converts the selection. `delete`, `duplicate`,
   `undo`, and `redo` are actions. A duplicate at the cap does nothing.
 - `{"cmd": "editor", "sun": {"active": true, "position": [0, 40, -30], "place": false, "cancel": false}}`:
-  drive the sun placement. `active` enters or leaves the mode, `position` sets
-  the sun position directly, `place` commits and leaves, and `cancel` restores
-  the sun from before the mode. The fields apply in that order and every field
-  is optional.
+  drive the sun placement. `active` enters or leaves the mode, `position` is
+  projected onto the 50 m sky dome and clamped above the arena floor, `place`
+  commits and leaves, and `cancel` restores the sun from before the mode. The
+  fields apply in that order and every field is optional.
 - `{"cmd": "menu", "open": true, "item": "Type weight", "activate": true, "direction": -1, "set": 900}`:
   open or close the settings menu, select a row by name, activate the selected
   row, or set the Type weight. `item` is `Window mode`, `Display`, `Resolution`,
@@ -608,16 +614,19 @@ captures the Platform and Ramp previews. Run it with `--size 800x600` to check
 that the bottom dock still fits and clears the crosshair.
 
 `scenarios/editor-sun.json` enters sun placement, captures the sun gizmo on the
-sky dome, sets an exact sun position, and captures the committed lighting.
+sky dome, sets a sun position through the dome projection, and captures the
+committed lighting.
 `scenarios/editor-object.json` edits a placed object, captures the inspector,
 then captures the undo and redo restores. `scenarios/editor-lamps.json` captures
 the three lamp previews, places a warm lamp, a cool panel, a red beacon, and a
 pillar, then captures the lit scene, the point-light shadow, and the selected
-lamp edit with its undo. `scenarios/lamp-wall-plane.json` places a lamp halfway
-into a wall, clear of the floor and the adjacent walls, and captures the view
-with the point-light shadows on and off. The two captures must match; a fan of
-shadows on the wall or the floor fails the check. Run it with
-`--debug-renderer`.
+lamp edit with its undo. `scenarios/editor-input.json` drives the pointer,
+wheel, relative turn, palette step, number key, snap toggle, and right-click
+clear through the same action set as the keyboard. `scenarios/lamp-wall-plane.json`
+places a lamp halfway into a wall, clear of the floor and the adjacent walls,
+and captures the view with the point-light shadows on and off. The two captures
+must match; a fan of shadows on the wall or the floor fails the check. Run it
+with `--debug-renderer`.
 
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window

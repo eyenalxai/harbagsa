@@ -15,8 +15,8 @@ frame_fills_the_palette_from_the_prefab_catalog :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
 	defer game.simulation_destroy(&sim)
 	debug.active = true
-	game.debug_palette_open(&debug)
-	testing.expect(t, game.debug_palette_select(&debug, 4), "platform select failed")
+	apply_expect(t, &debug, &sim, game.Palette_Open{}, "open failed")
+	apply_expect(t, &debug, &sim, game.Palette_Select{index = 4}, "select failed")
 
 	scene := frame.build(
 		&sim,
@@ -50,9 +50,9 @@ frame_fills_the_lamp_light_line_and_emissive_thumbnail :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
 	defer game.simulation_destroy(&sim)
 	debug.active = true
-	game.debug_palette_open(&debug)
+	apply_expect(t, &debug, &sim, game.Palette_Open{}, "open failed")
 	lamp_index := int(game.Prefab_Id.Lamp)
-	testing.expect(t, game.debug_palette_select(&debug, lamp_index), "lamp select failed")
+	apply_expect(t, &debug, &sim, game.Palette_Select{index = lamp_index}, "select failed")
 
 	scene := frame.build(
 		&sim,
@@ -67,9 +67,9 @@ frame_fills_the_lamp_light_line_and_emissive_thumbnail :: proc(t: ^testing.T) {
 	testing.expect_value(t, string(item.light_line[:item.light_length]), "warm · 1.5 · 8 m")
 	testing.expect_value(t, scene.hud.palette.hint_count, len(game.PALETTE_HINTS) + 1)
 
-	game.debug_light_change(&debug, &sim, .Color)
-	game.debug_light_change(&debug, &sim, .Intensity_Up)
-	game.debug_light_change(&debug, &sim, .Range_Up)
+	apply_expect(t, &debug, &sim, game.Light_Adjust{change = .Color}, "colour failed")
+	apply_expect(t, &debug, &sim, game.Light_Adjust{change = .Intensity_Up}, "intensity failed")
+	apply_expect(t, &debug, &sim, game.Light_Adjust{change = .Range_Up}, "range failed")
 	scene = frame.build(
 		&sim,
 		&debug,
@@ -86,13 +86,13 @@ frame_fills_the_lamp_light_line_and_emissive_thumbnail :: proc(t: ^testing.T) {
 palette_needs_debug_mode_and_yields_to_the_menu :: proc(t: ^testing.T) {
 	sim, debug, hud, scratch := create_state(t)
 	defer game.simulation_destroy(&sim)
-	game.debug_palette_open(&debug)
+	debug.palette.open = true
 
 	scene := frame.build(&sim, &debug, {alpha = 1.0, hud = true}, nil, &hud, &scratch)
 	testing.expect(t, !scene.hud.palette.open, "the palette drew outside debug mode")
 
 	debug.active = true
-	game.debug_palette_open(&debug)
+	apply_expect(t, &debug, &sim, game.Palette_Open{}, "open failed")
 	game.menu_open(&hud.menu)
 	scene = frame.build(&sim, &debug, {alpha = 1.0, hud = true}, nil, &hud, &scratch)
 	testing.expect(t, scene.hud.menu_open, "the menu is not open")

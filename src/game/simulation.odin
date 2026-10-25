@@ -1,4 +1,5 @@
 #+vet explicit-allocators
+#+vet !unused-procedures // the harness calls simulation_face; the game binary does not
 package game
 
 import b3 "libs:box3d"
@@ -237,4 +238,9 @@ create_static_box :: proc(world_id: b3.WorldId, box: geometry.Box) {
 		box.half_extents,
 		0.0,
 	)
+}
+
+simulation_face :: proc(sim: ^Simulation, yaw, pitch: f32) {
+	sim.player.yaw = b3.UnwindAngle(yaw)
+	sim.player.pitch = clamp(pitch, -PITCH_LIMIT, PITCH_LIMIT)
 }
