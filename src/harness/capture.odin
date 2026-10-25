@@ -74,6 +74,7 @@ Capture_Request :: struct {
 	target:    Capture_Target,
 	format:    Capture_Format,
 	enabled:   bool,
+	png:       bool,
 	region:    Maybe(Capture_Region),
 	profile:   Maybe(Capture_Profile),
 	crop:      Maybe(Capture_Crop),
@@ -89,6 +90,7 @@ Capture_Result :: struct {
 	target:        string         `json:"target"`,
 	format:        string         `json:"format"`,
 	target_format: string         `json:"target_format"`,
+	png:           bool           `json:"png,omitempty"`,
 	hash:          string         `json:"hash,omitempty"`,
 	render_digest: string         `json:"render_digest,omitempty"`,
 	stats:         Maybe(Capture_Stats) `json:"stats,omitempty"`,
@@ -110,6 +112,12 @@ Capture_Delta :: struct {
 	different: int,
 }
 
+// A capture writes a PNG when its format is png, or when it asks for a sidecar
+// beside its stats or profile.
+capture_has_png :: proc(capture: Capture_Result) -> bool {
+	return capture.path != "" && (capture.format == "png" || capture.png)
+}
+
 Capture_Summary :: struct {
 	count:                  int,
 	worst_mean_delta:       f32,
@@ -118,6 +126,7 @@ Capture_Summary :: struct {
 	worst_over_16_fraction: f32,
 	last_target:            string,
 	last_format:            string,
+	last_png:               bool,
 	last_stats:             Maybe(Capture_Stats),
 	last_profile:           Maybe(Capture_Profile_Result),
 	last_region:            Maybe(Capture_Region),
@@ -143,6 +152,7 @@ capture_summary :: proc(captures: []Capture_Result) -> Capture_Summary {
 		last := captures[len(captures) - 1]
 		summary.last_target = last.target
 		summary.last_format = last.format
+		summary.last_png = last.png
 		summary.last_stats = last.stats
 		summary.last_profile = last.profile
 		summary.last_region = last.region

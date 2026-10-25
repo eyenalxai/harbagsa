@@ -807,6 +807,15 @@ debug gate. The runner enables it for that run. **Avoid**: precondition, flag.
 A named value a scenario declares in `parameters` and uses as `${name}`. The
 declared value sets the type. **Avoid**: variable, argument.
 
+### Suite
+A JSON manifest of scenario entries that runs in manifest order. Each entry
+keeps its scenario's `requires`, and the suite exit code is the highest entry
+code. **Avoid**: batch, group, list.
+
+### Suite entry
+One scenario in a suite, with an optional label, size, parameter values, and
+render mode. The label names the run directory. **Avoid**: job, item.
+
 ### Parameter sweep
 One scenario run per value of one or more scenario parameters, with each run in
 its own directory. **Avoid**: matrix run, batch.

@@ -137,8 +137,9 @@ off for diagnosis.
   only TAA inputs.
 - The render digest hashes `sky` and `ao`. A run that turns either off cannot
   share a digest with a run that leaves them on.
-- `setup.ao_samples` and `setup.ao_radius` report the shader constants, so a
-  change to either appears in `report.json` without a code read.
+- `setup.renderer.ao_samples`, `setup.renderer.ao_radius`, and
+  `setup.renderer.ao_strength` report the shader constants, so a change to any
+  of them appears in `report.json` without a code read.
 - The overrides are diagnostic only. `clear` restores both to true. With `sky`
   off, the lit pass uses the old flat ambient color and the background keeps
   the clear color.

@@ -66,15 +66,18 @@ session_check_command :: proc(
 	reply.check = &session.checks[len(session.checks) - 1]
 	reply.ok = result.ok
 	if !result.ok {
+		tolerance := check_tolerance_note(result, session.allocator)
 		message := fmt.aprintf(
-			"check failed: %s %s %s (actual %s)",
+			"check failed: %s %s %s%s (actual %s)",
 			result.field,
 			result.op,
 			result.expected,
+			tolerance,
 			result.actual,
 			allocator = session.allocator,
 		)
 		session_failure(session, message)
+		delete(tolerance, session.allocator)
 		delete(message, session.allocator)
 	}
 	return ""
