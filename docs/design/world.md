@@ -21,12 +21,11 @@ space. This is the opposite of the 2D layer, which authors sRGB hex
 | Dive set | `0.25 0.75 0.40` | `src/game/arena_props.odin:88` |
 | Slide lane | `0.90 0.80 0.20` | `src/game/arena_props.odin:89` |
 | Mantle wall | `0.60 0.35 0.80` | `src/game/arena_props.odin:90` |
-| Room | `0.38 0.60 0.56` | `src/game/arena_room.odin:20` |
+| Room | `0.38 0.60 0.56` | `src/game/arena_room.odin:50` |
 | Crate, green | `0.30 0.68 0.38` | `src/game/prefabs.odin:44` |
 | Crate, orange | `0.86 0.56 0.20` | `src/game/prefabs.odin:45` |
 | Crate, blue | `0.26 0.48 0.84` | `src/game/prefabs.odin:46` |
-| Sun light | `1.00 0.98 0.94` | `src/renderer/shaders/box.frag:44` |
-| Ambient | `0.24 0.25 0.28` | `src/renderer/scene.odin:20` |
+| Sun light | `1.00 0.98 0.94` | `src/renderer/shaders/box.frag:43` |
 | Debug selection | `1.00 0.80 0.20` | `src/game/debug_draw_objects.odin:6` |
 
 Rules:
@@ -48,25 +47,26 @@ wider disk widens every penumbra, so the shadow stops reading as a shadow. The
 shader takes 16 samples on a Vogel disk, so a penumbra has 17 levels and softens
 with blocker distance.
 
-The sun is the only light with a direction. Ambient comes from the sky gradient
-when the sky pass is on, or from the flat `AMBIENT_COLOR` when it is off. The
-ambient occlusion rays darken that term in shade, corners, and tunnels. A sunlit
-fragment keeps the full ambient:
+There is no ambient term. The sun and the point lights are the only light
+sources, and the sky is a background. A surface that neither reaches is black.
+
+The ambient-occlusion rays stay; they scale the direct light instead of an
+ambient term. The formula is:
 
 ```text
-albedo * (ambient * ao_in_shade + diffuse * sun * visibility)
+albedo * (diffuse * sun * visibility + point_lights) * occlusion
 ```
 
-Direct sun buries the sky term, so a full AO band on a sunlit floor reads as
-dirt. The gate reuses the sun visibility and costs no ray. Shadowed surfaces
-keep the whole contact term.
+The occlusion is a local visibility term. It darkens a lit corner or a contact
+band; a surface the light does not reach stays black. It applies to the sun and
+the lamps, at strength 0.5. It is not global illumination and it does not bounce.
 
-The ambient uses 8 rays and the sun 16. A partial count carries a per-pixel,
+The occlusion uses 8 rays and the sun 16. A partial count carries a per-pixel,
 per-frame offset inside its own step; a full or empty count stays exact. Without
-that offset the shade steps in eighths and the floor below a ramp shows contour
-bands. The TAA history is 32-bit, so the resolve can average the offset over the
-phase sequence; a 16-bit history rounds that average away and keeps the count
-field. The output dither is a separate, last step for the 8-bit write.
+the offset a partial count steps in eighths and a contact band shows a contour.
+The TAA history is 32-bit, so the resolve can average the offset over the phase
+sequence; a 16-bit history rounds that average away and keeps the count field.
+The output dither is a separate, last step for the 8-bit write.
 
 If a surface must look different, change its albedo. Do not add a lighting term.
 
@@ -79,8 +79,7 @@ material distinguishes one box from another except its colour.
 ## The sky
 
 The sky is an analytic gradient, not a texture. `sky.glsl` gives one ramp for
-the sky pass and a narrower two-colour ramp for the ambient term, scaled to the
-scene exposure. With the sky pass off, `DEFAULT_CLEAR_COLOR` is
+the sky pass. The sky is a background, not a light. With the sky pass off, `DEFAULT_CLEAR_COLOR` is
 `(0.10, 0.45, 0.75)`, written linear into an RGBA16F target.
 
 The gradient is the only large soft field in the frame. Keep the horizon band
@@ -92,13 +91,14 @@ cloud.
 - Every shape is a box. A ramp is a thin box rotated about X.
 - No rounded, bevelled, or non-box primitive. A curve in the world would be the
   only curve on screen.
-- The arena is 40 m square with 4 m walls: 58 static boxes and 3 crates at
+- The arena is 40 m square with 4 m walls: 63 static boxes and 3 crates at
   spawn. The floor is 1 m thick, the arena walls 0.5 m, and a crate 1 m. The
-  closed room in the +x/+z corner is 7 m square with 3 m walls, a 0.3 m
-  ceiling, and one 1.6 m by 2.2 m doorway.
-- The room's interior is the lighting test. The sun enters only through the
-  doorway, the sky ambient still applies as a normal ramp, and a placed lamp
-  adds the point-light term. There is no sky visibility term and no bounce.
+  closed room in the +x/+z corner is 11 m square with 3 m walls, a 0.3 m
+  ceiling, and one 1.6 m by 2.2 m door in the west wall.
+- The door opens into a four-turn light lock: east, south, west, south, and east
+  into the chamber. The tunnel is 2.0 m wide and 2.4 m high. No straight sun ray
+  reaches the chamber. The base is total darkness, so the chamber is black until
+  a lamp is placed. There is no bounce.
 - The player has no body and casts no shadow.
 - No fog and no depth cue beyond perspective. The near plane is 0.05 m and the
   far plane 200 m.

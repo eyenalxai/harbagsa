@@ -142,7 +142,7 @@ instead of keeping a baked edge pattern.
 `capture.worst_mean_delta <= 0.03` and `capture.worst_over_16_fraction <=
 0.000005`.
 
-Superseded by `docs/adr/0017-sky-ambient-and-ray-traced-ambient-occlusion.md`: the stochastic AO term moves the mean gate to 0.07. The fraction gate stays at 0.000005 and measures 2.17e-06.
+Superseded by `docs/adr/0028-direct-light-with-surface-occlusion.md`: the occlusion term now scales the direct light at strength 0.5. The mean gate stays at 0.07 and the fraction gate at 0.000005. The direct-light run measures 0.0412 and 3.25e-06.
 
 ### Crate push
 
@@ -156,7 +156,7 @@ Captured on 2026-10-25 from `fix/shadow-banding-1`. The accumulation count caps
 at 512, so each new sample carries weight 1/513. The shaded floor below a ramp
 has a linear value near 0.03, where one fp16 step is about 3e-5; the update is
 below that step. The 16-bit history therefore cannot hold the running average,
-and the resolved field keeps the 1/8 ambient-occlusion steps.
+and the resolved field keeps the 1/8 occlusion steps.
 
 The history is now `R32G32B32A32_SFLOAT`; the scene color, velocity, and count
 targets stay 16-bit. `scenarios/ramp-shadow-crouch.json` is the image gate. At
@@ -166,6 +166,10 @@ targets stay 16-bit. `scenarios/ramp-shadow-crouch.json` is the image gate. At
 | --- | ---: | ---: |
 | R16G16B16A16_SFLOAT | 275 | 0.638 |
 | R32G32B32A32_SFLOAT | 0 | 0.494 |
+
+After the direct-light change in ADR 0028 the same region measures 0 steps and a
+0.086 level maximum jump. The 16-bit comparison above is from the old ambient
+scene and is kept for the record.
 
 Against the mean of 32 frozen sun phases rendered with TAA off, the 32-bit field
 is -0.000015 linear luma away with a 0.0014 deviation; the 16-bit field is
