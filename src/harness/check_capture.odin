@@ -179,7 +179,30 @@ capture_stats_field :: proc(stats: Capture_Stats, path: string) -> (Check_Value,
 		if !has_steps {
 			return {}, format_error("%s", "the last capture has no step statistics")
 		}
-		switch path[len("steps."):] {
+		tail := path[len("steps."):]
+		if tail == "over_cap" {
+			return {kind = .Number, number = f64(steps.over_cap)}, ""
+		}
+		if strings.has_prefix(tail, "top.") {
+			index_text, field, has_field := split_field(tail[len("top."):])
+			index, index_ok := strconv.parse_int(index_text)
+			if !index_ok || index < 0 || index >= len(steps.top) || !has_field {
+				return {}, fmt.aprintf("capture step index %q is out of range", index_text, allocator = context.allocator)
+			}
+			jump := steps.top[index]
+			switch field {
+			case "x":
+				return {kind = .Number, number = f64(jump.x)}, ""
+			case "y":
+				return {kind = .Number, number = f64(jump.y)}, ""
+			case "axis":
+				return {kind = .String, text = jump.axis}, ""
+			case "levels":
+				return {kind = .Number, number = f64(jump.levels)}, ""
+			}
+			return {}, fmt.aprintf("unknown capture step field %q", field, allocator = context.allocator)
+		}
+		switch tail {
 		case "count":
 			return {kind = .Number, number = f64(steps.count)}, ""
 		case "pairs":

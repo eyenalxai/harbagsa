@@ -44,7 +44,7 @@ setup_build :: proc(
 		target = "none",
 		width = options.width,
 		height = options.height,
-		revision = HARNESS_REVISION,
+		revision = trim_revision(HARNESS_REVISION),
 		dirty = HARNESS_DIRTY,
 		renderer_debug = renderer_debug || renderer.RENDERER_DEBUG_ENABLED,
 		view = {hud = view.hud, debug = view.debug, hint = view.hint, perf = view.perf},

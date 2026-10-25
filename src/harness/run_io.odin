@@ -61,20 +61,20 @@ build_summary :: proc(report: Report, out_dir: string) -> Run_Summary {
 		summary.failure = strings.clone(report.error, context.allocator)
 	}
 	count := 0
-	for capture in report.screenshots {
+	for capture in report.captures {
 		if capture.path != "" {
 			count += 1
 		}
 	}
-	screenshots := make([]string, count, context.allocator)
+	captures := make([]string, count, context.allocator)
 	index := 0
-	for capture in report.screenshots {
+	for capture in report.captures {
 		if capture.path != "" {
-			screenshots[index] = strings.clone(capture.path, context.allocator)
+			captures[index] = strings.clone(capture.path, context.allocator)
 			index += 1
 		}
 	}
-	summary.screenshots = screenshots
+	summary.captures = captures
 	return summary
 }
 
@@ -89,10 +89,10 @@ summary_destroy :: proc(summary: ^Run_Summary) {
 	if summary.failure != "" {
 		delete(summary.failure, context.allocator)
 	}
-	for path in summary.screenshots {
+	for path in summary.captures {
 		delete(path, context.allocator)
 	}
-	delete(summary.screenshots, context.allocator)
+	delete(summary.captures, context.allocator)
 	summary^ = {}
 }
 
