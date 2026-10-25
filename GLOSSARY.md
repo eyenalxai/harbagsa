@@ -118,14 +118,22 @@ The exclusive action state: None, Diving, Sliding, or Mantling. Stance and gait 
 _Avoid_: Action state
 
 **Arena**:
-The fixed test level: a floor, walls, stairs, ramps, tunnels, mantle walls, a dive platform, a slide lane, a closed room with one doorway, and a few crates.
+The fixed test level: a floor, walls, stairs, ramps, tunnels, mantle walls, a dive platform, a slide lane, a closed room with a four-turn light lock, and a few crates.
 _Avoid_: Map, level
 
 **Room**:
-The closed 7 m square arena structure in the +x/+z corner. It has one
-1.6 m by 2.2 m doorway in its west wall. It is static arena geometry, not a
-placed object, and it exists to test interior lighting.
+The closed 11 m square arena structure in the +x/+z corner. It has one
+1.6 m by 2.2 m door in its west wall. The door opens into a four-turn light
+lock; the chamber behind it has no straight path to the door. It is twelve
+static arena boxes, not a placed object, and it exists to test interior
+lighting.
 _Avoid_: Building, house
+
+**Light lock**:
+A bent entry tunnel with enough right-angle turns that no straight sun ray
+reaches the space behind it. The room's lock turns four times: east, south,
+west, south, and east. The tunnel is 2.0 m wide and 2.4 m high.
+_Avoid_: Air lock, light trap
 
 **World palette**:
 The scene colours, authored as linear RGBA floats because the renderer shades in
@@ -208,24 +216,20 @@ The partly lit band between the umbra and the fully lit area. Its width grows wi
 _Avoid_: Soft edge, blur
 
 **Ambient occlusion**:
-The cosine-weighted fraction of the hemisphere at a surface point that visible geometry does not block. It scales ambient light only where the sun does not reach the point. It is not global illumination, because it adds no bounce light.
+The cosine-weighted fraction of the hemisphere at a surface point that visible geometry does not block. The scene has no ambient term, so it scales the direct sun and point light. It darkens a lit corner or contact band; it is not global illumination, because it adds no bounce light.
 _Avoid_: SSAO (that is one estimator), GI (that adds bounce light)
 
 **Sky**:
-The analytic gradient that fills the background: a horizon-to-zenith ramp, a darker ground color below the horizon, and a sun disk with a glow. It draws after the lit pass and shades only the pixels that no box covers.
+The analytic gradient that fills the background: a horizon-to-zenith ramp, a darker ground color below the horizon, and a sun disk with a glow. It draws after the lit pass and shades only the pixels that no box covers. It is a background, not a light.
 _Avoid_: Skybox, cubemap, backdrop
-
-**Sky ambient**:
-A two-colour hemisphere ramp on the surface normal, scaled to the scene exposure. The lit pass uses it as the ambient term, and ambient occlusion scales it in shade. It is not the integral of the visible sky.
-_Avoid_: IBL, environment light, ambient probe
 
 **AO radius**:
 The maximum distance an ambient occlusion ray travels: 1.5 m. A surface beyond that distance does not count as an occluder.
 _Avoid_: AO distance, occlusion range
 
 **AO strength**:
-The multiplier on the ambient occlusion term. `0` leaves the ambient light
-unchanged and `1` applies the full occlusion.
+The multiplier on the ambient occlusion term. `0` leaves the direct light
+unchanged and `1` applies the full occlusion. The scene uses 0.5.
 _Avoid_: AO amount, AO weight
 
 **Degree boundary**:

@@ -26,7 +26,6 @@ layout(set = 0, binding = 1) readonly buffer Objects {
 } scene;
 
 #include "camera.glsl"
-#include "sky.glsl"
 
 layout(set = 0, binding = 2) uniform accelerationStructureEXT scene_tlas;
 
@@ -64,10 +63,11 @@ float interleaved_gradient_noise(vec2 pixel) {
     return fract(52.9829189 * fract(dot(pixel, vec2(0.06711056, 0.00583715))));
 }
 
-// A visibility count is a coarse fraction: eight AO rays step the ambient by
-// one eighth, and that step survives the TAA average as a band. Offset the
-// count inside its own step so the resolve sees a continuous value. The hash
-// takes the shadow phase, so the offset changes each frame and TAA averages it.
+// A visibility count is a coarse fraction: the sun uses sixteen rays and the
+// surface occlusion eight, and either step survives the TAA average as a band.
+// Offset the count inside its own step so the resolve sees a continuous value.
+// The hash takes the shadow phase, so the offset changes each frame and TAA
+// averages it.
 float visibility_rounding(uint frame) {
     uint hash = uint(gl_FragCoord.x) * 1973u + uint(gl_FragCoord.y) * 9277u + frame * 26699u;
     hash = (hash ^ 61u) ^ (hash >> 16u);
@@ -169,14 +169,17 @@ vec3 point_light_radiance(vec3 world_position, vec3 normal) {
 
 // The Makefile compiles this with -DAO_SAMPLE_COUNT and passes the same value
 // to the Odin build. A cosine-weighted hemisphere sample already carries the
-// cosine and the 1/pi of the AO integral, so the visible fraction is the AO
-// term.
+// cosine and the 1/pi of the occlusion integral, so the visible fraction is the
+// occlusion term.
 #ifndef AO_SAMPLE_COUNT
 #define AO_SAMPLE_COUNT 8
 #endif
 const int AO_SAMPLES = AO_SAMPLE_COUNT;
 
-float ambient_visibility(vec3 position, vec3 normal, float radius, float phase) {
+// The scene has no ambient term, so surface occlusion scales the direct sun and
+// point light instead. A corner the light still reaches darkens; a surface no
+// light reaches stays black.
+float surface_occlusion(vec3 position, vec3 normal, float radius, float phase) {
     vec3 origin = position + normal * 0.01;
     vec3 up = abs(normal.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
     vec3 tangent = normalize(cross(up, normal));
@@ -205,23 +208,20 @@ void main() {
         visibility = sun_visibility(v_world_position, normal, to_light);
     }
 
-    vec3 ambient = camera.lighting.w > 0.5 ? sky_ambient(normal) : camera.ambient.rgb;
     float ao = 1.0;
-    if (camera.lighting.z > 0.5) {
+    if (camera.occlusion.z > 0.5) {
         // A different irrational than the sun phase keeps the two sample sets
         // from sharing a rotation.
         float phase = fract(
             interleaved_gradient_noise(gl_FragCoord.xy) + camera.screen.w * 0.7548776662
         ) * 6.2831853;
-        ao = ambient_visibility(v_world_position, normal, camera.lighting.x, phase);
-        ao = mix(1.0, ao, camera.lighting.y);
+        ao = surface_occlusion(v_world_position, normal, camera.occlusion.x, phase);
+        ao = mix(1.0, ao, camera.occlusion.y);
     }
-    // The sky ambient is a fixed exposure, not the real sky-to-sun ratio, so a
-    // full AO band on a sunlit floor reads as dirt. Direct sun buries the sky
-    // term in life. Keep the occlusion where the sky is the only light.
-    float shade = 1.0 - visibility;
-    vec3 lit = ambient * mix(1.0, ao, shade) + diffuse * SUN_COLOR * visibility;
-    lit += point_light_radiance(v_world_position, normal);
+    // Direct light only: the sun and the point lights, each with its own shadow
+    // ray. The occlusion darkens the light that reaches a corner. There is no
+    // ambient term, so a surface that no light reaches is black.
+    vec3 lit = (diffuse * SUN_COLOR * visibility + point_light_radiance(v_world_position, normal)) * ao;
     vec3 color = v_color * lit + v_color * object.color.a;
 
     vec4 world_position = vec4(v_world_position, 1.0);

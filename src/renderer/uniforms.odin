@@ -10,19 +10,17 @@ MAX_SCENE_BOXES :: 256
 // extent in .y and .z, and the TAA sample phase in .w. sun.x is the tangent
 // of the sun angular radius, sun.y the camera far plane, so the sky pass
 // writes the same depth as the velocity clear, sun.z the point light count,
-// and sun.w the point-light shadow flag.
+// and sun.w the point-light shadow flag. occlusion.x is the AO radius in
+// metres, y the strength, and z the enabled flag.
 Camera_Uniform :: struct {
 	view:                 Mat4,
 	projection:           Mat4,
 	prev_view_projection: Mat4,
 	light_direction:      [4]f32,
-	ambient:              [4]f32,
 	screen:               [4]f32,
 	sun:                  [4]f32,
 	jitter:               [4]f32,
-	// x is the AO radius in metres, y the AO strength, z the AO flag, and w
-	// the sky flag. Both flags are 0 or 1 so the shader branch is uniform.
-	lighting:             [4]f32,
+	occlusion:            [4]f32,
 }
 
 // color.rgb is the box colour and color.a the emissive strength.
@@ -45,7 +43,7 @@ TAA_Params :: struct {
 	force_trust:    f32,
 }
 
-#assert(size_of(Camera_Uniform) == 288)
+#assert(size_of(Camera_Uniform) == 272)
 #assert(size_of(Object_Data) == 144)
 #assert(size_of(Object_Index) == 4)
 #assert(size_of(TAA_Params) == 24)

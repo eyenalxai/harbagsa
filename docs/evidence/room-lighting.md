@@ -1,71 +1,71 @@
 # Room lighting evidence
 
-Captured on 2026-10-25 from the feature commit on
-`feat/closed-room-lighting-test`. GPU: AMD Radeon RX 9060 XT (RADV GFX1200).
-All runs are offscreen through `bin/harbagsa-agent`.
+Captured on 2026-10-25 from the direct-light branch. GPU: AMD Radeon RX 9060 XT
+(RADV GFX1200). All runs are offscreen through `bin/harbagsa-agent`.
 
 ## The room
 
-The arena has a closed room in its +x/+z corner. It is 7 m square with a
-3 m clear height, a 0.3 m ceiling, and one 1.6 m by 2.2 m doorway in the west
-wall. It is seven static arena boxes, so it collides and enters the TLAS. It is
-not a placed object. The arena stays 40 m; the empty corner holds the room
-without a resize. The colour is the new teal world hue
-`0.38 0.60 0.56` linear, documented in
+The arena has a closed room in its +x/+z corner. It is 11 m square with a 3 m
+clear height, a 0.3 m ceiling, and one 1.6 m by 2.2 m door in the west wall. It
+is twelve static arena boxes: seven shell boxes, four interior walls, and one
+dropped tunnel ceiling. It collides and enters the TLAS. It is not a placed
+object. The arena stays 40 m.
+
+The door opens into a four-turn entry tunnel, a light lock. The path is east,
+south, west, south, and east into the chamber. The clear tunnel width is 2.0 m
+and the clear height is 2.4 m. The lanes are `z 12.2..14.2`, `z 9.9..11.9`, and
+`z 7.6..9.6`; the east connector is `x 10.5..12.5` and the west connector is
+`x 6.8..8.7`. The chamber is the east strip and the south strip, about 70 m2.
+The colour is the teal world hue `0.38 0.60 0.56` linear, documented in
 [world.md](../design/world.md).
 
-The room exists to test the current interior lighting model. It is not a change
-to that model. The scenario is `scenarios/room-lighting.json`; the design is
-[ADR 0017](../adr/0017-sky-ambient-and-ray-traced-ambient-occlusion.md) and the
-terms are in [GLOSSARY.md](../../GLOSSARY.md).
+The scene has no ambient term. The room is black unless a real light reaches it.
+The decision is in
+[ADR 0028](../adr/0028-direct-light-with-surface-occlusion.md). The ambient
+occlusion rays stay and scale the sun and point lights at strength 0.5.
 
 ## What it checks
 
-The scenario runs at 1280x720. The values are from
+`scenarios/room-lighting.json` at 1280x720. Values are from
 `./bin/harbagsa-agent run scenarios/room-lighting.json --out runs/room-lighting`.
 
 | Check | Measured | Gate | Passes |
 | --- | ---: | --- | --- |
-| `sealed-depth` maximum depth | 0.9895 | below 0.999 | yes |
-| `ceiling-depth` maximum depth | 0.9722 | below 0.999 | yes |
-| Doorway sun patch mean green | 113.5 | above 100 | yes |
-| Doorway shade patch mean green | 88.1 | below 95 | yes |
-| Lamp-on mean green | 144.9 | above 120 | yes |
-| Lamp-off mean green | 76.4 | below 90 | yes |
+| First lane, west sun mean green | 6.33 | at least 2 | yes |
+| First lane, east sun mean green | 0.17 | below 0.5 | yes |
+| Chamber, west sun mean green | 0.17 | below 0.5 | yes |
+| Chamber, east sun mean green | 0.17 | below 0.5 | yes |
+| Chamber, west against east | 0.00 | equal within 0.1 | yes |
+| Chamber depth maximum | 0.9947 | below 0.999 | yes |
+| First lane depth maximum | 0.9907 | below 0.999 | yes |
+| Lamp on mean green | 123.75 | at least 80 | yes |
+| Lamp off mean green | 0.17 | below 0.5 | yes |
 
-The depth gate is the closure proof. The depth target clears to 1.0, so a sky
-pixel in a sealed view reaches 1.0. The far corner of the room reads 0.989 and
-the ceiling reads 0.972.
+The 0.17 floor is the output dither on black. The chamber does not change with
+the sun azimuth: no straight sun ray passes the four turns. The first lane is
+lit when the sun is west, because the sun shines through the west door. It is
+black when the sun is east. The door is the only path for the sun.
 
-The sun gate compares one 500 by 240 region at `(400, 460)`, which covers the
-floor at the doorway. Moving the sun from the west (`azimuth_deg 270`) to the east
-(`azimuth_deg 90`) drops the region mean by 25.4 levels. The doorway is the only
-path for that light.
+The lamp is a warm `Lamp` at `(14.5, 2.75, 7.0)` with intensity 2.5 and range
+10. It is placed with `place`, so no debug gizmo enters the frame. The lamp is
+the only light in the chamber, and the occlusion term darkens the corners it
+lights. Removing the lamp returns the view to the dither floor.
 
-The lamp gate uses a warm `Lamp` at `(13.5, 2.75, 10.5)`, the prefab default of
-1.5 intensity and 8 m range. The `place` command creates it without debug mode,
-so the sun gizmo and editor lines stay out of the frame. The room-corner view
-rises by 68.5 levels when the lamp is placed and falls back when `remove`
-deletes it. The lamp sits at the ceiling and casts the hard point-light shadow.
-The sun elevation, lamp intensity, lamp range, and patch region are scenario
-parameters.
-
-The colour captures are `outside`, `inside-door`, `sealed-corner`, `ceiling`,
-`door-sun`, `door-shade`, `room-corner`, `lamp-on`, and `lamp-off`. The run
-directory holds the PNGs; the repository does not commit images.
+The colour captures are `outside`, `door-out`, `lane1-west`, `lane1-east`,
+`chamber-west`, `chamber-east`, `lamp-on`, and `lamp-off`. The run directory
+holds the PNGs; the repository does not commit images.
 
 ## What it does not prove
 
-- The ambient term is a normal ramp, not an integral of the visible sky. A
-  sealed room is not darker than an open surface with the same normal, except
-  where ambient occlusion reaches.
-- The AO radius is 1.5 m and the room is 6.4 m inside. Only the bands near the
-  corners and the ceiling darken. The floor centre stays at full ambient.
-- There is no bounce light. The doorway sun patch does not fill the room.
-- There is one lamp. The light budget is the eight nearest lamps.
-
-Those limits are the reason to keep the room as a test fixture rather than
-treat its image as a physical interior.
+- There is no global illumination. The doorway sun patch does not fill the
+  tunnel, and a lamp does not bounce light around a corner.
+- The occlusion is a contact term on the direct light, not an ambient integral.
+  A lamp-lit corner is darker than a path tracer would make it.
+- The default sun comes from the +x/+z side, so the west facade is in shade and
+  the door is a dark notch from outside. The `outside` capture shows the lit
+  roof and north face; `door-out` looks out from inside the tunnel.
+- There is one lamp in the test scene. The light budget is the eight nearest
+  lamps.
 
 ## Reproduce
 

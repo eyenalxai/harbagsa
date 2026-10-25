@@ -4,7 +4,7 @@
   "description": "Interior light, sky and ambient occlusion, ramps, and sun shadow angles.",
   "entries": [
     "room-lighting",
-    "sky-ao",
+    "sky",
     "stairs-ao",
     "ramp-shadow",
     "shadow-angle"

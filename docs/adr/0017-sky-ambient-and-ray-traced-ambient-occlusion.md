@@ -1,5 +1,11 @@
 # Analytic sky and ray-traced ambient occlusion
 
+> Superseded by
+> [ADR 0028](0028-direct-light-with-surface-occlusion.md). The ambient term is
+> gone, the sky is a background, and the occlusion rays now scale the direct
+> light. Scenario names in the body are historical; the current sky scenario is
+> `scenarios/sky.json`. The decision is kept for the record.
+
 > 0015 until 2026-10-24. The ground-speed ADR claimed 0015 first, so this one
 > moved to 0017.
 
