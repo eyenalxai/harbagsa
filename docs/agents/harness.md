@@ -584,8 +584,11 @@ Formats:
 - `raw`: intermediate targets only. Writes `<name>.bin` with the exact texel
   bytes. `target_format` in the report names the Vulkan format.
 - `stats`: any target. Writes no file. The report holds per-channel `min`,
-  `max`, and `mean`, and for `velocity` the median screen motion in texels over
-  covered pixels.
+  `max`, `mean`, `stddev`, and `gradient`, and for `velocity` the median screen
+  motion in texels over covered pixels. `stddev` is the population standard
+  deviation over the region. `gradient` is the mean absolute difference between
+  each pixel and its right and down neighbours; a region with no neighbour pair
+  reports 0.
 
 A stats capture accepts `"region": {"x","y","w","h"}` or `"rect": [x,y,w,h]`.
 The statistics cover the region and the report echoes it; a check reads
@@ -602,8 +605,8 @@ move the baseline.
 
 A check reads the last capture in its window: `capture.target`,
 `capture.format`, and `capture.stats.min.x`, `capture.stats.max.x`,
-`capture.stats.mean.x`, `capture.stats.velocity_median_texels`, and the same
-`.y`, `.z`, `.w` channels.
+`capture.stats.mean.x`, `capture.stats.stddev.x`, `capture.stats.gradient.x`,
+`capture.stats.velocity_median_texels`, and the same `.y`, `.z`, `.w` channels.
 
 `scenarios/capture-targets.json` covers a static and a moving velocity capture,
 scene color, history, and depth.

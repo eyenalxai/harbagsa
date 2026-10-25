@@ -641,9 +641,11 @@ also carries a `setup` block: target kind, extent, view flags, and renderer
 config, so a run is reproducible.
 
 A capture can read an intermediate target. `"target": "velocity"` with
-`"format": "stats"` reports per-channel min, max, and mean plus the median
-screen motion in texels. `"format": "float"` writes a `.f32` file and `"raw"`
-writes the exact texel bytes. A PNG capture is color only.
+`"format": "stats"` reports per-channel min, max, mean, `stddev`, and
+`gradient`, plus the median screen motion in texels for a velocity target. The
+gradient is the mean absolute difference between 4-neighbour pixels over the
+region. `"format": "float"` writes a `.f32` file and `"raw"` writes the exact
+texel bytes. A PNG capture is color only.
 `scenarios/capture-targets.json` covers every target.
 
 `renderer_debug` changes renderer inputs for a diagnosis: TAA, jitter, history
