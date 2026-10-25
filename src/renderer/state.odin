@@ -54,6 +54,7 @@ Renderer_Report :: struct {
 	atlas_weight:        f32    `json:"atlas_weight"`,
 	text_truncated_runs: int    `json:"text_truncated_runs"`,
 	text_font_drops:     int    `json:"text_font_drops"`,
+	debug_vertex_count:  int    `json:"debug_vertex_count"`,
 	debug:               Debug_Report `json:"debug"`,
 }
 
@@ -105,6 +106,7 @@ renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
 		atlas_weight       = text_atlas_applied_weight(r),
 		text_truncated_runs = r.overlay.atlas.caps.truncated_runs,
 		text_font_drops     = r.overlay.atlas.caps.dropped_fonts,
+		debug_vertex_count  = r.overlay.debug_count,
 		debug = {
 			active = r.taa.debug.active,
 			taa = r.taa.enabled,
