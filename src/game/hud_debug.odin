@@ -200,10 +200,7 @@ hud_placement_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^De
 		),
 		numeric = true,
 	}
-	light: Light_Settings
-	if prefab_has_light(debug.placement.prefab) {
-		light = debug.palette.light
-	}
+	light := next_placement_light(debug)
 	hud.rows[7] = {
 		kind    = .Metric,
 		label   = "Light",

@@ -139,11 +139,8 @@ run :: proc() -> bool {
 				debug_view = !debug_view
 			}
 			if events.debug_mode_pressed {
-				if debug.active && debug.palette.open {
-					game.debug_palette_close(&debug)
-					recapture_after_palette(&window, &events, &editor)
-				}
 				game.debug_mode_toggle(&debug, &sim)
+				editor_sync_cursor(&window, &debug, hud.menu.open, &editor)
 				clear_latches(&latches)
 			}
 			if events.taa_pressed {
@@ -239,8 +236,16 @@ run :: proc() -> bool {
 
 		// Edit after the fixed steps so a dragged transform is the one rendered.
 		if debug.active && !hud.menu.open {
-			game.debug_mode_update(&debug, &sim, editor_input_from_events(events), delta)
+			game.debug_mode_update(
+				&debug,
+				&sim,
+				editor_motion(events),
+				editor.actions[:editor.action_count],
+				false,
+				delta,
+			)
 		}
+		editor_sync_cursor(&window, &debug, hud.menu.open, &editor)
 
 		perf.mark(&perf_state, .Simulation)
 

@@ -58,29 +58,12 @@ Debug_Mode :: struct {
 	sun_angular_diameter: f32,
 }
 
-Debug_Input :: struct {
-	move_forward:           f32,
-	move_right:            f32,
-	move_up:               f32,
-	look_delta:            [2]f32,
-	wheel_delta:           f32,
-	primary_pressed:       bool,
-	primary_released:      bool,
-	secondary_pressed:     bool,
-	delete_pressed:        bool,
-	duplicate_pressed:     bool,
-	undo_pressed:          bool,
-	redo_pressed:          bool,
-	rotate_left:           bool,
-	rotate_right:          bool,
-	large_step:            bool,
-	sun_placement_pressed: bool,
-	light_color_pressed:          bool,
-	light_intensity_down_pressed: bool,
-	light_intensity_up_pressed:   bool,
-	light_range_down_pressed:     bool,
-	light_range_up_pressed:       bool,
-	captured:              bool,
+Debug_Motion :: struct {
+	move_forward: f32,
+	move_right:   f32,
+	move_up:      f32,
+	look_delta:   [2]f32,
+	captured:     bool,
 }
 
 debug_mode_create :: proc(allocator: mem.Allocator) -> Debug_Mode {
@@ -203,32 +186,6 @@ debug_mode_reset_scene :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	save_player_and_sync_camera(dm, sim)
 }
 
-debug_mode_update :: proc(dm: ^Debug_Mode, sim: ^Simulation, input: Debug_Input, delta: f32) {
-	if !dm.active {
-		return
-	}
-	if !input.captured {
-		debug_mode_end_drag(dm)
-	}
-
-	if input.captured && dm.dragging == .None && !input.primary_pressed {
-		dm.camera.yaw = b3.UnwindAngle(dm.camera.yaw - input.look_delta.x * YAW_SENSITIVITY)
-		dm.camera.pitch = clamp(
-			dm.camera.pitch - input.look_delta.y * PITCH_SENSITIVITY,
-			-PITCH_LIMIT,
-			PITCH_LIMIT,
-		)
-	}
-
-	debug_fly(dm, input, delta)
-	// The sun mode owns the click that leaves it, so the same click cannot also
-	// select a placed object.
-	if !debug_edit_sun(dm, sim, input) {
-		debug_edit_lights(dm, sim, input)
-		debug_edit_objects(dm, sim, input)
-	}
-	debug_placement_refresh(dm, sim)
-}
 
 // The palette, the placement tool, and the sun placement are mutually
 // exclusive, and the settings menu owns the input while it is open.
@@ -281,19 +238,3 @@ camera_from_player :: proc(sim: ^Simulation) -> Debug_Camera {
 	}
 }
 
-@(private)
-debug_fly :: proc(dm: ^Debug_Mode, input: Debug_Input, delta: f32) {
-	if delta <= 0.0 {
-		return
-	}
-
-	forward := debug_camera_forward_horizontal(dm.camera)
-	right := debug_camera_right(dm.camera)
-	move := forward * input.move_forward + right * input.move_right
-	move.y = input.move_up
-	length := b3.Length(move)
-	if length > 1.0 {
-		move = move * (1.0 / length)
-	}
-	dm.camera.position += move * (DEBUG_FLY_SPEED * delta)
-}
