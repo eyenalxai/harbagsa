@@ -19,90 +19,19 @@ session_renderer_debug :: proc(session: ^Session, command: Renderer_Debug_Comman
 	}
 	debug := session.render.backend.get_debug(session.render.backend.ctx)
 	debug.active = true
-	if command.has_taa {
-		debug.taa = command.taa
-	}
-	if command.has_jitter {
-		debug.jitter = command.jitter
-	}
-	if command.has_history_weight {
-		debug.history_weight = command.history_weight
-	}
-	if command.has_clamp {
-		debug.clamp = command.clamp
-	}
-	if command.has_depth_trust {
-		debug.force_depth_trust = command.depth_trust
-	}
-	if command.has_shadow_phase {
-		debug.shadow_phase = u32(command.shadow_phase)
+	debug = renderer.renderer_debug_apply_patch(debug, command.patch)
+	if _, has_phase := command.shadow_phase.?; has_phase {
 		debug.freeze_shadow_phase = true
 	}
-	if command.has_freeze_shadow_phase {
-		debug.freeze_shadow_phase = command.freeze_shadow_phase
-		if command.freeze_shadow_phase && !command.has_shadow_phase {
-			debug.shadow_phase = session.render.report.shadow_phase
+	if freeze, has_freeze := command.freeze_shadow_phase.?; has_freeze {
+		debug.freeze_shadow_phase = freeze
+		if freeze {
+			if _, has_phase := command.shadow_phase.?; !has_phase {
+				debug.shadow_phase = session.render.report.shadow_phase
+			}
 		}
 	}
-	if command.has_light_shadows {
-		debug.light_shadows = command.light_shadows
-	}
-	if command.has_synthetic_lights {
-		debug.synthetic_lights = command.synthetic_lights
-	}
-	if command.has_sky {
-		debug.sky = command.sky
-	}
-	if command.has_gi {
-		debug.gi = command.gi
-	}
-	if command.has_ao {
-		debug.ao = command.ao
-	}
-	if command.has_ao_radius {
-		debug.ao_radius = command.ao_radius
-	}
-	if command.has_ao_strength {
-		debug.ao_strength = command.ao_strength
-	}
-	if command.has_clip_height {
-		debug.clip_height = command.clip_height
-	}
-	defaults := renderer.renderer_debug_default()
-	for field in command.reset {
-		switch field {
-		case .TAA:
-			debug.taa = defaults.taa
-		case .Jitter:
-			debug.jitter = defaults.jitter
-		case .History_Weight:
-			debug.history_weight = defaults.history_weight
-		case .Clamp:
-			debug.clamp = defaults.clamp
-		case .Depth_Trust:
-			debug.force_depth_trust = defaults.force_depth_trust
-		case .Freeze_Shadow_Phase:
-			debug.freeze_shadow_phase = defaults.freeze_shadow_phase
-		case .Shadow_Phase:
-			debug.shadow_phase = defaults.shadow_phase
-		case .Light_Shadows:
-			debug.light_shadows = defaults.light_shadows
-		case .Synthetic_Lights:
-			debug.synthetic_lights = defaults.synthetic_lights
-		case .Sky:
-			debug.sky = defaults.sky
-		case .GI:
-			debug.gi = defaults.gi
-		case .AO:
-			debug.ao = defaults.ao
-		case .AO_Radius:
-			debug.ao_radius = defaults.ao_radius
-		case .AO_Strength:
-			debug.ao_strength = defaults.ao_strength
-		case .Clip_Height:
-			debug.clip_height = defaults.clip_height
-		}
-	}
+	debug = renderer.renderer_debug_apply_patch(debug, renderer_debug_reset_patch(command.reset))
 	session.render.backend.set_debug(session.render.backend.ctx, debug)
 	session_refresh_renderer(session)
 	return ""

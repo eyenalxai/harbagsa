@@ -26,21 +26,21 @@ renderer_debug_parses_every_override :: proc(t: ^testing.T) {
 	}
 	debug := command.renderer_debug
 	testing.expect(t, command.kind == .Renderer_Debug, "wrong command kind")
-	testing.expect(t, debug.has_taa && !debug.taa, "taa was not parsed")
-	testing.expect(t, debug.has_jitter && !debug.jitter, "jitter was not parsed")
-	testing.expect(t, debug.has_history_weight && debug.history_weight == 0.25, "weight was not parsed")
-	testing.expect(t, debug.has_clamp && !debug.clamp, "clamp was not parsed")
-	testing.expect(t, debug.has_depth_trust && debug.depth_trust, "depth trust was not parsed")
-	testing.expect(t, debug.has_freeze_shadow_phase, "freeze was not parsed")
-	testing.expect(t, debug.has_shadow_phase && debug.shadow_phase == 9, "phase was not parsed")
-	testing.expect(t, debug.has_light_shadows && !debug.light_shadows, "light shadows were not parsed")
-	testing.expect(t, debug.has_synthetic_lights && debug.synthetic_lights == 9, "synthetic lights were not parsed")
-	testing.expect(t, debug.has_sky && !debug.sky, "sky was not parsed")
-	testing.expect(t, debug.has_gi && !debug.gi, "gi was not parsed")
-	testing.expect(t, debug.has_ao && !debug.ao, "ao was not parsed")
-	testing.expect(t, debug.has_ao_radius && debug.ao_radius == 2.0, "ao radius was not parsed")
-	testing.expect(t, debug.has_ao_strength && debug.ao_strength == 0.25, "ao strength was not parsed")
-	testing.expect(t, debug.has_clip_height && debug.clip_height == 3.0, "clip height was not parsed")
+	expect_patch_bool(t, debug.taa, false, "taa")
+	expect_patch_bool(t, debug.jitter, false, "jitter")
+	expect_patch_number(t, debug.history_weight, 0.25, "weight")
+	expect_patch_bool(t, debug.clamp, false, "clamp")
+	expect_patch_bool(t, debug.depth_trust, true, "depth trust")
+	expect_patch_bool(t, debug.freeze_shadow_phase, true, "freeze")
+	expect_patch_int(t, debug.shadow_phase, 9, "phase")
+	expect_patch_bool(t, debug.light_shadows, false, "light shadows")
+	expect_patch_int(t, debug.synthetic_lights, 9, "synthetic lights")
+	expect_patch_bool(t, debug.sky, false, "sky")
+	expect_patch_bool(t, debug.gi, false, "gi")
+	expect_patch_bool(t, debug.ao, false, "ao")
+	expect_patch_number(t, debug.ao_radius, 2.0, "ao radius")
+	expect_patch_number(t, debug.ao_strength, 0.25, "ao strength")
+	expect_patch_number(t, debug.clip_height, 3.0, "clip height")
 }
 
 @(test)
@@ -78,8 +78,8 @@ renderer_debug_parses_a_null_reset :: proc(t: ^testing.T) {
 		return
 	}
 	debug := command.renderer_debug
-	testing.expect(t, !debug.has_history_weight, "a null reset set the weight")
-	testing.expect(t, !debug.has_sky, "a null reset set the sky")
+	expect_patch_unset(t, debug.history_weight, "weight")
+	expect_patch_unset(t, debug.sky, "sky")
 	testing.expect(t, .History_Weight in debug.reset, "the weight reset was dropped")
 	testing.expect(t, .Sky in debug.reset, "the sky reset was dropped")
 	testing.expect(t, .AO_Radius in debug.reset, "the ao radius reset was dropped")
@@ -104,10 +104,10 @@ scenario_compiles_a_renderer_debug_block :: proc(t: ^testing.T) {
 	}
 	first := scenario.commands[0]
 	testing.expect(t, first.kind == .Renderer_Debug, "debug block is not the first command")
-	testing.expect(t, first.renderer_debug.has_jitter && !first.renderer_debug.jitter, "jitter was dropped")
-	testing.expect(t, first.renderer_debug.shadow_phase == 2, "shadow phase was dropped")
-	testing.expect(t, first.renderer_debug.has_sky && !first.renderer_debug.sky, "sky was dropped")
-	testing.expect(t, first.renderer_debug.has_ao && !first.renderer_debug.ao, "ao was dropped")
+	expect_patch_bool(t, first.renderer_debug.jitter, false, "jitter")
+	expect_patch_int(t, first.renderer_debug.shadow_phase, 2, "shadow phase")
+	expect_patch_bool(t, first.renderer_debug.sky, false, "sky")
+	expect_patch_bool(t, first.renderer_debug.ao, false, "ao")
 }
 
 @(test)
@@ -229,6 +229,30 @@ renderer_debug_record_keeps_the_gate :: proc(t: ^testing.T) {
 	defer harness.reply_destroy(&reply, context.allocator)
 	testing.expectf(t, reply.ok, "replay failed: %s", reply.error)
 	testing.expect(t, session.debug_renderer, "replay did not enable the declared gate")
+}
+
+@(private)
+expect_patch_bool :: proc(t: ^testing.T, value: Maybe(bool), expected: bool, name: string) {
+	actual, has := value.?
+	testing.expectf(t, has && actual == expected, "%s was not parsed", name)
+}
+
+@(private)
+expect_patch_int :: proc(t: ^testing.T, value: Maybe(int), expected: int, name: string) {
+	actual, has := value.?
+	testing.expectf(t, has && actual == expected, "%s was not parsed", name)
+}
+
+@(private)
+expect_patch_number :: proc(t: ^testing.T, value: Maybe(f32), expected: f32, name: string) {
+	actual, has := value.?
+	testing.expectf(t, has && actual == expected, "%s was not parsed", name)
+}
+
+@(private)
+expect_patch_unset :: proc(t: ^testing.T, value: $T, name: string) {
+	_, has := value.?
+	testing.expectf(t, !has, "%s was set by a null reset", name)
 }
 
 Fake_Renderer_Debug :: struct {

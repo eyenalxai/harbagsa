@@ -40,41 +40,6 @@ Schema_Document :: struct {
 	units:           []Schema_Unit   `json:"units"`,
 }
 
-COMMAND_DESCRIPTIONS := [?]struct {
-	kind:        Command_Kind,
-	description: string,
-} {
-	{.Reset, "Return the simulation, settings, menu, and debug state to their defaults."},
-	{.Look, "Apply one pixel look delta through the game sensitivity."},
-	{.Face, "Set the player view directly. Angles are degrees."},
-	{.Input, "Set persistent movement input until the next input command."},
-	{.Step, "Advance the simulation by fixed frames."},
-	{.Settle, "Render every frame of a settle without writing a screenshot."},
-	{.State, "Report the current state."},
-	{.Capture, "Render one frame and write one capture output."},
-	{.Captures, "Render one frame and write several capture outputs."},
-	{.Camera, "Move the debug camera or set a camera override."},
-	{.View, "Toggle the HUD, debug draw, capture hint, and perf overlay."},
-	{.Sun, "Place the sun by azimuth, elevation, and angular diameter."},
-	{.Debug_Mode, "Enter or leave the debug mode and drive its palette."},
-	{.Editor, "Drive the object palette, placement, edits, and history."},
-	{.Menu, "Open, close, select, and change the settings menu."},
-	{.Check, "Evaluate a predicate against the state or a capture."},
-	{.Record, "Start or stop recording a live session into a scenario."},
-	{.Replay, "Replay a recorded scenario inside the live session."},
-	{.Repro, "Write the live view as a scene scenario and show the notice."},
-	{.Perf, "Measure frame time over a fixed or primed run."},
-	{.Renderer_Debug, "Apply gated renderer overrides. A field set to null restores its default."},
-	{.Displays, "Replace the display list."},
-	{.Rows, "Dump the HUD and menu rows."},
-	{.Scene, "Apply an exact scene: camera, sun, objects, settings, view, and displays."},
-	{.Place, "Create one object from a prefab without entering debug mode."},
-	{.Remove, "Delete one object by id without entering debug mode."},
-	{.Get, "Resolve one state or capture field and return its JSON scalar."},
-	{.Reference, "Compare the probe indirect term with a path-traced reference."},
-	{.Quit, "Close the session."},
-}
-
 SCENARIO_KEYS := []string {
 	"version",
 	"note",
@@ -108,15 +73,6 @@ SCHEMA_UNITS := [?]Schema_Unit {
 	{"histogram", "bins"},
 	{"shadow_phase", "phase"},
 	{"synthetic_lights", "count"},
-}
-
-schema_command_description :: proc(kind: Command_Kind) -> string {
-	for entry in COMMAND_DESCRIPTIONS {
-		if entry.kind == kind {
-			return entry.description
-		}
-	}
-	return ""
 }
 
 schema_backend_name :: proc(backend: Command_Backend) -> string {

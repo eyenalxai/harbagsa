@@ -29,6 +29,15 @@ command_names_are_unique :: proc(t: ^testing.T) {
 }
 
 @(test)
+every_command_row_describes_itself :: proc(t: ^testing.T) {
+	for row in harness.COMMANDS {
+		testing.expectf(t, row.description != "", "command %q has no description", row.name)
+		testing.expect(t, row.parse != nil, "a command row has no parser")
+		testing.expect(t, row.execute != nil, "a command row has no executor")
+	}
+}
+
+@(test)
 a_capture_without_rendering_is_skipped :: proc(t: ^testing.T) {
 	session, error := harness.session_create(context.allocator)
 	testing.expectf(t, error == "", "session create failed: %s", error)

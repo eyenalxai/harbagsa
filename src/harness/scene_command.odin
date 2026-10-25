@@ -78,7 +78,9 @@ parse_scene :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 		if !debug_ok {
 			return {}, format_error("%s", "scene 'renderer_debug' must be an object")
 		}
-		if key, unknown := json_unknown_key(debug_object, RENDERER_DEBUG_BLOCK_KEYS); unknown {
+		allowed := renderer_debug_keys(context.temp_allocator, false)
+		defer delete(allowed, context.temp_allocator)
+		if key, unknown := json_unknown_key(debug_object, allowed); unknown {
 			return {}, format_error("unknown renderer_debug key %q", key)
 		}
 		fields, fields_error := renderer_debug_fields(debug_object)

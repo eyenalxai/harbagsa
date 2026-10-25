@@ -51,6 +51,40 @@ repro_writes_a_scene_and_sets_the_notice :: proc(t: ^testing.T) {
 }
 
 @(test)
+repro_keeps_a_renderer_debug_override :: proc(t: ^testing.T) {
+	_ = os.remove(REPRO_PATH)
+	session, error := harness.session_create(context.allocator)
+	testing.expectf(t, error == "", "session create failed: %s", error)
+	defer harness.session_destroy(&session)
+	if error != "" {
+		return
+	}
+	session.render.debug = full_renderer_debug()
+
+	reply := execute(t, &session, REPRO_LINE)
+	defer harness.reply_destroy(&reply, context.allocator)
+	testing.expectf(t, reply.ok, "repro failed: %s", reply.error)
+	data, read_error := os.read_entire_file(REPRO_PATH, context.allocator)
+	defer delete(data, context.allocator)
+	testing.expectf(t, read_error == nil, "the snapshot was not written: %v", read_error)
+	if read_error != nil {
+		return
+	}
+	text := string(data)
+	testing.expectf(t, strings.contains(text, `"gi": false`), "the snapshot lost gi: %s", text)
+	testing.expectf(
+		t,
+		strings.contains(text, `"renderer_debug": true`),
+		"the snapshot lost the renderer debug gate",
+	)
+	scenario, parse_error := harness.scenario_parse(text, context.allocator)
+	defer harness.scenario_destroy(&scenario, context.allocator)
+	testing.expectf(t, parse_error == "", "the snapshot did not parse: %s", parse_error)
+	testing.expect(t, scenario.requires.renderer_debug, "the parsed snapshot lost the gate")
+	_ = os.remove(REPRO_PATH)
+}
+
+@(test)
 the_notice_is_a_check_field :: proc(t: ^testing.T) {
 	_ = os.remove(REPRO_PATH)
 	session, error := harness.session_create(context.allocator)
