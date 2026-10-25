@@ -89,8 +89,10 @@ MANTLE_ACROSS_DISTANCE :: 0.45
 MANTLE_DOWN_EXTRA :: 0.20
 MANTLE_DURATION :: 0.25
 MANTLE_UP_FRACTION :: 0.60
+// The probe is inset from the capsule side and lifted off the floor, so a
+// tangent wall or the floor does not count as an obstruction.
 HEADROOM_PROBE_LIFT :: 0.002
-HEADROOM_CEILING_MARGIN :: 0.05
+HEADROOM_SIDE_INSET :: 0.02
 
 EYE_HEIGHT_SMOOTH_RATE :: 25.0
 
