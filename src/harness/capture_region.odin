@@ -43,6 +43,7 @@ Capture_Profile_Result :: struct {
 	from:      int    `json:"from"`,
 	to:        int    `json:"to"`,
 	channel:   string `json:"channel"`,
+	source:    string `json:"source"`,
 	mean:      bool   `json:"mean"`,
 	values:    []f32  `json:"values"`,
 	width:     f32    `json:"width"`,

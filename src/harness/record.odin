@@ -9,7 +9,7 @@ import "core:strings"
 import "src:frame"
 import "src:renderer"
 
-session_record_start :: proc(session: ^Session, path: string) -> string {
+session_record_start :: proc(session: ^Session, path: string, include_scene := true) -> string {
 	if session.recording {
 		return format_error("%s", "already recording; send 'record' without a path to stop")
 	}
@@ -23,26 +23,35 @@ session_record_start :: proc(session: ^Session, path: string) -> string {
 	clear(&session.recorded)
 
 	append(&session.recorded, strings.clone(`{"cmd": "reset"}`, session.allocator))
-	options := frame.Options {
-		hud        = session.view.hud,
-		debug_view = session.view.debug,
-		captured   = !session.view.hint,
-		perf       = session.view.perf,
+	if include_scene {
+		options := frame.Options {
+			hud        = session.view.hud,
+			debug_view = session.view.debug,
+			captured   = !session.view.hint,
+			perf       = session.view.perf,
+		}
+		camera: ^renderer.Camera
+		if session.has_camera_override {
+			camera = &session.camera_override
+		}
+		debug: ^renderer.Renderer_Debug
+		if session.renderer_debug.active {
+			debug = &session.renderer_debug
+		}
+		scene := frame.scene_capture(
+			&session.sim,
+			&session.debug,
+			options,
+			camera,
+			debug,
+			session.allocator,
+		)
+		_, has_scene_debug := scene.renderer_debug.?
+		session.recorded_renderer_debug = has_scene_debug
+		scene_line := frame.scene_json(scene, session.allocator, false)
+		frame.scene_destroy(&scene, session.allocator)
+		append(&session.recorded, scene_line)
 	}
-	camera: ^renderer.Camera
-	if session.has_camera_override {
-		camera = &session.camera_override
-	}
-	scene := frame.scene_capture(
-		&session.sim,
-		&session.debug,
-		options,
-		camera,
-		session.allocator,
-	)
-	scene_line := frame.scene_json(scene, session.allocator)
-	frame.scene_destroy(&scene, session.allocator)
-	append(&session.recorded, scene_line)
 	if session.input.move_forward != 0 || session.input.move_right != 0 || session.input.jump_pressed {
 		input_line := fmt.aprintf(
 			`{{"cmd": "input", "forward": %g, "right": %g, "jump": %v}}`,

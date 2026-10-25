@@ -45,6 +45,7 @@ session_main :: proc(options: Session_Options) -> int {
 		trace_dir  = strings.clone(absolute_frames, context.allocator),
 	}
 	runtime.session.debug_renderer = options.debug_renderer
+	session_set_timeout(&runtime.session, options.timeout_seconds)
 	runtime.session.render_enabled = !options.no_render
 	runtime.session.backend_provider = {
 		ctx = &runtime,

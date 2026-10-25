@@ -391,8 +391,12 @@ A JSON document that compiles to one command list for the harness.
 _Avoid_: Script, test case
 
 **Capture**:
-One rendered frame written as a PNG by the harness.
+One rendered frame written as a PNG, a float or raw image, a statistics summary, or a profile by the harness.
 _Avoid_: Shot
+
+**Capture group**:
+One rendered frame that writes several capture outputs from the same pixels.
+_Avoid_: Batch, multi-shot
 
 **Capture target**:
 The image a capture reads: the final color, the velocity target, the history, the depth buffer, or the scene color.
@@ -405,6 +409,14 @@ _Avoid_: Export mode
 **Capture statistics**:
 The per-channel minimum, maximum, mean, standard deviation, and gradient of a capture over an optional region, plus the median screen motion in texels for a velocity capture over covered pixels. The gradient is the mean absolute difference between 4-neighbour pixels; a region with no neighbour pair reports zero.
 _Avoid_: Image metrics
+
+**Shader digest**:
+The FNV hash of the SPIR-V embedded in the binary, reported at `setup.renderer.shader_digest`. Unlike the render digest, it changes when a shader changes.
+_Avoid_: Build hash, shader version
+
+**Harness schema**:
+The JSON document from `harbagsa-agent schema` that names the command fields, units, scenario and suite keys, capture targets and formats, check fields, and state field tree.
+_Avoid_: Command list
 
 **Analysis report**:
 The `analysis.json` file from a run with color captures. It holds the capture window, the per-pair deltas, the summary, the dominant period, the worst unstable pixels' series, and the optional map paths.

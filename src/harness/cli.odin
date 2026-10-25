@@ -28,6 +28,7 @@ Common_Options :: struct {
 	no_analysis:          bool,
 	debug_renderer:       bool,
 	verbose:              bool,
+	timeout_seconds:      f64,
 	debug_overrides:      [MAX_DEBUG_OVERRIDES]Debug_Override,
 	debug_override_count: int,
 }
@@ -60,6 +61,8 @@ cli_main :: proc() -> int {
 		return cli_compare(args[1:])
 	case "ab":
 		return cli_ab(args[1:])
+	case "schema":
+		return cli_schema(args[1:])
 	case "help", "--help", "-h":
 		print_usage()
 		return EXIT_OK
@@ -73,6 +76,10 @@ cli_run :: proc(args: []string) -> int {
 	options := Run_Options{common = {width = DEFAULT_WIDTH, height = DEFAULT_HEIGHT}}
 	index := 0
 	for index < len(args) {
+		if args[index] == "--help" || args[index] == "-h" {
+			print_run_usage()
+			return EXIT_OK
+		}
 		next, handled, option_error := parse_common_option(args, index, &options.common)
 		if option_error != "" {
 			return cli_error(option_error)
@@ -131,7 +138,11 @@ cli_session :: proc(args: []string) -> int {
 	index := 0
 	for index < len(args) {
 		argument := args[index]
-		if argument == "--socket" {
+		switch argument {
+		case "--help", "-h":
+			print_session_usage()
+			return EXIT_OK
+		case "--socket":
 			if index + 1 >= len(args) {
 				return cli_error("--socket needs a path")
 			}
@@ -228,6 +239,16 @@ parse_common_option :: proc(
 	case "--verbose", "--summary":
 		options.verbose = true
 		return index + 1, true, ""
+	case "--timeout":
+		if index + 1 >= len(args) {
+			return index, true, "--timeout needs seconds"
+		}
+		seconds, ok := strconv.parse_f64(args[index + 1])
+		if !ok || seconds <= 0 {
+			return index, true, "--timeout must be a positive number of seconds"
+		}
+		options.timeout_seconds = seconds
+		return index + 2, true, ""
 	}
 	return index, false, ""
 }
@@ -252,28 +273,4 @@ parse_size :: proc(text: string) -> (width, height: u32, ok: bool) {
 cli_error :: proc(message: string) -> int {
 	print_summary_failure(message, EXIT_SCENARIO)
 	return EXIT_SCENARIO
-}
-
-@(private)
-print_usage :: proc() {
-	fmt.eprintln("usage:")
-	fmt.eprintln("  harbagsa-agent run <scenario.json|-> [--out DIR] [--tag NAME] [--param NAME=VALUE[,VALUE...]] [--size WxH] [--present] [--no-render] [--no-analysis] [--debug-renderer] [--renderer-debug KEY=VALUE] [--verbose]")
-	fmt.eprintln("  harbagsa-agent session [--socket PATH] [--out DIR] [--size WxH] [--present] [--no-render] [--no-analysis] [--debug-renderer] [--renderer-debug KEY=VALUE]")
-	fmt.eprintln("  harbagsa-agent diff <run-a> <run-b> [--max-pixels N] [--json]")
-	fmt.eprintln("  harbagsa-agent compare <run-a> <run-b> [--out DIR] [--json]")
-	fmt.eprintln("  harbagsa-agent suite <name|path> [scenario...] [--out DIR] [--tag NAME] [--list] [--json] [--fail-fast] [--present] [--no-render] [--no-analysis] [--debug-renderer] [--verbose]")
-	fmt.eprintln("  harbagsa-agent ab [--base REF] [--scenario PATH] [--size WxH] [--runs N] [--prime SECONDS] [--out DIR]")
-	fmt.eprintln("  harbagsa-agent help | -h | --help")
-	fmt.eprintln("")
-	fmt.eprintln("run - reads the scenario from standard input.")
-	fmt.eprintln("--tag NAME appends NAME to the run directory so two runs coexist.")
-	fmt.eprintln("--param NAME=VALUE overrides a scenario parameter; a comma list sweeps")
-	fmt.eprintln("each value into its own run directory and writes sweep.json.")
-	fmt.eprintln("run --verbose writes captures, checks, failures, setup, and perf to standard error;")
-	fmt.eprintln("standard output stays one JSON line.")
-	fmt.eprintln("perf takes {\"cmd\": \"perf\", \"frames\": N, \"warmup\": M, \"prime\": SECONDS, \"name\": \"label\", \"trace\": \"trace.jsonl\"}.")
-	fmt.eprintln("diff pairs PNG captures by name. --max-pixels N exits 1 when a pair exceeds N;")
-	fmt.eprintln("--json prints one machine-readable object.")
-	fmt.eprintln("compare writes a labeled before/after panel and compare.json under runs/compare.")
-	fmt.eprintln("suite runs a manifest from suites/<name>.json in order and writes suite.json.")
 }

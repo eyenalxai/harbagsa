@@ -51,6 +51,7 @@ hud_state_update :: proc(
 	hud_perf_append(hud)
 }
 
+
 @(private)
 hud_player_state_update :: proc(hud: ^HUD_State, snapshot: Render_Snapshot) {
 	hud.rows[0] = {

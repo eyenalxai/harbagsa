@@ -7,7 +7,7 @@ import "core:fmt"
 NOTICE_SECONDS :: 2.0
 // The longest copy is "Scene snapshot failed · " plus a snapshot path of at
 // most frame.SNAPSHOT_PATH_BYTES. tests/frame/notice.odin pins the pair.
-NOTICE_TEXT_BYTES :: 96
+NOTICE_TEXT_BYTES :: 224
 
 Notice_State :: struct {
 	text:      [NOTICE_TEXT_BYTES]u8,

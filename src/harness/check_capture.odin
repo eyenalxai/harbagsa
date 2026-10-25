@@ -120,6 +120,8 @@ capture_profile_field :: proc(
 		return {kind = .String, text = profile.axis}, ""
 	case "channel":
 		return {kind = .String, text = profile.channel}, ""
+	case "source":
+		return {kind = .String, text = profile.source}, ""
 	}
 	if strings.has_prefix(path, "values.") {
 		index, parse_ok := strconv.parse_int(path[len("values."):])
@@ -184,6 +186,12 @@ capture_stats_field :: proc(stats: Capture_Stats, path: string) -> (Check_Value,
 			return {kind = .Number, number = f64(steps.pairs)}, ""
 		case "max":
 			return {kind = .Number, number = f64(steps.max)}, ""
+		case "blur":
+			return {kind = .Number, number = f64(steps.blur)}, ""
+		case "min":
+			return {kind = .Number, number = f64(steps.floor)}, ""
+		case "max_levels":
+			return {kind = .Number, number = f64(steps.cap)}, ""
 		}
 		return {}, fmt.aprintf("unknown capture step field %q", path, allocator = context.allocator)
 	}

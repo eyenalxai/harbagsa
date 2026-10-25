@@ -8,26 +8,40 @@ import "core:mem"
 // band. The 9x9 box removes the output dither and the stochastic sample noise;
 // half a level then names a band edge. The 8 level cap keeps a geometry edge
 // out of the count.
-STEP_BLUR_RADIUS :: 4
+STEP_BLUR :: 9
 STEP_MIN_LEVELS :: 0.5
 STEP_MAX_LEVELS :: 8.0
 
+Capture_Steps_Options :: struct {
+	blur: int,
+	min:  f32,
+	max:  f32,
+}
+
+capture_steps_default :: proc() -> Capture_Steps_Options {
+	return {blur = STEP_BLUR, min = STEP_MIN_LEVELS, max = STEP_MAX_LEVELS}
+}
+
 Capture_Steps :: struct {
-	count: int `json:"count"`,
-	pairs: int `json:"pairs"`,
-	max:   f32 `json:"max"`,
+	count: int   `json:"count"`,
+	pairs: int   `json:"pairs"`,
+	max:   f32   `json:"max"`,
+	blur:  int   `json:"blur"`,
+	floor: f32   `json:"min"`,
+	cap:   f32   `json:"max_levels"`,
 }
 
 capture_steps_build :: proc(
 	values: []f32,
 	width, height: u32,
 	region: Capture_Region,
+	options: Capture_Steps_Options,
 	allocator: mem.Allocator,
 ) -> Capture_Steps {
 	if region.w <= 1 || region.h <= 1 {
 		return {}
 	}
-	radius := STEP_BLUR_RADIUS
+	radius := max((options.blur - 1) / 2, 0)
 	rows := region.h + 2 * radius
 	horizontal := make([]f32, rows * region.w, allocator)
 	defer delete(horizontal, allocator)
@@ -58,7 +72,11 @@ capture_steps_build :: proc(
 		}
 	}
 
-	result := Capture_Steps{}
+	result := Capture_Steps {
+		blur  = options.blur,
+		floor = options.min,
+		cap   = options.max,
+	}
 	for row in 0 ..< region.h {
 		for column in 0 ..< region.w {
 			index := row * region.w + column
@@ -66,7 +84,7 @@ capture_steps_build :: proc(
 				jump := abs(blurred[index] - blurred[index - 1])
 				result.pairs += 1
 				result.max = max(result.max, jump)
-				if jump > STEP_MIN_LEVELS && jump < STEP_MAX_LEVELS {
+				if jump > options.min && jump < options.max {
 					result.count += 1
 				}
 			}
@@ -74,7 +92,7 @@ capture_steps_build :: proc(
 				jump := abs(blurred[index] - blurred[index - region.w])
 				result.pairs += 1
 				result.max = max(result.max, jump)
-				if jump > STEP_MIN_LEVELS && jump < STEP_MAX_LEVELS {
+				if jump > options.min && jump < options.max {
 					result.count += 1
 				}
 			}
