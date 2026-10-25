@@ -237,7 +237,8 @@ Options:
 - `--renderer-debug KEY=VALUE`: apply a gated renderer override before the
   commands. Repeat the flag for more fields. It needs the same gate as the
   command.
-- `--no-render`: run the simulation and checks only. No Vulkan device is created.
+- `--no-render`: run the simulation and checks only. No Vulkan device is created,
+  captures are skipped, and a perf run measures CPU time only.
 - `--present`: render the real SDL window and capture the swapchain image
   before present. No compositor and no `grim`.
 - `--debug-renderer`: accept the renderer debug command. A build with

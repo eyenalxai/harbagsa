@@ -9,13 +9,13 @@ session_menu :: proc(session: ^Session, command: Menu_Command) -> string {
 		will_open = command.open
 	}
 	if command.has_item && !will_open {
-		return "menu must be open to select a row"
+		return format_error("%s", "menu must be open to select a row")
 	}
 	if command.has_activate && !will_open {
-		return "menu must be open to activate a row"
+		return format_error("%s", "menu must be open to activate a row")
 	}
 	if command.has_set && !will_open {
-		return "menu must be open to set a value"
+		return format_error("%s", "menu must be open to set a value")
 	}
 
 	if command.has_open {

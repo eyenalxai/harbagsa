@@ -1063,19 +1063,29 @@ frame-rate change.
 
 Change:
 
-- `Command_Kind` and `Command` in `src/harness/command.odin`.
-- `command_name` and `command_destroy`.
-- `command_parse` and a parser in `src/harness/command_parsers.odin`, or a new
-  file when the command grows (`src/harness/menu_command.odin` is the example).
-- `session_execute` and `session_record_command` in
-  `src/harness/session_commands.odin`, with a helper in a `session_*.odin` file
-  when the command has its own state.
+- `Command_Kind` and its payload in `src/harness/command.odin`.
+- One row in `COMMANDS` in `src/harness/command_registry.odin`: name, parse,
+  execute, record policy, destroy, and backend policy.
+- A parser in `src/harness/command_parsers.odin` or a command file, and an
+  `execute_*` in `src/harness/command_execute.odin` or a `session_*.odin`
+  helper.
 - A scenario block when the command is a setup step: parse it into the same
   command and append it before the commands. `renderer_debug` is the example.
 - README and, for a new domain word, `GLOSSARY.md`.
 - A section in this page when the command needs more than a line of
   explanation. `capture` and `renderer_debug` are the examples.
-- A test in `tests/harness/`.
+- A row test in `tests/harness/registry.odin` and a JSONL test.
+
+The parser and dispatcher, the name lookup, the recorder, and the destroy path
+read the row. A missing row panics, and the registry test catches it before a
+run. Command errors are allocated with `context.allocator`; the dispatcher frees
+the row's error after copying it into the reply, so no command sets an ownership
+flag.
+
+`backend` is `None`, `Optional`, or `Required`. The batch run and the live
+session use the same policy through `Session.backend_provider`; a capture with
+rendering disabled is skipped in both. A `Required` command without rendering
+fails in its own execute proc, so CPU-only `perf` still works.
 
 ## Checks
 
@@ -1133,8 +1143,8 @@ harness in the same change. Do not leave the automation behind the game.
   page. The recorder owns begin, end, and viewport.
 - New perf field: add it to the perf report struct, the reply, the run report,
   the trace, and this page.
-- New command: follow **Adding a command**, add a JSONL test, and add a scenario
-  example when it changes a normal workflow.
+- New command: follow **Adding a command**, add the registry row test, a JSONL
+  test, and a scenario example when it changes a normal workflow.
 - New capture target or format: add it to `Capture_Target` or `Capture_Format`,
   the name/parse and extension helpers, `target_image`, `record_capture_copy`,
   `read_capture_target`, and `capture_values`. Add it to the capture parser,
