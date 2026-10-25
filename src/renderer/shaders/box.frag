@@ -67,6 +67,10 @@ layout(set = 0, binding = 8) readonly buffer ProbeDepth {
     vec2 depth[];
 } probe_depth_set;
 
+layout(set = 0, binding = 9) readonly buffer ProbePositions {
+    vec4 positions[];
+} probe_positions;
+
 const vec3 SUN_COLOR = vec3(1.0, 0.98, 0.94);
 const int SUN_SAMPLES = 16;
 const float GOLDEN_ANGLE = 2.39996323;
@@ -196,8 +200,10 @@ vec3 probe_indirect(vec3 world_position, vec3 normal) {
                 float weight_y = y == 0 ? 1.0 - fraction.y : fraction.y;
                 float weight_z = z == 0 ? 1.0 - fraction.z : fraction.z;
 
-                vec3 probe_position = volume.min_spacing.xyz +
-                    (vec3(cell) + 0.5) * volume.min_spacing.w;
+                uint probe_index = volume.counts_offset.w + uint(
+                    (cell.z * int(counts.y) + cell.y) * int(counts.x) + cell.x
+                );
+                vec3 probe_position = probe_positions.positions[probe_index].xyz;
                 vec3 to_surface = world_position - probe_position;
                 float distance2 = dot(to_surface, to_surface);
                 if (distance2 < 1e-6) {
@@ -210,9 +216,6 @@ vec3 probe_indirect(vec3 world_position, vec3 normal) {
                     continue;
                 }
 
-                uint probe_index = volume.counts_offset.w + uint(
-                    (cell.z * int(counts.y) + cell.y) * int(counts.x) + cell.x
-                );
                 vec2 oct = oct_encode(direction);
                 ivec2 texel = clamp(
                     ivec2(oct * float(PROBE_GRID_SIZE)),

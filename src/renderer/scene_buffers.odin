@@ -117,7 +117,7 @@ destroy_scene_frame_buffers :: proc(r: ^Renderer) {
 @(private)
 write_scene_bindings :: proc(r: ^Renderer) {
 	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		buffer_infos := [8]vk.DescriptorBufferInfo {
+		buffer_infos := [9]vk.DescriptorBufferInfo {
 			{
 				buffer = r.scene.camera_buffers[i],
 				offset = 0,
@@ -158,8 +158,13 @@ write_scene_bindings :: proc(r: ^Renderer) {
 				offset = 0,
 				range = r.probe.depth_bytes,
 			},
+			{
+				buffer = r.probe.position_buffers[i],
+				offset = 0,
+				range = r.probe.position_bytes,
+			},
 		}
-		writes := [8]vk.WriteDescriptorSet {
+		writes := [9]vk.WriteDescriptorSet {
 			{
 				sType = .WRITE_DESCRIPTOR_SET,
 				dstSet = r.scene.descriptor_sets[i],
@@ -223,6 +228,14 @@ write_scene_bindings :: proc(r: ^Renderer) {
 				descriptorCount = 1,
 				descriptorType = .STORAGE_BUFFER,
 				pBufferInfo = &buffer_infos[7],
+			},
+			{
+				sType = .WRITE_DESCRIPTOR_SET,
+				dstSet = r.scene.descriptor_sets[i],
+				dstBinding = PROBE_POSITIONS_BINDING,
+				descriptorCount = 1,
+				descriptorType = .STORAGE_BUFFER,
+				pBufferInfo = &buffer_infos[8],
 			},
 		}
 		vk.UpdateDescriptorSets(r.device, u32(len(writes)), &writes[0], 0, nil)

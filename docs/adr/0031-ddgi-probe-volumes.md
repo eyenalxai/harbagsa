@@ -18,6 +18,8 @@ The target is interiors with many local lights and no sun.
   shades the hit with the sun, the point lights, and the emissive surface. A miss
   returns the sky gradient. Point-light shadows use the same mask as the lit
   pass, so a lamp does not block its own light.
+- Before the rays run, the CPU pushes every probe out of any box it sits inside,
+  along the shallowest local axis.
 - Every probe updates every frame. A new value replaces the old one on the first
   frame and after a light or sun change; otherwise it blends with an alpha of
   0.25.
@@ -36,7 +38,7 @@ The target is interiors with many local lights and no sun.
   second loop.
 - Depth moments reject a probe behind a wall during sampling. They do not fix a
   probe grid that straddles a wall; that is the leak-control ticket.
-- The probe pass is 0.116 ms with 300 probes and 64 synthetic lights at
+- The probe pass is 0.154 ms with 300 probes and 64 synthetic lights at
   1280 x 720. Updating every probe is cheap enough to be the default.
 
 ## Considered Options
@@ -48,7 +50,7 @@ The target is interiors with many local lights and no sun.
   see, which is the whole point of a room around a corner.
 - **One ray per probe.** Too coarse; the octahedral map needs the 64 directions.
 - **Round-robin probe updates.** Lower cost, but a moving lamp would show a slow
-  wave. The first slice updates all probes and pays 0.116 ms.
+  wave. The first slice updates all probes and pays 0.154 ms.
 
 ## Consequences
 
@@ -57,12 +59,15 @@ The target is interiors with many local lights and no sun.
 - The probe atlas is 1.5 KB per probe: 1 KB irradiance and 0.5 KB depth. The
   first volume holds 300 probes, about 450 KB per in-flight frame.
 - A light, sun, or volume change resets the blend to a full replace. Moving
-  geometry does not reset the probes yet; a crate that moves inside a lit room
-  keeps stale indirect until a light changes. The leak-control ticket owns that
-  dirty state.
-- The volume covers the whole room, including internal walls. The depth test
-  rejects back-facing probes, but a probe on the other side of a thin wall can
-  still leak. Per-room classification, relocation, and a leak pair are the next
-  ticket.
+  geometry relocates the probe positions each frame, but does not reset the
+  radiance blend. A crate that moves inside a lit room keeps its old indirect
+  until the blend converges.
+- `scenarios/ddgi-leak.json`, `ddgi-door.json`, and `ddgi-move.json` gate the
+  wall leak, the doorway transport, and the moving lamp.
+- The volume covers the whole room, including internal walls. The sampler rejects
+  back-facing probes with the surface normal and the depth moment, and the probe
+  positions are relocated out of boxes. The leak scenario keeps the lane wall
+  within 0.01 mean of its no-lamp value while the chamber is lit. A separate
+  per-room classification is not needed for this room network yet.
 - The pass order is now `Tlas -> Cluster -> Probe -> Depth -> Scene -> Sky ->
   Taa -> Overlay`.
