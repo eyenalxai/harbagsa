@@ -9,69 +9,61 @@ record_scene :: proc(
 	r: ^Renderer,
 	command_buffer: vk.CommandBuffer,
 	image_index: u32,
-	view: Frame_View,
+	input: Render_Input,
 	capture: Frame_Capture,
 ) -> bool {
+	input := input
 	r.frame_count += 1
 	if int(image_index) >= len(r.target.views) {
 		log.errorf("renderer: target image index %d is out of range", image_index)
 		return false
 	}
-	box_count := len(view.boxes)
+	box_count := len(input.boxes)
 	if box_count > MAX_SCENE_BOXES {
 		log.errorf("renderer: scene has %d boxes, the limit is %d", box_count, MAX_SCENE_BOXES)
 		return false
 	}
 
-	if !prepare_overlay(r, view.debug_lines, view.hud) {
+	if !prepare_overlay(r, input.debug_lines, input.hud) {
 		log.error("renderer: overlay vertex upload failed")
 		return false
 	}
 	if r.taa.has_prev_models && box_count != r.taa.prev_model_count {
 		reset_history(r, .Scene_Change)
 	}
-	lights := frame_lights(r, view.lights)
+	lights := frame_lights(r, input.lights)
 	if !write_light_data(r, lights) {
 		return false
 	}
-	lights = lights[:r.light_count]
+	input.lights = lights[:r.light_count]
 	if r.taa.has_prev_sun &&
-	   (r.taa.prev_light_direction != view.light_direction ||
-		   r.taa.prev_sun_angular_diameter != view.sun_angular_diameter) {
+	   (r.taa.prev_light_direction != input.light_direction ||
+		   r.taa.prev_sun_angular_diameter != input.sun_angular_diameter) {
 		reset_history(r, .Scene_Change)
 	}
-	r.taa.prev_light_direction = view.light_direction
-	r.taa.prev_sun_angular_diameter = view.sun_angular_diameter
+	r.taa.prev_light_direction = input.light_direction
+	r.taa.prev_sun_angular_diameter = input.sun_angular_diameter
 	r.taa.has_prev_sun = true
-	if !update_camera(
-		r,
-		view.camera,
-		view.light_direction,
-		r.light_count,
-		view.sun_angular_diameter,
-	) {
+
+	// The recorder owns the renderer-internal inputs, so one value goes to the
+	// uniform, the digest, and the pass list.
+	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
+	input.width = extent.width
+	input.height = extent.height
+	input.jitter = taa_frame_jitter(r, extent)
+	input.shadow_phase = taa_shadow_phase(r)
+	r.taa.current_jitter = input.jitter
+	r.taa.shadow_phase = input.shadow_phase
+	input.atlas_weight = text_atlas_applied_weight(r)
+	debug := renderer_debug(r)
+	input.sky = debug.sky
+	input.ao = debug.ao
+	r.render_digest = render_digest(input)
+	r.has_render_digest = true
+	if !update_camera(r, input) {
 		return false
 	}
-	debug := renderer_debug(r)
-	r.render_digest = render_digest(
-		Render_Digest_Input {
-			width = r.target.config.width,
-			height = r.target.config.height,
-			camera = view.camera,
-			light_direction = view.light_direction,
-			sun_angular_diameter = view.sun_angular_diameter,
-			boxes = view.boxes,
-			lights = lights,
-			jitter = r.taa.current_jitter,
-			shadow_phase = r.taa.shadow_phase,
-			atlas_weight = text_atlas_applied_weight(r),
-			sky = debug.sky,
-			ao = debug.ao,
-			view_flags = view.view_flags,
-		},
-	)
-	r.has_render_digest = true
-	if !write_object_data(r, view.boxes) {
+	if !write_object_data(r, input.boxes) {
 		return false
 	}
 
@@ -85,7 +77,7 @@ record_scene :: proc(
 
 	reset_timing(r, command_buffer)
 	write_timing(r, command_buffer, .Start)
-	record_acceleration(r, command_buffer, view.boxes)
+	record_acceleration(r, command_buffer, input.boxes)
 	write_timing(r, command_buffer, .After_Tlas)
 	record_scene_depth(r, command_buffer, box_count)
 	write_timing(r, command_buffer, .After_Depth)

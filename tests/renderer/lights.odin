@@ -34,7 +34,7 @@ point_light_lights_a_box_and_reaches_the_buffer :: proc(t: ^testing.T) {
 		half_extents = {2, 2, 0.25},
 		color        = {0.5, 0.5, 0.5, 1},
 	}
-	view := renderer.Frame_View {
+	view := renderer.Render_Input {
 		camera          = renderer.Camera{position = {0, 0, 5}, fov_x = math.PI * 0.5},
 		light_direction      = {0, -1, 0},
 		sun_angular_diameter = TEST_SUN_ANGULAR_DIAMETER,
@@ -118,7 +118,7 @@ lamp_mask_blocks_neither_its_point_light_nor_the_sun :: proc(t: ^testing.T) {
 	lights := []renderer.Light {
 		{position = {0, 1.9, 0}, intensity = 3, color = {1, 1, 1}, range = 8},
 	}
-	view := renderer.Frame_View {
+	view := renderer.Render_Input {
 		camera               = TEST_CAMERA,
 		light_direction      = {0, 1, 0},
 		sun_angular_diameter = TEST_SUN_ANGULAR_DIAMETER,
@@ -167,7 +167,7 @@ emissive_box_draws_without_a_light :: proc(t: ^testing.T) {
 		half_extents = {0.3, 0.3, 0.3},
 		color        = {0.5, 0.5, 0.5, 1},
 	}
-	view := renderer.Frame_View {
+	view := renderer.Render_Input {
 		camera          = TEST_CAMERA,
 		light_direction      = {0, -1, 0},
 		sun_angular_diameter = TEST_SUN_ANGULAR_DIAMETER,

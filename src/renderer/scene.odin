@@ -119,21 +119,19 @@ destroy_scene :: proc(r: ^Renderer) {
 	r.scene.index_count = 0
 }
 
-update_camera :: proc(
-	r: ^Renderer,
-	camera: Camera,
-	light_direction: [3]f32,
-	light_count: int,
-	sun_angular_diameter: f32,
-) -> bool {
-	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
+update_camera :: proc(r: ^Renderer, input: Render_Input) -> bool {
+	extent := vk.Extent2D{input.width, input.height}
 	height := f32(extent.height)
 	if height <= 0 {
 		log.error("renderer: cannot build a projection for a zero-height target")
 		return false
 	}
-	if !(sun_angular_diameter > 0 && sun_angular_diameter < SUN_ANGULAR_DIAMETER_LIMIT) {
-		log.errorf("renderer: sun angular diameter %v is out of range", sun_angular_diameter)
+	if !(input.sun_angular_diameter > 0 &&
+	   input.sun_angular_diameter < SUN_ANGULAR_DIAMETER_LIMIT) {
+		log.errorf(
+			"renderer: sun angular diameter %v is out of range",
+			input.sun_angular_diameter,
+		)
 		return false
 	}
 	aspect := f32(extent.width) / height
@@ -144,27 +142,27 @@ update_camera :: proc(
 		return false
 	}
 
-	cos_pitch := math.cos(camera.pitch)
+	cos_pitch := math.cos(input.camera.pitch)
 	forward := [3]f32{
-		-math.sin(camera.yaw) * cos_pitch,
-		math.sin(camera.pitch),
-		-math.cos(camera.yaw) * cos_pitch,
+		-math.sin(input.camera.yaw) * cos_pitch,
+		math.sin(input.camera.pitch),
+		-math.cos(input.camera.yaw) * cos_pitch,
 	}
 	target := [3]f32 {
-		camera.position.x + forward.x,
-		camera.position.y + forward.y,
-		camera.position.z + forward.z,
+		input.camera.position.x + forward.x,
+		input.camera.position.y + forward.y,
+		input.camera.position.z + forward.z,
 	}
-	view := mat4_look_at(camera.position, target, CAMERA_UP)
+	view := mat4_look_at(input.camera.position, target, CAMERA_UP)
 	projection := mat4_perspective(
-		2 * math.atan(math.tan(camera.fov_x * 0.5) / aspect),
+		2 * math.atan(math.tan(input.camera.fov_x * 0.5) / aspect),
 		aspect,
 		CAMERA_NEAR,
 		CAMERA_FAR,
 	)
 	view_projection := mat4_multiply(projection, view)
 
-	taa_note_camera(r, camera)
+	taa_note_camera(r, input.camera)
 
 	previous := view_projection
 	if r.taa.has_prev_view_projection {
@@ -173,6 +171,44 @@ update_camera :: proc(
 	r.taa.prev_view_projection = view_projection
 	r.taa.has_prev_view_projection = true
 
+	buffer^ = Camera_Uniform {
+		view = view,
+		projection = projection,
+		prev_view_projection = previous,
+		light_direction = {
+			input.light_direction.x,
+			input.light_direction.y,
+			input.light_direction.z,
+			0,
+		},
+		ambient = {AMBIENT_COLOR.x, AMBIENT_COLOR.y, AMBIENT_COLOR.z, 0},
+		// The sun sample pattern rotates only while TAA can average it.
+		screen = {
+			srgb_gamma(r),
+			f32(extent.width),
+			height,
+			f32(input.shadow_phase),
+		},
+		sun = {
+			math.tan(input.sun_angular_diameter * 0.5),
+			CAMERA_FAR,
+			f32(len(input.lights)),
+			r.taa.debug.active && !r.taa.debug.light_shadows ? 0 : 1,
+		},
+		jitter = {input.jitter.x, input.jitter.y, 0, 0},
+		lighting = {
+			AO_RADIUS,
+			AO_STRENGTH,
+			input.ao ? 1.0 : 0.0,
+			input.sky ? 1.0 : 0.0,
+		},
+	}
+	return true
+}
+
+// Jitter advances once per recorded frame. The digest, the uniform, and the
+// report all read the value this call stores in the input.
+taa_frame_jitter :: proc(r: ^Renderer, extent: vk.Extent2D) -> [2]f32 {
 	jitter: [2]f32
 	jitter_enabled := r.taa.enabled && !(r.taa.debug.active && !r.taa.debug.jitter)
 	if jitter_enabled {
@@ -182,31 +218,5 @@ update_camera :: proc(
 	} else {
 		r.taa.applied_jitter_index = 0
 	}
-	r.taa.current_jitter = jitter
-	r.taa.shadow_phase = taa_shadow_phase(r)
-	debug := renderer_debug(r)
-
-	buffer^ = Camera_Uniform {
-		view = view,
-		projection = projection,
-		prev_view_projection = previous,
-		light_direction = {light_direction.x, light_direction.y, light_direction.z, 0},
-		ambient = {AMBIENT_COLOR.x, AMBIENT_COLOR.y, AMBIENT_COLOR.z, 0},
-		// The sun sample pattern rotates only while TAA can average it.
-		screen = {srgb_gamma(r), f32(extent.width), height, f32(r.taa.shadow_phase)},
-		sun = {
-			math.tan(sun_angular_diameter * 0.5),
-			CAMERA_FAR,
-			f32(light_count),
-			r.taa.debug.active && !r.taa.debug.light_shadows ? 0 : 1,
-		},
-		jitter = {jitter.x, jitter.y, 0, 0},
-		lighting = {
-			AO_RADIUS,
-			AO_STRENGTH,
-			debug.ao ? 1.0 : 0.0,
-			debug.sky ? 1.0 : 0.0,
-		},
-	}
-	return true
+	return jitter
 }

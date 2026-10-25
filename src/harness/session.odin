@@ -80,6 +80,7 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 		alpha = 1.0,
 		debug = game.debug_mode_create(allocator),
 		analysis_config = analysis_config_default(),
+		renderer_report = {last_reset = "none"},
 	}
 	session.hud.menu.displays = display.fallback_list()
 	// The scratch holds the frame's debug lines, so it is too large for a local

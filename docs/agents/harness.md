@@ -1145,12 +1145,19 @@ harness in the same change. Do not leave the automation behind the game.
   `Pending_Capture`, the backend, `capture_field`, the docs, and a synthetic
   image test. A block that writes no file must still be readable by a check. A check must read the same value
   the file records.
+- New render input: add the field to `Render_Input`, one row to
+  `RENDER_DIGEST_FIELDS` (hashed, or an explicit exclusion with the reason), the
+  recorder fill, and the reflection test. The uniform reads the same input.
+- New renderer report field: add the field and tag to `Renderer_Report` or
+  `Debug_Report`, one row to `REPORT_FIELDS`, and the reflection test. The JSON
+  and the check paths read the same field.
 - New renderer debug override: add it to `Renderer_Debug`, `set_renderer_debug`,
   the resolve push constants and shader, `renderer_debug_fields`, the renderer
   state, the docs, and the gate test. Do not make it reachable without the
   gate.
 - New point light input: add it to `Light`, the light buffer upload, the scene
-  shader loop, the render digest, and `tests/renderer/lights.odin`.
+  shader loop, `Render_Input`, and its digest row. Add a test to
+  `tests/renderer/lights.odin`.
 - New scenario key or run option: add it to `scenario_parse` and its allowed
   key set, the CLI parser, the README, this page, and a parser test. A new
   top-level key also joins `scenario_build` and the inheritance merge.
