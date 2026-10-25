@@ -56,6 +56,33 @@ session_renderer_debug :: proc(session: ^Session, command: Renderer_Debug_Comman
 	if command.has_ao {
 		debug.ao = command.ao
 	}
+	defaults := renderer.renderer_debug_default()
+	for field in command.reset {
+		switch field {
+		case .TAA:
+			debug.taa = defaults.taa
+		case .Jitter:
+			debug.jitter = defaults.jitter
+		case .History_Weight:
+			debug.history_weight = defaults.history_weight
+		case .Clamp:
+			debug.clamp = defaults.clamp
+		case .Depth_Trust:
+			debug.force_depth_trust = defaults.force_depth_trust
+		case .Freeze_Shadow_Phase:
+			debug.freeze_shadow_phase = defaults.freeze_shadow_phase
+		case .Shadow_Phase:
+			debug.shadow_phase = defaults.shadow_phase
+		case .Light_Shadows:
+			debug.light_shadows = defaults.light_shadows
+		case .Synthetic_Lights:
+			debug.synthetic_lights = defaults.synthetic_lights
+		case .Sky:
+			debug.sky = defaults.sky
+		case .AO:
+			debug.ao = defaults.ao
+		}
+	}
 	session.backend.set_debug(session.backend.ctx, debug)
 	session_refresh_renderer(session)
 	return ""

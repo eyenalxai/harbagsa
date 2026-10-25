@@ -1,0 +1,18 @@
+{
+  "requires": {"renderer_debug": true},
+  "size": "1280x720",
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "analysis": false,
+  "parameters": {"phase": 0},
+  "commands": [
+    {"cmd": "camera", "position": [2.9, 0.8, -2.5], "look_at": [5.2, 0.0, -2.5]},
+    {"cmd": "renderer_debug", "taa": false, "freeze_shadow_phase": true, "shadow_phase": "${phase}"},
+    {"cmd": "capture", "name": "phase", "target": "scene_color", "format": "float"},
+    {"cmd": "capture", "name": "phase-stats", "format": "stats", "region": {"x": 150, "y": 420, "w": 550, "h": 280}}
+  ],
+  "checks": [
+    {"field": "capture.count", "op": "eq", "value": 2},
+    {"field": "capture.named.phase.format", "op": "eq", "value": "float"},
+    {"field": "capture.named.phase.target", "op": "eq", "value": "scene_color"}
+  ]
+}

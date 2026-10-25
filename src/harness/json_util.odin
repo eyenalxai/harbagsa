@@ -63,6 +63,11 @@ json_array :: proc(value: json.Value) -> (result: json.Array, ok: bool) {
 	}
 }
 
+json_is_null :: proc(value: json.Value) -> bool {
+	_, ok := value.(json.Null)
+	return ok
+}
+
 json_object :: proc(value: json.Value) -> (result: json.Object, ok: bool) {
 	#partial switch object in value {
 	case json.Object:

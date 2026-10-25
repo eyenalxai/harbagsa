@@ -27,6 +27,7 @@ Common_Options :: struct {
 	no_render:            bool,
 	no_analysis:          bool,
 	debug_renderer:       bool,
+	summary:              bool,
 	verbose:              bool,
 	timeout_seconds:      f64,
 	debug_overrides:      [MAX_DEBUG_OVERRIDES]Debug_Override,
@@ -64,8 +65,7 @@ cli_main :: proc() -> int {
 	case "schema":
 		return cli_schema(args[1:])
 	case "help", "--help", "-h":
-		print_usage()
-		return EXIT_OK
+		return cli_help(args[1:])
 	}
 	fmt.eprintf("harbagsa-agent: unknown command %q\n", args[0])
 	print_usage()
@@ -236,7 +236,10 @@ parse_common_option :: proc(
 	case "--debug-renderer":
 		options.debug_renderer = true
 		return index + 1, true, ""
-	case "--verbose", "--summary":
+	case "--summary":
+		options.summary = true
+		return index + 1, true, ""
+	case "--verbose":
 		options.verbose = true
 		return index + 1, true, ""
 	case "--timeout":

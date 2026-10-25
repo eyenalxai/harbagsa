@@ -28,10 +28,10 @@ The scenario runs at 1280x720. The values are from
 | --- | ---: | --- | --- |
 | `sealed-depth` maximum depth | 0.9895 | below 0.999 | yes |
 | `ceiling-depth` maximum depth | 0.9722 | below 0.999 | yes |
-| Doorway sun patch mean green | 113.4 | above 100 | yes |
-| Doorway shade patch mean green | 87.9 | below 95 | yes |
-| Lamp-on mean green | 144.6 | above 120 | yes |
-| Lamp-off mean green | 76.3 | below 90 | yes |
+| Doorway sun patch mean green | 113.5 | above 100 | yes |
+| Doorway shade patch mean green | 88.1 | below 95 | yes |
+| Lamp-on mean green | 144.9 | above 120 | yes |
+| Lamp-off mean green | 76.4 | below 90 | yes |
 
 The depth gate is the closure proof. The depth target clears to 1.0, so a sky
 pixel in a sealed view reaches 1.0. The far corner of the room reads 0.989 and
@@ -39,13 +39,16 @@ the ceiling reads 0.972.
 
 The sun gate compares one 500 by 240 region at `(400, 460)`, which covers the
 floor at the doorway. Moving the sun from the west (`azimuth_deg 270`) to the east
-(`azimuth_deg 90`) drops the region mean by 25.5 levels. The doorway is the only
+(`azimuth_deg 90`) drops the region mean by 25.4 levels. The doorway is the only
 path for that light.
 
 The lamp gate uses a warm `Lamp` at `(13.5, 2.75, 10.5)`, the prefab default of
-1.5 intensity and 8 m range. The room-corner view rises by 68.3 levels when the
-lamp is placed and falls back when it is deleted. The lamp sits at the ceiling
-and casts the hard point-light shadow.
+1.5 intensity and 8 m range. The `place` command creates it without debug mode,
+so the sun gizmo and editor lines stay out of the frame. The room-corner view
+rises by 68.5 levels when the lamp is placed and falls back when `remove`
+deletes it. The lamp sits at the ceiling and casts the hard point-light shadow.
+The sun elevation, lamp intensity, lamp range, and patch region are scenario
+parameters.
 
 The colour captures are `outside`, `inside-door`, `sealed-corner`, `ceiling`,
 `door-sun`, `door-shade`, `room-corner`, `lamp-on`, and `lamp-off`. The run
@@ -72,5 +75,5 @@ tools/make.sh build
 jq -r '.checks[] | [.field, .ok, .actual] | @tsv' runs/room-lighting/report.json
 ```
 
-The scenario is also part of `make validate-offscreen`, so the Vulkan validation
-layers cover the room geometry and the lamp shadow ray.
+The scenario is part of `make validate-offscreen` and `make lighting`, so the
+Vulkan validation layers cover the room geometry and the lamp shadow ray.

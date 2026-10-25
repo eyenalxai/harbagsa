@@ -14,7 +14,12 @@ HARNESS_REVISION := $(shell git rev-parse --short HEAD 2>/dev/null || printf unk
 HARNESS_DIRTY := $(shell if git rev-parse --git-dir >/dev/null 2>&1 && [ -z "$$(git status --porcelain 2>/dev/null)" ]; then printf false; else printf true; fi)
 AO_SAMPLES ?= 8
 RENDERER_DEFINES := -define:AO_SAMPLES=$(AO_SAMPLES)
-AGENT_DEFINES := -define:HARNESS_REVISION=$(HARNESS_REVISION) -define:HARNESS_DIRTY=$(HARNESS_DIRTY) $(RENDERER_DEFINES)
+TEST_PACKAGES := display platform input physics simulation frame perf harness renderer docs
+TEST_TARGETS := $(addprefix test-,$(TEST_PACKAGES))
+# These packages can see the whole program, so they keep the unused-procedure check.
+TEST_FULL_FLAGS := display physics simulation
+TEST_DEPS = $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
+AGENT_DEFINES := -define:HARNESS_REVISION='"$(HARNESS_REVISION)"' -define:HARNESS_DIRTY=$(HARNESS_DIRTY) $(RENDERER_DEFINES)
 AGENT_BUILD := $(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) $(AGENT_DEFINES) -out:$(AGENT_BIN)
 VALIDATE_AGENT_BIN := bin/harbagsa-agent-validate
 VALIDATE_SCENARIO ?= scenarios/smoke.json
@@ -85,7 +90,7 @@ VULKAN_LAYER_DIRS ?= \
 	/usr/share/vulkan/explicit_layer.d
 VALIDATION_LAYER := VK_LAYER_KHRONOS_validation
 
-.PHONY: all FORCE build agent check check-spirv check-lines test run shaders validate validate-offscreen validate-demo check-validation-layer shot smoke ui suite clean
+.PHONY: all FORCE build agent check check-spirv check-lines test $(TEST_TARGETS) run shaders validate validate-offscreen validate-demo check-validation-layer shot smoke ui lighting suite clean
 
 FORCE:
 
@@ -192,18 +197,13 @@ check-lines:
 	exit $$status
 
 # Box3D's world registry is not safe for concurrent world creation, so the test
-# programs share one runner thread.
-test: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
-	$(ODIN) test tests/display $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
-	$(ODIN) test tests/platform $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
-	$(ODIN) test tests/input $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
-	$(ODIN) test tests/physics $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
-	$(ODIN) test tests/simulation $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
-	$(ODIN) test tests/frame $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
-	$(ODIN) test tests/perf $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
-	$(ODIN) test tests/harness $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
-	$(ODIN) test tests/renderer $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
-	$(ODIN) test tests/docs $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
+# programs share one runner thread. One target per package keeps a tight loop
+# cheap; `test` is the aggregate.
+test: $(TEST_TARGETS)
+
+$(TEST_TARGETS): test-%: $(TEST_DEPS)
+	$(ODIN) test tests/$* $(if $(filter $*,$(TEST_FULL_FLAGS)),$(ODIN_FLAGS),$(ODIN_LIB_CHECK_FLAGS)) \
+		$(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
 
 run: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
@@ -284,7 +284,7 @@ shot: agent
 		printf 'make shot: no report at %s\n' "$$report" >&2; \
 		exit 1; \
 	fi; \
-	paths=$$($(JQ) -r '.screenshots[].path // empty' "$$report") || { \
+	paths=$$($(JQ) -r '.captures[].path // empty' "$$report") || { \
 		printf 'make shot: cannot read captures from %s\n' "$$report" >&2; \
 		exit 1; \
 	}; \
@@ -301,6 +301,9 @@ smoke: agent
 
 ui: agent
 	$(AGENT_BIN) suite ui --out runs/ui $(AGENT_FLAGS)
+
+lighting: agent
+	$(AGENT_BIN) suite lighting --out runs/lighting $(AGENT_FLAGS)
 
 SUITE ?= offscreen
 suite: agent

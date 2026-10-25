@@ -2,6 +2,7 @@
 package harness
 
 
+import "core:math"
 import "core:mem"
 
 // A region limits the statistics to a rectangle of the source image. The short
@@ -11,6 +12,51 @@ Capture_Region :: struct {
 	y: int `json:"y"`,
 	w: int `json:"w"`,
 	h: int `json:"h"`,
+}
+
+Capture_Region_Unit :: enum {
+	Pixels,
+	Normalized,
+}
+
+// A scenario names a region before the capture extent is known. A normalized
+// region resolves against the frame it reads, so one file works at every size.
+Capture_Region_Spec :: struct {
+	unit:       Capture_Region_Unit,
+	pixels:     Capture_Region,
+	normalized: [4]f32,
+}
+
+capture_region_spec_pixels :: proc(region: Capture_Region) -> Capture_Region_Spec {
+	return {unit = .Pixels, pixels = region}
+}
+
+capture_region_resolve :: proc(
+	spec: Capture_Region_Spec,
+	width, height: u32,
+) -> (Capture_Region, string) {
+	if spec.unit == .Pixels {
+		region := spec.pixels
+		if !capture_region_valid(region, width, height) {
+			return {}, format_error("region must be inside the %dx%d target", width, height)
+		}
+		return region, ""
+	}
+	x, y, w, h := spec.normalized[0], spec.normalized[1], spec.normalized[2], spec.normalized[3]
+	if x < 0 || y < 0 || w <= 0 || h <= 0 || x + w > 1.000001 || y + h > 1.000001 {
+		return {}, format_error(
+			"a normalized region needs x, y in [0, 1], positive w, h, and x+w, y+h at most 1",
+		)
+	}
+	left := int(math.round(f64(x) * f64(width)))
+	top := int(math.round(f64(y) * f64(height)))
+	right := int(math.round(f64(x + w) * f64(width)))
+	bottom := int(math.round(f64(y + h) * f64(height)))
+	left = clamp(left, 0, int(width) - 1)
+	top = clamp(top, 0, int(height) - 1)
+	right = clamp(right, left + 1, int(width))
+	bottom = clamp(bottom, top + 1, int(height))
+	return {x = left, y = top, w = right - left, h = bottom - top}, ""
 }
 
 Profile_Axis :: enum {

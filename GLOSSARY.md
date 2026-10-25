@@ -440,14 +440,21 @@ JSON reply per line.
 _Avoid_: Daemon, server
 
 **Offscreen target**:
-The render target with a color image, a depth image, and a readback buffer, but
-no surface or swapchain.
+The render target with a color image and a depth image, but no surface or
+swapchain. Its capture readback buffer is allocated on the first capture.
 _Avoid_: Headless framebuffer
+
+**Capture readback**:
+The mapped GPU buffer that receives a capture copy. It is allocated on the first
+frame that asks for a capture, so the live game without a capture owns no
+readback buffer. The error names the target, format, required bytes, and buffer
+size when it does not fit.
+_Avoid_: Capture buffer, staging buffer
 
 **Frame in flight**:
 The number of submitted frames the CPU may record before the GPU completes one.
 The swapchain target keeps two. The offscreen target keeps one, because it owns
-a single color image and a single readback buffer.
+a single color image and a single capture readback buffer.
 _Avoid_: Queue depth
 
 **Swapchain target**:
@@ -693,7 +700,10 @@ The cause recorded at each TAA history reset: create, extent, toggle, teleport, 
 _Avoid_: Reset flag
 
 **Renderer debug override**:
-A gated change to a TAA or point-light input for diagnosis: TAA, jitter, history weight, clamp, depth trust, shadow phase, point-light shadows, or synthetic lights. Every change resets history.
+A gated change to a TAA or point-light input for diagnosis: TAA, jitter,
+history weight, clamp, depth trust, shadow phase, point-light shadows, or
+synthetic lights. Every change resets history. A field set to `null` restores
+that field's default without clearing the others.
 _Avoid_: Debug flag
 
 **Debug override gate**:
@@ -815,11 +825,15 @@ continuous field. A full or empty count stays exact. **Avoid**: noise, jitter.
 ### Step
 A local jump in the box-filtered luma that a visibility count leaves at a band
 edge. `capture.stats.steps` counts the jumps between half a level and a
-geometry edge. **Avoid**: edge, contour.
+geometry edge, names the eight largest in `top`, and counts the jumps at or
+above the cap in `over_cap`. **Avoid**: edge, contour.
 
 ### Region
 A rectangle of the source image that limits a capture's statistics or
-histogram. **Avoid**: window, crop (a crop changes the written image).
+histogram. A **normalized region** gives the same rectangle as fractions of the
+frame with `"unit": "normalized"`, so one scenario works at every capture size.
+The report echoes the resolved pixel region. **Avoid**: window, crop (a crop
+changes the written image).
 
 ### Crop
 A scaled PNG written from a rectangle of a capture. The capture keeps its source
@@ -883,7 +897,19 @@ replay file.
 ### Repro
 The `F5` action and its harness twin, the `repro` command: write one scene
 snapshot to a file and show the notice. The key writes
-`runs/repro/repro-<unix-ms>.json`. **Avoid**: replay file, state dump.
+`runs/repro/repro-<unix-ms>.json`. A harness `repro` path is relative to the run
+directory (or the `session --out` directory), and an absolute path stays
+absolute. **Avoid**: replay file, state dump.
+
+### Place command
+The harness `place` command creates one object from a prefab at an exact
+transform without entering debug mode. It is scene setup, not an edit, so it
+has no undo entry and draws no editor lines. **Avoid**: editor place,
+spawn (a spawn is the game API).
+
+### Remove command
+The harness `remove` command deletes one object by id without entering debug
+mode. **Avoid**: delete (the editor action).
 
 ### Display list
 The harness's scripted set of displays and modes. It replaces the compositor

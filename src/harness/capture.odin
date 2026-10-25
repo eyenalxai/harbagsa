@@ -56,7 +56,7 @@ Capture_Spec :: struct {
 	target:    Capture_Target,
 	format:    Capture_Format,
 	png:       bool,
-	region:    Maybe(Capture_Region),
+	region:    Maybe(Capture_Region_Spec),
 	profile:   Maybe(Capture_Profile),
 	crop:      Maybe(Capture_Crop),
 	histogram: Maybe(int),
@@ -200,6 +200,11 @@ capture_result_destroy :: proc(result: ^Capture_Result, allocator: mem.Allocator
 	}
 	if histogram, has_histogram := result.histogram.?; has_histogram {
 		capture_histogram_destroy(&histogram, allocator)
+	}
+	if stats, has_stats := result.stats.?; has_stats {
+		if steps, has_steps := stats.steps.?; has_steps {
+			capture_steps_destroy(&steps, allocator)
+		}
 	}
 	result^ = {}
 }
