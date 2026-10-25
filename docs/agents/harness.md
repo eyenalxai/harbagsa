@@ -77,14 +77,15 @@ serializes Make with `flock`.
 | change a renderer input for a diagnosis | **Renderer debug overrides** |
 | check the sky and the ambient occlusion | **Sky and ambient occlusion** |
 | measure image stability or the period | **Analysis** |
-| compare two builds or revisions | **Cross-run diff** |
+| compare two builds or revisions | **Cross-run diff** and **Cross-run compare** |
 | script the display list | **Commands** (`displays`) |
 | dump the HUD and menu rows | **Commands** (`rows`) |
 | measure an edge or a gradient | **Capture targets** and **Analysis** |
 | compare two builds | **Performance** and `ab` |
 | measure frame time | **Performance** |
 | prove a capture-free sequence is deterministic | **Screenshots** and `scenarios/capture-free.json` |
-| understand a design choice | `docs/adr/0008` to `docs/adr/0023` |
+| reproduce a live view | **Live session** and `docs/adr/0025` |
+| understand a design choice | `docs/adr/0008` to `docs/adr/0026` |
 
 ## What one run writes
 
@@ -242,6 +243,7 @@ and crops are pixels. `turn` and `wheel` are step counts.
 - `{"cmd": "displays", "set": [{"name": "Solo", "desktop": "1280x720", "modes": ["1280x720"]}]}`
 - `{"cmd": "displays", "clear": true}`
 - `{"cmd": "rows"}`
+- `{"cmd": "scene", "camera": {...}, "sun": {...}, "objects": [...], "settings": {...}, "view": {...}, "displays": [...]}`
 - `{"cmd": "debug_mode", "active": true}`
 - `{"cmd": "editor", "open": true, "select": 4, "pick": true, "height": 0.5}`
 - `{"cmd": "editor", "select": 8, "light_color": "cool", "light_intensity": 2.2, "light_range": 12}`
@@ -272,6 +274,17 @@ is active.
 convergence count reaches the 512 cap and reports `settle.frames` and
 `settle.converged`. It needs a renderer.
 
+A `scene` command applies one exact scene. Its blocks are `camera`, `sun`,
+`objects`, `settings`, `view`, and `displays`, and every block is optional. The
+camera source is `player`, `debug`, or `override`; a player source carries a
+`player` block with the feet position, yaw, pitch, stance, velocity, grounded
+state, step smoothing, and eye height. An object carries
+its id, prefab, body, position, rotation quaternion, colour, and light. The
+settings carry the window mode, display index, windowed resolution, input
+modes, and type weight. The display list replaces the menu list. `F5` writes one
+scene, and `record` starts with one, so a live view replays as a normal
+scenario. A scene load closes the settings menu.
+
 `sun clear` restores the default direction and angular diameter.
 
 `displays` replaces the harness display list for the rest of the run. A display
@@ -290,7 +303,8 @@ Sprint mode, Crouch mode, Prone mode, or Resume. `item`, `activate`, and `set`
 need an open menu. `direction` is `-1` or `1` (default `1`) and needs
 `activate`. `set` is a Type weight in 100..900.
 
-A capture names its target and format. See **Capture targets**. A region
+A capture names its target and format. A capture name is unique in one run; a
+second capture with the same name is an error. See **Capture targets**. A region
 limits the statistics to a rectangle, a profile measures an edge or a gradient,
 a crop writes a scaled PNG, and a histogram counts the region's channels.
 
@@ -591,9 +605,14 @@ ready line on standard output. Capture files go to `runs/session/frames/` unless
 `--out` selects another directory.
 
 `record PATH` starts recording. A second `record` with no path stops and writes
-the scenario. Recording starts with a fresh reset, so send the actions after the
-start command if you want them in the scenario. `replay PATH` resets and runs the
-scenario.
+the scenario. Recording starts with `reset`, one `scene` snapshot of the current
+state, and the current `input`. Send the actions after the start command if you
+want them in the scenario. `replay PATH` resets and runs the scenario.
+
+The game has no control socket. `F5` writes `runs/repro/repro-<unix>.json` and
+logs its absolute path. The file is a normal scenario with one `scene` command,
+so `bin/harbagsa-agent run runs/repro/repro-....json` is the whole repro step.
+The key writes a file only; it does not open a command channel.
 
 ## Screenshots
 
@@ -817,6 +836,27 @@ Without `--max-pixels`, differences are reported but do not fail the command.
 instead of the table. `errors` lists missing pairs, size mismatches, decode
 failures, and limit hits. Check `setup.revision` and `setup.dirty` before the
 pixels so a dirty tree is not mistaken for a revision change.
+
+## Cross-run compare
+
+```sh
+./bin/harbagsa-agent compare runs/before runs/after
+./bin/harbagsa-agent compare runs/before runs/after --out runs/compare/stairs --json
+```
+
+`compare` pairs the color PNG captures by name, like `diff`. It writes
+`compare.png` and `compare.json` under `runs/compare/<a>-vs-<b>/` by default.
+The panel names each run's scenario, revision, dirty flag, and run directory;
+each row names the capture, its extent, and the pixel delta. A missing pair,
+a size mismatch, or a decode failure is labeled in the panel and exits 1.
+
+A panel holds six pairs and splits into `compare-2.png`, `compare-3.png`, and
+so on. `compare.json` lists every page. The labels use the embedded font stack,
+so no ImageMagick or compositor is needed. The command refuses an output path
+inside either run's `frames/` directory, because `diff` would read the panel as
+a capture.
+
+`diff` stays numeric. Use `compare` when the image is the evidence.
 
 ## Renderer state
 
@@ -1120,6 +1160,22 @@ frame-rate change.
 - `src/harness/check_analysis.odin`: analysis check fields.
 - `src/harness/report.odin`: the run report and summary types.
 - `src/harness/report_setup.odin`: the run's setup block.
+- `src/harness/compare.odin`: the compare CLI, report, and table.
+- `src/harness/compare_run.odin`: the run metadata loader and pair builder.
+- `src/harness/compare_panel.odin`: the labeled panel layout.
+- `src/harness/compare_text.odin`: the CPU label blitter.
+- `src/harness/compare_image.odin`: the canvas, border, and scaled blit.
+- `src/harness/suite.odin`: the suite manifest and entries.
+- `src/harness/suite_run.odin`: the suite CLI and report types.
+- `src/harness/suite_execute.odin`: the suite runner and list.
+- `src/harness/suite_report.odin`: the suite table and JSON.
+- `src/frame/scene.odin`: the scene type, the live capture, and the JSON text.
+- `src/harness/scene_command.odin`: the scene command and its blocks.
+- `src/harness/scene_objects.odin`: scene objects, lights, and displays.
+- `src/harness/session_scene.odin`: applies a scene to a session.
+- `repro.odin`: the `F5` file writer.
+- `suites/renderer.json`, `suites/offscreen.json`, and `suites/ui.json`: the
+  first manifests.
 - `src/digest/digest.odin`: FNV-1a for the state and render digests.
 - `src/perf/`: the perf sample, ring, statistics, and text formatting.
 - `src/renderer/timing.odin`: the timestamp pools, the pass boundaries, and the
@@ -1180,8 +1236,8 @@ frame-rate change.
   TAA, HUD and menu overlay.
 - `src/platform/`: SDL and headless adapters. `display.odin` queries displays and
   applies the window state.
-- `tests/harness/` (including `analysis.odin`, `renderer_debug.odin`, and
-  `renderer_state.odin`), `tests/frame/`, `tests/display/display.odin`,
+- `tests/harness/` (including `analysis.odin`, `renderer_debug.odin`,
+  `renderer_state.odin`, `suite.odin`, `scene.odin`, and `compare.odin`), `tests/frame/`, `tests/display/display.odin`,
   `tests/renderer/` (including `target.odin`, `render_digest.odin`,
   `capture_values.odin`, and `debug.odin`).
 - `scenarios/smoke.json`, `scenarios/taa-static.json`,

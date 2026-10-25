@@ -50,6 +50,8 @@ SPIR-V lives in `build/shaders/` and is embedded into the binary.
 - `F3`: toggle temporal anti-aliasing (TAA). TAA is on by default.
 - `F4`: toggle the perf overlay. It shows the frame interval, the CPU frame
   time, and the GPU pass times.
+- `F5`: write a repro scenario to `runs/repro/`. It holds the camera, sun,
+  placed objects, settings, view flags, and display list.
 - `Esc`: open the settings menu. The menu pauses the game and releases the
   cursor. Press `Esc` again to resume.
 
@@ -144,6 +146,7 @@ stairs.
   click restores the sun from before the mode.
 - `R`: reset the player and return the camera to spawn.
 - `Shift+R`: reset the placed objects, the sun, and the player.
+- `F5`: write a repro scenario to `runs/repro/`.
 - `F2`: leave debug mode. The player returns to the saved position and view.
 - `Esc`: close the palette, cancel the placement, cancel the sun placement, or
   open the settings menu, in that order. The settings menu closes the palette and
@@ -338,6 +341,42 @@ normal agent. `--list` shows each entry's size, gate, and render mode without
 running it. `--fail-fast` stops at the first failure; the default runs every
 entry.
 
+### Compare two runs
+
+`compare` writes a labeled before/after panel for the captures that share a
+name:
+
+```sh
+./bin/harbagsa-agent compare runs/before runs/after
+./bin/harbagsa-agent compare runs/before runs/after --out runs/compare/stairs
+```
+
+The default output is `runs/compare/<a>-vs-<b>/compare.png` with
+`compare.json` beside it. The header names each scenario, revision, dirty flag,
+and run directory. Each row names the capture, its frame and extent, and the
+pixel delta. A missing pair or a size mismatch is labeled in the panel and
+exits 1. A long comparison splits into `compare-2.png`, `compare-3.png`, and so
+on; `compare.json` lists every page.
+
+`compare` uses the embedded font stack and writes PNGs, so it needs no
+ImageMagick or compositor. Keep the output under `runs/`; an image never enters
+the repository. `diff` stays the numeric command.
+
+### Live repro
+
+`F5` in the game writes `runs/repro/repro-<unix>.json` and logs the absolute
+path. The file is a normal scenario with one `scene` command; run it directly:
+
+```sh
+./bin/harbagsa-agent run runs/repro/repro-1750000000.json
+```
+
+The scene carries the camera source and view, the player pose when the source is
+`player`, the sun, every placed object with its exact rotation and light, the
+window and input settings, the type weight, the display list, and the view
+flags. `record` starts with the same scene, so a recording begins from the live
+state instead of a bare reset.
+
 ### Scenario format
 
 ```json
@@ -471,7 +510,8 @@ The batch runner and the live session share one command set:
   `"png": true` to a color `stats` or `profile` capture to write the image
   beside the numbers. One capture stays one result. Region, profile, and crop
   do not change the capture extent; the crop reports `written_width` and
-  `written_height`.
+  `written_height`. A capture name is unique in one run; a second capture with
+  the same name is an error.
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw_deg": 0, "pitch_deg": 0}`: inspection
   camera. It does not move the player. It accepts `look_at` instead of
   `yaw_deg`/`pitch_deg`, and `fov_deg` in degrees (1..170). `look_at` with
@@ -553,6 +593,9 @@ The batch runner and the live session share one command set:
   ambient occlusion off, `light_shadows` turns the point-light shadows off, and
   `synthetic_lights` replaces the frame's lamps with 0 to 8 test lights. `clear`
   resets every override. Changing an input resets history.
+- `{"cmd": "scene", ...}`: apply an exact scene with `camera`, `sun`, `objects`,
+  `settings`, `view`, and `displays` blocks. `F5` writes one and `record` starts
+  with one; see **Live repro**.
 - `{"cmd": "record", "path": "scenarios/walk.json"}`: start recording. Send
   `{"cmd": "record"}` to stop and write the scenario.
 - `{"cmd": "replay", "path": "scenarios/walk.json"}`: reset and run a scenario.
