@@ -3,48 +3,12 @@ package harness
 
 import "core:fmt"
 
-// One namespace per check. The check resolver reads the same names, so a check
-// never asks `state_build` for a document it will not address.
-@(private)
-check_sections :: proc(field: string) -> State_Sections {
-	head, _, _ := split_field(field)
-	switch head {
-	case "player":
-		return {.Player}
-	case "camera":
-		return {.Camera}
-	case "objects":
-		return {.Objects}
-	case "settings":
-		return {.Settings}
-	case "debug", "sun":
-		return {.Debug}
-	case "menu":
-		return {.Menu}
-	case "notice":
-		return {.Notice}
-	case "rows":
-		return {.Rows}
-	case "settle":
-		return {.Settle}
-	case "renderer":
-		return {.Renderer}
-	case "render_digest":
-		return {.Render_Digest}
-	case "digest":
-		return ALL_STATE_SECTIONS
-	case "capture", "analysis":
-		return {}
-	}
-	return {}
-}
-
 session_check_command :: proc(
 	session: ^Session,
 	command: Check_Command,
 	reply: ^Reply,
 ) -> string {
-	sections := check_sections(command.field)
+	sections := state_section_for_field(command.field)
 	if .Menu in sections || .Notice in sections || .Rows in sections {
 		session_refresh_hud(session)
 	}
