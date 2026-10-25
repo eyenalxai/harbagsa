@@ -6,6 +6,30 @@ crosshair, and the settings panel. The captures come from `bin/harbagsa-agent` a
 `runs/<scenario-stem>/` and read the frames from `frames/`. Screenshots stay out
 of the repository.
 
+## Geist typeface
+
+The overlay moved from Roboto Condensed and Roboto Mono to Geist and Geist Mono.
+Run the two surfaces into before and after directories, then compare them:
+
+```sh
+make shot SCENARIO=hud OUT=runs/ui/hud-before
+make shot SCENARIO=hud OUT=runs/ui/hud-after
+make shot SCENARIO=scenarios/settings-menu.json OUT=runs/ui/menu-before
+make shot SCENARIO=scenarios/settings-menu.json OUT=runs/ui/menu-after
+./bin/harbagsa-agent diff runs/ui/hud-before runs/ui/hud-after
+./bin/harbagsa-agent diff runs/ui/menu-before runs/ui/menu-after
+```
+
+The diff covers the text region only:
+
+- `hud-walk`: 8622 pixels differ, max delta 224 of 255, mean 0.780, over-16
+  7595.
+- `settings-menu`: 62984 pixels differ, max delta 246 of 255, mean 5.410,
+  over-16 59456.
+
+The status panel and the settings panel grow with the wider face. Both still fit
+1280x720.
+
 ## Settings panel
 
 ```sh
@@ -14,10 +38,10 @@ of the repository.
 
 What changed:
 
-- Text is Roboto Condensed and Roboto Mono, drawn from a coverage atlas
-  rasterized by FreeType at the device pixel size. A texel is the fraction of its
-  pixel the glyph covers. The earlier distance field could not draw a one-pixel
-  stem; ADR 0007 has the measurement.
+- Text is Geist and Geist Mono, drawn from a coverage atlas rasterized by
+  FreeType at the device pixel size. A texel is the fraction of its pixel the
+  glyph covers. The earlier distance field could not draw a one-pixel stem; ADR
+  0007 has the measurement.
 - HarfBuzz shapes every string, so advances and pair kerning match the variable
   font at the displayed weight. The old 97x97 kerning table is gone.
 - A type size still means an em in device pixels. Each layer of the atlas now
@@ -46,8 +70,8 @@ What changed:
 
 The scenario captures the menu at 400, 900, and 100. The same frames show the
 slider at the three positions, the `Settings` title at the role weight, and the
-numeric `400`, `900`, and `100` values in Roboto Mono. Above 700 the mono face
-clamps at Bold, so the numbers stop gaining weight before the prose does.
+numeric `400`, `900`, and `100` values in Geist Mono. Both faces run to Black
+900, so the numbers keep pace with the prose.
 
 ## Blocked note
 
@@ -86,7 +110,7 @@ What changed:
   body rows. Grounded and position are caption rows. The old panel drew six
   lines at one size and one colour.
 - Every number that changes during play is formatted into a fixed field and drawn
-  in Roboto Mono, so the row width never changes and the panel never resizes as
+  in Geist Mono, so the row width never changes and the panel never resizes as
   the player walks. A test holds this.
 - A numeric Detail row now draws at 14 px. It used to fall back to the 15 px mono
   layer.

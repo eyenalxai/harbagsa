@@ -4,7 +4,6 @@ package ui
 
 TYPE_WEIGHT_MIN :: f32(100)
 TYPE_WEIGHT_MAX :: f32(900)
-TYPE_WEIGHT_MONO_MAX :: f32(700)
 TYPE_WEIGHT_DEFAULT :: f32(400)
 
 Row_Kind :: enum {

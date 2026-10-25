@@ -2,6 +2,9 @@
 
 > 0014 until 2026-10-24. The scene-pass ADR claimed 0014 first, so this one
 > moved.
+>
+> Superseded by ADR 0033: the faces are now Geist and Geist Mono, and both cover
+> 100-900. The Roboto details below are the state at the time of this decision.
 
 The 2D layer draws Roboto Condensed and Roboto Mono from one variable file per
 face. Weight is a settings value, the atlas is keyed by face, weight, and pixel

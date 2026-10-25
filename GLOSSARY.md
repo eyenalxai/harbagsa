@@ -604,15 +604,15 @@ _Avoid_: Font sizes, text styles
 
 **Coverage atlas**:
 The one texture that holds every glyph as the fraction of each pixel the glyph
-covers, rasterized at the device pixel size from the subset Roboto Condensed and
-Roboto Mono faces. It holds one layer per face, weight, and pixel size the theme
-can draw, and it is repacked when the density or the type weight changes.
+covers, rasterized at the device pixel size from the subset Geist and Geist Mono
+faces. It holds one layer per face, weight, and pixel size the theme can draw,
+and it is repacked when the density or the type weight changes.
 _Avoid_: SDF atlas, font texture, bitmap font, glyph sheet
 
 **Type weight**:
 The variable-font weight the 2D layer draws at, from 100 to 900. The settings
 menu and the `menu` command set it, every type role derives from it, and the
-coverage atlas rebuilds on a worker when it changes. Mono stops at 700.
+coverage atlas rebuilds on a worker when it changes.
 _Avoid_: Font weight, boldness
 
 **Sub-pixel phase**:

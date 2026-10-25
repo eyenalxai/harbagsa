@@ -54,12 +54,10 @@ text_type_for_role :: proc(theme: UI_Theme, role: ui.Text_Role) -> Text_Type {
 	case .Mono_Body:
 		type := theme.type_body
 		type.face = .Mono
-		type.weight = min(type.weight, MONO_MAX_WEIGHT)
 		return type
 	case .Mono_Caption:
 		type := theme.type_caption
 		type.face = .Mono
-		type.weight = min(type.weight, MONO_MAX_WEIGHT)
 		return type
 	}
 	return theme.type_body

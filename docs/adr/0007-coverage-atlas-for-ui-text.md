@@ -1,6 +1,6 @@
 # Coverage atlas for the 2D layer
 
-> Updated by ADR 0016. The faces are now variable Roboto Condensed and Roboto
+> Updated by ADR 0016 and ADR 0033. The faces are now variable Geist and Geist
 > Mono; the layer key carries the face and weight, and the mono set has a 14 px
 > layer. The Noto role list below is the state at the time of this decision.
 
