@@ -3,6 +3,7 @@
 package harness_test
 
 import "core:fmt"
+import "core:os"
 import "core:strings"
 import "core:testing"
 
@@ -66,6 +67,64 @@ sweep_label_names_the_values :: proc(t: ^testing.T) {
 	label := harness.sweep_label(overrides, context.allocator)
 	defer delete(label, context.allocator)
 	testing.expect_value(t, label, "lamp_x=19.999,mode=warm_light")
+}
+
+@(test)
+sweep_count_stops_at_the_cap :: proc(t: ^testing.T) {
+	values := make([]string, 17, context.temp_allocator)
+	for index in 0 ..< 17 {
+		values[index] = "1"
+	}
+	parameters := []harness.Parameter_Sweep {
+		{name = "x", values = values},
+		{name = "y", values = values},
+	}
+	testing.expect_value(t, harness.sweep_combination_count(parameters), harness.MAX_SWEEP_RUNS + 1)
+}
+
+@(test)
+sweep_execute_runs_each_value :: proc(t: ^testing.T) {
+	scenario_path := "/tmp/opencode/harness-sweep-run.json"
+	out_dir := "/tmp/opencode/harness-sweep-run-out"
+	body := `{"parameters":{"n":1},"commands":[
+		{"cmd":"step","frames":"${n}"},
+		{"cmd":"check","field":"frame","op":"eq","value":"${n}"}
+	]}`
+	if write_error := os.write_entire_file(scenario_path, body); write_error != nil {
+		testing.expectf(t, false, "cannot write the sweep scenario: %v", write_error)
+		return
+	}
+	defer os.remove(scenario_path)
+	defer os.remove_all(out_dir)
+
+	file, read_error := harness.scenario_file_read(scenario_path, context.allocator)
+	testing.expectf(t, read_error == "", "cannot read the sweep scenario: %s", read_error)
+	if read_error != "" {
+		return
+	}
+	defer harness.scenario_file_destroy(&file, context.allocator)
+
+	options := harness.Run_Options {
+		scenario = scenario_path,
+		common   = {width = 320, height = 180, no_render = true, out_dir = out_dir},
+		parameter_count = 1,
+	}
+	options.parameters[0] = harness.Parameter_Sweep {
+		name   = "n",
+		values = []string{"1", "2"},
+	}
+	execution, execute_error := harness.sweep_execute(&file, options, 2)
+	defer harness.sweep_execution_destroy(&execution, context.allocator)
+	testing.expectf(t, execute_error == "", "sweep failed: %s", execute_error)
+	if execute_error != "" {
+		return
+	}
+	testing.expect(t, execution.report.ok, "the sweep did not pass")
+	testing.expect_value(t, len(execution.report.runs), 2)
+	for run in execution.report.runs {
+		testing.expect(t, run.ok, "a sweep run failed")
+	}
+	testing.expect(t, os.is_dir(execution.base_dir), "the sweep directory is missing")
 }
 
 @(test)
