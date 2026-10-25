@@ -78,7 +78,7 @@ run :: proc() -> bool {
 	if loop.displays.list.count == 0 {
 		log.warn("harbagsa: SDL reported no displays; keeping the created window")
 	}
-	loop.hud.menu.displays = loop.displays.list
+	loop.sim.settings.display = loop.displays.list
 	initial_display := platform.display_index_for_window(&window, &loop.displays)
 	if initial_display >= 0 {
 		loop.sim.settings.window.display = initial_display

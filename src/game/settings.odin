@@ -7,6 +7,7 @@ import "src:ui"
 
 Settings :: struct {
 	window:      display.Window_Settings,
+	display:     display.List,
 	sprint_mode: Input_Mode,
 	crouch_mode: Input_Mode,
 	prone_mode:  Input_Mode,
@@ -67,22 +68,19 @@ toggle_window_mode :: proc(mode: display.Window_Mode) -> display.Window_Mode {
 	return mode == .Borderless ? .Windowed : .Borderless
 }
 
-settings_display_name :: proc(settings: Settings, displays: ^display.List) -> string {
-	if displays == nil || displays.count == 0 {
+settings_display_name :: proc(settings: ^Settings) -> string {
+	if settings.display.count == 0 {
 		return "Display 1"
 	}
-	info := display.info_at(displays, settings.window.display)
+	info := display.info_at(&settings.display, settings.window.display)
 	return display.name(info)
 }
 
-settings_effective_resolution :: proc(
-	settings: Settings,
-	displays: ^display.List,
-) -> display.Mode {
-	if displays == nil || displays.count == 0 {
+settings_effective_resolution :: proc(settings: ^Settings) -> display.Mode {
+	if settings.display.count == 0 {
 		return settings.window.resolution
 	}
-	info := display.info_at(displays, settings.window.display)
+	info := display.info_at(&settings.display, settings.window.display)
 	if settings.window.mode == .Borderless {
 		return info.desktop
 	}

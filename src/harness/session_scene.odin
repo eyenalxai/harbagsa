@@ -16,12 +16,13 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 		for scene_display, index in scene.displays {
 			info := &list.items[index]
 			display.set_name(info, scene_display.name)
-			info.desktop = {scene_display.desktop[0], scene_display.desktop[1]}
+			display.set_desktop(info, {scene_display.desktop[0], scene_display.desktop[1]})
 			for mode in scene_display.modes {
 				display.add_mode(info, {mode[0], mode[1]})
 			}
+			display.sort_modes(info)
 		}
-		session.hud.menu.displays = list
+		session.sim.settings.display = list
 	}
 
 	if command.has_settings {
@@ -34,7 +35,7 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 		}
 		session.sim.settings.window.mode = window_mode
 		session.sim.settings.window.display = display.clamp_index(
-			&session.hud.menu.displays,
+			&session.sim.settings.display,
 			scene.settings.display,
 		)
 		session.sim.settings.window.resolution = {
