@@ -302,10 +302,10 @@ overrides one value; a comma list runs the scenario once per value:
 ```
 
 Repeat `--param` for every parameter. The runner takes the cartesian product in
-flag order and the last parameter changes fastest. Values cannot hold a comma.
-With one value the run is a plain run into the usual directory; with more than
-one, each run gets a directory named by its values and the parent gets
-`sweep.json`.
+flag order and the last parameter changes fastest. Values cannot hold a comma,
+and a sweep holds at most 256 runs. With one value the run is a plain run into
+the usual directory; with more than one, each run gets a directory named by its
+values and the parent gets `sweep.json`.
 
 `sweep.json` holds `ok`, `exit_code`, `scenario`, and one entry per combination:
 `parameters`, `run_dir`, `report`, `state`, `digest`, `exit_code`, `ok`, and
@@ -852,10 +852,10 @@ including a new shadow phase and a light change.
 so the image converges. `scenarios/renderer-debug-jitter.json` freezes the phase
 and lets jitter cycle, so the analysis can find the period.
 `scenarios/lamp-wall-plane.json` aims the debug camera at the wall, arms the
-Lamp, and clicks the ghost. It captures the same view with `light_shadows` on
-and off; the two images must match. A fan of shadows on the wall or the floor
-means the shadow ray counted the wall the light sits on. The scenario also
-checks the wall gradient directly, so the fan fails even without the on/off pair.
+Lamp, and clicks the ghost. A wall gradient check gates the fan of shadows that
+appears when the shadow ray counts the wall the light sits on, so no
+before/after pair is needed. A crate capture with `light_shadows` on and off
+still proves the point light casts.
 `scenarios/perf-lamps.json` injects eight synthetic lights, measures shadows on,
 then disables the point-light shadows and measures again. It writes one trace per
 side.

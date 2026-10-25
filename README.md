@@ -292,9 +292,9 @@ runs/lamp-threshold/
 ```
 
 Repeat `--param` for more parameters; the runner takes the cartesian product,
-with the last parameter changing fastest. A value cannot hold a comma. One
-value is a plain run, so `--param lamp_x=19.999` writes the usual run directory
-and no `sweep.json`.
+with the last parameter changing fastest. A value cannot hold a comma, and a
+sweep holds at most 256 runs. One value is a plain run, so
+`--param lamp_x=19.999` writes the usual run directory and no `sweep.json`.
 
 `sweep.json` lists each combination's parameters, run directory, report, state,
 digest, exit code, and error. The process exit code is the highest of the runs,
@@ -688,11 +688,11 @@ lamp edit with its undo. `scenarios/editor-input.json` drives the pointer,
 wheel, relative turn, palette step, number key, snap toggle, and right-click
 clear through the same action set as the keyboard. `scenarios/lamp-wall-plane.json`
 aims the debug camera at a wall, arms the Lamp, and clicks the ghost, so the
-anchor and `debug_placement_place` are part of the regression. It captures the
-view with the point-light shadows on and off; the two captures must match. A
-wall gradient check gates the shadow fan directly, without the on/off pair. The
-scenario declares `requires.renderer_debug`, so it needs no flag, and
-`make validate-offscreen` runs it.
+anchor and `debug_placement_place` are part of the regression. A wall gradient
+check gates the shadow fan directly, without a before/after pair. It also
+captures a crate with the point-light shadows on and off to prove the point
+light still casts. The scenario declares `requires.renderer_debug`, so it needs
+no flag, and `make validate-offscreen` runs it.
 
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window
