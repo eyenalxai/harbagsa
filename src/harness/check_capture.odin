@@ -186,6 +186,10 @@ capture_stats_field :: proc(stats: Capture_Stats, path: string) -> (Check_Value,
 		value = stats.max[channel]
 	case "mean":
 		value = stats.mean[channel]
+	case "stddev":
+		value = stats.stddev[channel]
+	case "gradient":
+		value = stats.gradient[channel]
 	case:
 		return {}, fmt.aprintf("unknown capture statistics field %q", path, allocator = context.allocator)
 	}
