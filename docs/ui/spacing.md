@@ -63,8 +63,8 @@ Rules that follow from the drawing:
 
 - The value column ends on `panel_x + panel_width - padding`, not on the widest
   row. `build_menu` widens `rows_layout.value_width` to reach the edge.
-- The label column is the widest label. `rows_measure` skips a `Header` when it
-  measures that column, and skips values on `Header` and `Divider` rows. The
+- The label column is the widest label. `ui.rows_layout` skips a `Header` when
+  it measures that column, and skips values on `Header` and `Divider` rows. The
   value column starts `spacing.xl` after the label column.
 - One gap, one owner: the row layout adds the gap above a row, so no row carries
   its own margin and the last row leaves no trailing gap. A row gets `spacing.xs`
@@ -74,10 +74,9 @@ Rules that follow from the drawing:
   40.5 px at density 1. The track spans `frame_x .. frame_x + frame_width`; the
   knob travel is the inner width minus `spacing.md`, so the ticks and the knob
   stay inside the panel.
-- The settings content width freezes when the menu opens, at 5 % above its
-  opening value. The frozen value is a floor, not a cap. For the weight axis the
-  headroom covers the growth, so the track does not move under the cursor while
-  the value changes.
+- The settings content width is measured on every layout, with 5 % headroom.
+  There is no frozen width and no draw-time cache. Input and draw call the same
+  `ui.menu_layout` with the same theme and metrics.
 - A divider and the selection band both span `frame_x .. frame_x + frame_width`,
   the panel's inner rectangle. They share one edge with each other. The legend
   grid has its own pitch: caption line height plus `spacing.xxs`.

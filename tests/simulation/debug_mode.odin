@@ -52,29 +52,31 @@ free_fly_moves_horizontally_and_vertically :: proc(t: ^testing.T) {
 	step_distance: f32 = game.DEBUG_FLY_SPEED * 0.1
 
 	start := dm.camera.position
-	game.debug_mode_update(&dm, &sim, game.Debug_Input{captured = true, move_forward = 1.0}, 0.1)
+	game.debug_mode_update(&dm, &sim, {captured = true, move_forward = 1.0}, nil, false, 0.1)
 	expect_near(t, dm.camera.position.z, start.z - step_distance, 0.001, "forward speed")
 	expect_near(t, dm.camera.position.x, start.x, 0.001, "forward drift x")
 	expect_near(t, dm.camera.position.y, start.y, 0.001, "forward drift y")
 
 	start = dm.camera.position
-	game.debug_mode_update(&dm, &sim, game.Debug_Input{captured = true, move_right = 1.0}, 0.1)
+	game.debug_mode_update(&dm, &sim, {captured = true, move_right = 1.0}, nil, false, 0.1)
 	expect_near(t, dm.camera.position.x, start.x + step_distance, 0.001, "strafe speed")
 	expect_near(t, dm.camera.position.y, start.y, 0.001, "strafe drift y")
 
 	start = dm.camera.position
-	game.debug_mode_update(&dm, &sim, game.Debug_Input{captured = true, move_up = 1.0}, 0.1)
+	game.debug_mode_update(&dm, &sim, {captured = true, move_up = 1.0}, nil, false, 0.1)
 	expect_near(t, dm.camera.position.y, start.y + step_distance, 0.001, "fly up speed")
 
 	start = dm.camera.position
-	game.debug_mode_update(&dm, &sim, game.Debug_Input{captured = true, move_up = -1.0}, 0.1)
+	game.debug_mode_update(&dm, &sim, {captured = true, move_up = -1.0}, nil, false, 0.1)
 	expect_near(t, dm.camera.position.y, start.y - step_distance, 0.001, "fly down speed")
 
 	start = dm.camera.position
 	game.debug_mode_update(
 		&dm,
 		&sim,
-		game.Debug_Input{captured = true, move_forward = 1.0, move_up = 1.0},
+		{captured = true, move_forward = 1.0, move_up = 1.0},
+		nil,
+		false,
 		0.1,
 	)
 	expect_near(t, b3.Length(dm.camera.position - start), step_distance, 0.001, "diagonal speed")

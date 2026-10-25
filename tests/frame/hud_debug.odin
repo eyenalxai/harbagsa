@@ -7,6 +7,7 @@ import "core:testing"
 
 import "src:game"
 import "src:renderer"
+import "src:ui"
 
 @(private)
 inspector_width :: proc(
@@ -20,7 +21,9 @@ inspector_width :: proc(
 	snapshot := game.simulation_snapshot(sim)
 	game.hud_state_update(hud, sim, debug, snapshot, true, 0)
 	testing.expect_value(t, len(hud.view.rows), game.HUD_INSPECTOR_ROW_COUNT)
-	layout := renderer.rows_measure(atlas, theme, hud.view.rows, {value_align = .Left})
+	ctx: renderer.Layout_Context
+	renderer.layout_context_init(&ctx, theme, atlas, 0, 0)
+	layout := ui.rows_layout(ctx.inputs, hud.view.rows, {value_align = .Left})
 	values = {}
 	for row, index in hud.view.rows {
 		values[index] = row.value
@@ -56,17 +59,17 @@ debug_inspector_width_survives_every_selection :: proc(t: ^testing.T) {
 
 	expected, _ := inspector_width(t, &sim, &debug, &hud, &atlas, theme)
 	for id in ids {
-		testing.expect(t, game.debug_select_object(&debug, &sim, id), "select failed")
+		apply_expect(t, &debug, &sim, game.Select_Object{id = id}, "select failed")
 		actual, _ := inspector_width(t, &sim, &debug, &hud, &atlas, theme)
 		testing.expectf(t, actual == expected, "the inspector width moved from %v to %v", expected, actual)
 	}
 
-	_ = game.debug_select_object(&debug, &sim, 0)
+	apply_expect(t, &debug, &sim, game.Select_Object{id = 0}, "clear failed")
 	actual, values := inspector_width(t, &sim, &debug, &hud, &atlas, theme)
 	testing.expectf(t, actual == expected, "the empty inspector width moved to %v", actual)
 	testing.expect_value(t, values[1], "None         # 000")
 
-	game.debug_placement_set_snap(&debug, true)
+	apply_expect(t, &debug, &sim, game.Placement_Set_Snap{snap = true}, "snap failed")
 	actual, _ = inspector_width(t, &sim, &debug, &hud, &atlas, theme)
 	testing.expectf(t, actual == expected, "the snap row changed the width to %v", actual)
 }
@@ -82,7 +85,7 @@ debug_inspector_shows_the_lamp_light_and_budget :: proc(t: ^testing.T) {
 		&sim,
 		{prefab = .Lamp, body_mode = .Static, center = {2, 1, 6}, yaw = 0},
 	)
-	testing.expect(t, game.debug_select_object(&debug, &sim, id), "select failed")
+	apply_expect(t, &debug, &sim, game.Select_Object{id = id}, "select failed")
 	snapshot := game.simulation_snapshot(&sim)
 	game.hud_state_update(&hud, &sim, &debug, snapshot, true, 0)
 	rows := hud.view.rows
@@ -107,7 +110,7 @@ debug_inspector_shows_the_lamp_light_and_budget :: proc(t: ^testing.T) {
 		"the lamp count is missing",
 	)
 
-	testing.expect(t, game.debug_placement_arm(&debug, &sim, .Beacon), "arm failed")
+	apply_expect(t, &debug, &sim, game.Placement_Arm{prefab = .Beacon}, "arm failed")
 	game.hud_state_update(&hud, &sim, &debug, snapshot, true, 0)
 	testing.expect(
 		t,

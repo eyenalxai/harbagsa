@@ -233,11 +233,11 @@ debug_hud_reports_the_armed_placement :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 	debug.active = true
 	debug.camera = {position = {0, 1.7, 14}, yaw = 0, pitch = -0.9}
-	testing.expect(t, game.debug_palette_select(&debug, 4), "select failed")
-	testing.expect(t, game.debug_palette_pick(&debug, &sim), "pick failed")
-	game.debug_placement_set_height(&debug, 0.5)
-	game.debug_placement_set_yaw(&debug, 90)
-	game.debug_placement_set_snap(&debug, true)
+	apply_expect(t, &debug, &sim, game.Palette_Select{index = 4}, "select failed")
+	apply_expect(t, &debug, &sim, game.Palette_Pick{}, "pick failed")
+	apply_expect(t, &debug, &sim, game.Placement_Set_Height{height = 0.5}, "height failed")
+	apply_expect(t, &debug, &sim, game.Placement_Set_Yaw{yaw = 90}, "yaw failed")
+	apply_expect(t, &debug, &sim, game.Placement_Set_Snap{snap = true}, "snap failed")
 
 	scene := frame.build(
 		&sim,
@@ -259,7 +259,7 @@ debug_hud_reports_the_armed_placement :: proc(t: ^testing.T) {
 	testing.expect(t, strings.contains(rows[4].value, "90.0"), "yaw row is missing")
 
 	height_width := len(rows[3].value)
-	game.debug_placement_set_height(&debug, 12.25)
+	apply_expect(t, &debug, &sim, game.Placement_Set_Height{height = 12.25}, "height failed")
 	scene = frame.build(
 		&sim,
 		&debug,

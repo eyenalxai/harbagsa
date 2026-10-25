@@ -49,6 +49,12 @@ object_history_redo_depth :: proc(history: ^Object_History) -> int {
 }
 
 object_history_record :: proc(history: ^Object_History, sim: ^Simulation) {
+	object_history_push(history, object_snapshot_capture(sim, history.allocator))
+}
+
+// The caller captures the snapshot before the mutation and pushes it only when
+// the mutation succeeds, so a failed edit cannot leave a duplicate entry.
+object_history_push :: proc(history: ^Object_History, snapshot: Object_Snapshot) {
 	if history.undo == nil {
 		history.undo = make([dynamic]Object_Snapshot, 0, HISTORY_LIMIT, history.allocator)
 	}
@@ -56,7 +62,7 @@ object_history_record :: proc(history: ^Object_History, sim: ^Simulation) {
 		object_snapshot_destroy(&history.undo[0], history.allocator)
 		ordered_remove(&history.undo, 0)
 	}
-	append(&history.undo, object_snapshot_capture(sim, history.allocator))
+	append(&history.undo, snapshot)
 	object_history_clear_redo(history)
 }
 

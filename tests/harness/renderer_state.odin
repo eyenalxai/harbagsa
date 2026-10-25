@@ -34,7 +34,7 @@ renderer_state_reaches_the_state_and_checks :: proc(t: ^testing.T) {
 		history_read       = 0,
 		history_weight     = 12.0 / 13.0,
 		reset_count        = 2,
-		last_reset         = .Teleport,
+		last_reset         = "teleport",
 		shadow_phase       = 12,
 		light_count        = 3,
 		debug              = {light_shadows = true},

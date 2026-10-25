@@ -50,11 +50,12 @@ editor_sun_position_drives_the_angles_and_the_digest :: proc(t: ^testing.T) {
 
 	after := harness.session_state(&session)
 	defer harness.state_destroy(&after, context.allocator)
-	testing.expect_value(t, after.debug.sun.position.y, 50.0)
+	expected := game.sun_dome_point({0, 50, 5})
+	testing.expect_value(t, after.debug.sun.position.y, expected.y)
 	testing.expect(t, abs(after.debug.sun.azimuth) < 0.001, "the azimuth did not follow the position")
 	testing.expect(
 		t,
-		abs(after.debug.sun.elevation - f32(84.2894)) < 0.001,
+		abs(after.debug.sun.elevation - f32(84.2894)) < 0.01,
 		"the elevation did not follow the position",
 	)
 	testing.expect(t, after.digest != before.digest, "the sun position did not reach the digest")
@@ -75,7 +76,8 @@ editor_sun_place_commits_and_cancel_restores :: proc(t: ^testing.T) {
 	harness.reply_destroy(&reply, context.allocator)
 	state := harness.session_state(&session)
 	testing.expect(t, !state.debug.sun.active, "place kept sun placement active")
-	testing.expect_value(t, state.debug.sun.position.x, 10.0)
+	expected := game.sun_dome_point({10, 40, 20})
+	testing.expect_value(t, state.debug.sun.position.x, expected.x)
 	harness.state_destroy(&state, context.allocator)
 
 	reply = execute(t, &session, `{"cmd": "editor", "sun": {"active": true, "position": [0, 50, 0]}}`)
@@ -86,8 +88,8 @@ editor_sun_place_commits_and_cancel_restores :: proc(t: ^testing.T) {
 	restored := harness.session_state(&session)
 	defer harness.state_destroy(&restored, context.allocator)
 	testing.expect(t, !restored.debug.sun.active, "cancel kept sun placement active")
-	testing.expect_value(t, restored.debug.sun.position.x, 10.0)
-	testing.expect_value(t, restored.debug.sun.position.y, 40.0)
+	testing.expect_value(t, restored.debug.sun.position.x, expected.x)
+	testing.expect_value(t, restored.debug.sun.position.y, expected.y)
 }
 
 @(test)

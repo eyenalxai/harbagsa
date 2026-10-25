@@ -287,15 +287,34 @@ and ticks. A check reads them as `rows.hud.N.*` and `rows.menu.N.*`.
 The `editor` command drives the debug placement tool, the lamp light, and the sun
 placement. It needs debug mode; send `{"cmd": "debug_mode", "active": true}`
 first. Every field is optional, and one command may combine fields. They apply
-in this order: `camera`, `open`, `select`, `select_object`, `body`, `height`,
-`yaw`, `snap`, `light_color`, `light_intensity`, `light_range`, `pick`, `cancel`,
-`place`, `move`, `rotate`, `delete`, `duplicate`, `undo`, `redo`, `sun`.
+in this order: `camera`, `open`, `select`, `palette_step`, `palette_number`,
+`select_object`, `body`, `flip_body`, `height`, `yaw`, `snap`, `snap_toggle`,
+`light_color`, `light_intensity`, `light_range`, `pick`, `cancel`, `place`,
+`move`, `rotate`, `turn`, `wheel`, `primary`, `secondary`, `drag_move`,
+`drag_release`, `delete`, `duplicate`, `undo`, `redo`, `sun`.
+
+The keyboard and the harness both build `game.Edit_Action` values and call
+`game.edit_apply`; the rules live there once. A rejected edit returns `ok: false`
+and a stable reason, such as no selection, not a lamp, the scene is full, the
+menu is open, or the palette, placement, or sun mode owns the input. `cancel`
+with no active mode is a no-op.
 
 | Field | Meaning |
 | --- | --- |
 | `open` | open or close the object palette |
 | `select` | zero-based prefab index; a new prefab restores its default body |
-| `body` | `static` or `dynamic`; the next placement while the palette is open, the selected object while it is closed |
+| `body` | `static` or `dynamic`; the next placement while the palette or the placement tool owns the editor, the selected object otherwise |
+| `flip_body` | the `M` key: flip the same target as `body` |
+| `palette_step` | arrow-key selection step; wraps around the catalog |
+| `palette_number` | 1-based catalog key in [1, 9] |
+| `snap_toggle` | the `G` key: flip the 0.25 m grid snap |
+| `turn` | relative yaw steps, 15 or 45 degrees; the armed tool or the selection |
+| `wheel` | relative height steps, 0.25 or 1 metre; the armed tool or the selection |
+| `large` | Shift step for `turn` and `wheel` |
+| `primary` | left mouse press: select and start a drag, place the ghost, or commit the sun |
+| `secondary` | right mouse press: cancel the active mode or clear the selection |
+| `drag_move` | `[dx, dy]` look delta applied to the current object drag |
+| `drag_release` | left mouse release: end the object drag |
 | `pick` | arm the selected prefab, close the palette, cast the placement ray |
 | `height` | offset above the surface in metres; clamped at 0 |
 | `yaw` | rotation in degrees |
@@ -313,7 +332,7 @@ in this order: `camera`, `open`, `select`, `select_object`, `body`, `height`,
 | `duplicate` | copy the selected object one half extent along +X, select the copy, and play the pop; a no-op at the cap |
 | `undo` | restore the previous object-list snapshot |
 | `redo` | restore the next object-list snapshot |
-| `sun` | `{"active", "position", "place", "cancel"}` drives sun placement |
+| `sun` | `{"active", "position", "place", "cancel"}` drives sun placement; `position` is projected onto the 50 m sky dome and clamped above the floor |
 
 `select` follows the catalog order: Crate, Small crate, Wide crate, Block,
 Platform, Ramp, Pillar, Wall, Lamp, Light panel, Beacon. A pick casts a 100 m ray
@@ -325,11 +344,14 @@ The three light prefabs carry a lamp light. The light fields apply to the next
 lamp placement while the palette is open or the placement tool is armed, and to
 the selected lamp otherwise. A non-lamp target is an error. `debug.placement.light`
 reports the next placement light, `debug.inspector.light` the selected lamp, and
-`debug.lights` the active and total lamp counts.
+`debug.lights` the active and total lamp counts. The state and the HUD read
+`debug.placement.light` from `game.next_placement_light`.
 
 `place` requires `prefab` and `position`. Its `yaw` defaults to 0 and its `body`
 to the prefab default. It bypasses the ray and leaves the armed tool unchanged.
-At the 128-object cap it creates nothing.
+A lamp uses the tuned next-placement light when it is the palette-selected
+prefab, and its catalog default otherwise. At the 128-object cap it returns an
+error and creates nothing.
 
 `select_object` changes only the selection, so it does not add a history entry.
 `move`, `rotate`, `delete`, `duplicate`, and `body` on the selection each add one
@@ -373,6 +395,8 @@ supported window. `scenarios/editor-sun.json` captures the default light, the
 sun gizmo on the sky dome, and the committed lighting.
 `scenarios/editor-object.json` selects an object, moves, rotates, and converts
 it, duplicates it, then captures the inspector and the undo and redo restores.
+`scenarios/editor-input.json` drives the pointer, wheel, relative turn, palette
+step, number key, snap toggle, and right-click clear through the same actions.
 `scenarios/editor-lamps.json` captures the three lamp previews, places a warm
 lamp, a cool panel, a red beacon, and a pillar, then checks the light values and
 the active and lamp counts. It captures the lit scene, the point-light shadow,
@@ -944,9 +968,8 @@ frame-rate change.
 - `src/harness/ab_command.odin`: the `ab` wrapper over `tools/ab.sh`.
 - `src/harness/run_paths.odin`: the tag-aware run directory.
 - `src/harness/session_settle.odin`: the convergence wait.
-- `src/harness/state_field_leaves.odin`: the settings, menu, and player resolvers.
-- `src/harness/state_debug_fields.odin`: the debug palette, sun, and light resolvers.
-- `src/harness/state_fields.odin`: the top-level state field table.
+- `src/harness/state_schema.odin`: the reflection walk over `State` that resolves
+  check paths. `State` and its `json` tags are the schema.
 - `src/harness/cli_override.odin`: the CLI renderer override.
 - `src/harness/perf_run.odin`: the perf run and its prime loop.
 - `src/harness/perf_report.odin`: the perf report types and fill.
@@ -964,7 +987,6 @@ frame-rate change.
 - `src/harness/analysis_images.odin`: PNG decode and the analysis maps.
 - `src/harness/check_capture.odin`: capture checks and the check window.
 - `src/harness/check_analysis.odin`: analysis check fields.
-- `src/harness/check_objects.odin`: placed-object check fields.
 - `src/harness/report.odin`: the run report and summary types.
 - `src/harness/report_setup.odin`: the run's setup block.
 - `src/digest/digest.odin`: FNV-1a for the state and render digests.
@@ -987,12 +1009,20 @@ frame-rate change.
 - `src/game/lights.odin`: the light type, the colour cycle, the intensity and
   range steps, the eight-nearest selection, and the light count.
 - `src/game/debug_light_tools.odin`: the keyboard and harness light edit target.
+- `src/game/edit_action.odin`: the action dispatcher and `edit_apply`.
+- `src/game/edit_types.odin`: the action union, results, and reasons.
+- `src/game/edit_palette.odin`, `edit_object.odin`, `edit_pointer.odin`, and
+  `edit_placement.odin`: the palette, selection, pointer, and placement rules.
+- `src/renderer/pass.odin`: the one pass value and `record_pass`.
+- `src/renderer/pass_builders.odin`: the builders for every pass kind.
+- `src/renderer/render_input.odin`: the one frame input.
+- `src/harness/command_registry.odin`: one row per harness command.
+- `src/harness/command_execute.odin`: the row execute procs.
+- `src/harness/session_check.odin`: the partial-state check command.
 - `src/game/object_records.odin`: the object record and snapshot capture, the
   restore path, and the one placed-object spawn path.
 - `src/game/object_history.odin`: the 64-entry heap snapshot stack and its undo
   and redo.
-- `src/game/debug_object_tools.odin`: select, move, rotate, convert, delete,
-  duplicate, body key, and undo and redo for the selection.
 - `src/game/hud_debug.odin`: the debug inspector, placement rows, and their fixed
   number fields.
 - `src/game/spawn_pop.odin`: the pop curve, the spawn age and scale, the visual
@@ -1039,19 +1069,29 @@ frame-rate change.
 
 Change:
 
-- `Command_Kind` and `Command` in `src/harness/command.odin`.
-- `command_name` and `command_destroy`.
-- `command_parse` and a parser in `src/harness/command_parsers.odin`, or a new
-  file when the command grows (`src/harness/menu_command.odin` is the example).
-- `session_execute` and `session_record_command` in
-  `src/harness/session_commands.odin`, with a helper in a `session_*.odin` file
-  when the command has its own state.
+- `Command_Kind` and its payload in `src/harness/command.odin`.
+- One row in `COMMANDS` in `src/harness/command_registry.odin`: name, parse,
+  execute, record policy, destroy, and backend policy.
+- A parser in `src/harness/command_parsers.odin` or a command file, and an
+  `execute_*` in `src/harness/command_execute.odin` or a `session_*.odin`
+  helper.
 - A scenario block when the command is a setup step: parse it into the same
   command and append it before the commands. `renderer_debug` is the example.
 - README and, for a new domain word, `GLOSSARY.md`.
 - A section in this page when the command needs more than a line of
   explanation. `capture` and `renderer_debug` are the examples.
-- A test in `tests/harness/`.
+- A row test in `tests/harness/registry.odin` and a JSONL test.
+
+The parser and dispatcher, the name lookup, the recorder, and the destroy path
+read the row. A missing row panics, and the registry test catches it before a
+run. Command errors are allocated with `context.allocator`; the dispatcher frees
+the row's error after copying it into the reply, so no command sets an ownership
+flag.
+
+`backend` is `None`, `Optional`, or `Required`. The batch run and the live
+session use the same policy through `Session.backend_provider`; a capture with
+rendering disabled is skipped in both. A `Required` command without rendering
+fails in its own execute proc, so CPU-only `perf` still works.
 
 ## Checks
 
@@ -1087,11 +1127,16 @@ the game with validation enabled.
 The harness is part of the product. When you add or change a feature, update the
 harness in the same change. Do not leave the automation behind the game.
 
+- New edit intent: add one variant to `game.Edit_Action`, one case in
+  `edit_apply`, the keyboard adapter, the `editor` parser, a harness test, and
+  this page. Do not add a second rule outside `edit_apply`.
+
 - New simulation input: add it to `game.Input_Snapshot`, the `input` command,
   and `tests/harness`.
-- New state field: add it to `State`, `state_build`, the table in
-  `state_fields.odin` and its leaf resolver, the report schema, and the docs.
-  Add it to `state_digest` only when it changes the simulation.
+- New state field: add it to the `State` struct with its `json` tag and fill it
+  in `state_build_sections`. The JSON, the check resolver, and the digest read
+  the same field. Add `digest:"-"` when it must not enter the simulation digest.
+  Add the section to `check_sections` when it is a new namespace.
 - New setting or menu row: add it to `Settings` and `DEFAULT_SETTINGS`, then
   `Menu_Item`, `MENU_ITEM_COUNT`, `MENU_ITEM_NAMES`, `menu_view`, and
   `menu_change_setting`. Add it to `Settings_State` or `Menu_State`, the digest,
@@ -1100,12 +1145,13 @@ harness in the same change. Do not leave the automation behind the game.
   `platform.apply_window_state`.
 - New view toggle: add it to the `view` command, `frame.Options`, the README, and
   this page.
-- New CPU phase or GPU pass: add it to the `perf` enums, the renderer timing
-  boundaries, the formatters, the tests, and this page.
+- New CPU phase or GPU pass: add it to the `perf` enums, `perf.PASS_ORDER`, a
+  builder in `pass_builders.odin`, the formatters, the pass-order test, and this
+  page. The recorder owns begin, end, and viewport.
 - New perf field: add it to the perf report struct, the reply, the run report,
   the trace, and this page.
-- New command: follow **Adding a command**, add a JSONL test, and add a scenario
-  example when it changes a normal workflow.
+- New command: follow **Adding a command**, add the registry row test, a JSONL
+  test, and a scenario example when it changes a normal workflow.
 - New capture target or format: add it to `Capture_Target` or `Capture_Format`,
   the name/parse and extension helpers, `target_image`, `record_capture_copy`,
   `read_capture_target`, and `capture_values`. Add it to the capture parser,
@@ -1117,22 +1163,30 @@ harness in the same change. Do not leave the automation behind the game.
   `Pending_Capture`, the backend, `capture_field`, the docs, and a synthetic
   image test. A block that writes no file must still be readable by a check. A check must read the same value
   the file records.
+- New render input: add the field to `Render_Input`, one row to
+  `RENDER_DIGEST_FIELDS` (hashed, or an explicit exclusion with the reason), the
+  recorder fill, and the reflection test. The uniform reads the same input.
+- New renderer report field: add the field and tag to `Renderer_Report` or
+  `Debug_Report`. The State reflection walk covers the JSON and check paths;
+  there is no separate report table.
 - New renderer debug override: add it to `Renderer_Debug`, `set_renderer_debug`,
   the resolve push constants and shader, `renderer_debug_fields`, the renderer
   state, the docs, and the gate test. Do not make it reachable without the
   gate.
 - New point light input: add it to `Light`, the light buffer upload, the scene
-  shader loop, the render digest, and `tests/renderer/lights.odin`.
+  shader loop, `Render_Input`, and its digest row. Add a test to
+  `tests/renderer/lights.odin`.
 - New scenario key or run option: add it to `scenario_parse` and its allowed
   key set, the CLI parser, the README, this page, and a parser test. A new
   top-level key also joins `scenario_build` and the inheritance merge.
-- New state object: one row in `STATE_FIELDS` in `src/harness/state_fields.odin`
-  and the sub-resolver case. A flat field is one case; an indexed object is one
-  resolver.
-- New check namespace: add it to `check_field` and to the resolver table.
+- New state object: one field in `State` with a `json` tag. The reflection walk
+  covers it, and `tests/harness/schema.odin` fails when a leaf does not resolve.
+- New capture or analysis namespace: add it to `check_field`; the state
+  namespaces come from the `State` struct.
 - Render state is not simulation state: render fields do not go into
   `state_digest`. Put them in the render digest and `Renderer_State` instead.
-- New renderer pass or target: keep it behind `Target` or `Frame_View`. Add an
+- New renderer pass or target: keep it behind `Target` or `Render_Input`. Add a
+  `Pass` builder, a barrier proc on that pass, a pass-order test, and an
   offscreen test when the pass must match the game.
 - New screenshot or evidence path: update the README and this page.
 - New prefab: add it to `Prefab_Id` and `PREFABS` in `src/game/prefabs.odin`,

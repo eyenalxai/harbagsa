@@ -25,13 +25,8 @@ object_editor_setup :: proc(t: ^testing.T) -> (game.Simulation, game.Debug_Mode)
 }
 
 @(private)
-object_editor_step :: proc(dm: ^game.Debug_Mode, sim: ^game.Simulation, input: game.Debug_Input) {
-	game.debug_mode_update(dm, sim, input, game.SIMULATION_STEP)
-}
-
-@(private)
 object_editor_select :: proc(dm: ^game.Debug_Mode, sim: ^game.Simulation) {
-	object_editor_step(dm, sim, game.Debug_Input{primary_pressed = true, captured = true})
+	edit_step(dm, sim, {game.Primary_Press{}})
 }
 
 @(private)
@@ -62,11 +57,7 @@ debug_edit_drag_moves_object_horizontally :: proc(t: ^testing.T) {
 	id := first_object_id(&sim)
 	before := game.simulation_object_box(&sim, id).center
 
-	object_editor_step(
-		&dm,
-		&sim,
-		game.Debug_Input{look_delta = {10.0, 0.0}, captured = true},
-	)
+	edit_step(&dm, &sim, {game.Drag_Move{look_delta = {10.0, 0.0}}})
 
 	after := game.simulation_object_box(&sim, id).center
 	testing.expect_value(t, dm.dragging, game.Debug_Drag.Object)
@@ -82,16 +73,16 @@ debug_edit_wheel_raises_and_clamps_object :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 
 	object_editor_select(&dm, &sim)
-	object_editor_step(&dm, &sim, game.Debug_Input{primary_released = true, captured = true})
+	edit_step(&dm, &sim, {game.Primary_Release{}})
 	testing.expect_value(t, dm.dragging, game.Debug_Drag.None)
 
 	id := first_object_id(&sim)
 	before := game.simulation_object_box(&sim, id).center.y
-	object_editor_step(&dm, &sim, game.Debug_Input{wheel_delta = 2.0, captured = true})
+	edit_step(&dm, &sim, {game.Wheel{steps = 2}})
 	after := game.simulation_object_box(&sim, id).center.y
 	expect_near(t, after - before, 2.0 * game.OBJECT_WHEEL_STEP, 0.0001, "wheel height")
 
-	object_editor_step(&dm, &sim, game.Debug_Input{wheel_delta = -100.0, captured = true})
+	edit_step(&dm, &sim, {game.Wheel{steps = -100}})
 	expect_near(
 		t,
 		game.simulation_object_box(&sim, id).center.y,
@@ -108,7 +99,7 @@ debug_edit_right_click_clears_the_selection :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 
 	object_editor_select(&dm, &sim)
-	object_editor_step(&dm, &sim, game.Debug_Input{secondary_pressed = true, captured = true})
+	edit_step(&dm, &sim, {game.Secondary_Press{}})
 
 	testing.expect_value(t, dm.selection, game.Debug_Selection.None)
 	testing.expect_value(t, dm.selected_object_id, game.INVALID_OBJECT_ID)
@@ -122,7 +113,7 @@ debug_edit_delete_removes_selected_object :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 
 	object_editor_select(&dm, &sim)
-	object_editor_step(&dm, &sim, game.Debug_Input{delete_pressed = true, captured = true})
+	edit_step(&dm, &sim, {game.Delete_Selected{}})
 
 	testing.expect_value(
 		t,
@@ -141,10 +132,10 @@ debug_edit_empty_click_clears_selection :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 
 	object_editor_select(&dm, &sim)
-	object_editor_step(&dm, &sim, game.Debug_Input{primary_released = true, captured = true})
+	edit_step(&dm, &sim, {game.Primary_Release{}})
 	dm.camera.pitch = 0.6
 
-	object_editor_step(&dm, &sim, game.Debug_Input{primary_pressed = true, captured = true})
+	edit_step(&dm, &sim, {game.Primary_Press{}})
 
 	testing.expect_value(t, dm.selection, game.Debug_Selection.None)
 	testing.expect_value(t, dm.selected_object_id, game.INVALID_OBJECT_ID)
@@ -169,7 +160,7 @@ debug_edit_clears_stale_selection :: proc(t: ^testing.T) {
 	dm.dragging = .Object
 	testing.expect(t, game.simulation_remove_object(&sim, id), "remove failed")
 
-	object_editor_step(&dm, &sim, game.Debug_Input{captured = true})
+	editor_step(&dm, &sim, {captured = true})
 
 	testing.expect_value(t, dm.selection, game.Debug_Selection.None)
 	testing.expect_value(t, dm.selected_object_id, game.INVALID_OBJECT_ID)

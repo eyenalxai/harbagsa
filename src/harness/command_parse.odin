@@ -27,64 +27,14 @@ command_parse :: proc(value: json.Value, allocator := context.allocator) -> (Com
 		return {}, format_error("%s", "'cmd' must be a string")
 	}
 
-	switch name {
-	case "reset":
-		if key, unknown := json_unknown_key(object, {"cmd"}); unknown {
-			return {}, format_error("unknown key %q", key)
-		}
-		return {kind = .Reset}, ""
-	case "look":
-		return parse_look(object)
-	case "face":
-		return parse_face(object)
-	case "input":
-		return parse_input(object)
-	case "step":
-		return parse_step(object)
-	case "settle":
-		return parse_settle(object)
-	case "state":
-		if key, unknown := json_unknown_key(object, {"cmd"}); unknown {
-			return {}, format_error("unknown key %q", key)
-		}
-		return {kind = .State}, ""
-	case "capture":
-		return parse_capture(object, allocator)
-	case "camera":
-		return parse_camera(object)
-	case "view":
-		return parse_view(object)
-	case "sun":
-		return parse_sun(object)
-	case "debug_mode":
-		return parse_debug_mode(object)
-	case "editor":
-		return parse_editor(object)
-	case "menu":
-		return parse_menu(object)
-	case "check":
-		return parse_check(object, allocator)
-	case "record":
-		return parse_record(object, allocator)
-	case "replay":
-		return parse_replay(object, allocator)
-	case "perf":
-		return parse_perf(object, allocator)
-	case "renderer_debug":
-		return parse_renderer_debug(object)
-	case "displays":
-		return parse_displays(object, allocator)
-	case "rows":
-		if key, unknown := json_unknown_key(object, {"cmd"}); unknown {
-			return {}, format_error("unknown key %q", key)
-		}
-		return {kind = .Rows}, ""
-	case "quit":
-		if key, unknown := json_unknown_key(object, {"cmd"}); unknown {
-			return {}, format_error("unknown key %q", key)
-		}
-		return {kind = .Quit}, ""
+	row, found := command_row_by_name(name)
+	if !found {
+		return {}, format_error("unknown command %q", name)
 	}
-	return {}, format_error("unknown command %q", name)
+	command, parse_error := row.parse(object, allocator)
+	if parse_error != "" {
+		return {}, parse_error
+	}
+	command.kind = row.kind
+	return command, ""
 }
-

@@ -2,6 +2,7 @@
 #+vet !unused-procedures // @(test) procs are called by the test runner, not by name
 package renderer_test
 
+import "core:reflect"
 import "core:testing"
 
 import "src:digest"
@@ -15,8 +16,10 @@ DIGEST_CAMERA :: renderer.Camera {
 	fov_x    = 1.5,
 }
 
-digest_input :: proc() -> renderer.Render_Digest_Input {
+digest_input :: proc() -> renderer.Render_Input {
 	return {
+		width = 320,
+		height = 180,
 		camera = DIGEST_CAMERA,
 		light_direction = {0.3, -0.9, 0.2},
 		sun_angular_diameter = 0.53 * 3.14159265 / 180.0,
@@ -134,4 +137,25 @@ state_digest_algorithm_is_stable :: proc(t: ^testing.T) {
 	hash := digest.fnv()
 	text := digest.hex(hash, context.temp_allocator)
 	testing.expect_value(t, text, "cbf29ce484222325")
+}
+
+@(test)
+render_input_gains_a_digest_row_with_every_field :: proc(t: ^testing.T) {
+	fields := reflect.struct_fields_zipped(renderer.Render_Input)
+	testing.expect_value(t, len(renderer.RENDER_DIGEST_FIELDS), len(fields))
+	for field in fields {
+		found := false
+		for row in renderer.RENDER_DIGEST_FIELDS {
+			if row.name == field.name {
+				found = true
+				break
+			}
+		}
+		testing.expectf(t, found, "Render_Input.%s has no digest row", field.name)
+	}
+	for row in renderer.RENDER_DIGEST_FIELDS {
+		if !row.hashed {
+			testing.expectf(t, row.reason != "", "unhashed input %q has no reason", row.name)
+		}
+	}
 }

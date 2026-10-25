@@ -16,14 +16,16 @@ draw at the same time; it does not replace this panel.
 ```odin
 theme := o.theme
 padding := theme.spacing.lg
-options := Rows_Options{value_align = .Left}
-layout := rows_measure(&o.atlas, theme, rows, options)
+ctx: Layout_Context
+layout_context_init(&ctx, theme, &o.atlas, 0, 0)
+options := ui.Rows_Options{value_align = .Left}
+layout := ui.rows_layout(ctx.inputs, rows, options)
 
 x := theme.spacing.md
 y := theme.spacing.md
 hud_emit_rect(o, x, y, layout.width + padding * 2, layout.height + padding * 2, theme.surface_hud)
 hud_emit_frame(o, x, y, layout.width + padding * 2, layout.height + padding * 2, theme.hairline, theme.line_hairline)
-rows_emit(o, theme, x + padding, y + padding, layout, rows, options)
+rows_emit(o, theme, x + padding, y + padding, ctx.inputs, layout, rows, options)
 ```
 
 Incorrect: measuring one line and sizing the panel from it.
@@ -129,8 +131,9 @@ rule, not a different tint.
 
 ## Legend grid
 
-Use for the control list, and only there. The renderer owns the column count:
-`HINT_COLUMNS :: 3`. The `ui.Menu` data carries `hints` but no column field.
+Use for the control list, and only there. The game supplies `ui.Menu.hint_columns`
+(the settings menu uses 3) and `ui.hint_grid` clamps it to the
+`HUD_MENU_MAX_HINT_COLUMNS` cap.
 Keys are right-aligned against their action so a one-letter key does not float
 in a column sized by the longest shortcut.
 
@@ -171,18 +174,18 @@ Use instead when the fact is quiet: a `Detail` row. When it needs emphasis: a
 | `Divider` | one separator line | no |
 
 Every row also carries `numeric`, `blocked`, `ratio`, and `ticks`. The `Slider`
-emitter reads `ratio` and `ticks`. `rows_measure` skips `Header` when it measures
+emitter reads `ratio` and `ticks`. `rows_layout` skips `Header` when it measures
 the label column and skips values on `Header` and `Divider` rows.
 
 An unlisted kind does not exist. If a surface needs one, extend `Row_Kind` and
-all of `row_label_style`, `row_value_style`, `row_gap`, `row_height`, and
-`rows_emit_row` in the same change. Add it to the `rows_measure` switch too when
-it has no label or value to measure. A kind that only part of that set knows
-about draws at the wrong height or draws nothing. A kind that draws a control
-also needs its emitter: the `Slider` adds `rows_emit_slider` in
-`src/renderer/hud_slider.odin` and publishes its travel rect for the pointer.
-`menu_slider_rect` measures the same rect before the first draw, so a press on
-the opening frame starts a drag.
+all of `row_label_role`, `row_value_role`, `row_gap`, and `row_height` in
+`src/ui/layout.odin`, and `rows_emit_row` in `src/renderer/hud_rows.odin`, in the
+same change. Add it to the `rows_layout` switch too when it has no label or value
+to measure. A kind that only part of that set knows about draws at the wrong
+height or draws nothing. A kind that draws a control also needs its emitter: the
+`Slider` adds `rows_emit_slider` in `src/renderer/hud_slider.odin` and returns
+its travel rect from `ui.slider_rect`. Input and draw read the same layout, so a
+press on the opening frame starts a drag.
 
 ## Slider row
 

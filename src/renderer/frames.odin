@@ -3,20 +3,8 @@ package renderer
 
 import "core:log"
 
-import "src:geometry"
 import "src:perf"
 import vk "vendor:vulkan"
-
-Frame_View :: struct {
-	camera:               Camera,
-	light_direction:      [3]f32,
-	sun_angular_diameter: f32,
-	boxes:                []geometry.Box,
-	lights:               []Light,
-	debug_lines:          []geometry.Line,
-	hud:                  HUD_Frame,
-	view_flags:           View_Flags,
-}
 
 create_semaphore :: proc(r: ^Renderer, semaphore: ^vk.Semaphore) -> bool {
 	info := vk.SemaphoreCreateInfo {
@@ -63,7 +51,7 @@ init_frames :: proc(r: ^Renderer) -> Error {
 
 begin_frame :: proc(
 	r: ^Renderer,
-	view: Frame_View,
+	input: Render_Input,
 	capture := Frame_Capture{},
 ) -> (
 	frame: Frame,
@@ -124,7 +112,7 @@ begin_frame :: proc(
 	if !check(vk.ResetCommandBuffer(command_buffer, {}), "vkResetCommandBuffer") {
 		return {}, .Fatal
 	}
-	if !record_scene(r, command_buffer, image_index, view, capture) {
+	if !record_scene(r, command_buffer, image_index, input, capture) {
 		return {}, .Fatal
 	}
 	r.timing_frames[r.frame_index] = u64(r.frame_count)

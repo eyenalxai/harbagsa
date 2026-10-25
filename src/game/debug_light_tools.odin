@@ -10,7 +10,7 @@ Light_Edit_Target :: enum {
 
 // The keyboard and the harness share one rule: the open palette or the armed
 // tool tunes the next placement, a selected lamp tunes itself, and a non-lamp
-// selection swallows the key.
+// target refuses the change.
 @(private)
 light_target :: proc(
 	dm: ^Debug_Mode,
@@ -21,7 +21,7 @@ light_target :: proc(
 	settings: Light_Settings,
 	ok: bool,
 ) {
-	if dm.palette.open || dm.placement.armed {
+	if editor_uses_next_placement(dm) {
 		if !prefab_has_light(palette_selected(dm.palette)) {
 			return .None, INVALID_OBJECT_ID, {}, false
 		}
@@ -40,70 +40,73 @@ light_target :: proc(
 	return .Palette, INVALID_OBJECT_ID, palette_light(dm), true
 }
 
-debug_light_change :: proc(dm: ^Debug_Mode, sim: ^Simulation, change: Light_Change) -> bool {
+@(private)
+edit_light_change :: proc(dm: ^Debug_Mode, sim: ^Simulation, change: Light_Change) -> Edit_Result {
+	if dm.sun.active {
+		return edit_fail(.Sun_Active)
+	}
 	target, id, settings, ok := light_target(dm, sim)
 	if !ok {
-		return false
+		return edit_fail(.No_Lamp)
 	}
-	next := light_adjust(settings, change)
-	if next == settings {
-		return true
-	}
-	return light_store(dm, sim, target, id, next)
+	return light_apply(dm, sim, target, id, settings, light_adjust(settings, change))
 }
 
-debug_light_set_color :: proc(dm: ^Debug_Mode, sim: ^Simulation, color: Light_Color) -> bool {
+@(private)
+edit_light_set_color :: proc(dm: ^Debug_Mode, sim: ^Simulation, color: Light_Color) -> Edit_Result {
+	if dm.sun.active {
+		return edit_fail(.Sun_Active)
+	}
 	target, id, settings, ok := light_target(dm, sim)
 	if !ok {
-		return false
+		return edit_fail(.No_Lamp)
 	}
-	next := light_with_color(settings, color)
-	if next == settings {
-		return true
-	}
-	return light_store(dm, sim, target, id, next)
+	return light_apply(dm, sim, target, id, settings, light_with_color(settings, color))
 }
 
-debug_light_set_intensity :: proc(dm: ^Debug_Mode, sim: ^Simulation, intensity: f32) -> bool {
+@(private)
+edit_light_set_intensity :: proc(
+	dm: ^Debug_Mode,
+	sim: ^Simulation,
+	intensity: f32,
+) -> Edit_Result {
+	if dm.sun.active {
+		return edit_fail(.Sun_Active)
+	}
 	target, id, settings, ok := light_target(dm, sim)
 	if !ok {
-		return false
+		return edit_fail(.No_Lamp)
 	}
-	next := light_with_intensity(settings, intensity)
-	if next == settings {
-		return true
-	}
-	return light_store(dm, sim, target, id, next)
+	return light_apply(dm, sim, target, id, settings, light_with_intensity(settings, intensity))
 }
 
-debug_light_set_range :: proc(dm: ^Debug_Mode, sim: ^Simulation, range: f32) -> bool {
+@(private)
+edit_light_set_range :: proc(dm: ^Debug_Mode, sim: ^Simulation, range: f32) -> Edit_Result {
+	if dm.sun.active {
+		return edit_fail(.Sun_Active)
+	}
 	target, id, settings, ok := light_target(dm, sim)
 	if !ok {
-		return false
+		return edit_fail(.No_Lamp)
 	}
-	next := light_with_range(settings, range)
-	if next == settings {
-		return true
-	}
-	return light_store(dm, sim, target, id, next)
+	return light_apply(dm, sim, target, id, settings, light_with_range(settings, range))
 }
 
-debug_edit_lights :: proc(dm: ^Debug_Mode, sim: ^Simulation, input: Debug_Input) {
-	if input.light_color_pressed {
-		_ = debug_light_change(dm, sim, .Color)
+@(private)
+light_apply :: proc(
+	dm: ^Debug_Mode,
+	sim: ^Simulation,
+	target: Light_Edit_Target,
+	id: Object_Id,
+	settings, next: Light_Settings,
+) -> Edit_Result {
+	if next == settings {
+		return edit_ok()
 	}
-	if input.light_intensity_down_pressed {
-		_ = debug_light_change(dm, sim, .Intensity_Down)
+	if !light_store(dm, sim, target, id, next) {
+		return edit_fail(.Failed)
 	}
-	if input.light_intensity_up_pressed {
-		_ = debug_light_change(dm, sim, .Intensity_Up)
-	}
-	if input.light_range_down_pressed {
-		_ = debug_light_change(dm, sim, .Range_Down)
-	}
-	if input.light_range_up_pressed {
-		_ = debug_light_change(dm, sim, .Range_Up)
-	}
+	return edit_ok()
 }
 
 @(private)

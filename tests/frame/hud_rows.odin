@@ -195,7 +195,9 @@ measure_status_panel :: proc(
 
 	game.hud_state_update(hud, sim, debug, snapshot, true, 0)
 	testing.expect(t, len(hud.view.rows) == game.HUD_ROW_COUNT, "the status rows went missing")
-	return renderer.rows_measure(atlas, theme, hud.view.rows, {value_align = .Left})
+	ctx: renderer.Layout_Context
+	renderer.layout_context_init(&ctx, theme, atlas, 0, 0)
+	return ui.rows_layout(ctx.inputs, hud.view.rows, {value_align = .Left})
 }
 
 @(private)

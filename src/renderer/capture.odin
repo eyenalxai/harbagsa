@@ -185,6 +185,21 @@ record_capture_copy :: proc(
 			{.SHADER_READ},
 		)
 	}
+	if target == .Color {
+		// The present pass always sees the target in the colour layout, so the
+		// capture copy is the only place that owns this transition back.
+		image_barrier(
+			command_buffer,
+			image,
+			subresource,
+			.TRANSFER_SRC_OPTIMAL,
+			.COLOR_ATTACHMENT_OPTIMAL,
+			{.TRANSFER},
+			{.COLOR_ATTACHMENT_OUTPUT},
+			{.TRANSFER_READ},
+			{.COLOR_ATTACHMENT_WRITE},
+		)
+	}
 	return true
 }
 

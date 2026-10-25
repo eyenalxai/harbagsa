@@ -4,57 +4,79 @@ package harness
 import "core:math"
 import "core:mem"
 
+import "core:reflect"
+import "base:runtime"
+
 import b3 "libs:box3d"
+
 import "src:digest"
 import "src:game"
 
+// The State struct is the schema. The digest walks the same fields the JSON
+// writer emits and skips the fields tagged `digest:"-"`.
 state_digest :: proc(state: State, allocator: mem.Allocator) -> string {
 	hash := digest.fnv()
-	digest.write_i64(&hash, i64(state.frame))
-	digest.write_f32(&hash, state.player.position.x)
-	digest.write_f32(&hash, state.player.position.y)
-	digest.write_f32(&hash, state.player.position.z)
-	digest.write_f32(&hash, state.player.eye.x)
-	digest.write_f32(&hash, state.player.eye.y)
-	digest.write_f32(&hash, state.player.eye.z)
-	digest.write_f32(&hash, state.player.velocity.x)
-	digest.write_f32(&hash, state.player.velocity.y)
-	digest.write_f32(&hash, state.player.velocity.z)
-	digest.write_f32(&hash, state.player.yaw)
-	digest.write_f32(&hash, state.player.pitch)
-	digest.write_bool(&hash, state.player.grounded)
-	digest.write_f32(&hash, state.debug.sun.position.x)
-	digest.write_f32(&hash, state.debug.sun.position.y)
-	digest.write_f32(&hash, state.debug.sun.position.z)
-	digest.write_string(&hash, state.settings.window_mode)
-	digest.write_string(&hash, state.settings.display)
-	digest.write_i64(&hash, i64(state.settings.display_index))
-	digest.write_string(&hash, state.settings.resolution)
-	digest.write_string(&hash, state.settings.window_resolution)
-	digest.write_string(&hash, state.settings.sprint_mode)
-	digest.write_string(&hash, state.settings.crouch_mode)
-	digest.write_string(&hash, state.settings.prone_mode)
-	digest.write_f32(&hash, state.settings.type_weight)
-	digest.write_bool(&hash, state.menu.open)
-	digest.write_i64(&hash, i64(state.menu.selected))
-	digest.write_i64(&hash, i64(len(state.objects)))
-	for object in state.objects {
-		digest.write_i64(&hash, i64(object.id))
-		digest.write_string(&hash, object.prefab)
-		digest.write_string(&hash, object.body)
-		digest.write_f32(&hash, object.position.x)
-		digest.write_f32(&hash, object.position.y)
-		digest.write_f32(&hash, object.position.z)
-		digest.write_f32(&hash, object.rotation.x)
-		digest.write_f32(&hash, object.rotation.y)
-		digest.write_f32(&hash, object.rotation.z)
-		digest.write_f32(&hash, object.rotation.w)
-		digest.write_bool(&hash, object.light.active)
-		digest.write_string(&hash, object.light.color)
-		digest.write_f32(&hash, object.light.intensity)
-		digest.write_f32(&hash, object.light.range)
-	}
+	value: any = state
+	digest_value(&hash, value)
 	return digest.hex(hash, allocator)
+}
+
+@(private)
+digest_value :: proc(hash: ^digest.FNV, value: any) {
+	ti := runtime.type_info_base(type_info_of(value.id))
+	#partial switch info in ti.variant {
+	case runtime.Type_Info_Struct:
+		for field in reflect.struct_fields_zipped(value.id) {
+			if reflect.struct_tag_get(field.tag, "digest") == "-" {
+				continue
+			}
+			digest_value(hash, reflect.struct_field_value(value, field))
+		}
+	case runtime.Type_Info_Slice:
+		slice := cast(^runtime.Raw_Slice)value.data
+		digest.write_u64(hash, u64(slice.len))
+		for index in 0 ..< slice.len {
+			element := any {
+				data = rawptr(uintptr(slice.data) + uintptr(index) * uintptr(info.elem.size)),
+				id   = info.elem.id,
+			}
+			digest_value(hash, element)
+		}
+	case runtime.Type_Info_Array:
+		digest.write_u64(hash, u64(info.count))
+		for index in 0 ..< int(info.count) {
+			element := any {
+				data = rawptr(uintptr(value.data) + uintptr(index) * uintptr(info.elem.size)),
+				id   = info.elem.id,
+			}
+			digest_value(hash, element)
+		}
+	case runtime.Type_Info_Boolean:
+		boolean, ok := reflect.as_bool(value)
+		if ok {
+			digest.write_bool(hash, boolean)
+		}
+	case runtime.Type_Info_Integer:
+		number, ok := reflect.as_i64(value)
+		if ok {
+			digest.write_i64(hash, number)
+		}
+	case runtime.Type_Info_Float:
+		number, ok := reflect.as_f64(value)
+		if ok {
+			digest.write_f32(hash, f32(number))
+		}
+	case runtime.Type_Info_String:
+		text, ok := reflect.as_string(value)
+		if ok {
+			digest.write_string(hash, text)
+		}
+	case runtime.Type_Info_Enum:
+		name, ok := reflect.enum_name_from_value_any(value)
+		if ok {
+			digest.write_string(hash, name)
+		}
+	}
 }
 
 @(private)

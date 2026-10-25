@@ -87,8 +87,10 @@ build_status_panel :: proc(o: ^Overlay, view: ui.Hud) {
 		return
 	}
 	padding := theme.spacing.lg
-	options := Rows_Options{value_align = .Left}
-	layout := rows_measure(&o.atlas, theme, rows, options)
+	options := ui.Rows_Options{value_align = .Left}
+	ctx: Layout_Context
+	layout_context_init(&ctx, theme, &o.atlas, 0, 0)
+	layout := ui.rows_layout(ctx.inputs, rows, options)
 
 	x := theme.spacing.md
 	y := theme.spacing.md
@@ -97,7 +99,7 @@ build_status_panel :: proc(o: ^Overlay, view: ui.Hud) {
 
 	hud_emit_rect(o, x, y, width, height, theme.surface_hud)
 	hud_emit_frame(o, x, y, width, height, theme.hairline, theme.line_hairline)
-	rows_emit(o, theme, x + padding, y + padding, layout, rows, options)
+	rows_emit(o, theme, x + padding, y + padding, ctx.inputs, layout, rows, options)
 }
 
 @(private)

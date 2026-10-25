@@ -36,13 +36,8 @@ create_sun_test :: proc(t: ^testing.T) -> (game.Simulation, game.Debug_Mode) {
 }
 
 @(private)
-sun_input :: proc(dm: ^game.Debug_Mode, sim: ^game.Simulation, input: game.Debug_Input) {
-	game.debug_mode_update(dm, sim, input, DT)
-}
-
-@(private)
 enter_sun :: proc(dm: ^game.Debug_Mode, sim: ^game.Simulation) {
-	sun_input(dm, sim, {sun_placement_pressed = true})
+	edit_step(dm, sim, {game.Sun_Toggle{}})
 }
 
 @(test)
@@ -119,11 +114,11 @@ sun_key_enters_the_placement_mode :: proc(t: ^testing.T) {
 	testing.expect(t, dm.sun.position.y >= game.SUN_DOME_MIN_HEIGHT, "sun fell below the horizon")
 	testing.expect(t, game.debug_mode_sun_direction(&dm).y < 0.0, "light did not point down")
 
-	game.debug_sun_exit(&dm)
+	apply_expect(t, &dm, &sim, game.Sun_Exit{}, "sun exit failed")
 	dm.dragging = .Object
-	game.debug_sun_enter(&dm, &sim)
+	apply_expect(t, &dm, &sim, game.Sun_Enter{}, "sun enter failed")
 	testing.expect_value(t, dm.dragging, game.Debug_Drag.None)
-	game.debug_sun_exit(&dm)
+	apply_expect(t, &dm, &sim, game.Sun_Exit{}, "sun exit failed")
 }
 
 @(test)
@@ -137,7 +132,7 @@ sun_lighting_follows_the_camera :: proc(t: ^testing.T) {
 	first_direction := game.debug_mode_sun_direction(&dm)
 
 	dm.camera.yaw = math.PI / 2.0
-	sun_input(&dm, &sim, {captured = true})
+	edit_step(&dm, &sim, nil)
 
 	testing.expect(t, dm.sun.position != first, "the sun did not follow the camera")
 	testing.expect(
@@ -155,7 +150,7 @@ sun_click_commits_the_aimed_position :: proc(t: ^testing.T) {
 
 	enter_sun(&dm, &sim)
 	dm.camera.yaw = 0.8
-	sun_input(&dm, &sim, {primary_pressed = true, captured = true})
+	edit_step(&dm, &sim, {game.Primary_Press{}})
 
 	expected := game.sun_dome_point(game.debug_aim_point(&dm, &sim, game.SUN_AIM_DISTANCE))
 	testing.expect(t, !dm.sun.active, "the click did not leave sun placement")
@@ -173,10 +168,10 @@ sun_secondary_cancels_and_restores :: proc(t: ^testing.T) {
 	before := dm.sun.position
 	enter_sun(&dm, &sim)
 	dm.camera.yaw = 1.2
-	sun_input(&dm, &sim, {captured = true})
+	edit_step(&dm, &sim, nil)
 	testing.expect(t, dm.sun.position != before, "aiming did not move the sun")
 
-	sun_input(&dm, &sim, {secondary_pressed = true})
+	edit_step(&dm, &sim, {game.Secondary_Press{}})
 	testing.expect(t, !dm.sun.active, "right click kept sun placement active")
 	testing.expect_value(t, dm.sun.position, before)
 }
@@ -189,7 +184,7 @@ sun_key_leaves_and_keeps_the_current_position :: proc(t: ^testing.T) {
 
 	enter_sun(&dm, &sim)
 	dm.camera.yaw = -0.7
-	sun_input(&dm, &sim, {captured = true})
+	edit_step(&dm, &sim, nil)
 	aimed := dm.sun.position
 
 	enter_sun(&dm, &sim)
@@ -204,7 +199,7 @@ sun_reset_restores_the_default_position :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 
 	enter_sun(&dm, &sim)
-	game.debug_sun_set_position(&dm, {0.0, 50.0, 0.0})
+	game.sun_position_set(&dm, {0.0, 50.0, 0.0})
 
 	game.debug_mode_reset_scene(&dm, &sim)
 
@@ -219,7 +214,7 @@ sun_mode_is_exclusive_with_the_palette_and_placement :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 
 	enter_sun(&dm, &sim)
-	game.debug_palette_open(&dm)
+	apply_expect(t, &dm, &sim, game.Palette_Open{}, "open failed")
 	testing.expect(t, !dm.sun.active, "the palette did not cancel sun placement")
 	testing.expect(t, dm.palette.open, "the palette did not open")
 
@@ -227,9 +222,9 @@ sun_mode_is_exclusive_with_the_palette_and_placement :: proc(t: ^testing.T) {
 	testing.expect(t, !dm.palette.open, "sun placement did not close the palette")
 	testing.expect(t, dm.sun.active, "sun placement did not open")
 
-	game.debug_palette_open(&dm)
-	testing.expect(t, game.debug_palette_select(&dm, 4), "platform select failed")
-	testing.expect(t, game.debug_palette_pick(&dm, &sim), "pick failed")
+	apply_expect(t, &dm, &sim, game.Palette_Open{}, "open failed")
+	apply_expect(t, &dm, &sim, game.Palette_Select{index = 4}, "platform select failed")
+	apply_expect(t, &dm, &sim, game.Palette_Pick{}, "pick failed")
 	testing.expect(t, dm.placement.armed, "pick did not arm the tool")
 
 	enter_sun(&dm, &sim)

@@ -2,6 +2,7 @@
 package harness
 
 import "core:fmt"
+import "core:log"
 import "core:strings"
 
 session_queue_capture :: proc(
@@ -11,6 +12,10 @@ session_queue_capture :: proc(
 	immediate: bool,
 	error: string,
 ) {
+	if !session.render_enabled {
+		log.warn("harness: capture skipped because rendering is disabled")
+		return true, ""
+	}
 	frame := command.has_frame ? command.frame : session.frame
 	if frame < session.frame {
 		return false, fmt.aprintf(

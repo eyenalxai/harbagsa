@@ -7,6 +7,7 @@ import "core:strings"
 
 import "src:display"
 import "src:game"
+import "src:renderer"
 
 Vec_State :: struct {
 	x: f32 `json:"x"`,
@@ -44,8 +45,8 @@ Object_State :: struct {
 	body:      string      `json:"body"`,
 	position:  Vec_State   `json:"position"`,
 	rotation:  Quat_State  `json:"rotation"`,
-	scale:     f32         `json:"scale"`,
-	spawn_age: f32         `json:"spawn_age"`,
+	scale:     f32         `json:"scale" digest:"-"`,
+	spawn_age: f32         `json:"spawn_age" digest:"-"`,
 	light:     Light_State `json:"light"`,
 }
 
@@ -64,9 +65,9 @@ Settings_State :: struct {
 Menu_State :: struct {
 	open:     bool   `json:"open"`,
 	selected: int    `json:"selected"`,
-	item:     string `json:"item"`,
-	status:   string `json:"status"`,
-	blocked:  bool   `json:"blocked"`,
+	item:     string `json:"item" digest:"-"`,
+	status:   string `json:"status" digest:"-"`,
+	blocked:  bool   `json:"blocked" digest:"-"`,
 }
 
 Settle_State :: struct {
@@ -74,54 +75,50 @@ Settle_State :: struct {
 	converged: bool `json:"converged"`,
 }
 
-Renderer_Debug_State :: struct {
-	active:              bool   `json:"active"`,
-	taa:                 bool   `json:"taa"`,
-	jitter:              bool   `json:"jitter"`,
-	history_weight:      f32    `json:"history_weight"`,
-	clamp:               bool   `json:"clamp"`,
-	depth_trust:         bool   `json:"depth_trust"`,
-	shadow_phase_frozen: bool   `json:"shadow_phase_frozen"`,
-	shadow_phase:        u32    `json:"shadow_phase"`,
-	light_shadows:       bool   `json:"light_shadows"`,
-	synthetic_lights:    int    `json:"synthetic_lights"`,
-	sky:                 bool   `json:"sky"`,
-	ao:                  bool   `json:"ao"`,
-}
-
-Renderer_State :: struct {
-	active:              bool                 `json:"active"`,
-	frame_count:         u32                  `json:"frame_count"`,
-	taa_enabled:         bool                 `json:"taa_enabled"`,
-	jitter_index:        int                  `json:"jitter_index"`,
-	history_valid:       bool                 `json:"history_valid"`,
-	convergence_frames:  int                  `json:"convergence_frames"`,
-	history_read:        int                  `json:"history_read"`,
-	history_weight:      f32                  `json:"history_weight"`,
-	reset_count:         int                  `json:"reset_count"`,
-	last_reset:          string               `json:"last_reset"`,
-	shadow_phase:        u32                  `json:"shadow_phase"`,
-	light_count:         int                  `json:"light_count"`,
-	atlas_weight:        f32                  `json:"atlas_weight"`,
-	text_truncated_runs: int                  `json:"text_truncated_runs"`,
-	text_font_drops:     int                  `json:"text_font_drops"`,
-	debug:               Renderer_Debug_State `json:"debug"`,
-}
-
 State :: struct {
 	frame:         int            `json:"frame"`,
 	player:        Player_State   `json:"player"`,
-	camera:        Camera_State   `json:"camera"`,
+	camera:        Camera_State   `json:"camera" digest:"-"`,
 	objects:       []Object_State `json:"objects"`,
 	settings:      Settings_State `json:"settings"`,
-	debug:         Debug_State    `json:"debug"`,
+	debug:         Debug_State    `json:"debug" digest:"-"`,
 	sun:           Sun_State      `json:"sun"`,
 	menu:          Menu_State     `json:"menu"`,
-	rows:          Rows_State     `json:"rows"`,
-	settle:        Settle_State   `json:"settle"`,
-	renderer:      Renderer_State `json:"renderer"`,
-	render_digest: string         `json:"render_digest"`,
-	digest:        string         `json:"digest"`,
+	rows:          Rows_State     `json:"rows" digest:"-"`,
+	settle:        Settle_State   `json:"settle" digest:"-"`,
+	renderer:      renderer.Renderer_Report `json:"renderer" digest:"-"`,
+	render_digest: string         `json:"render_digest" digest:"-"`,
+	digest:        string         `json:"digest" digest:"-"`,
+}
+
+State_Section :: enum {
+	Frame,
+	Player,
+	Camera,
+	Objects,
+	Settings,
+	Debug,
+	Menu,
+	Rows,
+	Settle,
+	Renderer,
+	Render_Digest,
+}
+
+State_Sections :: bit_set[State_Section]
+
+ALL_STATE_SECTIONS :: State_Sections {
+	.Frame,
+	.Player,
+	.Camera,
+	.Objects,
+	.Settings,
+	.Debug,
+	.Menu,
+	.Rows,
+	.Settle,
+	.Renderer,
+	.Render_Digest,
 }
 
 state_build :: proc(
@@ -130,28 +127,79 @@ state_build :: proc(
 	hud: ^game.HUD_State,
 	debug: ^game.Debug_Mode,
 	camera: Camera_State,
-	renderer_state: Renderer_State,
+	renderer_state: renderer.Renderer_Report,
 	render_digest: string,
 	settle: Settle_State,
 	allocator: mem.Allocator,
 ) -> State {
-	game.hud_state_update(hud, sim, debug, game.simulation_snapshot(sim), false, game.SIMULATION_STEP)
+	return state_build_sections(
+		sim,
+		frame,
+		hud,
+		debug,
+		camera,
+		renderer_state,
+		render_digest,
+		settle,
+		ALL_STATE_SECTIONS,
+		allocator,
+	)
+}
+
+// A check names one namespace, so the command builds only that namespace. The
+// digest needs every section; every other check is a partial document.
+state_build_sections :: proc(
+	sim: ^game.Simulation,
+	frame: int,
+	hud: ^game.HUD_State,
+	debug: ^game.Debug_Mode,
+	camera: Camera_State,
+	renderer_state: renderer.Renderer_Report,
+	render_digest: string,
+	settle: Settle_State,
+	sections: State_Sections,
+	allocator: mem.Allocator,
+) -> State {
 	menu := &hud.menu
-	snapshot := game.simulation_snapshot(sim)
-	resolution := game.settings_effective_resolution(sim.settings, &menu.displays)
-	window_resolution := sim.settings.window.resolution
 	state := State {
 		frame = frame,
-		player = {
+		camera = camera,
+		settle = settle,
+		renderer = renderer_state,
+	}
+
+	if .Player in sections {
+		snapshot := game.simulation_snapshot(sim)
+		state.player = {
 			position = vec_state(snapshot.position),
 			eye = vec_state(snapshot.eye_position),
 			velocity = vec_state(snapshot.velocity),
 			yaw = snapshot.yaw,
 			pitch = snapshot.pitch,
 			grounded = snapshot.grounded,
-		},
-		camera = camera,
-		settings = {
+		}
+	}
+	if .Objects in sections {
+		objects := game.simulation_objects(sim)
+		state.objects = make([]Object_State, len(objects), allocator)
+		for object, index in objects {
+			box := game.simulation_object_box(sim, object.id)
+			state.objects[index] = {
+				id        = u32(object.id),
+				prefab    = game.prefab_name(object.prefab),
+				body      = game.body_mode_name(object.body_mode),
+				position  = vec_state(box.center),
+				rotation  = quat_state(box.rotation),
+				scale     = game.simulation_object_scale(sim, object.id),
+				spawn_age = game.simulation_object_spawn_age(sim, object.id),
+				light     = light_state(object.light),
+			}
+		}
+	}
+	if .Settings in sections {
+		resolution := game.settings_effective_resolution(sim.settings, &menu.displays)
+		window_resolution := sim.settings.window.resolution
+		state.settings = {
 			window_mode = game.window_mode_name(sim.settings.window.mode),
 			display = strings.clone(
 				game.settings_display_name(sim.settings, &menu.displays),
@@ -177,37 +225,31 @@ state_build :: proc(
 			crouch_mode = game.input_mode_name(sim.settings.crouch_mode),
 			prone_mode = game.input_mode_name(sim.settings.prone_mode),
 			type_weight = sim.settings.type_weight,
-		},
-		debug = debug_state_build(debug, sim),
-		sun = sun_state(debug),
-		menu = {
+		}
+	}
+	if .Debug in sections {
+		sun := sun_state(debug)
+		state.sun = sun
+		state.debug = debug_state_build(debug, sim, sun)
+	}
+	if .Menu in sections {
+		state.menu = {
 			open = menu.open,
 			selected = int(menu.selected),
 			item = game.menu_selected_name(menu),
 			status = menu.status,
 			blocked = menu_selected_blocked(menu),
-		},
-		rows = rows_state_build(hud, allocator),
-		settle = settle,
-		renderer = renderer_state,
-		render_digest = render_digest == "" ? "" : strings.clone(render_digest, allocator),
-	}
-	objects := game.simulation_objects(sim)
-	state.objects = make([]Object_State, len(objects), allocator)
-	for object, index in objects {
-		box := game.simulation_object_box(sim, object.id)
-		state.objects[index] = {
-			id        = u32(object.id),
-			prefab    = game.prefab_name(object.prefab),
-			body      = game.body_mode_name(object.body_mode),
-			position  = vec_state(box.center),
-			rotation  = quat_state(box.rotation),
-			scale     = game.simulation_object_scale(sim, object.id),
-			spawn_age = game.simulation_object_spawn_age(sim, object.id),
-			light     = light_state(object.light),
 		}
 	}
-	state.digest = state_digest(state, allocator)
+	if .Rows in sections {
+		state.rows = rows_state_build(hud, allocator)
+	}
+	if .Render_Digest in sections && render_digest != "" {
+		state.render_digest = strings.clone(render_digest, allocator)
+	}
+	if sections == ALL_STATE_SECTIONS {
+		state.digest = state_digest(state, allocator)
+	}
 	return state
 }
 

@@ -17,7 +17,7 @@ disable_taa :: proc(state: ^renderer.Renderer) {
 @(private)
 draw_scene :: proc(
 	state: ^renderer.Renderer,
-	view: renderer.Frame_View,
+	view: renderer.Render_Input,
 ) -> (
 	values: []f32,
 	width, height: u32,
@@ -42,14 +42,14 @@ draw_scene :: proc(
 }
 
 @(private)
-sample_floor :: proc(state: ^renderer.Renderer, view: renderer.Frame_View) -> f32 {
+sample_floor :: proc(state: ^renderer.Renderer, view: renderer.Render_Input) -> f32 {
 	return sample_point(state, view, {0, 0.001, 0})
 }
 
 @(private)
 sample_point :: proc(
 	state: ^renderer.Renderer,
-	view: renderer.Frame_View,
+	view: renderer.Render_Input,
 	point: [3]f32,
 ) -> f32 {
 	values, width, height, ok := draw_scene(state, view)

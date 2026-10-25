@@ -7,17 +7,7 @@ import "core:time"
 import "src:perf"
 import vk "vendor:vulkan"
 
-Timing_Boundary :: enum u32 {
-	Start,
-	After_Tlas,
-	After_Depth,
-	After_Lit,
-	After_Sky,
-	After_Taa,
-	After_Overlay,
-}
-
-TIMESTAMP_COUNT :: u32(Timing_Boundary.After_Overlay) + 1
+TIMESTAMP_COUNT :: u32(perf.PASS_COUNT) + 1
 
 // Instrumentation never takes the renderer down: a pool that cannot be created
 // turns the GPU timings off and leaves the CPU numbers in place.
@@ -67,7 +57,7 @@ reset_timing :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer) {
 	vk.CmdResetQueryPool(command_buffer, r.query_pools[r.frame_index], 0, TIMESTAMP_COUNT)
 }
 
-write_timing :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, boundary: Timing_Boundary) {
+write_timing_start :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer) {
 	if !r.timing_available {
 		return
 	}
@@ -75,7 +65,21 @@ write_timing :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, boundary: T
 		command_buffer,
 		{.BOTTOM_OF_PIPE},
 		r.query_pools[r.frame_index],
-		u32(boundary),
+		0,
+	)
+}
+
+// The timestamp index is the pass index plus one, so `perf.PASS_ORDER` is the
+// only place the boundary order lives.
+write_timing :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: perf.Pass) {
+	if !r.timing_available {
+		return
+	}
+	vk.CmdWriteTimestamp(
+		command_buffer,
+		{.BOTTOM_OF_PIPE},
+		r.query_pools[r.frame_index],
+		u32(pass) + 1,
 	)
 }
 
@@ -115,48 +119,13 @@ read_timing :: proc(r: ^Renderer) {
 		available = true,
 		frame     = r.timing_frames[r.frame_index],
 	}
-	times.passes[.Tlas] = ticks_duration(
-		values[Timing_Boundary.Start],
-		values[Timing_Boundary.After_Tlas],
-		period,
-		mask,
-	)
-	times.passes[.Depth] = ticks_duration(
-		values[Timing_Boundary.After_Tlas],
-		values[Timing_Boundary.After_Depth],
-		period,
-		mask,
-	)
-	times.passes[.Scene] = ticks_duration(
-		values[Timing_Boundary.After_Depth],
-		values[Timing_Boundary.After_Lit],
-		period,
-		mask,
-	)
-	times.passes[.Sky] = ticks_duration(
-		values[Timing_Boundary.After_Lit],
-		values[Timing_Boundary.After_Sky],
-		period,
-		mask,
-	)
-	times.passes[.Taa] = ticks_duration(
-		values[Timing_Boundary.After_Sky],
-		values[Timing_Boundary.After_Taa],
-		period,
-		mask,
-	)
-	times.passes[.Overlay] = ticks_duration(
-		values[Timing_Boundary.After_Taa],
-		values[Timing_Boundary.After_Overlay],
-		period,
-		mask,
-	)
-	times.total = ticks_duration(
-		values[Timing_Boundary.Start],
-		values[Timing_Boundary.After_Overlay],
-		period,
-		mask,
-	)
+	previous := u32(0)
+	for pass in perf.PASS_ORDER {
+		next := u32(pass) + 1
+		times.passes[pass] = ticks_duration(values[previous], values[next], period, mask)
+		previous = next
+	}
+	times.total = ticks_duration(values[0], values[TIMESTAMP_COUNT - 1], period, mask)
 	r.gpu_times = times
 }
 

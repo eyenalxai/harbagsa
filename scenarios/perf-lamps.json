@@ -8,6 +8,6 @@
     {"cmd": "perf", "frames": 120, "warmup": 60, "trace": "trace-shadows-on.jsonl"},
     {"cmd": "renderer_debug", "light_shadows": false},
     {"cmd": "check", "field": "renderer.debug.light_shadows", "op": "eq", "value": false},
-    {"cmd": "perf", "frames": 120, "warmup": 60, "trace": "trace-shadows-off.jsonl"}
+    {"cmd": "perf", "frames": 120, "warmup": 60}
   ]
 }

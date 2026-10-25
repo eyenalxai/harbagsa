@@ -6,7 +6,6 @@ import "core:math"
 import "src:digest"
 import "src:frame"
 import "src:game"
-import "src:renderer"
 
 @(private)
 session_refresh_renderer :: proc(session: ^Session) {
@@ -27,45 +26,14 @@ session_refresh_renderer :: proc(session: ^Session) {
 }
 
 session_state :: proc(session: ^Session) -> State {
-	report := session.renderer_report
-	renderer_state := Renderer_State {
-		active             = report.active,
-		frame_count        = report.frame_count,
-		taa_enabled        = report.taa_enabled,
-		jitter_index       = report.jitter_index,
-		history_valid      = report.history_valid,
-		convergence_frames = report.convergence_frames,
-		history_read       = report.history_read,
-		history_weight     = report.history_weight,
-		reset_count        = report.reset_count,
-		last_reset         = renderer.reset_reason_name(report.last_reset),
-		shadow_phase       = report.shadow_phase,
-		light_count        = report.light_count,
-		atlas_weight       = report.atlas_weight,
-		text_truncated_runs = report.text_truncated_runs,
-		text_font_drops     = report.text_font_drops,
-		debug = {
-			active              = report.debug.active,
-			taa                 = report.debug.taa,
-			jitter              = report.debug.jitter,
-			history_weight      = report.debug.history_weight,
-			clamp               = report.debug.clamp,
-			depth_trust         = report.debug.depth_trust,
-			shadow_phase_frozen = report.debug.shadow_phase_frozen,
-			shadow_phase        = report.debug.shadow_phase,
-			light_shadows       = report.debug.light_shadows,
-			synthetic_lights    = report.debug.synthetic_lights,
-			sky                 = report.debug.sky,
-			ao                  = report.debug.ao,
-		},
-	}
+	session_refresh_hud(session)
 	return state_build(
 		&session.sim,
 		session.frame,
 		&session.hud,
 		&session.debug,
 		session_camera(session),
-		renderer_state,
+		session.renderer_report,
 		session.render_digest_text,
 		{ frames = session.settle_frames, converged = session.settle_converged },
 		session.allocator,

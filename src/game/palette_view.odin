@@ -104,7 +104,7 @@ palette_light_preview :: proc(palette: ^ui.Palette, debug: ^Debug_Mode, count: i
 	if !prefab_has_light(id) {
 		return
 	}
-	light := palette_light(debug)
+	light := placement_light_for(debug, id)
 	item := &palette.items[palette.selected]
 	item.color = light_color4(light.color)
 	item.light_length = write_light_line(item.light_line[:], light)

@@ -3,25 +3,20 @@ package renderer
 
 import vk "vendor:vulkan"
 
-record_taa_resolve :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image_index: u32) {
+taa_barriers :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
 	taa := &r.taa
 	read_index := taa.history_read
 	write_index := (read_index + 1) % TAA_HISTORY_IMAGES
-	read := taa.history[read_index]
-	write := taa.history[write_index]
-	read_count := taa.counts[read_index]
-	write_count := taa.counts[write_index]
-	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
-	target_image := r.target.images[image_index]
 
-	taa_read_barrier(command_buffer, read.image, &taa.history_layouts[read_index])
-	taa_write_barrier(command_buffer, write.image, &taa.history_layouts[write_index])
-	taa_read_barrier(command_buffer, read_count.image, &taa.count_layouts[read_index])
-	taa_write_barrier(command_buffer, write_count.image, &taa.count_layouts[write_index])
+	record_scene_read_barriers(r, command_buffer)
+	taa_read_barrier(command_buffer, taa.history[read_index].image, &taa.history_layouts[read_index])
+	taa_write_barrier(command_buffer, taa.history[write_index].image, &taa.history_layouts[write_index])
+	taa_read_barrier(command_buffer, taa.counts[read_index].image, &taa.count_layouts[read_index])
+	taa_write_barrier(command_buffer, taa.counts[write_index].image, &taa.count_layouts[write_index])
 
 	image_barrier(
 		command_buffer,
-		target_image,
+		r.target.images[pass.image_index],
 		COLOR_SUBRESOURCE,
 		.UNDEFINED,
 		.COLOR_ATTACHMENT_OPTIMAL,
@@ -30,53 +25,11 @@ record_taa_resolve :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image
 		{},
 		{.COLOR_ATTACHMENT_WRITE},
 	)
+}
 
-	target_clear := vk.ClearValue{}
-	target_clear.color.float32 = r.clear_color
-	attachments := [3]vk.RenderingAttachmentInfo {
-		{
-			sType = .RENDERING_ATTACHMENT_INFO,
-			imageView = r.target.views[image_index],
-			imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
-			loadOp = .CLEAR,
-			storeOp = .STORE,
-			clearValue = target_clear,
-		},
-		{
-			sType = .RENDERING_ATTACHMENT_INFO,
-			imageView = write.view,
-			imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
-			loadOp = .DONT_CARE,
-			storeOp = .STORE,
-		},
-		{
-			sType = .RENDERING_ATTACHMENT_INFO,
-			imageView = write_count.view,
-			imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
-			loadOp = .DONT_CARE,
-			storeOp = .STORE,
-		},
-	}
-	rendering_info := vk.RenderingInfo {
-		sType = .RENDERING_INFO,
-		renderArea = {extent = extent},
-		layerCount = 1,
-		colorAttachmentCount = u32(len(attachments)),
-		pColorAttachments = &attachments[0],
-	}
-	vk.CmdBeginRendering(command_buffer, &rendering_info)
-
-	viewport := vk.Viewport {
-		width = f32(extent.width),
-		height = f32(extent.height),
-		minDepth = 0,
-		maxDepth = 1,
-	}
-	scissor := vk.Rect2D{extent = extent}
-	vk.CmdSetViewport(command_buffer, 0, 1, &viewport)
-	vk.CmdSetScissor(command_buffer, 0, 1, &scissor)
-
-	vk.CmdBindPipeline(command_buffer, .GRAPHICS, taa.pipeline)
+taa_draw :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
+	taa := &r.taa
+	read_index := taa.history_read
 	descriptor_set := taa.descriptor_sets[r.frame_index * TAA_HISTORY_IMAGES + read_index]
 	vk.CmdBindDescriptorSets(
 		command_buffer,
@@ -111,13 +64,17 @@ record_taa_resolve :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image
 		&params,
 	)
 	vk.CmdDraw(command_buffer, 3, 1, 0, 0)
-	vk.CmdEndRendering(command_buffer)
+}
 
-	taa_finish_write(command_buffer, write.image, &taa.history_layouts[write_index])
-	taa_finish_write(command_buffer, write_count.image, &taa.count_layouts[write_index])
+taa_after :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
+	taa := &r.taa
+	read_index := taa.history_read
+	write_index := (read_index + 1) % TAA_HISTORY_IMAGES
+	taa_finish_write(command_buffer, taa.history[write_index].image, &taa.history_layouts[write_index])
+	taa_finish_write(command_buffer, taa.counts[write_index].image, &taa.count_layouts[write_index])
 	image_barrier(
 		command_buffer,
-		target_image,
+		r.target.images[pass.image_index],
 		COLOR_SUBRESOURCE,
 		.COLOR_ATTACHMENT_OPTIMAL,
 		.COLOR_ATTACHMENT_OPTIMAL,
@@ -125,6 +82,35 @@ record_taa_resolve :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, image
 		{.COLOR_ATTACHMENT_OUTPUT},
 		{.COLOR_ATTACHMENT_WRITE},
 		{.COLOR_ATTACHMENT_READ, .COLOR_ATTACHMENT_WRITE},
+	)
+}
+
+@(private)
+record_scene_read_barriers :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer) {
+	color := r.taa.scene_color[r.frame_index]
+	velocity := r.taa.velocity[r.frame_index]
+
+	image_barrier(
+		command_buffer,
+		color.image,
+		COLOR_SUBRESOURCE,
+		.COLOR_ATTACHMENT_OPTIMAL,
+		.SHADER_READ_ONLY_OPTIMAL,
+		{.COLOR_ATTACHMENT_OUTPUT},
+		{.FRAGMENT_SHADER},
+		{.COLOR_ATTACHMENT_WRITE},
+		{.SHADER_READ},
+	)
+	image_barrier(
+		command_buffer,
+		velocity.image,
+		COLOR_SUBRESOURCE,
+		.COLOR_ATTACHMENT_OPTIMAL,
+		.SHADER_READ_ONLY_OPTIMAL,
+		{.COLOR_ATTACHMENT_OUTPUT},
+		{.FRAGMENT_SHADER},
+		{.COLOR_ATTACHMENT_WRITE},
+		{.SHADER_READ},
 	)
 }
 

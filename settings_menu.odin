@@ -3,8 +3,8 @@ package main
 
 import "src:game"
 import "src:platform"
-import "src:renderer"
 import "src:ui"
+import "src:renderer"
 
 @(private)
 open_settings_menu :: proc(
@@ -79,34 +79,15 @@ handle_settings_menu_events :: proc(
 		events.captured = close_settings_menu(window, menu, recapture^)
 		accumulator^ = 0
 	}
+	layout := renderer.menu_layout_for(r, menu.view)
+	target_width, target_height := renderer.target_extent(r)
+	pointer := ui.pointer_to_target(events.pointer, f32(target_width), f32(target_height))
 	game.menu_weight_input(
 		menu,
 		settings,
-		menu_slider_for_window(r, window, menu.view),
-		events.pointer,
+		layout.slider,
+		pointer,
 		events.pointer_pressed,
 		events.pointer_down,
 	)
-}
-
-@(private)
-menu_slider_for_window :: proc(
-	r: ^renderer.Renderer,
-	window: ^platform.Window,
-	menu: ui.Menu,
-) -> ui.Slider_Rect {
-	slider := renderer.menu_slider_rect(r, menu)
-	window_width, window_height := platform.window_size(window)
-	if window_width <= 0 || window_height <= 0 {
-		return slider
-	}
-	width, height := renderer.target_extent(r)
-	scale_x := f32(width) / window_width
-	scale_y := f32(height) / window_height
-	slider.x *= scale_x
-	slider.width *= scale_x
-	slider.knob *= scale_x
-	slider.y *= scale_y
-	slider.height *= scale_y
-	return slider
 }
