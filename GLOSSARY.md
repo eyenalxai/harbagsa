@@ -185,15 +185,15 @@ The forward lighting path that builds a light index list per cluster in a comput
 _Avoid_: Tiled forward, light grid
 
 **Probe volume**:
-A box in world space with a probe spacing and a 3D count. One volume covers the room, its lanes, and the chamber. The renderer allocates one probe per cell and samples the eight probes around a surface.
+A box in world space with a probe spacing and a 3D count. The scene supplies them as data: the room network, the roof over the room, and four perimeter strips over the open arena. The room volume comes first, so the sampler never picks an arena probe for an interior surface. The renderer allocates one probe per cell and samples the eight probes around a surface.
 _Avoid_: Light grid, lightmap
 
 **DDGI**:
-Dynamic diffuse global illumination. Each probe traces 64 rays, stores an 8 by 8 octahedral irradiance map and a depth moment, and the lit pass blends the surrounding probes. It adds one diffuse bounce without a bake.
+Dynamic diffuse global illumination. Each probe traces 256 rays, stores an 8 by 8 octahedral irradiance map and a depth moment, and the lit pass blends the surrounding probes. It adds one diffuse bounce without a bake.
 _Avoid_: GI bake, irradiance volume (that is the static form)
 
 **Probe indirect**:
-The diffuse radiance the lit pass adds from the probe volume. It is separate from ambient occlusion: the occlusion scales direct light, and the probe term adds the bounce.
+The diffuse radiance the lit pass adds from the probe volumes. It is separate from ambient occlusion: the occlusion scales direct light, and the probe term adds the bounce. In the open arena the same term carries the sky fill.
 _Avoid_: Ambient term, AO
 
 **Lamp prefab**:
@@ -236,8 +236,8 @@ The partly lit band between the umbra and the fully lit area. Its width grows wi
 _Avoid_: Soft edge, blur
 
 **Ambient occlusion**:
-The cosine-weighted fraction of the hemisphere at a surface point that visible geometry does not block. It scales the direct sun and point light. It darkens a lit corner or contact band; it is not global illumination, because it adds no bounce light. The probe volume adds that bounce separately.
-_Avoid_: SSAO (that is one estimator), GI (the probe volume owns that)
+The cosine-weighted fraction of the hemisphere at a surface point that visible geometry does not block. It scales the direct sun and point light. It darkens a lit corner or contact band; it is not global illumination, because it adds no bounce light. The probe volumes add that bounce separately.
+_Avoid_: SSAO (that is one estimator), GI (the probe volumes own that)
 
 **Sky**:
 The analytic gradient that fills the background: a horizon-to-zenith ramp, a darker ground color below the horizon, and a sun disk with a glow. It draws after the lit pass and shades only the pixels that no box covers. It is a background for the camera; a probe ray that escapes through an opening uses the same gradient as its miss radiance.
