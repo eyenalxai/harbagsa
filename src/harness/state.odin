@@ -73,6 +73,10 @@ Menu_State :: struct {
 	blocked:  bool   `json:"blocked" digest:"-"`,
 }
 
+Notice_State :: struct {
+	text: string `json:"text"`,
+}
+
 Settle_State :: struct {
 	frames:    int  `json:"frames"`,
 	converged: bool `json:"converged"`,
@@ -87,6 +91,7 @@ State :: struct {
 	debug:         Debug_State    `json:"debug" digest:"-"`,
 	sun:           Sun_State      `json:"sun"`,
 	menu:          Menu_State     `json:"menu"`,
+	notice:        Notice_State   `json:"notice" digest:"-"`,
 	rows:          Rows_State     `json:"rows" digest:"-"`,
 	settle:        Settle_State   `json:"settle" digest:"-"`,
 	renderer:      renderer.Renderer_Report `json:"renderer" digest:"-"`,
@@ -102,6 +107,7 @@ State_Section :: enum {
 	Settings,
 	Debug,
 	Menu,
+	Notice,
 	Rows,
 	Settle,
 	Renderer,
@@ -118,6 +124,7 @@ ALL_STATE_SECTIONS :: State_Sections {
 	.Settings,
 	.Debug,
 	.Menu,
+	.Notice,
 	.Rows,
 	.Settle,
 	.Renderer,
@@ -244,6 +251,9 @@ state_build_sections :: proc(
 			status = menu.status,
 			blocked = menu_selected_blocked(menu),
 		}
+	}
+	if .Notice in sections {
+		state.notice = {text = game.hud_notice_text(hud)}
 	}
 	if .Rows in sections {
 		state.rows = rows_state_build(hud, allocator)

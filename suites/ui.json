@@ -6,6 +6,7 @@
     "ui",
     "settings-menu",
     "type-weight",
-    "hud"
+    "hud",
+    "repro-notice"
   ]
 }
