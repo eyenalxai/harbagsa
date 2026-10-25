@@ -48,6 +48,11 @@ const uint SUN_RAY_MASK = 0xFFu;
 // A lamp instance carries 0x01. The point shadow ray tests 0x02, so a lamp
 // never blocks its own light while the sun ray still sees it.
 const uint POINT_RAY_MASK = 0x02u;
+// A light on a surface ends its shadow ray on that surface. The ray query
+// reports that endpoint as a hit for some pixels and misses it for others, so
+// the surface the lamp is mounted on paints a fan of shadows on every surface
+// it lights. Stop the ray short of the light instead.
+const float POINT_SHADOW_END_BIAS = 0.001;
 
 vec2 vogel_disk(int index, int count, float phase) {
     float radius = sqrt((float(index) + 0.5) / float(count));
@@ -119,8 +124,19 @@ vec3 point_light_radiance(vec3 world_position, vec3 normal) {
         float falloff = 1.0 - reach * reach;
         falloff *= falloff;
         float visibility = 1.0;
-        if (shadows && occluded(world_position + normal * 0.002, direction, POINT_RAY_MASK, distance)) {
-            visibility = 0.0;
+        if (shadows) {
+            // Keep the endpoint short of the light. A surface the light sits on
+            // would otherwise shadow it for a subset of the pixels, which reads
+            // as a fan across every surface the lamp lights.
+            float shadow_distance = max(distance - POINT_SHADOW_END_BIAS, 0.0);
+            if (occluded(
+                world_position + normal * 0.002,
+                direction,
+                POINT_RAY_MASK,
+                shadow_distance
+            )) {
+                visibility = 0.0;
+            }
         }
         sum += light.color.rgb * (light.position.w * diffuse * falloff * visibility);
     }
