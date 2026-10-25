@@ -17,34 +17,34 @@ perf_trace_path :: proc(name, run_dir: string, allocator: mem.Allocator) -> stri
 }
 
 write_session_trace :: proc(session: ^Session, run_dir: string) -> string {
-	if !session.has_trace {
+	if !session.perf.has_trace {
 		return ""
 	}
-	path := perf_trace_path(session.trace_name, run_dir, session.allocator)
-	if write_error := write_perf_trace(path, session.trace_samples[:]); write_error != "" {
+	path := perf_trace_path(session.perf.trace_name, run_dir, session.allocator)
+	if write_error := write_perf_trace(path, session.perf.trace_samples[:]); write_error != "" {
 		delete(path, session.allocator)
 		return write_error
 	}
-	if session.trace_path != "" {
-		delete(session.trace_path, session.allocator)
+	if session.perf.trace_path != "" {
+		delete(session.perf.trace_path, session.allocator)
 	}
-	session.trace_path = path
+	session.perf.trace_path = path
 	return ""
 }
 
 // A run may measure more than one side in one scenario, so every perf command
 // that asks for a trace keeps its own file.
 write_session_traces :: proc(session: ^Session, run_dir: string) -> string {
-	for &trace in session.traces {
+	for &trace in session.perf.traces {
 		path := perf_trace_path(trace.name, run_dir, session.allocator)
 		if write_error := write_perf_trace(path, trace.samples); write_error != "" {
 			delete(path, session.allocator)
 			return write_error
 		}
-		if session.trace_path != "" {
-			delete(session.trace_path, session.allocator)
+		if session.perf.trace_path != "" {
+			delete(session.perf.trace_path, session.allocator)
 		}
-		session.trace_path = path
+		session.perf.trace_path = path
 	}
 	return ""
 }

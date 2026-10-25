@@ -7,8 +7,3 @@ View :: struct {
 	hint:  bool,
 	perf:  bool,
 }
-
-Pending_Capture :: struct {
-	frame:    int,
-	requests: []Capture_Request,
-}
