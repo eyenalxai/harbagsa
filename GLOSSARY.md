@@ -197,7 +197,7 @@ The partly lit band between the umbra and the fully lit area. Its width grows wi
 _Avoid_: Soft edge, blur
 
 **Ambient occlusion**:
-The cosine-weighted fraction of the hemisphere at a surface point that visible geometry does not block. It scales ambient light. It is not global illumination, because it adds no bounce light.
+The cosine-weighted fraction of the hemisphere at a surface point that visible geometry does not block. It scales ambient light only where the sun does not reach the point. It is not global illumination, because it adds no bounce light.
 _Avoid_: SSAO (that is one estimator), GI (that adds bounce light)
 
 **Sky**:
@@ -205,7 +205,7 @@ The analytic gradient that fills the background: a horizon-to-zenith ramp, a dar
 _Avoid_: Skybox, cubemap, backdrop
 
 **Sky ambient**:
-A two-colour hemisphere ramp on the surface normal, scaled to the scene exposure. The lit pass uses it as the ambient term, and ambient occlusion scales it. It is not the integral of the visible sky.
+A two-colour hemisphere ramp on the surface normal, scaled to the scene exposure. The lit pass uses it as the ambient term, and ambient occlusion scales it in shade. It is not the integral of the visible sky.
 _Avoid_: IBL, environment light, ambient probe
 
 **AO radius**:
