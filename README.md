@@ -232,6 +232,9 @@ Options:
 - `--out DIR`: replace this run directory atomically. Default: `runs/<stem>`.
 - `--tag NAME`: append NAME to the run directory, so `runs/smoke/before` and
   `runs/smoke/after` coexist. The report records the final directory.
+- `--param NAME=VALUE[,VALUE...]`: override a scenario parameter. A comma list
+  runs one scenario per value; repeat the flag for every parameter and the
+  runner takes the cartesian product. See **Parameter sweep**.
 - `--size WxH`: capture size. Default: `1280x720`. A scenario `size` and
   `--size` together are an error.
 - `--renderer-debug KEY=VALUE`: apply a gated renderer override before the
@@ -258,6 +261,59 @@ hint off. Only a `capture` command writes a PNG. A scenario with no capture and
 no perf run never creates a Vulkan device unless `--present` asks for the
 window.
 
+### Parameter sweep
+
+A scenario declares its knobs and uses `${name}`:
+
+```json
+"parameters": {"lamp_x": 20.0},
+"commands": [
+  {"cmd": "editor", "place": {"prefab": "Lamp",
+   "position": ["${lamp_x}", 2.0, -19.5]}}
+]
+```
+
+`--param` overrides a value. A comma list runs one scenario per value:
+
+```sh
+./bin/harbagsa-agent run scenarios/lamp-threshold.json \
+  --param lamp_x=20,19.999,19.99,19.9 --out runs/lamp-threshold
+```
+
+Each value gets its own run directory, and the parent gets `sweep.json`:
+
+```text
+runs/lamp-threshold/
+  sweep.json
+  lamp_x=20/report.json
+  lamp_x=19.999/report.json
+  lamp_x=19.99/report.json
+  lamp_x=19.9/report.json
+```
+
+Repeat `--param` for more parameters; the runner takes the cartesian product,
+with the last parameter changing fastest. A value cannot hold a comma. One
+value is a plain run, so `--param lamp_x=19.999` writes the usual run directory
+and no `sweep.json`.
+
+`sweep.json` lists each combination's parameters, run directory, report, state,
+digest, exit code, and error. The process exit code is the highest of the runs,
+so one bad combination fails the sweep while the rest still run. An override
+must match a `${name}` in the scenario, and it must parse as the declared type.
+
+Read the per-value metrics from the reports:
+
+```sh
+for report in runs/lamp-threshold/*/report.json; do
+  jq -r '[.scenario.parameters[0].value,
+          .screenshots[0].stats.gradient[1]] | @tsv' "$report"
+done
+```
+
+The report stores statistics as arrays in RGBA order. A check names the same
+channels `x`, `y`, `z`, and `w`, so `capture.named.wall.stats.gradient.y` is
+green.
+
 ### Scenario format
 
 ```json
@@ -281,7 +337,9 @@ A scenario may declare `"size": "1280x720"` to pin its pixels. It may extend
 another scenario with `"extends": "base.json"`, which merges the base object and
 lets the child win. A `parameters` block substitutes `${name}` in any command
 value; a parameter must be a string, number, or boolean. The base path resolves
-against the extending file.
+against the extending file. A placeholder is always a JSON string, so a number
+in an array is written `["${lamp_x}", 2.0, -19.5]`; substitution puts the
+parameter's own type in its place.
 
 The `commands` array runs verbatim, and `record` writes this form. Only a
 `capture` command writes a PNG; a scenario without one renders nothing unless
