@@ -1,0 +1,30 @@
+{
+  "size": "1280x720",
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "renderer_debug", "taa": false, "ao": false},
+    {"cmd": "debug_mode", "active": true},
+    {"cmd": "editor", "camera": {"position": [17.5, 1.7, -17.2], "yaw": -0.827, "pitch": -0.259}},
+    {"cmd": "editor", "select": 8, "light_color": "warm", "light_intensity": 4.0, "light_range": 10},
+    {"cmd": "editor", "place": {"prefab": "Lamp", "position": [20.0, 2.0, -19.5], "body": "static"}},
+    {"cmd": "settle", "frames": 20},
+    {"cmd": "capture", "name": "lamp-on-wall"},
+    {"cmd": "renderer_debug", "taa": false, "ao": false, "light_shadows": false},
+    {"cmd": "settle", "frames": 20},
+    {"cmd": "capture", "name": "lamp-on-wall-shadows-off"},
+    {"cmd": "editor", "place": {"prefab": "Crate", "position": [19.3, 0.5, -19.0], "body": "static"}},
+    {"cmd": "renderer_debug", "taa": false, "ao": false, "light_shadows": true},
+    {"cmd": "settle", "frames": 20},
+    {"cmd": "capture", "name": "crate-shadow"},
+    {"cmd": "renderer_debug", "taa": false, "ao": false, "light_shadows": false},
+    {"cmd": "settle", "frames": 20},
+    {"cmd": "capture", "name": "crate-shadow-off"}
+  ],
+  "checks": [
+    {"field": "objects.4.prefab", "op": "eq", "value": "Lamp"},
+    {"field": "objects.4.position.x", "op": "eq", "value": 20},
+    {"field": "debug.lights.active", "op": "eq", "value": 1},
+    {"field": "capture.1.delta_mean", "op": "lt", "value": 0.001},
+    {"field": "capture.3.delta_mean", "op": "gt", "value": 0.1}
+  ]
+}
