@@ -33,6 +33,7 @@ Command_Kind :: enum {
 	Place,
 	Remove,
 	Get,
+	Reference,
 	Quit,
 }
 
@@ -220,6 +221,7 @@ Command :: struct {
 	place:          Place_Command,
 	remove:         Remove_Command,
 	get:            Get_Command,
+	reference:      Reference_Command,
 }
 
 command_name :: proc(kind: Command_Kind) -> string {

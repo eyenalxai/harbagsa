@@ -71,6 +71,7 @@ COMMAND_DESCRIPTIONS := [?]struct {
 	{.Place, "Create one object from a prefab without entering debug mode."},
 	{.Remove, "Delete one object by id without entering debug mode."},
 	{.Get, "Resolve one state or capture field and return its JSON scalar."},
+	{.Reference, "Compare the probe indirect term with a path-traced reference."},
 	{.Quit, "Close the session."},
 }
 

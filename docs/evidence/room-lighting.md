@@ -33,27 +33,27 @@ rays stay and scale the sun and point lights at strength 0.5.
 
 | Check | Measured | Gate | Passes |
 | --- | ---: | --- | --- |
-| First lane, west sun mean green | 39.75 | at least 2 | yes |
-| First lane, east sun mean green | 8.08 | below 20 and below west | yes |
-| Chamber, west sun mean green | 0.26 | below 0.5 | yes |
+| First lane, west sun mean green | 40.45 | at least 2 | yes |
+| First lane, east sun mean green | 9.59 | below 20 and below west | yes |
+| Chamber, west sun mean green | 0.24 | below 0.5 | yes |
 | Chamber, east sun mean green | 0.18 | below 0.5 | yes |
-| Chamber, west against east | 0.07 | equal within 0.1 | yes |
+| Chamber, west against east | 0.06 | equal within 0.1 | yes |
 | Chamber depth maximum | 0.9947 | below 0.999 | yes |
 | First lane depth maximum | 0.9907 | below 0.999 | yes |
-| Lamp on mean green | 183.10 | at least 80 | yes |
-| Lamp off mean green | 0.26 | below 0.5 | yes |
+| Lamp on mean green | 164.77 | at least 80 | yes |
+| Lamp off mean green | 0.24 | below 0.5 | yes |
 
 The dither floor is the output dither on black. The chamber does not receive a
 straight sun ray: no sun ray passes the four turns. The first lane is lit when
 the sun is west, because the sun shines through the west door. Under an east sun
-it is dim but not black; the 8.08 is transport through the connected light lock,
-not a wall leak. The chamber stays near the floor, 0.18 to 0.26. The door is
+it is dim but not black; the 9.59 is transport through the connected light lock,
+not a wall leak. The chamber stays near the floor, 0.18 to 0.24. The door is
 the only direct path for the sun.
 
 The lamp is a warm `Lamp` at `(14.5, 2.75, 7.0)` with intensity 2.5 and range
 10. It is placed with `place`, so no debug gizmo enters the frame. The lamp is
 the only light in the chamber, and the occlusion term darkens the direct light
-in the corners. Removing the lamp returns the view to 0.26, near the dither
+in the corners. Removing the lamp returns the view to 0.24, near the dither
 floor.
 
 The colour captures are `outside`, `door-out`, `lane1-west`, `lane1-east`,
