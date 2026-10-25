@@ -63,7 +63,7 @@ parse_input_fields :: proc(object: json.Object) -> (input: Input_Command, error:
 		input.right = f32(right)
 		input.has_right = true
 	}
-	if field_error := json_take_bool(object, "jump", &input.jump, &input.has_jump); field_error != "" {
+	if field_error := json_optional_bool(object, "jump", &input.jump, &input.has_jump); field_error != "" {
 		return {}, field_error
 	}
 	return input, ""

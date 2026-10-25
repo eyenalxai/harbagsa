@@ -132,7 +132,7 @@ json_bool :: proc(object: json.Object, key: string, value: ^bool) -> string {
 	return ""
 }
 
-json_take_bool :: proc(object: json.Object, key: string, value: ^bool, has: ^bool) -> string {
+json_optional_bool :: proc(object: json.Object, key: string, value: ^bool, has: ^bool) -> string {
 	raw, present := json_get(object, key)
 	if !present {
 		return ""

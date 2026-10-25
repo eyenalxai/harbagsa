@@ -22,7 +22,7 @@ parse_editor_light :: proc(object: json.Object) -> (Editor_Light, string) {
 	if value, has := json_get(object, "light_color"); has {
 		name, ok := json_string(value)
 		if !ok {
-			return {}, "'light_color' must be a string"
+			return {}, format_error("%s", "'light_color' must be a string")
 		}
 		color, parsed := game.light_color_parse(name)
 		if !parsed {

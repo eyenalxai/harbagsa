@@ -87,7 +87,7 @@ parse_editor :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command
 	}
 
 	command := Command{kind = .Editor}
-	if field_error := json_take_bool(object, "open", &command.editor.open, &command.editor.has_open); field_error != "" {
+	if field_error := json_optional_bool(object, "open", &command.editor.open, &command.editor.has_open); field_error != "" {
 		return {}, field_error
 	}
 	if value, has := json_get(object, "select"); has {
@@ -115,7 +115,7 @@ parse_editor :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command
 	if value, has := json_get(object, "height"); has {
 		height, ok := json_number(value)
 		if !ok || height < 0 {
-			return {}, "'height' must be a non-negative number"
+			return {}, format_error("%s", "'height' must be a non-negative number")
 		}
 		command.editor.height = f32(height)
 		command.editor.has_height = true
@@ -123,12 +123,12 @@ parse_editor :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command
 	if value, has := json_get(object, "yaw_deg"); has {
 		yaw, ok := json_number(value)
 		if !ok {
-			return {}, "'yaw_deg' must be a number"
+			return {}, format_error("%s", "'yaw_deg' must be a number")
 		}
 		command.editor.yaw_deg = f32(yaw)
 		command.editor.has_yaw = true
 	}
-	if field_error := json_take_bool(object, "snap", &command.editor.snap, &command.editor.has_snap); field_error != "" {
+	if field_error := json_optional_bool(object, "snap", &command.editor.snap, &command.editor.has_snap); field_error != "" {
 		return {}, field_error
 	}
 	if field_error := json_bool(object, "cancel", &command.editor.cancel); field_error != "" {
@@ -175,7 +175,7 @@ parse_editor :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command
 	command.editor.input = editor_input
 
 	if !editor_command_has_action(object) {
-		return {}, "editor needs at least one field"
+		return {}, format_error("%s", "editor needs at least one field")
 	}
 	return command, ""
 }
@@ -184,14 +184,14 @@ parse_editor :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command
 parse_editor_place :: proc(value: json.Value) -> (Editor_Place, string) {
 	object, ok := json_object(value)
 	if !ok {
-		return {}, "'place' must be an object"
+		return {}, format_error("%s", "'place' must be an object")
 	}
 	if key, unknown := json_unknown_key(object, {"prefab", "position", "yaw_deg", "body"}); unknown {
 		return {}, format_error("unknown editor place key %q", key)
 	}
 	name, name_ok := string_field(object, "prefab")
 	if !name_ok {
-		return {}, "editor 'place' needs a string 'prefab'"
+		return {}, format_error("%s", "editor 'place' needs a string 'prefab'")
 	}
 	prefab_id, parsed := game.prefab_parse(name)
 	if !parsed {
@@ -199,7 +199,7 @@ parse_editor_place :: proc(value: json.Value) -> (Editor_Place, string) {
 	}
 	position, position_ok := vec3_field(object, "position")
 	if !position_ok {
-		return {}, "editor 'place' needs a 'position' of three numbers"
+		return {}, format_error("%s", "editor 'place' needs a 'position' of three numbers")
 	}
 
 	place := Editor_Place {
@@ -210,7 +210,7 @@ parse_editor_place :: proc(value: json.Value) -> (Editor_Place, string) {
 	if yaw_value, has := json_get(object, "yaw_deg"); has {
 		yaw, yaw_ok := json_number(yaw_value)
 		if !yaw_ok {
-			return {}, "editor 'place' yaw_deg must be a number"
+			return {}, format_error("%s", "editor 'place' yaw_deg must be a number")
 		}
 		place.yaw_deg = f32(yaw)
 	}

@@ -28,7 +28,7 @@ parse_menu :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, 
 	}
 
 	command := Command{kind = .Menu}
-	if field_error := json_take_bool(object, "open", &command.menu.open, &command.menu.has_open); field_error != "" {
+	if field_error := json_optional_bool(object, "open", &command.menu.open, &command.menu.has_open); field_error != "" {
 		return {}, field_error
 	}
 	if value, has := json_get(object, "item"); has {
@@ -43,7 +43,7 @@ parse_menu :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, 
 		command.menu.item = item
 		command.menu.has_item = true
 	}
-	if field_error := json_take_bool(object, "activate", &command.menu.activate, &command.menu.has_activate); field_error != "" {
+	if field_error := json_optional_bool(object, "activate", &command.menu.activate, &command.menu.has_activate); field_error != "" {
 		return {}, field_error
 	}
 	if value, has := json_get(object, "direction"); has {
