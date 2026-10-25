@@ -1122,8 +1122,8 @@ run never created a renderer, and `renderer.active` is `false`.
 | `shadow_phase` | the sun sample phase the last frame used |
 | `light_count` | the point lights the last frame uploaded |
 | `cluster_overflow` | lights a cluster kept beyond its 256-index stride |
-| `probe_volume_count` | probe volumes the scene supplied; 6 in the current scene |
-| `probe_count` | probes in the live atlas; 537 in the current scene |
+| `probe_volume_count` | probe volumes the scene supplied; 8 in the current scene |
+| `probe_count` | probes in the live atlas; 633 in the current scene |
 | `probe_frame` | probe-update frames since the atlas was created |
 | `probe_energy` | mean linear RGB irradiance across the probe atlas |
 | `atlas_weight` | the type weight the active coverage atlas holds |
@@ -1304,7 +1304,7 @@ Change them with `--param` without editing the file:
 
 The scenario sets `"analysis": false` because its captures are different views,
 not a steady series. `make lighting` runs it with the sky, AO, ramp, sun
-angle, and arena coverage scenarios.
+angle, sealed-pair, and arena coverage scenarios.
 
 `scenarios/ddgi.json` isolates the probe term. It puts the camera in the chamber,
 turns the sun below the horizon, places one lamp, and captures the same view
@@ -1312,25 +1312,33 @@ with the probe indirect on and off. It checks the probe count, the volume count,
 the atlas energy, and that the on frame is brighter. The off frame still shows
 the direct lamp, so the difference is the bounce.
 
-`scenarios/ddgi-leak.json` puts the lamp in the chamber and the camera in the
-first lane. The solid wall and the four-turn light lock keep the one-bounce
-probe term out of the lane; the gate holds the lane mean at its no-lamp value.
-`scenarios/ddgi-door.json` looks through the room's west door with the sun below
-the horizon and checks the lamp lights the opening. `scenarios/ddgi-move.json`
-moves the lamp with the editor and checks both views stay lit.
+`scenarios/ddgi-sealed.json` builds a sealed two-room pair from static placed
+Walls and Platforms at (-10, -8). A lamp sits in room A and the camera in room B
+behind a solid shared wall. The wall capture stays at the dither floor before
+and after the lamp, and a depth capture proves the wall is in front of the
+camera. The scenario then removes the placed door segment from the shared wall
+in the same run. The doorway view brightens, and a view of the far wall is
+dimmer than the doorway. The opening is transport; the solid wall is the leak
+gate. `scenarios/ddgi-door.json` still looks through the room's static west door
+with the sun below the horizon, and `scenarios/ddgi-move.json` moves the lamp
+with the editor and checks both views stay lit.
 
 `scenarios/ddgi-arena.json` covers the open arena and the room exterior. It uses
 the `outside` camera from `room-lighting`, captures the whole frame, and measures
 the room's west face, which no sun ray reaches. The face mean must clear the old
 black level and its pure-black colour-key fraction must fall below 0.1. A second
 view at the chamber camera proves the sealed room stays at the dither floor and
-that its depth target holds no sky pixel. The scene supplies six probe volumes:
-the room first, a roof volume, and four perimeter volumes that stop at the room's
-outer wall. The room volume wins the sampler for every interior point, so the
-arena sky fill cannot light a room or a lane through a wall.
+that its depth target holds no sky pixel. The scene supplies eight probe volumes:
+the room first, two sealed-pair volumes next, a roof volume, and four perimeter
+volumes that stop at the room's outer wall. The room and pair volumes win the
+sampler for their interior points, so the arena sky fill cannot light a room or
+a lane through a wall. The pair uses one volume per room, so a room B surface
+never samples a room A probe; the gather keeps the reference 5 percent Chebyshev
+floor as a fallback inside the room.
 `tests/frame/probe_volumes.odin` keeps that ordering in the build: it checks the
-first volume, that no arena probe centre is inside the room footprint, that the
-arena bounds stop before the room interior, and that the open floor is covered.
+first three volumes, that no pair probe centre is inside a wall, that no arena
+probe centre is inside the room footprint, that the arena bounds stop before the
+room interior, and that the open floor is covered.
 
 The chamber is black, not merely shaded, before the lamp exists. The depth check
 proves the room is closed. The four-turn check proves that no straight sun ray
@@ -1579,8 +1587,8 @@ frame-rate change.
 - `src/renderer/text_shaper.odin`: FreeType and HarfBuzz shaping for the 2D layer.
 - `src/renderer/capture.odin`: the target copy and RGBA f32 decode.
 - `src/frame/`: shared scene assembly and draw for the game and the harness.
-- `src/frame/probe_volumes.odin`: the room, roof, and open-arena probe volumes,
-  and the room-first ordering.
+- `src/frame/probe_volumes.odin`: the room, sealed-pair, roof, and open-arena
+  probe volumes, and the room-first ordering.
 - `src/game/prefabs.odin`: the placed-object body modes, prefab catalog, and
   starting crate layout.
 - `src/game/objects.odin`: the placed-object list and the create, remove, move,
