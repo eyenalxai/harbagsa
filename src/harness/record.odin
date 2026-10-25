@@ -53,14 +53,15 @@ session_record_start :: proc(session: ^Session, path: string, include_scene := t
 		append(&session.recorder.recorded, scene_line)
 	}
 	if session.input.move_forward != 0 || session.input.move_right != 0 || session.input.jump_pressed {
-		input_line := fmt.aprintf(
-			`{{"cmd": "input", "forward": %g, "right": %g, "jump": %v}}`,
-			session.input.move_forward,
-			session.input.move_right,
-			session.input.jump_pressed,
-			allocator = session.allocator,
-		)
-		append(&session.recorder.recorded, input_line)
+		input := Input_Command {
+			forward     = session.input.move_forward,
+			right       = session.input.move_right,
+			jump        = session.input.jump_pressed,
+			has_forward = true,
+			has_right   = true,
+			has_jump    = true,
+		}
+		append(&session.recorder.recorded, input_command_json(input, session.allocator))
 	}
 	return ""
 }

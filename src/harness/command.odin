@@ -3,6 +3,8 @@ package harness
 
 import "core:mem"
 
+import "src:renderer"
+
 No_Fields_Command :: struct {}
 
 Command_Kind :: enum {
@@ -78,11 +80,9 @@ Captures_Command :: struct {
 
 Camera_Command :: struct {
 	position:     [3]f32,
-	look_at:      [3]f32,
 	yaw_rad:      f32,
 	pitch_rad:    f32,
 	fov_deg:      f32,
-	has_look_at:  bool,
 	has_fov:      bool,
 	has_angles:   bool,
 	clear:        bool,
@@ -161,38 +161,9 @@ Renderer_Debug_Field :: enum {
 Renderer_Debug_Resets :: bit_set[Renderer_Debug_Field]
 
 Renderer_Debug_Command :: struct {
-	clear:                   bool,
-	reset:                   Renderer_Debug_Resets,
-	taa:                     bool,
-	jitter:                  bool,
-	history_weight:          f32,
-	clamp:                   bool,
-	depth_trust:             bool,
-	freeze_shadow_phase:     bool,
-	shadow_phase:            int,
-	light_shadows:           bool,
-	synthetic_lights:        int,
-	sky:                     bool,
-	gi:                      bool,
-	ao:                      bool,
-	ao_radius:               f32,
-	ao_strength:             f32,
-	clip_height:             f32,
-	has_taa:                 bool,
-	has_jitter:              bool,
-	has_history_weight:      bool,
-	has_clamp:               bool,
-	has_depth_trust:         bool,
-	has_freeze_shadow_phase: bool,
-	has_shadow_phase:        bool,
-	has_light_shadows:       bool,
-	has_synthetic_lights:    bool,
-	has_sky:                 bool,
-	has_gi:                  bool,
-	has_ao:                  bool,
-	has_ao_radius:           bool,
-	has_ao_strength:         bool,
-	has_clip_height:         bool,
+	clear: bool,
+	reset: Renderer_Debug_Resets,
+	using patch: renderer.Renderer_Debug_Patch,
 }
 
 Command :: struct {

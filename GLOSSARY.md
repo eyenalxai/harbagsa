@@ -448,8 +448,12 @@ The image a capture reads: the final color, the velocity target, the history, th
 _Avoid_: Render layer
 
 **Capture format**:
-The output a capture writes: PNG for color, `float` for RGBA f32 values, `raw` for the stored texel bytes, or `stats` for the numeric summary.
+The output a capture writes: PNG for color, `float` for RGBA f32 values, `raw` for the stored texel bytes, `stats` for the numeric summary, or `profile` for a line or mean span.
 _Avoid_: Export mode
+
+**Capture option**:
+One extra capture block: region, profile, crop, histogram, steps, or color key. The parser checks the option against the format, and the recorder writes every option back into the recorded command.
+_Avoid_: Capture flag, modifier
 
 **Capture statistics**:
 The per-channel minimum, maximum, mean, standard deviation, and gradient of a capture over an optional region, plus the median screen motion in texels for a velocity capture over covered pixels. Each block names its channels `x`, `y`, `z`, and `w`. The gradient is the mean absolute difference between 4-neighbour pixels; a region with no neighbour pair reports zero. A colour key adds the count of pixels within a tolerance of one RGB value.
@@ -762,10 +766,18 @@ _Avoid_: Reset flag
 
 **Renderer debug override**:
 A gated change to a renderer input for diagnosis: TAA, jitter, history weight,
-clamp, depth trust, shadow phase, point-light shadows, synthetic lights, the AO
-radius and strength, or the plan-view clip height. Every change resets history.
-A field set to `null` restores that field's default without clearing the others.
+clamp, depth trust, shadow phase, point-light shadows, synthetic lights, the sky,
+probe indirect, ambient occlusion, the AO radius and strength, or the plan-view
+clip height. Every change resets history. A field set to `null` restores that
+field's default without clearing the others.
 _Avoid_: Debug flag
+
+**Renderer debug patch**:
+The sparse set of renderer debug override fields that one command or scene block
+carries. An absent field keeps its live value; a `null` field restores its
+default. A scene snapshot writes every effective field, so a repro restores the
+exact override.
+_Avoid_: Debug struct, override delta
 
 **Debug override gate**:
 The `ENABLE_RENDERER_DEBUG` build define or the `--debug-renderer` flag that lets a run use renderer debug overrides. A release build without either rejects the command.
