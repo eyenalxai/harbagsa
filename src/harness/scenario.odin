@@ -101,7 +101,10 @@ scenario_parameter_values :: proc(
 	for name, parameter in parameters {
 		values[index] = {
 			name  = strings.clone(name, allocator),
-			value = strings.clone(scenario_parameter_text(parameter, context.temp_allocator), allocator),
+			value = strings.clone(
+				scenario_parameter_text(parameter, context.temp_allocator),
+				allocator,
+			),
 		}
 		index += 1
 	}
