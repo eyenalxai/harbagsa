@@ -294,6 +294,8 @@ with `value`, or with another field with `other`:
 `{"cmd":"check","field":"capture.1.stats.mean.y","op":"gt","other":"capture.0.stats.mean.y"}`.
 A type mismatch or a missing field is a check error. `capture.N.*` names one
 capture in the window; `capture.first` and `capture.last` are aliases.
+`capture.named.<name>.*` names a capture by its `name`; a missing name is a
+check error.
 
 Check fields use the `state.json` shape, for example `player.position.y`,
 `player.grounded`, `objects.1.position.z`, `objects.count`,
