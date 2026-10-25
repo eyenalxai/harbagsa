@@ -185,8 +185,9 @@ The probe atlas stores encoded irradiance and depth moments. Moving geometry
 relocates probe centres but does not reset the irradiance blend; a crate that
 moves inside a lit room keeps its old indirect until the blend converges.
 
-There is no path-traced reference in this change. It needs a scene and a
-tolerance design that compares a multi-bounce reference with the one-bounce
-probe field. It is a follow-up on issue #320. The probe field is one diffuse
-bounce; it is not a path-traced renderer and it does not claim modern-game
-parity.
+The path-traced reference is [`docs/evidence/ddgi-reference.md`](ddgi-reference.md).
+It measures the probe field against a 3-bounce CPU estimator and fails the
+current tree: the probe ray omits the hit surface albedo, and the room volume's
+high z bound sits one ULP below the north wall, so that face reads zero. The
+probe field is one diffuse bounce; it is not a path-traced renderer and does not
+claim modern-game parity.
