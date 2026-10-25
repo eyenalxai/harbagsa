@@ -18,7 +18,6 @@ Capture_Target :: enum {
 	Scene_Color,
 }
 
-MAX_CAPTURE_TARGETS :: 5
 Capture_Targets :: bit_set[Capture_Target]
 
 Frame_Capture :: struct {
