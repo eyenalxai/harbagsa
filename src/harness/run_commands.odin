@@ -28,7 +28,7 @@ execute_commands :: proc(session: ^Session, scenario: Scenario) -> string {
 
 @(private)
 rewrite_capture_paths :: proc(session: ^Session, out_dir: string) {
-	for &capture in session.captures {
+	for &capture in session.capture.captures {
 		if capture.path == "" {
 			continue
 		}

@@ -201,17 +201,17 @@ autocorrelation :: proc(series: []f32, mean: f32, variance: f64, lag: int) -> f3
 }
 
 session_refresh_analysis :: proc(session: ^Session) {
-	session.has_analysis = false
-	session.analysis = {}
-	if !session.analysis_config.enabled || len(session.captures) == 0 {
+	session.analysis.has_summary = false
+	session.analysis.summary = {}
+	if !session.analysis.config.enabled || len(session.capture.captures) == 0 {
 		return
 	}
-	frames := analysis_frames(session.captures[:], session.allocator)
+	frames := analysis_frames(session.capture.captures[:], session.allocator)
 	defer delete(frames, session.allocator)
-	window := analysis_window(frames, session.analysis_config)
+	window := analysis_window(frames, session.analysis.config)
 	comparable := analysis_comparable(window, session.allocator)
 	defer delete(comparable, session.allocator)
-	session.analysis = analysis_summary(comparable)
+	session.analysis.summary = analysis_summary(comparable)
 	if len(comparable) > 0 {
 		image, width, height, image_ok := analysis_load_png(
 			comparable[len(comparable) - 1].path,
@@ -219,7 +219,7 @@ session_refresh_analysis :: proc(session: ^Session) {
 		)
 		if image_ok {
 			bands_region: Maybe(Capture_Region)
-			if spec, has_region := session.analysis_config.region.?; has_region {
+			if spec, has_region := session.analysis.config.region.?; has_region {
 				resolved, region_error := capture_region_resolve(spec, width, height)
 				if region_error != "" {
 					delete(image, session.allocator)
@@ -227,11 +227,11 @@ session_refresh_analysis :: proc(session: ^Session) {
 				}
 				bands_region = resolved
 			}
-			session.analysis.bands = analysis_bands(image, width, height, bands_region)
+			session.analysis.summary.bands = analysis_bands(image, width, height, bands_region)
 			delete(image, session.allocator)
 		}
 	}
-	session.has_analysis = true
+	session.analysis.has_summary = true
 }
 
 analysis_pairs :: proc(window: []Capture_Result, allocator: mem.Allocator) -> []Analysis_Pair {

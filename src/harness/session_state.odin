@@ -9,23 +9,23 @@ import "src:game"
 
 @(private)
 session_refresh_renderer :: proc(session: ^Session) {
-	if session.backend == nil || session.backend.snapshot == nil {
+	if session.render.backend == nil || session.render.backend.snapshot == nil {
 		return
 	}
-	if session.backend.get_debug != nil {
-		session.renderer_debug = session.backend.get_debug(session.backend.ctx)
+	if session.render.backend.get_debug != nil {
+		session.render.debug = session.render.backend.get_debug(session.render.backend.ctx)
 	}
-	snapshot := session.backend.snapshot(session.backend.ctx)
-	session.renderer_report = snapshot.report
-	session.has_render_digest = snapshot.has_digest
-	session.render_digest = snapshot.digest
+	snapshot := session.render.backend.snapshot(session.render.backend.ctx)
+	session.render.report = snapshot.report
+	session.render.has_digest = snapshot.has_digest
+	session.render.digest = snapshot.digest
 	if !snapshot.has_digest {
 		return
 	}
-	if session.render_digest_text != "" {
-		delete(session.render_digest_text, session.allocator)
+	if session.render.digest_text != "" {
+		delete(session.render.digest_text, session.allocator)
 	}
-	session.render_digest_text = digest.hex(snapshot.digest, session.allocator)
+	session.render.digest_text = digest.hex(snapshot.digest, session.allocator)
 }
 
 session_state :: proc(session: ^Session) -> State {
@@ -36,9 +36,9 @@ session_state :: proc(session: ^Session) -> State {
 		&session.hud,
 		&session.debug,
 		session_camera(session),
-		session.renderer_report,
-		session.render_digest_text,
-		{ frames = session.settle_frames, converged = session.settle_converged },
+		session.render.report,
+		session.render.digest_text,
+		{ frames = session.settle.frames, converged = session.settle.converged },
 		session.allocator,
 	)
 }

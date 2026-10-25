@@ -33,10 +33,10 @@ a_capture_without_rendering_is_skipped :: proc(t: ^testing.T) {
 	session, error := harness.session_create(context.allocator)
 	testing.expectf(t, error == "", "session create failed: %s", error)
 	defer harness.session_destroy(&session)
-	session.render_enabled = false
+	session.render.enabled = false
 
 	reply := execute(t, &session, `{"cmd": "capture", "name": "skipped"}`)
 	defer harness.reply_destroy(&reply, context.allocator)
 	testing.expect(t, reply.ok, "a no-render capture failed")
-	testing.expect_value(t, len(session.captures), 0)
+	testing.expect_value(t, len(session.capture.captures), 0)
 }

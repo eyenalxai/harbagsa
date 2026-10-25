@@ -16,12 +16,9 @@ session_perf :: proc(session: ^Session, command: Perf_Command) -> string {
 	}
 	// One trace per run keeps the trace file and the report aligned. A second
 	// trace would overwrite the first one's samples.
-	if session.has_trace && command.has_trace {
+	if session.perf.has_trace && command.has_trace {
 		return format_error("a run holds one perf trace; use a trace on one perf command")
 	}
-	session.perf_report = {}
-	session.has_perf_report = false
-
 	if frame_error := session_perf_frame(session); frame_error != "" {
 		return frame_error
 	}
@@ -57,7 +54,7 @@ session_perf :: proc(session: ^Session, command: Perf_Command) -> string {
 		if frame_error := session_perf_frame(session); frame_error != "" {
 			return frame_error
 		}
-		if sample, ok := perf.last_sample(&session.perf); ok && sample.frame == session.perf.frame {
+		if sample, ok := perf.last_sample(&session.perf.state); ok && sample.frame == session.perf.state.frame {
 			append(&samples, sample)
 		}
 		if session.quit {
@@ -69,16 +66,16 @@ session_perf :: proc(session: ^Session, command: Perf_Command) -> string {
 		return format_error("perf measured no frames")
 	}
 	if command.has_trace {
-		session.trace_name = strings.clone(command.trace, session.allocator)
-		session.trace_samples = make([dynamic]perf.Sample, 0, len(samples), session.allocator)
-		append(&session.trace_samples, ..samples[:])
-		session.has_trace = true
+		session.perf.trace_name = strings.clone(command.trace, session.allocator)
+		session.perf.trace_samples = make([dynamic]perf.Sample, 0, len(samples), session.allocator)
+		append(&session.perf.trace_samples, ..samples[:])
+		session.perf.has_trace = true
 		record := Trace_Record {
 			name = strings.clone(command.trace, session.allocator),
 			samples = make([]perf.Sample, len(samples), session.allocator),
 		}
 		copy(record.samples, samples[:])
-		append(&session.traces, record)
+		append(&session.perf.traces, record)
 	}
 	summary := perf.Summary {
 		measured = len(samples),
@@ -93,9 +90,7 @@ session_perf :: proc(session: ^Session, command: Perf_Command) -> string {
 		command.prime,
 		prime_frames,
 	)
-	append(&session.perf_reports, report)
-	session.perf_report = session.perf_reports[len(session.perf_reports) - 1]
-	session.has_perf_report = true
+	append(&session.perf.reports, report)
 	return ""
 }
 
@@ -104,23 +99,23 @@ session_perf_frame :: proc(session: ^Session) -> string {
 	if timeout := session_check_timeout(session); timeout != "" {
 		return timeout
 	}
-	perf.begin_frame(&session.perf)
-	perf.mark(&session.perf, .Events)
+	perf.begin_frame(&session.perf.state)
+	perf.mark(&session.perf.state, .Events)
 	input := session.input
 	game.simulation_step(&session.sim, input, game.SIMULATION_STEP)
 	session.input.jump_pressed = false
 	session.frame += 1
-	perf.mark(&session.perf, .Simulation)
-	if session.backend != nil {
+	perf.mark(&session.perf.state, .Simulation)
+	if session.render.backend != nil {
 		if draw_error := session_draw(session, {}); draw_error != "" {
 			return draw_error
 		}
-		perf.set_gpu(&session.perf, session.backend.gpu_times(session.backend.ctx))
+		perf.set_gpu(&session.perf.state, session.render.backend.gpu_times(session.render.backend.ctx))
 	} else {
-		perf.mark(&session.perf, .Build)
-		perf.mark(&session.perf, .Record)
+		perf.mark(&session.perf.state, .Build)
+		perf.mark(&session.perf.state, .Record)
 	}
-	perf.mark(&session.perf, .Present)
-	perf.end_frame(&session.perf)
+	perf.mark(&session.perf.state, .Present)
+	perf.end_frame(&session.perf.state)
 	return ""
 }
