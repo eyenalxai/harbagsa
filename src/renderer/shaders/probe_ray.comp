@@ -119,13 +119,14 @@ vec3 hit_radiance(vec3 origin, vec3 direction, float distance, out float hit_dis
     bool backface = dot(normal, direction) > 0.0;
 
     ObjectData object = scene.objects[instance_index];
-    vec3 radiance = object.color.rgb * object.color.a;
+    vec3 albedo = object.color.rgb;
+    vec3 radiance = albedo * object.color.a;
 
     vec3 to_light = normalize(-camera.light_direction.xyz);
     float diffuse = max(dot(normal, to_light), 0.0);
     if (diffuse > 0.0) {
         if (!occluded(hit_position + normal * 0.002, to_light, SUN_RAY_MASK, 1000.0)) {
-            radiance += SUN_COLOR * diffuse;
+            radiance += albedo * SUN_COLOR * diffuse;
         }
     }
 
@@ -157,7 +158,7 @@ vec3 hit_radiance(vec3 origin, vec3 direction, float distance, out float hit_dis
                 continue;
             }
         }
-        radiance += light.color.rgb * (light.position.w * light_diffuse * falloff);
+        radiance += albedo * light.color.rgb * (light.position.w * light_diffuse * falloff);
     }
 
     hit_distance = backface ? -t : t;
