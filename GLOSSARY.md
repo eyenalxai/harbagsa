@@ -135,6 +135,14 @@ reaches the space behind it. The room's lock turns four times: east, south,
 west, south, and east. The tunnel is 2.0 m wide and 2.4 m high.
 _Avoid_: Air lock, light trap
 
+**Sealed pair**:
+The two-room harness scene at (-10, -8). Eight static placed Walls and two
+Platform roofs form room A and room B around a solid shared wall. A removable
+Wall segment fills the shared doorway, so one scenario gates both a wall leak
+and doorway transport. The pair has its own 1 m probe volume, after the room
+volume and before the arena strips.
+_Avoid_: Leak box, test room
+
 **World palette**:
 The scene colours, authored as linear RGBA floats because the renderer shades in
 linear space. The 2D layer authors sRGB hex instead; a value does not move
@@ -185,7 +193,7 @@ The forward lighting path that builds a light index list per cluster in a comput
 _Avoid_: Tiled forward, light grid
 
 **Probe volume**:
-A box in world space with a probe spacing and a 3D count. The scene supplies them as data: the room network, the roof over the room, and four perimeter strips over the open arena. The room volume comes first, so the sampler never picks an arena probe for an interior surface. The renderer allocates one probe per cell and samples the eight probes around a surface.
+A box in world space with a probe spacing and a 3D count. The scene supplies them as data: the room network, the sealed pair, the roof over the room, and four perimeter strips over the open arena. The room volume comes first and the sealed pair comes second, so the sampler never picks an arena probe for an interior surface. The renderer allocates one probe per cell and samples the eight probes around a surface.
 _Avoid_: Light grid, lightmap
 
 **DDGI**:

@@ -25,7 +25,7 @@
     {"cmd": "capture", "name": "chamber-depth", "target": "depth", "format": "stats"}
   ],
   "checks": [
-    {"field": "renderer.probe_volume_count", "op": "eq", "value": 6},
+    {"field": "renderer.probe_volume_count", "op": "eq", "value": 7},
     {"field": "capture.named.arena-shade.stats.mean.y", "op": "gt", "value": 20},
     {"field": "capture.named.arena-shade.stats.color_key.fraction", "op": "lt", "value": 0.1},
     {"field": "capture.named.arena-shade-zoom.written_width", "op": "eq", "value": 560},

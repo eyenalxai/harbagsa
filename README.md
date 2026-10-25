@@ -975,16 +975,24 @@ static arena geometry: walk in through the west door and follow the four turns.
 chamber, turns the sun below the horizon, and places one lamp. It captures the
 same view with the probe indirect on and off, checks the probe count and atlas
 energy, and requires the on frame to be brighter. The off frame still shows the
-direct lamp, so the difference is the bounce. `scenarios/ddgi-leak.json` puts the
-lamp in the chamber and checks that the lane stays dark while the chamber is
-lit. The lane and the chamber are connected by the light lock, so that scenario
-is not a sealed leak pair; the sealed pair is follow-up. `scenarios/ddgi-door.json`
-looks through the west door and checks the lamp lights the opening.
-`scenarios/ddgi-move.json` moves the lamp with the editor and checks the room
-stays lit. `scenarios/ddgi-arena.json` uses the `outside` camera, gates the
-room's shaded west face above the old black level, and checks that the sealed
-chamber stays dark with no sky depth pixel. The result is in
-[docs/evidence/ddgi.md](docs/evidence/ddgi.md).
+direct lamp, so the difference is the bounce.
+
+`scenarios/ddgi-sealed.json` builds a sealed two-room pair from static placed
+Walls and Platforms at (-10, -8): a lamp in room A, the camera in room B, and a
+solid shared wall with a removable door segment. The wall view stays at the
+dither floor before and after the lamp, and its depth target proves the wall is
+in front of the camera. The scenario then removes the door segment in the same
+run: room B brightens through the opening, and the far wall is dimmer than the
+doorway. That is transport, not a leak. `scenarios/ddgi-door.json` still covers
+the room's static west door, and `scenarios/ddgi-move.json` moves the lamp with
+the editor and checks the room stays lit.
+
+`scenarios/ddgi-arena.json` uses the `outside` camera, gates the room's shaded
+west face above the old black level, and checks that the sealed chamber stays
+dark with no sky depth pixel. The result is in
+[docs/evidence/ddgi.md](docs/evidence/ddgi.md). The probe field is one diffuse
+bounce on a 1 m test grid and a coarse 4 m arena grid. It is not a path-traced
+reference, and it does not claim modern-game parity.
 
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window
