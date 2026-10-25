@@ -170,6 +170,21 @@ capture_stats_field :: proc(stats: Capture_Stats, path: string) -> (Check_Value,
 		}
 		return {kind = .Number, number = f64(median)}, ""
 	}
+	if strings.has_prefix(path, "steps.") {
+		steps, has_steps := stats.steps.?
+		if !has_steps {
+			return {}, format_error("%s", "the last capture has no step statistics")
+		}
+		switch path[len("steps."):] {
+		case "count":
+			return {kind = .Number, number = f64(steps.count)}, ""
+		case "pairs":
+			return {kind = .Number, number = f64(steps.pairs)}, ""
+		case "max":
+			return {kind = .Number, number = f64(steps.max)}, ""
+		}
+		return {}, fmt.aprintf("unknown capture step field %q", path, allocator = context.allocator)
+	}
 	head, tail, has_tail := split_field(path)
 	if !has_tail {
 		return {}, fmt.aprintf("unknown capture statistics field %q", path, allocator = context.allocator)

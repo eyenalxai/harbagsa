@@ -60,6 +60,11 @@ Direct sun buries the sky term, so a full AO band on a sunlit floor reads as
 dirt. The gate reuses the sun visibility and costs no ray. Shadowed surfaces
 keep the whole contact term.
 
+The ambient uses 8 rays and the sun 16. A partial count carries a per-pixel,
+per-frame offset inside its own step; a full or empty count stays exact. Without
+that offset the shade steps in eighths and the floor below a ramp shows contour
+bands. The output dither is a separate, last step for the 8-bit write.
+
 If a surface must look different, change its albedo. Do not add a lighting term.
 
 ## No texture
