@@ -21,7 +21,6 @@ Pass :: struct {
 	bind_camera:  bool,
 	has_rendering: bool,
 	draw:         proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass),
-	box_count:    int,
 	image_index:  u32,
 	boxes:        []geometry.Box,
 }

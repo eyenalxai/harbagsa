@@ -51,7 +51,7 @@ COMMANDS := [?]Command_Row {
 	{.Record, "record", parse_record, execute_record, .Skip, destroy_record, .None},
 	{.Replay, "replay", parse_replay, execute_replay, .Skip, destroy_replay, .Optional},
 	{.Perf, "perf", parse_perf, execute_perf, .Skip, destroy_perf, .Required},
-	{.Renderer_Debug, "renderer_debug", parse_renderer_debug_row, execute_renderer_debug, .Raw, nil, .None},
+	{.Renderer_Debug, "renderer_debug", parse_renderer_debug_row, execute_renderer_debug, .Raw, nil, .Optional},
 	{.Displays, "displays", parse_displays, execute_displays, .Raw, destroy_displays, .None},
 	{.Rows, "rows", parse_no_fields, execute_rows, .Skip, nil, .None},
 	{.Quit, "quit", parse_no_fields, execute_quit, .Skip, nil, .None},

@@ -21,7 +21,7 @@ light_target :: proc(
 	settings: Light_Settings,
 	ok: bool,
 ) {
-	if dm.palette.open || dm.placement.armed {
+	if editor_uses_next_placement(dm) {
 		if !prefab_has_light(palette_selected(dm.palette)) {
 			return .None, INVALID_OBJECT_ID, {}, false
 		}
@@ -49,14 +49,7 @@ edit_light_change :: proc(dm: ^Debug_Mode, sim: ^Simulation, change: Light_Chang
 	if !ok {
 		return edit_fail(.No_Lamp)
 	}
-	next := light_adjust(settings, change)
-	if next == settings {
-		return edit_ok()
-	}
-	if !light_store(dm, sim, target, id, next) {
-		return edit_fail(.Failed)
-	}
-	return edit_ok()
+	return light_apply(dm, sim, target, id, settings, light_adjust(settings, change))
 }
 
 @(private)
@@ -68,14 +61,7 @@ edit_light_set_color :: proc(dm: ^Debug_Mode, sim: ^Simulation, color: Light_Col
 	if !ok {
 		return edit_fail(.No_Lamp)
 	}
-	next := light_with_color(settings, color)
-	if next == settings {
-		return edit_ok()
-	}
-	if !light_store(dm, sim, target, id, next) {
-		return edit_fail(.Failed)
-	}
-	return edit_ok()
+	return light_apply(dm, sim, target, id, settings, light_with_color(settings, color))
 }
 
 @(private)
@@ -91,14 +77,7 @@ edit_light_set_intensity :: proc(
 	if !ok {
 		return edit_fail(.No_Lamp)
 	}
-	next := light_with_intensity(settings, intensity)
-	if next == settings {
-		return edit_ok()
-	}
-	if !light_store(dm, sim, target, id, next) {
-		return edit_fail(.Failed)
-	}
-	return edit_ok()
+	return light_apply(dm, sim, target, id, settings, light_with_intensity(settings, intensity))
 }
 
 @(private)
@@ -110,7 +89,17 @@ edit_light_set_range :: proc(dm: ^Debug_Mode, sim: ^Simulation, range: f32) -> E
 	if !ok {
 		return edit_fail(.No_Lamp)
 	}
-	next := light_with_range(settings, range)
+	return light_apply(dm, sim, target, id, settings, light_with_range(settings, range))
+}
+
+@(private)
+light_apply :: proc(
+	dm: ^Debug_Mode,
+	sim: ^Simulation,
+	target: Light_Edit_Target,
+	id: Object_Id,
+	settings, next: Light_Settings,
+) -> Edit_Result {
 	if next == settings {
 		return edit_ok()
 	}

@@ -53,7 +53,8 @@ The order is the triage order. A broken interaction outranks a weak colour.
    renderer can produce, not over a dim test scene. The floors are in
    [colour.md](../ui/colour.md).
 4. **Fixed fields.** Every number that changes during play is in a fixed-width
-   field and drawn in mono. The panel width must not move.
+   field and drawn in mono. The panel width must not move on a selection or a
+   value change; a type-weight change may resize it once.
 5. **Token only.** No literal colour and no bare pixel size in
    `src/renderer/hud.odin`, `src/renderer/hud_menu.odin`,
    `src/renderer/hud_rows.odin`, or `src/ui/layout.odin`. The one

@@ -157,3 +157,17 @@ state_marshals_with_the_tagged_struct :: proc(t: ^testing.T) {
 		testing.expect(t, strings.contains(string(data), `"render_digest"`), "the state JSON lost a tag")
 	}
 }
+
+@(test)
+a_state_command_does_not_advance_the_menu_status :: proc(t: ^testing.T) {
+	session, error := harness.session_create(context.allocator)
+	testing.expectf(t, error == "", "session create failed: %s", error)
+	defer harness.session_destroy(&session)
+	game.menu_open(&session.hud.menu)
+	session.hud.menu.status = "unchanged"
+	session.hud.menu.status_remaining = 0.5
+
+	state := harness.session_state(&session)
+	defer harness.state_destroy(&state, context.allocator)
+	testing.expect_value(t, session.hud.menu.status_remaining, f32(0.5))
+}

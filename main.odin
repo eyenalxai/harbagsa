@@ -241,7 +241,7 @@ run :: proc() -> bool {
 				&sim,
 				editor_motion(events),
 				editor.actions[:editor.action_count],
-				false,
+				hud.menu.open,
 				delta,
 			)
 		}

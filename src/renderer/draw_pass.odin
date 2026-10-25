@@ -13,6 +13,10 @@ bind_camera :: proc(
 	vk.CmdBindDescriptorSets(command_buffer, .GRAPHICS, layout, 0, 1, &descriptor_set, 0, nil)
 }
 
+target_extent_vk :: proc(r: ^Renderer) -> vk.Extent2D {
+	return {r.target.config.width, r.target.config.height}
+}
+
 set_viewport :: proc(command_buffer: vk.CommandBuffer, width, height: u32) {
 	viewport := vk.Viewport {
 		width = f32(width),

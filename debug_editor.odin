@@ -58,12 +58,6 @@ handle_editor_events :: proc(
 		events.secondary_pressed = false
 	}
 
-	// L hands the cursor back before the sun mode takes the same key.
-	if palette_open && events.sun_placement_pressed {
-		add_action(state, game.Palette_Close{})
-		palette_open = false
-	}
-
 	if events.flip_body_pressed {
 		add_action(state, game.Flip_Body{})
 		events.flip_body_pressed = false

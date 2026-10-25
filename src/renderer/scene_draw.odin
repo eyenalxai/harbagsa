@@ -48,7 +48,7 @@ record_scene :: proc(
 
 	// The recorder owns the renderer-internal inputs, so one value goes to the
 	// uniform, the digest, and the pass list.
-	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
+	extent := target_extent_vk(r)
 	// The camera reset runs before the jitter advances, because a reset puts the
 	// jitter index back to zero.
 	taa_note_camera(r, input.camera)
@@ -83,7 +83,7 @@ record_scene :: proc(
 	write_timing_start(r, command_buffer)
 	for kind in perf.PASS_ORDER {
 		pass: Pass
-		build_pass(r, &pass, kind, image_index, input.boxes, box_count)
+		build_pass(r, &pass, kind, image_index, input.boxes)
 		record_pass(r, command_buffer, &pass)
 		write_timing(r, command_buffer, kind)
 	}

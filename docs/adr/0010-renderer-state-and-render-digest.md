@@ -38,9 +38,9 @@ scene.
   because they draw after the resolve; the view flags already record whether
   each is present. A reflection test fails when a field has no row.
 - `Renderer_Report` is the one report type, with JSON field tags. `Debug_Report`
-  is its nested debug block. `REPORT_FIELDS` is the one path table; the harness
-  check paths read it, and a reflection test pins every struct field and JSON
-  tag to a row. `last_reset` is the reason name string.
+  is its nested debug block. The state schema's reflection walk (ADR-0022)
+  resolves `renderer.*` from the same struct and tags, so there is no separate
+  report path table. `last_reset` is the reason name string.
 - `history_weight` is the weight the next resolve would give the history,
   `count / (count + 1)`, from the renderer's convergence counter. A per-pixel
   count would need a readback; the scalar is enough to tell convergence from a

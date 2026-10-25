@@ -25,7 +25,7 @@ every_pass_kind_builds_one_scope :: proc(t: ^testing.T) {
 
 	for kind in perf.PASS_ORDER {
 		pass: renderer.Pass
-		renderer.build_pass(&r, &pass, kind, 0, nil, 0)
+		renderer.build_pass(&r, &pass, kind, 0, nil)
 		testing.expect_value(t, pass.name, kind)
 		testing.expect_value(t, pass.has_rendering, kind != .Tlas)
 		has_barriers := pass.barriers != nil

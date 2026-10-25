@@ -153,4 +153,9 @@ render_input_gains_a_digest_row_with_every_field :: proc(t: ^testing.T) {
 		}
 		testing.expectf(t, found, "Render_Input.%s has no digest row", field.name)
 	}
+	for row in renderer.RENDER_DIGEST_FIELDS {
+		if !row.hashed {
+			testing.expectf(t, row.reason != "", "unhashed input %q has no reason", row.name)
+		}
+	}
 }

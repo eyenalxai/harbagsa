@@ -8,6 +8,7 @@ Render_Digest_Field :: struct {
 	name:   string,
 	hashed: bool,
 	write:  proc(hash: ^digest.FNV, input: Render_Input),
+	reason: string,
 }
 
 // The digest names the effective render inputs, not the game state. Two frames
@@ -15,21 +16,21 @@ Render_Digest_Field :: struct {
 // `debug_lines` are unhashed on purpose: they draw after the resolve, and the
 // view flags already record whether each is present.
 RENDER_DIGEST_FIELDS := [?]Render_Digest_Field {
-	{"width", true, write_width},
-	{"height", true, write_height},
-	{"camera", true, write_camera},
-	{"light_direction", true, write_light_direction},
-	{"sun_angular_diameter", true, write_sun_angular_diameter},
-	{"boxes", true, write_boxes},
-	{"lights", true, write_lights},
-	{"jitter", true, write_jitter},
-	{"shadow_phase", true, write_shadow_phase},
-	{"atlas_weight", true, write_atlas_weight},
-	{"sky", true, write_sky},
-	{"ao", true, write_ao},
-	{"view_flags", true, write_view_flags},
-	{"debug_lines", false, nil},
-	{"hud", false, nil},
+	{"width", true, write_width, ""},
+	{"height", true, write_height, ""},
+	{"camera", true, write_camera, ""},
+	{"light_direction", true, write_light_direction, ""},
+	{"sun_angular_diameter", true, write_sun_angular_diameter, ""},
+	{"boxes", true, write_boxes, ""},
+	{"lights", true, write_lights, ""},
+	{"jitter", true, write_jitter, ""},
+	{"shadow_phase", true, write_shadow_phase, ""},
+	{"atlas_weight", true, write_atlas_weight, ""},
+	{"sky", true, write_sky, ""},
+	{"ao", true, write_ao, ""},
+	{"view_flags", true, write_view_flags, ""},
+	{"debug_lines", false, nil, "draws after the resolve"},
+	{"hud", false, nil, "draws after the resolve"},
 }
 
 // The digest names the effective render inputs, not the game state. Two frames

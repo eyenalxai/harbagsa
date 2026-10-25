@@ -177,11 +177,17 @@ edit_ok :: proc() -> Edit_Result {
 }
 
 edit_no_change :: proc() -> Edit_Result {
-	return {}
+	return {reason = .No_Change}
 }
 
 edit_fail :: proc(reason: Edit_Reason) -> Edit_Result {
 	return {reason = reason}
+}
+
+// The open palette or the armed tool owns the next placement. Body and light
+// edits use this one decision.
+editor_uses_next_placement :: proc(dm: ^Debug_Mode) -> bool {
+	return dm.palette.open || dm.placement.armed
 }
 
 edit_reason_message :: proc(reason: Edit_Reason) -> string {

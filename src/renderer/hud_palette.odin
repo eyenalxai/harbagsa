@@ -281,10 +281,9 @@ palette_hit_test :: proc(r: ^Renderer, pointer: [2]f32, item_count: int) -> Pale
 	ctx: Layout_Context
 	layout_context_init(&ctx, ui_theme_init(height), nil, f32(width), f32(height))
 	layout := ui.palette_layout(ctx.inputs, item_count)
-	x := pointer.x * f32(width)
-	y := pointer.y * f32(height)
+	point := ui.pointer_to_target(pointer, f32(width), f32(height))
 	return {
-		inside = ui.rect_contains(layout.panel, x, y),
-		card = ui.palette_card_at(layout, pointer),
+		inside = ui.rect_contains(layout.panel, point.x, point.y),
+		card = ui.palette_card_at(layout, point),
 	}
 }

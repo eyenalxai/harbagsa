@@ -203,8 +203,8 @@ palette_hit_test_matches_the_draw_and_skips_the_empty_slot :: proc(t: ^testing.T
 	for index in 0 ..< layout.card_count {
 		card := layout.cards[index]
 		pointer := [2]f32 {
-			(card.x + card.width * 0.5) / 800.0,
-			(card.y + card.height * 0.5) / 600.0,
+			card.x + card.width * 0.5,
+			card.y + card.height * 0.5,
 		}
 		testing.expectf(
 			t,
@@ -216,18 +216,18 @@ palette_hit_test_matches_the_draw_and_skips_the_empty_slot :: proc(t: ^testing.T
 
 	empty := layout.cards[ui.PALETTE_SLOTS - 1]
 	empty_pointer := [2]f32 {
-		(empty.x + empty.width * 0.5) / 800.0,
-		(empty.y + empty.height * 0.5) / 600.0,
+		empty.x + empty.width * 0.5,
+		empty.y + empty.height * 0.5,
 	}
 	testing.expect_value(t, ui.palette_card_at(layout, empty_pointer), -1)
 
 	gap_pointer := [2]f32 {
-		(layout.cards[0].x + layout.cards[0].width + 1.0) / 800.0,
-		(layout.cards[0].y + layout.cards[0].height * 0.5) / 600.0,
+		layout.cards[0].x + layout.cards[0].width + 1.0,
+		layout.cards[0].y + layout.cards[0].height * 0.5,
 	}
 	testing.expect_value(t, ui.palette_card_at(layout, gap_pointer), -1)
 	testing.expect_value(t, ui.palette_card_at(layout, {0.0, 0.0}), -1)
-	testing.expect_value(t, ui.palette_card_at(layout, {0.99, 0.99}), -1)
+	testing.expect_value(t, ui.palette_card_at(layout, {799.0, 599.0}), -1)
 	testing.expect(
 		t,
 		palette_geometry(theme, 800, 600, 0).panel == layout.panel,
