@@ -22,6 +22,8 @@ capture_field :: proc(capture: Capture_Summary, path: string) -> (Check_Value, s
 		return {kind = .String, text = capture.last_target}, ""
 	case "format":
 		return {kind = .String, text = capture.last_format}, ""
+	case "png":
+		return {kind = .Bool, boolean = capture.last_png}, ""
 	}
 	if strings.has_prefix(path, "stats.") {
 		stats_path := path[len("stats."):]

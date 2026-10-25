@@ -54,6 +54,8 @@ cli_main :: proc() -> int {
 		return cli_session(args[1:])
 	case "diff":
 		return cli_diff(args[1:])
+	case "suite":
+		return cli_suite(args[1:])
 	case "ab":
 		return cli_ab(args[1:])
 	case "help", "--help", "-h":
@@ -256,6 +258,7 @@ print_usage :: proc() {
 	fmt.eprintln("  harbagsa-agent run <scenario.json|-> [--out DIR] [--tag NAME] [--param NAME=VALUE[,VALUE...]] [--size WxH] [--present] [--no-render] [--no-analysis] [--debug-renderer] [--renderer-debug KEY=VALUE] [--verbose]")
 	fmt.eprintln("  harbagsa-agent session [--socket PATH] [--out DIR] [--size WxH] [--present] [--no-render] [--no-analysis] [--debug-renderer] [--renderer-debug KEY=VALUE]")
 	fmt.eprintln("  harbagsa-agent diff <run-a> <run-b> [--max-pixels N] [--json]")
+	fmt.eprintln("  harbagsa-agent suite <name|path> [scenario...] [--out DIR] [--tag NAME] [--list] [--json] [--fail-fast] [--present] [--no-render] [--no-analysis] [--debug-renderer] [--verbose]")
 	fmt.eprintln("  harbagsa-agent ab [--base REF] [--scenario PATH] [--size WxH] [--runs N] [--prime SECONDS] [--out DIR]")
 	fmt.eprintln("  harbagsa-agent help | -h | --help")
 	fmt.eprintln("")
@@ -268,4 +271,5 @@ print_usage :: proc() {
 	fmt.eprintln("perf takes {\"cmd\": \"perf\", \"frames\": N, \"warmup\": M, \"prime\": SECONDS, \"name\": \"label\", \"trace\": \"trace.jsonl\"}.")
 	fmt.eprintln("diff pairs PNG captures by name. --max-pixels N exits 1 when a pair exceeds N;")
 	fmt.eprintln("--json prints one machine-readable object.")
+	fmt.eprintln("suite runs a manifest from suites/<name>.json in order and writes suite.json.")
 }

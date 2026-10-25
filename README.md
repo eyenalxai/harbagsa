@@ -315,6 +315,29 @@ The report stores statistics as arrays in RGBA order. A check names the same
 channels `x`, `y`, `z`, and `w`, so `capture.named.wall.stats.gradient.y` is
 green.
 
+### Suites
+
+A suite manifest names scenarios to run in order. The first manifests are
+`suites/renderer.json`, `suites/offscreen.json`, and `suites/ui.json`:
+
+```sh
+./bin/harbagsa-agent suite renderer
+./bin/harbagsa-agent suite renderer --list
+./bin/harbagsa-agent suite offscreen --json
+```
+
+A manifest entry is a scenario name, or an object with `scenario` and optional
+`label`, `size`, `params`, and `no_render`. The scenario owns its `requires`;
+the suite reads the merged scenario after `extends` and lets the runner enable
+the gate. The exit code is the highest entry code. The run directory holds
+`suite.json` beside one directory per entry.
+
+`make validate-offscreen` runs `suites/offscreen.json` with the validation
+build. `make ui` runs `suites/ui.json`. `make suite SUITE=renderer` runs the
+normal agent. `--list` shows each entry's size, gate, and render mode without
+running it. `--fail-fast` stops at the first failure; the default runs every
+entry.
+
 ### Scenario format
 
 ```json
@@ -349,7 +372,9 @@ The `commands` array runs verbatim, and `record` writes this form. Only a
 `jump` is an edge on the first frame of its block. Capture frames are
 zero-based frame numbers.
 
-Check operators are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. A check compares
+Check operators are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. A numeric check
+takes an optional `tolerance`; it applies to `eq` and `ne` and is absolute.
+A tolerance on an ordering op or a non-number is an error. A check compares
 with `value`, or with another field with `other`:
 `{"cmd":"check","field":"capture.1.stats.mean.y","op":"gt","other":"capture.0.stats.mean.y"}`.
 A type mismatch or a missing field is a check error. `capture.N.*` names one
@@ -372,9 +397,10 @@ Check fields use the `state.json` shape, for example `player.position.y`,
 `rows.menu.3.kind`, `renderer.taa_enabled`, `renderer.text_truncated_runs`, or
 `render_digest`. A capture check can also read `capture.target`,
 `capture.format`, `capture.stats.*`, `capture.region.*`, `capture.profile.*`,
-`capture.crop.*`, `capture.histogram.*`, and `capture.render_digest` for the
-last capture in its window. `capture.stats.steps.count`, `.pairs`, and `.max`
-read the visibility-band metric; a stats capture must name a region. Add
+`capture.crop.*`, `capture.histogram.*`, `capture.png`, and
+`capture.render_digest` for the last capture in its window.
+`capture.stats.steps.count`, `.pairs`, and `.max` read the visibility-band
+metric; a stats capture must name a region. Add
 `"window": {"start": 2, "count": 8}` to aggregate over part of the captures;
 `warmup` stays the shorthand for skipping the first N.
 
@@ -441,9 +467,11 @@ The batch runner and the live session share one command set:
   `"profile"` to choose the output. The default is a color PNG. A stats capture
   accepts `"region": {"x","y","w","h"}` or `"rect": [x,y,w,h]` and an optional
   `"histogram": 8`. A color capture accepts `"crop": {"x","y","w","h","scale"}`
-  to write a scaled PNG, and a `"profile"` block to measure an edge. Region,
-  profile, and crop do not change the capture extent; the crop reports
-  `written_width` and `written_height`.
+  to write a scaled PNG, and a `"profile"` block to measure an edge. Add
+  `"png": true` to a color `stats` or `profile` capture to write the image
+  beside the numbers. One capture stays one result. Region, profile, and crop
+  do not change the capture extent; the crop reports `written_width` and
+  `written_height`.
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw_deg": 0, "pitch_deg": 0}`: inspection
   camera. It does not move the player. It accepts `look_at` instead of
   `yaw_deg`/`pitch_deg`, and `fov_deg` in degrees (1..170). `look_at` with
@@ -719,7 +747,8 @@ settings.
 the renderer state and render digest. `scenarios/renderer-reset.json` teleports
 the camera and checks that the history reset names the teleport. `report.json`
 also carries a `setup` block: target kind, extent, view flags, the renderer
-debug gate, and renderer config, so a run is reproducible.
+debug gate, the renderer config, and the AO sample count, radius, and strength,
+so a run is reproducible.
 
 A capture can read an intermediate target. `"target": "velocity"` with
 `"format": "stats"` reports per-channel min, max, mean, `stddev`, and

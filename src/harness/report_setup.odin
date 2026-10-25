@@ -19,6 +19,7 @@ Renderer_Config_State :: struct {
 	max_samples:      int    `json:"max_samples"`,
 	ao_samples:       int    `json:"ao_samples"`,
 	ao_radius:        f32    `json:"ao_radius"`,
+	ao_strength:      f32    `json:"ao_strength"`,
 }
 
 Setup_State :: struct {
@@ -53,6 +54,7 @@ setup_build :: proc(
 			max_samples = renderer.TAA_MAX_SAMPLES,
 			ao_samples = renderer.AO_SAMPLES,
 			ao_radius = renderer.AO_RADIUS,
+			ao_strength = renderer.AO_STRENGTH,
 		},
 	}
 	if !backend.ready || backend.setup == nil {
@@ -71,6 +73,7 @@ setup_build :: proc(
 		max_samples = report.max_samples,
 		ao_samples = report.ao_samples,
 		ao_radius = report.ao_radius,
+		ao_strength = report.ao_strength,
 	}
 	return setup
 }

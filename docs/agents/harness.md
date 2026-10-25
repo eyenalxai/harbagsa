@@ -159,7 +159,8 @@ Rules:
 - A capture frame is a zero-based frame number. A past frame is an error; a
   future frame queues.
 - A check uses the `state.json` shape. Operators: `eq`, `ne`, `lt`, `le`, `gt`,
-  `ge`. Examples: `player.position.y`, `objects.count`, `settings.window_mode`,
+  `ge`. A numeric check takes an optional absolute `tolerance`; it applies to
+  `eq` and `ne`. A tolerance on an ordering op or a non-number is an error. Examples: `player.position.y`, `objects.count`, `settings.window_mode`,
   `settings.resolution`, `settings.sprint_mode`, `settings.type_weight`,
   `menu.open`, `debug.active`, `debug.palette.open`, `debug.placement.armed`,
   `debug.placement.prefab`, `debug.sun.active`, `debug.sun.angular_diameter_deg`,
@@ -171,8 +172,9 @@ Rules:
   exists. `objects.count` is the list length.
 - A capture check reads the capture summary. Fields: `capture.count`,
   `capture.worst_mean_delta`, `capture.worst_max_delta`,
-  `capture.worst_over_16`, and `capture.worst_over_16_fraction`. The fraction
-  scales with the capture size. Each capture after the first compares its
+  `capture.worst_over_16`, and `capture.worst_over_16_fraction`. A check can read
+  `capture.png` to tell whether a result wrote an image. The fraction scales
+  with the capture size. Each capture after the first compares its
   pixels with the previous capture. `warmup` skips that many captures before
   the summary, so a scenario can ignore TAA convergence.
 - A check window selects captures instead: `"window": {"start": 2, "count": 8}`.
@@ -207,7 +209,8 @@ Rules:
   `{"cmd":"check","field":"capture.1.stats.mean.y","op":"gt","other":"capture.0.stats.mean.y"}`.
   `capture.N.*`, `capture.first.*`, and `capture.last.*` name one capture.
   `capture.named.<name>.*` names a capture by its `name`; a missing name is a
-  check error.
+  check error. A check with `tolerance` compares two numbers within that
+  absolute distance.
 
 ## Units
 
@@ -330,6 +333,44 @@ The effective parameters are in `report.scenario.parameters`, sorted by name,
 and they join the scenario hash, so two sweep runs of one file are distinct
 scenarios. `scenarios/lamp-threshold.json` is the worked example; it measures
 the wall gradient at each lamp position and writes no check.
+
+## Suites
+
+`suites/<name>.json` is a manifest of scenario entries. `harbagsa-agent suite
+<name|path>` runs them in order and writes `suite.json` beside one run
+directory per entry.
+
+```json
+{
+  "version": 1,
+  "name": "renderer",
+  "description": "Renderer state and temporal stability",
+  "entries": [
+    "renderer-state",
+    {"scenario": "taa-motion", "label": "taa-motion-800", "size": "800x600"},
+    {"scenario": "smoke", "no_render": true}
+  ]
+}
+```
+
+An entry is a scenario name or an object. The object keys are `scenario`,
+`label`, `size`, `params`, and `no_render`. A name without a path resolves
+under `scenarios/`. `params` holds one scalar per name; a comma list is not
+allowed because a suite entry is one run. `label` names the run directory and
+must use only letters, digits, `-`, and `_`.
+
+A suite never declares `requires` itself. It parses each scenario after
+`extends` and reads the merged `requires`, and `run_scenario` enables the gate.
+The suite exit code is the highest entry code, so one failure does not hide the
+other rows. `--fail-fast` stops at the first failure. `--list` parses every
+entry and prints its size, gate, and render mode without running it.
+
+`harbagsa-agent suite offscreen` is the validation target. `make
+validate-offscreen` builds the validation agent and runs
+`suites/offscreen.json`; `make ui` runs `suites/ui.json`; `make suite
+SUITE=renderer` uses the normal agent. Positional selectors replace the
+manifest entries, so `make validate-offscreen SCENARIO=renderer-debug` still
+runs one scenario.
 
 ## Editor
 
@@ -633,7 +674,8 @@ Formats:
   `.x` and the other channels are zero. Color values stay in 0..255.
 - `raw`: intermediate targets only. Writes `<name>.bin` with the exact texel
   bytes. `target_format` in the report names the Vulkan format.
-- `stats`: any target. Writes no file. The report holds per-channel `min`,
+- `stats`: any target. Writes no file unless the capture adds `"png": true`.
+  The report holds per-channel `min`,
   `max`, `mean`, `stddev`, and `gradient`, and for `velocity` the median screen
   motion in texels over covered pixels. `stddev` is the population standard
   deviation over the region. `gradient` is the mean absolute difference between
@@ -653,8 +695,11 @@ region at least four pixels inside a flat boundary, because the filter reads
 that margin. `scenarios/ramp-shadow.json` is the worked example.
 
 A color capture accepts a `profile` block and `"format": "profile"` for an
-edge measurement, and a `crop` block to write a scaled PNG. A profile over a
-PNG capture is allowed and reported beside the PNG.
+edge measurement, and a `crop` block to write a scaled PNG. Add `"png": true`
+to a color `stats` or `profile` capture to write the image beside the numbers.
+One capture stays one result, so `capture.count` and named checks do not
+change. A sidecar joins the PNG delta series and the analysis window. A crop
+and a sidecar cannot be combined.
 
 `png` with an intermediate target, or `float`/`raw` with color, is a scenario
 error. Capture deltas compare color PNG captures only; another target does not
@@ -673,9 +718,9 @@ scene color, history, and depth.
 ## Analysis
 
 A run with captures writes `analysis.json` beside `report.json`, and
-`report.json` links it in `analysis`. The pair and pixel analysis uses color PNG
-captures; a run with only intermediate captures writes an empty window and
-summary. The analysis is on by default. Disable it with `"analysis": false` or
+`report.json` links it in `analysis`. The pair and pixel analysis uses color PNG captures, including a stats or
+profile sidecar; a run with only intermediate captures writes an empty window
+and summary. The analysis is on by default. Disable it with `"analysis": false` or
 `--no-analysis`.
 
 `analysis.json` holds:
@@ -755,7 +800,8 @@ falls back to `frames/<name>.png`. The frame fallback skips the derived
 `analysis-diff.png` and `analysis-variance.png` maps.
 
 Each pair reports `name`, `width`, `height`, `different_pixels`, `max_delta`,
-`mean_delta`, `over_16`, and `identical`. A pixel differs when an RGB channel
+`mean_delta`, `over_16`, and `identical`. A stats or profile capture with a
+PNG sidecar is paired like a plain PNG capture. A pixel differs when an RGB channel
 changes; alpha is ignored. `mean_delta` is the mean over pixels of the largest
 RGB channel delta, so it matches the per-capture deltas in `report.json`.
 
@@ -830,9 +876,9 @@ same when they do not. It is separate from the simulation digest: read
 
 `report.json` carries a `setup` block: the target kind (`offscreen`,
 `swapchain`, or `none`), the extent, the view flags, the renderer debug gate,
-the device name, the frame count in flight, the TAA state, and the jitter,
-history, and sample caps. Use it to compare two runs before you compare their
-pixels.
+the device name, the frame count in flight, the TAA state, the jitter,
+history, and sample caps, and the AO sample count, radius, and strength. Use it
+to compare two runs before you compare their pixels.
 
 `scenarios/renderer-state.json` checks the steady state. `scenarios/renderer-reset.json`
 checks a teleport reset.
@@ -1189,24 +1235,25 @@ tools/make.sh build
 
 `make smoke` runs the smoke scenario with the normal agent and needs no
 validation layer. `make shot SCENARIO=...` runs one scenario and prints the
-capture paths. `make ui` runs the four UI scenarios into `runs/ui-*`.
+capture paths. `make ui` runs `suites/ui.json` into `runs/ui/<entry>`.
 
 `make validate` builds the agent with validation enabled and runs
 `scenarios/smoke.json` offscreen, then with `--present` when a display is
 available. Both validation targets accept `SCENARIO=...` (one path, one stem,
 or a list) and `AGENT_FLAGS=...`; each scenario gets its own output directory.
-`make validate-offscreen` is the headless target: it runs `smoke`, `type-weight`,
-`settings-menu`, `ui`, `shadow-angle`, and `perf-crates` offscreen, each into its
-own output directory, and stops on the first failure:
+`make validate-offscreen` is the headless target: it runs
+`suites/offscreen.json` offscreen, each entry into its own directory, and exits
+with the highest entry code. `SCENARIO=...` replaces the manifest entries:
 
 ```sh
 make validate-offscreen SCENARIO=renderer-debug AGENT_FLAGS=--debug-renderer
 ```
 
 `make shot SCENARIO=scenarios/ui.json` builds, runs, and prints the capture
-paths. `make ui` runs the four UI scenarios into `runs/ui-*`. `make smoke` is the
-short end-to-end gate and needs no validation layers. `make validate-demo` runs
-the game with validation enabled.
+paths. `make ui` runs `suites/ui.json` into `runs/ui/<entry>`. `make suite
+SUITE=renderer` runs a suite with the normal agent. `make smoke` is the short
+end-to-end gate and needs no validation layers. `make validate-demo` runs the
+game with validation enabled.
 
 ## Keep the harness current
 
