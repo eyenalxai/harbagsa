@@ -538,16 +538,18 @@ centre (zero when not armed). The ghost is drawn as debug lines while armed: the
 oriented box, the footprint on the surface, and the height guide.
 
 The sun gizmo is debug lines too: a ring, a cross, and a dashed line to the
-arena centre. It is bright amber while the placement mode is active and dimmer
-amber while idle. The palette, the object placement, and the sun placement are
-mutually exclusive. The settings menu cancels the sun placement when it opens.
+arena centre. It draws only while the sun placement is active. The palette, the
+object placement, and the sun placement are mutually exclusive. The settings
+menu cancels the sun placement when it opens.
 
 `scenarios/editor-ghost.json` captures the armed ghost on the floor and raised,
 then places a block at an exact transform. `scenarios/debug-palette.json` opens
 the palette, captures the Platform preview, selects the Ramp, and captures its
 pitched preview. Run it with `--size 800x600` to check the dock fits the smallest
-supported window. `scenarios/editor-sun.json` captures the default light, the
-sun gizmo on the sky dome, and the committed lighting.
+supported window. `scenarios/editor-sun.json` captures the player view and the
+idle sun with no debug lines, the sun gizmo on the sky dome, and the committed
+lighting. It checks `renderer.debug_vertex_count` at zero without the sun
+placement and after the commit, and above 80 while placing.
 `scenarios/editor-object.json` selects an object, moves, rotates, and converts
 it, duplicates it, then captures the inspector and the undo and redo restores.
 `scenarios/editor-input.json` drives the pointer, wheel, relative turn, palette
@@ -601,7 +603,7 @@ The 2D layer is part of the feature, so its captures live next to it.
 | `scenarios/hud.json` | the status panel at spawn, mid-walk, and facing the arena |
 | `scenarios/hud-debug.json` | the debug-mode readout, which shares the row renderer |
 | `scenarios/editor-ghost.json` | the armed placement HUD, the ghost, and an exact place |
-| `scenarios/editor-sun.json` | the default light, the sun gizmo, and the committed sun |
+| `scenarios/editor-sun.json` | the empty line pass, the sun gizmo, and the committed sun |
 | `scenarios/editor-object.json` | the inspector, the object edit flow, and the undo and redo restores |
 | `scenarios/editor-lamps.json` | the three lamp previews, the lit scene, a point-light shadow, and a lamp edit |
 | `scenarios/debug-palette.json` | the open palette, its selection, and the cube and ramp previews |
@@ -1060,8 +1062,7 @@ run never created a renderer, and `renderer.active` is `false`.
 | `atlas_weight` | the type weight the active coverage atlas holds |
 | `text_truncated_runs` | text runs cut at the 128-glyph cap |
 | `text_font_drops` | HarfBuzz fonts dropped at the 8-font cap |
-| `text_truncated_runs` | runs cut at the 128-glyph cap |
-| `text_font_drops` | fonts dropped at the 8-font shaper cap |
+| `debug_vertex_count` | the debug line vertices the last frame prepared, world and editor |
 
 The state also carries a `camera` object: `position`, `yaw_deg`, `pitch_deg`,
 `fov_deg`, `source`, and `overridden`. Every angle is in degrees. It reports
