@@ -133,6 +133,27 @@ scenario_parameter_override_reaches_a_command :: proc(t: ^testing.T) {
 }
 
 @(test)
+scenario_parameter_override_can_declare_a_parameter :: proc(t: ^testing.T) {
+	body := `{"commands":[{"cmd":"step","frames":"${n}"}]}`
+	scenario, error := harness.scenario_parse(
+		body,
+		context.allocator,
+		[]harness.Parameter_Override{{name = "n", value = "2"}},
+	)
+	testing.expectf(t, error == "", "undeclared override parse failed: %s", error)
+	defer harness.scenario_destroy(&scenario, context.allocator)
+	if error != "" {
+		return
+	}
+	testing.expect_value(t, scenario.commands[0].step.frames, 2)
+	testing.expect_value(t, len(scenario.source.parameters), 1)
+	if len(scenario.source.parameters) == 1 {
+		testing.expect_value(t, scenario.source.parameters[0].name, "n")
+		testing.expect_value(t, scenario.source.parameters[0].value, "2")
+	}
+}
+
+@(test)
 scenario_parameter_override_changes_the_hash :: proc(t: ^testing.T) {
 	body := `{"parameters":{"x":20.0},"commands":[{"cmd":"camera","position":["${x}",0,0],"yaw":0,"pitch":0}]}`
 	first, first_error := harness.scenario_parse(
