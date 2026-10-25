@@ -37,6 +37,9 @@ from the light otherwise reads its own dark outgoing radiance and stays black.
   backface weight `(dot(to_probe, normal) + 1)^2 / 4 + 0.2`, Chebyshev
   visibility, decodes the gamma, multiplies the hemisphere factor `2 * pi`, and
   divides by `pi` for the diffuse BRDF so the term shares the lit pass scale.
+- The ray stores a negative hit distance on a backface. The blend ignores that
+  ray's radiance and skips a probe when more than a quarter of its rays hit
+  backfaces. The depth blend uses the absolute distance.
 - Hysteresis stays at `0.75`. A light or sun hash change, a volume change, or a
   texel delta above `0.25` replaces the texel instead of blending it.
 - The probe volume stays the room, its lanes, and the chamber. The CPU still

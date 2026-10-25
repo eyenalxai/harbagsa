@@ -34,22 +34,22 @@ inside a box are pushed out along the shallowest local axis before the rays run.
 
 | Capture | Mean green |
 | --- | ---: |
-| `gi-on` | 181.25 |
+| `gi-on` | 183.12 |
 | `gi-off` | 123.78 |
-| `ao-on` | 181.24 |
-| `ao-off` | 184.49 |
+| `ao-on` | 183.11 |
+| `ao-off` | 186.26 |
 
 The scenario checks `probe_count`, `probe_volume_count`, `probe_energy`, the
 GI on/off order, and the AO on/off order: 10 checks, 0 failed. The probe energy
-is 0.179 in linear irradiance. The four captures are deterministic: a repeat run
+is 0.177 in linear irradiance. The four captures are deterministic: a repeat run
 produces the same PNG hashes.
 
-The room gate is `scenarios/room-lighting.json`: 23 checks, 0 failed. The first
-lane is 39.67 mean green under the west sun and 8.07 under the east sun. The
+The room gate is `scenarios/room-lighting.json`: 19 checks, 0 failed. The first
+lane is 39.75 mean green under the west sun and 8.08 under the east sun. The
 east value is transport through the connected four-turn light lock, not a wall
-leak. The chamber is 0.94 to 0.99 under the sun alone, 181.52 with the lamp, and
-0.94 after the lamp is removed. The chamber is dim but not black because the
-indirect field carries the sun bounce through the lock.
+leak. The chamber is 0.18 to 0.26 under the sun alone, 183.10 with the lamp, and
+0.26 after the lamp is removed. A backface ray no longer leaks into the sealed
+end of the lock.
 
 ## Leak pair
 
@@ -61,30 +61,30 @@ the chamber.
 | --- | ---: |
 | `lane-dark` | 49.38 |
 | `lane-lit` | 49.39 |
-| `chamber-lit` | 181.24 |
+| `chamber-lit` | 183.11 |
 
 The lane moves by 0.005, inside the gate's 50.0 absolute ceiling, and the
 chamber is bright. The scenario has 3 checks, 0 failed.
 
 This is not a sealed leak pair. The chamber and the lane are connected by the
 four-turn light lock, so light through the lock is transport, not a bug. The
-sealed two-room pair is issue #321.
+sealed two-room pair is issue #322.
 
 ## Doorway and moving lamp
 
 `scenarios/ddgi-door.json` looks through the room's west door with the sun below
-the horizon. The doorway admits the lamp: mean green rises from 43.28 to 85.37.
+the horizon. The doorway admits the lamp: mean green rises from 43.28 to 85.38.
 Five checks pass, including the placed lamp identity.
 
 `scenarios/ddgi-move.json` places the lamp in the chamber, then moves it with the
-editor. Both views stay above 120 mean green: 187.73 before and 172.23 after.
+editor. Both views stay above 120 mean green: 189.55 before and 173.72 after.
 The object position checks and both light checks pass; 4 checks.
 
 ## Contact term
 
 Ambient occlusion multiplies direct light only. The indirect term has its own
 probe visibility, so multiplying it by AO would count the corner twice. In the
-same chamber view, turning AO off raises mean green from 181.24 to 184.49 while
+same chamber view, turning AO off raises mean green from 183.11 to 186.26 while
 the probe atlas is unchanged. The decision is recorded in
 `docs/adr/0032-direct-ao-and-probe-indirect.md`.
 

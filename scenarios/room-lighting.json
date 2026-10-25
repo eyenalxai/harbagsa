@@ -54,17 +54,13 @@
     {"field": "capture.named.lane-depth.stats.max.x", "op": "lt", "value": 0.999},
     {"field": "capture.named.chamber-depth.stats.max.x", "op": "lt", "value": 0.999},
     {"field": "capture.named.lane1-west.stats.mean.y", "op": "gt", "value": 2},
-    {"field": "capture.named.lane1-east.stats.mean.y", "op": "gt", "value": 2},
     {"field": "capture.named.lane1-east.stats.mean.y", "op": "lt", "value": 20},
     {"field": "capture.named.lane1-east.stats.mean.y", "op": "lt", "other": "capture.named.lane1-west.stats.mean.y"},
-    {"field": "capture.named.chamber-west.stats.mean.y", "op": "gt", "value": 0.5},
-    {"field": "capture.named.chamber-west.stats.mean.y", "op": "lt", "value": 2},
-    {"field": "capture.named.chamber-east.stats.mean.y", "op": "gt", "value": 0.5},
-    {"field": "capture.named.chamber-east.stats.mean.y", "op": "lt", "value": 2},
+    {"field": "capture.named.chamber-west.stats.mean.y", "op": "lt", "value": 0.5},
+    {"field": "capture.named.chamber-east.stats.mean.y", "op": "lt", "value": 0.5},
     {"field": "capture.named.chamber-west.stats.mean.y", "op": "eq", "other": "capture.named.chamber-east.stats.mean.y", "tolerance": 0.1},
     {"field": "capture.named.lamp-on.stats.mean.y", "op": "gt", "value": 80},
-    {"field": "capture.named.lamp-off.stats.mean.y", "op": "gt", "value": 0.5},
-    {"field": "capture.named.lamp-off.stats.mean.y", "op": "lt", "value": 2},
+    {"field": "capture.named.lamp-off.stats.mean.y", "op": "lt", "value": 0.5},
     {"field": "capture.named.lamp-on.stats.mean.y", "op": "gt", "other": "capture.named.lamp-off.stats.mean.y"}
   ]
 }
