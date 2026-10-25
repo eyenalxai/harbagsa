@@ -59,7 +59,8 @@ vec3 probe_indirect(vec3 world_position, vec3 normal) {
     for (int index = 0; index < volume_count; ++index) {
         ProbeVolume volume = probe_volumes.volumes[index];
         vec3 high = volume.min_spacing.xyz +
-                    vec3(volume.counts_offset.xyz) * volume.min_spacing.w;
+                    vec3(volume.counts_offset.xyz) * volume.min_spacing.w +
+                    vec3(1e-3);
         if (all(greaterThanEqual(world_position, volume.min_spacing.xyz)) &&
             all(lessThanEqual(world_position, high))) {
             volume_index = index;
