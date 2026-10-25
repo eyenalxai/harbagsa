@@ -58,7 +58,8 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 	// The scratch holds the frame's debug lines, so it is too large for a local
 	// Session on the stack.
 	session.scratch = new(frame.Scratch, allocator)
-	session.sim = game.simulation_create()
+	session.scratch.allocator = allocator
+	session.sim = game.simulation_create(session.allocator)
 	if !game.simulation_is_valid(&session.sim) {
 		game.debug_mode_destroy(&session.debug)
 		free(session.scratch, allocator)
@@ -96,6 +97,7 @@ session_destroy :: proc(session: ^Session) {
 	perf_run_destroy(&session.perf, session.allocator)
 	analysis_run_destroy(&session.analysis)
 	render_state_destroy(&session.render, session.allocator)
+	frame.scratch_destroy(session.scratch)
 	free(session.scratch, session.allocator)
 	session^ = {}
 }
@@ -111,7 +113,7 @@ session_reset :: proc(session: ^Session) -> string {
 	if game.simulation_is_valid(&session.sim) {
 		game.simulation_destroy(&session.sim)
 	}
-	session.sim = game.simulation_create()
+	session.sim = game.simulation_create(session.allocator)
 	if !game.simulation_is_valid(&session.sim) {
 		return format_error("%s", "simulation init failed")
 	}

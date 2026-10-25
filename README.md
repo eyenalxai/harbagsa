@@ -166,14 +166,14 @@ card glows, and the preview adds the colour, intensity, and range line.
 
 The HUD shows the stance, gait, horizontal speed, grounded state, movement
 state, and position. In debug mode the inspector shows the selection as the
-prefab and object id, the object count and capacity, the selected object's body,
+prefab and object id, the object count, the selected object's body,
 size, position, yaw, and snap state, its light values for a lamp, and the active
 light count against the lamp count. Every changing value uses a fixed field and
 the mono face, so the panel does not resize with the selection. While the
 placement tool is armed, it shows the armed prefab, body, height, yaw, snap,
 object count, and the next lamp light instead. While sun placement is active, it
-adds a sun placement row. The eight nearest lamps to the camera are active; the
-rest stay emissive but do not light the scene.
+adds a sun placement row. Every placed lamp is active, and the inspector shows
+the active count against the lamp count.
 The settings menu shows the control list. Borderless fills the selected display;
 Windowed uses the chosen resolution.
 
@@ -664,8 +664,9 @@ The batch runner and the live session share one command set:
   renderer inputs. It needs `--debug-renderer` or a build with
   `-define:ENABLE_RENDERER_DEBUG=true`. `sky` turns the sky pass off, `ao` turns the
   occlusion on direct light off, `light_shadows` turns the point-light shadows off, and
-  `synthetic_lights` replaces the frame's lamps with 0 to 8 test lights. Set one
-  field to `null` to restore that field's default without touching the others.
+  `synthetic_lights` replaces the frame's lamps with a generated test field. Set a
+  count to choose how many lights it holds. Set one field to `null` to restore that
+  field's default without touching the others.
   `clear` resets every override. Changing an input resets history.
 - `{"cmd": "scene", ...}`: apply an exact scene with `camera`, `sun`, `objects`,
   `settings`, `view`, `displays`, and `renderer_debug` blocks. Every block is
@@ -749,7 +750,7 @@ them at the same size to compare two builds. `scenarios/perf-crates.json`
 places 60 objects in a grid with the Crate prefab and measures them, so the box
 count is part of the probe.
 
-`scenarios/perf-lamps.json` injects eight synthetic point lights through the
+`scenarios/perf-lamps.json` injects a synthetic point-light field through the
 renderer debug override, then measures the same view with point-light shadows on
 and off. It writes `trace-shadows-on.jsonl` and `trace-shadows-off.jsonl` in one
 run, so the shadow cost is a paired comparison. Only a build with

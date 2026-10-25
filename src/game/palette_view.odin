@@ -75,9 +75,8 @@ debug_palette_view :: proc(sim: ^Simulation, debug: ^Debug_Mode) -> ui.Palette {
 	}
 	count_text := fmt.bprintf(
 		palette.count[:],
-		"%d / %d",
+		"%d",
 		simulation_object_count(sim),
-		MAX_PLACED_OBJECTS,
 	)
 	palette.count_length = len(count_text)
 

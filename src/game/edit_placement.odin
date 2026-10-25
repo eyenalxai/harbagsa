@@ -52,9 +52,6 @@ edit_place_object :: proc(dm: ^Debug_Mode, sim: ^Simulation, place: Place_Object
 
 @(private)
 place_object :: proc(dm: ^Debug_Mode, sim: ^Simulation, spawn: Object_Spawn) -> Edit_Result {
-	if simulation_object_count(sim) >= MAX_PLACED_OBJECTS {
-		return edit_fail(.Scene_Full)
-	}
 	history := debug_history(dm)
 	snapshot := object_snapshot_capture(sim, history.allocator)
 	id := simulation_create_object(sim, spawn)
