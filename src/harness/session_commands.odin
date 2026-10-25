@@ -26,10 +26,11 @@ Reply :: struct {
 	get:      ^Get_Result     `json:"get,omitempty"`,
 
 	// Borrowed from the session; valid until the next command.
-	capture: ^Capture_Result `json:"capture,omitempty"`,
-	check:   ^Check_Result   `json:"check,omitempty"`,
-	perf:    ^Perf_Report    `json:"perf,omitempty"`,
-	trace:   string          `json:"trace,omitempty"`,
+	capture:   ^Capture_Result   `json:"capture,omitempty"`,
+	check:     ^Check_Result     `json:"check,omitempty"`,
+	perf:      ^Perf_Report      `json:"perf,omitempty"`,
+	reference: ^Reference_Report `json:"reference,omitempty"`,
+	trace:     string            `json:"trace,omitempty"`,
 }
 
 Replay_Summary :: struct {
