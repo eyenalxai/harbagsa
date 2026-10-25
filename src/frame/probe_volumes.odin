@@ -10,15 +10,17 @@ import "src:renderer"
 ROOM_PROBE_SPACING :: 1.04
 ROOM_PROBE_COUNTS :: [3]u32{10, 3, 10}
 
-// The sealed-pair scenario builds two placed rooms around (-10, -8). This
-// volume owns both interiors before the 4 m arena strips, so a surface inside
-// either room never samples an arena probe. The 0.05 m edge offset keeps every
-// probe centre in air and still covers each inner wall face.
+// The sealed-pair scenario builds two placed rooms around (-10, -8). One
+// volume per room owns that room's interior before the 4 m arena strips, so a
+// surface inside either room never samples a probe across the shared wall. The
+// 0.05 m edge offset keeps every probe centre in air and still covers each
+// inner wall face.
 SEALED_PAIR_X :: f32(-10.0)
 SEALED_PAIR_Z :: f32(-8.0)
-SEALED_PAIR_PROBE_MIN :: [3]f32{SEALED_PAIR_X - 3.8, 0.0, SEALED_PAIR_Z - 1.8}
+SEALED_PAIR_PROBE_MIN_A :: [3]f32{SEALED_PAIR_X - 3.8, 0.0, SEALED_PAIR_Z - 1.8}
+SEALED_PAIR_PROBE_MIN_B :: [3]f32{SEALED_PAIR_X + 0.2, 0.0, SEALED_PAIR_Z - 1.8}
 SEALED_PAIR_PROBE_SPACING :: f32(1.0)
-SEALED_PAIR_PROBE_COUNTS :: [3]u32{8, 3, 4}
+SEALED_PAIR_PROBE_COUNTS :: [3]u32{4, 3, 4}
 
 // Sky fill is low frequency, so the open arena uses a 4 m cell. The north strip
 // is 5.5 m deep and needs two rows that both stay outside the room, which fixes
@@ -53,7 +55,7 @@ NORTH_PROBE_COUNTS :: [3]u32{15, 2, 2}
 // The roof volume lights the room's exterior roof. Its floor is the room
 // ceiling height, and its probes sit above the roof; none of them is inside
 // the room.
-PROBE_VOLUMES := [7]renderer.Probe_Volume {
+PROBE_VOLUMES := [8]renderer.Probe_Volume {
 	{
 		min = {game.ARENA_ROOM_INNER_LOW_X, 0.0, game.ARENA_ROOM_INNER_LOW_Z},
 		spacing = ROOM_PROBE_SPACING,
@@ -61,7 +63,13 @@ PROBE_VOLUMES := [7]renderer.Probe_Volume {
 		probe_offset = 0,
 	},
 	{
-		min = SEALED_PAIR_PROBE_MIN,
+		min = SEALED_PAIR_PROBE_MIN_A,
+		spacing = SEALED_PAIR_PROBE_SPACING,
+		counts = SEALED_PAIR_PROBE_COUNTS,
+		probe_offset = 0,
+	},
+	{
+		min = SEALED_PAIR_PROBE_MIN_B,
 		spacing = SEALED_PAIR_PROBE_SPACING,
 		counts = SEALED_PAIR_PROBE_COUNTS,
 		probe_offset = 0,
