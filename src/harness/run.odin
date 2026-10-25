@@ -117,7 +117,7 @@ run_batch :: proc(options: Run_Options) -> int {
 		print_summary_failure(session_error, EXIT_RENDER)
 		return EXIT_RENDER
 	}
-	session.debug_renderer = options.debug_renderer
+	session.debug_renderer = options.debug_renderer || scenario.requires.renderer_debug
 	session.analysis_config = scenario.analysis
 	if options.no_analysis {
 		session.analysis_config.enabled = false
@@ -192,6 +192,8 @@ run_batch :: proc(options: Run_Options) -> int {
 	}
 
 	rewrite_capture_paths(&session, absolute_out)
+	setup := setup_build(common, session.view, backend)
+	setup.renderer_debug = session.debug_renderer
 	report_path := join_path({staging, "report.json"}, context.allocator)
 	defer delete(report_path, context.allocator)
 	report := Report {
@@ -199,7 +201,7 @@ run_batch :: proc(options: Run_Options) -> int {
 		run_dir     = absolute_out,
 		frame       = state.frame,
 		state       = state,
-		setup       = setup_build(common, session.view, backend),
+		setup       = setup,
 		screenshots = session.captures[:],
 		checks      = session.checks[:],
 		failures    = session.failures[:],

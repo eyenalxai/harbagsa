@@ -190,6 +190,9 @@ Rules:
   to gate TAA stability.
 - A top-level `renderer_debug` object compiles to the renderer debug command
   before the commands. See **Renderer debug overrides**.
+- A top-level `"requires": {"renderer_debug": true}` enables the gated command
+  for this scenario without `--debug-renderer`. The gate still rejects a
+  scenario that does not declare it.
 - A top-level `"size": "1280x720"` pins the extent. `--size` with a declared
   size is an error.
 - A top-level `"extends": "base.json"` merges the base object and lets the child
@@ -772,9 +775,10 @@ same when they do not. It is separate from the simulation digest: read
 `render_digest` for the render inputs and `digest` for the simulation.
 
 `report.json` carries a `setup` block: the target kind (`offscreen`,
-`swapchain`, or `none`), the extent, the view flags, the device name, the frame
-count in flight, the TAA state, and the jitter, history, and sample caps. Use it
-to compare two runs before you compare their pixels.
+`swapchain`, or `none`), the extent, the view flags, the renderer debug gate,
+the device name, the frame count in flight, the TAA state, and the jitter,
+history, and sample caps. Use it to compare two runs before you compare their
+pixels.
 
 `scenarios/renderer-state.json` checks the steady state. `scenarios/renderer-reset.json`
 checks a teleport reset.
@@ -884,8 +888,8 @@ and measures them, so the box count is part of the probe.
 `renderer_debug` block injects eight synthetic lights, the first `perf` command
 measures them with hard shadows, then the command disables point-light shadows
 and the second `perf` measures again. Both traces stay in the run directory:
-`trace-shadows-on.jsonl` and `trace-shadows-off.jsonl`. It needs
-`--debug-renderer` or the build define. The paired result is in
+`trace-shadows-on.jsonl` and `trace-shadows-off.jsonl`. Its `requires.renderer_debug` declaration enables
+the gated command, so it needs no flag. The paired result is in
 `docs/evidence/perf-lamps.md`.
 
 ### Benchmark two builds
