@@ -191,9 +191,7 @@ debug_mode_reset_scene :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 // exclusive, and the settings menu owns the input while it is open.
 debug_mode_cancel_editing :: proc(dm: ^Debug_Mode) {
 	debug_mode_end_drag(dm)
-	palette_close(&dm.palette)
-	debug_placement_cancel(dm)
-	debug_sun_cancel(dm)
+	take_tool(dm, .None)
 }
 
 @(private)

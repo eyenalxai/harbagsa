@@ -270,6 +270,12 @@ The stable number that addresses a placed object through the game API and the
 harness. The list index stays internal.
 _Avoid_: Handle, slot
 
+**Active tool**:
+The one debug tool that owns the frame: the Object palette, Sun placement, or
+the Placement tool. `active_tool` reads it; `take_tool` cancels the others.
+Arming the Placement tool closes the palette.
+_Avoid_: Current mode, tool state
+
 **Object palette**:
 The debug-mode prefab chooser. It holds the open flag, the selected catalog
 index, and the body and light settings for the next placement. The bottom dock
@@ -338,6 +344,13 @@ _Avoid_: Game loop, engine
 **Input snapshot**:
 One frame of player intent: movement axes, sprint, crouch, prone, jump, and reset. Look is a separate frame call.
 _Avoid_: Input state, controls
+
+**Frame input**:
+The resolved intent of one frame: the Input snapshot, the Editing actions, the
+menu intents, the view intents, and the pause and cursor state. `src/input` turns
+one `platform.Events` value into one `Frame_Input`. The resolver holds only the
+edge latches.
+_Avoid_: Input state, input command
 
 **Settings**:
 The runtime window and input-mode choices: window mode, display, resolution,

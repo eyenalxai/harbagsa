@@ -9,17 +9,17 @@ OBJECT_WHEEL_STEP :: 0.5
 
 @(private)
 edit_primary_press :: proc(dm: ^Debug_Mode, sim: ^Simulation, captured: bool) -> Edit_Result {
-	if dm.palette.open {
+	switch active_tool(dm) {
+	case .Palette:
 		return edit_no_change()
-	}
-	if dm.sun.active {
+	case .Sun:
 		return edit_sun_exit(dm)
-	}
-	if dm.placement.armed {
+	case .Placement:
 		if !captured {
 			return edit_no_change()
 		}
 		return edit_placement_place(dm, sim)
+	case .None:
 	}
 	if !captured {
 		return edit_no_change()
@@ -53,15 +53,15 @@ edit_primary_release :: proc(dm: ^Debug_Mode) -> Edit_Result {
 
 @(private)
 edit_secondary_press :: proc(dm: ^Debug_Mode) -> Edit_Result {
-	if dm.palette.open {
+	switch active_tool(dm) {
+	case .Palette:
 		return edit_palette_close(dm)
-	}
-	if dm.sun.active {
+	case .Sun:
 		return edit_sun_cancel(dm)
-	}
-	if dm.placement.armed {
+	case .Placement:
 		debug_placement_cancel(dm)
 		return edit_ok()
+	case .None:
 	}
 	if dm.selection == .Object {
 		debug_mode_clear_selection(dm)
@@ -108,15 +108,16 @@ edit_wheel :: proc(
 	large: bool,
 	captured: bool,
 ) -> Edit_Result {
-	if dm.palette.open || dm.sun.active {
+	switch active_tool(dm) {
+	case .Palette, .Sun:
 		return edit_no_change()
-	}
-	if dm.placement.armed {
+	case .Placement:
 		if !captured {
 			return edit_no_change()
 		}
 		debug_placement_raise(dm, steps, large)
 		return edit_ok()
+	case .None:
 	}
 	if !captured {
 		return edit_no_change()
@@ -143,15 +144,15 @@ edit_wheel :: proc(
 
 @(private)
 edit_cancel :: proc(dm: ^Debug_Mode) -> Edit_Result {
-	if dm.palette.open {
+	switch active_tool(dm) {
+	case .Palette:
 		return edit_palette_close(dm)
-	}
-	if dm.placement.armed {
+	case .Sun:
+		return edit_sun_cancel(dm)
+	case .Placement:
 		debug_placement_cancel(dm)
 		return edit_ok()
-	}
-	if dm.sun.active {
-		return edit_sun_cancel(dm)
+	case .None:
 	}
 	return edit_no_change()
 }

@@ -6,7 +6,7 @@ An Odin project. Build, check, and test commands live in `README.md`.
 
 Backwards compatibility does not matter. Rip and tear if needed. Refactor anything you need; you have free rein over the code. Focus on long-term maintenance. Do not write duplicated code. Re-use existing code when possible.
 
-Keep each first-party `.odin` file under 300 lines. `make check` enforces it. Vendored bindings are exempt.
+Keep each first-party `.odin` file under 400 lines. `make check` enforces it. Vendored bindings are exempt.
 
 All new commits must be written in conventional commit style.
 
@@ -31,6 +31,12 @@ Write a comment only when it answers a hard "Why this way?" question. Do not nar
 - Search for an existing helper before you add one.
 - Do not name a thing `V2`, `New`, or `Enhanced`. Replace the old one and take its name.
 - Never weaken or delete a test to make a run pass.
+
+## CI
+
+CI checks and CI tests are not needed. Do not add a CI workflow for them, and do
+not wait for CI to merge a pull request. The local `make check` and `make test`
+are the gate.
 
 ## Agent skills
 

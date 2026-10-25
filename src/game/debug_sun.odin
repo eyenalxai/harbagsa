@@ -23,8 +23,7 @@ edit_sun_enter :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Result {
 	if dm.sun.active {
 		return edit_ok()
 	}
-	palette_close(&dm.palette)
-	debug_placement_cancel(dm)
+	take_tool(dm, .Sun)
 	debug_mode_end_drag(dm)
 	dm.sun.saved_position = dm.sun.position
 	dm.sun.active = true
