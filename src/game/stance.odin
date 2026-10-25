@@ -5,39 +5,31 @@ import "core:c"
 import "core:math"
 import b3 "libs:box3d"
 
-Headroom_Query :: struct {
-	threshold: f32,
-	blocked:   bool,
-}
-
 @(private)
-headroom_overlap :: proc "c" (shape_id: b3.ShapeId, ctx: rawptr) -> bool {
-	query := cast(^Headroom_Query)ctx
-	aabb := b3.Shape_GetAABB(shape_id)
-	if aabb.lowerBound.y >= query.threshold {
-		query.blocked = true
-		return false
-	}
-	return true
+headroom_overlap :: proc "c" (_: b3.ShapeId, ctx: rawptr) -> bool {
+	blocked := cast(^bool)ctx
+	blocked^ = true
+	return false
 }
 
-// Headroom is a ceiling check, not a full-capsule overlap. A step or a placed
-// beside the feet touches the capsule but does not block a taller stance. A
-// shape whose lower bound starts above the floor margin is a ceiling.
+// Headroom is a clear-space check, not a full-capsule overlap. The probe keeps
+// the stance height but is inset from the capsule side and lifted off the floor,
+// so a floor, a step, or a wall that only touches the lower body does not block
+// a taller stance. Any shape that crosses the inset probe is overhead, including
+// a rotated overhang such as a ramp underside whose AABB starts below the feet.
 has_headroom :: proc(sim: ^Simulation, feet: b3.Vec3, stance: Stance) -> bool {
 	height := stance_height(stance)
+	radius := f32(PLAYER_RADIUS - HEADROOM_SIDE_INSET)
 	points: [2]b3.Vec3
-	points[0] = {0.0, PLAYER_RADIUS, 0.0}
-	points[1] = {0.0, max(height - PLAYER_RADIUS, PLAYER_RADIUS), 0.0}
+	points[0] = {0.0, radius, 0.0}
+	points[1] = {0.0, max(height - radius, radius), 0.0}
 
 	proxy := b3.ShapeProxy {
 		points = raw_data(points[:]),
 		count = c.int(2),
-		radius = PLAYER_RADIUS,
+		radius = radius,
 	}
-	query := Headroom_Query {
-		threshold = feet.y + HEADROOM_CEILING_MARGIN,
-	}
+	blocked := false
 	origin := feet + b3.Vec3{0.0, HEADROOM_PROBE_LIFT, 0.0}
 	_ = b3.World_OverlapShape(
 		sim.world_id,
@@ -45,9 +37,9 @@ has_headroom :: proc(sim: ^Simulation, feet: b3.Vec3, stance: Stance) -> bool {
 		proxy,
 		b3.DefaultQueryFilter(),
 		headroom_overlap,
-		&query,
+		&blocked,
 	)
-	return !query.blocked
+	return !blocked
 }
 
 choose_stance :: proc(requested: Stance, standing_fits, crouching_fits: bool) -> Stance {

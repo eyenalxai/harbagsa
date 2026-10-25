@@ -67,7 +67,7 @@ The speed along the walkable ground plane. On a straight climb the horizontal sp
 _Avoid_: Surface speed
 
 **Headroom**:
-The clear space above the feet that a taller stance needs. The controller tests it before the capsule grows. A floor-level side obstacle does not reduce headroom; an overhead shape does.
+The clear space above the feet that a taller stance needs. The controller tests it before the capsule grows. A floor, a step, or a wall that only touches the lower body does not reduce headroom; an overhead shape does.
 _Avoid_: Ceiling check
 
 **Dive**:

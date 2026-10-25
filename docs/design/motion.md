@@ -52,7 +52,7 @@ per-step eye movement to 0.10 m, half of one 0.20 m tread.
 | Motion | Formula | Source |
 | --- | --- | --- |
 | Look | direct delta, no filter | `src/game/player.odin:66` |
-| Eye height | exponential to the stance target | `src/game/stance.odin:222` |
+| Eye height | exponential to the stance target | `src/game/stance.odin:214` |
 | Step offset | accumulated, then exponential to zero | `src/game/step.odin:213` |
 | Mantle | smoothstep over 0.25 s, 60% rise then move across | `src/game/mantle.odin:125` |
 | Render blend | eye position only, `alpha` from the accumulator | `src/frame/frame.odin:136` |
