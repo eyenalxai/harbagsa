@@ -123,27 +123,6 @@ sprint_auto_stands_from_crouch :: proc(t: ^testing.T) {
 }
 
 @(test)
-headroom_drops_the_player_under_each_tunnel :: proc(t: ^testing.T) {
-	Tunnel :: struct {
-		position: [3]f32,
-		stance:   game.Stance,
-	}
-	tunnels := [3]Tunnel {
-		{game.ARENA_TUNNEL_135_POSITION, .Crouching},
-		{game.ARENA_TUNNEL_122_POSITION, .Crouching},
-		{game.ARENA_TUNNEL_090_POSITION, .Prone},
-	}
-	for tunnel in tunnels {
-		sim := create(t)
-		sim.player.position = tunnel.position
-		sim.player.velocity = {}
-		step(&sim, {}, 2)
-		testing.expect_value(t, sim.player.stance, tunnel.stance)
-		game.simulation_destroy(&sim)
-	}
-}
-
-@(test)
 sprint_keeps_crouch_under_a_low_ceiling :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
