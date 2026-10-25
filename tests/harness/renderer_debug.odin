@@ -2,6 +2,7 @@
 #+vet !unused-procedures // @(test) procs are called by the test runner, not by name
 package harness_test
 
+import "core:os"
 import "core:strings"
 import "core:testing"
 
@@ -148,6 +149,50 @@ renderer_debug_needs_the_gate :: proc(t: ^testing.T) {
 	testing.expectf(t, reply.ok, "clear failed: %s", reply.error)
 	harness.reply_destroy(&reply, context.allocator)
 	testing.expect_value(t, fake.clears, 1)
+}
+
+RENDERER_DEBUG_RECORD_PATH :: "/tmp/opencode/harbagsa-renderer-debug-record.json"
+
+@(test)
+renderer_debug_record_keeps_the_gate :: proc(t: ^testing.T) {
+	session, _ := harness.session_create(context.allocator)
+	defer harness.session_destroy(&session)
+	fake := Fake_Renderer_Debug{}
+	backend := harness.Backend {
+		ready       = true,
+		ctx         = &fake,
+		get_debug   = fake_get_debug,
+		set_debug   = fake_set_debug,
+		clear_debug = fake_clear_debug,
+	}
+	harness.session_set_backend(&session, &backend, false)
+	session.debug_renderer = true
+
+	record_line := `{"cmd":"record","path":"` + RENDERER_DEBUG_RECORD_PATH + `"}`
+	reply := execute(t, &session, record_line)
+	harness.reply_destroy(&reply, context.allocator)
+	reply = execute(t, &session, `{"cmd":"renderer_debug","jitter":false}`)
+	harness.reply_destroy(&reply, context.allocator)
+	reply = execute(t, &session, `{"cmd":"record"}`)
+	harness.reply_destroy(&reply, context.allocator)
+	defer os.remove(RENDERER_DEBUG_RECORD_PATH)
+
+	data, read_error := os.read_entire_file(RENDERER_DEBUG_RECORD_PATH, context.allocator)
+	testing.expectf(t, read_error == nil, "cannot read the recording: %v", read_error)
+	if read_error != nil {
+		return
+	}
+	defer delete(data, context.allocator)
+	text := string(data)
+	testing.expect(t, strings.contains(text, `"requires"`), "the recording lost the gate")
+	testing.expect(t, strings.contains(text, "renderer_debug"), "the recording lost the command")
+
+	session.debug_renderer = false
+	replay_line := `{"cmd":"replay","path":"` + RENDERER_DEBUG_RECORD_PATH + `"}`
+	reply = execute(t, &session, replay_line)
+	defer harness.reply_destroy(&reply, context.allocator)
+	testing.expectf(t, reply.ok, "replay failed: %s", reply.error)
+	testing.expect(t, session.debug_renderer, "replay did not enable the declared gate")
 }
 
 Fake_Renderer_Debug :: struct {
