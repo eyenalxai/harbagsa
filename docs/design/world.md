@@ -49,11 +49,16 @@ with blocker distance.
 
 The sun is the only light with a direction. Ambient comes from the sky gradient
 when the sky pass is on, or from the flat `AMBIENT_COLOR` when it is off. The
-ambient occlusion rays darken that term in corners and tunnels:
+ambient occlusion rays darken that term in shade, corners, and tunnels. A sunlit
+fragment keeps the full ambient:
 
 ```text
-albedo * (ambient * ao + diffuse * sun * visibility)
+albedo * (ambient * ao_in_shade + diffuse * sun * visibility)
 ```
+
+Direct sun buries the sky term, so a full AO band on a sunlit floor reads as
+dirt. The gate reuses the sun visibility and costs no ray. Shadowed surfaces
+keep the whole contact term.
 
 If a surface must look different, change its albedo. Do not add a lighting term.
 
