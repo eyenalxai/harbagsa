@@ -10,6 +10,16 @@ import "core:strconv"
 // fields the JSON writer emits, so a check cannot drift from the document.
 state_field :: proc(state: State, path: string) -> (Check_Value, string) {
 	head, rest, has_tail := split_field(path)
+	if head == "static_boxes" {
+		if rest == "count" {
+			return {kind = .Number, number = f64(len(state.static_boxes))}, ""
+		}
+		if !has_tail {
+			return {}, format_error("%s", "static_boxes needs a field")
+		}
+		value: any = state.static_boxes
+		return resolve_state_path(value, rest, path)
+	}
 	if head == "objects" {
 		if rest == "count" {
 			return {kind = .Number, number = f64(len(state.objects))}, ""

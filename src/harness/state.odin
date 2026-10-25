@@ -19,6 +19,13 @@ Quat_State :: struct {
 	w: f32 `json:"w"`,
 }
 
+Color_State :: struct {
+	r: f32 `json:"r"`,
+	g: f32 `json:"g"`,
+	b: f32 `json:"b"`,
+	a: f32 `json:"a"`,
+}
+
 Player_State :: struct {
 	position:  Vec_State `json:"position"`,
 	eye:       Vec_State `json:"eye"`,
@@ -36,6 +43,15 @@ Camera_State :: struct {
 	fov_deg:    f32       `json:"fov_deg"`,
 	source:     string    `json:"source"`,
 	overridden: bool      `json:"overridden"`,
+}
+
+Static_Box_State :: struct {
+	center:       Vec_State  `json:"center"`,
+	half_extents: Vec_State  `json:"half_extents"`,
+	color:        Color_State `json:"color"`,
+	rotation:     Quat_State `json:"rotation"`,
+	emissive:     f32        `json:"emissive"`,
+	visual_only:  bool       `json:"visual_only"`,
 }
 
 Object_State :: struct {
@@ -81,6 +97,7 @@ Settle_State :: struct {
 State :: struct {
 	frame:         int            `json:"frame"`,
 	player:        Player_State   `json:"player"`,
+	static_boxes:  []Static_Box_State `json:"static_boxes" digest:"-"`,
 	camera:        Camera_State   `json:"camera" digest:"-"`,
 	objects:       []Object_State `json:"objects"`,
 	settings:      Settings_State `json:"settings"`,
@@ -100,6 +117,7 @@ State_Section :: enum {
 	Objects,
 	Settings,
 	Debug,
+	Static_Boxes,
 	Sun,
 	Menu,
 	Notice,
@@ -177,6 +195,10 @@ state_destroy :: proc(state: ^State, allocator: mem.Allocator) {
 	if state.objects != nil {
 		delete(state.objects, allocator)
 		state.objects = nil
+	}
+	if state.static_boxes != nil {
+		delete(state.static_boxes, allocator)
+		state.static_boxes = nil
 	}
 	rows_state_destroy(&state.rows, allocator)
 	free_string(&state.settings.display, allocator)

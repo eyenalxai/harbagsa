@@ -151,6 +151,9 @@ Renderer_Debug_Field :: enum {
 	Synthetic_Lights,
 	Sky,
 	AO,
+	AO_Radius,
+	AO_Strength,
+	Clip_Height,
 }
 
 Renderer_Debug_Resets :: bit_set[Renderer_Debug_Field]
@@ -169,6 +172,9 @@ Renderer_Debug_Command :: struct {
 	synthetic_lights:        int,
 	sky:                     bool,
 	ao:                      bool,
+	ao_radius:               f32,
+	ao_strength:             f32,
+	clip_height:             f32,
 	has_taa:                 bool,
 	has_jitter:              bool,
 	has_history_weight:      bool,
@@ -180,6 +186,9 @@ Renderer_Debug_Command :: struct {
 	has_synthetic_lights:    bool,
 	has_sky:                 bool,
 	has_ao:                  bool,
+	has_ao_radius:           bool,
+	has_ao_strength:         bool,
+	has_clip_height:         bool,
 }
 
 Command :: struct {

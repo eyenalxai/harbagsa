@@ -25,8 +25,8 @@ compare_reads_two_fields_with_the_same_resolver :: proc(t: ^testing.T) {
 @(test)
 compare_reads_one_capture_against_another :: proc(t: ^testing.T) {
 	captures := []harness.Capture_Result {
-		{stats = harness.Capture_Stats{mean = {0, 0.4, 0, 1}}},
-		{stats = harness.Capture_Stats{mean = {0, 0.6, 0, 1}}},
+		{stats = harness.Capture_Stats{mean = {x = 0, y = 0.4, z = 0, w = 1}}},
+		{stats = harness.Capture_Stats{mean = {x = 0, y = 0.6, z = 0, w = 1}}},
 	}
 	command := harness.Check_Command {
 		field     = "capture.1.stats.mean.y",
@@ -101,8 +101,8 @@ compare_parses_other_instead_of_value :: proc(t: ^testing.T) {
 @(test)
 compare_applies_a_tolerance_to_equality :: proc(t: ^testing.T) {
 	captures := []harness.Capture_Result {
-		{name = "on", stats = harness.Capture_Stats{mean = {0, 143, 0, 1}}},
-		{name = "off", stats = harness.Capture_Stats{mean = {0, 145, 0, 1}}},
+		{name = "on", stats = harness.Capture_Stats{mean = {x = 0, y = 143, z = 0, w = 1}}},
+		{name = "off", stats = harness.Capture_Stats{mean = {x = 0, y = 145, z = 0, w = 1}}},
 	}
 	command, error := harness.command_parse_string(
 		`{"cmd":"check","field":"capture.named.on.stats.mean.y","op":"eq","other":"capture.named.off.stats.mean.y","tolerance":2}`,

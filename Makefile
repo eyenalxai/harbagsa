@@ -90,7 +90,7 @@ VULKAN_LAYER_DIRS ?= \
 	/usr/share/vulkan/explicit_layer.d
 VALIDATION_LAYER := VK_LAYER_KHRONOS_validation
 
-.PHONY: all FORCE build agent check check-spirv check-lines test $(TEST_TARGETS) run shaders validate validate-offscreen validate-demo check-validation-layer shot smoke ui lighting suite clean
+.PHONY: all FORCE build agent check check-spirv check-lines test $(TEST_TARGETS) run shaders validate validate-offscreen validate-demo check-validation-layer check-references shot smoke quick ui lighting suite clean
 
 FORCE:
 
@@ -185,6 +185,9 @@ check: check-lines check-spirv $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shad
 	$(ODIN) check src/ui $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/input $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 
+check-references:
+	@python3 tools/check-references.py
+
 check-lines:
 	@status=0; \
 	for file in $$(find . -name '*.odin' -not -path './vendor/*'); do \
@@ -202,8 +205,9 @@ check-lines:
 test: $(TEST_TARGETS)
 
 $(TEST_TARGETS): test-%: $(TEST_DEPS)
+	@mkdir -p build/test
 	$(ODIN) test tests/$* $(if $(filter $*,$(TEST_FULL_FLAGS)),$(ODIN_FLAGS),$(ODIN_LIB_CHECK_FLAGS)) \
-		$(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1
+		$(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1 -out:build/test/$*.bin
 
 run: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
@@ -293,6 +297,9 @@ shot: agent
 		exit 1; \
 	fi; \
 	printf '%s\n' "$$paths"
+
+quick: agent
+	$(AGENT_BIN) suite fast --out runs/fast $(AGENT_FLAGS)
 
 smoke: agent
 	@out=$(if $(strip $(OUT)),$(OUT),runs/smoke-make); \

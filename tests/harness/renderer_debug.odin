@@ -15,7 +15,8 @@ renderer_debug_parses_every_override :: proc(t: ^testing.T) {
 		`{"cmd": "renderer_debug", "taa": false, "jitter": false, "history_weight": 0.25,
 		  "clamp": false, "depth_trust": true, "freeze_shadow_phase": true,
 		  "shadow_phase": 9, "light_shadows": false, "synthetic_lights": 9,
-		  "sky": false, "ao": false}`,
+		  "sky": false, "ao": false, "ao_radius": 2.0, "ao_strength": 0.25,
+		  "clip_height": 3.0}`,
 		context.allocator,
 	)
 	defer harness.command_destroy(&command, context.allocator)
@@ -36,6 +37,9 @@ renderer_debug_parses_every_override :: proc(t: ^testing.T) {
 	testing.expect(t, debug.has_synthetic_lights && debug.synthetic_lights == 9, "synthetic lights were not parsed")
 	testing.expect(t, debug.has_sky && !debug.sky, "sky was not parsed")
 	testing.expect(t, debug.has_ao && !debug.ao, "ao was not parsed")
+	testing.expect(t, debug.has_ao_radius && debug.ao_radius == 2.0, "ao radius was not parsed")
+	testing.expect(t, debug.has_ao_strength && debug.ao_strength == 0.25, "ao strength was not parsed")
+	testing.expect(t, debug.has_clip_height && debug.clip_height == 3.0, "clip height was not parsed")
 }
 
 @(test)
@@ -48,6 +52,9 @@ renderer_debug_rejects_bad_fields :: proc(t: ^testing.T) {
 		`{"cmd": "renderer_debug", "clear": true, "taa": null}`,
 		`{"cmd": "renderer_debug", "light_shadows": 1}`,
 		`{"cmd": "renderer_debug", "speed": 2}`,
+		`{"cmd": "renderer_debug", "ao_radius": 0}`,
+		`{"cmd": "renderer_debug", "ao_strength": 2}`,
+		`{"cmd": "renderer_debug", "clip_height": 1001}`,
 	}
 	for line in bad {
 		_, error := harness.command_parse_string(line, context.allocator)
@@ -61,7 +68,7 @@ renderer_debug_rejects_bad_fields :: proc(t: ^testing.T) {
 @(test)
 renderer_debug_parses_a_null_reset :: proc(t: ^testing.T) {
 	command, error := harness.command_parse_string(
-		`{"cmd":"renderer_debug","history_weight":null,"sky":null}`,
+		`{"cmd":"renderer_debug","history_weight":null,"sky":null,"ao_radius":null,"clip_height":null}`,
 		context.allocator,
 	)
 	defer harness.command_destroy(&command, context.allocator)
@@ -74,6 +81,8 @@ renderer_debug_parses_a_null_reset :: proc(t: ^testing.T) {
 	testing.expect(t, !debug.has_sky, "a null reset set the sky")
 	testing.expect(t, .History_Weight in debug.reset, "the weight reset was dropped")
 	testing.expect(t, .Sky in debug.reset, "the sky reset was dropped")
+	testing.expect(t, .AO_Radius in debug.reset, "the ao radius reset was dropped")
+	testing.expect(t, .Clip_Height in debug.reset, "the clip height reset was dropped")
 }
 
 @(test)

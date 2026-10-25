@@ -119,6 +119,20 @@ scenario_commands :: proc(scenario: ^Scenario, value: json.Value, allocator: mem
 		return format_error("%s", "scenario 'commands' must be a non-empty array")
 	}
 	for item, index in array {
+		object, object_ok := json_object(item)
+		if object_ok {
+			if cmd_value, has_cmd := json_get(object, "cmd"); has_cmd {
+				if cmd, cmd_ok := json_string(cmd_value); cmd_ok && cmd == "shot" {
+					shot_error := scenario_shot(object, &scenario.commands, allocator)
+					if shot_error != "" {
+						error := fmt.aprintf("command %d: %s", index, shot_error, allocator = context.allocator)
+						delete(shot_error, context.allocator)
+						return error
+					}
+					continue
+				}
+			}
+		}
 		command, command_error := command_parse(item, allocator)
 		if command_error != "" {
 			error := fmt.aprintf("command %d: %s", index, command_error, allocator = context.allocator)

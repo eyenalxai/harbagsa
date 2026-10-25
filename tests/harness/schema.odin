@@ -26,6 +26,10 @@ collect_state_paths :: proc(t: typeid, prefix: string, paths: ^[dynamic]string) 
 				collect_state_paths(typeid_of(harness.Object_State), "objects.1", paths)
 				continue
 			}
+			if prefix == "" && name == "static_boxes" {
+				collect_state_paths(typeid_of(harness.Static_Box_State), "static_boxes.0", paths)
+				continue
+			}
 			collect_state_paths(field.type.id, path, paths)
 		}
 	case runtime.Type_Info_Slice:
@@ -53,9 +57,17 @@ schema_state :: proc() -> harness.State {
 	hud_rows[0] = {kind = "metric", label = "A", value = "B", ratio = 0.5, ticks = 3}
 	menu_rows := make([]harness.Row_State, 1, context.temp_allocator)
 	menu_rows[0] = {kind = "setting", label = "C", value = "D"}
+	static_boxes := make([]harness.Static_Box_State, 1, context.temp_allocator)
+	static_boxes[0] = {
+		center = {x = 0, y = 1, z = 2},
+		half_extents = {x = 3, y = 4, z = 5},
+		color = {r = 1, g = 0.5, b = 0.25, a = 1},
+		rotation = {w = 1},
+	}
 	return {
 		frame = 7,
 		objects = objects,
+		static_boxes = static_boxes,
 		rows = harness.Rows_State{hud = hud_rows, menu = menu_rows},
 	}
 }
@@ -66,6 +78,7 @@ every_state_field_resolves_through_the_schema :: proc(t: ^testing.T) {
 	paths := make([dynamic]string, 0, 160, context.temp_allocator)
 	collect_state_paths(typeid_of(harness.State), "", &paths)
 	append(&paths, "objects.count")
+	append(&paths, "static_boxes.count")
 
 	testing.expect(t, len(paths) > 100, "the schema walk found too few fields")
 	for path in paths {

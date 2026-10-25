@@ -416,7 +416,7 @@ The output a capture writes: PNG for color, `float` for RGBA f32 values, `raw` f
 _Avoid_: Export mode
 
 **Capture statistics**:
-The per-channel minimum, maximum, mean, standard deviation, and gradient of a capture over an optional region, plus the median screen motion in texels for a velocity capture over covered pixels. The gradient is the mean absolute difference between 4-neighbour pixels; a region with no neighbour pair reports zero.
+The per-channel minimum, maximum, mean, standard deviation, and gradient of a capture over an optional region, plus the median screen motion in texels for a velocity capture over covered pixels. Each block names its channels `x`, `y`, `z`, and `w`. The gradient is the mean absolute difference between 4-neighbour pixels; a region with no neighbour pair reports zero. A colour key adds the count of pixels within a tolerance of one RGB value.
 _Avoid_: Image metrics
 
 **Shader digest**:
@@ -430,6 +430,22 @@ _Avoid_: Command list
 **Analysis report**:
 The `analysis.json` file from a run with color captures. It holds the capture window, the per-pair deltas, the summary, the dominant period, the worst unstable pixels' series, and the optional map paths.
 _Avoid_: Diff report
+
+**Static box**:
+An immutable box in the arena: the floor, a wall, a prop, or a room part. It is not a placed object and it does not enter the simulation digest. `static_boxes` reports every static box; `harbagsa-agent boxes` prints the same list without a renderer.
+_Avoid_: Arena mesh, level mesh
+
+**Shot**:
+A scenario-only shorthand that compiles to an optional camera, an optional sun, a settle, and one capture. A live session does not accept it.
+_Avoid_: Preset, view
+
+**Visual A/B**:
+The `ab --visual` flow that builds a base ref and the current tree, runs one scenario on both, and writes a labeled compare panel with the delta column.
+_Avoid_: Montage, image diff
+
+**Check margin**:
+The distance from a check's actual value to its gate in the pass direction. A positive margin passed; `harbagsa-agent checks` prints it.
+_Avoid_: Slack, tolerance
 
 **Capture check window**:
 The slice of captures a check aggregates, `{"start": S, "count": N}`. Warmup is the shorthand for skipping the first N captures.
@@ -697,7 +713,7 @@ builds only that part; `digest` is the only check that needs every section.
 _Avoid_: State slice, partial document
 
 **Renderer state**:
-The harness state block that describes the last rendered frame: frame count, TAA state, jitter index, history validity, convergence frames, history read index and weight, reset count and reason, shadow phase, and active point-light count.
+The harness state block that describes the last rendered frame: frame count, TAA state, jitter index, history validity, convergence frames, history read index and weight, reset count and reason, shadow phase, active point-light count, and the debug vertex counts by source. A capture carries the same block for the frame that wrote it.
 _Avoid_: Render stats, GPU state
 
 **Render digest**:
@@ -709,10 +725,10 @@ The cause recorded at each TAA history reset: create, extent, toggle, teleport, 
 _Avoid_: Reset flag
 
 **Renderer debug override**:
-A gated change to a TAA or point-light input for diagnosis: TAA, jitter,
-history weight, clamp, depth trust, shadow phase, point-light shadows, or
-synthetic lights. Every change resets history. A field set to `null` restores
-that field's default without clearing the others.
+A gated change to a renderer input for diagnosis: TAA, jitter, history weight,
+clamp, depth trust, shadow phase, point-light shadows, synthetic lights, the AO
+radius and strength, or the plan-view clip height. Every change resets history.
+A field set to `null` restores that field's default without clearing the others.
 _Avoid_: Debug flag
 
 **Debug override gate**:

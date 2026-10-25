@@ -73,21 +73,21 @@ capture_stats_reports_channels_and_velocity_median :: proc(t: ^testing.T) {
 		2, 0, 1, 0,
 		3, 0, 1, 0,
 	}
-	stats := harness.capture_stats(values, 2, 2, .Velocity, nil, nil, context.allocator)
-	testing.expect_value(t, stats.min[0], f32(0))
-	testing.expect_value(t, stats.max[0], f32(3))
-	testing.expect_value(t, stats.mean[0], f32(1.5))
-	testing.expectf(t, abs(stats.stddev[0] - 1.118034) < 1e-5, "stddev is %v", stats.stddev[0])
-	testing.expect_value(t, stats.gradient[0], f32(1.5))
-	testing.expect_value(t, stats.stddev[1], f32(0))
-	testing.expect_value(t, stats.gradient[1], f32(0))
+	stats := harness.capture_stats(values, 2, 2, .Velocity, nil, nil, nil, context.allocator)
+	testing.expect_value(t, stats.min.x, f32(0))
+	testing.expect_value(t, stats.max.x, f32(3))
+	testing.expect_value(t, stats.mean.x, f32(1.5))
+	testing.expectf(t, abs(stats.stddev.x - 1.118034) < 1e-5, "stddev is %v", stats.stddev.x)
+	testing.expect_value(t, stats.gradient.x, f32(1.5))
+	testing.expect_value(t, stats.stddev.y, f32(0))
+	testing.expect_value(t, stats.gradient.y, f32(0))
 	median, has_median := stats.velocity_median_texels.?
 	testing.expect(t, has_median, "velocity median is missing")
 	if has_median {
 		testing.expect_value(t, median, f32(4))
 	}
 
-	depth := harness.capture_stats(values, 2, 2, .Depth, nil, nil, context.allocator)
+	depth := harness.capture_stats(values, 2, 2, .Depth, nil, nil, nil, context.allocator)
 	_, has_depth_median := depth.velocity_median_texels.?
 	testing.expect(t, !has_depth_median, "depth stats reported a velocity median")
 }
@@ -96,9 +96,9 @@ capture_stats_reports_channels_and_velocity_median :: proc(t: ^testing.T) {
 capture_stats_gradient_without_a_neighbour_is_zero :: proc(t: ^testing.T) {
 	values := []f32{0.25, 0.5, 0.75, 1}
 	region := harness.Capture_Region{x = 0, y = 0, w = 1, h = 1}
-	stats := harness.capture_stats(values, 1, 1, .Color, region, nil, context.allocator)
-	testing.expect_value(t, stats.stddev[0], f32(0))
-	testing.expect_value(t, stats.gradient[0], f32(0))
+	stats := harness.capture_stats(values, 1, 1, .Color, region, nil, nil, context.allocator)
+	testing.expect_value(t, stats.stddev.x, f32(0))
+	testing.expect_value(t, stats.gradient.x, f32(0))
 }
 
 @(test)
@@ -269,4 +269,79 @@ capture_result_marshals_the_region :: proc(t: ^testing.T) {
 	defer delete(data, context.allocator)
 	testing.expectf(t, error == nil, "marshal failed: %v", error)
 	testing.expect(t, strings.contains(string(data), `"region"`), "the region is missing")
+}
+
+@(test)
+color_key_counts_matching_pixels :: proc(t: ^testing.T) {
+	values := []f32 {
+		255, 204, 51, 255,
+		0, 0, 0, 255,
+	}
+	stats := harness.capture_stats(
+		values,
+		2,
+		1,
+		.Color,
+		nil,
+		nil,
+		harness.Capture_Color_Key{r = 255, g = 204, b = 51, tolerance = 0},
+		context.allocator,
+	)
+	key, has_key := stats.color_key.?
+	testing.expect(t, has_key, "the color key is missing")
+	if has_key {
+		testing.expect_value(t, key.matches, 1)
+		testing.expect_value(t, key.fraction, f32(0.5))
+	}
+}
+
+@(test)
+color_key_needs_a_color_stats_capture :: proc(t: ^testing.T) {
+	good, error := harness.command_parse_string(
+		`{"cmd":"capture","name":"key","format":"stats","color_key":{"r":255,"g":204,"b":51,"tolerance":3}}`,
+		context.allocator,
+	)
+	defer harness.command_destroy(&good, context.allocator)
+	testing.expectf(t, error == "", "color key parse failed: %s", error)
+
+	bad := []string{
+		`{"cmd":"capture","name":"key","format":"stats","target":"depth","color_key":{"r":1,"g":2,"b":3,"tolerance":0}}`,
+		`{"cmd":"capture","name":"key","format":"png","color_key":{"r":1,"g":2,"b":3,"tolerance":0}}`,
+		`{"cmd":"capture","name":"key","format":"stats","color_key":{"r":256,"g":2,"b":3,"tolerance":0}}`,
+		`{"cmd":"capture","name":"key","format":"stats","color_key":{"r":1,"g":2,"b":3,"tolerance":-1}}`,
+	}
+	for line in bad {
+		_, bad_error := harness.command_parse_string(line, context.allocator)
+		testing.expectf(t, bad_error != "", "bad color key was accepted: %s", line)
+		if bad_error != "" {
+			delete(bad_error, context.allocator)
+		}
+	}
+}
+
+@(test)
+capture_check_reads_the_renderer_state_of_that_frame :: proc(t: ^testing.T) {
+	captures := []harness.Capture_Result {
+		{
+			name = "idle",
+			renderer = {debug_vertex_count = 0, debug_vertices = {sun = 0, world = 0}},
+		},
+	}
+	command := harness.Check_Command {
+		field = "capture.named.idle.renderer.debug_vertices.sun",
+		op    = .Eq,
+		value = {kind = .Number, number = 0},
+	}
+	result := harness.check_evaluate(command, {}, captures, nil, context.allocator)
+	defer harness.check_result_destroy(&result, context.allocator)
+	testing.expectf(t, result.ok, "capture renderer check failed: %s", result.error)
+
+	total := harness.Check_Command {
+		field = "capture.named.idle.renderer.debug_vertex_count",
+		op    = .Eq,
+		value = {kind = .Number, number = 0},
+	}
+	total_result := harness.check_evaluate(total, {}, captures, nil, context.allocator)
+	defer harness.check_result_destroy(&total_result, context.allocator)
+	testing.expectf(t, total_result.ok, "capture renderer total failed: %s", total_result.error)
 }

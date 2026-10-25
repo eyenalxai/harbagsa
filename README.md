@@ -15,10 +15,12 @@ direct light in contact, corners, and tunnels.
 
 - [Odin](https://odin-lang.org/) tested with `dev-2026-10`
 - SDL3 and a Vulkan 1.3 driver with the Vulkan loader
-- A GPU with `VK_KHR_acceleration_structure` and `VK_KHR_ray_query`
+- A GPU with `VK_KHR_acceleration_structure`, `VK_KHR_ray_query`, and the
+  Vulkan 1.3 shader demote feature
 - `glslc` from shaderc to compile the GLSL shaders
 - `spirv-val` from SPIRV-Tools to validate the compiled shaders (optional)
 - A C and C++ compiler for the vendored Box3D, FreeType, and HarfBuzz libraries
+- `python3` for `make check-references` and the perf A/B report
 - `make` (optional)
 
 ## Run
@@ -200,6 +202,11 @@ window or compositor. `make build` builds it next to the game. Agent-specific
 operational notes are in `docs/agents/harness.md`. Run
 `./bin/harbagsa-agent --help` (or `-h`) for the command and option list.
 
+For the short loop, use `make shot SCENARIO=editor-sun OUT=runs/editor-sun`
+and `make test-simulation`. `make quick` builds the agent and runs
+`suites/fast.json`. Read `report.json` with `jq`; `harbagsa-agent checks
+runs/editor-sun` prints every gate and its margin.
+
 ### Run a scenario
 
 ```sh
@@ -224,8 +231,9 @@ true}` the frames directory also holds `analysis-diff.png` and
 `analysis-variance.png`.
 
 `report.json` holds the pass/fail result, the final state, the setup block,
-a `captures` array (name, target, format, PNG flag, and path when it wrote a
-file), checks, the state digest, and the named perf reports when perf ran.
+a `captures` array (name, optional note, target, format, PNG flag, path when it
+wrote a file, render digest, and the renderer state of that frame), checks, the
+state digest, and the named perf reports when perf ran.
 `state.json` holds the final state alone. `analysis.json` holds the per-run
 image analysis when the run captured frames. The pair and pixel analysis uses
 color captures. `run.log` holds the log lines. Standard output is one JSON
@@ -325,19 +333,19 @@ Read the per-value metrics from the reports:
 ```sh
 for report in runs/lamp-threshold/*/report.json; do
   jq -r '[.scenario.parameters[0].value,
-          .captures[0].stats.gradient[1]] | @tsv' "$report"
+          .captures[0].stats.gradient.y] | @tsv' "$report"
 done
 ```
 
-The report stores statistics as arrays in RGBA order. A check names the same
-channels `x`, `y`, `z`, and `w`, so `capture.named.wall.stats.gradient.y` is
-green.
+The report stores statistics as `x`, `y`, `z`, and `w` objects, so a reader
+does not need to remember that index 1 is green. A check names the same
+channels: `capture.named.wall.stats.gradient.y` is green.
 
 ### Suites
 
 A suite manifest names scenarios to run in order. The manifests are
-`suites/renderer.json`, `suites/offscreen.json`, `suites/ui.json`, and
-`suites/lighting.json`:
+`suites/renderer.json`, `suites/offscreen.json`, `suites/ui.json`,
+`suites/lighting.json`, and `suites/fast.json`:
 
 ```sh
 ./bin/harbagsa-agent suite renderer
@@ -353,12 +361,41 @@ the gate. The exit code is the highest entry code. The run directory holds
 
 `make validate-offscreen` runs `suites/offscreen.json` with the validation
 build. `make ui` runs `suites/ui.json`; `make lighting` runs
-`suites/lighting.json`; `make suite SUITE=renderer` runs the normal agent.
-`--list` shows each entry's size, gate, and render mode without running it. `--fail-fast` stops at the first failure; the default runs every
-entry. A suite prints `suite: <entry>` before each run and the wall-clock time
-in `suite.json`; `--quiet` suppresses the progress lines. `--timeout SECONDS`
-applies one budget to each entry. Suite names and scenarios resolve from the
+`suites/lighting.json`; `make quick` runs `suites/fast.json`; `make suite
+SUITE=renderer` runs the normal agent. `--list` shows each entry's size, gate,
+and render mode without running it. `--fail-fast` stops at the first failure;
+the default runs every entry. A suite prints `suite: <entry>` before each run
+and the wall-clock time in `suite.json`; `--quiet` suppresses the progress
+lines. `--timeout SECONDS` applies one budget to each entry. `--only NAME` and
+`--skip NAME` select entries by scenario, scenario stem, or label; both accept
+a comma list and repeat. A filter that matches no entry is an error, so a typo
+does not silently run nothing. Suite names and scenarios resolve from the
 repository root, so `harbagsa-agent suite renderer` works from any directory.
+
+### Inspect the scene and the checks
+
+`boxes` prints the immutable arena geometry without a renderer:
+
+```sh
+./bin/harbagsa-agent boxes
+./bin/harbagsa-agent boxes --json | jq '.boxes[0]'
+```
+
+Each entry carries `center`, `half_extents`, `color`, `rotation`, `emissive`,
+and `visual_only`. A check reads the same data as `static_boxes.count` and
+`static_boxes.N.center.x`. A plan view adds `renderer_debug.clip_height` to
+drop the roof; `scenarios/box-plan.json` is the worked example.
+
+`checks` reads one run and prints every check with its gate and margin:
+
+```sh
+./bin/harbagsa-agent checks runs/editor-sun
+./bin/harbagsa-agent checks runs/editor-sun --json
+```
+
+A positive margin is the distance from the gate in the pass direction. The
+command exits 0 when every check passed, 1 when one failed, and 2 when the
+report cannot be read.
 
 ### Compare two runs
 
@@ -385,7 +422,25 @@ both scenario paths, revisions, dirty flags, extents, and capture counts.
 
 `compare` uses the embedded font stack and writes PNGs, so it needs no
 ImageMagick or compositor. Keep the output under `runs/`; an image never enters
-the repository. `diff` stays the numeric command.
+the repository. `diff` stays the numeric command. `compare --delta` is also the
+labeled before/after/delta panel for visual review.
+
+### Visual A/B
+
+Build a base ref and the current tree, run one scenario on both, and write the
+compare panel:
+
+```sh
+./bin/harbagsa-agent ab --visual \
+  --ref origin/main --scenario scenarios/editor-sun.json --out runs/visual-ab
+```
+
+The wrapper delegates to `tools/visual-ab.sh`. It builds each side with `make
+agent`, runs the same scenario into `base/` and `head/`, and calls `compare
+--delta` into `compare/`. `--keep` leaves the base worktree under
+`build/visual-ab/base`. A side that fails still leaves its report and captures,
+so the panel and the exit code show the difference. Omit `--size` when the
+scenario declares its own size.
 
 ### Live repro
 
@@ -469,6 +524,7 @@ are pixels.
 
 Check fields use the `state.json` shape, for example `player.position.y`,
 `player.grounded`, `player.stance`, `objects.1.position.z`, `objects.count`,
+`static_boxes.count`, `static_boxes.0.center.x`, `static_boxes.0.emissive`,
 `settings.window_mode`, `settings.resolution`, `settings.type_weight`,
 `menu.open`, `menu.status`, `menu.blocked`, `notice.text`, `debug.active`,
 `debug.placement.armed`, `debug.sun.angular_diameter_deg`, `sun.elevation_deg`,
@@ -484,8 +540,14 @@ and `.max_levels` read the visibility-band metric; a stats capture must name a
 region. `.top.N.x`, `.top.N.y`, `.top.N.axis`, and `.top.N.levels` name the
 largest counted jumps, and `over_cap` counts jumps at or above the cap. Tune it
 with `"steps": {"blur": 9, "min": 0.5, "max": 8}`; `blur` is an odd kernel size
-in [1, 31]. Add `"window": {"start": 2, "count": 8}` to aggregate over part of
-the captures; `warmup` stays the shorthand for skipping the first N.
+in [1, 31]. `capture.stats.color_key.matches` and `.fraction` read the colour
+key. A named capture exposes the renderer state of its own frame:
+`capture.named.idle.renderer.debug_vertices.sun` and
+`capture.named.idle.renderer.debug_vertex_count`. Add
+`"window": {"start": 2, "count": 8}` to aggregate over part of
+the captures; `warmup` stays the shorthand for skipping the first N. A
+scenario-level `note` and a capture-level `note` are echoed into
+`report.scenario.note` and `captures[].note`.
 
 A run with captures writes `analysis.json`. It holds per-pair deltas, a
 summary, the dominant period, the worst unstable pixels' series, and optional
@@ -549,7 +611,10 @@ The batch runner and the live session share one command set:
   count, TAA state, jitter index, history validity, convergence frames, history
   read index and weight, reset count and reason, shadow phase, the active light
   count, the applied atlas weight, text truncations and dropped fonts, the
-  debug line vertex count, and the debug override values.
+  debug line vertex count, a per-source `debug_vertices` count (`world`, `sun`,
+  `selection`, `placement`), and the debug override values. `static_boxes`
+  carries the immutable arena geometry, so a check can inspect the room plan
+  without a render.
   `setup.renderer.shader_digest` is the FNV hash of the SPIR-V embedded in the
   binary, so a shader edit is visible even when `render_digest` stays the same.
   `render_digest` covers the target extent, the effective
@@ -562,7 +627,13 @@ The batch runner and the live session share one command set:
   intermediate image, and `"format": "float"`, `"raw"`, `"stats"`, or
   `"profile"` to choose the output. The default is a color PNG. A stats capture
   accepts `"region": {"x","y","w","h"}` or `"rect": [x,y,w,h]`, an optional
-  `"histogram": 8`, and a `"steps"` block. Add
+  `"histogram": 8`, a `"steps"` block, and a `"color_key"` block. A color key
+  counts the pixels within the tolerance of one 0..255 RGB value:
+  `{"color_key":{"r":255,"g":231,"b":124,"tolerance":8}}` reports
+  `capture.stats.color_key.matches` and `.fraction`. A capture and a scenario
+  also accept a `"note"` string, echoed into `report.json`; the capture result
+  carries the `renderer` state of the frame that wrote it, so
+  `capture.named.idle.renderer.debug_vertices.sun` is exact. Add
   `"unit": "normalized"` to a region to give `x`, `y`, `w`, and `h` as
   fractions of the frame. A color capture accepts
   `"crop": {"x","y","w","h","scale"}` to write a scaled PNG, and a `"profile"`
@@ -582,6 +653,11 @@ The batch runner and the live session share one command set:
   `capture-<target>-<index>`. This keeps a PNG, the history statistics, and a
   profile on the same frame. A group holds at most eight outputs.
   `scenarios/capture-group.json` demonstrates all six output forms.
+- `{"cmd": "shot", "name": "lane", "camera": {...}, "sun": {...}, "settle": 40, "format": "stats"}`:
+  a scenario-only shorthand. It expands, in order, to an optional `camera`, an
+  optional `sun`, a `settle` frame count or object, and a `capture` that takes
+  every other field on the shot. It keeps the scenario short without hiding the
+  sequence. `scenarios/shot.json` is the worked example.
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw_deg": 0, "pitch_deg": 0}`: inspection
   camera. It does not move the player. It accepts `look_at` instead of
   `yaw_deg`/`pitch_deg`, and `fov_deg` in degrees (1..170). `look_at` with
@@ -665,8 +741,10 @@ The batch runner and the live session share one command set:
   `-define:ENABLE_RENDERER_DEBUG=true`. `sky` turns the sky pass off, `ao` turns the
   occlusion on direct light off, `light_shadows` turns the point-light shadows off, and
   `synthetic_lights` replaces the frame's lamps with a generated test field. Set a
-  count to choose how many lights it holds. Set one field to `null` to restore that
-  field's default without touching the others.
+  count to choose how many lights it holds. `ao_radius` (0.01..50 m) and
+  `ao_strength` (0..1) tune the contact darkening, and `clip_height` (0..1000 m)
+  discards fragments above that world height for a plan view. Set one field to
+  `null` to restore that field's default without touching the others.
   `clear` resets every override. Changing an input resets history.
 - `{"cmd": "scene", ...}`: apply an exact scene with `camera`, `sun`, `objects`,
   `settings`, `view`, `displays`, and `renderer_debug` blocks. Every block is
@@ -679,11 +757,11 @@ The batch runner and the live session share one command set:
   directory, or the `session --out` directory; an absolute path stays absolute.
   The final path must hold at most 160 bytes, so the notice can name it. A write
   failure returns `ok: false` and leaves the failure notice set.
-- `{"cmd": "record", "path": "scenarios/walk.json", "actions": false}`: start
+- `{"cmd": "record", "path": "runs/walk.json", "actions": false}`: start
   recording. Send `{"cmd": "record"}` to stop and write the scenario. `actions`
   omits the initial scene and keeps the reset, so only the action sequence
   matters.
-- `{"cmd": "replay", "path": "scenarios/walk.json"}`: reset and run a scenario.
+- `{"cmd": "replay", "path": "runs/walk.json"}`: reset and run a scenario.
 - `{"cmd": "quit"}`: stop the session.
 
 Unknown keys, wrong types, and out-of-range values are per-command errors. The
@@ -941,6 +1019,7 @@ odin run . -collection:src=src -collection:libs=vendor
 ```sh
 make check
 make check-spirv
+make check-references
 make test
 ```
 
@@ -955,7 +1034,13 @@ no Vulkan device is available.
 Each package also has one target for a tight loop:
 `make test-display`, `test-platform`, `test-input`, `test-physics`,
 `test-simulation`, `test-frame`, `test-perf`, `test-harness`,
-`test-renderer`, and `test-docs`. `make test` stays the aggregate.
+`test-renderer`, and `test-docs`. `make test` stays the aggregate. Each test
+binary lands in `build/test/`, so a failed run does not leave a `.bin` in the
+repository root.
+
+`make check-references` scans every Markdown page and suite manifest for a
+`scenarios/*.json` or `suites/*.json` reference and fails when the file is
+missing. Run it after a scenario rename.
 
 If more than one agent or terminal can build in this checkout, use the
 wrapper. It serializes Make with `flock` and needs `flock` from util-linux.

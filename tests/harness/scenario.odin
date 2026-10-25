@@ -291,3 +291,20 @@ menu_command_accepts_activate_false :: proc(t: ^testing.T) {
 	testing.expect(t, command.menu.has_activate, "activate presence was lost")
 	testing.expect(t, !command.menu.activate, "activate:false became true")
 }
+
+@(test)
+scenario_and_capture_notes_survive_parse :: proc(t: ^testing.T) {
+	scenario, error := harness.scenario_parse(
+		`{"note":"why this run exists","commands":[
+			{"cmd":"capture","name":"shot","note":"why this frame exists"}
+		]}`,
+		context.allocator,
+	)
+	defer harness.scenario_destroy(&scenario, context.allocator)
+	testing.expectf(t, error == "", "note parse failed: %s", error)
+	if error != "" {
+		return
+	}
+	testing.expect_value(t, scenario.source.note, "why this run exists")
+	testing.expect_value(t, scenario.commands[0].capture.note, "why this frame exists")
+}

@@ -98,6 +98,33 @@ parse_region_value :: proc(value: json.Value) -> (Capture_Region_Spec, string) {
 }
 
 @(private)
+parse_capture_color_key :: proc(value: json.Value) -> (Capture_Color_Key, string) {
+	fields, fields_ok := json_object(value)
+	if !fields_ok {
+		return {}, format_error("%s", "'color_key' must be an object")
+	}
+	if key, unknown := json_unknown_key(fields, {"r", "g", "b", "tolerance"}); unknown {
+		return {}, format_error("unknown color_key key %q", key)
+	}
+	key := Capture_Color_Key{}
+	levels := [3]^u8{&key.r, &key.g, &key.b}
+	names := [3]string{"r", "g", "b"}
+	for level, index in levels {
+		number, has := integer_field(fields, names[index])
+		if !has || number < 0 || number > 255 {
+			return {}, format_error("%s", "'color_key' needs integer r, g, b in [0, 255]")
+		}
+		level^ = u8(number)
+	}
+	tolerance, has_tolerance := number_field(fields, "tolerance")
+	if !has_tolerance || tolerance < 0 || tolerance > 255 {
+		return {}, format_error("%s", "'color_key.tolerance' must be a number in [0, 255]")
+	}
+	key.tolerance = f32(tolerance)
+	return key, ""
+}
+
+@(private)
 parse_capture_steps :: proc(value: json.Value) -> (Capture_Steps_Options, string) {
 	fields, fields_ok := json_object(value)
 	if !fields_ok {

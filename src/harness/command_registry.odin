@@ -93,6 +93,9 @@ parse_no_fields :: proc(object: json.Object, allocator: mem.Allocator) -> (Comma
 @(private)
 destroy_capture :: proc(command: ^Command, allocator: mem.Allocator) {
 	delete(command.capture.name, allocator)
+	if command.capture.note != "" {
+		delete(command.capture.note, allocator)
+	}
 	command^ = {}
 }
 
@@ -100,6 +103,9 @@ destroy_capture :: proc(command: ^Command, allocator: mem.Allocator) {
 destroy_captures :: proc(command: ^Command, allocator: mem.Allocator) {
 	for &output in command.captures.outputs {
 		delete(output.name, allocator)
+		if output.note != "" {
+			delete(output.note, allocator)
+		}
 	}
 	delete(command.captures.outputs, allocator)
 	command^ = {}

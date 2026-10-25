@@ -4,6 +4,8 @@ package harness
 import "core:encoding/json"
 import "core:mem"
 
+import "src:renderer"
+
 RENDERER_DEBUG_KEYS :: []string {
 	"cmd",
 	"clear",
@@ -18,6 +20,9 @@ RENDERER_DEBUG_KEYS :: []string {
 	"synthetic_lights",
 	"sky",
 	"ao",
+	"ao_radius",
+	"ao_strength",
+	"clip_height",
 }
 
 RENDERER_DEBUG_BLOCK_KEYS :: []string {
@@ -33,6 +38,9 @@ RENDERER_DEBUG_BLOCK_KEYS :: []string {
 	"synthetic_lights",
 	"sky",
 	"ao",
+	"ao_radius",
+	"ao_strength",
+	"clip_height",
 }
 
 @(private)
@@ -133,6 +141,42 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 	if error := debug_bool(object, "ao", .AO, &command.ao, &command.has_ao, &command.reset); error != "" {
 		return {}, error
 	}
+	if error := debug_number(
+		object,
+		"ao_radius",
+		.AO_Radius,
+		0.01,
+		50,
+		&command.ao_radius,
+		&command.has_ao_radius,
+		&command.reset,
+	); error != "" {
+		return {}, error
+	}
+	if error := debug_number(
+		object,
+		"ao_strength",
+		.AO_Strength,
+		0,
+		1,
+		&command.ao_strength,
+		&command.has_ao_strength,
+		&command.reset,
+	); error != "" {
+		return {}, error
+	}
+	if error := debug_number(
+		object,
+		"clip_height",
+		.Clip_Height,
+		0,
+		renderer.DEBUG_CLIP_HEIGHT_MAX,
+		&command.clip_height,
+		&command.has_clip_height,
+		&command.reset,
+	); error != "" {
+		return {}, error
+	}
 	if command.clear && (command.has_taa ||
 	   command.has_jitter ||
 	   command.has_history_weight ||
@@ -144,6 +188,9 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 	   command.has_synthetic_lights ||
 	   command.has_sky ||
 	   command.has_ao ||
+	   command.has_ao_radius ||
+	   command.has_ao_strength ||
+	   command.has_clip_height ||
 	   command.reset != {}) {
 		return {}, "'clear' cannot be combined with overrides"
 	}

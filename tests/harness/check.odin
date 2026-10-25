@@ -54,8 +54,8 @@ capture_check_needs_a_capture :: proc(t: ^testing.T) {
 @(test)
 capture_check_reads_a_capture_by_name :: proc(t: ^testing.T) {
 	captures := []harness.Capture_Result {
-		{name = "before", delta_mean = 0.2, stats = harness.Capture_Stats{mean = {1, 2, 3, 4}}},
-		{name = "after", delta_mean = 0.02, stats = harness.Capture_Stats{mean = {2, 3, 4, 5}}},
+		{name = "before", delta_mean = 0.2, stats = harness.Capture_Stats{mean = {x = 1, y = 2, z = 3, w = 4}}},
+		{name = "after", delta_mean = 0.02, stats = harness.Capture_Stats{mean = {x = 2, y = 3, z = 4, w = 5}}},
 	}
 	mean := harness.Check_Command {
 		field = "capture.named.after.stats.mean.y",

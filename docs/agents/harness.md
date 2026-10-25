@@ -9,13 +9,20 @@ page is the short operational guide for agents.
 ## Quick start
 
 Five recipes. Each writes a run directory; read `report.json` for the result.
+For a visual bug, start with `make shot`; it builds, runs, and prints the capture
+paths. `make quick` runs the short suite, and `make test-simulation` is the
+narrow simulation gate. `run -` reads a scenario from standard input, and
+`--tag before` keeps a repeat beside the first run:
+
+```sh
+printf '%s\n' '{"cmd":"step","frames":2}' |
+  ./bin/harbagsa-agent run - --tag probe --out runs/probe
+```
 
 1. Capture the HUD:
 
    ```sh
-   tools/make.sh build
-   ./bin/harbagsa-agent run scenarios/hud.json --out runs/ui/hud
-   jq -r '.captures[].path' runs/ui/hud/report.json
+   make shot SCENARIO=hud OUT=runs/ui/hud
    ```
 
 2. Capture the settings menu:
@@ -74,8 +81,11 @@ serializes Make with `flock`.
 | capture the final image | **Capture targets** (`color` + `png`) |
 | read velocity, history, depth, or scene color | **Capture targets** |
 | read numeric image statistics | **Capture targets** (`stats`) |
-| read renderer state or the render digest | **Renderer state** |
+| read renderer state, the debug vertex counts, or the render digest | **Renderer state** |
 | change a renderer input for a diagnosis | **Renderer debug overrides** |
+| inspect the static arena boxes | `harbagsa-agent boxes` or **Interior room** |
+| read every check gate and margin | `harbagsa-agent checks runs/<stem>` |
+| run a scenario on two builds and write a panel | **Visual A/B** |
 | check the sky and the direct-light occlusion | **Sky and ambient occlusion** |
 | test lighting inside the closed room | **Interior room** |
 | measure image stability or the period | **Analysis** |
@@ -99,8 +109,10 @@ serializes Make with `flock`.
   effective `parameters`), `run_dir`, `frame`, `state`, `setup`, `captures`,
   `checks`, `failures`, `digest`, `error`, `perf` (a list of named reports) when
   perf ran, `trace` when the run wrote a perf trace, and `analysis` when the run
-  wrote an analysis report. A `captures` entry carries `name`, `target`,
-  `format`, and `png`, plus `path` when it wrote a file.
+  wrote an analysis report. A `captures` entry carries `name`, `note`, `target`,
+  `format`, and `png`, plus `path` when it wrote a file, the `render_digest`,
+  and the `renderer` report of the frame that wrote it. `scenario.note` echoes
+  the scenario-level note.
 - `analysis.json`: the per-run image analysis. See **Analysis**.
 - `frames/analysis-diff.png` and `frames/analysis-variance.png`: the optional
   analysis maps.
@@ -110,7 +122,9 @@ serializes Make with `flock`.
   objects, window and input settings, the debug mode, menu, rows, settle, frame,
   renderer, render digest, and simulation digest. Each object carries `id`,
   `prefab`, `body`, `position`, `rotation`, `scale`, `spawn_age`, and `light`
-  (`active`, `color`, `intensity`, `range`). The debug mode carries the palette,
+  (`active`, `color`, `intensity`, `range`). `static_boxes` carries the
+  immutable arena geometry: `center`, `half_extents`, `color`, `rotation`,
+  `emissive`, and `visual_only`. The debug mode carries the palette,
   the placement tool, the sun, the inspector, the light budget, and the history.
 - `frames/<name>.png`, `.f32`, or `.bin`: captures. A color capture is a PNG;
   `float` and `raw` write the intermediate target.
@@ -213,6 +227,11 @@ Rules:
   substitutes `${name}` in any command value. A parameter must be a string,
   number, or boolean. A placeholder is a JSON string, so `["${x}", 0, 0]` puts a
   numeric parameter in an array.
+- A top-level `"note"` is echoed into `report.scenario.note`; a capture `note`
+  is echoed into `captures[].note`. Use them to say why a run or a frame exists.
+- A `shot` command is a scenario-only shorthand. It expands to an optional
+  `camera`, an optional `sun`, a `settle`, and a `capture`, so a view is four
+  lines shorter. The expanded commands still run verbatim.
 - A check compares with `value` or with `other`:
   `{"cmd":"check","field":"capture.1.stats.mean.y","op":"gt","other":"capture.0.stats.mean.y"}`.
   `capture.N.*`, `capture.first.*`, and `capture.last.*` name one capture.
@@ -240,7 +259,8 @@ and crops are pixels. `turn` and `wheel` are step counts.
 - `{"cmd": "settle", "frames": 300}`
 - `{"cmd": "state"}`
 - `{"cmd": "rows"}`
-- `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`
+- `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0, "note": "why"}`
+- `{"cmd": "shot", "name": "lane", "camera": {...}, "sun": {...}, "settle": 40, "format": "stats"}`
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw_deg": 0, "pitch_deg": 0}`
 - `{"cmd": "camera", "position": [0, 2, 12], "look_at": [0, 1, 0], "fov_deg": 75}`
 - `{"cmd": "camera", "clear": true}`
@@ -268,9 +288,10 @@ and crops are pixels. `turn` and `wheel` are step counts.
 - `{"cmd": "renderer_debug", "jitter": false, "shadow_phase": 12}`
 - `{"cmd": "renderer_debug", "light_shadows": false, "synthetic_lights": 8}`
 - `{"cmd": "renderer_debug", "sky": false, "ao": false}`
-- `{"cmd": "record", "path": "scenarios/walk.json"}`
+- `{"cmd": "renderer_debug", "ao_radius": 2.0, "ao_strength": 0.25, "clip_height": 2.0}`
+- `{"cmd": "record", "path": "runs/walk.json"}`
 - `{"cmd": "record"}`
-- `{"cmd": "replay", "path": "scenarios/walk.json"}`
+- `{"cmd": "replay", "path": "runs/walk.json"}`
 - `{"cmd": "quit"}`
 
 `camera` accepts `look_at` instead of `yaw_deg`/`pitch_deg`, and `fov_deg` in
@@ -281,6 +302,10 @@ is active.
 `settle` also takes `{"cmd":"settle","until":"converged"}`. It renders until the
 convergence count reaches the 512 cap and reports `settle.frames` and
 `settle.converged`. It needs a renderer.
+
+A `shot` is only valid in a scenario. It expands in order to the `camera`, the
+`sun`, the `settle` (a frame count or an object), and one `capture` that takes
+every other shot key. `scenarios/shot.json` is the worked example.
 
 A `scene` command applies one exact scene. Its blocks are `camera`, `sun`,
 `objects`, `settings`, `view`, `displays`, and `renderer_debug`, and every block
@@ -396,8 +421,14 @@ other rows. `--fail-fast` stops at the first failure. `--list` parses every
 entry and prints its size, gate, and render mode without running it. Each entry
 prints `suite: <label>` before it runs and its wall-clock time in `suite.json`;
 `--quiet` suppresses the progress lines. `--timeout SECONDS` applies one budget
-to each entry. Suite names and scenario names resolve from the repository root,
-so the command works from any directory.
+to each entry. `--only NAME,...` and `--skip NAME,...` select entries by
+scenario, scenario stem, or label; repeat either flag to add a filter. A filter
+that matches no entry is an error. Suite names and scenario names resolve from
+the repository root, so the command works from any directory.
+
+`suites/fast.json` is the short visual loop: smoke, the interior room, the
+stairs AO, and the lamp wall plane. `make quick` builds the agent and runs it.
+The full suites stay the final gate.
 
 `harbagsa-agent suite offscreen` is the validation target. `make
 validate-offscreen` builds the validation agent and runs
@@ -548,8 +579,10 @@ the palette, captures the Platform preview, selects the Ramp, and captures its
 pitched preview. Run it with `--size 800x600` to check the dock fits the smallest
 supported window. `scenarios/editor-sun.json` captures the player view and the
 idle sun with no debug lines, the sun gizmo on the sky dome, and the committed
-lighting. It checks `renderer.debug_vertex_count` at zero without the sun
-placement and after the commit, and above 80 while placing.
+lighting. It checks `renderer.debug_vertices.sun` at zero without the sun
+placement and after the commit, and above 80 while placing. It also counts the
+amber gizmo with a `color_key` on a HUD-free stats capture, and checks that a
+capture's own `renderer` report holds the same sun vertex count.
 `scenarios/editor-object.json` selects an object, moves, rotates, and converts
 it, duplicates it, then captures the inspector and the undo and redo restores.
 `scenarios/editor-input.json` drives the pointer, wheel, relative turn, palette
@@ -760,6 +793,14 @@ works at 1280x720 and 2560x1440. The report echoes the resolved pixel region.
 `"histogram": 8` adds per-channel bin counts for the region or the whole image.
 `capture.stats.region.*` and `capture.histogram.*` read them.
 
+Every statistics block is an object named `x`, `y`, `z`, `w`, so
+`capture.stats.mean.y` reads green in both JSON and a check. A
+`"color_key": {"r","g","b","tolerance"}` block counts the pixels within the
+per-channel tolerance of one 0..255 colour. It needs the color target and
+`format: "stats"`; the result is `capture.stats.color_key.matches` and
+`.fraction`. `scenarios/editor-sun.json` uses it to prove that the amber sun
+gizmo is gone after placement, without guessing from vertex totals.
+
 A capture with `"crop": {"x","y","w","h","scale"}` writes a nearest-neighbor
 scaled PNG. `width` and `height` stay the source extent; `written_width` and
 `written_height` name the file. A crop stays out of the analysis window and the
@@ -837,8 +878,13 @@ group and the run. `scenarios/capture-group.json` covers all six output forms.
 error. Capture deltas compare color PNG captures only; another target does not
 move the baseline.
 
+A named capture also exposes the renderer report of its own frame:
+`capture.named.idle.renderer.debug_vertices.sun` is the sun vertex count that
+frame drew, not the last frame of the run. The group attaches the report after
+the render and before the capture joins the list.
+
 A check reads the last capture in its window: `capture.target`,
-`capture.format`, and `capture.stats.min.x`, `capture.stats.max.x`,
+`capture.format`, `capture.note`, and `capture.stats.min.x`, `capture.stats.max.x`,
 `capture.stats.mean.x`, `capture.stats.stddev.x`, `capture.stats.gradient.x`,
 `capture.stats.steps.count`, `capture.stats.steps.pairs`,
 `capture.stats.steps.max`, `capture.stats.steps.over_cap`,
@@ -980,6 +1026,22 @@ only appears in one phase is the temporal filter or the output dither; compare
 `renderer.taa_enabled`, the history weight, and the step count. The design
 background is in `docs/adr/0027-32-bit-taa-history.md`.
 
+## Visual A/B
+
+```sh
+./bin/harbagsa-agent ab --visual \
+  --ref origin/main --scenario scenarios/editor-sun.json --out runs/visual-ab
+```
+
+`ab --visual` delegates to `tools/visual-ab.sh`. It builds the ref and the
+current tree with `make agent`, runs the same scenario into `base/` and `head/`,
+then calls `compare --delta` into `compare/`. `--keep` leaves the base worktree.
+Omit `--size` when the scenario declares its own size. A side that fails still
+leaves a report and any captures, so the panel and exit code show the difference.
+
+`compare --delta` is the labeled before/after/delta panel. Use it directly
+when the two runs already exist.
+
 ## Cross-run diff
 
 ```sh
@@ -1063,6 +1125,10 @@ run never created a renderer, and `renderer.active` is `false`.
 | `text_truncated_runs` | text runs cut at the 128-glyph cap |
 | `text_font_drops` | HarfBuzz fonts dropped at the 8-font cap |
 | `debug_vertex_count` | the debug line vertices the last frame prepared, world and editor |
+| `debug_vertices.world` | world bounds and contacts from the F1 debug draw |
+| `debug_vertices.sun` | the sun placement ring, cross, and dashed aim line |
+| `debug_vertices.selection` | the selected object's outline |
+| `debug_vertices.placement` | the placement ghost, footprint, and guide |
 
 The state also carries a `camera` object: `position`, `yaw_deg`, `pitch_deg`,
 `fov_deg`, `source`, and `overridden`. Every angle is in degrees. It reports
@@ -1099,11 +1165,15 @@ same when they do not. It is separate from the simulation digest: read
 `report.json` carries a `setup` block: the target kind (`offscreen`,
 `swapchain`, or `none`), the extent, the view flags, the renderer debug gate,
 the device name, the frame count in flight, the TAA state, the jitter,
-history, and sample caps, and the AO sample count, radius, and strength. Use it
-to compare two runs before you compare their pixels.
+history, and sample caps, and the AO sample count, radius, and strength. The
+AO values are the build defaults; `state.renderer.debug` reports the effective
+override when one is active. Use the setup block to compare two runs before you
+compare their pixels.
 
 `scenarios/renderer-state.json` checks the steady state. `scenarios/renderer-reset.json`
-checks a teleport reset.
+checks a teleport reset. A capture copies this report into
+`captures[].renderer`, so a later frame cannot change what the capture check
+reads.
 
 ## Renderer debug overrides
 
@@ -1125,6 +1195,9 @@ it. Any other build rejects it with a clear error.
 | `synthetic_lights` | replace the frame's lights with a generated test field of any non-negative count |
 | `sky` | draw the sky pass; the sky is a background, not a light |
 | `ao` | trace the occlusion rays; they scale the sun and point lights |
+| `ao_radius` | set the occlusion ray length in [0.01, 50] m |
+| `ao_strength` | set the occlusion mix in [0, 1] |
+| `clip_height` | discard fragments above this world height in [0, 1000] m; a plan view |
 | `clear` | reset every override and turn TAA, the sky, and the AO on |
 | any field set to `null` | restore that field's default |
 
@@ -1159,7 +1232,8 @@ surface that the sun and the point lights do not reach is black.
 The lit pass traces eight occlusion rays per fragment and scales the sun and
 point-light sum by the visible fraction, out to 1.5 m. The strength is 0.5. A
 lit corner darkens; a surface with no light stays black. Both the sky pass and
-the occlusion are debug overrides. `{"cmd": "renderer_debug", "sky": false}`
+the occlusion are debug overrides. `ao_radius` and `ao_strength` tune the
+contact darkening without a rebuild; the render digest covers both. `{"cmd": "renderer_debug", "sky": false}`
 removes the sky pass and leaves the clear colour. `{"cmd": "renderer_debug",
 "ao": false}` drops the occlusion and keeps the direct light. `clear` turns
 both back on.
@@ -1192,6 +1266,17 @@ corner. The room is static arena geometry, not a placed object. It is 11 m
 square with a 3 m clear height and one west door. The door opens into a
 four-turn light lock: east, south, west, south, and east into the chamber.
 
+The short level recipe:
+
+```sh
+make shot SCENARIO=room-lighting OUT=runs/room-lighting
+jq -r '.captures[] | select(.name | test("chamber")) | [.name, .stats.mean.y] | @tsv' \
+  runs/room-lighting/report.json
+```
+
+A depth capture with `max < 0.999` proves no sky pixel is visible in the room.
+Use `harbagsa-agent boxes` when the question is the plan rather than the light.
+
 The scenario:
 
 1. captures the outside, the view out of the door, the first tunnel lane, and
@@ -1219,6 +1304,20 @@ The chamber is black, not merely shaded. The depth check proves the room is
 closed. The four-turn check proves that no straight sun ray passes the door. The
 lamp is the only light inside, and the occlusion term darkens the corners it
 lights. There is no bounce and no ambient fill.
+
+### Plan view and static boxes
+
+`harbagsa-agent boxes` prints the immutable arena boxes without a renderer;
+`--json` writes `{count, boxes}`. A check reads the same list as
+`static_boxes.count` and `static_boxes.N.center.x`, `.half_extents.z`,
+`.color.r`, `.rotation.w`, `.emissive`, and `.visual_only`. The list is 63
+boxes: the floor and four walls, the props, and the room. This is the cheap way
+to check a door gap or a room plan.
+
+For a picture, add `"renderer_debug": {"clip_height": 2.0}` and put the camera
+above the arena looking down. The clip discards the roof and the upper walls.
+`scenarios/box-plan.json` is the worked example; run it with
+`make shot SCENARIO=box-plan OUT=runs/box-plan`.
 
 ## Performance
 
@@ -1351,6 +1450,7 @@ frame-rate change.
 - `src/harness/`: CLI, scenario compiler, commands, session, runner, socket, PNG.
 - `src/harness/capture.odin`: the capture result, target, format, and file write.
 - `src/harness/capture_stats.odin`: the capture statistics and pixel hash.
+- `src/harness/capture_color_key.odin`: the colour key count.
 - `src/harness/capture_steps.odin`: the visibility-band step metric.
 - `src/harness/capture_command.odin`: the capture target/format parser.
 - `src/harness/capture_region.odin`: the region, crop, and histogram.
@@ -1368,7 +1468,10 @@ frame-rate change.
   snapshot and sets the notice.
 - `src/harness/session_displays.odin`: the scripted display list.
 - `src/harness/session_draw.odin`: the frame draw and the capture dispatch.
-- `src/harness/ab_command.odin`: the `ab` wrapper over `tools/ab.sh`.
+- `src/harness/ab_command.odin`: the `ab` wrapper over `tools/ab.sh` and `tools/visual-ab.sh`.
+- `src/harness/boxes.odin`: the `boxes` command over `game.arena_static_boxes`.
+- `src/harness/checks.odin`: the `checks` table over a run's `report.json`.
+- `src/harness/shot_command.odin`: the scenario-only `shot` shorthand.
 - `src/harness/run_backend.odin`: the lazy run backend.
 - `src/harness/run_paths.odin`: the tag-aware run directory.
 - `src/harness/run_stages.odin`: the five run stages, their results, and the
@@ -1501,6 +1604,7 @@ frame-rate change.
   `scenarios/renderer-reset.json`, `scenarios/capture-targets.json`,
   `scenarios/renderer-debug.json`, `scenarios/renderer-debug-converge.json`,
   `scenarios/renderer-debug-jitter.json`, `scenarios/capture-free.json`,
+  `scenarios/box-plan.json`, `scenarios/shot.json`,
   `scenarios/editor-ghost.json`, `scenarios/editor-sun.json`,
   `scenarios/editor-object.json`, `scenarios/editor-lamps.json`,
   `scenarios/debug-pop.json`, `scenarios/type-weight.json`,
@@ -1558,9 +1662,21 @@ when the test asserts the error. Return the error from the library code and let
 the outer layer log it; do not log an expected failure inside a test.
 
 `make smoke` runs the smoke scenario with the normal agent and needs no
-validation layer. `make shot SCENARIO=...` runs one scenario and prints the
-capture paths. `make ui` runs `suites/ui.json` into `runs/ui/<entry>`;
-`make lighting` runs `suites/lighting.json` into `runs/lighting/<entry>`.
+validation layer. `make shot SCENARIO=... OUT=...` builds, runs one scenario,
+and prints the capture paths; use it for every visual loop. `make ui` runs
+`suites/ui.json` into `runs/ui/<entry>`; `make lighting` runs
+`suites/lighting.json` into `runs/lighting/<entry>`; `make quick` runs
+`suites/fast.json` into `runs/fast/<entry>`.
+
+`harbagsa-agent checks runs/<stem>` prints every check with its gate, actual
+value, and margin, including the checks that passed. `--json` writes the same
+rows. A positive margin is the distance from the gate in the pass direction;
+the command exits 1 when a check failed. Use it instead of a hand-written `jq`
+table when re-baselining.
+
+`make check-references` scans every Markdown page and suite for a missing
+`scenarios/*.json` or `suites/*.json` reference. Run it after a rename. Test
+binaries land in `build/test/`, so a failed test leaves no `.bin` in the root.
 
 `make validate` builds the agent with validation enabled and runs
 `scenarios/smoke.json` offscreen, then with `--present` when a display is
@@ -1574,12 +1690,9 @@ with the highest entry code. `SCENARIO=...` replaces the manifest entries:
 make validate-offscreen SCENARIO=renderer-debug AGENT_FLAGS=--debug-renderer
 ```
 
-`make shot SCENARIO=scenarios/ui.json` builds, runs, and prints the capture
-paths. `make ui` runs `suites/ui.json` into `runs/ui/<entry>`; `make lighting`
-runs `suites/lighting.json`. `make suite SUITE=renderer` runs a suite with the
-normal agent. `make smoke` is the short
-end-to-end gate and needs no validation layers. `make validate-demo` runs the
-game with validation enabled.
+`make suite SUITE=renderer` runs a suite with the normal agent. `make smoke` is
+the short end-to-end gate and needs no validation layers. `make validate-demo`
+runs the game with validation enabled.
 
 ## Keep the harness current
 
@@ -1625,7 +1738,13 @@ harness in the same change. Do not leave the automation behind the game.
   flat-run metric.
 - New capture block: add it to `Capture_Spec`, the backend, `capture_field`,
   the docs, and a synthetic image test. A block that writes no file must still be readable by a check. A check must read the same value
-  the file records.
+  the file records. `color_key` is the worked example: parser, builder,
+  report field, check field, schema path, and a unit test.
+- New scenario shorthand: compile it to explicit commands in
+  `scenario_commands`, not to a new session command, so a live session and a
+  recorded scenario cannot depend on it. `shot` is the example.
+- New report field on a capture: add it to `Capture_Result` and set it in
+  `session_draw_group`; that is where the frame's renderer report is copied.
 - New render input: add the field to `Render_Input`, one row to
   `RENDER_DIGEST_FIELDS` (hashed, or an explicit exclusion with the reason), the
   recorder fill, and the reflection test. The uniform reads the same input.

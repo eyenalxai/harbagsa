@@ -129,7 +129,7 @@ off for diagnosis.
   `capture.worst_over_16_fraction` gate stays at 5e-06 and measures 2.17e-06
   at 1280x720. The mean gate is wider because the AO samples are stochastic;
   the shade-only gate removes the AO noise from the sunlit part.
-- `scenarios/sky-ao.json` gates the image. Mean green: zenith 135.8 against a
+- `scenarios/sky.json` gates the image. Mean green: zenith 135.8 against a
   gate of at most 140, horizon 156.2 against a gate of at least 150, corner with
   AO off 69.9 against a gate of at least 64, and corner with AO on 53.5 against
   a gate of at most 58. With `sky: false` the zenith mean is 179. With the AO
