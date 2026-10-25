@@ -74,9 +74,10 @@ PROBE_VOLUMES_BINDING :: 6
 PROBE_IRRADIANCE_BINDING :: 7
 PROBE_DEPTH_BINDING :: 8
 PROBE_POSITIONS_BINDING :: 9
+PROBE_RAYS_BINDING :: 10
 
 create_scene_resources :: proc(r: ^Renderer) -> bool {
-	bindings := [10]vk.DescriptorSetLayoutBinding {
+	bindings := [11]vk.DescriptorSetLayoutBinding {
 		{
 			binding = CAMERA_BINDING,
 			descriptorType = .UNIFORM_BUFFER,
@@ -137,6 +138,12 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 			descriptorCount = 1,
 			stageFlags = {.FRAGMENT, .COMPUTE},
 		},
+		{
+			binding = PROBE_RAYS_BINDING,
+			descriptorType = .STORAGE_BUFFER,
+			descriptorCount = 1,
+			stageFlags = {.COMPUTE},
+		},
 	}
 	layout_info := vk.DescriptorSetLayoutCreateInfo {
 		sType = .DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -152,7 +159,7 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 
 	pool_sizes := [3]vk.DescriptorPoolSize {
 		{type = .UNIFORM_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT},
-		{type = .STORAGE_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT * 8},
+		{type = .STORAGE_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT * 9},
 		{type = .ACCELERATION_STRUCTURE_KHR, descriptorCount = MAX_FRAMES_IN_FLIGHT},
 	}
 	pool_info := vk.DescriptorPoolCreateInfo {

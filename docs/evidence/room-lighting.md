@@ -1,6 +1,6 @@
 # Room lighting evidence
 
-Captured on 2026-10-25 from the direct-light branch. GPU: AMD Radeon RX 9060 XT
+Captured on 2026-10-25 from the DDGI gather branch. GPU: AMD Radeon RX 9060 XT
 (RADV GFX1200). All runs are offscreen through `bin/harbagsa-agent`.
 
 ## The room
@@ -19,10 +19,12 @@ and the clear height is 2.4 m. The lanes are `z 12.2..14.2`, `z 9.9..11.9`, and
 The colour is the teal world hue `0.38 0.60 0.56` linear, documented in
 [world.md](../design/world.md).
 
-The scene has no ambient term. The room is black unless a real light reaches it.
-The decision is in
-[ADR 0028](../adr/0028-direct-light-with-surface-occlusion.md). The ambient
-occlusion rays stay and scale the sun and point lights at strength 0.5.
+The scene has no constant ambient term. The room is black unless direct or
+probe indirect light reaches it. The direct-light decision is in
+[ADR 0028](../adr/0028-direct-light-with-surface-occlusion.md); the probe
+indirect term is in
+[ADR 0033](../adr/0033-ddgi-irradiance-and-gather.md). The ambient occlusion
+rays stay and scale the sun and point lights at strength 0.5.
 
 ## What it checks
 
@@ -31,25 +33,28 @@ occlusion rays stay and scale the sun and point lights at strength 0.5.
 
 | Check | Measured | Gate | Passes |
 | --- | ---: | --- | --- |
-| First lane, west sun mean green | 6.33 | at least 2 | yes |
-| First lane, east sun mean green | 0.17 | below 0.5 | yes |
-| Chamber, west sun mean green | 0.17 | below 0.5 | yes |
-| Chamber, east sun mean green | 0.17 | below 0.5 | yes |
-| Chamber, west against east | 0.00 | equal within 0.1 | yes |
+| First lane, west sun mean green | 39.75 | at least 2 | yes |
+| First lane, east sun mean green | 8.08 | below 20 and below west | yes |
+| Chamber, west sun mean green | 0.26 | below 0.5 | yes |
+| Chamber, east sun mean green | 0.18 | below 0.5 | yes |
+| Chamber, west against east | 0.07 | equal within 0.1 | yes |
 | Chamber depth maximum | 0.9947 | below 0.999 | yes |
 | First lane depth maximum | 0.9907 | below 0.999 | yes |
-| Lamp on mean green | 123.75 | at least 80 | yes |
-| Lamp off mean green | 0.17 | below 0.5 | yes |
+| Lamp on mean green | 183.10 | at least 80 | yes |
+| Lamp off mean green | 0.26 | below 0.5 | yes |
 
-The 0.17 floor is the output dither on black. The chamber does not change with
-the sun azimuth: no straight sun ray passes the four turns. The first lane is
-lit when the sun is west, because the sun shines through the west door. It is
-black when the sun is east. The door is the only path for the sun.
+The 0.17 floor is the output dither on black. The chamber does not receive a
+straight sun ray: no sun ray passes the four turns. The first lane is lit when
+the sun is west, because the sun shines through the west door. Under an east sun
+it is dim but not black; the 8.08 is transport through the connected light lock,
+not a wall leak. The chamber stays near the floor, 0.18 to 0.26. The door is
+the only direct path for the sun.
 
 The lamp is a warm `Lamp` at `(14.5, 2.75, 7.0)` with intensity 2.5 and range
 10. It is placed with `place`, so no debug gizmo enters the frame. The lamp is
-the only light in the chamber, and the occlusion term darkens the corners it
-lights. Removing the lamp returns the view to the dither floor.
+the only light in the chamber, and the occlusion term darkens the direct light
+in the corners. Removing the lamp returns the view to 0.26, near the dither
+floor.
 
 The colour captures are `outside`, `door-out`, `lane1-west`, `lane1-east`,
 `chamber-west`, `chamber-east`, `lamp-on`, and `lamp-off`. The run directory
@@ -57,15 +62,16 @@ holds the PNGs; the repository does not commit images.
 
 ## What it does not prove
 
-- There is no global illumination. The doorway sun patch does not fill the
-  tunnel, and a lamp does not bounce light around a corner.
+- There is one diffuse bounce, not a full path trace. The probe field is
+  low-frequency, so it fills a wall but does not reproduce a multi-bounce
+  reference within a stated tolerance.
 - The occlusion is a contact term on the direct light, not an ambient integral.
   A lamp-lit corner is darker than a path tracer would make it.
 - The default sun comes from the +x/+z side, so the west facade is in shade and
   the door is a dark notch from outside. The `outside` capture shows the lit
   roof and north face; `door-out` looks out from inside the tunnel.
-- There is one lamp in the test scene. The light budget is the eight nearest
-  lamps.
+- There is one lamp in the test scene. The light budget holds every active lamp;
+  clustered forward+ scales the per-pixel loop.
 
 ## Reproduce
 

@@ -69,7 +69,7 @@ write_probe_positions :: proc(r: ^Renderer, boxes: []geometry.Box) {
 	if r.probe.probe_count == 0 {
 		return
 	}
-	data := cast([^][4]f32)r.probe.position_mapped[r.frame_index]
+	data := cast([^][4]f32)r.probe.positions[r.frame_index].mapped
 	if data == nil {
 		return
 	}
