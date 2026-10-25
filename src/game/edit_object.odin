@@ -88,7 +88,8 @@ edit_rotate_selected :: proc(dm: ^Debug_Mode, sim: ^Simulation, degrees: f32) ->
 @(private)
 edit_turn :: proc(dm: ^Debug_Mode, sim: ^Simulation, steps: int, large: bool) -> Edit_Result {
 	if dm.placement.armed {
-		return edit_placement_turn(dm, steps, large)
+		debug_placement_turn(dm, steps, large)
+		return edit_ok()
 	}
 	step: f32 = large ? PLACEMENT_YAW_STEP_LARGE : PLACEMENT_YAW_STEP
 	return edit_rotate_selected(dm, sim, f32(steps) * step)
@@ -96,7 +97,7 @@ edit_turn :: proc(dm: ^Debug_Mode, sim: ^Simulation, steps: int, large: bool) ->
 
 @(private)
 edit_set_body :: proc(dm: ^Debug_Mode, sim: ^Simulation, mode: Body_Mode) -> Edit_Result {
-	if dm.palette.open || dm.placement.armed {
+	if editor_uses_next_placement(dm) {
 		palette_set_body(&dm.palette, mode)
 		return edit_ok()
 	}
@@ -117,7 +118,7 @@ edit_set_body :: proc(dm: ^Debug_Mode, sim: ^Simulation, mode: Body_Mode) -> Edi
 
 @(private)
 edit_flip_body :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Result {
-	if dm.palette.open || dm.placement.armed {
+	if editor_uses_next_placement(dm) {
 		palette_flip_body(&dm.palette)
 		return edit_ok()
 	}

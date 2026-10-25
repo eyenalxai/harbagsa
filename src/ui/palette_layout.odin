@@ -1,3 +1,4 @@
+#+vet explicit-allocators
 #+vet !unused-procedures // the renderer and frame tests call this API; the game binary does not
 package ui
 
@@ -82,13 +83,11 @@ palette_layout :: proc(inputs: Layout_Inputs, item_count: int) -> Palette_Layout
 }
 
 palette_card_at :: proc(layout: Palette_Layout, pointer: [2]f32) -> int {
-	x := pointer.x * layout.target.x
-	y := pointer.y * layout.target.y
-	if !rect_contains(layout.panel, x, y) {
+	if !rect_contains(layout.panel, pointer.x, pointer.y) {
 		return -1
 	}
 	for index in 0 ..< layout.card_count {
-		if rect_contains(layout.cards[index], x, y) {
+		if rect_contains(layout.cards[index], pointer.x, pointer.y) {
 			return index
 		}
 	}

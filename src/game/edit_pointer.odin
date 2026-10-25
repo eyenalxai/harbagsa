@@ -60,7 +60,8 @@ edit_secondary_press :: proc(dm: ^Debug_Mode) -> Edit_Result {
 		return edit_sun_cancel(dm)
 	}
 	if dm.placement.armed {
-		return edit_placement_cancel(dm)
+		debug_placement_cancel(dm)
+		return edit_ok()
 	}
 	if dm.selection == .Object {
 		debug_mode_clear_selection(dm)
@@ -114,7 +115,8 @@ edit_wheel :: proc(
 		if !captured {
 			return edit_no_change()
 		}
-		return edit_placement_raise(dm, steps, large)
+		debug_placement_raise(dm, steps, large)
+		return edit_ok()
 	}
 	if !captured {
 		return edit_no_change()
@@ -145,7 +147,8 @@ edit_cancel :: proc(dm: ^Debug_Mode) -> Edit_Result {
 		return edit_palette_close(dm)
 	}
 	if dm.placement.armed {
-		return edit_placement_cancel(dm)
+		debug_placement_cancel(dm)
+		return edit_ok()
 	}
 	if dm.sun.active {
 		return edit_sun_cancel(dm)

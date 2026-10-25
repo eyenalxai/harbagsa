@@ -968,8 +968,6 @@ frame-rate change.
 - `src/harness/ab_command.odin`: the `ab` wrapper over `tools/ab.sh`.
 - `src/harness/run_paths.odin`: the tag-aware run directory.
 - `src/harness/session_settle.odin`: the convergence wait.
-- `src/harness/state_field_leaves.odin`: the settings, menu, and player resolvers.
-- `src/harness/state_debug_fields.odin`: the debug palette, sun, and light resolvers.
 - `src/harness/state_schema.odin`: the reflection walk over `State` that resolves
   check paths. `State` and its `json` tags are the schema.
 - `src/harness/cli_override.odin`: the CLI renderer override.
@@ -989,7 +987,6 @@ frame-rate change.
 - `src/harness/analysis_images.odin`: PNG decode and the analysis maps.
 - `src/harness/check_capture.odin`: capture checks and the check window.
 - `src/harness/check_analysis.odin`: analysis check fields.
-- `src/harness/check_objects.odin`: placed-object check fields.
 - `src/harness/report.odin`: the run report and summary types.
 - `src/harness/report_setup.odin`: the run's setup block.
 - `src/digest/digest.odin`: FNV-1a for the state and render digests.
@@ -1012,12 +1009,20 @@ frame-rate change.
 - `src/game/lights.odin`: the light type, the colour cycle, the intensity and
   range steps, the eight-nearest selection, and the light count.
 - `src/game/debug_light_tools.odin`: the keyboard and harness light edit target.
+- `src/game/edit_action.odin`: the action dispatcher and `edit_apply`.
+- `src/game/edit_types.odin`: the action union, results, and reasons.
+- `src/game/edit_palette.odin`, `edit_object.odin`, `edit_pointer.odin`, and
+  `edit_placement.odin`: the palette, selection, pointer, and placement rules.
+- `src/renderer/pass.odin`: the one pass value and `record_pass`.
+- `src/renderer/pass_builders.odin`: the builders for every pass kind.
+- `src/renderer/render_input.odin`: the one frame input.
+- `src/harness/command_registry.odin`: one row per harness command.
+- `src/harness/command_execute.odin`: the row execute procs.
+- `src/harness/session_check.odin`: the partial-state check command.
 - `src/game/object_records.odin`: the object record and snapshot capture, the
   restore path, and the one placed-object spawn path.
 - `src/game/object_history.odin`: the 64-entry heap snapshot stack and its undo
   and redo.
-- `src/game/debug_object_tools.odin`: select, move, rotate, convert, delete,
-  duplicate, body key, and undo and redo for the selection.
 - `src/game/hud_debug.odin`: the debug inspector, placement rows, and their fixed
   number fields.
 - `src/game/spawn_pop.odin`: the pop curve, the spawn age and scale, the visual
@@ -1162,8 +1167,8 @@ harness in the same change. Do not leave the automation behind the game.
   `RENDER_DIGEST_FIELDS` (hashed, or an explicit exclusion with the reason), the
   recorder fill, and the reflection test. The uniform reads the same input.
 - New renderer report field: add the field and tag to `Renderer_Report` or
-  `Debug_Report`, one row to `REPORT_FIELDS`, and the reflection test. The JSON
-  and the check paths read the same field.
+  `Debug_Report`. The State reflection walk covers the JSON and check paths;
+  there is no separate report table.
 - New renderer debug override: add it to `Renderer_Debug`, `set_renderer_debug`,
   the resolve push constants and shader, `renderer_debug_fields`, the renderer
   state, the docs, and the gate test. Do not make it reachable without the

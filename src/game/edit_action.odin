@@ -61,19 +61,26 @@ edit_apply :: proc(
 	case Placement_Arm:
 		return edit_placement_arm(dm, sim, value.prefab)
 	case Placement_Cancel:
-		return edit_placement_cancel(dm)
+		debug_placement_cancel(dm)
+		return edit_ok()
 	case Placement_Set_Height:
-		return edit_placement_set_height(dm, value.height)
+		debug_placement_set_height(dm, value.height)
+		return edit_ok()
 	case Placement_Raise:
-		return edit_placement_raise(dm, value.steps, value.large)
+		debug_placement_raise(dm, value.steps, value.large)
+		return edit_ok()
 	case Placement_Set_Yaw:
-		return edit_placement_set_yaw(dm, value.yaw)
+		debug_placement_set_yaw(dm, value.yaw)
+		return edit_ok()
 	case Placement_Turn:
-		return edit_placement_turn(dm, value.steps, value.large)
+		debug_placement_turn(dm, value.steps, value.large)
+		return edit_ok()
 	case Placement_Set_Snap:
-		return edit_placement_set_snap(dm, value.snap)
+		debug_placement_set_snap(dm, value.snap)
+		return edit_ok()
 	case Placement_Toggle_Snap:
-		return edit_placement_toggle_snap(dm)
+		debug_placement_toggle_snap(dm)
+		return edit_ok()
 	case Placement_Place:
 		return edit_placement_place(dm, sim)
 	case Place_Object:
