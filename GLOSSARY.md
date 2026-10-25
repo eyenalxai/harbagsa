@@ -752,8 +752,19 @@ A run of identical 8-bit values along a gradient. **Avoid**: stepping, contourin
 
 ### Dither
 A fixed, per-pixel offset applied before an 8-bit quantization. The output
-dither on the resolve breaks a band without entering the TAA history.
-**Avoid**: noise, grain.
+dither on the resolve breaks a band without entering the TAA history. The
+visibility dither is a separate offset inside one ray-count step; see
+**Visibility dither**. **Avoid**: noise, grain.
+
+### Visibility dither
+A per-pixel, per-frame offset inside one visibility step. A partial sun or
+ambient-occlusion count becomes a continuous fraction before TAA averages it;
+a full or empty count stays exact. **Avoid**: noise, jitter.
+
+### Step
+A local jump in the box-filtered luma that a visibility count leaves at a band
+edge. `capture.stats.steps` counts the jumps between half a level and a
+geometry edge. **Avoid**: edge, contour.
 
 ### Region
 A rectangle of the source image that limits a capture's statistics or
