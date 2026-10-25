@@ -9,6 +9,7 @@
 #define PROBE_DISTANCE_EXPONENT 50.0
 #define PROBE_HYSTERESIS 0.75
 #define PROBE_LARGE_CHANGE_THRESHOLD 0.25
+#define PROBE_BACKFACE_THRESHOLD 0.25
 #define PROBE_PI 3.14159265358979
 // The reference gather returns irradiance. The lit pass adds the sun as
 // albedo * NdotL, so the diffuse BRDF's 1/pi keeps both terms on one scale.
