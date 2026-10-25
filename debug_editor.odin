@@ -2,6 +2,7 @@
 package main
 
 import "core:log"
+import "core:math"
 
 import "src:game"
 import "src:platform"
@@ -9,10 +10,13 @@ import "src:renderer"
 
 Editor_State :: struct {
 	pointer_available: bool,
+	palette_was_open:  bool,
+	actions:           [game.MAX_EDIT_ACTIONS]game.Edit_Action,
+	action_count:      int,
 }
 
-// The game loop owns the palette handoff and the pointer. The game only sees
-// palette state and actions, and the renderer only sees a normalized pointer.
+// The window loop owns the pointer and the cursor. It turns events into edit
+// intents; `game.edit_apply` owns every rule those intents follow.
 handle_editor_events :: proc(
 	window: ^platform.Window,
 	debug: ^game.Debug_Mode,
@@ -22,67 +26,126 @@ handle_editor_events :: proc(
 	events: ^platform.Events,
 	state: ^Editor_State,
 ) {
+	state.action_count = 0
 	if !debug.active || menu_open {
 		return
 	}
+	palette_open := debug.palette.open
 
-	// Esc closes the palette, then the placement, then the sun placement before
-	// it reaches settings.
-	if events.cancel_pressed {
-		if debug.palette.open {
-			game.debug_palette_close(debug)
-			recapture_after_palette(window, events, state)
-			events.cancel_pressed = false
-		} else if debug.placement.armed {
-			game.debug_placement_cancel(debug)
-			events.cancel_pressed = false
-		} else if debug.sun.active {
-			game.debug_sun_cancel(debug)
-			events.cancel_pressed = false
-		}
+	// Esc closes the nearest mode. If none is active it stays with the settings
+	// menu, so the caller must not consume it.
+	if events.cancel_pressed && (palette_open || debug.placement.armed || debug.sun.active) {
+		add_action(state, game.Cancel{})
+		events.cancel_pressed = false
 	}
 
 	if events.palette_toggle_pressed {
-		if debug.palette.open {
-			game.debug_palette_close(debug)
-			recapture_after_palette(window, events, state)
+		if palette_open {
+			add_action(state, game.Palette_Close{})
+			palette_open = false
 		} else {
-			open_palette(window, debug, events, state)
+			add_action(state, game.Palette_Open{})
+			palette_open = true
 		}
 		events.palette_toggle_pressed = false
 	}
 
-	if debug.palette.open && events.secondary_pressed {
-		game.debug_palette_close(debug)
-		recapture_after_palette(window, events, state)
+	// The palette owns the cursor, so close it before a right click reaches the
+	// world. The same press must not also clear an object selection.
+	if palette_open && events.secondary_pressed {
+		add_action(state, game.Palette_Close{})
+		palette_open = false
 		events.secondary_pressed = false
 	}
 
-	// The palette owns the cursor while it is open, so hand the cursor back
-	// before the sun mode takes the same L press.
-	if debug.palette.open && events.sun_placement_pressed {
-		game.debug_palette_close(debug)
-		recapture_after_palette(window, events, state)
+	// L hands the cursor back before the sun mode takes the same key.
+	if palette_open && events.sun_placement_pressed {
+		add_action(state, game.Palette_Close{})
+		palette_open = false
 	}
 
 	if events.flip_body_pressed {
-		game.debug_body_key(debug, sim)
+		add_action(state, game.Flip_Body{})
+		events.flip_body_pressed = false
 	}
 	if events.toggle_snap_pressed {
-		game.debug_placement_toggle_snap(debug)
+		add_action(state, game.Placement_Toggle_Snap{})
+		events.toggle_snap_pressed = false
 	}
 
-	if !debug.palette.open {
+	sun_action := false
+	if events.sun_placement_pressed {
+		add_action(state, game.Sun_Toggle{})
+		sun_action = true
+		events.sun_placement_pressed = false
+	}
+
+	if palette_open {
+		palette_open = collect_palette_actions(renderer_state, events, state, palette_open)
+	}
+	// The sun mode owns the click that commits or cancels it and blocks the
+	// light keys, exactly like the keyboard path before the action set existed.
+	if debug.sun.active || sun_action {
+		if debug.sun.active && !sun_action {
+			collect_sun_pointer_actions(events, state)
+		}
 		return
 	}
-	handle_palette_pointer(window, debug, sim, renderer_state, events, state)
-	if !debug.palette.open {
+
+	collect_light_actions(events, state)
+	if palette_open {
 		return
 	}
-	handle_palette_keys(window, debug, sim, events, state)
+
+	if events.undo_pressed {
+		add_action(state, game.Undo{})
+		events.undo_pressed = false
+	}
+	if events.redo_pressed {
+		add_action(state, game.Redo{})
+		events.redo_pressed = false
+	}
+	if events.duplicate_pressed {
+		add_action(state, game.Duplicate_Selected{})
+		events.duplicate_pressed = false
+	}
+	if events.delete_pressed {
+		add_action(state, game.Delete_Selected{})
+		events.delete_pressed = false
+	}
+	if events.rotate_left_pressed {
+		add_action(state, game.Turn{steps = -1, large = events.sprint_held})
+		events.rotate_left_pressed = false
+	}
+	if events.rotate_right_pressed {
+		add_action(state, game.Turn{steps = 1, large = events.sprint_held})
+		events.rotate_right_pressed = false
+	}
+	if events.primary_pressed {
+		add_action(state, game.Primary_Press{})
+		events.primary_pressed = false
+	}
+	if events.primary_released {
+		add_action(state, game.Primary_Release{})
+		events.primary_released = false
+	}
+	if events.secondary_pressed {
+		add_action(state, game.Secondary_Press{})
+		events.secondary_pressed = false
+	}
+	if events.wheel_delta != 0.0 {
+		add_action(
+			state,
+			game.Wheel{steps = int(math.round(events.wheel_delta)), large = events.sprint_held},
+		)
+		events.wheel_delta = 0
+	}
+	if debug.dragging == .Object {
+		add_action(state, game.Drag_Move{look_delta = events.look_delta})
+	}
 }
 
-editor_input_from_events :: proc(events: platform.Events) -> game.Debug_Input {
+editor_motion :: proc(events: platform.Events) -> game.Debug_Motion {
 	move_up: f32
 	if events.fly_up {
 		move_up += 1
@@ -95,105 +158,112 @@ editor_input_from_events :: proc(events: platform.Events) -> game.Debug_Input {
 		move_right = events.move_right,
 		move_up = move_up,
 		look_delta = events.look_delta,
-		wheel_delta = events.wheel_delta,
-		primary_pressed = events.primary_pressed,
-		primary_released = events.primary_released,
-		secondary_pressed = events.secondary_pressed,
-		delete_pressed = events.delete_pressed,
-		duplicate_pressed = events.duplicate_pressed,
-		undo_pressed = events.undo_pressed,
-		redo_pressed = events.redo_pressed,
-		rotate_left = events.rotate_left_pressed,
-		rotate_right = events.rotate_right_pressed,
-		large_step = events.sprint_held,
-		sun_placement_pressed = events.sun_placement_pressed,
-		light_color_pressed = events.light_color_pressed,
-		light_intensity_down_pressed = events.light_intensity_down_pressed,
-		light_intensity_up_pressed = events.light_intensity_up_pressed,
-		light_range_down_pressed = events.light_range_down_pressed,
-		light_range_up_pressed = events.light_range_up_pressed,
 		captured = events.captured,
 	}
 }
 
-@(private)
-open_palette :: proc(
+// The cursor follows the palette. The menu owns it separately, so leave the
+// palette flag alone while the menu is open.
+editor_sync_cursor :: proc(
 	window: ^platform.Window,
 	debug: ^game.Debug_Mode,
-	events: ^platform.Events,
+	menu_open: bool,
 	state: ^Editor_State,
 ) {
-	game.debug_palette_open(debug)
-	platform.set_click_capture(window, false)
-	released := !platform.set_cursor_capture(window, false)
-	if !released {
-		log.warn("harbagsa: cursor release for the palette failed; using the keyboard path")
+	if !debug.active || menu_open {
+		state.palette_was_open = debug.palette.open
+		return
 	}
-	events.captured = !released
-	state.pointer_available = released
-}
-
-@(private)
-recapture_after_palette :: proc(
-	window: ^platform.Window,
-	events: ^platform.Events,
-	state: ^Editor_State,
-) {
+	if debug.palette.open == state.palette_was_open {
+		return
+	}
+	state.palette_was_open = debug.palette.open
+	if debug.palette.open {
+		platform.set_click_capture(window, false)
+		released := !platform.set_cursor_capture(window, false)
+		state.pointer_available = released
+		if !released {
+			log.warn("harbagsa: cursor release for the palette failed; using the keyboard path")
+		}
+		return
+	}
 	platform.set_click_capture(window, true)
-	events.captured = platform.set_cursor_capture(window, true)
+	_ = platform.set_cursor_capture(window, true)
 	state.pointer_available = false
 }
 
 @(private)
-pick_palette :: proc(
-	window: ^platform.Window,
-	debug: ^game.Debug_Mode,
-	sim: ^game.Simulation,
-	events: ^platform.Events,
-	state: ^Editor_State,
-) {
-	if !game.debug_palette_pick(debug, sim) {
+add_action :: proc(state: ^Editor_State, action: game.Edit_Action) {
+	if state.action_count >= len(state.actions) {
+		log.warn("harbagsa: the editor action buffer is full")
 		return
 	}
-	recapture_after_palette(window, events, state)
+	state.actions[state.action_count] = action
+	state.action_count += 1
 }
 
 @(private)
-handle_palette_pointer :: proc(
-	window: ^platform.Window,
-	debug: ^game.Debug_Mode,
-	sim: ^game.Simulation,
+collect_sun_pointer_actions :: proc(events: ^platform.Events, state: ^Editor_State) {
+	if events.primary_pressed {
+		add_action(state, game.Primary_Press{})
+		events.primary_pressed = false
+	}
+	if events.secondary_pressed {
+		add_action(state, game.Secondary_Press{})
+		events.secondary_pressed = false
+	}
+}
+
+@(private)
+collect_light_actions :: proc(events: ^platform.Events, state: ^Editor_State) {
+	if events.light_color_pressed {
+		add_action(state, game.Light_Adjust{change = .Color})
+		events.light_color_pressed = false
+	}
+	if events.light_intensity_down_pressed {
+		add_action(state, game.Light_Adjust{change = .Intensity_Down})
+		events.light_intensity_down_pressed = false
+	}
+	if events.light_intensity_up_pressed {
+		add_action(state, game.Light_Adjust{change = .Intensity_Up})
+		events.light_intensity_up_pressed = false
+	}
+	if events.light_range_down_pressed {
+		add_action(state, game.Light_Adjust{change = .Range_Down})
+		events.light_range_down_pressed = false
+	}
+	if events.light_range_up_pressed {
+		add_action(state, game.Light_Adjust{change = .Range_Up})
+		events.light_range_up_pressed = false
+	}
+}
+
+@(private)
+collect_palette_actions :: proc(
 	renderer_state: ^renderer.Renderer,
 	events: ^platform.Events,
 	state: ^Editor_State,
-) {
-	if !state.pointer_available {
-		return
+	palette_open: bool,
+) -> bool {
+	open := palette_open
+	if state.pointer_available {
+		hit := renderer.palette_hit_test(renderer_state, events.pointer, game.PREFAB_COUNT)
+		if events.pointer_moved && hit.card >= 0 {
+			add_action(state, game.Palette_Select{index = hit.card})
+		}
+		if events.pointer_pressed {
+			if hit.card >= 0 {
+				add_action(state, game.Palette_Select{index = hit.card})
+				add_action(state, game.Palette_Pick{})
+				open = false
+			} else if !hit.inside {
+				add_action(state, game.Palette_Close{})
+				open = false
+			}
+			events.pointer_pressed = false
+		}
 	}
-	hit := renderer.palette_hit_test(renderer_state, events.pointer, game.PREFAB_COUNT)
-	if events.pointer_moved && hit.card >= 0 {
-		_ = game.debug_palette_select(debug, hit.card)
-	}
-	if !events.pointer_pressed {
-		return
-	}
-	if hit.card >= 0 {
-		_ = game.debug_palette_select(debug, hit.card)
-		pick_palette(window, debug, sim, events, state)
-	} else if !hit.inside {
-		game.debug_palette_close(debug)
-		recapture_after_palette(window, events, state)
-	}
-}
 
-@(private)
-handle_palette_keys :: proc(
-	window: ^platform.Window,
-	debug: ^game.Debug_Mode,
-	sim: ^game.Simulation,
-	events: ^platform.Events,
-	state: ^Editor_State,
-) {
 	delta: int
 	switch {
 	case events.navigate_up_pressed, events.navigate_left_pressed:
@@ -202,13 +272,20 @@ handle_palette_keys :: proc(
 		delta = 1
 	}
 	if delta != 0 {
-		count := game.PREFAB_COUNT
-		_ = game.debug_palette_select(debug, (debug.palette.selected + delta + count) % count)
+		add_action(state, game.Palette_Step{delta = delta})
 	}
 	if events.palette_number > 0 {
-		_ = game.debug_palette_select(debug, events.palette_number - 1)
+		add_action(state, game.Palette_Select{index = events.palette_number - 1})
 	}
 	if events.confirm_pressed {
-		pick_palette(window, debug, sim, events, state)
+		add_action(state, game.Palette_Pick{})
+		open = false
 	}
+	events.navigate_up_pressed = false
+	events.navigate_down_pressed = false
+	events.navigate_left_pressed = false
+	events.navigate_right_pressed = false
+	events.confirm_pressed = false
+	events.palette_number = 0
+	return open
 }

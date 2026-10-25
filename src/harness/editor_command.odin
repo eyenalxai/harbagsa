@@ -5,6 +5,42 @@ import "core:encoding/json"
 
 import "src:game"
 
+EDITOR_KEYS := [?]string {
+	"cmd",
+	"open",
+	"select",
+	"body",
+	"pick",
+	"height",
+	"yaw",
+	"snap",
+	"cancel",
+	"camera",
+	"place",
+	"sun",
+	"select_object",
+	"move",
+	"rotate",
+	"delete",
+	"duplicate",
+	"undo",
+	"redo",
+	"light_color",
+	"light_intensity",
+	"light_range",
+	"palette_step",
+	"palette_number",
+	"flip_body",
+	"snap_toggle",
+	"turn",
+	"wheel",
+	"large",
+	"primary",
+	"secondary",
+	"drag_move",
+	"drag_release",
+}
+
 Editor_Camera :: struct {
 	position: [3]f32,
 	yaw:      f32,
@@ -41,34 +77,11 @@ Editor_Command :: struct {
 	has_sun:    bool,
 	object:     Editor_Object,
 	light:      Editor_Light,
+	input:      Editor_Input,
 }
 
 parse_editor :: proc(object: json.Object) -> (Command, string) {
-	allowed := []string {
-		"cmd",
-		"open",
-		"select",
-		"body",
-		"pick",
-		"height",
-		"yaw",
-		"snap",
-		"cancel",
-		"camera",
-		"place",
-		"sun",
-		"select_object",
-		"move",
-		"rotate",
-		"delete",
-		"duplicate",
-		"undo",
-		"redo",
-		"light_color",
-		"light_intensity",
-		"light_range",
-	}
-	if key, unknown := json_unknown_key(object, allowed); unknown {
+	if key, unknown := json_unknown_key(object, EDITOR_KEYS[:]); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 
@@ -172,6 +185,11 @@ parse_editor :: proc(object: json.Object) -> (Command, string) {
 		return {}, light_error
 	}
 	command.editor.light = editor_light
+	editor_input, input_error := parse_editor_input(object)
+	if input_error != "" {
+		return {}, input_error
+	}
+	command.editor.input = editor_input
 
 	if !editor_command_has_action(object) {
 		return {}, "editor needs at least one field"
@@ -256,30 +274,7 @@ parse_body_mode :: proc(value: json.Value, label: string) -> (game.Body_Mode, st
 
 @(private)
 editor_command_has_action :: proc(object: json.Object) -> bool {
-	keys := []string {
-		"open",
-		"select",
-		"body",
-		"pick",
-		"height",
-		"yaw",
-		"snap",
-		"cancel",
-		"camera",
-		"place",
-		"sun",
-		"select_object",
-		"move",
-		"rotate",
-		"delete",
-		"duplicate",
-		"undo",
-		"redo",
-		"light_color",
-		"light_intensity",
-		"light_range",
-	}
-	for key in keys {
+	for key in EDITOR_KEYS[1:] {
 		if _, present := json_get(object, key); present {
 			return true
 		}

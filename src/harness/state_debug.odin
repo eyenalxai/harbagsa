@@ -95,22 +95,10 @@ debug_state_build :: proc(debug: ^game.Debug_Mode, sim: ^game.Simulation) -> Deb
 	return state
 }
 
-// The next placement light belongs to the prefab the placement tool will use:
-// the armed prefab, or the palette selection while the tool is idle.
+// The state and the HUD read the next placement light through the same proc.
 @(private)
 placement_light_state :: proc(debug: ^game.Debug_Mode) -> Light_State {
-	prefab := debug.placement.prefab
-	if !debug.placement.armed {
-		prefab = game.palette_selected(debug.palette)
-	}
-	if !game.prefab_has_light(prefab) {
-		return {}
-	}
-	settings := debug.palette.light
-	if !settings.active {
-		settings = game.prefab_light(prefab)
-	}
-	return light_state(settings)
+	return light_state(game.next_placement_light(debug))
 }
 
 @(private)

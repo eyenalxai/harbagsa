@@ -266,6 +266,21 @@ the yaw, and the grid snap flag. Picking a palette card arms it; placing keeps
 it armed.
 _Avoid_: Spawn mode, build mode
 
+**Editing action**:
+One intent that the keyboard or the harness sends to the edit facade: palette,
+placement, object, light, sun, pointer, or cancel. One apply proc owns its rule.
+_Avoid_: Edit command, tool call
+
+**Edit result**:
+The outcome of one editing action: applied, or a reason the action did not run.
+_Avoid_: Error code, status
+
+**Next placement light**:
+The light the next placement uses. The open palette or the armed tool holds the
+tuned values; otherwise the prefab default applies. The state and the HUD read
+one proc.
+_Avoid_: Placement light state, preview light
+
 **Ghost**:
 The wireframe preview of the armed placement: the oriented box, its footprint on
 the surface, and the height guide. It is a planning aid, not a collision test.

@@ -287,15 +287,34 @@ and ticks. A check reads them as `rows.hud.N.*` and `rows.menu.N.*`.
 The `editor` command drives the debug placement tool, the lamp light, and the sun
 placement. It needs debug mode; send `{"cmd": "debug_mode", "active": true}`
 first. Every field is optional, and one command may combine fields. They apply
-in this order: `camera`, `open`, `select`, `select_object`, `body`, `height`,
-`yaw`, `snap`, `light_color`, `light_intensity`, `light_range`, `pick`, `cancel`,
-`place`, `move`, `rotate`, `delete`, `duplicate`, `undo`, `redo`, `sun`.
+in this order: `camera`, `open`, `select`, `palette_step`, `palette_number`,
+`select_object`, `body`, `flip_body`, `height`, `yaw`, `snap`, `snap_toggle`,
+`light_color`, `light_intensity`, `light_range`, `pick`, `cancel`, `place`,
+`move`, `rotate`, `turn`, `wheel`, `primary`, `secondary`, `drag_move`,
+`drag_release`, `delete`, `duplicate`, `undo`, `redo`, `sun`.
+
+The keyboard and the harness both build `game.Edit_Action` values and call
+`game.edit_apply`; the rules live there once. A rejected edit returns `ok: false`
+and a stable reason, such as no selection, not a lamp, the scene is full, the
+menu is open, or the palette, placement, or sun mode owns the input. `cancel`
+with no active mode is a no-op.
 
 | Field | Meaning |
 | --- | --- |
 | `open` | open or close the object palette |
 | `select` | zero-based prefab index; a new prefab restores its default body |
-| `body` | `static` or `dynamic`; the next placement while the palette is open, the selected object while it is closed |
+| `body` | `static` or `dynamic`; the next placement while the palette or the placement tool owns the editor, the selected object otherwise |
+| `flip_body` | the `M` key: flip the same target as `body` |
+| `palette_step` | arrow-key selection step; wraps around the catalog |
+| `palette_number` | 1-based catalog key in [1, 9] |
+| `snap_toggle` | the `G` key: flip the 0.25 m grid snap |
+| `turn` | relative yaw steps, 15 or 45 degrees; the armed tool or the selection |
+| `wheel` | relative height steps, 0.25 or 1 metre; the armed tool or the selection |
+| `large` | Shift step for `turn` and `wheel` |
+| `primary` | left mouse press: select and start a drag, place the ghost, or commit the sun |
+| `secondary` | right mouse press: cancel the active mode or clear the selection |
+| `drag_move` | `[dx, dy]` look delta applied to the current object drag |
+| `drag_release` | left mouse release: end the object drag |
 | `pick` | arm the selected prefab, close the palette, cast the placement ray |
 | `height` | offset above the surface in metres; clamped at 0 |
 | `yaw` | rotation in degrees |
@@ -313,7 +332,7 @@ in this order: `camera`, `open`, `select`, `select_object`, `body`, `height`,
 | `duplicate` | copy the selected object one half extent along +X, select the copy, and play the pop; a no-op at the cap |
 | `undo` | restore the previous object-list snapshot |
 | `redo` | restore the next object-list snapshot |
-| `sun` | `{"active", "position", "place", "cancel"}` drives sun placement |
+| `sun` | `{"active", "position", "place", "cancel"}` drives sun placement; `position` is projected onto the 50 m sky dome and clamped above the floor |
 
 `select` follows the catalog order: Crate, Small crate, Wide crate, Block,
 Platform, Ramp, Pillar, Wall, Lamp, Light panel, Beacon. A pick casts a 100 m ray
@@ -325,11 +344,14 @@ The three light prefabs carry a lamp light. The light fields apply to the next
 lamp placement while the palette is open or the placement tool is armed, and to
 the selected lamp otherwise. A non-lamp target is an error. `debug.placement.light`
 reports the next placement light, `debug.inspector.light` the selected lamp, and
-`debug.lights` the active and total lamp counts.
+`debug.lights` the active and total lamp counts. The state and the HUD read
+`debug.placement.light` from `game.next_placement_light`.
 
 `place` requires `prefab` and `position`. Its `yaw` defaults to 0 and its `body`
 to the prefab default. It bypasses the ray and leaves the armed tool unchanged.
-At the 128-object cap it creates nothing.
+A lamp uses the tuned next-placement light when it is the palette-selected
+prefab, and its catalog default otherwise. At the 128-object cap it returns an
+error and creates nothing.
 
 `select_object` changes only the selection, so it does not add a history entry.
 `move`, `rotate`, `delete`, `duplicate`, and `body` on the selection each add one
@@ -373,6 +395,8 @@ supported window. `scenarios/editor-sun.json` captures the default light, the
 sun gizmo on the sky dome, and the committed lighting.
 `scenarios/editor-object.json` selects an object, moves, rotates, and converts
 it, duplicates it, then captures the inspector and the undo and redo restores.
+`scenarios/editor-input.json` drives the pointer, wheel, relative turn, palette
+step, number key, snap toggle, and right-click clear through the same actions.
 `scenarios/editor-lamps.json` captures the three lamp previews, places a warm
 lamp, a cool panel, a red beacon, and a pillar, then checks the light values and
 the active and lamp counts. It captures the lit scene, the point-light shadow,
@@ -1086,6 +1110,10 @@ the game with validation enabled.
 
 The harness is part of the product. When you add or change a feature, update the
 harness in the same change. Do not leave the automation behind the game.
+
+- New edit intent: add one variant to `game.Edit_Action`, one case in
+  `edit_apply`, the keyboard adapter, the `editor` parser, a harness test, and
+  this page. Do not add a second rule outside `edit_apply`.
 
 - New simulation input: add it to `game.Input_Snapshot`, the `input` command,
   and `tests/harness`.
