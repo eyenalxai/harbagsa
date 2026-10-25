@@ -50,21 +50,6 @@ placement_geometry :: proc(placement: Placement) -> Placement_Geometry {
 }
 
 @(private)
-debug_placement_arm :: proc(dm: ^Debug_Mode, sim: ^Simulation, prefab_id: Prefab_Id) -> bool {
-	if !simulation_is_valid(sim) {
-		return false
-	}
-	debug_sun_cancel(dm)
-	// The palette is the one place that holds the next placement's body and
-	// light, so arming by prefab also selects it there.
-	_ = palette_select(&dm.palette, int(prefab_id))
-	dm.placement.armed = true
-	dm.placement.prefab = prefab_id
-	debug_placement_refresh(dm, sim)
-	return true
-}
-
-@(private)
 debug_placement_refresh :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	if !dm.placement.armed || !simulation_is_valid(sim) {
 		return
