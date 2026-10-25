@@ -1,4 +1,5 @@
 {
+  "requires": {"renderer_debug": true},
   "view": {"hud": false, "debug": false, "hint": false},
   "renderer_debug": {"jitter": false, "shadow_phase": 0},
   "commands": [

@@ -84,13 +84,14 @@ serializes Make with `flock`.
 | compare two builds | **Performance** and `ab` |
 | measure frame time | **Performance** |
 | prove a capture-free sequence is deterministic | **Screenshots** and `scenarios/capture-free.json` |
-| understand a design choice | `docs/adr/0008` to `docs/adr/0021` |
+| understand a design choice | `docs/adr/0008` to `docs/adr/0023` |
 
 ## What one run writes
 
 `runs/<scenario-stem>/`
 
-- `report.json`: `ok`, `exit_code`, `scenario` (`path` and `hash`), `run_dir`,
+- `report.json`: `ok`, `exit_code`, `scenario` (`path`, `hash`, and the
+  effective `parameters`), `run_dir`,
   `frame`, `state`, `setup`, `screenshots`, `checks`, `failures`, `digest`,
   `error`, `perf` (a list of named reports) when perf ran, `trace` when the run
   wrote a perf trace, and `analysis` when the run wrote an analysis report.
@@ -115,6 +116,8 @@ Standard output is one JSON summary. Standard error holds logs.
 
 `run -` reads the scenario from standard input. `--tag NAME` appends a directory
 to the run path, so `runs/smoke/before` and `runs/smoke/after` coexist.
+`--param NAME=VALUE[,VALUE...]` overrides a scenario parameter, and a comma
+list runs a sweep. See **Parameter sweep**.
 `--renderer-debug KEY=VALUE` applies one gated override before the commands;
 repeat the flag for more fields.
 
@@ -190,15 +193,21 @@ Rules:
   to gate TAA stability.
 - A top-level `renderer_debug` object compiles to the renderer debug command
   before the commands. See **Renderer debug overrides**.
+- A top-level `"requires": {"renderer_debug": true}` enables the gated command
+  for this scenario without `--debug-renderer`. The gate still rejects a
+  scenario that does not declare it.
 - A top-level `"size": "1280x720"` pins the extent. `--size` with a declared
   size is an error.
 - A top-level `"extends": "base.json"` merges the base object and lets the child
   win; a relative path resolves against the extending file. A `parameters` block
   substitutes `${name}` in any command value. A parameter must be a string,
-  number, or boolean.
+  number, or boolean. A placeholder is a JSON string, so `["${x}", 0, 0]` puts a
+  numeric parameter in an array.
 - A check compares with `value` or with `other`:
   `{"cmd":"check","field":"capture.1.stats.mean.y","op":"gt","other":"capture.0.stats.mean.y"}`.
   `capture.N.*`, `capture.first.*`, and `capture.last.*` name one capture.
+  `capture.named.<name>.*` names a capture by its `name`; a missing name is a
+  check error.
 
 ## Commands
 
@@ -282,6 +291,38 @@ fallback list.
 `rows` replies with the HUD and menu rows: kind, label, value, blocked, ratio,
 and ticks. A check reads them as `rows.hud.N.*` and `rows.menu.N.*`.
 
+## Parameter sweep
+
+A scenario declares its knobs in `parameters` and uses `${name}`. `--param`
+overrides one value; a comma list runs the scenario once per value:
+
+```sh
+./bin/harbagsa-agent run scenarios/lamp-threshold.json \
+  --param lamp_x=20,19.999,19.99,19.9 --out runs/lamp-threshold
+```
+
+Repeat `--param` for every parameter. The runner takes the cartesian product in
+flag order and the last parameter changes fastest. Values cannot hold a comma,
+and a sweep holds at most 256 runs. With one value the run is a plain run into
+the usual directory; with more than one, each run gets a directory named by its
+values and the parent gets `sweep.json`.
+
+`sweep.json` holds `ok`, `exit_code`, `scenario`, and one entry per combination:
+`parameters`, `run_dir`, `report`, `state`, `digest`, `exit_code`, `ok`, and
+`error`. The process exit code is the highest of the runs, so every combination
+still runs after a check failure. A scenario parse error for one value is
+recorded for that value and the sweep continues.
+
+An override must match a `${name}` used outside the `parameters` block. The
+declared default sets the type: a string stays text, a boolean must parse as
+`true` or `false`, and a number accepts both `20` and `19.999`. A parameter
+the flag does not name keeps its declared value.
+
+The effective parameters are in `report.scenario.parameters`, sorted by name,
+and they join the scenario hash, so two sweep runs of one file are distinct
+scenarios. `scenarios/lamp-threshold.json` is the worked example; it measures
+the wall gradient at each lamp position and writes no check.
+
 ## Editor
 
 The `editor` command drives the debug placement tool, the lamp light, and the sun
@@ -323,7 +364,7 @@ with no active mode is a no-op.
 | `light_intensity` | intensity in [0.2, 4.0], rounded to a tenth |
 | `light_range` | range in [2, 20] metres, rounded to a whole metre |
 | `cancel` | clear the armed tool without placing |
-| `camera` | `{"position", "yaw", "pitch"}` for the debug camera; yaw and pitch are radians |
+| `camera` | `{"position", "look_at"}` or `{"position", "yaw", "pitch"}` for the debug camera; angles are radians |
 | `place` | `{"prefab", "position", "yaw", "body"}` creates at an exact transform |
 | `select_object` | placed object id; 0 clears the selection |
 | `move` | `[x, y, z]` centre for the selected object; y clamps above the floor |
@@ -584,8 +625,11 @@ Formats:
 - `raw`: intermediate targets only. Writes `<name>.bin` with the exact texel
   bytes. `target_format` in the report names the Vulkan format.
 - `stats`: any target. Writes no file. The report holds per-channel `min`,
-  `max`, and `mean`, and for `velocity` the median screen motion in texels over
-  covered pixels.
+  `max`, `mean`, `stddev`, and `gradient`, and for `velocity` the median screen
+  motion in texels over covered pixels. `stddev` is the population standard
+  deviation over the region. `gradient` is the mean absolute difference between
+  each pixel and its left and top neighbours; a region with no neighbour pair
+  reports 0.
 
 A stats capture accepts `"region": {"x","y","w","h"}` or `"rect": [x,y,w,h]`.
 The statistics cover the region and the report echoes it; a check reads
@@ -602,8 +646,8 @@ move the baseline.
 
 A check reads the last capture in its window: `capture.target`,
 `capture.format`, and `capture.stats.min.x`, `capture.stats.max.x`,
-`capture.stats.mean.x`, `capture.stats.velocity_median_texels`, and the same
-`.y`, `.z`, `.w` channels.
+`capture.stats.mean.x`, `capture.stats.stddev.x`, `capture.stats.gradient.x`,
+`capture.stats.velocity_median_texels`, and the same `.y`, `.z`, `.w` channels.
 
 `scenarios/capture-targets.json` covers a static and a moving velocity capture,
 scene color, history, and depth.
@@ -737,8 +781,11 @@ run never created a renderer, and `renderer.active` is `false`.
 | `text_font_drops` | fonts dropped at the 8-font shaper cap |
 
 The state also carries a `camera` object: `position`, `yaw`, `pitch`, `fov` in
-degrees, and `overridden`. A `camera` command sets it; `clear` restores the
-player view. The `sun` object is the debug sun placement: it carries `azimuth`,
+degrees, `source`, and `overridden`. It reports the view the renderer uses.
+`source` is `player`, `debug`, or `override`; `overridden` is true whenever that
+view is not the player. A `camera` command sets the override; `clear` drops it
+and restores the player or debug view. The `sun` object is the debug sun
+placement: it carries `azimuth`,
 `elevation`, and `angular_diameter`, in degrees. The `settle` object carries the
 last wait's `frames` and `converged`. The `rows` object carries the HUD and menu
 rows. The `menu` object carries `status` and `blocked` beside `open`, `selected`,
@@ -764,9 +811,10 @@ same when they do not. It is separate from the simulation digest: read
 `render_digest` for the render inputs and `digest` for the simulation.
 
 `report.json` carries a `setup` block: the target kind (`offscreen`,
-`swapchain`, or `none`), the extent, the view flags, the device name, the frame
-count in flight, the TAA state, and the jitter, history, and sample caps. Use it
-to compare two runs before you compare their pixels.
+`swapchain`, or `none`), the extent, the view flags, the renderer debug gate,
+the device name, the frame count in flight, the TAA state, and the jitter,
+history, and sample caps. Use it to compare two runs before you compare their
+pixels.
 
 `scenarios/renderer-state.json` checks the steady state. `scenarios/renderer-reset.json`
 checks a teleport reset.
@@ -803,10 +851,11 @@ including a new shadow phase and a light change.
 `scenarios/renderer-debug-converge.json` turns jitter off and freezes the phase,
 so the image converges. `scenarios/renderer-debug-jitter.json` freezes the phase
 and lets jitter cycle, so the analysis can find the period.
-`scenarios/lamp-wall-plane.json` puts a lamp halfway into the wall plane and
-captures the same view with `light_shadows` on and off. The two images must
-match; a fan of shadows on the wall or the floor means the shadow ray counted
-the wall the light sits on.
+`scenarios/lamp-wall-plane.json` aims the debug camera at the wall, arms the
+Lamp, and clicks the ghost. A wall gradient check gates the fan of shadows that
+appears when the shadow ray counts the wall the light sits on, so no
+before/after pair is needed. A crate capture with `light_shadows` on and off
+still proves the point light casts.
 `scenarios/perf-lamps.json` injects eight synthetic lights, measures shadows on,
 then disables the point-light shadows and measures again. It writes one trace per
 side.
@@ -876,8 +925,8 @@ and measures them, so the box count is part of the probe.
 `renderer_debug` block injects eight synthetic lights, the first `perf` command
 measures them with hard shadows, then the command disables point-light shadows
 and the second `perf` measures again. Both traces stay in the run directory:
-`trace-shadows-on.jsonl` and `trace-shadows-off.jsonl`. It needs
-`--debug-renderer` or the build define. The paired result is in
+`trace-shadows-on.jsonl` and `trace-shadows-off.jsonl`. Its `requires.renderer_debug` declaration enables
+the gated command, so it needs no flag. The paired result is in
 `docs/evidence/perf-lamps.md`.
 
 ### Benchmark two builds
@@ -961,11 +1010,18 @@ frame-rate change.
 - `src/harness/capture_region.odin`: the region, crop, and histogram.
 - `src/harness/capture_profile.odin`: the edge profile and its 10%-90% width.
 - `src/harness/analysis_bands.odin`: the identical-run band metric.
-- `src/harness/scenario_inherit.odin`: `extends` and `parameters`.
+- `src/harness/scenario_file.odin`: read one scenario once, parse it per sweep
+  value.
+- `src/harness/scenario_inherit.odin`: the `extends` merge.
+- `src/harness/scenario_parameters.odin`: the `parameters` block and overrides.
+- `src/harness/scenario_substitute.odin`: `${name}` substitution.
+- `src/harness/sweep.odin`: the `--param` parse, combinations, and labels.
+- `src/harness/sweep_run.odin`: the sweep runner and `sweep.json`.
 - `src/harness/session_rows.odin`: the HUD and menu row dump.
 - `src/harness/session_displays.odin`: the scripted display list.
 - `src/harness/session_draw.odin`: the frame draw and the capture dispatch.
 - `src/harness/ab_command.odin`: the `ab` wrapper over `tools/ab.sh`.
+- `src/harness/run_backend.odin`: the lazy run backend.
 - `src/harness/run_paths.odin`: the tag-aware run directory.
 - `src/harness/session_settle.odin`: the convergence wait.
 - `src/harness/state_schema.odin`: the reflection walk over `State` that resolves
@@ -976,6 +1032,7 @@ frame-rate change.
 - `src/harness/perf_command.odin`: the perf command parser.
 - `src/harness/session_state.odin`: the session's renderer snapshot.
 - `src/harness/editor_command.odin`: the `editor` command and its parser.
+- `src/harness/editor_camera_command.odin`: the debug camera parser.
 - `src/harness/editor_object_command.odin`: the object editing fields.
 - `src/harness/editor_light_command.odin`: the light fields.
 - `src/harness/state_light.odin`: the object light and light budget state.

@@ -58,10 +58,11 @@ Session :: struct {
 
 	quit: bool,
 
-	recording:          bool,
-	record_path:        string,
-	record_start_frame: int,
-	recorded:           [dynamic]string,
+	recording:               bool,
+	record_path:             string,
+	record_start_frame:      int,
+	recorded:                [dynamic]string,
+	recorded_renderer_debug: bool,
 
 	perf:            perf_pkg.State,
 	perf_report:     Perf_Report,

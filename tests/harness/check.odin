@@ -52,6 +52,40 @@ capture_check_needs_a_capture :: proc(t: ^testing.T) {
 }
 
 @(test)
+capture_check_reads_a_capture_by_name :: proc(t: ^testing.T) {
+	captures := []harness.Capture_Result {
+		{name = "before", delta_mean = 0.2, stats = harness.Capture_Stats{mean = {1, 2, 3, 4}}},
+		{name = "after", delta_mean = 0.02, stats = harness.Capture_Stats{mean = {2, 3, 4, 5}}},
+	}
+	mean := harness.Check_Command {
+		field = "capture.named.after.stats.mean.y",
+		op    = .Eq,
+		value = {kind = .Number, number = 3},
+	}
+	mean_result := harness.check_evaluate(mean, {}, captures, nil, context.allocator)
+	defer harness.check_result_destroy(&mean_result, context.allocator)
+	testing.expectf(t, mean_result.ok, "named stats check failed: %s", mean_result.error)
+
+	delta := harness.Check_Command {
+		field = "capture.named.after.delta_mean",
+		op    = .Lt,
+		value = {kind = .Number, number = 0.1},
+	}
+	delta_result := harness.check_evaluate(delta, {}, captures, nil, context.allocator)
+	defer harness.check_result_destroy(&delta_result, context.allocator)
+	testing.expectf(t, delta_result.ok, "named delta check failed: %s", delta_result.error)
+
+	missing := harness.Check_Command {
+		field = "capture.named.missing.stats.mean.y",
+		op    = .Eq,
+		value = {kind = .Number, number = 3},
+	}
+	missing_result := harness.check_evaluate(missing, {}, captures, nil, context.allocator)
+	defer harness.check_result_destroy(&missing_result, context.allocator)
+	testing.expect(t, missing_result.error != "", "a missing capture name was accepted")
+}
+
+@(test)
 object_check_reads_the_state_by_id :: proc(t: ^testing.T) {
 	state := harness.State {
 		objects = []harness.Object_State {

@@ -116,4 +116,50 @@ camera_state_reports_the_override_and_the_player :: proc(t: ^testing.T) {
 	defer harness.state_destroy(&cleared, context.allocator)
 	testing.expect(t, !cleared.camera.overridden, "the cleared camera still reports an override")
 	testing.expect_value(t, cleared.camera.fov, f32(90))
+	testing.expect_value(t, cleared.camera.source, "player")
+}
+
+@(test)
+camera_state_reports_the_debug_view :: proc(t: ^testing.T) {
+	session, error := harness.session_create(context.allocator)
+	testing.expectf(t, error == "", "session create failed: %s", error)
+	defer harness.session_destroy(&session)
+	if error != "" {
+		return
+	}
+	reply := execute(t, &session, `{"cmd":"debug_mode","active":true}`)
+	harness.reply_destroy(&reply, context.allocator)
+	reply = execute(
+		t,
+		&session,
+		`{"cmd":"editor","camera":{"position":[4,3,-2],"yaw":0.5,"pitch":-0.25}}`,
+	)
+	harness.reply_destroy(&reply, context.allocator)
+
+	state := harness.session_state(&session)
+	defer harness.state_destroy(&state, context.allocator)
+	testing.expect_value(t, state.camera.source, "debug")
+	testing.expect(t, state.camera.overridden, "the debug view is not reported as an override")
+	testing.expect_value(t, state.camera.position.x, f32(4))
+	testing.expect_value(t, state.camera.position.y, f32(3))
+	testing.expect_value(t, state.camera.position.z, f32(-2))
+	testing.expect_value(t, state.camera.yaw, f32(0.5))
+	testing.expect_value(t, state.camera.pitch, f32(-0.25))
+	testing.expectf(t, abs(state.camera.fov - 90) < 1e-4, "debug fov is %v", state.camera.fov)
+
+	reply = execute(t, &session, `{"cmd":"camera","position":[1,2,3],"yaw":0,"pitch":0}`)
+	harness.reply_destroy(&reply, context.allocator)
+	overridden := harness.session_state(&session)
+	defer harness.state_destroy(&overridden, context.allocator)
+	testing.expect_value(t, overridden.camera.source, "override")
+	testing.expect_value(t, overridden.camera.position.x, f32(1))
+
+	reply = execute(t, &session, `{"cmd":"camera","clear":true}`)
+	harness.reply_destroy(&reply, context.allocator)
+	reply = execute(t, &session, `{"cmd":"debug_mode","active":false}`)
+	harness.reply_destroy(&reply, context.allocator)
+	restored := harness.session_state(&session)
+	defer harness.state_destroy(&restored, context.allocator)
+	testing.expect_value(t, restored.camera.source, "player")
+	testing.expect(t, !restored.camera.overridden, "leaving debug mode still reports an override")
 }

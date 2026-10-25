@@ -16,6 +16,7 @@ session_record_start :: proc(session: ^Session, path: string) -> string {
 	session.recording = true
 	session.record_path = strings.clone(path, session.allocator)
 	session.record_start_frame = session.frame
+	session.recorded_renderer_debug = false
 	clear(&session.recorded)
 
 	append(&session.recorded, strings.clone(`{"cmd": "reset"}`, session.allocator))
@@ -67,7 +68,12 @@ session_record_stop :: proc(session: ^Session) -> (path: string, error: string) 
 
 	builder := strings.builder_make(allocator = context.temp_allocator)
 	defer strings.builder_destroy(&builder)
-	fmt.sbprint(&builder, "{\n  \"version\": 1,\n  \"commands\": [\n")
+	fmt.sbprint(&builder, "{\n  \"version\": 1,\n")
+	// A recorded renderer debug command needs the gate when it replays.
+	if session.recorded_renderer_debug {
+		fmt.sbprint(&builder, "  \"requires\": {\"renderer_debug\": true},\n")
+	}
+	fmt.sbprint(&builder, "  \"commands\": [\n")
 	for line, index in session.recorded {
 		fmt.sbprintf(&builder, "    %s", line)
 		if index + 1 < len(session.recorded) {
@@ -117,6 +123,9 @@ session_replay :: proc(session: ^Session, path: string) -> (Replay_Summary, stri
 
 	if restart_error := session_restart(session); restart_error != "" {
 		return {}, restart_error
+	}
+	if scenario.requires.renderer_debug {
+		session.debug_renderer = true
 	}
 
 	summary := Replay_Summary{ok = true}

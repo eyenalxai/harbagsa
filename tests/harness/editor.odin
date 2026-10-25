@@ -24,6 +24,74 @@ editor_session :: proc(t: ^testing.T) -> harness.Session {
 }
 
 @(test)
+editor_camera_aims_at_a_point :: proc(t: ^testing.T) {
+	command, error := harness.command_parse_string(
+		`{"cmd":"editor","camera":{"position":[0,1.7,14],"look_at":[0,1.7,4]}}`,
+		context.allocator,
+	)
+	defer harness.command_destroy(&command, context.allocator)
+	testing.expectf(t, error == "", "editor look_at parse failed: %s", error)
+	if error != "" {
+		return
+	}
+	testing.expect(t, abs(command.editor.camera.yaw) < 1e-5, "looking down -z has a nonzero yaw")
+	testing.expect(t, abs(command.editor.camera.pitch) < 1e-5, "looking level has a nonzero pitch")
+
+	bad := []string{
+		`{"cmd":"editor","camera":{"position":[0,0,0],"look_at":[0,0,-1],"yaw":0,"pitch":0}}`,
+		`{"cmd":"editor","camera":{"position":[0,0,0],"look_at":[0,0,0]}}`,
+	}
+	for line in bad {
+		_, bad_error := harness.command_parse_string(line, context.allocator)
+		testing.expectf(t, bad_error != "", "bad editor camera was accepted: %s", line)
+		if bad_error != "" {
+			delete(bad_error, context.allocator)
+		}
+	}
+}
+
+@(test)
+editor_primary_places_the_ghost_at_the_aim :: proc(t: ^testing.T) {
+	session := editor_session(t)
+	defer harness.session_destroy(&session)
+
+	reply := execute(
+		t,
+		&session,
+		`{"cmd":"editor","camera":{"position":[0,1.7,14],"look_at":[0,1.0,0]}}`,
+	)
+	harness.reply_destroy(&reply, context.allocator)
+	reply = execute(t, &session, `{"cmd":"editor","select":3,"pick":true}`)
+	harness.reply_destroy(&reply, context.allocator)
+	reply = execute(t, &session, `{"cmd":"step","frames":1}`)
+	harness.reply_destroy(&reply, context.allocator)
+
+	aimed := harness.session_state(&session)
+	ghost := aimed.debug.placement.position
+	harness.state_destroy(&aimed, context.allocator)
+
+	reply = execute(t, &session, `{"cmd":"editor","primary":true}`)
+	harness.reply_destroy(&reply, context.allocator)
+	placed := harness.session_state(&session)
+	defer harness.state_destroy(&placed, context.allocator)
+	testing.expect(t, placed.debug.selected_id != 0, "primary selected nothing")
+	if placed.debug.selected_id == 0 || len(placed.objects) == 0 {
+		return
+	}
+	object := placed.objects[len(placed.objects) - 1]
+	testing.expect_value(t, object.prefab, "Block")
+	testing.expectf(
+		t,
+		abs(object.position.x - ghost.x) < 1e-3 &&
+		abs(object.position.y - ghost.y) < 1e-3 &&
+		abs(object.position.z - ghost.z) < 1e-3,
+		"the click placed %v, not the ghost %v",
+		object.position,
+		ghost,
+	)
+}
+
+@(test)
 editor_opens_selects_and_picks_a_prefab :: proc(t: ^testing.T) {
 	session := editor_session(t)
 	defer harness.session_destroy(&session)
