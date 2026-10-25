@@ -19,11 +19,6 @@ struct Light {
     vec4 color;
 };
 
-struct ProbeVolume {
-    vec4 min_spacing;
-    uvec4 counts_offset;
-};
-
 layout(set = 0, binding = 1) readonly buffer Objects {
     ObjectData objects[];
 } scene;
@@ -34,26 +29,18 @@ layout(set = 0, binding = 3) readonly buffer Lights {
     Light lights[];
 } light_set;
 
-layout(set = 0, binding = 6) readonly buffer ProbeVolumes {
-    ProbeVolume volumes[];
-} probe_volumes;
-
-layout(set = 0, binding = 7) buffer ProbeIrradiance {
-    vec4 irradiance[];
-} probe_irradiance;
-
-layout(set = 0, binding = 8) buffer ProbeDepth {
-    vec2 depth[];
-} probe_depth;
-
 layout(set = 0, binding = 9) readonly buffer ProbePositions {
     vec4 positions[];
 } probe_positions;
 
+layout(set = 0, binding = 10) writeonly buffer ProbeRays {
+    vec4 rays[];
+} probe_rays;
+
 layout(push_constant) uniform ProbePush {
     uint first_probe;
     uint probe_count;
-    uint frame;
+    uint reset;
     uint pad;
 } push;
 
@@ -177,54 +164,24 @@ vec3 hit_radiance(vec3 origin, vec3 direction, float distance, out float hit_dis
 }
 
 void main() {
-    uint local_probe = gl_GlobalInvocationID.x / uint(PROBE_TEXELS);
+    uint ray_index = gl_GlobalInvocationID.x;
+    uint local_probe = ray_index / uint(PROBE_RAYS);
     if (local_probe >= push.probe_count) {
         return;
     }
     uint probe_index = push.first_probe + local_probe;
-    uint texel = gl_GlobalInvocationID.x % uint(PROBE_TEXELS);
-
-    ProbeVolume volume;
-    bool found = false;
-    for (int index = 0; index < probe_volumes.volumes.length(); ++index) {
-        uint offset = probe_volumes.volumes[index].counts_offset.w;
-        uvec3 counts = probe_volumes.volumes[index].counts_offset.xyz;
-        if (probe_index >= offset && probe_index < offset + counts.x * counts.y * counts.z) {
-            volume = probe_volumes.volumes[index];
-            found = true;
-            break;
-        }
-    }
-    if (!found) {
-        return;
-    }
-
+    uint probe_ray = ray_index % uint(PROBE_RAYS);
     vec3 probe_position = probe_positions.positions[probe_index].xyz;
-
-    uint oct_x = texel % uint(PROBE_GRID_SIZE);
-    uint oct_y = texel / uint(PROBE_GRID_SIZE);
-    vec2 oct_uv = (vec2(float(oct_x), float(oct_y)) + 0.5) / float(PROBE_GRID_SIZE);
-    vec3 direction = oct_decode(oct_uv);
 
     float hit_distance;
     vec3 radiance = hit_radiance(
         probe_position,
-        direction,
+        probe_ray_direction(probe_ray),
         camera.sun.y,
         hit_distance
     );
-
-    uint probe_texel = probe_index * uint(PROBE_TEXELS) + texel;
-    float alpha = push.frame < 8u ? 1.0 : PROBE_BOUNCE_ALPHA;
-    vec4 previous = probe_irradiance.irradiance[probe_texel];
-    probe_irradiance.irradiance[probe_texel] = vec4(
-        mix(previous.rgb, radiance, alpha),
-        1.0
-    );
-    vec2 previous_depth = probe_depth.depth[probe_texel];
-    probe_depth.depth[probe_texel] = mix(
-        previous_depth,
-        vec2(hit_distance, hit_distance * hit_distance),
-        alpha
+    probe_rays.rays[probe_index * uint(PROBE_RAYS) + probe_ray] = vec4(
+        radiance,
+        hit_distance
     );
 }
