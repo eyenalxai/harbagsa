@@ -36,7 +36,6 @@ session_record_start :: proc(session: ^Session, path: string) -> string {
 	scene := frame.scene_capture(
 		&session.sim,
 		&session.debug,
-		&session.hud,
 		options,
 		camera,
 		session.allocator,

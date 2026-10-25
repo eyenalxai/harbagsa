@@ -32,7 +32,6 @@ session_repro :: proc(session: ^Session, path: string, reply: ^Reply) -> string 
 	absolute, write_error := frame.scene_write(
 		&session.sim,
 		&session.debug,
-		&session.hud,
 		options,
 		camera,
 		path,
