@@ -52,3 +52,5 @@ approximation would make the dither magnitude view-dependent.
 - `analysis.bands` gates the class. `scenarios/banding.json` checks the longest
   run and the median at 1280x720.
 - The 8-bit sRGB swapchain stays. The game still presents 8 bits per channel.
+- This dither handles the 8-bit write only. A ray-count step is larger and is
+  offset in the lit pass per `docs/adr/0024-visibility-count-dither.md`.
