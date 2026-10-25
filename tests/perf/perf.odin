@@ -105,7 +105,7 @@ gpu_fields_appear_in_the_overlay_text :: proc(t: ^testing.T) {
 	summary.gpu.total = perf.Distribution{mean = 3.30}
 	summary.gpu.top = .Scene
 
-	buffer: [96]u8
+	buffer: [192]u8
 	line := perf.format_summary(buffer[:], summary)
 	testing.expect(t, len(line) > 0 && len(line) < len(buffer), "summary did not fit")
 	testing.expect(t, strings.contains(line, "gpu"), "summary has no GPU total")

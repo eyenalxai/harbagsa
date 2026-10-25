@@ -22,6 +22,8 @@ build_pass :: proc(
 		pass.draw = draw_tlas
 	case .Cluster:
 		build_cluster_pass(r, pass)
+	case .Probe:
+		build_probe_pass(r, pass)
 	case .Depth:
 		build_depth_pass(r, pass)
 	case .Scene:
@@ -121,6 +123,13 @@ cluster_after :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pas
 		0,
 		nil,
 	)
+}
+
+@(private)
+build_probe_pass :: proc(r: ^Renderer, pass: ^Pass) {
+	pass.has_rendering = false
+	pass.draw = draw_probes
+	pass.after = probe_after
 }
 
 @(private)

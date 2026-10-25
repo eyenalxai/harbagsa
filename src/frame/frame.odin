@@ -96,6 +96,7 @@ build :: proc(
 		})
 	}
 	scene.lights = scratch.lights[:]
+	scene.probe_volumes = PROBE_VOLUMES[:]
 
 	scratch.debug_lines.count = 0
 	if options.debug_view {

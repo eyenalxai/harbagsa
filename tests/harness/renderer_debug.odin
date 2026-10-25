@@ -15,7 +15,7 @@ renderer_debug_parses_every_override :: proc(t: ^testing.T) {
 		`{"cmd": "renderer_debug", "taa": false, "jitter": false, "history_weight": 0.25,
 		  "clamp": false, "depth_trust": true, "freeze_shadow_phase": true,
 		  "shadow_phase": 9, "light_shadows": false, "synthetic_lights": 9,
-		  "sky": false, "ao": false, "ao_radius": 2.0, "ao_strength": 0.25,
+		  "sky": false, "gi": false, "ao": false, "ao_radius": 2.0, "ao_strength": 0.25,
 		  "clip_height": 3.0}`,
 		context.allocator,
 	)
@@ -36,6 +36,7 @@ renderer_debug_parses_every_override :: proc(t: ^testing.T) {
 	testing.expect(t, debug.has_light_shadows && !debug.light_shadows, "light shadows were not parsed")
 	testing.expect(t, debug.has_synthetic_lights && debug.synthetic_lights == 9, "synthetic lights were not parsed")
 	testing.expect(t, debug.has_sky && !debug.sky, "sky was not parsed")
+	testing.expect(t, debug.has_gi && !debug.gi, "gi was not parsed")
 	testing.expect(t, debug.has_ao && !debug.ao, "ao was not parsed")
 	testing.expect(t, debug.has_ao_radius && debug.ao_radius == 2.0, "ao radius was not parsed")
 	testing.expect(t, debug.has_ao_strength && debug.ao_strength == 0.25, "ao strength was not parsed")

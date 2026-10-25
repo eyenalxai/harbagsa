@@ -27,6 +27,7 @@ layout(set = 0, binding = 1) readonly buffer Objects {
 
 #include "camera.glsl"
 #include "cluster.glsl"
+#include "probe.glsl"
 
 layout(set = 0, binding = 2) uniform accelerationStructureEXT scene_tlas;
 
@@ -48,6 +49,23 @@ layout(set = 0, binding = 4) readonly buffer ClusterCounts {
 layout(set = 0, binding = 5) readonly buffer ClusterIndices {
     uint indices[];
 } cluster_indices;
+
+struct ProbeVolume {
+    vec4 min_spacing;
+    uvec4 counts_offset;
+};
+
+layout(set = 0, binding = 6) readonly buffer ProbeVolumes {
+    ProbeVolume volumes[];
+} probe_volumes;
+
+layout(set = 0, binding = 7) readonly buffer ProbeIrradiance {
+    vec4 irradiance[];
+} probe_irradiance_set;
+
+layout(set = 0, binding = 8) readonly buffer ProbeDepth {
+    vec2 depth[];
+} probe_depth_set;
 
 const vec3 SUN_COLOR = vec3(1.0, 0.98, 0.94);
 const int SUN_SAMPLES = 16;
@@ -135,6 +153,95 @@ float sun_visibility(vec3 world_position, vec3 normal, vec3 to_light) {
         }
     }
     return dithered_visibility(visible, SUN_SAMPLES);
+}
+
+vec3 probe_indirect(vec3 world_position, vec3 normal) {
+    int volume_count = int(camera.probe.x);
+    if (camera.probe.z < 0.5 || volume_count <= 0 || camera.probe.y <= 0.0) {
+        return vec3(0.0);
+    }
+
+    int volume_index = -1;
+    for (int index = 0; index < volume_count; ++index) {
+        ProbeVolume volume = probe_volumes.volumes[index];
+        vec3 high = volume.min_spacing.xyz +
+                    vec3(volume.counts_offset.xyz) * volume.min_spacing.w;
+        if (all(greaterThanEqual(world_position, volume.min_spacing.xyz)) &&
+            all(lessThanEqual(world_position, high))) {
+            volume_index = index;
+            break;
+        }
+    }
+    if (volume_index < 0) {
+        return vec3(0.0);
+    }
+
+    ProbeVolume volume = probe_volumes.volumes[volume_index];
+    uvec3 counts = volume.counts_offset.xyz;
+    vec3 local = (world_position - volume.min_spacing.xyz) / volume.min_spacing.w - 0.5;
+    vec3 base = floor(local);
+    vec3 fraction = local - base;
+
+    vec3 sum = vec3(0.0);
+    float total_weight = 0.0;
+    for (int z = 0; z < 2; ++z) {
+        for (int y = 0; y < 2; ++y) {
+            for (int x = 0; x < 2; ++x) {
+                ivec3 cell = clamp(
+                    ivec3(base) + ivec3(x, y, z),
+                    ivec3(0),
+                    ivec3(counts) - 1
+                );
+                float weight_x = x == 0 ? 1.0 - fraction.x : fraction.x;
+                float weight_y = y == 0 ? 1.0 - fraction.y : fraction.y;
+                float weight_z = z == 0 ? 1.0 - fraction.z : fraction.z;
+
+                vec3 probe_position = volume.min_spacing.xyz +
+                    (vec3(cell) + 0.5) * volume.min_spacing.w;
+                vec3 to_surface = world_position - probe_position;
+                float distance2 = dot(to_surface, to_surface);
+                if (distance2 < 1e-6) {
+                    continue;
+                }
+                float distance = sqrt(distance2);
+                vec3 direction = to_surface / distance;
+                float facing = max(dot(normal, -direction), 0.0);
+                if (facing <= 0.0) {
+                    continue;
+                }
+
+                uint probe_index = volume.counts_offset.w + uint(
+                    (cell.z * int(counts.y) + cell.y) * int(counts.x) + cell.x
+                );
+                vec2 oct = oct_encode(direction);
+                ivec2 texel = clamp(
+                    ivec2(oct * float(PROBE_GRID_SIZE)),
+                    ivec2(0),
+                    ivec2(PROBE_GRID_SIZE - 1)
+                );
+                uint sample_index = probe_index * uint(PROBE_TEXELS) +
+                    uint(texel.y * PROBE_GRID_SIZE + texel.x);
+                vec3 radiance = probe_irradiance_set.irradiance[sample_index].rgb;
+                vec2 moments = probe_depth_set.depth[sample_index];
+                float mean = moments.x;
+                float variance = max(moments.y - mean * mean, 0.0001);
+                float chebyshev = 1.0;
+                if (distance > mean) {
+                    float difference = distance - mean;
+                    chebyshev = variance / (variance + difference * difference);
+                }
+
+                float weight = weight_x * weight_y * weight_z * facing *
+                    chebyshev / (distance2 + 0.05);
+                sum += radiance * weight;
+                total_weight += weight;
+            }
+        }
+    }
+    if (total_weight <= 0.0) {
+        return vec3(0.0);
+    }
+    return sum / total_weight;
 }
 
 vec3 point_light_radiance(vec3 world_position, vec3 normal) {
@@ -254,7 +361,8 @@ void main() {
     // ray. The occlusion darkens the light that reaches a corner. There is no
     // ambient term, so a surface that no light reaches is black.
     vec3 lit = (diffuse * SUN_COLOR * visibility + point_light_radiance(v_world_position, normal)) * ao;
-    vec3 color = v_color * lit + v_color * object.color.a;
+    vec3 indirect = probe_indirect(v_world_position, normal);
+    vec3 color = v_color * (lit + indirect) + v_color * object.color.a;
 
     vec4 world_position = vec4(v_world_position, 1.0);
     vec4 previous_world = object.prev_model * vec4(v_local_position, 1.0);

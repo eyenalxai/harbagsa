@@ -27,7 +27,11 @@ every_pass_kind_builds_one_scope :: proc(t: ^testing.T) {
 		pass: renderer.Pass
 		renderer.build_pass(&r, &pass, kind, 0, nil)
 		testing.expect_value(t, pass.name, kind)
-		testing.expect_value(t, pass.has_rendering, kind != .Tlas && kind != .Cluster)
+		testing.expect_value(
+			t,
+			pass.has_rendering,
+			kind != .Tlas && kind != .Cluster && kind != .Probe,
+		)
 		has_barriers := pass.barriers != nil
 		testing.expect_value(
 			t,
@@ -35,6 +39,10 @@ every_pass_kind_builds_one_scope :: proc(t: ^testing.T) {
 			kind == .Depth || kind == .Scene || kind == .Sky || kind == .Taa,
 		)
 		has_after := pass.after != nil
-		testing.expect_value(t, has_after, kind == .Taa || kind == .Cluster)
+		testing.expect_value(
+			t,
+			has_after,
+			kind == .Taa || kind == .Cluster || kind == .Probe,
+		)
 	}
 }

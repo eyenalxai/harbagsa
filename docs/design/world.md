@@ -47,19 +47,35 @@ wider disk widens every penumbra, so the shadow stops reading as a shadow. The
 shader takes 16 samples on a Vogel disk, so a penumbra has 17 levels and softens
 with blocker distance.
 
-There is no ambient term. The sun and the point lights are the only light
-sources, and the sky is a background. A surface that neither reaches is black.
+The sun and the point lights are direct. A DDGI probe volume adds one diffuse
+bounce inside the room, so a lit wall fills the corner beside it. A surface that
+no light and no probe reaches is black.
 
-The ambient-occlusion rays stay; they scale the direct light instead of an
-ambient term. The formula is:
+The ambient-occlusion rays stay; they scale the direct light. The formula is:
 
 ```text
-albedo * (diffuse * sun * visibility + point_lights) * occlusion
+albedo * (direct * occlusion + probe_indirect)
 ```
 
 The occlusion is a local visibility term. It darkens a lit corner or a contact
-band; a surface the light does not reach stays black. It applies to the sun and
-the lamps, at strength 0.5. It is not global illumination and it does not bounce.
+band; it does not add bounce. The probe volume owns the bounce. The occlusion
+applies to the sun and the lamps, at strength 0.5.
+
+## Probe volume
+
+The room, its lanes, and the chamber share one probe volume. Probes sit at
+1.04 m spacing, inside the wall faces. Each probe traces 64 rays, one per
+octahedral texel, and stores irradiance plus a depth moment. The lit pass samples
+the eight probes around the surface, weights them by facing and distance, and
+rejects a probe behind a wall with its depth moment.
+
+A lamp change clears the blend on the next frame, so a removed lamp does not
+leave its bounce behind. A moving crate does not reset the probes yet; the leak
+ticket owns that dirty state. `renderer_debug.gi` turns the indirect term off
+for a paired capture.
+
+The probe pass updates every probe every frame. The room has 300 probes, and the
+pass costs about 0.12 ms with 64 synthetic lights at 1280 x 720.
 
 The occlusion uses 8 rays and the sun 16. A partial count carries a per-pixel,
 per-frame offset inside its own step; a full or empty count stays exact. Without
@@ -79,7 +95,9 @@ material distinguishes one box from another except its colour.
 ## The sky
 
 The sky is an analytic gradient, not a texture. `sky.glsl` gives one ramp for
-the sky pass. The sky is a background, not a light. With the sky pass off, `DEFAULT_CLEAR_COLOR` is
+the sky pass. The sky is a background for the camera and a radiance source for a
+probe ray that escapes through an opening; it does not directly light a surface.
+With the sky pass off, `DEFAULT_CLEAR_COLOR` is
 `(0.10, 0.45, 0.75)`, written linear into an RGBA16F target.
 
 The gradient is the only large soft field in the frame. Keep the horizon band

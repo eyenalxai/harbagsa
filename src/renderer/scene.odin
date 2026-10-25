@@ -72,6 +72,9 @@ Scene :: struct {
 }
 
 init_scene :: proc(r: ^Renderer) -> Error {
+	if !create_probe_resources(r) {
+		return .Create_Scene
+	}
 	if !create_scene_resources(r) {
 		return .Create_Scene
 	}
@@ -82,6 +85,9 @@ init_scene :: proc(r: ^Renderer) -> Error {
 		return .Create_Pipeline
 	}
 	if !create_cluster_pipeline(r) {
+		return .Create_Pipeline
+	}
+	if !create_probe_pipeline(r) {
 		return .Create_Pipeline
 	}
 	if !create_sky_pipeline(r) {
@@ -197,6 +203,12 @@ update_camera :: proc(r: ^Renderer, input: Render_Input) -> bool {
 			input.ao_strength,
 			input.ao ? 1.0 : 0.0,
 			input.clip_height,
+		},
+		probe = {
+			f32(r.probe.volume_count),
+			f32(r.probe.probe_count),
+			input.gi ? 1.0 : 0.0,
+			0,
 		},
 	}
 	return true
