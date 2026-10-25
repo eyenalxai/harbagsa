@@ -31,7 +31,7 @@
     {"field": "objects.4.position.z", "op": "gt", "value": -19.51},
     {"field": "objects.4.position.z", "op": "lt", "value": -19.49},
     {"field": "debug.lights.active", "op": "eq", "value": 1},
-    {"field": "capture.named.wall-stats.stats.gradient.y", "op": "lt", "value": 3.0},
+    {"field": "capture.named.wall-stats.stats.gradient.y", "op": "lt", "value": 1.0},
     {"field": "capture.named.crate-shadow-off.delta_mean", "op": "gt", "value": 0.1}
   ]
 }
