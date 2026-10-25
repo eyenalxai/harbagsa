@@ -145,6 +145,9 @@ run_scenario :: proc(scenario: ^Scenario, options: Run_Options, out_dir: string)
 		delete(session_error, context.allocator)
 		return result
 	}
+	// The repro file is a run side effect, so it belongs to the staging
+	// directory and moves with the run in swap_run_dir.
+	session.output_dir = staging
 	session.debug_renderer = options.debug_renderer || scenario.requires.renderer_debug
 	session_set_timeout(&session, common.timeout_seconds)
 	session.analysis_config = scenario.analysis
@@ -230,7 +233,7 @@ run_scenario :: proc(scenario: ^Scenario, options: Run_Options, out_dir: string)
 		frame       = state.frame,
 		state       = state,
 		setup       = setup,
-		screenshots = session.captures[:],
+		captures = session.captures[:],
 		checks      = session.checks[:],
 		failures    = session.failures[:],
 		digest      = state.digest,
@@ -287,6 +290,8 @@ run_scenario :: proc(scenario: ^Scenario, options: Run_Options, out_dir: string)
 	}
 	if options.verbose {
 		print_verbose_summary(report)
+	} else if options.summary {
+		print_compact_summary(report)
 	}
 	if failure != "" {
 		delete(failure, context.allocator)

@@ -58,6 +58,9 @@ COMMANDS := [?]Command_Row {
 	{.Displays, "displays", parse_displays, execute_displays, .Raw, destroy_displays, .None, Displays_Command},
 	{.Rows, "rows", parse_no_fields, execute_rows, .Skip, nil, .None, No_Fields_Command},
 	{.Scene, "scene", parse_scene, execute_scene, .Raw, destroy_scene, .None, Scene_Command},
+	{.Place, "place", parse_place, execute_place, .Raw, nil, .None, Place_Command},
+	{.Remove, "remove", parse_remove, execute_remove, .Raw, nil, .None, Remove_Command},
+	{.Get, "get", parse_get, execute_get, .Raw, destroy_get, .None, Get_Command},
 	{.Quit, "quit", parse_no_fields, execute_quit, .Skip, nil, .None, No_Fields_Command},
 }
 

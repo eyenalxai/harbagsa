@@ -2,6 +2,8 @@
 #+vet !unused-procedures // the harness reads captures; the game binary does not
 package renderer
 
+import "core:fmt"
+import "core:log"
 import "core:mem"
 
 import vk "vendor:vulkan"
@@ -68,15 +70,24 @@ record_capture_copy :: proc(
 	target: Capture_Target,
 	slot: int,
 ) -> bool {
+	name := capture_target_name(target)
 	if r.target.readback.buffer == 0 || r.target.readback.size == 0 {
+		log.errorf("renderer: capture readback is not allocated for %s slot %d", name, slot)
 		return false
 	}
 	stride := capture_slot_stride(r)
 	if vk.DeviceSize(slot) * stride >= r.target.readback.size {
+		log.errorf(
+			"renderer: capture slot %d for %s is past the %d byte readback",
+			slot,
+			name,
+			r.target.readback.size,
+		)
 		return false
 	}
 	image, format, ok := target_image(r, image_index, target)
 	if !ok || texel_bytes(format) == 0 {
+		log.errorf("renderer: capture target %s slot %d has no readable image", name, slot)
 		return false
 	}
 
@@ -170,26 +181,44 @@ read_capture_target :: proc(
 	pixels: []u8,
 	width, height: u32,
 	format: vk.Format,
-	ok: bool,
+	error: string,
 ) {
+	name := capture_target_name(target)
 	if r.target.readback.mapped == nil || r.target.readback.size == 0 {
-		return nil, 0, 0, .UNDEFINED, false
+		return nil, 0, 0, .UNDEFINED, "capture readback is not allocated; request a capture first"
 	}
 	_, image_format, image_ok := target_image(r, 0, target)
 	if !image_ok {
-		return nil, 0, 0, .UNDEFINED, false
+		return nil, 0, 0, .UNDEFINED, fmt.aprintf(
+			"capture target %s has no image",
+			name,
+			allocator = context.allocator,
+		)
 	}
 	format = image_format
 	bytes_per_texel := texel_bytes(format)
 	if bytes_per_texel == 0 {
-		return nil, 0, 0, .UNDEFINED, false
+		return nil, 0, 0, .UNDEFINED, fmt.aprintf(
+			"capture target %s has an unknown format",
+			name,
+			allocator = context.allocator,
+		)
 	}
 	width = r.target.config.width
 	height = r.target.config.height
 	required := vk.DeviceSize(width) * vk.DeviceSize(height) * vk.DeviceSize(bytes_per_texel)
 	offset := vk.DeviceSize(slot) * capture_slot_stride(r)
 	if offset + required > r.target.readback.size {
-		return nil, 0, 0, .UNDEFINED, false
+		return nil, 0, 0, .UNDEFINED, fmt.aprintf(
+			"capture %s (%s) at %dx%d needs %d bytes, the readback holds %d",
+			name,
+			format_name(format),
+			width,
+			height,
+			required,
+			r.target.readback.size,
+			allocator = context.allocator,
+		)
 	}
 	size := int(required)
 	source := rawptr(uintptr(r.target.readback.mapped) + uintptr(offset))
@@ -201,34 +230,35 @@ read_capture_target :: proc(
 				r.target.readback.pixels[i + 2], r.target.readback.pixels[i]
 		}
 	}
-	return r.target.readback.pixels[:size], width, height, format, true
+	return r.target.readback.pixels[:size], width, height, format, ""
 }
 
 // Four f32 values per pixel in RGBA order. Depth fills only .x. Color keeps its
 // 0..255 channel values. The other formats are linear floats.
 capture_values :: proc(bytes: []u8, format: vk.Format, allocator: mem.Allocator) -> []f32 {
-	bytes_per_texel := texel_bytes(format)
-	if bytes_per_texel == 0 || len(bytes) % bytes_per_texel != 0 {
+	info := format_info(format)
+	if info.texel_bytes == 0 || len(bytes) % info.texel_bytes != 0 {
 		return nil
 	}
-	pixels := len(bytes) / bytes_per_texel
+	pixels := len(bytes) / info.texel_bytes
 	values := make([]f32, pixels * 4, allocator)
-	if format == .R16G16B16A16_SFLOAT {
+	switch info.decode {
+	case .Rgba16f:
 		halves := cast([^]u16)raw_data(bytes)
 		for index in 0 ..< pixels * 4 {
 			values[index] = f32(transmute(f16)halves[index])
 		}
-	} else if format == .R32G32B32A32_SFLOAT {
+	case .Rgba32f:
 		floats := cast([^]f32)raw_data(bytes)
 		for index in 0 ..< pixels * 4 {
 			values[index] = floats[index]
 		}
-	} else if format == .D32_SFLOAT {
+	case .Depth32f:
 		depths := cast([^]f32)raw_data(bytes)
 		for index in 0 ..< pixels {
 			values[index * 4] = depths[index]
 		}
-	} else {
+	case .Rgba8:
 		for index in 0 ..< pixels {
 			base := index * 4
 			values[index * 4 + 0] = f32(bytes[base + 0])
@@ -236,6 +266,8 @@ capture_values :: proc(bytes: []u8, format: vk.Format, allocator: mem.Allocator)
 			values[index * 4 + 2] = f32(bytes[base + 2])
 			values[index * 4 + 3] = f32(bytes[base + 3])
 		}
+	case .Unknown:
+		return nil
 	}
 	return values
 }
