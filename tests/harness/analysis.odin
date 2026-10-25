@@ -145,8 +145,8 @@ scenario_analysis_parses_a_window_and_maps :: proc(t: ^testing.T) {
 		region, has_region := scenario.analysis.region.?
 		testing.expect(t, has_region, "the region was dropped")
 		if has_region {
-			testing.expect_value(t, region.x, 2)
-			testing.expect_value(t, region.h, 12)
+			testing.expect_value(t, region.pixels.x, 2)
+			testing.expect_value(t, region.pixels.h, 12)
 		}
 	}
 

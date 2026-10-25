@@ -176,7 +176,7 @@ write_compare_run :: proc(
 	testing.expectf(t, error == "", "cannot write the capture: %s", error)
 	defer harness.capture_result_destroy(&written, context.allocator)
 	report := fmt.aprintf(
-		`{{"scenario":{{"path":"scenarios/test.json"}},"setup":{{"revision":"%s","dirty":%v,"width":%d,"height":%d}},"screenshots":[{{"name":"%s","path":"%s","format":"png"}}]}}`,
+		`{{"scenario":{{"path":"scenarios/test.json"}},"setup":{{"revision":"%s","dirty":%v,"width":%d,"height":%d}},"captures":[{{"name":"%s","path":"%s","format":"png"}}]}}`,
 		revision,
 		dirty,
 		width,

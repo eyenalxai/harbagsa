@@ -45,6 +45,7 @@ renderer_debug_rejects_bad_fields :: proc(t: ^testing.T) {
 		`{"cmd": "renderer_debug", "history_weight": 1.5}`,
 		`{"cmd": "renderer_debug", "clear": true, "jitter": false}`,
 		`{"cmd": "renderer_debug", "clear": true, "synthetic_lights": 2}`,
+		`{"cmd": "renderer_debug", "clear": true, "taa": null}`,
 		`{"cmd": "renderer_debug", "synthetic_lights": 9}`,
 		`{"cmd": "renderer_debug", "light_shadows": 1}`,
 		`{"cmd": "renderer_debug", "speed": 2}`,
@@ -56,6 +57,24 @@ renderer_debug_rejects_bad_fields :: proc(t: ^testing.T) {
 			delete(error, context.allocator)
 		}
 	}
+}
+
+@(test)
+renderer_debug_parses_a_null_reset :: proc(t: ^testing.T) {
+	command, error := harness.command_parse_string(
+		`{"cmd":"renderer_debug","history_weight":null,"sky":null}`,
+		context.allocator,
+	)
+	defer harness.command_destroy(&command, context.allocator)
+	testing.expectf(t, error == "", "null reset parse failed: %s", error)
+	if error != "" {
+		return
+	}
+	debug := command.renderer_debug
+	testing.expect(t, !debug.has_history_weight, "a null reset set the weight")
+	testing.expect(t, !debug.has_sky, "a null reset set the sky")
+	testing.expect(t, .History_Weight in debug.reset, "the weight reset was dropped")
+	testing.expect(t, .Sky in debug.reset, "the sky reset was dropped")
 }
 
 @(test)
@@ -144,6 +163,14 @@ renderer_debug_needs_the_gate :: proc(t: ^testing.T) {
 	testing.expect(t, fake.debug.shadow_phase == 3, "shadow phase was not set")
 	testing.expect(t, !fake.debug.light_shadows, "light shadows were not disabled")
 	testing.expect(t, fake.debug.synthetic_lights == 8, "synthetic lights were not set")
+
+	reply = execute(t, &session, `{"cmd": "renderer_debug", "history_weight": null, "sky": null}`)
+	testing.expectf(t, reply.ok, "null reset failed: %s", reply.error)
+	harness.reply_destroy(&reply, context.allocator)
+	testing.expect_value(t, fake.debug.history_weight, f32(-1))
+	testing.expect(t, fake.debug.sky, "the sky reset did not restore the default")
+	testing.expect(t, fake.debug.synthetic_lights == 8, "the sky reset cleared another override")
+	testing.expect(t, fake.debug.shadow_phase == 3, "the sky reset cleared the shadow phase")
 
 	reply = execute(t, &session, `{"cmd": "renderer_debug", "clear": true}`)
 	testing.expectf(t, reply.ok, "clear failed: %s", reply.error)

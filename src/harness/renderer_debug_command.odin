@@ -54,73 +54,185 @@ renderer_debug_fields :: proc(object: json.Object) -> (Renderer_Debug_Command, s
 	if field_error := json_bool(object, "clear", &command.clear); field_error != "" {
 		return {}, field_error
 	}
-	if field_error := json_optional_bool(object, "taa", &command.taa, &command.has_taa); field_error != "" {
-		return {}, field_error
+	if error := debug_bool(object, "taa", .TAA, &command.taa, &command.has_taa, &command.reset); error != "" {
+		return {}, error
 	}
-	if field_error := json_optional_bool(object, "jitter", &command.jitter, &command.has_jitter); field_error != "" {
-		return {}, field_error
+	if error := debug_bool(object, "jitter", .Jitter, &command.jitter, &command.has_jitter, &command.reset); error != "" {
+		return {}, error
 	}
-	if value, has := json_get(object, "history_weight"); has {
-		weight, ok := json_number(value)
-		if !ok || weight < 0 || weight > 1 {
-			return {}, format_error("%s", "'history_weight' must be a number in [0, 1]")
-		}
-		command.history_weight = f32(weight)
-		command.has_history_weight = true
+	if error := debug_number(
+		object,
+		"history_weight",
+		.History_Weight,
+		0,
+		1,
+		&command.history_weight,
+		&command.has_history_weight,
+		&command.reset,
+	); error != "" {
+		return {}, error
 	}
-	if field_error := json_optional_bool(object, "clamp", &command.clamp, &command.has_clamp); field_error != "" {
-		return {}, field_error
+	if error := debug_bool(object, "clamp", .Clamp, &command.clamp, &command.has_clamp, &command.reset); error != "" {
+		return {}, error
 	}
-	if field_error := json_optional_bool(object, "depth_trust", &command.depth_trust, &command.has_depth_trust); field_error != "" {
-		return {}, field_error
+	if error := debug_bool(
+		object,
+		"depth_trust",
+		.Depth_Trust,
+		&command.depth_trust,
+		&command.has_depth_trust,
+		&command.reset,
+	); error != "" {
+		return {}, error
 	}
-	if field_error := json_optional_bool(
+	if error := debug_bool(
 		object,
 		"freeze_shadow_phase",
+		.Freeze_Shadow_Phase,
 		&command.freeze_shadow_phase,
 		&command.has_freeze_shadow_phase,
-	); field_error != "" {
-		return {}, field_error
+		&command.reset,
+	); error != "" {
+		return {}, error
 	}
-	if value, has := json_get(object, "shadow_phase"); has {
-		phase, ok := json_integer(value)
-		if !ok || phase < 0 || phase >= 64 {
-			return {}, format_error("%s", "'shadow_phase' must be an integer in [0, 63]")
-		}
-		command.shadow_phase = int(phase)
-		command.has_shadow_phase = true
+	if error := debug_integer(
+		object,
+		"shadow_phase",
+		.Shadow_Phase,
+		0,
+		63,
+		&command.shadow_phase,
+		&command.has_shadow_phase,
+		&command.reset,
+	); error != "" {
+		return {}, error
 	}
-	if field_error := json_optional_bool(object, "light_shadows", &command.light_shadows, &command.has_light_shadows); field_error != "" {
-		return {}, field_error
+	if error := debug_bool(
+		object,
+		"light_shadows",
+		.Light_Shadows,
+		&command.light_shadows,
+		&command.has_light_shadows,
+		&command.reset,
+	); error != "" {
+		return {}, error
 	}
-	if value, has := json_get(object, "synthetic_lights"); has {
-		count, ok := json_integer(value)
-		if !ok || count < 0 || count > renderer.MAX_POINT_LIGHTS {
-			return {}, format_error("%s", "'synthetic_lights' must be an integer in [0, 8]")
-		}
-		command.synthetic_lights = int(count)
-		command.has_synthetic_lights = true
+	if error := debug_integer(
+		object,
+		"synthetic_lights",
+		.Synthetic_Lights,
+		0,
+		renderer.MAX_POINT_LIGHTS,
+		&command.synthetic_lights,
+		&command.has_synthetic_lights,
+		&command.reset,
+	); error != "" {
+		return {}, error
 	}
-	if field_error := json_optional_bool(object, "sky", &command.sky, &command.has_sky); field_error != "" {
-		return {}, field_error
+	if error := debug_bool(object, "sky", .Sky, &command.sky, &command.has_sky, &command.reset); error != "" {
+		return {}, error
 	}
-	if field_error := json_optional_bool(object, "ao", &command.ao, &command.has_ao); field_error != "" {
-		return {}, field_error
+	if error := debug_bool(object, "ao", .AO, &command.ao, &command.has_ao, &command.reset); error != "" {
+		return {}, error
 	}
-	if command.clear {
-		if command.has_taa ||
-		   command.has_jitter ||
-		   command.has_history_weight ||
-		   command.has_clamp ||
-		   command.has_depth_trust ||
-		   command.has_freeze_shadow_phase ||
-		   command.has_shadow_phase ||
-		   command.has_light_shadows ||
-		   command.has_synthetic_lights ||
-		   command.has_sky ||
-		   command.has_ao {
-			return {}, format_error("%s", "'clear' cannot be combined with overrides")
-		}
+	if command.clear && (command.has_taa ||
+	   command.has_jitter ||
+	   command.has_history_weight ||
+	   command.has_clamp ||
+	   command.has_depth_trust ||
+	   command.has_freeze_shadow_phase ||
+	   command.has_shadow_phase ||
+	   command.has_light_shadows ||
+	   command.has_synthetic_lights ||
+	   command.has_sky ||
+	   command.has_ao ||
+	   command.reset != {}) {
+		return {}, "'clear' cannot be combined with overrides"
 	}
 	return command, ""
+}
+
+@(private)
+debug_bool :: proc(
+	object: json.Object,
+	key: string,
+	field: Renderer_Debug_Field,
+	target: ^bool,
+	has: ^bool,
+	reset: ^Renderer_Debug_Resets,
+) -> string {
+	value, present := json_get(object, key)
+	if !present {
+		return ""
+	}
+	if json_is_null(value) {
+		reset^ += {field}
+		return ""
+	}
+	flag, ok := json_boolean(value)
+	if !ok {
+		return format_error("'%s' must be a boolean or null", key)
+	}
+	target^ = flag
+	has^ = true
+	return ""
+}
+
+@(private)
+debug_number :: proc(
+	object: json.Object,
+	key: string,
+	field: Renderer_Debug_Field,
+	minimum, maximum: f64,
+	target: ^f32,
+	has: ^bool,
+	reset: ^Renderer_Debug_Resets,
+) -> string {
+	value, present := json_get(object, key)
+	if !present {
+		return ""
+	}
+	if json_is_null(value) {
+		reset^ += {field}
+		return ""
+	}
+	number, ok := json_number(value)
+	if !ok || number < minimum || number > maximum {
+		return format_error("'%s' must be a number in [%g, %g] or null", key, minimum, maximum)
+	}
+	target^ = f32(number)
+	has^ = true
+	return ""
+}
+
+@(private)
+debug_integer :: proc(
+	object: json.Object,
+	key: string,
+	field: Renderer_Debug_Field,
+	minimum, maximum: int,
+	target: ^int,
+	has: ^bool,
+	reset: ^Renderer_Debug_Resets,
+) -> string {
+	value, present := json_get(object, key)
+	if !present {
+		return ""
+	}
+	if json_is_null(value) {
+		reset^ += {field}
+		return ""
+	}
+	number, ok := json_integer(value)
+	if !ok || number < minimum || number > maximum {
+		return format_error(
+			"'%s' must be an integer in [%d, %d] or null",
+			key,
+			minimum,
+			maximum,
+		)
+	}
+	target^ = number
+	has^ = true
+	return ""
 }

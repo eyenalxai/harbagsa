@@ -105,6 +105,31 @@ a_failed_write_keeps_the_failure_notice :: proc(t: ^testing.T) {
 }
 
 @(test)
+repro_resolves_a_relative_path_under_the_output_dir :: proc(t: ^testing.T) {
+	dir := "/tmp/opencode/harbagsa-repro-output"
+	_ = os.remove_all(dir)
+	_ = os.make_directory_all(dir)
+	defer os.remove_all(dir)
+
+	session, error := harness.session_create(context.allocator)
+	testing.expectf(t, error == "", "session create failed: %s", error)
+	defer harness.session_destroy(&session)
+	session.output_dir = dir
+
+	reply := execute(t, &session, `{"cmd": "repro", "path": "live.json"}`)
+	defer harness.reply_destroy(&reply, context.allocator)
+	testing.expectf(t, reply.ok, "relative repro failed: %s", reply.error)
+	testing.expectf(
+		t,
+		strings.has_prefix(reply.written, dir),
+		"the reply lost the output directory: %s",
+		reply.written,
+	)
+	testing.expect(t, os.is_file("/tmp/opencode/harbagsa-repro-output/live.json"), "the repro was not written under the output directory")
+	testing.expect_value(t, game.hud_notice_text(&session.hud), "Scene snapshot · live.json")
+}
+
+@(test)
 repro_needs_a_path :: proc(t: ^testing.T) {
 	_, error := harness.command_parse_string(`{"cmd": "repro"}`, context.allocator)
 	defer delete(error, context.allocator)

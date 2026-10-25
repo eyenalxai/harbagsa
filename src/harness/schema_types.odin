@@ -64,10 +64,13 @@ COMMAND_DESCRIPTIONS := [?]struct {
 	{.Replay, "Replay a recorded scenario inside the live session."},
 	{.Repro, "Write the live view as a scene scenario and show the notice."},
 	{.Perf, "Measure frame time over a fixed or primed run."},
-	{.Renderer_Debug, "Apply gated renderer overrides."},
+	{.Renderer_Debug, "Apply gated renderer overrides. A field set to null restores its default."},
 	{.Displays, "Replace the display list."},
 	{.Rows, "Dump the HUD and menu rows."},
 	{.Scene, "Apply an exact scene: camera, sun, objects, settings, view, and displays."},
+	{.Place, "Create one object from a prefab without entering debug mode."},
+	{.Remove, "Delete one object by id without entering debug mode."},
+	{.Get, "Resolve one state or capture field and return its JSON scalar."},
 	{.Quit, "Close the session."},
 }
 
@@ -161,7 +164,9 @@ schema_append_fields :: proc(
 	allocator: runtime.Allocator,
 ) {
 	for field in reflect.struct_fields_zipped(id) {
-		if string_in(field.name, skip) || strings.has_prefix(field.name, "has_") {
+		if string_in(field.name, skip) ||
+		   strings.has_prefix(field.name, "has_") ||
+		   field.name == "reset" {
 			continue
 		}
 		json_name := reflect.struct_tag_get(field.tag, "json")

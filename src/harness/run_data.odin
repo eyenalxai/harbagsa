@@ -15,7 +15,7 @@ Run_Metadata :: struct {
 	dirty:       bool,
 	width:       u32,
 	height:      u32,
-	screenshots: int,
+	captures: int,
 	has_report:  bool,
 }
 
@@ -109,9 +109,9 @@ run_metadata_read :: proc(metadata: ^Run_Metadata, object: json.Object, allocato
 			}
 		}
 	}
-	if screenshots_value, has := json_get(object, "screenshots"); has {
-		if screenshots, screenshots_ok := json_array(screenshots_value); screenshots_ok {
-			metadata.screenshots = len(screenshots)
+	if captures_value, has := json_get(object, "captures"); has {
+		if captures, captures_ok := json_array(captures_value); captures_ok {
+			metadata.captures = len(captures)
 		}
 	}
 }
@@ -125,11 +125,11 @@ run_report_captures :: proc(
 	[]Diff_Capture,
 	bool,
 ) {
-	screenshots_value, has := json_get(object, "screenshots")
+	captures_value, has := json_get(object, "captures")
 	if !has {
 		return nil, true
 	}
-	array, array_ok := json_array(screenshots_value)
+	array, array_ok := json_array(captures_value)
 	if !array_ok {
 		return nil, false
 	}

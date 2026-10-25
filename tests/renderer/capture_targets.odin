@@ -47,14 +47,14 @@ offscreen_target_reads_two_targets_from_one_frame :: proc(t: ^testing.T) {
 	if status != .Ok {
 		return
 	}
-	color, width, height, _, color_ok := renderer.read_capture_target(&state, .Color, 0)
-	testing.expect(t, color_ok, "color readback failed")
-	scene_color, scene_width, scene_height, _, scene_ok := renderer.read_capture_target(
+	color, width, height, _, color_error := renderer.read_capture_target(&state, .Color, 0)
+	testing.expectf(t, color_error == "", "color readback failed: %s", color_error)
+	scene_color, scene_width, scene_height, _, scene_error := renderer.read_capture_target(
 		&state,
 		.Scene_Color,
 		1,
 	)
-	testing.expect(t, scene_ok, "scene color readback failed")
+	testing.expectf(t, scene_error == "", "scene color readback failed: %s", scene_error)
 	testing.expect_value(t, width, u32(TEST_WIDTH))
 	testing.expect_value(t, height, u32(TEST_HEIGHT))
 	testing.expect_value(t, scene_width, u32(TEST_WIDTH))

@@ -172,10 +172,45 @@ capture_region_is_recorded :: proc(t: ^testing.T) {
 	defer harness.command_destroy(&command, context.allocator)
 	testing.expectf(t, error == "", "region parse failed: %s", error)
 	if region, has := command.capture.region.?; has {
-		testing.expect_value(t, region.x, 1)
-		testing.expect_value(t, region.w, 3)
+		testing.expect_value(t, region.unit, harness.Capture_Region_Unit.Pixels)
+		testing.expect_value(t, region.pixels.x, 1)
+		testing.expect_value(t, region.pixels.w, 3)
 	} else {
 		testing.expect(t, false, "the region was dropped")
+	}
+}
+
+@(test)
+capture_region_resolves_a_normalized_region :: proc(t: ^testing.T) {
+	command, error := harness.command_parse_string(
+		`{"cmd":"capture","name":"s","format":"stats","region":{"x":0.3125,"y":0.6388889,"w":0.390625,"h":0.3333333,"unit":"normalized"}}`,
+		context.allocator,
+	)
+	defer harness.command_destroy(&command, context.allocator)
+	testing.expectf(t, error == "", "normalized region parse failed: %s", error)
+	if error != "" {
+		return
+	}
+	spec, has := command.capture.region.?
+	testing.expect(t, has, "the normalized region was dropped")
+	if !has {
+		return
+	}
+	testing.expect_value(t, spec.unit, harness.Capture_Region_Unit.Normalized)
+	resolved, resolve_error := harness.capture_region_resolve(spec, 1280, 720)
+	testing.expectf(t, resolve_error == "", "resolve failed: %s", resolve_error)
+	testing.expect_value(t, resolved, harness.Capture_Region{x = 400, y = 460, w = 500, h = 240})
+}
+
+@(test)
+capture_region_rejects_a_normalized_region_outside_the_frame :: proc(t: ^testing.T) {
+	_, error := harness.command_parse_string(
+		`{"cmd":"capture","name":"s","format":"stats","region":{"x":0.6,"y":0.5,"w":0.5,"h":0.2,"unit":"normalized"}}`,
+		context.allocator,
+	)
+	testing.expect(t, error != "", "a normalized region past the frame edge was accepted")
+	if error != "" {
+		delete(error, context.allocator)
 	}
 }
 

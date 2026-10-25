@@ -56,6 +56,11 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 	testing.expect_value(t, state.target.config.height, u32(TEST_HEIGHT))
 	testing.expect(t, state.target.config.format != .UNDEFINED, "offscreen target has no color format")
 	testing.expect(t, state.target.kind == .Offscreen, "target kind is not offscreen")
+	testing.expect(
+		t,
+		state.target.readback.mapped == nil,
+		"the offscreen target allocated a readback before a capture",
+	)
 
 	sim := game.simulation_create()
 	testing.expect(t, game.simulation_is_valid(&sim), "simulation world is invalid")
@@ -73,6 +78,11 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 		t,
 		perf.recorder_has(&recorder, .Record),
 		"renderer did not mark the end of command recording",
+	)
+	testing.expect(
+		t,
+		state.target.readback.mapped != nil,
+		"the first capture did not allocate a readback",
 	)
 
 	// The fences retire a slot after MAX_FRAMES_IN_FLIGHT frames, so draw
@@ -110,9 +120,9 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 		)
 	}
 
-	pixels, width, height, _, ok := renderer.read_capture_target(&state, .Color)
-	testing.expect(t, ok, "capture readback failed")
-	if !ok {
+	pixels, width, height, _, read_error := renderer.read_capture_target(&state, .Color)
+	testing.expectf(t, read_error == "", "capture readback failed: %s", read_error)
+	if read_error != "" {
 		return
 	}
 	testing.expect_value(t, width, u32(TEST_WIDTH))
@@ -154,9 +164,9 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 		}
 	}
 	testing.expect(t, sky_draw_ok, "sky draw failed")
-	sky_pixels, sky_width, _, _, sky_ok := renderer.read_capture_target(&state, .Color)
-	testing.expect(t, sky_ok, "sky capture readback failed")
-	if sky_ok {
+	sky_pixels, sky_width, _, _, sky_error := renderer.read_capture_target(&state, .Color)
+	testing.expectf(t, sky_error == "", "sky capture readback failed: %s", sky_error)
+	if sky_error == "" {
 		width := int(sky_width)
 		rows := len(sky_pixels) / (4 * width)
 		band := 20
@@ -282,8 +292,8 @@ render_offscreen_sequence :: proc() -> (
 	if frame.draw(state, scene, {targets = {.Color}}) != .Ok {
 		return nil, 0, false, true
 	}
-	data, _, _, _, read_ok := renderer.read_capture_target(state, .Color)
-	if !read_ok {
+	data, _, _, _, read_error := renderer.read_capture_target(state, .Color)
+	if read_error != "" {
 		return nil, 0, false, true
 	}
 	pixels = make([]u8, len(data), context.allocator)

@@ -15,7 +15,7 @@ Five recipes. Each writes a run directory; read `report.json` for the result.
    ```sh
    tools/make.sh build
    ./bin/harbagsa-agent run scenarios/hud.json --out runs/ui/hud
-   jq -r '.screenshots[].path' runs/ui/hud/report.json
+   jq -r '.captures[].path' runs/ui/hud/report.json
    ```
 
 2. Capture the settings menu:
@@ -57,7 +57,7 @@ tools/make.sh build
 ./bin/harbagsa-agent run scenarios/smoke.json
 ```
 
-Read `runs/smoke/report.json`. Use the absolute paths in `screenshots`. Exit
+Read `runs/smoke/report.json`. Use the absolute paths in `captures`. Exit
 code 0 means every check passed.
 
 Use `tools/make.sh` when another agent may build in the same checkout. It
@@ -68,6 +68,7 @@ serializes Make with `flock`.
 | Task | Read |
 | --- | --- |
 | drive the simulation | **Scenario format** and **Commands** |
+| place or remove one object without debug mode | **Place and remove** |
 | drive the object palette, placement, object edits, and history | **Editor** |
 | drive the sun placement | **Editor** |
 | capture the final image | **Capture targets** (`color` + `png`) |
@@ -82,6 +83,7 @@ serializes Make with `flock`.
 | discover command fields and check paths | `harbagsa-agent schema` |
 | script the display list | **Commands** (`displays`) |
 | dump the HUD and menu rows | **Commands** (`rows`) |
+| resolve one state field | **Live session** (`get`) |
 | measure an edge or a gradient | **Capture targets** and **Analysis** |
 | compare two builds | **Performance** and `ab` |
 | measure frame time | **Performance** |
@@ -94,10 +96,11 @@ serializes Make with `flock`.
 `runs/<scenario-stem>/`
 
 - `report.json`: `ok`, `exit_code`, `scenario` (`path`, `hash`, and the
-  effective `parameters`), `run_dir`,
-  `frame`, `state`, `setup`, `screenshots`, `checks`, `failures`, `digest`,
-  `error`, `perf` (a list of named reports) when perf ran, `trace` when the run
-  wrote a perf trace, and `analysis` when the run wrote an analysis report.
+  effective `parameters`), `run_dir`, `frame`, `state`, `setup`, `captures`,
+  `checks`, `failures`, `digest`, `error`, `perf` (a list of named reports) when
+  perf ran, `trace` when the run wrote a perf trace, and `analysis` when the run
+  wrote an analysis report. A `captures` entry carries `name`, `target`,
+  `format`, and `png`, plus `path` when it wrote a file.
 - `analysis.json`: the per-run image analysis. See **Analysis**.
 - `frames/analysis-diff.png` and `frames/analysis-variance.png`: the optional
   analysis maps.
@@ -111,11 +114,13 @@ serializes Make with `flock`.
   the placement tool, the sun, the inspector, the light budget, and the history.
 - `frames/<name>.png`, `.f32`, or `.bin`: captures. A color capture is a PNG;
   `float` and `raw` write the intermediate target.
-- Each screenshot entry carries `delta_mean`, `delta_max`, and `delta_over_16`
+- Each color PNG capture carries `delta_mean`, `delta_max`, and `delta_over_16`
   against the previous capture. The first capture has zeros.
 - `run.log`: log lines from the renderer, the session, and the runner.
 
-Standard output is one JSON summary. Standard error holds logs.
+Standard output is one JSON summary. Standard error holds logs. `--summary`
+writes the check table and every capture to standard error; `--verbose` adds
+the setup and perf reports.
 
 `run -` reads the scenario from standard input. `--tag NAME` appends a directory
 to the run path, so `runs/smoke/before` and `runs/smoke/after` coexist.
@@ -396,8 +401,8 @@ so the command works from any directory.
 
 `harbagsa-agent suite offscreen` is the validation target. `make
 validate-offscreen` builds the validation agent and runs
-`suites/offscreen.json`; `make ui` runs `suites/ui.json`; `make suite
-SUITE=renderer` uses the normal agent. Positional selectors replace the
+`suites/offscreen.json`; `make ui` runs `suites/ui.json`; `make lighting` runs
+`suites/lighting.json`; `make suite SUITE=renderer` uses the normal agent. Positional selectors replace the
 manifest entries, so `make validate-offscreen SCENARIO=renderer-debug` still
 runs one scenario.
 
@@ -405,7 +410,31 @@ runs one scenario.
 keys, capture targets and formats, check fields, and the state field tree as
 JSON. `schema capture --text` prints one command; `schema --text` prints the
 command table. `run`, `session`, `diff`, `compare`, `suite`, and `ab` accept
-`-h`/`--help`.
+`-h`/`--help`; `help <command>` prints the same options for a CLI command, or
+the field table for a scenario command such as `capture`.
+
+## Place and remove
+
+`place` is the scene-setup path. It creates one object without entering debug
+mode, so a lighting scenario draws no sun gizmo, ghost, or inspector outline.
+`prefab` and `position` are required. `yaw_deg` and `body` are optional; `body`
+defaults to the prefab's body. A `light` block is allowed only for a prefab with
+a light, and its omitted fields keep the prefab defaults:
+
+```json
+{"cmd":"place","prefab":"Lamp","position":[13.5,2.75,10.5],"body":"static",
+ "light":{"color":"warm","intensity":1.5,"range":8}}
+```
+
+`remove` deletes one object by id:
+
+```json
+{"cmd":"remove","id":4}
+```
+
+`place` replies with the new id in `placed`. The editor still owns palette
+selection, armed placement, undo and redo, and the inspector; use `place` and
+`remove` when a scenario needs a fixed scene rather than an edit.
 
 ## Editor
 
@@ -642,6 +671,18 @@ One JSON command per line. One JSON reply per line. The socket mode prints one
 ready line on standard output. Capture files go to `runs/session/frames/` unless
 `--out` selects another directory.
 
+`get FIELD` resolves one state, capture, or analysis path and replies with a
+typed `value`:
+
+```sh
+printf '%s\n' '{"cmd":"get","field":"notice.text"}' '{"cmd":"quit"}' |
+  ./bin/harbagsa-agent session --no-render
+```
+
+`get objects.count` returns a number, `get renderer.taa` a boolean, and
+`get objects.1.prefab` a string. It builds only the state sections the path
+needs and never appends a check.
+
 `record PATH` starts recording. A second `record` with no path stops and writes
 the scenario. Recording starts with `reset`, one `scene` snapshot of the current
 state, and the current `input`. `"actions": true` omits the scene snapshot and
@@ -658,7 +699,11 @@ whole repro step. A scene with renderer debug overrides carries its own
 `"requires": {"renderer_debug": true}`. `--repro-dir DIR` or
 `HARBAGSA_REPRO_DIR` moves the directory. The `repro` command writes the same
 file and sets the same notice, so a scenario can capture what the player sees.
-The key writes a file only; it does not open a command channel.
+A relative `repro` path joins the run directory (or the `session --out`
+directory), so `"path": "live.json"` lands at `runs/<run>/live.json`; an absolute
+path stays absolute. The notice names the path as written, and the reply's
+`written` field is the absolute file. The key writes a file only; it does not
+open a command channel.
 
 ## Screenshots
 
@@ -707,9 +752,11 @@ scenario does not change.
 | `scene_color` | the linear scene color before the resolve | `stats` |
 
 A stats capture accepts `"region": {"x","y","w","h"}` or `"rect": [x,y,w,h]`.
-The statistics cover the region. `"histogram": 8` adds per-channel bin counts
-for the region or the whole image. `capture.stats.region.*` and
-`capture.histogram.*` read them.
+The statistics cover the region. Add `"unit": "normalized"` to the object form
+to give `x`, `y`, `w`, and `h` as fractions of the frame; the same scenario then
+works at 1280x720 and 2560x1440. The report echoes the resolved pixel region.
+`"histogram": 8` adds per-channel bin counts for the region or the whole image.
+`capture.stats.region.*` and `capture.histogram.*` read them.
 
 A capture with `"crop": {"x","y","w","h","scale"}` writes a nearest-neighbor
 scaled PNG. `width` and `height` stay the source extent; `written_width` and
@@ -748,8 +795,9 @@ Formats:
   reports 0.
 
 A stats capture accepts `"region": {"x","y","w","h"}` or `"rect": [x,y,w,h]`.
-The statistics cover the region and the report echoes it; a check reads
-`capture.stats.region.x` and the other region fields. Add `"histogram": 8` for
+The statistics cover the region and the report echoes the resolved pixels; a
+check reads `capture.stats.region.x` and the other region fields. A normalized
+region uses the same keys plus `"unit": "normalized"`. Add `"histogram": 8` for
 per-channel bin counts in `capture.histogram.x`, `.y`, `.z`, and `.w`.
 
 A stats capture with a region also reports `capture.stats.steps`. It
@@ -759,7 +807,10 @@ A soft shadow gradient reports no steps; a ray-count step leaves a run of them.
 Keep the region at least four pixels inside a flat boundary, because the filter
 reads that margin. `"steps": {"blur": 9, "min": 0.5, "max": 8}` tunes the kernel
 and thresholds; `blur` is an odd kernel size in [1, 31]. The result echoes
-`blur`, `min`, and `max_levels`. `scenarios/ramp-shadow.json` and
+`blur`, `min`, and `max_levels`. `over_cap` counts jumps at or above the cap,
+so a geometry edge is visible without polluting the band count. `top` holds the
+eight largest counted jumps with `x`, `y`, `axis` (`x` or `y`), and `levels`;
+`top.0` is the largest. `scenarios/ramp-shadow.json` and
 `scenarios/ramp-shadow-crouch.json` are the worked examples; the second looks
 from the crouched view under the ramp, where the steps are widest.
 
@@ -788,8 +839,10 @@ A check reads the last capture in its window: `capture.target`,
 `capture.format`, and `capture.stats.min.x`, `capture.stats.max.x`,
 `capture.stats.mean.x`, `capture.stats.stddev.x`, `capture.stats.gradient.x`,
 `capture.stats.steps.count`, `capture.stats.steps.pairs`,
-`capture.stats.steps.max`, `capture.stats.steps.blur`,
-`capture.stats.steps.min`, `capture.stats.steps.max_levels`,
+`capture.stats.steps.max`, `capture.stats.steps.over_cap`,
+`capture.stats.steps.blur`, `capture.stats.steps.min`,
+`capture.stats.steps.max_levels`, `capture.stats.steps.top.N.x`,
+`.top.N.y`, `.top.N.axis`, `.top.N.levels`,
 `capture.stats.velocity_median_texels`, and the same `.y`, `.z`, `.w` channels.
 
 `scenarios/capture-targets.json` covers a static and a moving velocity capture,
@@ -818,9 +871,10 @@ and summary. The analysis is on by default. Disable it with `"analysis": false` 
 analyzed frame: `longest_run`, `median_run`, `levels`, `columns`, and the
 optional `region`. A gradient that is continuous in 16-bit and bands after the
 8-bit resolve shows a long run. Add `"region": {"x","y","w","h"}` to the
-analysis object to keep a flat patch or an overlay out of the metric; checks
-read `analysis.bands.region.*`. `scenarios/banding.json` gates the sky at
-`longest_run < 64`.
+analysis object to keep a flat patch or an overlay out of the metric, or add
+`"unit": "normalized"` to use fractions of the analyzed frame; checks read
+`analysis.bands.region.*` as the resolved pixels. `scenarios/banding.json` gates
+the sky at `longest_run < 64`.
 
 The dominant period is the lag with the strongest autocorrelation over the
 per-pair mean series. A periodic series correlates at every multiple of its
@@ -847,7 +901,7 @@ keeps the longest run below 64 rows, and the median at most 2.
 wall shadow and captures three ways:
 
 ```json
-{"cmd": "capture", "name": "edge-stats", "format": "stats",
+{"cmd": "capture", "name": "edge-stats", "format": "stats", "png": true,
  "region": {"x": 300, "y": 160, "w": 40, "h": 40}, "histogram": 8}
 {"cmd": "capture", "name": "edge-profile", "format": "profile",
  "profile": {"axis": "y", "at": 320, "from": 140, "to": 220}}
@@ -870,6 +924,60 @@ PNG at `w*scale` by `h*scale`, keeps the source extent in `width`/`height`, and
 reports the written size in `written_width`/`written_height`. A cropped capture
 does not join the delta or analysis series.
 
+### Diagnose banding
+
+A band is a step that survives the 8-bit write. To separate a real visibility
+step from a TAA or dither artifact, measure the same view against a phase
+average.
+
+1. Replay the view, or run the scenario that shows the band.
+2. Settle the normal view for 600 frames, then capture the color PNG and a
+   `stats` capture over the band region. The stats capture names the step count.
+3. Capture 32 frozen sun phases with TAA off. `scenarios/banding-phase.json` is
+   the template: it takes a `phase` parameter, sets
+   `{"taa": false, "freeze_shadow_phase": true, "shadow_phase": "<phase>"}`,
+   and writes `scene_color` as `float`.
+4. Run the 32 phases:
+
+   ```sh
+   for phase in $(seq 0 31); do
+     ./bin/harbagsa-agent run scenarios/banding-phase.json \
+       --param phase=$phase --out runs/banding/phase=$phase
+   done
+   ```
+
+5. Average the `.f32` files and contrast-stretch the mean. Each file holds
+   `width * height * 4` little-endian `f32` values in RGBA order:
+
+   ```sh
+   python3 - <<'PY'
+   import glob, struct
+
+   paths = sorted(glob.glob("runs/banding/phase=*/frames/phase.f32"))
+   frames = []
+   for path in paths:
+       raw = open(path, "rb").read()
+       frames.append(struct.unpack("<%df" % (len(raw) // 4), raw))
+   count = len(frames[0])
+   mean = [sum(values[i] for values in frames) / len(frames) for i in range(count)]
+
+   # The phase average is linear; stretch the luma to 0..1 to see the band.
+   luma = sorted(mean[i] * 0.2126 + mean[i + 1] * 0.7152 + mean[i + 2] * 0.0722
+                 for i in range(0, count, 4))
+   low, high = luma[len(luma) // 100], luma[-len(luma) // 100]
+   stretched = [min(max((v - low) / (high - low), 0.0), 1.0) for v in luma]
+   out = bytearray()
+   for value in stretched:
+       out += struct.pack("<4f", value, value, value, 1.0)
+   open("runs/banding/average.f32", "wb").write(out)
+   PY
+   ```
+
+A band that survives the phase average is a real visibility step. A band that
+only appears in one phase is the temporal filter or the output dither; compare
+`renderer.taa_enabled`, the history weight, and the step count. The design
+background is in `docs/adr/0027-32-bit-taa-history.md`.
+
 ## Cross-run diff
 
 ```sh
@@ -877,7 +985,7 @@ does not join the delta or analysis series.
 ./bin/harbagsa-agent diff runs/before runs/after --max-pixels 0 --json
 ```
 
-`diff` reads each run's `report.json` and pairs the `screenshots` entries by
+`diff` reads each run's `report.json` and pairs the `captures` entries by
 name. A run without a report, or an entry whose `path` is empty or unreadable,
 falls back to `frames/<name>.png`. The frame fallback skips the derived
 `analysis-diff.png` and `analysis-variance.png` maps.
@@ -1017,12 +1125,16 @@ it. Any other build rejects it with a clear error.
 | `sky` | draw the sky pass and use the sky ambient in the lit pass |
 | `ao` | trace the ambient occlusion rays |
 | `clear` | reset every override and turn TAA, the sky, and the AO on |
+| any field set to `null` | restore that field's default |
 
-An override starts from the current state. A scenario can put the same fields in
-a top-level `renderer_debug` object; it compiles to the command before the commands.
+An override starts from the current state. Set one field to `null` to restore
+that field's default without clearing the others: `{"history_weight": null}`
+returns the automatic weight and leaves TAA, sky, AO, and the rest alone. `clear`
+still resets every field. A scenario can put the same fields in a top-level
+`renderer_debug` object; it compiles to the command before the commands.
 
 Every change to the override resets the history with reason `debug_override`,
-including a new shadow phase and a light change.
+including a new shadow phase, a light change, and a reset.
 
 `scenarios/renderer-debug.json` sets every override and clears it.
 `scenarios/renderer-debug-converge.json` turns jitter off and freezes the phase,
@@ -1075,8 +1187,20 @@ corner. The room is static arena geometry, not a placed object. The scenario:
    that the maximum depth is below 1.0, so neither view contains a sky pixel;
 3. moves the sun behind the doorway and to the far side, and compares the same
    floor region through the doorway;
-4. places a warm lamp with the editor, leaves debug mode so the sun gizmo is not
-   drawn, and compares the same interior view with the lamp on and off.
+4. places a warm lamp with `place` (no debug mode and no sun gizmo), then
+   removes it and compares the same interior view with the lamp on and off.
+
+The sun elevation, lamp intensity, lamp range, and door patch are scenario
+parameters. Change them with `--param` without editing the file:
+
+```sh
+./bin/harbagsa-agent run scenarios/room-lighting.json \
+  --param sun_elevation_deg=20 --param lamp_intensity=2
+```
+
+The scenario sets `"analysis": false` because its captures are different views,
+not a steady series. `make lighting` runs it with the sky, AO, ramp, and sun
+angle scenarios.
 
 The depth check proves the room is closed. It does not prove the interior is
 dark: the ambient term is a normal ramp, not an integral of the visible sky, and
@@ -1368,8 +1492,9 @@ frame-rate change.
   `scenarios/debug-pop.json`, `scenarios/type-weight.json`,
   `scenarios/repro-notice.json`, `scenarios/sky-ao.json`,
   `scenarios/stairs-ao.json`, `scenarios/ramp-shadow.json`,
-  `scenarios/ramp-shadow-crouch.json`,
-  `scenarios/shadow-angle.json`, `scenarios/room-lighting.json`,
+  `scenarios/ramp-shadow-crouch.json`, `scenarios/banding.json`,
+  `scenarios/banding-phase.json`, `scenarios/shadow-angle.json`,
+  `scenarios/lamp-wall-plane.json`, `scenarios/room-lighting.json`,
   `scenarios/perf-crates.json`, and
   `scenarios/perf-lamps.json`.
 
@@ -1409,9 +1534,19 @@ tools/make.sh test
 tools/make.sh build
 ```
 
+`make test-<package>` runs one test package:
+`test-display`, `test-platform`, `test-input`, `test-physics`,
+`test-simulation`, `test-frame`, `test-perf`, `test-harness`,
+`test-renderer`, or `test-docs`. `make test` runs all of them.
+
+Odin's test runner counts any log at `error` or `fatal` as a failed test, even
+when the test asserts the error. Return the error from the library code and let
+the outer layer log it; do not log an expected failure inside a test.
+
 `make smoke` runs the smoke scenario with the normal agent and needs no
 validation layer. `make shot SCENARIO=...` runs one scenario and prints the
-capture paths. `make ui` runs `suites/ui.json` into `runs/ui/<entry>`.
+capture paths. `make ui` runs `suites/ui.json` into `runs/ui/<entry>`;
+`make lighting` runs `suites/lighting.json` into `runs/lighting/<entry>`.
 
 `make validate` builds the agent with validation enabled and runs
 `scenarios/smoke.json` offscreen, then with `--present` when a display is
@@ -1426,8 +1561,9 @@ make validate-offscreen SCENARIO=renderer-debug AGENT_FLAGS=--debug-renderer
 ```
 
 `make shot SCENARIO=scenarios/ui.json` builds, runs, and prints the capture
-paths. `make ui` runs `suites/ui.json` into `runs/ui/<entry>`. `make suite
-SUITE=renderer` runs a suite with the normal agent. `make smoke` is the short
+paths. `make ui` runs `suites/ui.json` into `runs/ui/<entry>`; `make lighting`
+runs `suites/lighting.json`. `make suite SUITE=renderer` runs a suite with the
+normal agent. `make smoke` is the short
 end-to-end gate and needs no validation layers. `make validate-demo` runs the
 game with validation enabled.
 
@@ -1462,11 +1598,14 @@ harness in the same change. Do not leave the automation behind the game.
   the trace, and this page.
 - New command: follow **Adding a command**, add the registry row test, a JSONL
   test, and a scenario example when it changes a normal workflow.
-- New capture target or format: add it to `Capture_Target` or `Capture_Format`,
-  `CAPTURE_FORMAT_INFO` (name, parser, and extension in one row),
-  `target_image`, `record_capture_copy`, `read_capture_target`, and
-  `capture_values`. Add it to the capture parser,
-  the README, this page, and a scenario. An unread target is not a tool.
+- New capture target or format: add the target to `Capture_Target`,
+  `target_image`, and `record_capture_copy`. Add the harness format to
+  `CAPTURE_FORMAT_INFO` (name, parser, and extension in one row). Add the
+  Vulkan format and its decode kind to `CAPTURE_FORMATS`; `capture_values`
+  dispatches on that kind. Add it to the capture parser, the README, this page,
+  and a scenario. An unread target is not a tool.
+  `tests/renderer/capture_format.odin` checks that every Vulkan row has a
+  decoder and fits `MAX_CAPTURE_TEXEL_BYTES`.
 - New analysis field: add it to the `Analysis_*` types, `analysis_field`, the
   analysis report, the docs, and a unit test. `analysis_bands.odin` owns the
   flat-run metric.
@@ -1480,9 +1619,9 @@ harness in the same change. Do not leave the automation behind the game.
   `Debug_Report`. The State reflection walk covers the JSON and check paths;
   there is no separate report table.
 - New renderer debug override: add it to `Renderer_Debug`, `set_renderer_debug`,
-  the resolve push constants and shader, `renderer_debug_fields`, the renderer
-  state, the docs, and the gate test. Do not make it reachable without the
-  gate.
+  the resolve push constants and shader, `renderer_debug_fields`, its
+  `Renderer_Debug_Field` reset case, the renderer state, the docs, and the gate
+  test. Do not make it reachable without the gate.
 - New point light input: add it to `Light`, the light buffer upload, the scene
   shader loop, `Render_Input`, and its digest row. Add a test to
   `tests/renderer/lights.odin`.

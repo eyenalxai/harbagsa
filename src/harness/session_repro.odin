@@ -1,6 +1,7 @@
 #+vet explicit-allocators
 package harness
 
+import "core:path/filepath"
 import "core:strings"
 
 import "src:frame"
@@ -13,7 +14,16 @@ session_repro :: proc(session: ^Session, path: string, reply: ^Reply) -> string 
 	if path == "" {
 		return format_error("%s", "repro needs a path")
 	}
-	if len(path) > frame.SNAPSHOT_PATH_BYTES {
+	target := path
+	owned_target := false
+	if session.output_dir != "" && !filepath.is_abs(path) {
+		target = join_path({session.output_dir, path}, session.allocator)
+		owned_target = true
+	}
+	defer if owned_target {
+		delete(target, session.allocator)
+	}
+	if len(target) > frame.SNAPSHOT_PATH_BYTES {
 		return format_error(
 			"repro path must hold at most %d bytes",
 			frame.SNAPSHOT_PATH_BYTES,
@@ -39,7 +49,7 @@ session_repro :: proc(session: ^Session, path: string, reply: ^Reply) -> string 
 		options,
 		camera,
 		debug,
-		path,
+		target,
 	)
 	game.hud_notice_scene_snapshot(&session.hud, path, write_error == "")
 	if write_error != "" {

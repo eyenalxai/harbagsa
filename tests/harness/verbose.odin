@@ -8,6 +8,40 @@ import "core:testing"
 import "src:harness"
 
 @(test)
+compact_summary_lists_the_check_table_and_capture_paths :: proc(t: ^testing.T) {
+	report := harness.Report {
+		ok = false,
+		exit_code = 1,
+		scenario = {path = "scenarios/room-lighting.json"},
+		captures = []harness.Capture_Result {
+			{name = "lamp-on", target = "color", format = "png", path = "/tmp/lamp-on.png"},
+			{name = "lamp-stats", target = "color", format = "stats"},
+		},
+		checks = []harness.Check_Result {
+			{field = "objects.count", op = "eq", expected = "4", actual = "4", ok = true},
+			{field = "notice.text", op = "eq", expected = "", actual = "x", ok = false},
+		},
+	}
+	lines := harness.summary_lines(report, context.allocator)
+	defer harness.verbose_summary_destroy(lines, context.allocator)
+	text := strings.join(lines, "\n", context.allocator)
+	defer delete(text, context.allocator)
+	for expectation in ([]string{
+		"result: failed (exit 1)",
+		"captures: 2",
+		"lamp-on",
+		"/tmp/lamp-on.png",
+		"lamp-stats",
+		"png no",
+		"checks: 2, failed: 1",
+		"PASS objects.count",
+		"FAIL notice.text",
+	}) {
+		testing.expectf(t, strings.contains(text, expectation), "the summary is missing %q:\n%s", expectation, text)
+	}
+}
+
+@(test)
 verbose_summary_lists_captures_checks_failures_and_perf :: proc(t: ^testing.T) {
 	report := harness.Report {
 		scenario = {path = "scenarios/smoke.json", hash = "0123456789abcdef"},
@@ -18,7 +52,7 @@ verbose_summary_lists_captures_checks_failures_and_perf :: proc(t: ^testing.T) {
 			width = 1280,
 			height = 720,
 		},
-		screenshots = []harness.Capture_Result {
+		captures = []harness.Capture_Result {
 			{name = "frame_0090", frame = 90, width = 1280, height = 720, path = "/tmp/frame_0090.png"},
 		},
 		checks = []harness.Check_Result {

@@ -71,6 +71,9 @@ scene_write :: proc(
 			allocator = context.allocator,
 		)
 	}
+	if filepath.is_abs(path) {
+		return strings.clone(path, context.allocator), ""
+	}
 	if working_directory, working_error := os.get_working_directory(context.temp_allocator); working_error == nil {
 		return fmt.aprintf(
 			"%s/%s",
