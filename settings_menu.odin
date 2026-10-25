@@ -2,9 +2,9 @@
 package main
 
 import "src:game"
+import "src:input"
 import "src:platform"
 import "src:ui"
-import "src:renderer"
 
 @(private)
 open_settings_menu :: proc(
@@ -32,62 +32,39 @@ close_settings_menu :: proc(
 	return false
 }
 
+// apply_menu_input applies one frame of navigation and the weight slider. It
+// returns true when the menu asked to close.
 @(private)
-handle_settings_menu_events :: proc(
-	r: ^renderer.Renderer,
-	window: ^platform.Window,
+apply_menu_input :: proc(
 	menu: ^game.Menu_State,
-	debug: ^game.Debug_Mode,
 	settings: ^game.Settings,
-	debug_active: bool,
-	events: ^platform.Events,
-	accumulator: ^f32,
-	recapture: ^bool,
-	latches: ^Input_Latches,
-) {
-	if events.cancel_pressed {
-		if menu.open {
-			events.captured = close_settings_menu(window, menu, recapture^)
-			accumulator^ = 0
-		} else {
-			recapture^ = events.captured
-			events.captured = open_settings_menu(window, menu, debug)
-			accumulator^ = game.SIMULATION_STEP
-			clear_latches(latches)
-			// The rows and the track rect normally come from the previous draw.
-			// Neither exists yet, so build them before this frame reads input.
-			game.menu_view(menu, settings^, debug_active, 0)
-		}
-	}
-
-	if !menu.open {
-		return
-	}
-	if events.navigate_up_pressed {
+	frame: input.Menu_Input,
+	slider: ui.Slider_Rect,
+	pointer: [2]f32,
+) -> bool {
+	if frame.up {
 		game.menu_move(menu, -1)
 	}
-	if events.navigate_down_pressed {
+	if frame.down {
 		game.menu_move(menu, 1)
 	}
-	if events.navigate_left_pressed {
+	if frame.left {
 		_ = game.menu_change_setting(menu, settings, -1)
 	}
-	if events.navigate_right_pressed {
+	if frame.right {
 		_ = game.menu_change_setting(menu, settings, 1)
 	}
-	if events.confirm_pressed && game.menu_activate(menu, settings) {
-		events.captured = close_settings_menu(window, menu, recapture^)
-		accumulator^ = 0
+	closed := false
+	if frame.confirm && game.menu_activate(menu, settings) {
+		closed = true
 	}
-	layout := renderer.menu_layout_for(r, menu.view)
-	target_width, target_height := renderer.target_extent(r)
-	pointer := ui.pointer_to_target(events.pointer, f32(target_width), f32(target_height))
 	game.menu_weight_input(
 		menu,
 		settings,
-		layout.slider,
+		slider,
 		pointer,
-		events.pointer_pressed,
-		events.pointer_down,
+		frame.pointer_pressed,
+		frame.pointer_down,
 	)
+	return closed
 }
