@@ -67,12 +67,15 @@ The target is interiors with many local lights and no sun.
   geometry relocates the probe positions each frame, but does not reset the
   radiance blend. A crate that moves inside a lit room keeps its old indirect
   until the blend converges.
-- `scenarios/ddgi-leak.json`, `ddgi-door.json`, and `ddgi-move.json` gate the
-  wall leak, the doorway transport, and the moving lamp.
-- The volume covers the whole room, including internal walls. The sampler rejects
-  back-facing probes with the surface normal and the depth moment, and the probe
-  positions are relocated out of boxes. The leak scenario keeps the lane wall
-  within 0.01 mean of its no-lamp value while the chamber is lit. A separate
-  per-room classification is not needed for this room network yet.
+- `scenarios/ddgi-sealed.json` gates a sealed two-room placed pair and its
+  doorway. `ddgi-door.json` and `ddgi-move.json` gate the static room door and
+  the moving lamp.
+- The room volume covers the whole room, including internal walls. The sealed
+  pair has one volume across both rooms, so the shared wall sits between probes.
+  The gather gives a fully occluded probe zero weight, and the depth moment
+  rejects the bright probe behind the wall; a 5 percent weight floor used to leak
+  it. The sampler rejects back-facing probes with the surface normal, and the
+  probe positions are relocated out of boxes. A separate per-room classification
+  is still not needed for these two scenes.
 - The pass order is now `Tlas -> Cluster -> Probe -> Depth -> Scene -> Sky ->
   Taa -> Overlay`.

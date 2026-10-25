@@ -9,9 +9,9 @@
     "stairs-ao",
     "ramp-shadow",
     "shadow-angle",
-    "ddgi-leak",
     "ddgi-door",
     "ddgi-move",
-    "ddgi-arena"
+    "ddgi-arena",
+    "ddgi-sealed"
   ]
 }
