@@ -37,9 +37,9 @@ without a second build.
   light contribution, so the shadow cost is measurable on its own.
 - `synthetic_lights` replaces the frame's light list with 0 to 8 fixed test
   lights, so the point-light cost is measurable without placing lamps.
-- `sky` turns the sky pass and its ambient term on or off. `ao` turns the
-  ambient occlusion rays on or off but keeps the sky light, so the two terms
-  can be measured apart.
+- `sky` turns the sky pass on or off. The sky is a background, not a light.
+  `ao` turns the occlusion rays on or off; they scale the sun and the point
+  lights, so the contact term can be measured apart from the direct light.
 - The resolve takes the overrides as push constants. A fixed weight replaces
   `count / (count + 1)`; a flag skips the clamp; a flag forces the depth trust.
 - The renderer report carries the override struct, so a scenario asserts the
