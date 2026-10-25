@@ -78,6 +78,35 @@ cli_run :: proc(args: []string) -> int {
 			continue
 		}
 		argument := args[index]
+		if argument == "--param" {
+			if index + 1 >= len(args) {
+				return cli_error("--param needs NAME=VALUE[,VALUE...]")
+			}
+			if options.parameter_count >= MAX_SWEEP_PARAMETERS {
+				return cli_error(fmt.aprintf(
+					"--param accepts at most %d parameters",
+					MAX_SWEEP_PARAMETERS,
+					allocator = context.temp_allocator,
+				))
+			}
+			sweep, sweep_error := parse_parameter_sweep(args[index + 1], context.allocator)
+			if sweep_error != "" {
+				return cli_error(sweep_error)
+			}
+			for existing in options.parameters[:options.parameter_count] {
+				if existing.name == sweep.name {
+					return cli_error(fmt.aprintf(
+						"--param %s is given twice",
+						sweep.name,
+						allocator = context.temp_allocator,
+					))
+				}
+			}
+			options.parameters[options.parameter_count] = sweep
+			options.parameter_count += 1
+			index += 2
+			continue
+		}
 		if strings.has_prefix(argument, "--") {
 			return cli_error(fmt.aprintf("unknown option %q", argument, allocator = context.temp_allocator))
 		}
@@ -224,7 +253,7 @@ cli_error :: proc(message: string) -> int {
 @(private)
 print_usage :: proc() {
 	fmt.eprintln("usage:")
-	fmt.eprintln("  harbagsa-agent run <scenario.json|-> [--out DIR] [--tag NAME] [--size WxH] [--present] [--no-render] [--no-analysis] [--debug-renderer] [--renderer-debug KEY=VALUE] [--verbose]")
+	fmt.eprintln("  harbagsa-agent run <scenario.json|-> [--out DIR] [--tag NAME] [--param NAME=VALUE[,VALUE...]] [--size WxH] [--present] [--no-render] [--no-analysis] [--debug-renderer] [--renderer-debug KEY=VALUE] [--verbose]")
 	fmt.eprintln("  harbagsa-agent session [--socket PATH] [--out DIR] [--size WxH] [--present] [--no-render] [--no-analysis] [--debug-renderer] [--renderer-debug KEY=VALUE]")
 	fmt.eprintln("  harbagsa-agent diff <run-a> <run-b> [--max-pixels N] [--json]")
 	fmt.eprintln("  harbagsa-agent ab [--base REF] [--scenario PATH] [--size WxH] [--runs N] [--prime SECONDS] [--out DIR]")
@@ -232,6 +261,8 @@ print_usage :: proc() {
 	fmt.eprintln("")
 	fmt.eprintln("run - reads the scenario from standard input.")
 	fmt.eprintln("--tag NAME appends NAME to the run directory so two runs coexist.")
+	fmt.eprintln("--param NAME=VALUE overrides a scenario parameter; a comma list sweeps")
+	fmt.eprintln("each value into its own run directory and writes sweep.json.")
 	fmt.eprintln("run --verbose writes captures, checks, failures, setup, and perf to standard error;")
 	fmt.eprintln("standard output stays one JSON line.")
 	fmt.eprintln("perf takes {\"cmd\": \"perf\", \"frames\": N, \"warmup\": M, \"prime\": SECONDS, \"name\": \"label\", \"trace\": \"trace.jsonl\"}.")

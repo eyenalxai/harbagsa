@@ -2,8 +2,10 @@
 package harness
 
 Run_Options :: struct {
-	using common: Common_Options,
-	scenario:     string,
+	using common:    Common_Options,
+	scenario:        string,
+	parameters:      [MAX_SWEEP_PARAMETERS]Parameter_Sweep,
+	parameter_count: int,
 }
 
 Report :: struct {

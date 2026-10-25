@@ -17,6 +17,8 @@ scenario_resolve :: proc(
 	value: json.Value,
 	base_dir: string,
 	depth: int,
+	overrides: []Parameter_Override,
+	used: []bool,
 	allocator: mem.Allocator,
 ) -> (json.Value, string) {
 	if depth > SCENARIO_EXTENDS_MAX {
@@ -29,7 +31,7 @@ scenario_resolve :: proc(
 
 	merged := make(json.Object, allocator)
 	if extends_value, has_extends := object["extends"]; has_extends {
-		base_value, base_error := scenario_load_base(extends_value, base_dir, depth, allocator)
+		base_value, base_error := scenario_load_base(extends_value, base_dir, depth, overrides, used, allocator)
 		if base_error != "" {
 			json.destroy_value(json.Value(merged), allocator)
 			return {}, base_error
@@ -56,7 +58,7 @@ scenario_resolve :: proc(
 		merged[strings.clone(key, allocator)] = json.clone_value(entry, allocator)
 	}
 
-	if parameters_error := scenario_apply_parameters(merged, allocator); parameters_error != "" {
+	if parameters_error := scenario_apply_parameters(&merged, overrides, used, depth == 0, allocator); parameters_error != "" {
 		json.destroy_value(json.Value(merged), allocator)
 		return {}, parameters_error
 	}
@@ -68,6 +70,8 @@ scenario_load_base :: proc(
 	extends_value: json.Value,
 	base_dir: string,
 	depth: int,
+	overrides: []Parameter_Override,
+	used: []bool,
 	allocator: mem.Allocator,
 ) -> (json.Value, string) {
 	name, name_ok := json_string(extends_value)
@@ -98,176 +102,16 @@ scenario_load_base :: proc(
 	}
 	defer json.destroy_value(value, allocator)
 
-	resolved, resolve_error := scenario_resolve(value, scenario_base_dir(path), depth + 1, allocator)
+	resolved, resolve_error := scenario_resolve(
+		value,
+		scenario_base_dir(path),
+		depth + 1,
+		overrides,
+		used,
+		allocator,
+	)
 	if resolve_error != "" {
 		return {}, resolve_error
 	}
 	return resolved, ""
-}
-
-@(private)
-scenario_apply_parameters :: proc(object: json.Object, allocator: mem.Allocator) -> string {
-	parameters_value, has_parameters := object["parameters"]
-	if !has_parameters {
-		return ""
-	}
-	parameters, parameters_ok := json_object(parameters_value)
-	if !parameters_ok {
-		return format_error("%s", "scenario 'parameters' must be an object")
-	}
-	for name, value in parameters {
-		#partial switch entry in value {
-		case json.String, json.Integer, json.Float, json.Boolean:
-		case:
-			return fmt.aprintf(
-				"parameter %q must be a string, number, or boolean",
-				name,
-				allocator = allocator,
-			)
-		}
-	}
-	for key, &entry in object {
-		if key == "parameters" || key == "extends" {
-			continue
-		}
-		resolved, resolve_error := scenario_substitute(entry, parameters, allocator)
-		if resolve_error != "" {
-			return resolve_error
-		}
-		json.destroy_value(entry, allocator)
-		entry = resolved
-	}
-	return ""
-}
-
-@(private)
-scenario_substitute :: proc(
-	value: json.Value,
-	parameters: json.Object,
-	allocator: mem.Allocator,
-) -> (json.Value, string) {
-	#partial switch entry in value {
-	case json.String:
-		if name, is_placeholder := scenario_placeholder(entry); is_placeholder {
-			parameter, has := parameters[name]
-			if !has {
-				return {}, fmt.aprintf("unknown parameter %q", name, allocator = allocator)
-			}
-			return scenario_parameter_copy(parameter, allocator)
-		}
-		text, changed := scenario_interpolate(entry, parameters, allocator)
-		if !changed {
-			return json.clone_value(value, allocator), ""
-		}
-		return json.Value(text), ""
-	case json.Array:
-		items := make([dynamic]json.Value, 0, len(entry), allocator)
-		for item in entry {
-			resolved, item_error := scenario_substitute(item, parameters, allocator)
-			if item_error != "" {
-				for resolved_item in items {
-					json.destroy_value(resolved_item, allocator)
-				}
-				delete(items)
-				return {}, item_error
-			}
-			append(&items, resolved)
-		}
-		return json.Value(json.Array(items)), ""
-	case json.Object:
-		object := make(json.Object, allocator)
-		for key, item in entry {
-			resolved, item_error := scenario_substitute(item, parameters, allocator)
-			if item_error != "" {
-				json.destroy_value(json.Value(object), allocator)
-				return {}, item_error
-			}
-			object[strings.clone(key, allocator)] = resolved
-		}
-		return json.Value(object), ""
-	}
-	return json.clone_value(value, allocator), ""
-}
-
-@(private)
-scenario_parameter_copy :: proc(value: json.Value, allocator: mem.Allocator) -> (json.Value, string) {
-	#partial switch entry in value {
-	case json.String:
-		return json.Value(strings.clone(entry, allocator)), ""
-	case json.Integer:
-		return json.Value(entry), ""
-	case json.Float:
-		return json.Value(entry), ""
-	case json.Boolean:
-		return json.Value(entry), ""
-	}
-	return {}, format_error("%s", "a parameter value must be a string, number, or boolean")
-}
-
-@(private)
-scenario_placeholder :: proc(text: string) -> (name: string, ok: bool) {
-	if len(text) < 4 || text[0] != '$' || text[1] != '{' || text[len(text) - 1] != '}' {
-		return "", false
-	}
-	name = text[2:len(text) - 1]
-	if name == "" || strings.index_byte(name, '}') >= 0 || strings.index_byte(name, '$') >= 0 {
-		return "", false
-	}
-	return name, true
-}
-
-// Returns the original string and false when it holds no placeholder, so the
-// caller can clone instead of allocating a copy.
-@(private)
-scenario_interpolate :: proc(
-	text: string,
-	parameters: json.Object,
-	allocator: mem.Allocator,
-) -> (result: string, changed: bool) {
-	keyword := "${"
-	if strings.index(text, keyword) < 0 {
-		return text, false
-	}
-	builder := strings.builder_make(allocator)
-	cursor := 0
-	for cursor < len(text) {
-		start := strings.index(text[cursor:], keyword)
-		if start < 0 {
-			strings.write_string(&builder, text[cursor:])
-			break
-		}
-		start += cursor
-		end := strings.index_byte(text[start + len(keyword):], '}')
-		if end < 0 {
-			strings.write_string(&builder, text[cursor:])
-			break
-		}
-		end += start + len(keyword)
-		name := text[start + len(keyword):end]
-		parameter, has := parameters[name]
-		if !has {
-			strings.write_string(&builder, text[cursor:end + 1])
-			cursor = end + 1
-			continue
-		}
-		strings.write_string(&builder, text[cursor:start])
-		strings.write_string(&builder, scenario_parameter_text(parameter, context.temp_allocator))
-		cursor = end + 1
-	}
-	return strings.to_string(builder), true
-}
-
-@(private)
-scenario_parameter_text :: proc(value: json.Value, allocator: mem.Allocator) -> string {
-	#partial switch entry in value {
-	case json.String:
-		return entry
-	case json.Integer:
-		return fmt.aprintf("%d", entry, allocator = allocator)
-	case json.Float:
-		return fmt.aprintf("%g", entry, allocator = allocator)
-	case json.Boolean:
-		return entry ? "true" : "false"
-	}
-	return ""
 }

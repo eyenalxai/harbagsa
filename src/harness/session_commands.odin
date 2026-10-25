@@ -93,6 +93,9 @@ reply_error :: proc(session: ^Session, kind: Command_Kind, message: string) -> R
 }
 
 session_record_command :: proc(session: ^Session, command: Command, raw_line: string) {
+	if command.kind == .Renderer_Debug {
+		session.recorded_renderer_debug = true
+	}
 	row := command_row_by_kind(command.kind)
 	switch row.record {
 	case .Raw:

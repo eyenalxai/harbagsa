@@ -374,7 +374,7 @@ The output a capture writes: PNG for color, `float` for RGBA f32 values, `raw` f
 _Avoid_: Export mode
 
 **Capture statistics**:
-The per-channel minimum, maximum, and mean of a capture, plus the median screen motion in texels for a velocity capture over covered pixels.
+The per-channel minimum, maximum, mean, standard deviation, and gradient of a capture over an optional region, plus the median screen motion in texels for a velocity capture over covered pixels. The gradient is the mean absolute difference between 4-neighbour pixels; a region with no neighbour pair reports zero.
 _Avoid_: Image metrics
 
 **Analysis report**:
@@ -777,6 +777,22 @@ A settle that renders until the TAA sample count reaches the 512 cap.
 ### Scenario extension
 An `extends` path that merges a base scenario object with a child that wins.
 **Avoid**: include, import.
+
+### Scenario requirement
+A gated capability a scenario declares in `requires`, such as the renderer
+debug gate. The runner enables it for that run. **Avoid**: precondition, flag.
+
+### Scenario parameter
+A named value a scenario declares in `parameters` and uses as `${name}`. The
+declared value sets the type. **Avoid**: variable, argument.
+
+### Parameter sweep
+One scenario run per value of one or more scenario parameters, with each run in
+its own directory. **Avoid**: matrix run, batch.
+
+### Sweep label
+The run directory name built from a sweep's parameter values.
+**Avoid**: run name, suffix.
 
 ### Run tag
 A directory name appended to the run path so two runs coexist. **Avoid**:
