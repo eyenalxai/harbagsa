@@ -71,23 +71,6 @@ Scene_View :: struct {
 	perf:  bool `json:"perf"`,
 }
 
-Scene_Renderer_Debug :: struct {
-	taa:                 Maybe(bool) `json:"taa,omitempty"`,
-	jitter:              Maybe(bool) `json:"jitter,omitempty"`,
-	history_weight:      Maybe(f32)  `json:"history_weight,omitempty"`,
-	clamp:               Maybe(bool) `json:"clamp,omitempty"`,
-	depth_trust:         Maybe(bool) `json:"depth_trust,omitempty"`,
-	freeze_shadow_phase: Maybe(bool) `json:"freeze_shadow_phase,omitempty"`,
-	shadow_phase:        Maybe(int)  `json:"shadow_phase,omitempty"`,
-	light_shadows:       Maybe(bool) `json:"light_shadows,omitempty"`,
-	synthetic_lights:    Maybe(int)  `json:"synthetic_lights,omitempty"`,
-	sky:                 Maybe(bool) `json:"sky,omitempty"`,
-	ao:                  Maybe(bool) `json:"ao,omitempty"`,
-	ao_radius:           Maybe(f32)  `json:"ao_radius,omitempty"`,
-	ao_strength:         Maybe(f32)  `json:"ao_strength,omitempty"`,
-	clip_height:         Maybe(f32)  `json:"clip_height,omitempty"`,
-}
-
 Scene_Display :: struct {
 	name:    string    `json:"name"`,
 	desktop: [2]i32    `json:"desktop"`,
@@ -101,7 +84,7 @@ Scene :: struct {
 	settings:       Scene_Settings       `json:"settings"`,
 	view:           Scene_View           `json:"view"`,
 	displays:       []Scene_Display      `json:"displays,omitempty"`,
-	renderer_debug: Maybe(Scene_Renderer_Debug) `json:"renderer_debug,omitempty"`,
+	renderer_debug: Maybe(renderer.Renderer_Debug_Patch) `json:"renderer_debug,omitempty"`,
 }
 
 scene_capture :: proc(
@@ -187,25 +170,7 @@ scene_capture :: proc(
 	}
 
 	if renderer_debug != nil && renderer_debug.active {
-		debug: Scene_Renderer_Debug = {
-			taa                 = renderer_debug.taa,
-			jitter              = renderer_debug.jitter,
-			clamp               = renderer_debug.clamp,
-			depth_trust         = renderer_debug.force_depth_trust,
-			freeze_shadow_phase = renderer_debug.freeze_shadow_phase,
-			shadow_phase        = int(renderer_debug.shadow_phase),
-			light_shadows       = renderer_debug.light_shadows,
-			synthetic_lights    = renderer_debug.synthetic_lights,
-			sky                 = renderer_debug.sky,
-			ao                  = renderer_debug.ao,
-			ao_radius           = renderer_debug.ao_radius,
-			ao_strength         = renderer_debug.ao_strength,
-			clip_height         = renderer_debug.clip_height,
-		}
-		if renderer_debug.history_weight >= 0 {
-			debug.history_weight = renderer_debug.history_weight
-		}
-		scene.renderer_debug = debug
+		scene.renderer_debug = renderer.renderer_debug_patch(renderer_debug^)
 	}
 
 	displays := &sim.settings.display

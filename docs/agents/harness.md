@@ -324,7 +324,8 @@ prefab, body, position, rotation quaternion, colour, and light. The settings
 carry the window mode, display index, windowed resolution, input modes, and type
 weight. The display list replaces the menu list. `F5` writes one scene, and
 `record` starts with one, so a live view replays as a normal scenario. A scene
-load closes the settings menu.
+snapshot writes every effective renderer override field, so a repro restores the
+exact debug state. A scene load closes the settings menu.
 
 `repro` writes the same scene snapshot the `F5` key writes and sets the same
 notice. `path` is required and holds at most 160 bytes, so the notice can name
@@ -727,8 +728,9 @@ needs and never appends a check.
 the scenario. Recording starts with `reset`, one `scene` snapshot of the current
 state, and the current `input`. `"actions": true` omits the scene snapshot and
 keeps the reset, so only the action sequence matters. Send the actions after the
-start command if you want them in the scenario. `replay PATH` resets and runs
-the scenario.
+start command if you want them in the scenario. A capture keeps every option and
+its frame is relative to the record start; a capture group keeps its outputs.
+`replay PATH` resets and runs the scenario.
 
 The game has no control socket. `F5` writes
 `runs/repro/repro-<unix-ms>.json`, logs its absolute path, and shows
@@ -1158,7 +1160,7 @@ The reset reasons are `none`, `create`, `extent`, `toggle`, `teleport`,
 `scene_change`, `debug_override`, `player_reset`, and `scene_reset`.
 
 The nested `debug` object repeats the active override values: `taa`, `jitter`,
-`history_weight`, `clamp`, `depth_trust`, `shadow_phase_frozen`,
+`history_weight`, `clamp`, `depth_trust`, `freeze_shadow_phase`,
 `shadow_phase`, `light_shadows`, `synthetic_lights`, `sky`, `gi`, and `ao`.
 
 The `debug.sun` object reports `active`, `position`, `azimuth_deg`,
@@ -1591,7 +1593,8 @@ frame-rate change.
 - `src/harness/state_light.odin`: the object light and light budget state.
 - `src/harness/session_editor.odin`: the `editor` command execution.
 - `src/harness/session_debug.odin`: the renderer debug gate and overrides.
-- `src/harness/renderer_debug_command.odin`: the override parser.
+- `src/harness/renderer_debug_command.odin`: the table-driven override parser,
+  the reset patch, and the key list.
 - `src/harness/analysis.odin`: the analysis config, summary, and period.
 - `src/harness/analysis_report.odin`: the analysis file.
 - `src/harness/analysis_images.odin`: PNG decode and the analysis maps.
@@ -1850,10 +1853,13 @@ harness in the same change. Do not leave the automation behind the game.
 - New renderer report field: add the field and tag to `Renderer_Report` or
   `Debug_Report`. The State reflection walk covers the JSON and check paths;
   there is no separate report table.
-- New renderer debug override: add it to `Renderer_Debug`, `set_renderer_debug`,
-  the resolve push constants and shader, `renderer_debug_fields`, its
-  `Renderer_Debug_Field` reset case, the renderer state, the docs, and the gate
-  test. Do not make it reachable without the gate.
+- New renderer debug override: add it to `Renderer_Debug`, its default,
+  `Renderer_Debug_Patch`, `renderer_debug_patch`, `renderer_debug_apply_patch`,
+  one `RENDERER_DEBUG_FIELD_ROWS` row, the `debug_patch_set_*` arm, the reset
+  arm in `renderer_debug_reset_patch`, the resolve push constants and shader,
+  the renderer state, the docs, and the gate test. The parser, the key list, and
+  the scene snapshot read the same patch and table. Do not make it reachable
+  without the gate.
 - New point light input: add it to `Light`, the light buffer upload, the scene
   shader loop, `Render_Input`, and its digest row. Add a test to
   `tests/renderer/lights.odin`.

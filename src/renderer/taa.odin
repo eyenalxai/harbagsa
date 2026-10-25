@@ -33,7 +33,6 @@ TAA :: struct {
 	// frame the state describes rather than the next one.
 	applied_jitter_index: int,
 	shadow_phase:         u32,
-	current_jitter:       [2]f32,
 	convergence_frames:   int,
 	reset_count:          int,
 	last_reset:           History_Reset_Reason,
