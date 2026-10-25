@@ -27,12 +27,15 @@ Report :: struct {
 }
 
 Run_Summary :: struct {
-	ok:          bool     `json:"ok"`,
-	exit_code:   int      `json:"exit_code"`,
-	run_dir:     string   `json:"run_dir"`,
-	report:      string   `json:"report"`,
-	state:       string   `json:"state"`,
-	screenshots: []string `json:"screenshots"`,
-	digest:      string   `json:"digest"`,
-	error:       string   `json:"error,omitempty"`,
+	ok:            bool     `json:"ok"`,
+	exit_code:     int      `json:"exit_code"`,
+	run_dir:       string   `json:"run_dir"`,
+	report:        string   `json:"report"`,
+	state:         string   `json:"state"`,
+	screenshots:   []string `json:"screenshots"`,
+	digest:        string   `json:"digest"`,
+	checks_total:  int      `json:"checks_total"`,
+	checks_failed: int      `json:"checks_failed"`,
+	error:         string   `json:"error,omitempty"`,
+	failure:       string   `json:"failure,omitempty"`,
 }

@@ -146,6 +146,19 @@ run :: proc() -> bool {
 			if events.taa_pressed {
 				renderer.toggle_taa(&state)
 			}
+			if events.repro_pressed {
+				_ = write_repro(
+					&sim,
+					&debug,
+					&hud,
+					frame.Options {
+						debug_view = debug_view,
+						captured = events.captured,
+						hud = true,
+						perf = hud.perf.visible,
+					},
+				)
+			}
 			if events.reset_scene_pressed {
 				game.debug_mode_reset_scene(&debug, &sim)
 				renderer.reset_history(&state, .Scene_Reset)
@@ -263,6 +276,7 @@ run :: proc() -> bool {
 				debug_view = debug_view,
 				captured = events.captured,
 				hud = true,
+				perf = hud.perf.visible,
 			},
 			nil,
 			&hud,

@@ -14,16 +14,16 @@ session_sun :: proc(session: ^Session, command: Sun_Command) {
 	}
 	azimuth, elevation := game.debug_mode_sun_angles(&session.debug)
 	if command.has_azimuth {
-		azimuth = math.to_radians(command.azimuth)
+		azimuth = math.to_radians(command.azimuth_deg)
 	}
 	if command.has_elevation {
-		elevation = math.to_radians(command.elevation)
+		elevation = math.to_radians(command.elevation_deg)
 	}
 	if command.has_azimuth || command.has_elevation {
 		direction := game.sun_direction_from_angles(azimuth, elevation)
 		game.sun_position_set(&session.debug, direction * f32(game.SUN_DOME_RADIUS))
 	}
 	if command.has_diameter {
-		session.debug.sun_angular_diameter = math.to_radians(command.diameter)
+		session.debug.sun_angular_diameter = math.to_radians(command.diameter_deg)
 	}
 }

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "name": "ui",
+  "description": "The overlay, menu, type weight, and HUD evidence.",
+  "entries": [
+    "ui",
+    "settings-menu",
+    "type-weight",
+    "hud"
+  ]
+}

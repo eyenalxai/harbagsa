@@ -113,7 +113,7 @@ sweep_execute :: proc(
 	if absolute_error != nil {
 		return {}, format_error("%s", "cannot resolve the sweep directory")
 	}
-	if mkdir_error := os.make_directory_all(absolute_base); mkdir_error != nil {
+	if mkdir_error := os.make_directory_all(absolute_base); mkdir_error != nil && mkdir_error != .Exist {
 		delete(absolute_base, context.allocator)
 		return {}, format_error("%s", "cannot create the sweep directory")
 	}

@@ -6,6 +6,9 @@ import "core:os"
 import "core:path/filepath"
 import "core:strings"
 
+import "src:frame"
+import "src:renderer"
+
 session_record_start :: proc(session: ^Session, path: string) -> string {
 	if session.recording {
 		return format_error("%s", "already recording; send 'record' without a path to stop")
@@ -20,21 +23,27 @@ session_record_start :: proc(session: ^Session, path: string) -> string {
 	clear(&session.recorded)
 
 	append(&session.recorded, strings.clone(`{"cmd": "reset"}`, session.allocator))
-	view_line := fmt.aprintf(
-		`{{"cmd": "view", "hud": %v, "debug": %v, "hint": %v, "perf": %v}}`,
-		session.view.hud,
-		session.view.debug,
-		session.view.hint,
-		session.view.perf,
-		allocator = session.allocator,
-	)
-	append(&session.recorded, view_line)
-	if session.debug.active {
-		append(
-			&session.recorded,
-			strings.clone(`{"cmd": "debug_mode", "active": true}`, session.allocator),
-		)
+	options := frame.Options {
+		hud        = session.view.hud,
+		debug_view = session.view.debug,
+		captured   = !session.view.hint,
+		perf       = session.view.perf,
 	}
+	camera: ^renderer.Camera
+	if session.has_camera_override {
+		camera = &session.camera_override
+	}
+	scene := frame.scene_capture(
+		&session.sim,
+		&session.debug,
+		&session.hud,
+		options,
+		camera,
+		session.allocator,
+	)
+	scene_line := frame.scene_json(scene, session.allocator)
+	frame.scene_destroy(&scene, session.allocator)
+	append(&session.recorded, scene_line)
 	if session.input.move_forward != 0 || session.input.move_right != 0 || session.input.jump_pressed {
 		input_line := fmt.aprintf(
 			`{{"cmd": "input", "forward": %g, "right": %g, "jump": %v}}`,
@@ -44,19 +53,6 @@ session_record_start :: proc(session: ^Session, path: string) -> string {
 			allocator = session.allocator,
 		)
 		append(&session.recorded, input_line)
-	}
-	if session.has_camera_override {
-		camera := session.camera_override
-		camera_line := fmt.aprintf(
-			`{{"cmd": "camera", "position": [%g, %g, %g], "yaw": %g, "pitch": %g}}`,
-			camera.position.x,
-			camera.position.y,
-			camera.position.z,
-			camera.yaw,
-			camera.pitch,
-			allocator = session.allocator,
-		)
-		append(&session.recorded, camera_line)
 	}
 	return ""
 }

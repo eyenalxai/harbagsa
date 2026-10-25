@@ -36,28 +36,33 @@ verbose_summary_lines :: proc(report: Report, allocator: mem.Allocator) -> []str
 	append(&lines, fmt.aprintf("checks: %d", len(report.checks), allocator = allocator))
 	for check in report.checks {
 		status := check.ok ? "PASS" : "FAIL"
+		tolerance := check_tolerance_note(check, allocator)
 		if check.error != "" {
 			append(&lines, fmt.aprintf(
-				"  %s %s %s %s actual %s error %s",
+				"  %s %s %s %s%s actual %s error %s",
 				status,
 				check.field,
 				check.op,
 				check.expected,
+				tolerance,
 				check.actual,
 				check.error,
 				allocator = allocator,
 			))
+			delete(tolerance, allocator)
 			continue
 		}
 		append(&lines, fmt.aprintf(
-			"  %s %s %s %s actual %s",
+			"  %s %s %s %s%s actual %s",
 			status,
 			check.field,
 			check.op,
 			check.expected,
+			tolerance,
 			check.actual,
 			allocator = allocator,
 		))
+		delete(tolerance, allocator)
 	}
 	append(&lines, fmt.aprintf("failures: %d", len(report.failures), allocator = allocator))
 	for failure in report.failures {

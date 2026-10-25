@@ -98,7 +98,7 @@ create_object :: proc(
 	return create_object_rotated(
 		sim,
 		spawn,
-		object_rotation(spawn.prefab, spawn.yaw),
+		object_rotation(spawn.prefab, spawn.yaw_rad),
 		color,
 		light,
 		settled,

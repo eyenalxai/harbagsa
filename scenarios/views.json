@@ -2,20 +2,20 @@
   "size": "320x180",
   "view": {"hud": false, "debug": false, "hint": false, "perf": false},
   "commands": [
-    {"cmd": "camera", "position": [0, 1.7, 0], "look_at": [0, 1.7, -5], "fov": 75},
+    {"cmd": "camera", "position": [0, 1.7, 0], "look_at": [0, 1.7, -5], "fov_deg": 75},
     {"cmd": "check", "field": "camera.overridden", "op": "eq", "value": true},
-    {"cmd": "check", "field": "camera.fov", "op": "eq", "value": 75},
-    {"cmd": "check", "field": "camera.yaw", "op": "gt", "value": -0.01},
-    {"cmd": "check", "field": "camera.yaw", "op": "lt", "value": 0.01},
+    {"cmd": "check", "field": "camera.fov_deg", "op": "eq", "value": 75},
+    {"cmd": "check", "field": "camera.yaw_deg", "op": "gt", "value": -0.573},
+    {"cmd": "check", "field": "camera.yaw_deg", "op": "lt", "value": 0.573},
     {"cmd": "settle", "frames": 4},
     {"cmd": "capture", "name": "forward"},
     {"cmd": "camera", "position": [0, 1.7, 0], "look_at": [-5, 1.7, 0]},
-    {"cmd": "check", "field": "camera.yaw", "op": "gt", "value": 1.56},
+    {"cmd": "check", "field": "camera.yaw_deg", "op": "gt", "value": 89.3814},
     {"cmd": "settle", "frames": 4},
     {"cmd": "capture", "name": "left"},
     {"cmd": "check", "field": "capture.named.left.delta_mean", "op": "gt", "other": "capture.named.forward.delta_mean"},
     {"cmd": "camera", "clear": true},
     {"cmd": "check", "field": "camera.overridden", "op": "eq", "value": false},
-    {"cmd": "check", "field": "camera.fov", "op": "gt", "value": 89}
+    {"cmd": "check", "field": "camera.fov_deg", "op": "gt", "value": 89}
   ]
 }

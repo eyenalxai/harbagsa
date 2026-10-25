@@ -68,7 +68,6 @@ choose_stance :: proc(requested: Stance, standing_fits, crouching_fits: bool) ->
 	return .Standing
 }
 
-@(private)
 commit_stance :: proc(player: ^Player, stance: Stance) {
 	player.stance = stance
 	player.crouch_engaged = stance == .Crouching

@@ -63,7 +63,7 @@ capture_matches :: proc(capture: Capture_Result, width, height: u32, by_size: bo
 	if _, cropped := capture.crop.?; cropped {
 		return false
 	}
-	return capture.target == "color" && capture.format == "png"
+	return capture.target == "color" && capture_has_png(capture)
 }
 
 @(private)
