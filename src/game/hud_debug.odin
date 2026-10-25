@@ -46,7 +46,7 @@ hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_
 	hud.rows[1] = {
 		kind    = .Metric,
 		label   = "Selection",
-		value   = line_format(&hud.storage, 0, "%-11s  # %3d", name, u32(id)),
+		value   = line_format(&hud.storage, 0, "%-11s  # %03d", name, u32(id)),
 		numeric = true,
 	}
 	hud.rows[2] = {

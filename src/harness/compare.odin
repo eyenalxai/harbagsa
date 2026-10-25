@@ -31,74 +31,44 @@ Compare_Report :: struct {
 	revision_a: string        `json:"revision_a"`,
 	dirty_a:   bool           `json:"dirty_a"`,
 	scenario_a: string        `json:"scenario_a"`,
+	width_a:    u32           `json:"width_a,omitempty"`,
+	height_a:   u32           `json:"height_a,omitempty"`,
+	screenshots_a: int        `json:"screenshots_a,omitempty"`,
 	revision_b: string        `json:"revision_b"`,
 	dirty_b:   bool           `json:"dirty_b"`,
 	scenario_b: string        `json:"scenario_b"`,
+	width_b:    u32           `json:"width_b,omitempty"`,
+	height_b:   u32           `json:"height_b,omitempty"`,
+	screenshots_b: int        `json:"screenshots_b,omitempty"`,
+	scale:      int           `json:"scale"`,
+	delta:      bool          `json:"delta"`,
 	pages:     []string       `json:"pages"`,
 	pairs:     []Compare_Pair `json:"pairs"`,
 }
 
-Compare_Options :: struct {
-	run_a: string,
-	run_b: string,
-	out:   string,
-	json:  bool,
-}
-
-cli_compare :: proc(args: []string) -> int {
-	options: Compare_Options
-	index := 0
-	for index < len(args) {
-		argument := args[index]
-		switch {
-		case argument == "--help" || argument == "-h":
-			print_compare_usage()
-			return EXIT_OK
-		case argument == "--json":
-			options.json = true
-			index += 1
-		case argument == "--out":
-			if index + 1 >= len(args) {
-				return compare_error("--out needs a directory")
-			}
-			options.out = args[index + 1]
-			index += 2
-		case strings.has_prefix(argument, "-"):
-			return compare_error(fmt.aprintf(
-				"unknown option %q",
-				argument,
-				allocator = context.temp_allocator,
-			))
-		case options.run_a == "":
-			options.run_a = argument
-			index += 1
-		case options.run_b == "":
-			options.run_b = argument
-			index += 1
-		case:
-			return compare_error("compare takes two run directories")
-		}
-	}
-	if options.run_a == "" || options.run_b == "" {
-		return compare_error("compare takes two run directories")
-	}
-	return compare_runs_command(options)
-}
-
 @(private)
 compare_runs_command :: proc(options: Compare_Options) -> int {
-	first, first_error := compare_run_load(options.run_a, context.allocator)
+	first, first_error := run_data_load(options.run_a, context.allocator)
 	if first_error != "" {
 		return compare_error(first_error)
 	}
-	defer compare_run_destroy(&first, context.allocator)
-	second, second_error := compare_run_load(options.run_b, context.allocator)
+	defer run_data_destroy(&first, context.allocator)
+	second, second_error := run_data_load(options.run_b, context.allocator)
 	if second_error != "" {
 		return compare_error(second_error)
 	}
-	defer compare_run_destroy(&second, context.allocator)
+	defer run_data_destroy(&second, context.allocator)
 
-	pairs, pair_errors := compare_pairs(first, second, context.allocator)
+	only: []string
+	if options.pairs != "" {
+		only = strings.split(options.pairs, ",", context.temp_allocator)
+		for name in only {
+			if name == "" || !valid_capture_name(name) {
+				return compare_error("--pairs names must use only letters, digits, '-' and '_'")
+			}
+		}
+	}
+	pairs, pair_errors := compare_pairs(first, second, only, context.allocator)
 	defer compare_pairs_destroy(pairs, context.allocator)
 	for message in pair_errors {
 		delete(message, context.allocator)
@@ -110,8 +80,8 @@ compare_runs_command :: proc(options: Compare_Options) -> int {
 	if out_dir == "" {
 		out_dir = fmt.aprintf(
 			"runs/compare/%s-vs-%s",
-			filepath.stem(filepath.base(first.dir)),
-			filepath.stem(filepath.base(second.dir)),
+			filepath.stem(filepath.base(first.metadata.dir)),
+			filepath.stem(filepath.base(second.metadata.dir)),
 			allocator = context.allocator,
 		)
 		owned_out = true
@@ -119,7 +89,7 @@ compare_runs_command :: proc(options: Compare_Options) -> int {
 	defer if owned_out {
 		delete(out_dir, context.allocator)
 	}
-	if refusal := compare_refuse_frames(out_dir, first.dir, second.dir); refusal != "" {
+	if refusal := compare_refuse_frames(out_dir, first.metadata.dir, second.metadata.dir); refusal != "" {
 		return compare_error(refusal)
 	}
 	absolute_out, absolute_error := absolute_path(out_dir, context.allocator)
@@ -137,18 +107,34 @@ compare_runs_command :: proc(options: Compare_Options) -> int {
 	}
 
 	report := Compare_Report {
-		run_a      = first.dir,
-		run_b      = second.dir,
+		run_a      = first.metadata.dir,
+		run_b      = second.metadata.dir,
 		out_dir    = absolute_out,
-		revision_a = first.revision,
-		dirty_a    = first.dirty,
-		scenario_a = first.scenario,
-		revision_b = second.revision,
-		dirty_b    = second.dirty,
-		scenario_b = second.scenario,
+		revision_a = first.metadata.revision,
+		dirty_a    = first.metadata.dirty,
+		scenario_a = first.metadata.scenario,
+		width_a    = first.metadata.width,
+		height_a   = first.metadata.height,
+		screenshots_a = first.metadata.screenshots,
+		revision_b = second.metadata.revision,
+		dirty_b    = second.metadata.dirty,
+		scenario_b = second.metadata.scenario,
+		width_b    = second.metadata.width,
+		height_b   = second.metadata.height,
+		screenshots_b = second.metadata.screenshots,
+		scale      = max(options.scale, 1),
+		delta      = options.delta,
 		pairs      = pairs,
 	}
-	pages, page_error := compare_write_pages(&report, first, second, absolute_out, context.allocator)
+	pages, page_error := compare_write_pages(
+		&report,
+		first,
+		second,
+		absolute_out,
+		max(options.scale, 1),
+		options.delta,
+		context.allocator,
+	)
 	defer compare_pages_destroy(pages, context.allocator)
 	if page_error != "" {
 		return compare_error(page_error)
@@ -212,27 +198,29 @@ compare_error :: proc(message: string) -> int {
 	return EXIT_SCENARIO
 }
 
-@(private)
-print_compare_usage :: proc() {
-	fmt.eprintln("usage: harbagsa-agent compare <run-a> <run-b> [--out DIR] [--json]")
-}
-
 compare_print_table :: proc(report: Compare_Report) {
 	fmt.printf("compare %s vs %s\n", report.run_a, report.run_b)
 	fmt.printf(
-		"A  %s  rev %s%s  %s\n",
+		"A  %s  rev %s%s  %dx%d  %d captures  %s\n",
 		report.scenario_a,
 		report.revision_a,
 		report.dirty_a ? " dirty" : "",
+		report.width_a,
+		report.height_a,
+		report.screenshots_a,
 		report.run_a,
 	)
 	fmt.printf(
-		"B  %s  rev %s%s  %s\n",
+		"B  %s  rev %s%s  %dx%d  %d captures  %s\n",
 		report.scenario_b,
 		report.revision_b,
 		report.dirty_b ? " dirty" : "",
+		report.width_b,
+		report.height_b,
+		report.screenshots_b,
 		report.run_b,
 	)
+	fmt.printf("scale %d  delta %s\n", report.scale, report.delta ? "yes" : "no")
 	failed := 0
 	for pair in report.pairs {
 		if !pair.ok {

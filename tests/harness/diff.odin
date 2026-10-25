@@ -82,9 +82,10 @@ diff_captures_prefers_the_report_and_falls_back_to_frames :: proc(t: ^testing.T)
 	second := write_test_png(t, frames, "second", pixels[:])
 	defer harness.capture_result_destroy(&second, context.allocator)
 
-	captures, error := harness.diff_captures_load(dir, context.allocator)
+	data, error := harness.run_data_load(dir, context.allocator)
 	testing.expectf(t, error == "", "frames fallback failed: %s", error)
-	defer harness.diff_captures_destroy(captures, context.allocator)
+	defer harness.run_data_destroy(&data, context.allocator)
+	captures := data.captures
 	testing.expect_value(t, len(captures), 2)
 	if len(captures) == 2 {
 		testing.expect_value(t, captures[0].name, "first")
@@ -97,9 +98,10 @@ diff_captures_prefers_the_report_and_falls_back_to_frames :: proc(t: ^testing.T)
 		{"name": "second", "format": "png"}
 	]}`
 	testing.expectf(t, os.write_entire_file(report_path, report) == nil, "cannot write the report")
-	from_report, report_error := harness.diff_captures_load(dir, context.allocator)
+	report_data, report_error := harness.run_data_load(dir, context.allocator)
 	testing.expectf(t, report_error == "", "report load failed: %s", report_error)
-	defer harness.diff_captures_destroy(from_report, context.allocator)
+	defer harness.run_data_destroy(&report_data, context.allocator)
+	from_report := report_data.captures
 	testing.expect_value(t, len(from_report), 2)
 	if len(from_report) == 2 {
 		testing.expect(t, os.is_file(from_report[0].path), "the stale path did not fall back")
@@ -137,9 +139,10 @@ diff_captures_prefers_the_supplied_run_directory :: proc(t: ^testing.T) {
 	report_path := "/tmp/opencode/harbagsa-diff-second/report.json"
 	testing.expectf(t, os.write_entire_file(report_path, report) == nil, "cannot write the copied report")
 
-	captures, error := harness.diff_captures_load(second_dir, context.allocator)
+	data, error := harness.run_data_load(second_dir, context.allocator)
 	testing.expectf(t, error == "", "copied run load failed: %s", error)
-	defer harness.diff_captures_destroy(captures, context.allocator)
+	defer harness.run_data_destroy(&data, context.allocator)
+	captures := data.captures
 	testing.expect_value(t, len(captures), 1)
 	if len(captures) == 1 {
 		pixels, _, _, ok := harness.load_png_rgba(captures[0].path, context.allocator)
@@ -189,9 +192,10 @@ diff_pairs_a_stats_capture_with_a_png_sidecar :: proc(t: ^testing.T) {
 	report_path := "/tmp/opencode/harbagsa-diff-sidecar/report.json"
 	testing.expectf(t, os.write_entire_file(report_path, report) == nil, "cannot write the report")
 
-	captures, error := harness.diff_captures_load(dir, context.allocator)
+	data, error := harness.run_data_load(dir, context.allocator)
 	testing.expectf(t, error == "", "sidecar load failed: %s", error)
-	defer harness.diff_captures_destroy(captures, context.allocator)
+	defer harness.run_data_destroy(&data, context.allocator)
+	captures := data.captures
 	testing.expect_value(t, len(captures), 1)
 	if len(captures) == 1 {
 		testing.expect_value(t, captures[0].name, "ao")

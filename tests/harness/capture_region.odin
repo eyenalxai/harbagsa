@@ -26,9 +26,7 @@ profile_recovers_a_known_ramp :: proc(t: ^testing.T) {
 	image := build_image(16, 16, proc(x, y: int) -> u8 { return u8(x * 16) })
 	defer delete(image, context.allocator)
 	profile, error := harness.capture_profile_build(
-		image,
-		16,
-		16,
+		{pixels = image, width = 16, height = 16},
 		harness.Capture_Profile{axis = .X, at = 0, from = 0, to = 15},
 		context.allocator,
 	)
@@ -48,9 +46,7 @@ flat_profile_reports_flat_and_zero_width :: proc(t: ^testing.T) {
 	image := build_image(8, 8, proc(x, y: int) -> u8 { return 120 })
 	defer delete(image, context.allocator)
 	profile, error := harness.capture_profile_build(
-		image,
-		8,
-		8,
+		{pixels = image, width = 8, height = 8},
 		harness.Capture_Profile{axis = .Y, at = 3, from = 0, to = 7},
 		context.allocator,
 	)
@@ -68,9 +64,7 @@ profile_range_outside_the_target_is_an_error :: proc(t: ^testing.T) {
 	image := build_image(4, 4, proc(x, y: int) -> u8 { return 0 })
 	defer delete(image, context.allocator)
 	_, error := harness.capture_profile_build(
-		image,
-		4,
-		4,
+		{pixels = image, width = 4, height = 4},
 		harness.Capture_Profile{axis = .X, at = 0, from = 0, to = 9},
 		context.allocator,
 	)
@@ -78,6 +72,34 @@ profile_range_outside_the_target_is_an_error :: proc(t: ^testing.T) {
 	if error != "" {
 		delete(error, context.allocator)
 	}
+}
+
+@(test)
+profile_reads_linear_intermediate_values :: proc(t: ^testing.T) {
+	values := make([]f32, 8 * 8 * 4, context.allocator)
+	defer delete(values, context.allocator)
+	for y in 0 ..< 8 {
+		for x in 0 ..< 8 {
+			base := (y * 8 + x) * 4
+			values[base + 0] = f32(x) / 7.0
+			values[base + 1] = f32(x) / 7.0
+			values[base + 2] = f32(x) / 7.0
+			values[base + 3] = 1.0
+		}
+	}
+	profile, error := harness.capture_profile_build(
+		{values = values, width = 8, height = 8},
+		harness.Capture_Profile{axis = .X, at = 3, from = 0, to = 7},
+		context.allocator,
+	)
+	testing.expectf(t, error == "", "float profile failed: %s", error)
+	defer harness.capture_profile_destroy(&profile, context.allocator)
+	if error != "" {
+		return
+	}
+	testing.expect_value(t, profile.source, "linear")
+	testing.expect_value(t, profile.values[0], f32(0))
+	testing.expect_value(t, profile.values[7], f32(1))
 }
 
 @(test)
@@ -134,6 +156,7 @@ region_limits_the_statistics :: proc(t: ^testing.T) {
 		2,
 		.Depth,
 		harness.Capture_Region{x = 0, y = 0, w = 1, h = 1},
+		nil,
 		context.allocator,
 	)
 	testing.expect_value(t, stats.min[0], f32(0))

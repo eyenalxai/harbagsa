@@ -26,6 +26,7 @@ Loop :: struct {
 	menu_recapture: bool,
 	displays:       platform.Displays,
 	applied_window: display.Window_Settings,
+	repro_dir:      string,
 }
 
 @(private)
@@ -65,6 +66,7 @@ apply_frame_input :: proc(
 			renderer.toggle_taa(loop.renderer)
 		}
 		if intent.view.repro {
+			renderer_debug := renderer.renderer_debug(loop.renderer)
 			_ = write_repro(
 				&loop.sim,
 				&loop.debug,
@@ -75,6 +77,8 @@ apply_frame_input :: proc(
 					hud = true,
 					perf = loop.hud.perf.visible,
 				},
+				&renderer_debug,
+				loop.repro_dir,
 			)
 		}
 		if intent.view.reset_scene {

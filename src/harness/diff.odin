@@ -15,11 +15,23 @@ Diff_Pair :: struct {
 }
 
 Diff_Report :: struct {
-	run_a:  string      `json:"run_a"`,
-	run_b:  string      `json:"run_b"`,
-	ok:     bool        `json:"ok"`,
-	pairs:  []Diff_Pair `json:"pairs"`,
-	errors: []string    `json:"errors,omitempty"`,
+	run_a:        string      `json:"run_a"`,
+	run_b:        string      `json:"run_b"`,
+	revision_a:   string      `json:"revision_a"`,
+	dirty_a:      bool        `json:"dirty_a"`,
+	scenario_a:   string      `json:"scenario_a"`,
+	width_a:      u32         `json:"width_a,omitempty"`,
+	height_a:     u32         `json:"height_a,omitempty"`,
+	screenshots_a: int        `json:"screenshots_a,omitempty"`,
+	revision_b:   string      `json:"revision_b"`,
+	dirty_b:      bool        `json:"dirty_b"`,
+	scenario_b:   string      `json:"scenario_b"`,
+	width_b:      u32         `json:"width_b,omitempty"`,
+	height_b:     u32         `json:"height_b,omitempty"`,
+	screenshots_b: int        `json:"screenshots_b,omitempty"`,
+	ok:           bool        `json:"ok"`,
+	pairs:        []Diff_Pair `json:"pairs"`,
+	errors:       []string    `json:"errors,omitempty"`,
 }
 
 Diff_Options :: struct {
@@ -47,6 +59,10 @@ diff_pair_build :: proc(name: string, first, second: []u8, width, height: u32) -
 diff_report_destroy :: proc(report: ^Diff_Report, allocator: mem.Allocator) {
 	delete(report.run_a, allocator)
 	delete(report.run_b, allocator)
+	delete(report.revision_a, allocator)
+	delete(report.scenario_a, allocator)
+	delete(report.revision_b, allocator)
+	delete(report.scenario_b, allocator)
 	for pair in report.pairs {
 		delete(pair.name, allocator)
 	}

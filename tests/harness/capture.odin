@@ -73,7 +73,7 @@ capture_stats_reports_channels_and_velocity_median :: proc(t: ^testing.T) {
 		2, 0, 1, 0,
 		3, 0, 1, 0,
 	}
-	stats := harness.capture_stats(values, 2, 2, .Velocity, nil, context.allocator)
+	stats := harness.capture_stats(values, 2, 2, .Velocity, nil, nil, context.allocator)
 	testing.expect_value(t, stats.min[0], f32(0))
 	testing.expect_value(t, stats.max[0], f32(3))
 	testing.expect_value(t, stats.mean[0], f32(1.5))
@@ -87,7 +87,7 @@ capture_stats_reports_channels_and_velocity_median :: proc(t: ^testing.T) {
 		testing.expect_value(t, median, f32(4))
 	}
 
-	depth := harness.capture_stats(values, 2, 2, .Depth, nil, context.allocator)
+	depth := harness.capture_stats(values, 2, 2, .Depth, nil, nil, context.allocator)
 	_, has_depth_median := depth.velocity_median_texels.?
 	testing.expect(t, !has_depth_median, "depth stats reported a velocity median")
 }
@@ -96,7 +96,7 @@ capture_stats_reports_channels_and_velocity_median :: proc(t: ^testing.T) {
 capture_stats_gradient_without_a_neighbour_is_zero :: proc(t: ^testing.T) {
 	values := []f32{0.25, 0.5, 0.75, 1}
 	region := harness.Capture_Region{x = 0, y = 0, w = 1, h = 1}
-	stats := harness.capture_stats(values, 1, 1, .Color, region, context.allocator)
+	stats := harness.capture_stats(values, 1, 1, .Color, region, nil, context.allocator)
 	testing.expect_value(t, stats.stddev[0], f32(0))
 	testing.expect_value(t, stats.gradient[0], f32(0))
 }
@@ -176,6 +176,54 @@ capture_region_is_recorded :: proc(t: ^testing.T) {
 		testing.expect_value(t, region.w, 3)
 	} else {
 		testing.expect(t, false, "the region was dropped")
+	}
+}
+
+@(test)
+captures_parses_one_frame_with_several_outputs :: proc(t: ^testing.T) {
+	command, error := harness.command_parse_string(
+		`{"cmd":"captures","name":"pair","frame":12,"outputs":[
+			{"target":"color","format":"png"},
+			{"target":"history","format":"stats","region":{"x":0,"y":0,"w":8,"h":8}},
+			{"target":"color","format":"profile","profile":{"axis":"x","at":1,"from":0,"to":7}}
+		]}`,
+		context.allocator,
+	)
+	defer harness.command_destroy(&command, context.allocator)
+	testing.expectf(t, error == "", "captures parse failed: %s", error)
+	if error != "" {
+		return
+	}
+	testing.expect_value(t, command.kind, harness.Command_Kind.Captures)
+	testing.expect_value(t, command.captures.frame, 12)
+	testing.expect_value(t, len(command.captures.outputs), 3)
+	if len(command.captures.outputs) == 3 {
+		testing.expect_value(t, command.captures.outputs[0].name, "pair-color-0")
+		testing.expect_value(t, command.captures.outputs[1].name, "pair-history-1")
+		testing.expect_value(t, command.captures.outputs[2].name, "pair-color-2")
+		_, has_region := command.captures.outputs[1].region.?
+		testing.expect(t, has_region, "the region was dropped")
+	}
+}
+
+@(test)
+captures_reject_duplicate_names :: proc(t: ^testing.T) {
+	session, error := harness.session_create(context.allocator)
+	testing.expectf(t, error == "", "session create failed: %s", error)
+	defer harness.session_destroy(&session)
+	command, parse_error := harness.command_parse_string(
+		`{"cmd":"captures","outputs":[
+			{"name":"same","target":"color","format":"png"},
+			{"name":"same","target":"history","format":"stats"}
+		]}`,
+		context.allocator,
+	)
+	defer harness.command_destroy(&command, context.allocator)
+	testing.expectf(t, parse_error == "", "captures parse failed: %s", parse_error)
+	_, queue_error := harness.session_queue_captures(&session, command.captures)
+	testing.expect(t, queue_error != "", "duplicate names were accepted")
+	if queue_error != "" {
+		delete(queue_error, context.allocator)
 	}
 }
 

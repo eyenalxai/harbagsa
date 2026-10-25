@@ -9,8 +9,12 @@ BIN := bin/harbagsa
 AGENT_BIN := bin/harbagsa-agent
 AGENT := cmd/harbagsa-agent
 HARNESS_REVISION := $(shell git rev-parse --short HEAD 2>/dev/null || printf unknown)
-HARNESS_DIRTY := $(shell if git rev-parse --git-dir >/dev/null 2>&1 && git diff --quiet 2>/dev/null; then printf false; else printf true; fi)
-AGENT_DEFINES := -define:HARNESS_REVISION='"$(HARNESS_REVISION)"' -define:HARNESS_DIRTY=$(HARNESS_DIRTY)
+# `git status --porcelain` covers staged and untracked files; `git diff --quiet`
+# sees neither.
+HARNESS_DIRTY := $(shell if git rev-parse --git-dir >/dev/null 2>&1 && [ -z "$$(git status --porcelain 2>/dev/null)" ]; then printf false; else printf true; fi)
+AO_SAMPLES ?= 8
+RENDERER_DEFINES := -define:AO_SAMPLES=$(AO_SAMPLES)
+AGENT_DEFINES := -define:HARNESS_REVISION=$(HARNESS_REVISION) -define:HARNESS_DIRTY=$(HARNESS_DIRTY) $(RENDERER_DEFINES)
 AGENT_BUILD := $(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) $(AGENT_DEFINES) -out:$(AGENT_BIN)
 VALIDATE_AGENT_BIN := bin/harbagsa-agent-validate
 VALIDATE_SCENARIO ?= scenarios/smoke.json
@@ -31,6 +35,7 @@ VULKANINFO ?= vulkaninfo
 SHADER_SRC := src/renderer/shaders
 SHADER_OUT := build/shaders
 SHADER_INCLUDES := $(SHADER_SRC)/gamma.glsl $(SHADER_SRC)/camera.glsl $(SHADER_SRC)/sky.glsl
+AO_STAMP := $(SHADER_OUT)/ao_samples
 SHADERS := $(SHADER_OUT)/box.vert.spv $(SHADER_OUT)/box.frag.spv \
 	$(SHADER_OUT)/debug.vert.spv $(SHADER_OUT)/debug.frag.spv \
 	$(SHADER_OUT)/hud.vert.spv $(SHADER_OUT)/hud.frag.spv \
@@ -80,7 +85,9 @@ VULKAN_LAYER_DIRS ?= \
 	/usr/share/vulkan/explicit_layer.d
 VALIDATION_LAYER := VK_LAYER_KHRONOS_validation
 
-.PHONY: all build agent check check-spirv check-lines test run shaders validate validate-offscreen validate-demo check-validation-layer shot smoke ui suite clean
+.PHONY: all FORCE build agent check check-spirv check-lines test run shaders validate validate-offscreen validate-demo check-validation-layer shot smoke ui suite clean
+
+FORCE:
 
 all: build
 
@@ -128,9 +135,13 @@ $(SHADER_OUT)/%.vert.spv: $(SHADER_SRC)/%.vert $(SHADER_INCLUDES)
 	@mkdir -p $(@D)
 	$(GLSLC) --target-env=vulkan1.3 -fshader-stage=vert $< -o $@
 
-$(SHADER_OUT)/%.frag.spv: $(SHADER_SRC)/%.frag $(SHADER_INCLUDES)
+$(AO_STAMP): FORCE
 	@mkdir -p $(@D)
-	$(GLSLC) --target-env=vulkan1.3 -fshader-stage=frag $< -o $@
+	@printf '%s\n' '$(AO_SAMPLES)' | cmp -s - $@ || printf '%s\n' '$(AO_SAMPLES)' > $@
+
+$(SHADER_OUT)/%.frag.spv: $(SHADER_SRC)/%.frag $(SHADER_INCLUDES) $(AO_STAMP)
+	@mkdir -p $(@D)
+	$(GLSLC) --target-env=vulkan1.3 -fshader-stage=frag -DAO_SAMPLE_COUNT=$(AO_SAMPLES) $< -o $@
 
 shaders: $(SHADERS)
 
@@ -151,7 +162,7 @@ agent: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 
 build: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	mkdir -p bin
-	$(ODIN) build . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -out:$(BIN)
+	$(ODIN) build . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) $(RENDERER_DEFINES) -out:$(BIN)
 	$(AGENT_BUILD)
 
 check: check-lines check-spirv $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
@@ -289,11 +300,11 @@ smoke: agent
 	$(AGENT_BIN) run scenarios/smoke.json --out "$$out"
 
 ui: agent
-	$(AGENT_BIN) suite ui --out runs/ui
+	$(AGENT_BIN) suite ui --out runs/ui $(AGENT_FLAGS)
 
 SUITE ?= offscreen
 suite: agent
-	$(AGENT_BIN) suite $(SUITE) --out runs/$(SUITE)
+	$(AGENT_BIN) suite $(SUITE) --out runs/$(SUITE) $(AGENT_FLAGS)
 
 validate-demo: check-validation-layer $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ENABLE_VALIDATION_LAYERS=true

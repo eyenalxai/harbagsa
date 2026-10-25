@@ -14,11 +14,9 @@ import "src:renderer"
 
 MAX_FRAME_DELTA :: f32(0.1)
 MAX_STEPS_PER_FRAME :: 8
-
 main :: proc() {
 	logger := log.create_console_logger(lowest = .Info, allocator = context.allocator)
 	context.logger = logger
-
 	ok := run()
 	log.destroy_console_logger(logger, allocator = context.allocator)
 	if !ok || renderer.validation_failed() {
@@ -27,6 +25,11 @@ main :: proc() {
 }
 
 run :: proc() -> bool {
+	repro_dir, repro_dir_ok := repro_directory(os.args[1:])
+	if !repro_dir_ok {
+		return false
+	}
+
 	initial := game.settings_default()
 	window, platform_error := platform.init(
 		"harbagsa",
@@ -74,6 +77,7 @@ run :: proc() -> bool {
 	loop.debug = game.debug_mode_create(context.allocator)
 	defer game.debug_mode_destroy(&loop.debug)
 	loop.renderer = &state
+	loop.repro_dir = repro_dir
 	loop.displays = platform.query_displays()
 	if loop.displays.list.count == 0 {
 		log.warn("harbagsa: SDL reported no displays; keeping the created window")

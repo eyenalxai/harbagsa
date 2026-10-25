@@ -23,7 +23,7 @@ draw_scene :: proc(
 	width, height: u32,
 	ok: bool,
 ) {
-	frame, status := renderer.begin_frame(state, view, {target = .Scene_Color, enabled = true})
+	frame, status := renderer.begin_frame(state, view, {targets = {.Scene_Color}})
 	if status != .Ok {
 		return nil, 0, 0, false
 	}

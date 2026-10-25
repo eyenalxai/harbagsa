@@ -8,6 +8,12 @@ import "core:strconv"
 import "core:strings"
 
 cli_diff :: proc(args: []string) -> int {
+	for argument in args {
+		if argument == "--help" || argument == "-h" {
+			print_diff_usage()
+			return EXIT_OK
+		}
+	}
 	options, option_error := diff_options_parse(args)
 	if option_error != "" {
 		fmt.eprintf("harbagsa-agent diff: %s\n", option_error)
@@ -31,6 +37,14 @@ cli_diff :: proc(args: []string) -> int {
 		fmt.eprintf("harbagsa-agent diff: %s\n", message)
 	}
 	return report.ok ? EXIT_OK : EXIT_CHECK
+}
+
+print_diff_usage :: proc() {
+	fmt.eprintln("usage: harbagsa-agent diff <run-a> <run-b> [--max-pixels N] [--json]")
+	fmt.eprintln("")
+	fmt.eprintln("Compare PNG captures with the same name. The table names both runs,")
+	fmt.eprintln("their scenarios, revisions, dirty flags, extents, and capture counts.")
+	fmt.eprintln("--max-pixels N exits 1 when a pair has more than N different pixels.")
 }
 
 @(private)
@@ -78,24 +92,36 @@ diff_options_parse :: proc(args: []string) -> (Diff_Options, string) {
 
 @(private)
 diff_runs :: proc(options: Diff_Options, allocator: mem.Allocator) -> (Diff_Report, string) {
-	first, first_error := diff_captures_load(options.run_a, allocator)
+	first, first_error := run_data_load(options.run_a, allocator)
 	if first_error != "" {
 		return {}, first_error
 	}
-	defer diff_captures_destroy(first, allocator)
-	second, second_error := diff_captures_load(options.run_b, allocator)
+	defer run_data_destroy(&first, allocator)
+	second, second_error := run_data_load(options.run_b, allocator)
 	if second_error != "" {
 		return {}, second_error
 	}
-	defer diff_captures_destroy(second, allocator)
+	defer run_data_destroy(&second, allocator)
 
 	report := Diff_Report {
-		run_a = strings.clone(options.run_a, allocator),
-		run_b = strings.clone(options.run_b, allocator),
+		run_a         = strings.clone(options.run_a, allocator),
+		run_b         = strings.clone(options.run_b, allocator),
+		revision_a    = strings.clone(first.metadata.revision, allocator),
+		dirty_a       = first.metadata.dirty,
+		scenario_a    = strings.clone(first.metadata.scenario, allocator),
+		width_a       = first.metadata.width,
+		height_a      = first.metadata.height,
+		screenshots_a = first.metadata.screenshots,
+		revision_b    = strings.clone(second.metadata.revision, allocator),
+		dirty_b       = second.metadata.dirty,
+		scenario_b    = strings.clone(second.metadata.scenario, allocator),
+		width_b       = second.metadata.width,
+		height_b      = second.metadata.height,
+		screenshots_b = second.metadata.screenshots,
 	}
-	pairs := make([dynamic]Diff_Pair, 0, len(first), allocator)
+	pairs := make([dynamic]Diff_Pair, 0, len(first.captures), allocator)
 	errors := make([dynamic]string, 0, 4, allocator)
-	report.ok = diff_compare(&pairs, &errors, first, second, options, allocator)
+	report.ok = diff_compare(&pairs, &errors, first.captures, second.captures, options, allocator)
 	report.pairs = pairs[:]
 	report.errors = errors[:]
 	return report, ""
@@ -207,6 +233,26 @@ diff_pair_load :: proc(
 
 @(private)
 diff_print_table :: proc(report: Diff_Report) {
+	fmt.printf(
+		"A  %s  rev %s%s  %dx%d  %d captures  %s\n",
+		report.scenario_a,
+		report.revision_a,
+		report.dirty_a ? " dirty" : "",
+		report.width_a,
+		report.height_a,
+		report.screenshots_a,
+		report.run_a,
+	)
+	fmt.printf(
+		"B  %s  rev %s%s  %dx%d  %d captures  %s\n",
+		report.scenario_b,
+		report.revision_b,
+		report.dirty_b ? " dirty" : "",
+		report.width_b,
+		report.height_b,
+		report.screenshots_b,
+		report.run_b,
+	)
 	fmt.printf(
 		"%-24s %7s %7s %11s %4s %8s %8s %s\n",
 		"name",

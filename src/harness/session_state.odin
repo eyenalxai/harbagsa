@@ -12,6 +12,9 @@ session_refresh_renderer :: proc(session: ^Session) {
 	if session.backend == nil || session.backend.snapshot == nil {
 		return
 	}
+	if session.backend.get_debug != nil {
+		session.renderer_debug = session.backend.get_debug(session.backend.ctx)
+	}
 	snapshot := session.backend.snapshot(session.backend.ctx)
 	session.renderer_report = snapshot.report
 	session.has_render_digest = snapshot.has_digest

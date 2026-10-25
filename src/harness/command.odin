@@ -3,6 +3,8 @@ package harness
 
 import "core:mem"
 
+No_Fields_Command :: struct {}
+
 Command_Kind :: enum {
 	Reset,
 	Look,
@@ -12,6 +14,7 @@ Command_Kind :: enum {
 	Settle,
 	State,
 	Capture,
+	Captures,
 	Camera,
 	View,
 	Sun,
@@ -66,6 +69,15 @@ Capture_Command :: struct {
 	profile:   Maybe(Capture_Profile),
 	crop:      Maybe(Capture_Crop),
 	histogram: Maybe(int),
+	steps:     Maybe(Capture_Steps_Options),
+}
+
+Captures_Command :: struct {
+	frame:      int,
+	has_frame:  bool,
+	alpha:      f32,
+	has_alpha:  bool,
+	outputs:    []Capture_Command,
 }
 
 Camera_Command :: struct {
@@ -121,6 +133,7 @@ View_Command :: struct {
 Record_Command :: struct {
 	path:     string,
 	has_path: bool,
+	actions:  bool,
 }
 
 Replay_Command :: struct {
@@ -165,6 +178,7 @@ Command :: struct {
 	step:           Step_Command,
 	settle:         Settle_Command,
 	capture:        Capture_Command,
+	captures:       Captures_Command,
 	camera:         Camera_Command,
 	view:           View_Command,
 	sun:            Sun_Command,

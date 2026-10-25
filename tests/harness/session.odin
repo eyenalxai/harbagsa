@@ -45,27 +45,31 @@ execute_expect_error :: proc(t: ^testing.T, session: ^harness.Session, line: str
 fake_render :: proc(
 	ctx: rawptr,
 	session: ^harness.Session,
-	request: harness.Capture_Request,
+	requests: []harness.Capture_Request,
 ) -> (
-	harness.Capture_Result,
+	[]harness.Capture_Result,
 	string,
 ) {
 	counter := cast(^int)ctx
 	counter^ += 1
-	if !request.enabled {
-		return {}, ""
+	if len(requests) == 0 {
+		return nil, ""
 	}
-	return {
-		name = strings.clone(request.name, context.allocator),
-		path = strings.clone("/tmp/opencode/fake-capture.png", context.allocator),
-		frame = session.frame,
-		width = 1,
-		height = 1,
-		target = "color",
-		format = "png",
-		target_format = "R8G8B8A8_SRGB",
-		hash = strings.clone("fake", context.allocator),
-	}, ""
+	results := make([]harness.Capture_Result, len(requests), context.allocator)
+	for request, index in requests {
+		results[index] = {
+			name = strings.clone(request.name, context.allocator),
+			path = strings.clone("/tmp/opencode/fake-capture.png", context.allocator),
+			frame = session.frame,
+			width = 1,
+			height = 1,
+			target = "color",
+			format = "png",
+			target_format = "R8G8B8A8_SRGB",
+			hash = strings.clone("fake", context.allocator),
+		}
+	}
+	return results, ""
 }
 
 @(test)

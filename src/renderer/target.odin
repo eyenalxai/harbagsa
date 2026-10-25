@@ -21,6 +21,7 @@ Readback :: struct {
 	mapped: rawptr,
 	pixels: []u8,
 	size:   vk.DeviceSize,
+	slots:  u32,
 }
 
 // The offscreen target owns one color image, so a second submission would
@@ -77,8 +78,9 @@ destroy_target :: proc(r: ^Renderer) {
 	r.target.config = {}
 }
 
-create_readback :: proc(r: ^Renderer, width, height: u32) -> bool {
-	size := vk.DeviceSize(width) * vk.DeviceSize(height) * MAX_CAPTURE_TEXEL_BYTES
+create_readback :: proc(r: ^Renderer, width, height: u32, slots: u32 = 1) -> bool {
+	count := max(slots, 1)
+	size := vk.DeviceSize(width) * vk.DeviceSize(height) * MAX_CAPTURE_TEXEL_BYTES * vk.DeviceSize(count)
 	if size == 0 {
 		return false
 	}
@@ -93,8 +95,24 @@ create_readback :: proc(r: ^Renderer, width, height: u32) -> bool {
 		return false
 	}
 	r.target.readback.size = size
+	r.target.readback.slots = count
 	r.target.readback.pixels = make([]u8, int(size), r.allocator)
 	return true
+}
+
+// A multi-target capture needs one slot per target. Growing the buffer is rare,
+// so wait for the device before replacing a buffer an earlier frame may read.
+ensure_readback_slots :: proc(r: ^Renderer, slots: u32) -> bool {
+	if r.target.readback.slots >= slots {
+		return true
+	}
+	if !check(vk.DeviceWaitIdle(r.device), "vkDeviceWaitIdle") {
+		return false
+	}
+	width := r.target.config.width
+	height := r.target.config.height
+	destroy_readback(r)
+	return create_readback(r, width, height, slots)
 }
 
 destroy_readback :: proc(r: ^Renderer) {
@@ -108,6 +126,7 @@ destroy_readback :: proc(r: ^Renderer) {
 		r.target.readback.pixels = nil
 	}
 	r.target.readback.size = 0
+	r.target.readback.slots = 0
 }
 
 @(private)

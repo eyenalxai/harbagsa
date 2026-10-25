@@ -64,7 +64,7 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 	hud: game.HUD_State
 	scratch: frame.Scratch
 	scene := frame.build(&sim, &debug, {alpha = 1.0, captured = true}, nil, &hud, &scratch)
-	status := frame.draw(&state, scene, {target = .Color, enabled = true})
+	status := frame.draw(&state, scene, {targets = {.Color}})
 	testing.expectf(t, status == .Ok, "offscreen draw failed: %v", status)
 	if status != .Ok {
 		return
@@ -279,7 +279,7 @@ render_offscreen_sequence :: proc() -> (
 			return nil, 0, false, true
 		}
 	}
-	if frame.draw(state, scene, {target = .Color, enabled = true}) != .Ok {
+	if frame.draw(state, scene, {targets = {.Color}}) != .Ok {
 		return nil, 0, false, true
 	}
 	data, _, _, _, read_ok := renderer.read_capture_target(state, .Color)

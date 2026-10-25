@@ -58,6 +58,15 @@ execute_capture :: proc(session: ^Session, command: Command, reply: ^Reply) -> s
 }
 
 @(private)
+execute_captures :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
+	immediate, capture_error := session_queue_captures(session, command.captures)
+	if capture_error == "" && immediate && len(session.captures) > 0 {
+		reply.capture = &session.captures[len(session.captures) - 1]
+	}
+	return capture_error
+}
+
+@(private)
 execute_camera :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	if command.camera.clear {
 		session.camera_override = {}
@@ -132,7 +141,7 @@ execute_check :: proc(session: ^Session, command: Command, reply: ^Reply) -> str
 @(private)
 execute_record :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	if command.record.has_path {
-		return session_record_start(session, command.record.path)
+		return session_record_start(session, command.record.path, !command.record.actions)
 	}
 	recorded, record_error := session_record_stop(session)
 	if record_error != "" {

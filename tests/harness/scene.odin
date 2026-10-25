@@ -83,8 +83,10 @@ scene_rejects_bad_blocks :: proc(t: ^testing.T) {
 		`{"cmd":"scene","camera":{"source":"orbit","position":[0,1,0],"yaw_deg":0,"pitch_deg":0}}`,
 		`{"cmd":"scene","sun":{"position":[0,50,0]}}`,
 		`{"cmd":"scene","objects":[{"id":1,"prefab":"Nope","body":"static","position":[0,0,0],"rotation":[0,0,0,1]}]}`,
-		`{"cmd":"scene","settings":{"window_mode":"Windowed"}}`,
-		`{"cmd":"scene","view":{"hud":true}}`,
+		`{"cmd":"scene","settings":{"window_mode":"Orbit"}}`,
+		`{"cmd":"scene","settings":{"display":-1}}`,
+		`{"cmd":"scene","view":{"hud":"yes"}}`,
+		`{"cmd":"scene","renderer_debug":{"taa":"yes"}}`,
 		`{"cmd":"scene","extra":1}`,
 	}
 	for line in cases {
@@ -96,12 +98,70 @@ scene_rejects_bad_blocks :: proc(t: ^testing.T) {
 	}
 }
 
+@(test)
+scene_applies_renderer_debug_overrides :: proc(t: ^testing.T) {
+	session, error := harness.session_create(context.allocator)
+	testing.expectf(t, error == "", "session create failed: %s", error)
+	defer harness.session_destroy(&session)
+	if error != "" {
+		return
+	}
+	state: Fake_Renderer_Debug
+	backend := harness.Backend {
+		ready     = true,
+		ctx       = &state,
+		get_debug = fake_get_debug,
+		set_debug = fake_set_debug,
+		snapshot  = fake_snapshot,
+	}
+	harness.session_set_backend(&session, &backend, false)
+	session.debug_renderer = true
+
+	reply := execute(t, &session, `{"cmd":"scene","renderer_debug":{"taa":false,"sky":false}}`)
+	defer harness.reply_destroy(&reply, context.allocator)
+	testing.expectf(t, reply.ok, "scene renderer debug failed: %s", reply.error)
+	testing.expect(t, state.debug.active, "the override is not active")
+	testing.expect(t, !state.debug.taa, "taa was not disabled")
+	testing.expect(t, !state.debug.sky, "sky was not disabled")
+}
+
+@(private)
+fake_snapshot :: proc(ctx: rawptr) -> harness.Backend_Snapshot {
+	return {report = {last_reset = "none"}}
+}
+
+@(test)
+scene_applies_partial_settings_and_view :: proc(t: ^testing.T) {
+	session, error := harness.session_create(context.allocator)
+	testing.expectf(t, error == "", "session create failed: %s", error)
+	defer harness.session_destroy(&session)
+	if error != "" {
+		return
+	}
+	session.sim.settings.type_weight = 640
+	session.view = {hud = true, debug = true, hint = false, perf = false}
+
+	reply := execute(
+		t,
+		&session,
+		`{"cmd":"scene","settings":{"type_weight":700},"view":{"hint":true}}`,
+	)
+	defer harness.reply_destroy(&reply, context.allocator)
+	testing.expectf(t, reply.ok, "partial scene failed: %s", reply.error)
+	testing.expect_value(t, session.sim.settings.type_weight, f32(700))
+	testing.expect(t, session.view.hud, "the partial view cleared hud")
+	testing.expect(t, session.view.debug, "the partial view cleared debug")
+	testing.expect(t, session.view.hint, "the partial view did not set hint")
+	testing.expect(t, !session.view.perf, "the partial view set perf")
+}
+
 @(private)
 scene_text :: proc(t: ^testing.T, session: ^harness.Session, options: frame.Options) -> string {
 	scene := frame.scene_capture(
 		&session.sim,
 		&session.debug,
 		options,
+		nil,
 		nil,
 		context.temp_allocator,
 	)
