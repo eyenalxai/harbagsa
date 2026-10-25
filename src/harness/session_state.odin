@@ -40,6 +40,8 @@ session_state :: proc(session: ^Session) -> State {
 	)
 }
 
+// The report names the view the renderer uses, in the order frame.build picks
+// it. `overridden` says the player view is not the one on screen.
 @(private)
 session_camera :: proc(session: ^Session) -> Camera_State {
 	if session.has_camera_override {
@@ -49,6 +51,18 @@ session_camera :: proc(session: ^Session) -> Camera_State {
 			yaw = camera.yaw,
 			pitch = camera.pitch,
 			fov = math.to_degrees(camera.fov_x),
+			source = "override",
+			overridden = true,
+		}
+	}
+	if session.debug.active {
+		camera := session.debug.camera
+		return {
+			position = vec_state(camera.position),
+			yaw = camera.yaw,
+			pitch = camera.pitch,
+			fov = math.to_degrees(frame.PLAYER_FOV_X),
+			source = "debug",
 			overridden = true,
 		}
 	}
@@ -58,5 +72,6 @@ session_camera :: proc(session: ^Session) -> Camera_State {
 		yaw = snapshot.yaw,
 		pitch = snapshot.pitch,
 		fov = math.to_degrees(frame.PLAYER_FOV_X),
+		source = "player",
 	}
 }
