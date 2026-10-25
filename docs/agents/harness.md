@@ -76,6 +76,7 @@ serializes Make with `flock`.
 | read renderer state or the render digest | **Renderer state** |
 | change a renderer input for a diagnosis | **Renderer debug overrides** |
 | check the sky and the ambient occlusion | **Sky and ambient occlusion** |
+| test lighting inside the closed room | **Interior room** |
 | measure image stability or the period | **Analysis** |
 | compare two builds or revisions | **Cross-run diff** and **Cross-run compare** |
 | script the display list | **Commands** (`displays`) |
@@ -1003,6 +1004,26 @@ and the noise budget are in
 `docs/adr/0017-sky-ambient-and-ray-traced-ambient-occlusion.md`; the count
 dither is in `docs/adr/0024-visibility-count-dither.md`.
 
+## Interior room
+
+`scenarios/room-lighting.json` drives the closed room in the arena's +x/+z
+corner. The room is static arena geometry, not a placed object. The scenario:
+
+1. captures the outside, the one doorway, the sealed corner, and the ceiling;
+2. captures the sealed corner and the ceiling on the depth target and checks
+   that the maximum depth is below 1.0, so neither view contains a sky pixel;
+3. moves the sun behind the doorway and to the far side, and compares the same
+   floor region through the doorway;
+4. places a warm lamp with the editor, leaves debug mode so the sun gizmo is not
+   drawn, and compares the same interior view with the lamp on and off.
+
+The depth check proves the room is closed. It does not prove the interior is
+dark: the ambient term is a normal ramp, not an integral of the visible sky, and
+the 1.5 m AO radius never reaches across the room. A room can therefore look
+brighter than a path tracer would make it, and the doorway sun patch does not
+bounce. Use the scenario to test those limits, not to assume global
+illumination.
+
 ## Performance
 
 The renderer records a perf sample every frame: the frame interval, five CPU
@@ -1041,10 +1062,10 @@ The design and its alternatives are in
 ranked causes are in `docs/evidence/perf-baseline.md`.
 
 `scenarios/perf-arena.json` and `scenarios/perf-backface.json` are the scene
-pass probes. The arena view shows every static box at once; the backface view
-covers the screen with surfaces that receive no direct sun. Run either at the
-same size on two builds to compare. The before/after is in
-`docs/evidence/perf-scene-pass.md`.
+pass probes. The arena view looks down on every static box; the closed room's
+roof hides its interior. The backface view covers the screen with surfaces that
+receive no direct sun. Run either at the same size on two builds to compare.
+The before/after is in `docs/evidence/perf-scene-pass.md`.
 
 `scenarios/perf-crates.json` places 60 objects in a grid with the Crate prefab
 and measures them, so the box count is part of the probe.
@@ -1266,7 +1287,8 @@ frame-rate change.
   `scenarios/debug-pop.json`, `scenarios/type-weight.json`,
   `scenarios/sky-ao.json`, `scenarios/stairs-ao.json`,
   `scenarios/ramp-shadow.json`, `scenarios/shadow-angle.json`,
-  `scenarios/perf-crates.json`, and `scenarios/perf-lamps.json`.
+  `scenarios/room-lighting.json`, `scenarios/perf-crates.json`, and
+  `scenarios/perf-lamps.json`.
 
 ## Adding a command
 
