@@ -41,6 +41,8 @@ capture_stats :: proc(
 	}
 	sums: [4]f64
 	squares: [4]f64
+	gradient_sums: [4]f64
+	pairs := 0
 	for y in y0 ..< y1 {
 		for x in x0 ..< x1 {
 			base := (y * int(width) + x) * 4
@@ -51,6 +53,21 @@ capture_stats :: proc(
 				sums[channel] += f64(value)
 				squares[channel] += f64(value) * f64(value)
 			}
+			// Compare with the left and top neighbours, so each pair counts once.
+			if x > x0 {
+				left := base - 4
+				for channel in 0 ..< 4 {
+					gradient_sums[channel] += f64(abs(values[base + channel] - values[left + channel]))
+				}
+				pairs += 1
+			}
+			if y > y0 {
+				up := base - int(width) * 4
+				for channel in 0 ..< 4 {
+					gradient_sums[channel] += f64(abs(values[base + channel] - values[up + channel]))
+				}
+				pairs += 1
+			}
 		}
 	}
 	for channel in 0 ..< 4 {
@@ -58,31 +75,7 @@ capture_stats :: proc(
 		variance := squares[channel] / f64(count) - mean * mean
 		stats.mean[channel] = f32(mean)
 		stats.stddev[channel] = f32(math.sqrt(max(variance, 0)))
-	}
-
-	gradient_sums: [4]f64
-	pairs := 0
-	for y in y0 ..< y1 {
-		for x in x0 ..< x1 {
-			base := (y * int(width) + x) * 4
-			if x + 1 < x1 {
-				right := base + 4
-				for channel in 0 ..< 4 {
-					gradient_sums[channel] += f64(abs(values[right + channel] - values[base + channel]))
-				}
-				pairs += 1
-			}
-			if y + 1 < y1 {
-				down := base + int(width) * 4
-				for channel in 0 ..< 4 {
-					gradient_sums[channel] += f64(abs(values[down + channel] - values[base + channel]))
-				}
-				pairs += 1
-			}
-		}
-	}
-	if pairs > 0 {
-		for channel in 0 ..< 4 {
+		if pairs > 0 {
 			stats.gradient[channel] = f32(gradient_sums[channel] / f64(pairs))
 		}
 	}
