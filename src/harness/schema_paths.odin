@@ -9,6 +9,7 @@ schema_state_paths :: proc(allocator: runtime.Allocator) -> []string {
 	paths := make([dynamic]string, 0, 192, allocator)
 	schema_collect_paths(typeid_of(State), "", &paths, allocator)
 	append(&paths, strings.clone("objects.count", allocator))
+	append(&paths, strings.clone("static_boxes.count", allocator))
 	return paths[:]
 }
 
@@ -70,6 +71,15 @@ schema_check_fields :: proc(allocator: runtime.Allocator) -> []string {
 		"capture.target",
 		"capture.format",
 		"capture.png",
+		"capture.note",
+		"capture.named.<name>.renderer.debug_vertex_count",
+		"capture.named.<name>.renderer.debug_vertices.sun",
+		"capture.stats.color_key.matches",
+		"capture.stats.color_key.fraction",
+		"capture.stats.color_key.r",
+		"capture.stats.color_key.g",
+		"capture.stats.color_key.b",
+		"capture.stats.color_key.tolerance",
 		"capture.stats.steps.count",
 		"capture.stats.steps.pairs",
 		"capture.stats.steps.max",

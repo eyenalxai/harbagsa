@@ -13,6 +13,7 @@ state_sections_name_the_check_namespaces :: proc(t: ^testing.T) {
 		section: harness.State_Section,
 	} {
 		{"player.position", .Player},
+		{"static_boxes.0.center", .Static_Boxes},
 		{"objects.1.position", .Objects},
 		{"settings.display", .Settings},
 		{"debug.palette.open", .Debug},
@@ -38,7 +39,7 @@ state_sections_name_the_check_namespaces :: proc(t: ^testing.T) {
 		harness.state_section_for_field("digest"),
 		harness.state_all_sections(),
 	)
-	testing.expect_value(t, card(harness.state_all_sections()), 9)
+	testing.expect_value(t, card(harness.state_all_sections()), 10)
 }
 
 @(test)

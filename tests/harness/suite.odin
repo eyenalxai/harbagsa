@@ -148,3 +148,41 @@ suite_list_reads_the_scenario_gate :: proc(t: ^testing.T) {
 		testing.expect(t, rows[0].requires_renderer_debug, "the gate was dropped")
 	}
 }
+
+@(test)
+suite_filters_select_by_scenario_stem_or_label :: proc(t: ^testing.T) {
+	entries := []harness.Suite_Entry{
+		{scenario = "smoke", label = "smoke"},
+		{scenario = "taa-motion", label = "taa-motion-800"},
+		{scenario = "room-lighting", label = "room"},
+	}
+	options := harness.Suite_Options{}
+	options.only[0] = "taa-motion"
+	options.only[1] = "room"
+	options.only_count = 2
+	filtered, error := harness.suite_entries_filter(entries, &options, context.allocator)
+	testing.expectf(t, error == "", "only filter failed: %s", error)
+	testing.expect_value(t, len(filtered.entries), 2)
+	if len(filtered.entries) == 2 {
+		testing.expect_value(t, filtered.entries[0].label, "taa-motion-800")
+		testing.expect_value(t, filtered.entries[1].label, "room")
+	}
+	delete(filtered.entries, context.allocator)
+
+	skip := harness.Suite_Options{}
+	skip.skip[0] = "smoke"
+	skip.skip_count = 1
+	filtered, error = harness.suite_entries_filter(entries, &skip, context.allocator)
+	testing.expectf(t, error == "", "skip filter failed: %s", error)
+	testing.expect_value(t, len(filtered.entries), 2)
+	delete(filtered.entries, context.allocator)
+
+	missing := harness.Suite_Options{}
+	missing.only[0] = "nope"
+	missing.only_count = 1
+	_, error = harness.suite_entries_filter(entries, &missing, context.allocator)
+	testing.expect(t, error != "", "a missing filter name was accepted")
+	if error != "" {
+		delete(error, context.allocator)
+	}
+}

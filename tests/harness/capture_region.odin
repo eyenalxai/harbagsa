@@ -157,11 +157,12 @@ region_limits_the_statistics :: proc(t: ^testing.T) {
 		.Depth,
 		harness.Capture_Region{x = 0, y = 0, w = 1, h = 1},
 		nil,
+		nil,
 		context.allocator,
 	)
-	testing.expect_value(t, stats.min[0], f32(0))
-	testing.expect_value(t, stats.max[0], f32(0))
-	testing.expect_value(t, stats.mean[0], f32(0))
+	testing.expect_value(t, stats.min.x, f32(0))
+	testing.expect_value(t, stats.max.x, f32(0))
+	testing.expect_value(t, stats.mean.x, f32(0))
 }
 
 @(test)

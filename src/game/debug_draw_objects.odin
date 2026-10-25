@@ -22,5 +22,5 @@ collect_object_editor_lines :: proc(dm: ^Debug_Mode, sim: ^Simulation, collector
 		box.half_extents,
 		transmute(b3.Quat)box.rotation,
 	)
-	append_box_edges(collector, corners, OBJECT_OUTLINE_COLOR)
+	append_box_edges(collector, corners, OBJECT_OUTLINE_COLOR, .Selection)
 }

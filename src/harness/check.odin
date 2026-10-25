@@ -212,7 +212,12 @@ capture_path_field :: proc(captures: []Capture_Result, path: string) -> (Check_V
 
 @(private)
 capture_one_field :: proc(capture: Capture_Result, path: string) -> (Check_Value, string) {
+	if strings.has_prefix(path, "renderer.") {
+		return state_field(State{renderer = capture.renderer}, path)
+	}
 	switch path {
+	case "note":
+		return {kind = .String, text = capture.note}, ""
 	case "delta_mean":
 		return {kind = .Number, number = f64(capture.delta_mean)}, ""
 	case "delta_max":

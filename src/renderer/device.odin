@@ -121,6 +121,12 @@ score_physical_device :: proc(
 		log.infof("renderer: skipping %q: ray queries are not supported", name)
 		return
 	}
+	// The fragment discard in the plan-view clip compiles to a demote. Vulkan
+	// 1.3 makes the feature optional, so the device must advertise it.
+	if !features13.shaderDemoteToHelperInvocation {
+		log.infof("renderer: skipping %q: shader demote is not supported", name)
+		return
+	}
 
 	if r.target.kind == .Swapchain {
 		if !device_supports_extension(device, vk.KHR_SWAPCHAIN_EXTENSION_NAME, r.allocator) {
@@ -228,9 +234,10 @@ create_logical_device :: proc(r: ^Renderer) -> Error {
 		bufferDeviceAddress = true,
 	}
 	features13 := vk.PhysicalDeviceVulkan13Features {
-		sType            = .PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-		pNext            = &features12,
-		dynamicRendering = true,
+		sType                          = .PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+		pNext                          = &features12,
+		dynamicRendering               = true,
+		shaderDemoteToHelperInvocation = true,
 	}
 	create_info := vk.DeviceCreateInfo{
 		sType                   = .DEVICE_CREATE_INFO,
