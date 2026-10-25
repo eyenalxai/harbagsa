@@ -127,7 +127,7 @@ compare_runs_command :: proc(options: Compare_Options) -> int {
 		return compare_error("cannot resolve the compare directory")
 	}
 	defer delete(absolute_out, context.allocator)
-	if make_error := os.make_directory_all(absolute_out); make_error != nil {
+	if make_error := os.make_directory_all(absolute_out); make_error != nil && make_error != .Exist {
 		return compare_error(fmt.aprintf(
 			"cannot create %s: %v",
 			absolute_out,
