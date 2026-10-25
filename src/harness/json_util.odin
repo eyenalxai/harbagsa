@@ -117,6 +117,35 @@ string_field :: proc(object: json.Object, key: string) -> (value: string, ok: bo
 	return json_string(value_json)
 }
 
+// json_bool reads an optional boolean and leaves value alone when the key is absent.
+// An empty return means success.
+json_bool :: proc(object: json.Object, key: string, value: ^bool) -> string {
+	raw, present := json_get(object, key)
+	if !present {
+		return ""
+	}
+	flag, ok := json_boolean(raw)
+	if !ok {
+		return format_error("'%s' must be a boolean", key)
+	}
+	value^ = flag
+	return ""
+}
+
+json_optional_bool :: proc(object: json.Object, key: string, value: ^bool, has: ^bool) -> string {
+	raw, present := json_get(object, key)
+	if !present {
+		return ""
+	}
+	flag, ok := json_boolean(raw)
+	if !ok {
+		return format_error("'%s' must be a boolean", key)
+	}
+	value^ = flag
+	has^ = true
+	return ""
+}
+
 @(private)
 vec3_field :: proc(object: json.Object, key: string) -> (value: [3]f32, ok: bool) {
 	value_json, has := json_get(object, key)

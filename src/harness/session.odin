@@ -109,7 +109,7 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 		if session.scratch != nil {
 			free(session.scratch, allocator)
 		}
-		return {}, "simulation init failed"
+		return {}, format_error("%s", "simulation init failed")
 	}
 	session.sim.settings.display = display.fallback_list()
 	session.pending = make([dynamic]Pending_Capture, 0, 8, allocator)

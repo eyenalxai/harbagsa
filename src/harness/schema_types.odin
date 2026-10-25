@@ -168,6 +168,13 @@ schema_append_fields :: proc(
 		if json_name == "-" {
 			continue
 		}
+		// A `using` field is flattened at the access level, and the parser
+		// accepts its keys at the top level, so the schema lists its fields in
+		// place of the container.
+		if field.is_using {
+			schema_append_fields(field.type.id, skip, fields, allocator)
+			continue
+		}
 		if index := strings.index_byte(json_name, ','); index >= 0 {
 			json_name = json_name[:index]
 		}

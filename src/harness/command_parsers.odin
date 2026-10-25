@@ -7,7 +7,7 @@ import "core:strings"
 
 
 @(private)
-parse_step :: proc(object: json.Object) -> (Command, string) {
+parse_step :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(object, {"cmd", "frames"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
@@ -20,7 +20,7 @@ parse_step :: proc(object: json.Object) -> (Command, string) {
 
 
 @(private)
-parse_view :: proc(object: json.Object) -> (Command, string) {
+parse_view :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(object, {"cmd", "hud", "debug", "hint", "perf"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
@@ -32,37 +32,17 @@ parse_view :: proc(object: json.Object) -> (Command, string) {
 }
 
 parse_view_fields :: proc(object: json.Object) -> (view: View_Command, error: string) {
-	if value, has := json_get(object, "hud"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'hud' must be a boolean")
-		}
-		view.hud = flag
-		view.has_hud = true
+	if field_error := json_optional_bool(object, "hud", &view.hud, &view.has_hud); field_error != "" {
+		return {}, field_error
 	}
-	if value, has := json_get(object, "debug"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'debug' must be a boolean")
-		}
-		view.debug = flag
-		view.has_debug = true
+	if field_error := json_optional_bool(object, "debug", &view.debug, &view.has_debug); field_error != "" {
+		return {}, field_error
 	}
-	if value, has := json_get(object, "hint"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'hint' must be a boolean")
-		}
-		view.hint = flag
-		view.has_hint = true
+	if field_error := json_optional_bool(object, "hint", &view.hint, &view.has_hint); field_error != "" {
+		return {}, field_error
 	}
-	if value, has := json_get(object, "perf"); has {
-		flag, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'perf' must be a boolean")
-		}
-		view.perf = flag
-		view.has_perf = true
+	if field_error := json_optional_bool(object, "perf", &view.perf, &view.has_perf); field_error != "" {
+		return {}, field_error
 	}
 	return view, ""
 }
@@ -193,12 +173,8 @@ parse_record :: proc(object: json.Object, allocator: mem.Allocator) -> (Command,
 		command.record.path = strings.clone(path, allocator)
 		command.record.has_path = true
 	}
-	if value, has := json_get(object, "actions"); has {
-		actions, ok := json_boolean(value)
-		if !ok {
-			return {}, format_error("%s", "'actions' must be a boolean")
-		}
-		command.record.actions = actions
+	if field_error := json_bool(object, "actions", &command.record.actions); field_error != "" {
+		return {}, field_error
 	}
 	return command, ""
 }

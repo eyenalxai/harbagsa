@@ -7,7 +7,7 @@ import "core:encoding/json"
 parse_editor_camera :: proc(value: json.Value) -> (Editor_Camera, string) {
 	object, ok := json_object(value)
 	if !ok {
-		return {}, "'camera' must be an object"
+		return {}, format_error("%s", "'camera' must be an object")
 	}
 	if key, unknown := json_unknown_key(
 		object,
@@ -17,7 +17,7 @@ parse_editor_camera :: proc(value: json.Value) -> (Editor_Camera, string) {
 	}
 	position, position_ok := vec3_field(object, "position")
 	if !position_ok {
-		return {}, "editor 'camera' needs a 'position' of three numbers"
+		return {}, format_error("%s", "editor 'camera' needs a 'position' of three numbers")
 	}
 	angles, angles_error := camera_angles_from_fields(object, position, "editor 'camera'")
 	if angles_error != "" {
