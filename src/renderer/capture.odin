@@ -6,7 +6,7 @@ import "core:mem"
 
 import vk "vendor:vulkan"
 
-MAX_CAPTURE_TEXEL_BYTES :: 8
+MAX_CAPTURE_TEXEL_BYTES :: 16
 
 Capture_Target :: enum {
 	Color,
@@ -70,6 +70,8 @@ format_info :: proc(format: vk.Format) -> Format_Info {
 		return {"B8G8R8A8_UNORM", 4}
 	case .R16G16B16A16_SFLOAT:
 		return {"R16G16B16A16_SFLOAT", 8}
+	case .R32G32B32A32_SFLOAT:
+		return {"R32G32B32A32_SFLOAT", 16}
 	case .D32_SFLOAT:
 		return {"D32_SFLOAT", 4}
 	}
@@ -255,6 +257,11 @@ capture_values :: proc(bytes: []u8, format: vk.Format, allocator: mem.Allocator)
 		halves := cast([^]u16)raw_data(bytes)
 		for index in 0 ..< pixels * 4 {
 			values[index] = f32(transmute(f16)halves[index])
+		}
+	} else if format == .R32G32B32A32_SFLOAT {
+		floats := cast([^]f32)raw_data(bytes)
+		for index in 0 ..< pixels * 4 {
+			values[index] = floats[index]
 		}
 	} else if format == .D32_SFLOAT {
 		depths := cast([^]f32)raw_data(bytes)

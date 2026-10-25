@@ -100,8 +100,9 @@ off for diagnosis.
   the fraction of sun rays that reach the point, so a penumbra fades the
   occlusion in with the shadow. The sky pixels take no AO. A partial count is
   dithered inside its own step per
-  `docs/adr/0024-visibility-count-dither.md`, so the 8-ray count no longer
-  leaves contour bands in the shade.
+  `docs/adr/0024-visibility-count-dither.md`, and the TAA history is 32-bit per
+  `docs/adr/0027-32-bit-taa-history.md`, so the 8-ray count no longer leaves
+  contour bands in the shade.
 - One diffuse bounce is still absent. AO is visibility, not transport, and the
   sun gate does not add bounce. A deep tunnel gets darker as it gets deeper.
   That is deliberate, not a bug.
