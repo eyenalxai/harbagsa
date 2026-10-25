@@ -34,7 +34,7 @@ handle_editor_events :: proc(
 
 	// Esc closes the nearest mode. If none is active it stays with the settings
 	// menu, so the caller must not consume it.
-	if events.cancel_pressed && (palette_open || debug.placement.armed || debug.sun.active) {
+	if events.cancel_pressed && game.active_tool(debug) != .None {
 		add_action(state, game.Cancel{})
 		events.cancel_pressed = false
 	}

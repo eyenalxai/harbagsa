@@ -8,14 +8,14 @@ import b3 "libs:box3d"
 
 @(private)
 edit_world_reason :: proc(dm: ^Debug_Mode) -> Edit_Reason {
-	if dm.palette.open {
+	switch active_tool(dm) {
+	case .Palette:
 		return .Palette_Open
-	}
-	if dm.sun.active {
+	case .Sun:
 		return .Sun_Active
-	}
-	if dm.placement.armed {
+	case .Placement:
 		return .Placement_Armed
+	case .None:
 	}
 	return .None
 }
@@ -87,7 +87,7 @@ edit_rotate_selected :: proc(dm: ^Debug_Mode, sim: ^Simulation, degrees: f32) ->
 
 @(private)
 edit_turn :: proc(dm: ^Debug_Mode, sim: ^Simulation, steps: int, large: bool) -> Edit_Result {
-	if dm.placement.armed {
+	if active_tool(dm) == .Placement {
 		debug_placement_turn(dm, steps, large)
 		return edit_ok()
 	}

@@ -4,9 +4,8 @@ package game
 
 @(private)
 edit_palette_open :: proc(dm: ^Debug_Mode) -> Edit_Result {
+	take_tool(dm, .Palette)
 	debug_mode_end_drag(dm)
-	debug_placement_cancel(dm)
-	debug_sun_cancel(dm)
 	palette_open(&dm.palette)
 	return edit_ok()
 }
