@@ -636,6 +636,13 @@ The statistics cover the region and the report echoes it; a check reads
 `capture.stats.region.x` and the other region fields. Add `"histogram": 8` for
 per-channel bin counts in `capture.histogram.x`, `.y`, `.z`, and `.w`.
 
+A color stats capture with a region also reports `capture.stats.steps`. It
+box-filters the luma 9x9, which removes the output dither and the sample noise,
+then counts adjacent jumps above half a level and below 8 levels. A soft shadow
+gradient reports no steps; a ray-count step leaves a run of them. Keep the
+region at least four pixels inside a flat boundary, because the filter reads
+that margin. `scenarios/ramp-shadow.json` is the worked example.
+
 A color capture accepts a `profile` block and `"format": "profile"` for an
 edge measurement, and a `crop` block to write a scaled PNG. A profile over a
 PNG capture is allowed and reported beside the PNG.
@@ -647,7 +654,9 @@ move the baseline.
 A check reads the last capture in its window: `capture.target`,
 `capture.format`, and `capture.stats.min.x`, `capture.stats.max.x`,
 `capture.stats.mean.x`, `capture.stats.stddev.x`, `capture.stats.gradient.x`,
-`capture.stats.velocity_median_texels`, and the same `.y`, `.z`, `.w` channels.
+`capture.stats.steps.count`, `capture.stats.steps.pairs`,
+`capture.stats.steps.max`, `capture.stats.velocity_median_texels`, and the same
+`.y`, `.z`, `.w` channels.
 
 `scenarios/capture-targets.json` covers a static and a moving velocity capture,
 scene color, history, and depth.
@@ -874,9 +883,15 @@ drops the occlusion term. `clear` turns both back on.
 `scenarios/sky-ao.json` captures the arena with both on, both off, and split.
 `scenarios/stairs-ao.json` captures the stairs at a 25° sun with the AO on and
 off, and checks that the sunlit floor keeps one value while the shaded wall
-still darkens. It declares `requires.renderer_debug`. The render digest covers both flags because they change the
-image. The design and the noise budget are in
-`docs/adr/0017-sky-ambient-and-ray-traced-ambient-occlusion.md`.
+still darkens. It declares `requires.renderer_debug`.
+`scenarios/ramp-shadow.json` looks at the shaded floor below the 20 degree ramp
+and gates the visibility band metric. A partial ray count is offset inside its
+own step, so the shade
+does not show 1/8 or 1/16 contour bands; the full and empty counts stay exact.
+The render digest covers both flags because they change the image. The design
+and the noise budget are in
+`docs/adr/0017-sky-ambient-and-ray-traced-ambient-occlusion.md`; the count
+dither is in `docs/adr/0024-visibility-count-dither.md`.
 
 ## Performance
 
@@ -1009,6 +1024,7 @@ frame-rate change.
 - `src/harness/`: CLI, scenario compiler, commands, session, runner, socket, PNG.
 - `src/harness/capture.odin`: the capture result, target, format, and file write.
 - `src/harness/capture_stats.odin`: the capture statistics and pixel hash.
+- `src/harness/capture_steps.odin`: the visibility-band step metric.
 - `src/harness/capture_command.odin`: the capture target/format parser.
 - `src/harness/capture_region.odin`: the region, crop, and histogram.
 - `src/harness/capture_profile.odin`: the edge profile and its 10%-90% width.
@@ -1123,8 +1139,8 @@ frame-rate change.
   `scenarios/editor-object.json`, `scenarios/editor-lamps.json`,
   `scenarios/debug-pop.json`, `scenarios/type-weight.json`,
   `scenarios/sky-ao.json`, `scenarios/stairs-ao.json`,
-  `scenarios/shadow-angle.json`, `scenarios/perf-crates.json`, and
-  `scenarios/perf-lamps.json`.
+  `scenarios/ramp-shadow.json`, `scenarios/shadow-angle.json`,
+  `scenarios/perf-crates.json`, and `scenarios/perf-lamps.json`.
 
 ## Adding a command
 
