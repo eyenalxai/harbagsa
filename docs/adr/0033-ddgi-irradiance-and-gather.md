@@ -43,7 +43,8 @@ from the light otherwise reads its own dark outgoing radiance and stays black.
 - Hysteresis stays at `0.75`. A light or sun hash change, a volume change, or a
   texel delta above `0.25` replaces the texel instead of blending it.
 - The probe volume stays the room, its lanes, and the chamber. The CPU still
-  relocates a probe out of a box before the rays run.
+  relocates a probe out of a box before the rays run. Arena and roof coverage are
+  in [ADR 0034](0034-ddgi-arena-coverage.md).
 
 ## Why
 
@@ -67,7 +68,7 @@ from the light otherwise reads its own dark outgoing radiance and stays black.
 - A probe texel that no ray reaches stays zero and the gather may return zero.
   That is correct for a sealed room with no light; the coverage ticket owns the
   open arena.
-- Coverage, classification, and a sealed leak pair remain out of scope. They are
-  issues #321 and #322.
+- Coverage is in [ADR 0034](0034-ddgi-arena-coverage.md). Classification and a
+  sealed leak pair remain out of scope; the leak pair is issue #322.
 - A path-traced reference for one room and one corridor needs a separate scene
   and tolerance design. It is not part of this change.
