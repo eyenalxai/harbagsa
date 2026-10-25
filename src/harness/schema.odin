@@ -11,7 +11,7 @@ schema_build :: proc(allocator: mem.Allocator) -> Schema_Document {
 	for row, index in COMMANDS {
 		commands[index] = {
 			name        = strings.clone(row.name, allocator),
-			description = strings.clone(schema_command_description(row.kind), allocator),
+			description = strings.clone(row.description, allocator),
 			backend     = strings.clone(schema_backend_name(row.backend), allocator),
 			fields      = schema_command_fields(&COMMANDS[index], allocator),
 		}

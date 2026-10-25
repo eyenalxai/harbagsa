@@ -19,7 +19,7 @@
     {"cmd": "check", "field": "renderer.debug.history_weight", "op": "eq", "value": 1},
     {"cmd": "check", "field": "renderer.debug.clamp", "op": "eq", "value": false},
     {"cmd": "check", "field": "renderer.debug.depth_trust", "op": "eq", "value": true},
-    {"cmd": "check", "field": "renderer.debug.shadow_phase_frozen", "op": "eq", "value": true},
+    {"cmd": "check", "field": "renderer.debug.freeze_shadow_phase", "op": "eq", "value": true},
     {"cmd": "check", "field": "renderer.debug.shadow_phase", "op": "eq", "value": 12},
     {"cmd": "check", "field": "renderer.debug.light_shadows", "op": "eq", "value": false},
     {"cmd": "check", "field": "renderer.debug.synthetic_lights", "op": "eq", "value": 4},
