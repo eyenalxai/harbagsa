@@ -118,8 +118,14 @@ The exclusive action state: None, Diving, Sliding, or Mantling. Stance and gait 
 _Avoid_: Action state
 
 **Arena**:
-The fixed test level: a floor, walls, stairs, ramps, tunnels, mantle walls, a dive platform, a slide lane, and a few crates.
+The fixed test level: a floor, walls, stairs, ramps, tunnels, mantle walls, a dive platform, a slide lane, a closed room with one doorway, and a few crates.
 _Avoid_: Map, level
+
+**Room**:
+The closed 7 m square arena structure in the +x/+z corner. It has one
+1.6 m by 2.2 m doorway in its west wall. It is static arena geometry, not a
+placed object, and it exists to test interior lighting.
+_Avoid_: Building, house
 
 **World palette**:
 The scene colours, authored as linear RGBA floats because the renderer shades in

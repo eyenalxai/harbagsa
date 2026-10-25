@@ -10,6 +10,7 @@
     "shadow-angle",
     "ramp-shadow",
     "perf-crates",
-    "lamp-wall-plane"
+    "lamp-wall-plane",
+    "room-lighting"
   ]
 }
