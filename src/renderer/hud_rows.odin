@@ -6,145 +6,43 @@ import "src:ui"
 // frame_x and frame_width are the panel's inner rectangle. The selection band
 // and every divider use it, so both share one edge; a zero width means the
 // caller has no panel and the row block is its own frame.
-Rows_Options :: struct {
-	value_align: ui.Row_Align,
-	frame_x:     f32,
-	frame_width: f32,
-	selected:    int,
-}
-
-Rows_Layout :: struct {
-	width:        f32,
-	height:       f32,
-	label_column: f32,
-	value_column: f32,
-	value_width:  f32,
-}
-
 row_label_style :: proc(theme: UI_Theme, kind: ui.Row_Kind) -> Text_Style {
-	switch kind {
-	case .Setting, .Action, .Slider:
-		return {type = theme.type_body_strong, color = theme.text_secondary}
-	case .Metric:
-		return {type = theme.type_body, color = theme.text_secondary}
-	case .Detail:
-		return {type = theme.type_caption, color = theme.text_tertiary}
-	case .Header:
-		return {type = theme.type_caption_caps, color = theme.text_tertiary}
-	case .Divider:
+	role := ui.row_label_role(kind)
+	color := theme.text_secondary
+	if kind == .Detail || kind == .Header {
+		color = theme.text_tertiary
 	}
-	return {type = theme.type_body, color = theme.text_secondary}
+	return text_style_for_role(theme, role, color)
 }
 
 row_value_style :: proc(theme: UI_Theme, row: ui.Row) -> Text_Style {
-	style := theme.type_body
+	role := ui.row_value_role(row)
 	color := theme.text_primary
-	switch row.kind {
-	case .Detail:
-		style = theme.type_caption
+	if row.kind == .Detail {
 		color = theme.text_tertiary
-	case .Setting, .Action, .Metric, .Slider:
-	case .Divider, .Header:
-		return {type = theme.type_body, color = color}
-	}
-	if row.numeric {
-		style.face = .Mono
-		style.weight = min(style.weight, MONO_MAX_WEIGHT)
 	}
 	if row.blocked {
 		color = theme.text_secondary
 	}
-	return {type = style, color = color}
-}
-
-row_gap :: proc(theme: UI_Theme, kind: ui.Row_Kind) -> f32 {
-	switch kind {
-	case .Header:
-		return theme.spacing.lg
-	case .Divider:
-		return theme.spacing.sm
-	case .Setting, .Action, .Slider:
-		return theme.spacing.sm
-	case .Metric, .Detail:
-	}
-	return theme.spacing.xs
-}
-
-row_height :: proc(theme: UI_Theme, kind: ui.Row_Kind) -> f32 {
-	switch kind {
-	case .Header, .Detail:
-		return theme.type_caption.line_height
-	case .Divider:
-		return theme.hairline
-	case .Slider:
-		return theme.type_body.line_height + theme.spacing.sm + theme.spacing.lg
-	case .Setting, .Action, .Metric:
-	}
-	return theme.type_body.line_height
-}
-
-rows_measure :: proc(atlas: ^Text_Atlas, theme: UI_Theme, rows: []ui.Row, options: Rows_Options) -> Rows_Layout {
-	layout: Rows_Layout
-	for row, index in rows {
-		if index > 0 {
-			layout.height += row_gap(theme, row.kind)
-		}
-		layout.height += row_height(theme, row.kind)
-		switch row.kind {
-		case .Header, .Divider:
-		case .Setting, .Action, .Metric, .Detail, .Slider:
-			if row.label != "" {
-				layout.label_column = max(
-					layout.label_column,
-					text_measure(atlas, row_label_style(theme, row.kind).type, row.label),
-				)
-			}
-			if row.value != "" {
-				layout.value_width = max(
-					layout.value_width,
-					text_measure(atlas, row_value_style(theme, row).type, row.value),
-				)
-			}
-		}
-	}
-	layout.value_column = layout.label_column + theme.spacing.xl
-	layout.width = layout.value_column + layout.value_width
-	return layout
-}
-
-// The row offset comes from the same walk that draws the rows, so a control
-// that the caller measures outside the draw lands on its drawn row.
-rows_row_y :: proc(theme: UI_Theme, rows: []ui.Row, index: int) -> f32 {
-	offset: f32
-	for row, current in rows {
-		if current > index {
-			break
-		}
-		if current > 0 {
-			offset += row_gap(theme, row.kind)
-		}
-		if current == index {
-			break
-		}
-		offset += row_height(theme, row.kind)
-	}
-	return offset
+	return text_style_for_role(theme, role, color)
 }
 
 rows_emit :: proc(
 	o: ^Overlay,
 	theme: UI_Theme,
 	x, y: f32,
-	layout: Rows_Layout,
+	inputs: ui.Layout_Inputs,
+	layout: ui.Rows_Layout,
 	rows: []ui.Row,
-	options: Rows_Options,
+	options: ui.Rows_Options,
 ) {
 	for row, index in rows {
 		rows_emit_row(
 			o,
 			theme,
 			x,
-			y + rows_row_y(theme, rows, index),
+			y + ui.rows_row_y(inputs, rows, index),
+			inputs,
 			layout,
 			row,
 			index,
@@ -158,10 +56,11 @@ rows_emit_row :: proc(
 	o: ^Overlay,
 	theme: UI_Theme,
 	x, y: f32,
-	layout: Rows_Layout,
+	inputs: ui.Layout_Inputs,
+	layout: ui.Rows_Layout,
 	row: ui.Row,
 	index: int,
-	options: Rows_Options,
+	options: ui.Rows_Options,
 ) {
 	atlas := &o.atlas
 	row_style := row_label_style(theme, row.kind)
@@ -185,7 +84,7 @@ rows_emit_row :: proc(
 
 	if selected {
 		band_pad := theme.spacing.xxs
-		band_height := row_height(theme, row.kind) + band_pad * 2
+		band_height := ui.row_height(inputs, row.kind) + band_pad * 2
 		hud_emit_rect(
 			o,
 			options.frame_x,
@@ -221,12 +120,12 @@ rows_emit_row :: proc(
 		)
 	}
 	if row.kind == .Slider {
-		rows_emit_slider(o, theme, y, row, options)
+		rows_emit_slider(o, theme, inputs, y, row, options)
 	}
 }
 
 @(private)
-rows_frame :: proc(x: f32, layout: Rows_Layout, options: Rows_Options) -> (frame_x, frame_width: f32) {
+rows_frame :: proc(x: f32, layout: ui.Rows_Layout, options: ui.Rows_Options) -> (frame_x, frame_width: f32) {
 	if options.frame_width > 0 {
 		return options.frame_x, options.frame_width
 	}
