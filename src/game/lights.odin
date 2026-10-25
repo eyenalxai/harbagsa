@@ -65,16 +65,6 @@ light_emissive :: proc(intensity: f32) -> f32 {
 	return LIGHT_EMISSIVE_BASE + LIGHT_EMISSIVE_RATE * intensity
 }
 
-light_settings :: proc(color: Light_Color, intensity, range: f32) -> Light_Settings {
-	return {
-		active = true,
-		color = color,
-		intensity = intensity,
-		range = range,
-		emissive = light_emissive(intensity),
-	}
-}
-
 light_color_rgb :: proc(color: Light_Color) -> [3]f32 {
 	return LIGHT_COLOR_RGB[color]
 }

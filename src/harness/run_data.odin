@@ -16,7 +16,6 @@ Run_Metadata :: struct {
 	width:       u32,
 	height:      u32,
 	captures: int,
-	has_report:  bool,
 }
 
 Run_Data :: struct {
@@ -61,7 +60,6 @@ run_data_load :: proc(dir: string, allocator: mem.Allocator) -> (Run_Data, strin
 		return {}, fmt.aprintf("%s is not a report", report_path, allocator = allocator)
 	}
 
-	data.metadata.has_report = true
 	run_metadata_read(&data.metadata, object, allocator)
 	captures, captures_ok := run_report_captures(object, dir, allocator)
 	if captures_ok && len(captures) > 0 {
