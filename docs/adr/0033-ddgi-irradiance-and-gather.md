@@ -37,6 +37,9 @@ from the light otherwise reads its own dark outgoing radiance and stays black.
   backface weight `(dot(to_probe, normal) + 1)^2 / 4 + 0.2`, Chebyshev
   visibility, decodes the gamma, multiplies the hemisphere factor `2 * pi`, and
   divides by `pi` for the diffuse BRDF so the term shares the lit pass scale.
+- The Chebyshev visibility weight keeps the reference 5 percent floor. The
+  sealed pair uses one probe volume per room, so a probe across the shared wall
+  is not in the surface cage; the floor is only a fallback inside the room.
 - The ray stores a negative hit distance on a backface. The blend ignores that
   ray's radiance and skips a probe when more than a quarter of its rays hit
   backfaces. The depth blend uses the absolute distance.
@@ -68,7 +71,7 @@ from the light otherwise reads its own dark outgoing radiance and stays black.
 - A probe texel that no ray reaches stays zero and the gather may return zero.
   That is correct for a sealed room with no light; the coverage ticket owns the
   open arena.
-- Coverage is in [ADR 0034](0034-ddgi-arena-coverage.md). Classification and a
-  sealed leak pair remain out of scope; the leak pair is issue #322.
+- Coverage is in [ADR 0034](0034-ddgi-arena-coverage.md). The sealed pair is
+  `scenarios/ddgi-sealed.json`; probe classification is still out of scope.
 - A path-traced reference for one room and one corridor needs a separate scene
   and tolerance design. It is not part of this change.

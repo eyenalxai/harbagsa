@@ -12,8 +12,11 @@ Irradiance is gamma encoded with a 5.0 exponent; the gather decodes it.
 The gather reads irradiance with `oct(surface normal)` and depth with
 `oct(world - probe)`, samples both bilinearly, applies the wrap backface weight
 and the Chebyshev depth test, then multiplies the `2 pi` hemisphere factor and
-divides by `pi` for the diffuse BRDF. A light or sun change resets the blend; a
-texel delta above 0.25 also replaces the texel.
+divides by `pi` for the diffuse BRDF. The reference 5 percent Chebyshev floor
+stays; a fully occluded probe still contributes a small fallback. The sealed
+pair uses one volume per room, so a probe across the shared wall is never in the
+surface's eight-probe cage. A light or sun change resets the blend; a texel delta
+above 0.25 also replaces the texel.
 
 ## Scenario
 
@@ -27,11 +30,12 @@ while GI stays on.
 make shot SCENARIO=ddgi OUT=runs/ddgi
 ```
 
-The room volume is 10 x 3 x 10 probes at 1.04 m spacing. Five arena volumes
-follow it: a roof volume and four perimeter strips at a 4 m cell, with a 2.775 m
-cell for the north strip. Probes inside a box are pushed out along the shallowest
-local axis before the rays run. The layout and the leak argument are in
-`docs/adr/0034-ddgi-arena-coverage.md`.
+The room volume is 10 x 3 x 10 probes at 1.04 m spacing. The two sealed-pair
+volumes come next: 4 x 3 x 4 probes per room at 1 m spacing. Five arena volumes
+follow them: a roof volume and four perimeter strips at a 4 m cell, with a
+2.775 m cell for the north strip. Probes inside a box are pushed out
+along the shallowest local axis before the rays run. The layout and the leak
+argument are in `docs/adr/0034-ddgi-arena-coverage.md`.
 
 ## Result
 
@@ -44,9 +48,9 @@ local axis before the rays run. The layout and the leak argument are in
 
 The scenario checks `probe_count`, `probe_volume_count`, `probe_energy`, the
 GI on/off order, and the AO on/off order: 10 checks, 0 failed. The probe energy
-is 0.137 over the whole atlas with the lamp on, down from 0.177 for the room grid
-alone; the arena sky fill is dimmer than the lamp-lit room. The four captures are
-deterministic: a repeat run produces the same PNG hashes.
+is 0.127 over the whole atlas with the lamp on. The arena sky fill is dimmer than
+the lamp-lit room. The four captures are deterministic: a repeat run produces
+the same PNG hashes.
 
 The room gate is `scenarios/room-lighting.json`: 19 checks, 0 failed. The first
 lane is 39.75 mean green under the west sun and 8.08 under the east sun. The
@@ -55,32 +59,55 @@ leak. The chamber is 0.18 to 0.26 under the sun alone, 183.10 with the lamp, and
 0.26 after the lamp is removed. A backface ray no longer leaks into the sealed
 end of the lock.
 
-## Leak pair
+## Sealed pair
 
-`scenarios/ddgi-leak.json` puts the camera in the first lane at the door,
-looking out into the arena, with the sun below the horizon. It captures the view
-before the lamp and after a lamp is placed in the chamber.
+`scenarios/ddgi-sealed.json` builds the pair from eight static placed Walls and
+two Platform roofs at (-10, -8). Room A holds a warm lamp at intensity 4 and
+range 12. The camera sits in room B behind the solid shared wall. The same run
+captures the wall before and after the lamp, then removes the placed door
+segment from the shared wall and captures the doorway and the far wall.
+
+The pair has one 4 x 3 x 4 probe grid per room at 1 m spacing. The shared wall
+sits between the two grids, so a room B surface samples only room B probes.
+Before the split, one cross-room grid put a bright room A probe in the room B
+cage; the reference 5 percent Chebyshev floor kept part of it:
+
+| Capture | One cross-room grid | One volume per room |
+| --- | ---: | ---: |
+| `sealed-wall` mean green | 0.168 | 0.168 |
+| `sealed-wall` max green | 1 | 1 |
+| `sealed-lamp` mean green | 0.415 | 0.165 |
+| `sealed-lamp` max green | 84 | 1 |
+| `sealed-depth` max depth | 0.9827 | 0.9827 |
+| `sealed-far` mean green | 0.165 | 0.165 |
+
+With one volume per room the lamp adds nothing to room B: the sealed wall and
+far wall both sit at the dither floor, and the depth target stays below 0.999.
+The lamp changes the room A probes, not room B. The 5 percent floor stays in the
+gather.
+
+Removing the door segment is transport, and the same run gates it:
 
 | Capture | Mean green |
 | --- | ---: |
-| `lane-dark` | 105.74 |
-| `lane-lit` | 105.74 |
-| `chamber-lit` | 183.11 |
+| `sealed-far` | 0.165 |
+| `door-far` | 85.20 |
+| `door-near` | 155.14 |
 
-The camera looks out of the room door, so the frame holds the sky-lit arena and
-the mean rose with coverage from 49.38. The lane moves by 0.0035 when the lamp
-turns on, inside the gate's 0.05 tolerance, and the chamber is bright. The gate
-is now the lane delta rather than an absolute ceiling, because the outdoor part
-of the frame is no longer black. The scenario has 3 checks, 0 failed.
+The far wall is in the shadow of the remaining shared wall: the direct lamp line
+crosses the solid part, so the far-wall lift comes through the opening and the
+probe field. It is brighter than the sealed baseline and dimmer than the doorway.
+That ordering is the doorway gate, not a wall leak. The scenario has 17 checks,
+0 failed.
 
-This is not a sealed leak pair. The chamber and the lane are connected by the
-four-turn light lock, so light through the lock is transport, not a bug. The
-sealed two-room pair is issue #322.
+The old `ddgi-leak` scenario is retired. Its camera looked out of the room door,
+and the chamber and lane are connected by the four-turn light lock, so it never
+tested a solid wall.
 
 ## Doorway and moving lamp
 
 `scenarios/ddgi-door.json` looks through the room's west door with the sun below
-the horizon. The doorway admits the lamp: mean green rises from 43.28 to 85.38.
+the horizon. The doorway admits the lamp: mean green rises from 96.08 to 142.81.
 Five checks pass, including the placed lamp identity.
 
 `scenarios/ddgi-move.json` places the lamp in the chamber, then moves it with the
@@ -104,9 +131,9 @@ colour key, writes a 4x crop, and then repeats the chamber view from
 
 The remaining 0.30% of the frame is the room doorway, which is the unlit
 interior. The shaded face is a smooth sky gradient with soft 4 m probe blotches,
-not the old black. The chamber keeps its value because the room volume comes
-first and the arena bounds stop at the room's outer wall; the arena probes add
-no light to a room or a lane through a wall.
+not the old black. The chamber stays at the dither floor because the room volume
+comes first and the arena bounds stop at the room's outer wall; the arena probes
+add no light to a room or a lane through a wall.
 
 The scenario has 7 checks, 0 failed:
 
@@ -130,27 +157,29 @@ the probe atlas is unchanged. The decision is recorded in
 
 `scenarios/perf-probes.json` uses 64 synthetic lights and the chamber camera at
 1280 x 720. The probe pass covers the ray trace and the blend. It costs 0.232 ms
-with 64 rays, 0.413 ms with 256 rays and 300 room probes, and 0.672 ms with 256
-rays and 537 probes after arena coverage. The 537-probe full GPU pass set is:
+with 64 rays, 0.413 ms with 256 rays and 300 room probes, 0.672 ms with 256 rays
+and 537 probes after arena coverage, and 0.735 ms with 256 rays and 633 probes
+after the sealed pair. The 633-probe full GPU pass set is:
 
 | Pass | ms |
 | --- | ---: |
-| TLAS | 0.291 |
-| Cluster | 0.034 |
-| Probe | 0.672 |
-| Depth | 0.016 |
-| Scene | 2.767 |
+| TLAS | 0.277 |
+| Cluster | 0.033 |
+| Probe | 0.735 |
+| Depth | 0.014 |
+| Scene | 2.729 |
 | Sky | 0.004 |
-| TAA | 0.231 |
+| TAA | 0.144 |
 | Overlay | 0.002 |
-| Total | 4.017 |
+| Total | 3.937 |
 
 ## Limits
 
 The room, its lane network, and the chamber share one grid, and that grid does
-not classify probes into disconnected rooms. The arena grid is coarse, so the
-perimeter walls show soft 4 m blotches. The sealed two-room leak pair is issue
-#322.
+not classify probes into disconnected rooms. The sealed pair uses two 1 m grids,
+one per room, so a room B surface never samples a room A probe. A larger
+building still needs a volume authoring and classification scheme. The arena grid
+is coarse, so the perimeter walls show soft 4 m blotches.
 
 The probe atlas stores encoded irradiance and depth moments. Moving geometry
 relocates probe centres but does not reset the irradiance blend; a crate that
@@ -158,4 +187,6 @@ moves inside a lit room keeps its old indirect until the blend converges.
 
 There is no path-traced reference in this change. It needs a scene and a
 tolerance design that compares a multi-bounce reference with the one-bounce
-probe field. It is a follow-up on issue #320.
+probe field. It is a follow-up on issue #320. The probe field is one diffuse
+bounce; it is not a path-traced renderer and it does not claim modern-game
+parity.
