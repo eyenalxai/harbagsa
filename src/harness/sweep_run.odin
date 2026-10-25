@@ -27,11 +27,7 @@ sweep_parameters_copy :: proc(
 
 @(private)
 sweep_run_destroy :: proc(run: ^Sweep_Run, allocator: mem.Allocator) {
-	for parameter in run.parameters {
-		delete(parameter.name, allocator)
-		delete(parameter.value, allocator)
-	}
-	delete(run.parameters, allocator)
+	scenario_parameters_destroy(run.parameters, allocator)
 	if run.run_dir != "" {
 		delete(run.run_dir, allocator)
 	}
@@ -78,7 +74,32 @@ sweep_run_from_result :: proc(
 	}
 }
 
-run_sweep :: proc(file: ^Scenario_File, options: Run_Options, combinations: int) -> int {
+Sweep_Execution :: struct {
+	report:   Sweep_Report,
+	base_dir: string,
+}
+
+sweep_execution_destroy :: proc(execution: ^Sweep_Execution, allocator: mem.Allocator) {
+	sweep_report_destroy(&execution.report, allocator)
+	if execution.base_dir != "" {
+		delete(execution.base_dir, allocator)
+	}
+	execution^ = {}
+}
+
+sweep_execute :: proc(
+	file: ^Scenario_File,
+	options: Run_Options,
+	combinations: int,
+) -> (Sweep_Execution, string) {
+	if combinations > MAX_SWEEP_RUNS {
+		return {}, fmt.aprintf(
+			"--param makes more than %d runs; split the sweep",
+			MAX_SWEEP_RUNS,
+			allocator = context.allocator,
+		)
+	}
+
 	base, owned := run_output_dir(
 		options.scenario,
 		options.out_dir,
@@ -90,13 +111,11 @@ run_sweep :: proc(file: ^Scenario_File, options: Run_Options, combinations: int)
 	}
 	absolute_base, absolute_error := absolute_path(base, context.allocator)
 	if absolute_error != nil {
-		print_summary_failure("cannot resolve the sweep directory", EXIT_SCENARIO)
-		return EXIT_SCENARIO
+		return {}, format_error("%s", "cannot resolve the sweep directory")
 	}
-	defer delete(absolute_base, context.allocator)
 	if mkdir_error := os.make_directory_all(absolute_base); mkdir_error != nil {
-		print_summary_failure("cannot create the sweep directory", EXIT_SCENARIO)
-		return EXIT_SCENARIO
+		delete(absolute_base, context.allocator)
+		return {}, format_error("%s", "cannot create the sweep directory")
 	}
 
 	runs := make([dynamic]Sweep_Run, 0, combinations, context.allocator)
@@ -104,8 +123,6 @@ run_sweep :: proc(file: ^Scenario_File, options: Run_Options, combinations: int)
 		ok       = true,
 		scenario = strings.clone(file.path, context.allocator),
 	}
-	defer sweep_report_destroy(&report, context.allocator)
-
 	parameter_array := options.parameters
 	buffer: [MAX_SWEEP_PARAMETERS]Parameter_Override
 	for index in 0 ..< combinations {
@@ -145,16 +162,27 @@ run_sweep :: proc(file: ^Scenario_File, options: Run_Options, combinations: int)
 		delete(label, context.allocator)
 	}
 	report.runs = runs[:]
+	return {report = report, base_dir = absolute_base}, ""
+}
 
-	sweep_path := join_path({absolute_base, "sweep.json"}, context.allocator)
+run_sweep :: proc(file: ^Scenario_File, options: Run_Options, combinations: int) -> int {
+	execution, execute_error := sweep_execute(file, options, combinations)
+	if execute_error != "" {
+		print_summary_failure(execute_error, EXIT_SCENARIO)
+		delete(execute_error, context.allocator)
+		return EXIT_SCENARIO
+	}
+	defer sweep_execution_destroy(&execution, context.allocator)
+
+	sweep_path := join_path({execution.base_dir, "sweep.json"}, context.allocator)
 	defer delete(sweep_path, context.allocator)
-	if write_error := write_json_file(sweep_path, report); write_error != "" {
+	if write_error := write_json_file(sweep_path, execution.report); write_error != "" {
 		print_summary_failure(write_error, EXIT_RENDER)
 		delete(write_error, context.allocator)
 		return EXIT_RENDER
 	}
-	print_sweep_report(report)
-	return report.exit_code
+	print_sweep_report(execution.report)
+	return execution.report.exit_code
 }
 
 @(private)
