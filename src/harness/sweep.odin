@@ -83,13 +83,18 @@ parse_parameter_sweep :: proc(
 sweep_combination_count :: proc(parameters: []Parameter_Sweep) -> int {
 	count := 1
 	for parameter in parameters {
-		count *= len(parameter.values)
+		values := len(parameter.values)
+		if values == 0 {
+			return 0
+		}
+		if count > MAX_SWEEP_RUNS / values {
+			return MAX_SWEEP_RUNS + 1
+		}
+		count *= values
 	}
 	return count
 }
 
-// Mixed radix, last parameter fastest, so the first parameter holds while the
-// rest count.
 sweep_combination :: proc(
 	parameters: []Parameter_Sweep,
 	index: int,
