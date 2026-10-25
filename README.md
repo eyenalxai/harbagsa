@@ -613,7 +613,11 @@ sky dome, sets an exact sun position, and captures the committed lighting.
 then captures the undo and redo restores. `scenarios/editor-lamps.json` captures
 the three lamp previews, places a warm lamp, a cool panel, a red beacon, and a
 pillar, then captures the lit scene, the point-light shadow, and the selected
-lamp edit with its undo.
+lamp edit with its undo. `scenarios/lamp-wall-plane.json` places a lamp halfway
+into a wall, clear of the floor and the adjacent walls, and captures the view
+with the point-light shadows on and off. The two captures must match; a fan of
+shadows on the wall or the floor fails the check. Run it with
+`--debug-renderer`.
 
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window

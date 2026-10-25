@@ -779,6 +779,10 @@ including a new shadow phase and a light change.
 `scenarios/renderer-debug-converge.json` turns jitter off and freezes the phase,
 so the image converges. `scenarios/renderer-debug-jitter.json` freezes the phase
 and lets jitter cycle, so the analysis can find the period.
+`scenarios/lamp-wall-plane.json` puts a lamp halfway into the wall plane and
+captures the same view with `light_shadows` on and off. The two images must
+match; a fan of shadows on the wall or the floor means the shadow ray counted
+the wall the light sits on.
 `scenarios/perf-lamps.json` injects eight synthetic lights, measures shadows on,
 then disables the point-light shadows and measures again. It writes one trace per
 side.
