@@ -83,6 +83,7 @@ Renderer :: struct {
 	frame_index:     int,
 	frame_count:     u32,
 	light_count:     int,
+	cluster_overflow: u32,
 	synthetic_lights: [dynamic]Light,
 	clear_color:     [4]f32,
 	timestamp_period:     f32,

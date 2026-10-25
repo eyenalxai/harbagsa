@@ -185,8 +185,8 @@ open.
 The summary row holds frames per second, the frame interval, the CPU frame
 time, the p95 interval, the spike count, and the GPU total with the costliest
 pass. The pass row holds the last completed frame's GPU pass times: the TLAS
-build, the depth prepass, the lit scene pass, the sky pass, the TAA resolve, and
-the overlay pass.
+build, the cluster assignment, the depth prepass, the lit scene pass, the sky
+pass, the TAA resolve, and the overlay pass.
 
 The GPU numbers belong to the last completed frame, so they are two frames
 behind the frame being recorded. A device without timestamp support shows the
@@ -730,8 +730,8 @@ session never creates a Vulkan device.
 A `perf` command steps the simulation and draws one frame per measurement. The
 reply and `report.json` carry the interval distribution, `p50`/`p95`/`mean` for
 every CPU phase and GPU pass, and the prime frame count. The GPU passes are the
-TLAS build, the depth prepass, the lit scene, the sky, the TAA resolve, and the
-overlay. The sky has its own timestamps. `prime` (seconds, default 2.0) warms the
+TLAS build, the cluster assignment, the depth prepass, the lit scene, the sky,
+the TAA resolve, and the overlay. The sky has its own timestamps. `prime` (seconds, default 2.0) warms the
 device clock before the measured window. `name` labels the result and
 `report.json` keeps every named result in a `perf` array. Add
 `"trace": "trace.jsonl"` to write one JSON object per measured frame under the

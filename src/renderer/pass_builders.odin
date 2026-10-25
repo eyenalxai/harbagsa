@@ -20,6 +20,8 @@ build_pass :: proc(
 	switch kind {
 	case .Tlas:
 		pass.draw = draw_tlas
+	case .Cluster:
+		build_cluster_pass(r, pass)
 	case .Depth:
 		build_depth_pass(r, pass)
 	case .Scene:
@@ -31,6 +33,94 @@ build_pass :: proc(
 	case .Overlay:
 		build_overlay_pass(r, pass)
 	}
+}
+
+@(private)
+build_cluster_pass :: proc(r: ^Renderer, pass: ^Pass) {
+	pass.has_rendering = false
+	pass.draw = draw_clusters
+	pass.after = cluster_after
+}
+
+@(private)
+draw_clusters :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
+	// The overflow slot is the only value that is not written by a cluster.
+	counts_buffer := r.scene.cluster_counts_buffers[r.frame_index]
+	vk.CmdFillBuffer(
+		command_buffer,
+		counts_buffer,
+		vk.DeviceSize(CLUSTER_COUNT * size_of(u32)),
+		vk.DeviceSize(size_of(u32)),
+		0,
+	)
+	barrier := vk.BufferMemoryBarrier {
+		sType = .BUFFER_MEMORY_BARRIER,
+		srcAccessMask = {.TRANSFER_WRITE},
+		dstAccessMask = {.SHADER_WRITE},
+		buffer = counts_buffer,
+		offset = vk.DeviceSize(CLUSTER_COUNT * size_of(u32)),
+		size = vk.DeviceSize(size_of(u32)),
+	}
+	vk.CmdPipelineBarrier(
+		command_buffer,
+		{.TRANSFER},
+		{.COMPUTE_SHADER},
+		{},
+		0,
+		nil,
+		1,
+		&barrier,
+		0,
+		nil,
+	)
+
+	vk.CmdBindPipeline(command_buffer, .COMPUTE, r.scene.cluster_pipeline)
+	vk.CmdBindDescriptorSets(
+		command_buffer,
+		.COMPUTE,
+		r.scene.cluster_layout,
+		0,
+		1,
+		&r.scene.descriptor_sets[r.frame_index],
+		0,
+		nil,
+	)
+	groups := u32((CLUSTER_COUNT + CLUSTER_LOCAL_SIZE - 1) / CLUSTER_LOCAL_SIZE)
+	vk.CmdDispatch(command_buffer, groups, 1, 1)
+}
+
+@(private)
+cluster_after :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
+	barriers := [2]vk.BufferMemoryBarrier {
+		{
+			sType = .BUFFER_MEMORY_BARRIER,
+			srcAccessMask = {.SHADER_WRITE},
+			dstAccessMask = {.SHADER_READ},
+			buffer = r.scene.cluster_counts_buffers[r.frame_index],
+			offset = 0,
+			size = vk.DeviceSize(CLUSTER_COUNTS_SIZE),
+		},
+		{
+			sType = .BUFFER_MEMORY_BARRIER,
+			srcAccessMask = {.SHADER_WRITE},
+			dstAccessMask = {.SHADER_READ},
+			buffer = r.scene.cluster_indices_buffers[r.frame_index],
+			offset = 0,
+			size = vk.DeviceSize(CLUSTER_COUNT * CLUSTER_LIGHT_STRIDE * size_of(u32)),
+		},
+	}
+	vk.CmdPipelineBarrier(
+		command_buffer,
+		{.COMPUTE_SHADER},
+		{.FRAGMENT_SHADER},
+		{},
+		0,
+		nil,
+		u32(len(barriers)),
+		&barriers[0],
+		0,
+		nil,
+	)
 }
 
 @(private)
