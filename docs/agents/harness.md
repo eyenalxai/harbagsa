@@ -84,13 +84,14 @@ serializes Make with `flock`.
 | compare two builds | **Performance** and `ab` |
 | measure frame time | **Performance** |
 | prove a capture-free sequence is deterministic | **Screenshots** and `scenarios/capture-free.json` |
-| understand a design choice | `docs/adr/0008` to `docs/adr/0021` |
+| understand a design choice | `docs/adr/0008` to `docs/adr/0023` |
 
 ## What one run writes
 
 `runs/<scenario-stem>/`
 
-- `report.json`: `ok`, `exit_code`, `scenario` (`path` and `hash`), `run_dir`,
+- `report.json`: `ok`, `exit_code`, `scenario` (`path`, `hash`, and the
+  effective `parameters`), `run_dir`,
   `frame`, `state`, `setup`, `screenshots`, `checks`, `failures`, `digest`,
   `error`, `perf` (a list of named reports) when perf ran, `trace` when the run
   wrote a perf trace, and `analysis` when the run wrote an analysis report.
@@ -854,7 +855,7 @@ and lets jitter cycle, so the analysis can find the period.
 Lamp, and clicks the ghost. It captures the same view with `light_shadows` on
 and off; the two images must match. A fan of shadows on the wall or the floor
 means the shadow ray counted the wall the light sits on. The scenario also
-checks the wall gradient directly, so the fan fails without the on/off pair.
+checks the wall gradient directly, so the fan fails even without the on/off pair.
 `scenarios/perf-lamps.json` injects eight synthetic lights, measures shadows on,
 then disables the point-light shadows and measures again. It writes one trace per
 side.
@@ -1009,13 +1010,18 @@ frame-rate change.
 - `src/harness/capture_region.odin`: the region, crop, and histogram.
 - `src/harness/capture_profile.odin`: the edge profile and its 10%-90% width.
 - `src/harness/analysis_bands.odin`: the identical-run band metric.
-- `src/harness/scenario_inherit.odin`: `extends` and `parameters`.
-- `src/harness/sweep.odin`: the `--param` sweep, combinations, labels, and
-  `sweep.json`.
+- `src/harness/scenario_file.odin`: read one scenario once, parse it per sweep
+  value.
+- `src/harness/scenario_inherit.odin`: the `extends` merge.
+- `src/harness/scenario_parameters.odin`: the `parameters` block and overrides.
+- `src/harness/scenario_substitute.odin`: `${name}` substitution.
+- `src/harness/sweep.odin`: the `--param` parse, combinations, and labels.
+- `src/harness/sweep_run.odin`: the sweep runner and `sweep.json`.
 - `src/harness/session_rows.odin`: the HUD and menu row dump.
 - `src/harness/session_displays.odin`: the scripted display list.
 - `src/harness/session_draw.odin`: the frame draw and the capture dispatch.
 - `src/harness/ab_command.odin`: the `ab` wrapper over `tools/ab.sh`.
+- `src/harness/run_backend.odin`: the lazy run backend.
 - `src/harness/run_paths.odin`: the tag-aware run directory.
 - `src/harness/session_settle.odin`: the convergence wait.
 - `src/harness/state_schema.odin`: the reflection walk over `State` that resolves
@@ -1026,6 +1032,7 @@ frame-rate change.
 - `src/harness/perf_command.odin`: the perf command parser.
 - `src/harness/session_state.odin`: the session's renderer snapshot.
 - `src/harness/editor_command.odin`: the `editor` command and its parser.
+- `src/harness/editor_camera_command.odin`: the debug camera parser.
 - `src/harness/editor_object_command.odin`: the object editing fields.
 - `src/harness/editor_light_command.odin`: the light fields.
 - `src/harness/state_light.odin`: the object light and light budget state.
