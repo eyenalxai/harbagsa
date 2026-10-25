@@ -189,7 +189,7 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 		}
 	}
 	if debug, has := command.renderer_debug.?; has {
-		if session.backend == nil || !session.backend.ready {
+		if session.render.backend == nil || !session.render.backend.ready {
 			if ensure_error := session_ensure_backend(session); ensure_error != "" {
 				return ensure_error
 			}

@@ -40,8 +40,8 @@ session_repro :: proc(session: ^Session, path: string, reply: ^Reply) -> string 
 		camera = &session.camera_override
 	}
 	debug: ^renderer.Renderer_Debug
-	if session.renderer_debug.active {
-		debug = &session.renderer_debug
+	if session.render.debug.active {
+		debug = &session.render.debug
 	}
 	absolute, write_error := frame.scene_write(
 		&session.sim,
