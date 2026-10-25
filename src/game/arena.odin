@@ -12,7 +12,7 @@ ARENA_FLOOR_THICKNESS :: 1.0
 // Floor and walls first, props next. Placed objects live in Simulation and
 // render after this fixed set.
 ARENA_BASE_BOX_COUNT :: 5
-ARENA_STATIC_BOX_COUNT :: ARENA_BASE_BOX_COUNT + ARENA_PROP_COUNT
+ARENA_STATIC_BOX_COUNT :: ARENA_BASE_BOX_COUNT + ARENA_PROP_COUNT + ARENA_ROOM_BOX_COUNT
 MAX_SCENE_BOXES :: ARENA_STATIC_BOX_COUNT + MAX_PLACED_OBJECTS
 
 FLOOR_COLOR :: [4]f32{0.42, 0.43, 0.46, 1.0}
@@ -69,7 +69,9 @@ arena_static_boxes :: proc() -> []geometry.Box {
 			rotation = geometry.IDENTITY_ROTATION,
 		}
 
-		build_arena_props(boxes[ARENA_BASE_BOX_COUNT:ARENA_STATIC_BOX_COUNT])
+		props_end := ARENA_BASE_BOX_COUNT + ARENA_PROP_COUNT
+		build_arena_props(boxes[ARENA_BASE_BOX_COUNT:props_end])
+		build_arena_room(boxes[props_end:ARENA_STATIC_BOX_COUNT])
 		initialized = true
 	}
 	return boxes[:]

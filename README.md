@@ -2,13 +2,13 @@
 
 A first-person movement demo. The player walks, sprints, crouches, crawls,
 jumps, dives, slides, and mantles in a fixed arena with stairs, ramps, tunnels,
-mantle walls, a dive platform, and pushable crates. SDL3 provides the window and
-input, raw Vulkan 1.3 with ray-query shadows draws the scene, and Box3D runs the
-physics. A directional sun casts hard contact shadows and softer distant
-shadows from the walls and crates. An analytic sky gradient fills the
-background. Ray-traced ambient occlusion uses the same scene acceleration
-structure to darken the ambient light in shade, corners, and tunnels. A sunlit
-surface keeps its full ambient.
+mantle walls, a dive platform, a closed room with one doorway, and pushable
+crates. SDL3 provides the window and input, raw Vulkan 1.3 with ray-query
+shadows draws the scene, and Box3D runs the physics. A directional sun casts
+hard contact shadows and softer distant shadows from the walls and crates. An
+analytic sky gradient fills the background. Ray-traced ambient occlusion uses
+the same scene acceleration structure to darken the ambient light in shade,
+corners, and tunnels. A sunlit surface keeps its full ambient.
 
 ## Requirements
 
@@ -784,6 +784,13 @@ check gates the shadow fan directly, without a before/after pair. It also
 captures a crate with the point-light shadows on and off to prove the point
 light still casts. The scenario declares `requires.renderer_debug`, so it needs
 no flag, and `make validate-offscreen` runs it.
+
+`scenarios/room-lighting.json` enters the closed room in the arena's +x/+z
+corner. It captures the outside, the one doorway, the sealed corner, and the
+ceiling. Two depth captures prove the sealed views contain no sky pixel. It compares the
+sun through the doorway with the sun on the far side, then places a warm lamp
+and compares the same view with the lamp on and off. The room is static arena
+geometry: walk in through the west doorway to see it.
 
 `scenarios/window-settings.json` opens the menu, moves to Display 2, switches to
 Windowed, changes the resolution, captures the result, and checks the window
