@@ -7,10 +7,12 @@
     {"cmd": "camera", "position": [0, 2.2, 12], "yaw_deg": 0, "pitch_deg": -8.5944},
     {"cmd": "settle", "frames": 8},
     {"cmd": "check", "field": "renderer.light_count", "op": "eq", "value": 32},
+    {"cmd": "check", "field": "renderer.cluster_overflow", "op": "eq", "value": 0},
     {"cmd": "capture", "name": "thirty-two-lights", "format": "stats"},
     {"cmd": "renderer_debug", "synthetic_lights": 64},
     {"cmd": "settle", "frames": 8},
     {"cmd": "check", "field": "renderer.light_count", "op": "eq", "value": 64},
+    {"cmd": "check", "field": "renderer.cluster_overflow", "op": "eq", "value": 0},
     {"cmd": "capture", "name": "sixty-four-lights", "format": "stats"}
   ],
   "checks": [

@@ -1244,9 +1244,9 @@ What the numbers mean:
 
 - The frame interval is wall clock. A capture outside a perf run has no interval.
 - The GPU pass times come from Vulkan timestamps. They belong to the last
-  completed frame, two frames behind the recording frame. The depth prepass, the
-  lit scene, and the sky are separate passes; the lit pass does not include the
-  depth prepass. Both sky timestamps are written even when the sky is off, so
+  completed frame, two frames behind the recording frame. The cluster
+  assignment, the depth prepass, the lit scene, and the sky are separate passes;
+  the lit pass does not include the depth prepass or the cluster assignment. Both sky timestamps are written even when the sky is off, so
   that pass reads near zero and the set is always complete.
 - A device without timestamp support, a failed query pool, or a run without a
   device reports the CPU numbers and leaves the GPU fields empty.
