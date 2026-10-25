@@ -8,6 +8,9 @@
     "sky",
     "stairs-ao",
     "ramp-shadow",
-    "shadow-angle"
+    "shadow-angle",
+    "ddgi-leak",
+    "ddgi-door",
+    "ddgi-move"
   ]
 }

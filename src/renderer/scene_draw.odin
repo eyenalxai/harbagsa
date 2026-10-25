@@ -42,6 +42,7 @@ record_scene :: proc(
 	if !ensure_probe_resources(r, input.probe_volumes) {
 		return false
 	}
+	write_probe_positions(r, input.boxes)
 	light_hash := probe_light_hash(input.lights)
 	sun_hash := probe_sun_hash(input.light_direction, input.sun_angular_diameter)
 	if !r.probe.has_hash || light_hash != r.probe.light_hash || sun_hash != r.probe.sun_hash {
