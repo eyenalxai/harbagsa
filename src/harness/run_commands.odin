@@ -6,14 +6,9 @@ import "core:path/filepath"
 import "core:strings"
 
 @(private)
-execute_commands :: proc(session: ^Session, scenario: Scenario, render_enabled: bool) -> string {
+execute_commands :: proc(session: ^Session, scenario: Scenario) -> string {
 	for command in scenario.commands {
 		log.infof("harness: %s at frame %d", command_name(command.kind), session.frame)
-		backend_ready := session.backend != nil && session.backend.ready
-		if command.kind == .Capture && (!render_enabled || !backend_ready) {
-			log.warn("harness: capture skipped because rendering is disabled")
-			continue
-		}
 		reply := session_execute(session, command, "")
 		ok := reply.ok
 		error := ""
@@ -29,25 +24,6 @@ execute_commands :: proc(session: ^Session, scenario: Scenario, render_enabled: 
 		}
 	}
 	return ""
-}
-
-scenario_has_capture :: proc(scenario: Scenario) -> bool {
-	for command in scenario.commands {
-		if command.kind == .Capture {
-			return true
-		}
-	}
-	return false
-}
-
-@(private)
-scenario_has_perf :: proc(scenario: Scenario) -> bool {
-	for command in scenario.commands {
-		if command.kind == .Perf {
-			return true
-		}
-	}
-	return false
 }
 
 @(private)

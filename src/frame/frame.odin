@@ -23,17 +23,6 @@ Scratch :: struct {
 	debug_lines: game.Debug_Lines,
 }
 
-Scene :: struct {
-	camera:               renderer.Camera,
-	sun_direction:        [3]f32,
-	sun_angular_diameter: f32,
-	boxes:                []geometry.Box,
-	lights:               []renderer.Light,
-	debug_lines:          []geometry.Line,
-	hud:                  renderer.HUD_Frame,
-	view_flags:           renderer.View_Flags,
-}
-
 build :: proc(
 	sim: ^game.Simulation,
 	debug: ^game.Debug_Mode,
@@ -41,10 +30,10 @@ build :: proc(
 	camera_override: ^renderer.Camera,
 	hud: ^game.HUD_State,
 	scratch: ^Scratch,
-) -> Scene {
-	scene: Scene
+) -> renderer.Render_Input {
+	scene: renderer.Render_Input
 	scene.hud.weight = sim.settings.type_weight
-	scene.sun_direction = game.debug_mode_sun_direction(debug)
+	scene.light_direction = game.debug_mode_sun_direction(debug)
 	scene.sun_angular_diameter = debug.sun_angular_diameter
 
 	snapshot := game.simulation_snapshot(sim)
@@ -142,27 +131,14 @@ build :: proc(
 
 draw :: proc(
 	state: ^renderer.Renderer,
-	scene: Scene,
+	scene: renderer.Render_Input,
 	capture := renderer.Frame_Capture{},
 ) -> renderer.Frame_Status {
-	frame, begin_status := renderer.begin_frame(state, frame_view(scene), capture)
+	frame, begin_status := renderer.begin_frame(state, scene, capture)
 	if begin_status != .Ok {
 		return begin_status
 	}
 	return renderer.end_frame(state, frame)
-}
-
-frame_view :: proc(scene: Scene) -> renderer.Frame_View {
-	return {
-		camera               = scene.camera,
-		light_direction      = scene.sun_direction,
-		sun_angular_diameter = scene.sun_angular_diameter,
-		boxes                = scene.boxes,
-		lights               = scene.lights,
-		debug_lines          = scene.debug_lines,
-		hud                  = scene.hud,
-		view_flags           = scene.view_flags,
-	}
 }
 
 @(private)

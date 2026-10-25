@@ -32,7 +32,7 @@ order for the full review.
 
 - A literal colour outside `src/renderer/ui_theme.odin`.
 - A bare pixel size in `src/renderer/hud.odin`, `src/renderer/hud_menu.odin`,
-  or `src/renderer/hud_rows.odin`.
+  `src/renderer/hud_rows.odin`, or `src/ui/layout.odin`.
 - `accent` on anything but the selection bar.
 - `text_tertiary` as the label or value of a selectable row.
 - Any fade, slide, or scale on the overlay.
@@ -53,10 +53,11 @@ The order is the triage order. A broken interaction outranks a weak colour.
    renderer can produce, not over a dim test scene. The floors are in
    [colour.md](../ui/colour.md).
 4. **Fixed fields.** Every number that changes during play is in a fixed-width
-   field and drawn in mono. The panel width must not move.
+   field and drawn in mono. The panel width must not move on a selection or a
+   value change; a type-weight change may resize it once.
 5. **Token only.** No literal colour and no bare pixel size in
    `src/renderer/hud.odin`, `src/renderer/hud_menu.odin`,
-   `src/renderer/hud_rows.odin`, or `src/renderer/hud_slider.odin`. The one
+   `src/renderer/hud_rows.odin`, or `src/ui/layout.odin`. The one
    exception is the documented 2 px accent-bar floor. Every other value belongs in
    `src/renderer/ui_theme.odin`.
 6. **One of the documented components.** A new panel is a status panel, a capture

@@ -28,8 +28,8 @@ window, so the editor had to be testable without a cursor.
   next placement and the choice sticks until the prefab changes. `M` also
   converts a selected placed object. Static objects use a static body; dynamic
   objects use the prefab density.
-- **The palette is a bottom dock.** A 6x2 grid of 72 px cards and a preview pane
-  sit in a 678 x 226 panel at density 1. The panel fits 800x600 and keeps the
+- **The palette is a bottom dock.** A 6x2 grid of `PALETTE_CARD_SIZE` cards and a preview pane
+  sit in a `PALETTE_PANEL_WIDTH` x `PALETTE_PANEL_HEIGHT` panel at density 1. The panel fits 800x600 and keeps the
   crosshair clear. The grid has one empty cell.
 - **The preview is isometric HUD geometry.** The renderer projects the oriented
   box corners and draws three shaded faces. A live 3D preview would need a

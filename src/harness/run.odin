@@ -10,6 +10,36 @@ EXIT_CHECK :: 1
 EXIT_SCENARIO :: 2
 EXIT_RENDER :: 3
 
+Run_Backend :: struct {
+	width:     u32,
+	height:    u32,
+	present:   bool,
+	frames_dir: string,
+	backend:   ^Backend,
+	session:   ^Session,
+}
+
+run_backend_ensure :: proc(ctx: rawptr) -> string {
+	run := cast(^Run_Backend)ctx
+	if run.backend.ready {
+		return ""
+	}
+	created, create_error := backend_create(
+		run.width,
+		run.height,
+		run.present,
+		run.frames_dir,
+		context.allocator,
+	)
+	if create_error != "" {
+		log.errorf("harness: %s", create_error)
+		return create_error
+	}
+	run.backend^ = created
+	session_set_backend(run.session, run.backend, run.present)
+	return ""
+}
+
 run_batch :: proc(options: Run_Options) -> int {
 	scenario, load_error := scenario_load(options.scenario, context.allocator)
 	if load_error != "" {
@@ -94,33 +124,28 @@ run_batch :: proc(options: Run_Options) -> int {
 	}
 	defer session_destroy(&session)
 
-	has_capture := scenario_has_capture(scenario)
 	render_enabled := !options.no_render
-	needs_backend := render_enabled && (options.present || has_capture || scenario_has_perf(scenario))
+	session.render_enabled = render_enabled
 	backend: Backend
+	run_backend := Run_Backend {
+		width = common.width,
+		height = common.height,
+		present = options.present,
+		frames_dir = frames_dir,
+		backend = &backend,
+		session = &session,
+	}
+	session.backend_provider = {ctx = &run_backend, ensure = run_backend_ensure}
 	backend_error := ""
-	if needs_backend {
-		created, create_error := backend_create(
-			common.width,
-			common.height,
-			options.present,
-			frames_dir,
-			context.allocator,
-		)
-		if create_error != "" {
-			backend_error = create_error
-			log.errorf("harness: %s", create_error)
-		} else {
-			backend = created
-			session_set_backend(&session, &backend, options.present)
-		}
+	if options.present && render_enabled {
+		backend_error = run_backend_ensure(&run_backend)
 	}
 	defer if backend.ready {
 		backend_destroy(&backend)
 	}
 
 	log.infof("harness: %d commands", len(scenario.commands))
-	failure := execute_commands(&session, scenario, render_enabled)
+	failure := execute_commands(&session, scenario)
 	if failure != "" {
 		session_failure(&session, failure)
 	}

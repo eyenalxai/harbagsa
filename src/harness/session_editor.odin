@@ -7,9 +7,7 @@ import "src:game"
 
 session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 	if !session.debug.active {
-		return format_error(
-			"editor needs debug mode; send {\"cmd\": \"debug_mode\", \"active\": true} first",
-		)
+		return format_error("%s", "editor needs debug mode; send {\"cmd\": \"debug_mode\", \"active\": true} first")
 	}
 
 	if command.has_camera {
@@ -19,140 +17,249 @@ session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 			pitch    = command.camera.pitch,
 		}
 	}
+
 	if command.has_open {
+		action: game.Edit_Action = game.Palette_Close{}
 		if command.open {
-			game.debug_palette_open(&session.debug)
-		} else {
-			game.debug_palette_close(&session.debug)
+			action = game.Palette_Open{}
+		}
+		if failure := apply_editor_action(session, action); failure != "" {
+			return failure
 		}
 	}
 	if command.has_select {
-		if !game.debug_palette_select(&session.debug, command.select) {
-			return format_error("select index %d is out of range", command.select)
+		if failure := apply_editor_action(
+			session,
+			game.Palette_Select{index = command.select},
+		); failure != "" {
+			return failure
+		}
+	}
+	if command.input.has_palette_step {
+		if failure := apply_editor_action(
+			session,
+			game.Palette_Step{delta = command.input.palette_step},
+		); failure != "" {
+			return failure
+		}
+	}
+	if command.input.has_palette_number {
+		if failure := apply_editor_action(
+			session,
+			game.Palette_Select{index = command.input.palette_number - 1},
+		); failure != "" {
+			return failure
 		}
 	}
 	if command.object.has_select_object {
-		id := game.Object_Id(command.object.select_object)
-		if !game.debug_select_object(&session.debug, &session.sim, id) {
-			return format_error("object id %d does not exist", command.object.select_object)
+		if failure := apply_editor_action(
+			session,
+			game.Select_Object{id = game.Object_Id(command.object.select_object)},
+		); failure != "" {
+			return failure
 		}
 	}
 	if command.has_body {
-		if session.debug.palette.open {
-			game.debug_palette_set_body(&session.debug, command.body)
-		} else if _, selected := game.debug_selected_object_id(&session.debug, &session.sim); selected {
-			if !game.debug_convert_selected(&session.debug, &session.sim, command.body) {
-				return format_error("body conversion failed")
-			}
-		} else {
-			game.debug_palette_set_body(&session.debug, command.body)
+		if failure := apply_editor_action(session, game.Set_Body{mode = command.body}); failure != "" {
+			return failure
+		}
+	}
+	if command.input.flip_body {
+		if failure := apply_editor_action(session, game.Flip_Body{}); failure != "" {
+			return failure
 		}
 	}
 	if command.has_height {
-		game.debug_placement_set_height(&session.debug, command.height)
+		if failure := apply_editor_action(
+			session,
+			game.Placement_Set_Height{height = command.height},
+		); failure != "" {
+			return failure
+		}
 	}
 	if command.has_yaw {
-		game.debug_placement_set_yaw(&session.debug, command.yaw)
+		if failure := apply_editor_action(session, game.Placement_Set_Yaw{yaw = command.yaw}); failure != "" {
+			return failure
+		}
 	}
 	if command.has_snap {
-		game.debug_placement_set_snap(&session.debug, command.snap)
+		if failure := apply_editor_action(session, game.Placement_Set_Snap{snap = command.snap}); failure != "" {
+			return failure
+		}
+	}
+	if command.input.snap_toggle {
+		if failure := apply_editor_action(session, game.Placement_Toggle_Snap{}); failure != "" {
+			return failure
+		}
 	}
 	if command.light.has_color {
-		if !game.debug_light_set_color(&session.debug, &session.sim, command.light.color) {
-			return format_error("light_color needs a lamp placement or a selected lamp")
+		if failure := apply_editor_action(
+			session,
+			game.Light_Set_Color{color = command.light.color},
+		); failure != "" {
+			return failure
 		}
 	}
 	if command.light.has_intensity {
-		if !game.debug_light_set_intensity(
-			&session.debug,
-			&session.sim,
-			command.light.intensity,
-		) {
-			return format_error("light_intensity needs a lamp placement or a selected lamp")
+		if failure := apply_editor_action(
+			session,
+			game.Light_Set_Intensity{intensity = command.light.intensity},
+		); failure != "" {
+			return failure
 		}
 	}
 	if command.light.has_range {
-		if !game.debug_light_set_range(&session.debug, &session.sim, command.light.range) {
-			return format_error("light_range needs a lamp placement or a selected lamp")
+		if failure := apply_editor_action(
+			session,
+			game.Light_Set_Range{range = command.light.range},
+		); failure != "" {
+			return failure
 		}
 	}
 	if command.pick {
-		_ = game.debug_palette_pick(&session.debug, &session.sim)
+		if failure := apply_editor_action(session, game.Palette_Pick{}); failure != "" {
+			return failure
+		}
 	}
 	if command.cancel {
-		game.debug_placement_cancel(&session.debug)
+		_ = apply_editor_action(session, game.Cancel{})
 	}
 	if command.has_place {
-		_ = game.debug_place_object(
-			&session.debug,
-			&session.sim,
-			{
+		if failure := apply_editor_action(
+			session,
+			game.Place_Object {
 				prefab = command.place.prefab,
 				body_mode = command.place.body,
 				center = command.place.position,
 				yaw = command.place.yaw * math.PI / 180.0,
-				light = placement_light(&session.debug, command.place.prefab),
 			},
-		)
+		); failure != "" {
+			return failure
+		}
 	}
 	if command.object.has_move {
-		if !game.debug_move_selected(&session.debug, &session.sim, command.object.move) {
-			return format_error("move needs a selected object")
+		if failure := apply_editor_action(
+			session,
+			game.Move_Selected{center = command.object.move},
+		); failure != "" {
+			return failure
 		}
 	}
 	if command.object.has_rotate {
-		if !game.debug_rotate_selected(&session.debug, &session.sim, command.object.rotate) {
-			return format_error("rotate needs a selected object")
+		if failure := apply_editor_action(
+			session,
+			game.Rotate_Selected{degrees = command.object.rotate},
+		); failure != "" {
+			return failure
+		}
+	}
+	if command.input.has_turn {
+		if failure := apply_editor_action(
+			session,
+			game.Turn{steps = command.input.turn, large = command.input.large},
+		); failure != "" {
+			return failure
+		}
+	}
+	if command.input.has_wheel {
+		if failure := apply_editor_action(
+			session,
+			game.Wheel{steps = command.input.wheel, large = command.input.large},
+		); failure != "" {
+			return failure
+		}
+	}
+	if command.input.primary {
+		if failure := apply_editor_action(session, game.Primary_Press{}); failure != "" {
+			return failure
+		}
+	}
+	if command.input.secondary {
+		if failure := apply_editor_action(session, game.Secondary_Press{}); failure != "" {
+			return failure
+		}
+	}
+	if command.input.has_drag_move {
+		if failure := apply_editor_action(
+			session,
+			game.Drag_Move{look_delta = command.input.drag_move},
+		); failure != "" {
+			return failure
+		}
+	}
+	if command.input.drag_release {
+		if failure := apply_editor_action(session, game.Primary_Release{}); failure != "" {
+			return failure
 		}
 	}
 	if command.object.delete {
-		if !game.debug_delete_selected(&session.debug, &session.sim) {
-			return format_error("delete needs a selected object")
+		if failure := apply_editor_action(session, game.Delete_Selected{}); failure != "" {
+			return failure
 		}
 	}
 	if command.object.duplicate {
-		if _, selected := game.debug_selected_object_id(&session.debug, &session.sim); !selected {
-			return format_error("duplicate needs a selected object")
+		if failure := apply_editor_action(session, game.Duplicate_Selected{}); failure != "" {
+			return failure
 		}
-		_ = game.debug_duplicate_selected(&session.debug, &session.sim)
 	}
 	if command.object.undo {
-		_ = game.debug_undo(&session.debug, &session.sim)
+		if failure := apply_editor_action(session, game.Undo{}); failure != "" {
+			return failure
+		}
 	}
 	if command.object.redo {
-		_ = game.debug_redo(&session.debug, &session.sim)
+		if failure := apply_editor_action(session, game.Redo{}); failure != "" {
+			return failure
+		}
 	}
 	if command.has_sun {
-		if command.sun.has_active {
-			if command.sun.active {
-				game.debug_sun_enter(&session.debug, &session.sim)
-			} else {
-				game.debug_sun_exit(&session.debug)
-			}
-		}
-		if command.sun.has_position {
-			game.debug_sun_set_position(&session.debug, command.sun.position)
-		}
-		if command.sun.place {
-			game.debug_sun_exit(&session.debug)
-		}
-		if command.sun.cancel {
-			game.debug_sun_cancel(&session.debug)
+		if failure := apply_editor_sun(session, command.sun); failure != "" {
+			return failure
 		}
 	}
 	return ""
 }
 
-// A direct place carries the tuned next-placement light only when it places the
-// prefab the palette currently holds; another lamp prefab starts from its own
-// defaults.
 @(private)
-placement_light :: proc(debug: ^game.Debug_Mode, prefab_id: game.Prefab_Id) -> game.Light_Settings {
-	if !game.prefab_has_light(prefab_id) {
-		return {}
+apply_editor_sun :: proc(session: ^Session, sun: Editor_Sun) -> string {
+	if sun.has_active {
+		action: game.Edit_Action = game.Sun_Exit{}
+		if sun.active {
+			action = game.Sun_Enter{}
+		}
+		if failure := apply_editor_action(session, action); failure != "" {
+			return failure
+		}
 	}
-	if prefab_id == game.palette_selected(debug.palette) {
-		return debug.palette.light
+	if sun.has_position {
+		if failure := apply_editor_action(
+			session,
+			game.Sun_Set_Position{position = sun.position},
+		); failure != "" {
+			return failure
+		}
 	}
-	return game.prefab_light(prefab_id)
+	if sun.place {
+		if failure := apply_editor_action(session, game.Sun_Exit{}); failure != "" {
+			return failure
+		}
+	}
+	if sun.cancel {
+		_ = apply_editor_action(session, game.Sun_Cancel{})
+	}
+	return ""
+}
+
+@(private)
+apply_editor_action :: proc(session: ^Session, action: game.Edit_Action) -> string {
+	result := game.edit_apply(
+		&session.debug,
+		&session.sim,
+		action,
+		{menu_open = session.hud.menu.open, captured = true},
+	)
+	if result.applied || result.reason == .No_Change {
+		return ""
+	}
+	return format_error("%s", game.edit_reason_message(result.reason))
 }

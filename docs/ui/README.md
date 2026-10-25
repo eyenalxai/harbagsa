@@ -6,10 +6,14 @@ one accent that means "this row". Nothing moves.
 
 The type has to carry the whole personality, because nothing else does.
 
-Fourteen files in `src/renderer` draw the overlay. `src/renderer/ui_theme.odin`
-holds the tokens. `src/ui/ui.odin` holds the data the game hands over.
-`src/renderer/hud_rows.odin` lays rows out, `src/renderer/hud_slider.odin` draws
-the slider row, `src/renderer/hud_menu.odin` builds the settings panel and its
+`src/ui/ui.odin` holds the data the game hands over, and `src/ui/layout.odin`,
+`src/ui/menu_layout.odin`, and `src/ui/palette_layout.odin` own the pure layout:
+rows, the slider rect, the hint grid, the settings panel, and the palette grid.
+They take a target extent and a `ui.Text_Metrics` adapter, so they run without a
+renderer or an atlas. `src/renderer/ui_theme.odin` holds the tokens.
+`src/renderer/ui_layout.odin` adapts the theme and atlas to `ui.Text_Metrics`.
+`src/renderer/hud_rows.odin` emits rows, `src/renderer/hud_slider.odin` draws the
+slider row, `src/renderer/hud_menu.odin` builds the settings panel and its
 legend, and `src/renderer/hud.odin` draws the status panel, capture hint, and
 crosshair. `src/renderer/overlay.odin`,
 `src/renderer/overlay_draw.odin`, and `src/renderer/overlay_pipeline.odin` own
@@ -24,21 +28,22 @@ coverage atlas. Change a value in the theme, not in a component.
 | Layer | Owns | Must not |
 | --- | --- | --- |
 | `src/game` | which rows exist, their labels and values | know about colours, sizes, or pixels |
-| `src/ui` | the row vocabulary | import anything |
+| `src/ui` | the row vocabulary and the pure layout | import a project package |
 | `src/frame` | passing the view through | add layout |
-| `src/renderer` | tokens, layout, drawing | invent content |
+| `src/renderer` | tokens, the atlas adapter, drawing | invent content |
 
 A component reads `theme.*`. A literal `[4]f32` colour or a bare pixel size in
 `src/renderer/hud.odin`, `src/renderer/hud_menu.odin`,
-`src/renderer/hud_rows.odin`, or `src/renderer/hud_slider.odin` is a bug.
+`src/renderer/hud_rows.odin`, or `src/ui/layout.odin` is a bug.
 
 ## Density
 
 Everything scales from one number: `density = clamp(height / 720, 1, 2)`, where
 `height` is the render target in pixels. A 720p window gets density 1, a 1080p
 window 1.5, a 1440p window 2. Below 720p it stays at 1 so the smallest supported
-window still shows every row. The theme has no density field; `ui_theme_init`
-folds the factor into each token, including `menu_min_width`.
+window still shows every row. `ui_theme_init` stores the factor in the theme and
+folds it into every token, including `menu_min_width` and the palette constants
+used by `ui.palette_layout`.
 
 Text rasterizes at the scaled pixel size, so the coverage atlas repacks when a
 rounded type size or the weight changes. The first build is synchronous at
@@ -59,11 +64,12 @@ startup; later changes use the worker. See [type.md](type.md).
 ## The object palette
 
 The debug object palette is a bottom dock, not a menu: the scene, the status
-panel, and the crosshair stay visible. It is a 6x2 grid of 72 px cards with a
-preview pane on the right and a footer of key hints. At density 1 the panel is
-678 x 226, centred, with `spacing.xl` below it. At 800x600 it sits from y 358 to
-584, below the crosshair box that ends at y 315. On a shorter target the top
-clamps to `spacing.md`; the palette never clips at a supported size.
+panel, and the crosshair stay visible. `ui.palette_layout` owns the geometry: a
+6x2 grid of `PALETTE_CARD_SIZE` cards in a `PALETTE_PANEL_WIDTH` x
+`PALETTE_PANEL_HEIGHT` panel, centred with `spacing.xl` below it, plus a preview
+pane and a footer of key hints. The draw, the hit test, and the tests read that
+one layout; no file repeats the numbers. On a shorter target the top clamps to
+`spacing.md`; the palette never clips at a supported size.
 
 Twelve cells are laid out. The catalog fills the first cells; the rest draw only
 a hairline frame, return no hit, and read as empty. A filled cell is a card: an
@@ -102,19 +108,20 @@ across every prefab and the empty selection.
 1. Decide the rows. Each row is a `ui.Row` with a `kind`: `Setting`, `Action`,
    `Metric`, `Detail`, `Slider`, `Header`, or `Divider`.
 2. Fill the rows in `src/game`. Format every number into a fixed field.
-3. Draw the panel with `rows_measure` and `rows_emit`. Do not measure text by
-   hand and do not position rows with per-row offsets.
+3. Measure with `ui.rows_layout` (or `ui.menu_layout`) and draw with
+   `rows_emit`. Do not measure text by hand and do not position rows with
+   per-row offsets.
 4. If the surface needs a value the theme does not have, add a token to
    `src/renderer/ui_theme.odin`. Do not inline it.
 
 If the surface needs a kind that does not exist, add it to `ui.Row_Kind` and to
-`row_label_style`, `row_value_style`, `row_gap`, `row_height`, and
-`rows_emit_row` in the same change. Add it to the `rows_measure` switch too when
-it has no label or value to measure. A kind that only part of that set knows
-about draws at the wrong height or draws nothing. A kind that draws a control
-also adds its emitter and publishes its travel rect for the pointer. The
-`Slider` does that in `src/renderer/hud_slider.odin`; `menu_slider_rect` exposes
-the same rect before the first draw.
+`row_label_role`, `row_value_role`, `row_gap`, and `row_height` in
+`src/ui/layout.odin`, and `rows_emit_row` in `src/renderer/hud_rows.odin` in the
+same change. Add it to the `rows_layout` switch too when it has no label or
+value to measure. A kind that only part of that set knows about draws at the
+wrong height or draws nothing. A kind that draws a control also adds its emitter
+and returns its travel rect in the layout. The `Slider` does that in
+`src/ui/layout.odin`; input and draw both read that one rect.
 
 ## Rules that are easy to break
 

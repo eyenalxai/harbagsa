@@ -3,75 +3,71 @@ package renderer
 
 import "core:log"
 
+import "src:perf"
 import vk "vendor:vulkan"
 
 record_scene :: proc(
 	r: ^Renderer,
 	command_buffer: vk.CommandBuffer,
 	image_index: u32,
-	view: Frame_View,
+	input: Render_Input,
 	capture: Frame_Capture,
 ) -> bool {
+	input := input
 	r.frame_count += 1
 	if int(image_index) >= len(r.target.views) {
 		log.errorf("renderer: target image index %d is out of range", image_index)
 		return false
 	}
-	box_count := len(view.boxes)
+	box_count := len(input.boxes)
 	if box_count > MAX_SCENE_BOXES {
 		log.errorf("renderer: scene has %d boxes, the limit is %d", box_count, MAX_SCENE_BOXES)
 		return false
 	}
 
-	if !prepare_overlay(r, view.debug_lines, view.hud) {
+	if !prepare_overlay(r, input.debug_lines, input.hud) {
 		log.error("renderer: overlay vertex upload failed")
 		return false
 	}
 	if r.taa.has_prev_models && box_count != r.taa.prev_model_count {
 		reset_history(r, .Scene_Change)
 	}
-	lights := frame_lights(r, view.lights)
+	lights := frame_lights(r, input.lights)
 	if !write_light_data(r, lights) {
 		return false
 	}
-	lights = lights[:r.light_count]
+	input.lights = lights[:r.light_count]
 	if r.taa.has_prev_sun &&
-	   (r.taa.prev_light_direction != view.light_direction ||
-		   r.taa.prev_sun_angular_diameter != view.sun_angular_diameter) {
+	   (r.taa.prev_light_direction != input.light_direction ||
+		   r.taa.prev_sun_angular_diameter != input.sun_angular_diameter) {
 		reset_history(r, .Scene_Change)
 	}
-	r.taa.prev_light_direction = view.light_direction
-	r.taa.prev_sun_angular_diameter = view.sun_angular_diameter
+	r.taa.prev_light_direction = input.light_direction
+	r.taa.prev_sun_angular_diameter = input.sun_angular_diameter
 	r.taa.has_prev_sun = true
-	if !update_camera(
-		r,
-		view.camera,
-		view.light_direction,
-		r.light_count,
-		view.sun_angular_diameter,
-	) {
+
+	// The recorder owns the renderer-internal inputs, so one value goes to the
+	// uniform, the digest, and the pass list.
+	extent := target_extent_vk(r)
+	// The camera reset runs before the jitter advances, because a reset puts the
+	// jitter index back to zero.
+	taa_note_camera(r, input.camera)
+	input.width = extent.width
+	input.height = extent.height
+	input.jitter = taa_frame_jitter(r, extent)
+	input.shadow_phase = taa_shadow_phase(r)
+	r.taa.current_jitter = input.jitter
+	r.taa.shadow_phase = input.shadow_phase
+	input.atlas_weight = text_atlas_applied_weight(r)
+	debug := renderer_debug(r)
+	input.sky = debug.sky
+	input.ao = debug.ao
+	r.render_digest = render_digest(input)
+	r.has_render_digest = true
+	if !update_camera(r, input) {
 		return false
 	}
-	debug := renderer_debug(r)
-	r.render_digest = render_digest(
-		Render_Digest_Input {
-			width = r.target.config.width,
-			height = r.target.config.height,
-			camera = view.camera,
-			light_direction = view.light_direction,
-			sun_angular_diameter = view.sun_angular_diameter,
-			boxes = view.boxes,
-			lights = lights,
-			jitter = r.taa.current_jitter,
-			shadow_phase = r.taa.shadow_phase,
-			atlas_weight = text_atlas_applied_weight(r),
-			sky = debug.sky,
-			ao = debug.ao,
-			view_flags = view.view_flags,
-		},
-	)
-	r.has_render_digest = true
-	if !write_object_data(r, view.boxes) {
+	if !write_object_data(r, input.boxes) {
 		return false
 	}
 
@@ -84,25 +80,18 @@ record_scene :: proc(
 	}
 
 	reset_timing(r, command_buffer)
-	write_timing(r, command_buffer, .Start)
-	record_acceleration(r, command_buffer, view.boxes)
-	write_timing(r, command_buffer, .After_Tlas)
-	record_scene_depth(r, command_buffer, box_count)
-	write_timing(r, command_buffer, .After_Depth)
-	record_scene_lit(r, command_buffer, box_count)
-	write_timing(r, command_buffer, .After_Lit)
-	record_sky_pass(r, command_buffer)
-	write_timing(r, command_buffer, .After_Sky)
-	record_scene_read_barriers(r, command_buffer)
-	record_taa_resolve(r, command_buffer, image_index)
-	write_timing(r, command_buffer, .After_Taa)
-	record_overlay_pass(r, command_buffer, image_index)
-	write_timing(r, command_buffer, .After_Overlay)
+	write_timing_start(r, command_buffer)
+	for kind in perf.PASS_ORDER {
+		pass: Pass
+		build_pass(r, &pass, kind, image_index, input.boxes)
+		record_pass(r, command_buffer, &pass)
+		write_timing(r, command_buffer, kind)
+	}
 	if capture.enabled && !record_capture_copy(r, command_buffer, image_index, capture.target) {
 		return false
 	}
 	if r.target.kind == .Swapchain {
-		record_present_barrier(r, command_buffer, image_index, capture.enabled)
+		record_present_pass(r, command_buffer, image_index)
 	}
 
 	if !check(vk.EndCommandBuffer(command_buffer), "vkEndCommandBuffer") {
@@ -116,161 +105,13 @@ record_scene :: proc(
 	return true
 }
 
-record_scene_depth :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_count: int) {
-	depth := r.taa.depth[r.frame_index]
-	record_depth_write_barrier(command_buffer, depth.image)
-	record_depth_prepass(r, command_buffer, box_count)
-}
-
-record_scene_lit :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_count: int) {
-	color := r.taa.scene_color[r.frame_index]
-	velocity := r.taa.velocity[r.frame_index]
-	depth := r.taa.depth[r.frame_index]
-
-	image_barrier(
-		command_buffer,
-		color.image,
-		COLOR_SUBRESOURCE,
-		.UNDEFINED,
-		.COLOR_ATTACHMENT_OPTIMAL,
-		{.TOP_OF_PIPE},
-		{.COLOR_ATTACHMENT_OUTPUT},
-		{},
-		{.COLOR_ATTACHMENT_WRITE},
-	)
-	image_barrier(
-		command_buffer,
-		velocity.image,
-		COLOR_SUBRESOURCE,
-		.UNDEFINED,
-		.COLOR_ATTACHMENT_OPTIMAL,
-		{.TOP_OF_PIPE},
-		{.COLOR_ATTACHMENT_OUTPUT},
-		{},
-		{.COLOR_ATTACHMENT_WRITE},
-	)
-
-	record_depth_read_barrier(command_buffer, depth.image)
-	record_color_pass(r, command_buffer, box_count)
-}
-
-record_scene_read_barriers :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer) {
-	color := r.taa.scene_color[r.frame_index]
-	velocity := r.taa.velocity[r.frame_index]
-
-	image_barrier(
-		command_buffer,
-		color.image,
-		COLOR_SUBRESOURCE,
-		.COLOR_ATTACHMENT_OPTIMAL,
-		.SHADER_READ_ONLY_OPTIMAL,
-		{.COLOR_ATTACHMENT_OUTPUT},
-		{.FRAGMENT_SHADER},
-		{.COLOR_ATTACHMENT_WRITE},
-		{.SHADER_READ},
-	)
-	image_barrier(
-		command_buffer,
-		velocity.image,
-		COLOR_SUBRESOURCE,
-		.COLOR_ATTACHMENT_OPTIMAL,
-		.SHADER_READ_ONLY_OPTIMAL,
-		{.COLOR_ATTACHMENT_OUTPUT},
-		{.FRAGMENT_SHADER},
-		{.COLOR_ATTACHMENT_WRITE},
-		{.SHADER_READ},
-	)
-}
-
-// Writing depth first means the lighting pass traces the sun rays for the
-// nearest surface at each pixel, even when several boxes overlap on screen.
-@(private)
-record_depth_prepass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_count: int) {
-	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
-	depth := r.taa.depth[r.frame_index]
-	depth_attachment := make_depth_attachment(depth.view, .DEPTH_ATTACHMENT_OPTIMAL)
-	rendering_info := vk.RenderingInfo {
-		sType = .RENDERING_INFO,
-		renderArea = {extent = extent},
-		layerCount = 1,
-		pDepthAttachment = &depth_attachment,
-	}
-	record_box_scope(
-		r,
-		command_buffer,
-		&rendering_info,
-		r.scene.depth_pipeline,
-		r.scene.depth_layout,
-		{.VERTEX},
-		box_count,
-	)
-}
-
-@(private)
-record_color_pass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, box_count: int) {
-	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
-	frame := r.frame_index
-	color := r.taa.scene_color[frame]
-	velocity := r.taa.velocity[frame]
-	depth := r.taa.depth[frame]
-
-	color_clear := vk.ClearValue{}
-	color_clear.color.float32 = r.clear_color
-	velocity_clear := vk.ClearValue{}
-	velocity_clear.color.float32 = {0, 0, CAMERA_FAR, 0}
-	attachments := [2]vk.RenderingAttachmentInfo {
-		{
-			sType = .RENDERING_ATTACHMENT_INFO,
-			imageView = color.view,
-			imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
-			loadOp = .CLEAR,
-			storeOp = .STORE,
-			clearValue = color_clear,
-		},
-		{
-			sType = .RENDERING_ATTACHMENT_INFO,
-			imageView = velocity.view,
-			imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
-			loadOp = .CLEAR,
-			storeOp = .STORE,
-			clearValue = velocity_clear,
-		},
-	}
-	depth_attachment := make_depth_attachment(depth.view, .DEPTH_ATTACHMENT_OPTIMAL, .LOAD)
-	rendering_info := vk.RenderingInfo {
-		sType = .RENDERING_INFO,
-		renderArea = {extent = extent},
-		layerCount = 1,
-		colorAttachmentCount = u32(len(attachments)),
-		pColorAttachments = &attachments[0],
-		pDepthAttachment = &depth_attachment,
-	}
-	record_box_scope(
-		r,
-		command_buffer,
-		&rendering_info,
-		r.scene.pipeline,
-		r.scene.pipeline_layout,
-		{.VERTEX, .FRAGMENT},
-		box_count,
-	)
-}
-
-@(private)
-record_box_scope :: proc(
+// The present transition is its own pass concern. The capture pass puts the
+// target back in the colour-attachment layout, so this barrier has no capture
+// branch.
+record_present_pass :: proc(
 	r: ^Renderer,
 	command_buffer: vk.CommandBuffer,
-	rendering_info: ^vk.RenderingInfo,
-	pipeline: vk.Pipeline,
-	layout: vk.PipelineLayout,
-	stages: vk.ShaderStageFlags,
-	box_count: int,
+	image_index: u32,
 ) {
-	extent := rendering_info.renderArea.extent
-	vk.CmdBeginRendering(command_buffer, rendering_info)
-	set_viewport(command_buffer, extent.width, extent.height)
-	vk.CmdBindPipeline(command_buffer, .GRAPHICS, pipeline)
-	bind_camera(command_buffer, layout, r.scene.descriptor_sets[r.frame_index])
-	draw_boxes_indexed(r, command_buffer, layout, stages, box_count)
-	vk.CmdEndRendering(command_buffer)
+	record_present_barrier(r, command_buffer, image_index)
 }

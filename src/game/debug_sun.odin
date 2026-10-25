@@ -18,9 +18,10 @@ DEFAULT_SUN_DIRECTION :: [3]f32{-0.45, -1.0, -0.35}
 // matches the old default light.
 DEFAULT_SUN_POSITION :: [3]f32{19.5467, 43.4372, 15.2030}
 
-debug_sun_enter :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
+@(private)
+edit_sun_enter :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Result {
 	if dm.sun.active {
-		return
+		return edit_ok()
 	}
 	palette_close(&dm.palette)
 	debug_placement_cancel(dm)
@@ -28,14 +29,30 @@ debug_sun_enter :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	dm.sun.saved_position = dm.sun.position
 	dm.sun.active = true
 	debug_sun_refresh(dm, sim)
+	return edit_ok()
 }
 
 // Leaving the mode keeps the live position; the commit is just the click that
 // ends it.
-debug_sun_exit :: proc(dm: ^Debug_Mode) {
+@(private)
+edit_sun_exit :: proc(dm: ^Debug_Mode) -> Edit_Result {
+	if !dm.sun.active {
+		return edit_no_change()
+	}
 	dm.sun.active = false
+	return edit_ok()
 }
 
+@(private)
+edit_sun_cancel :: proc(dm: ^Debug_Mode) -> Edit_Result {
+	if !dm.sun.active {
+		return edit_no_change()
+	}
+	debug_sun_cancel(dm)
+	return edit_ok()
+}
+
+@(private)
 debug_sun_cancel :: proc(dm: ^Debug_Mode) {
 	if !dm.sun.active {
 		return
@@ -44,48 +61,37 @@ debug_sun_cancel :: proc(dm: ^Debug_Mode) {
 	dm.sun.active = false
 }
 
+@(private)
+edit_sun_toggle :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Result {
+	if dm.sun.active {
+		return edit_sun_exit(dm)
+	}
+	return edit_sun_enter(dm, sim)
+}
+
+@(private)
+edit_sun_set_position :: proc(dm: ^Debug_Mode, position: [3]f32) -> Edit_Result {
+	sun_position_set(dm, position)
+	return edit_ok()
+}
+
+// The keyboard and the harness both go through here: a position is projected
+// onto the dome and clamped above the floor, so a raw position cannot leave the
+// sun under the arena.
+sun_position_set :: proc(dm: ^Debug_Mode, position: [3]f32) {
+	dm.sun.position = sun_dome_point(position)
+}
+
 debug_sun_reset :: proc(dm: ^Debug_Mode) {
 	dm.sun = {position = DEFAULT_SUN_POSITION}
 }
 
-debug_sun_toggle :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
-	if dm.sun.active {
-		debug_sun_exit(dm)
-	} else {
-		debug_sun_enter(dm, sim)
-	}
-}
-
-// The position is the source of truth; the direction is always derived, so a
-// harness capture can set a position and still get the matching shading.
-debug_sun_set_position :: proc(dm: ^Debug_Mode, position: [3]f32) {
-	dm.sun.position = position
-}
-
+@(private)
 debug_sun_refresh :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	if !dm.sun.active || sim == nil || !simulation_is_valid(sim) {
 		return
 	}
 	dm.sun.position = sun_dome_point(debug_aim_point(dm, sim, SUN_AIM_DISTANCE))
-}
-
-debug_edit_sun :: proc(dm: ^Debug_Mode, sim: ^Simulation, input: Debug_Input) -> bool {
-	if input.sun_placement_pressed {
-		debug_sun_toggle(dm, sim)
-		return true
-	}
-	if !dm.sun.active {
-		return false
-	}
-	if input.secondary_pressed {
-		debug_sun_cancel(dm)
-		return true
-	}
-	debug_sun_refresh(dm, sim)
-	if input.primary_pressed && input.captured {
-		debug_sun_exit(dm)
-	}
-	return true
 }
 
 sun_dome_point :: proc(aim: [3]f32) -> [3]f32 {
