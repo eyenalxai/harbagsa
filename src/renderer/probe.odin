@@ -46,6 +46,11 @@ Probe :: struct {
 	depth_mapped:  [MAX_FRAMES_IN_FLIGHT]rawptr,
 	depth_bytes:   vk.DeviceSize,
 
+	position_buffers: [MAX_FRAMES_IN_FLIGHT]vk.Buffer,
+	position_memory:  [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
+	position_mapped:  [MAX_FRAMES_IN_FLIGHT]rawptr,
+	position_bytes:   vk.DeviceSize,
+
 	pipeline: vk.Pipeline,
 	layout:   vk.PipelineLayout,
 
@@ -112,6 +117,7 @@ create_probe_buffers :: proc(r: ^Renderer) -> bool {
 	r.probe.depth_bytes = vk.DeviceSize(
 		probe_slots * PROBE_TEXELS * size_of([2]f32),
 	)
+	r.probe.position_bytes = vk.DeviceSize(probe_slots * size_of([4]f32))
 	for frame in 0 ..< MAX_FRAMES_IN_FLIGHT {
 		if !create_mapped_buffer(
 			r,
@@ -135,6 +141,17 @@ create_probe_buffers :: proc(r: ^Renderer) -> bool {
 			return false
 		}
 		mem.set(r.probe.depth_mapped[frame], 0, int(r.probe.depth_bytes))
+		if !create_mapped_buffer(
+			r,
+			r.probe.position_bytes,
+			{.STORAGE_BUFFER},
+			&r.probe.position_buffers[frame],
+			&r.probe.position_memory[frame],
+			&r.probe.position_mapped[frame],
+		) {
+			return false
+		}
+		mem.set(r.probe.position_mapped[frame], 0, int(r.probe.position_bytes))
 	}
 	return true
 }
@@ -163,9 +180,16 @@ destroy_probe_buffers :: proc(r: ^Renderer) {
 			r.probe.depth_mapped[frame] = nil
 		}
 		destroy_buffer(r, &r.probe.depth_buffers[frame], &r.probe.depth_memory[frame])
+
+		if r.probe.position_mapped[frame] != nil {
+			vk.UnmapMemory(r.device, r.probe.position_memory[frame])
+			r.probe.position_mapped[frame] = nil
+		}
+		destroy_buffer(r, &r.probe.position_buffers[frame], &r.probe.position_memory[frame])
 	}
 	r.probe.irradiance_bytes = 0
 	r.probe.depth_bytes = 0
+	r.probe.position_bytes = 0
 }
 
 destroy_probe :: proc(r: ^Renderer) {

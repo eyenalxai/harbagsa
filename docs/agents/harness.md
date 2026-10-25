@@ -1312,6 +1312,13 @@ with the probe indirect on and off. It checks the probe count, the volume count,
 the atlas energy, and that the on frame is brighter. The off frame still shows
 the direct lamp, so the difference is the bounce.
 
+`scenarios/ddgi-leak.json` puts the lamp in the chamber and the camera in the
+first lane. The solid wall and the four-turn light lock keep the one-bounce
+probe term out of the lane; the gate holds the lane mean at its no-lamp value.
+`scenarios/ddgi-door.json` looks through the room's west door with the sun below
+the horizon and checks the lamp lights the opening. `scenarios/ddgi-move.json`
+moves the lamp with the editor and checks both views stay lit.
+
 The chamber is black, not merely shaded, before the lamp exists. The depth check
 proves the room is closed. The four-turn check proves that no straight sun ray
 passes the door. With the lamp on, the probe volume adds one diffuse bounce and

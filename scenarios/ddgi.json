@@ -82,6 +82,35 @@
       "name": "gi-off",
       "format": "stats",
       "png": true
+    },
+    {
+      "cmd": "renderer_debug",
+      "gi": true,
+      "ao": true
+    },
+    {
+      "cmd": "settle",
+      "frames": 30
+    },
+    {
+      "cmd": "capture",
+      "name": "ao-on",
+      "format": "stats",
+      "png": true
+    },
+    {
+      "cmd": "renderer_debug",
+      "ao": false
+    },
+    {
+      "cmd": "settle",
+      "frames": 20
+    },
+    {
+      "cmd": "capture",
+      "name": "ao-off",
+      "format": "stats",
+      "png": true
     }
   ],
   "checks": [
@@ -114,6 +143,16 @@
       "field": "capture.named.gi-off.stats.mean.y",
       "op": "gt",
       "value": 0
+    },
+    {
+      "field": "capture.named.ao-off.stats.mean.y",
+      "op": "gt",
+      "other": "capture.named.ao-on.stats.mean.y"
+    },
+    {
+      "field": "capture.named.ao-on.stats.mean.y",
+      "op": "gt",
+      "value": 120
     }
   ]
 }
