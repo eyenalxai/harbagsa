@@ -43,7 +43,7 @@ rays stay and scale the sun and point lights at strength 0.5.
 | Lamp on mean green | 183.10 | at least 80 | yes |
 | Lamp off mean green | 0.26 | below 0.5 | yes |
 
-The 0.17 floor is the output dither on black. The chamber does not receive a
+The dither floor is the output dither on black. The chamber does not receive a
 straight sun ray: no sun ray passes the four turns. The first lane is lit when
 the sun is west, because the sun shines through the west door. Under an east sun
 it is dim but not black; the 8.08 is transport through the connected light lock,
