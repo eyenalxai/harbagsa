@@ -9,6 +9,9 @@ session_check_command :: proc(
 	reply: ^Reply,
 ) -> string {
 	sections := state_section_for_field(command.field)
+	if command.has_other {
+		sections |= state_section_for_field(command.other)
+	}
 	if .Menu in sections || .Notice in sections || .Rows in sections {
 		session_refresh_hud(session)
 	}

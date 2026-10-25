@@ -40,3 +40,24 @@ state_sections_name_the_check_namespaces :: proc(t: ^testing.T) {
 	)
 	testing.expect_value(t, card(harness.state_all_sections()), 9)
 }
+
+@(test)
+check_other_builds_both_namespaces :: proc(t: ^testing.T) {
+	session, error := harness.session_create(context.allocator)
+	testing.expectf(t, error == "", "session create failed: %s", error)
+	if error != "" {
+		return
+	}
+	defer harness.session_destroy(&session)
+
+	reply := execute(t, &session, `{"cmd":"sun","azimuth_deg":120,"elevation_deg":30}`)
+	harness.reply_destroy(&reply, context.allocator)
+
+	reply = execute(
+		t,
+		&session,
+		`{"cmd":"check","field":"sun.azimuth_deg","op":"eq","other":"debug.sun.azimuth_deg","tolerance":0.01}`,
+	)
+	defer harness.reply_destroy(&reply, context.allocator)
+	testing.expectf(t, reply.ok, "cross-namespace check failed: %s", reply.error)
+}

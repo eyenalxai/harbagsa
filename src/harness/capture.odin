@@ -30,6 +30,9 @@ CAPTURE_FORMAT_INFO := [Capture_Format]Capture_Format_Info {
 }
 
 capture_format_name :: proc(format: Capture_Format) -> string {
+	if int(format) < 0 || int(format) >= len(CAPTURE_FORMAT_INFO) {
+		return "png"
+	}
 	return CAPTURE_FORMAT_INFO[format].name
 }
 

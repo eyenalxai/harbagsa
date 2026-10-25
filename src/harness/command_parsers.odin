@@ -32,16 +32,16 @@ parse_view :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, 
 }
 
 parse_view_fields :: proc(object: json.Object) -> (view: View_Command, error: string) {
-	if field_error := json_take_bool(object, "hud", &view.hud, &view.has_hud); field_error != "" {
+	if field_error := json_optional_bool(object, "hud", &view.hud, &view.has_hud); field_error != "" {
 		return {}, field_error
 	}
-	if field_error := json_take_bool(object, "debug", &view.debug, &view.has_debug); field_error != "" {
+	if field_error := json_optional_bool(object, "debug", &view.debug, &view.has_debug); field_error != "" {
 		return {}, field_error
 	}
-	if field_error := json_take_bool(object, "hint", &view.hint, &view.has_hint); field_error != "" {
+	if field_error := json_optional_bool(object, "hint", &view.hint, &view.has_hint); field_error != "" {
 		return {}, field_error
 	}
-	if field_error := json_take_bool(object, "perf", &view.perf, &view.has_perf); field_error != "" {
+	if field_error := json_optional_bool(object, "perf", &view.perf, &view.has_perf); field_error != "" {
 		return {}, field_error
 	}
 	return view, ""
