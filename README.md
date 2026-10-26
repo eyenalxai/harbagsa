@@ -961,10 +961,11 @@ and captures a wall shadow twice: once with a 3-degree sun disk, then with the
 0.53-degree disk the build uses. The penumbra width follows the diameter, so
 the small disk gives a shadow edge about 5.7 times narrower.
 `scenarios/ramp-shadow.json` looks at the shaded floor below the 20 degree ramp
-and gates the step count in a region that holds no geometry edge. The step
+and gates the step amplitude in a region that holds no geometry edge. The step
 metric box-filters the luma, so the output dither drops out and a ray-count
 step remains. `scenarios/ramp-shadow-crouch.json` repeats the gate from the
-crouched view under the ramp, where the steps are widest. It also catches the
+crouched view under the ramp, where the steps are widest; that view keeps the
+step count gate. It also catches the
 TAA history precision: a 16-bit history keeps the count steps, and the 32-bit
 history reaches zero steps. `scenarios/banding-phase.json` captures one frozen
 sun phase as `scene_color` float; the banding recipe in
@@ -1029,7 +1030,8 @@ west face above the old black level, and checks that the sealed chamber stays
 dark with no sky depth pixel. It also gates the coverage `black_fraction` and
 `lit_fraction` and a float `zero_fraction`. The result is in
 [docs/evidence/ddgi.md](docs/evidence/ddgi.md). The probe field is one diffuse
-bounce on a 1 m test grid and a coarse 4 m arena grid. It is not a path-traced
+bounce on a 1.04 m room grid, a 1 m sealed-pair scenario grid, and a 2 m arena
+grid with a y=0.5 ground layer. It is not a path-traced
 reference, and it does not claim modern-game parity.
 
 `scenarios/ddgi-reference.json` is the path-traced comparison. It captures the
@@ -1037,7 +1039,9 @@ chamber and the room lane as `scene_color` float frames. A one-bounce CPU
 reference at an 80 x 45 pixel grid gates the probe field; a three-bounce run is
 advisory and reports the missing multi-bounce transport. The gate fails when the
 probe indirect term misses the stated luminance, colour, or coverage tolerance.
-`make reference` runs it. The estimator, the scene, the tolerance, and the
+`scenarios/ddgi-platform.json` adds the dive platform at a low sun, where the
+shaded face, the tunnel corner, and the contact expose the probe visibility.
+`make reference` runs both. The estimator, the scene, the tolerance, and the
 current measured gap are in
 [docs/evidence/ddgi-reference.md](docs/evidence/ddgi-reference.md).
 

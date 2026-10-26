@@ -14,11 +14,14 @@ import "src:renderer"
 ROOM_PROBE_SPACING :: 1.04
 ROOM_PROBE_COUNTS :: [3]u32{10, 3, 10}
 
-// Sky fill is low frequency, so the open arena uses a 4 m cell. The north strip
-// runs from the room's inner face to the arena wall, 5.8 m, and needs two rows
-// that both stay outside the room, which fixes its spacing at 2.9 m.
-ARENA_PROBE_SPACING :: f32(4.0)
-NORTH_PROBE_SPACING :: f32(2.9)
+// A crate and a platform are not low frequency. The perimeter strips use 2 m
+// cells and four layers from y=0.5, so the lowest layer is near the contact.
+// The narrow east strip uses 1 m cells to keep a probe near the east wall.
+SOUTH_PROBE_SPACING :: f32(2.0)
+WEST_PROBE_SPACING :: f32(2.065)
+EAST_PROBE_SPACING :: f32(1.0)
+NORTH_PROBE_SPACING :: f32(2.0)
+ROOF_PROBE_SPACING :: f32(4.0)
 
 // The room's outer wall face. The side strips end on the inner face, so the
 // wall thickness and the door threshold are owned by the strip, while the room
@@ -34,10 +37,10 @@ ARENA_PROBE_EDGE :: f32(0.05)
 ARENA_LOW :: f32(-game.ARENA_HALF_SIZE)
 
 ROOF_PROBE_COUNTS :: [3]u32{3, 1, 3}
-WEST_PROBE_COUNTS :: [3]u32{7, 2, 3}
-EAST_PROBE_COUNTS :: [3]u32{1, 2, 3}
-SOUTH_PROBE_COUNTS :: [3]u32{10, 2, 6}
-NORTH_PROBE_COUNTS :: [3]u32{15, 2, 2}
+WEST_PROBE_COUNTS :: [3]u32{13, 4, 6}
+EAST_PROBE_COUNTS :: [3]u32{4, 8, 12}
+SOUTH_PROBE_COUNTS :: [3]u32{20, 4, 12}
+NORTH_PROBE_COUNTS :: [3]u32{20, 4, 3}
 
 // A test scene adds its own interior volumes after the room volume and before
 // the arena strips, so a placed room wins the sampler over the open-arena fill.
@@ -47,16 +50,14 @@ MAX_SCENE_PROBE_VOLUMES :: 8
 MAX_SCENE_PROBES :: 4096
 SCENE_PROBE_NAME_BYTES :: 31
 
-// The gather shader adds this to the high bound, so a face exactly on the
-// volume edge does not fall out after a float round trip. The probe map must
-// read the same bound or it reports a gap the renderer does not have.
+// The gather shader adds this to the low and high bounds, so a face exactly on
+// the volume edge does not fall out after a float round trip. The probe map
+// must read the same bounds or it reports a gap the renderer does not have.
 PROBE_VOLUME_EDGE_EPSILON :: f32(1e-3)
 
-// The four perimeter volumes tile the open floor and stop at the room
-// footprint. Each centre is outside the footprint: a south centre at z <= 1.55,
-// a north centre at z >= 15.84, and a side centre at x <= 4.55 or x >= 19.45.
-// The boundaries overlap where a strip meets a side, and every one of those
-// cells is open sky.
+// The four perimeter volumes tile the open floor and meet the room's inner
+// faces, so the wall thickness belongs to the strip. The room volume is first
+// and still owns the inner face. The strips overlap where one meets another.
 //
 // The roof volume lights the room's exterior roof. Its floor is the room
 // ceiling height, and its probes sit above the roof; none of them is inside
@@ -74,44 +75,44 @@ PROBE_VOLUMES := [6]renderer.Probe_Volume {
 			game.ARENA_ROOM_HEIGHT,
 			ROOM_OUTER_LOW_Z - ARENA_PROBE_EDGE,
 		},
-		spacing = ARENA_PROBE_SPACING,
+		spacing = ROOF_PROBE_SPACING,
 		counts = ROOF_PROBE_COUNTS,
 		probe_offset = 0,
 	},
 	{
 		min = {
 			game.ARENA_ROOM_INNER_LOW_X -
-			f32(WEST_PROBE_COUNTS.x) * ARENA_PROBE_SPACING,
-			0.0,
+			f32(WEST_PROBE_COUNTS.x) * WEST_PROBE_SPACING,
+			-0.5,
 			ROOM_OUTER_LOW_Z - ARENA_PROBE_EDGE,
 		},
-		spacing = ARENA_PROBE_SPACING,
+		spacing = WEST_PROBE_SPACING,
 		counts = WEST_PROBE_COUNTS,
 		probe_offset = 0,
 	},
 	{
 		min = {
 			game.ARENA_ROOM_INNER_HIGH_X,
-			0.0,
+			-0.5,
 			ROOM_OUTER_LOW_Z - ARENA_PROBE_EDGE,
 		},
-		spacing = ARENA_PROBE_SPACING,
+		spacing = EAST_PROBE_SPACING,
 		counts = EAST_PROBE_COUNTS,
 		probe_offset = 0,
 	},
 	{
 		min = {
 			ARENA_LOW,
-			0.0,
+			-0.5,
 			game.ARENA_ROOM_INNER_LOW_Z -
-			f32(SOUTH_PROBE_COUNTS.z) * ARENA_PROBE_SPACING,
+			f32(SOUTH_PROBE_COUNTS.z) * SOUTH_PROBE_SPACING,
 		},
-		spacing = ARENA_PROBE_SPACING,
+		spacing = SOUTH_PROBE_SPACING,
 		counts = SOUTH_PROBE_COUNTS,
 		probe_offset = 0,
 	},
 	{
-		min = {ARENA_LOW, 0.0, game.ARENA_ROOM_INNER_HIGH_Z},
+		min = {ARENA_LOW, -0.5, game.ARENA_ROOM_INNER_HIGH_Z},
 		spacing = NORTH_PROBE_SPACING,
 		counts = NORTH_PROBE_COUNTS,
 		probe_offset = 0,
@@ -142,11 +143,11 @@ probe_volume_high :: proc(volume: renderer.Probe_Volume) -> [3]f32 {
 probe_volume_contains :: proc(volume: renderer.Probe_Volume, point: [3]f32) -> bool {
 	high := probe_volume_high(volume) + PROBE_VOLUME_EDGE_EPSILON
 	return(
-		point.x >= volume.min.x &&
+		point.x >= volume.min.x - PROBE_VOLUME_EDGE_EPSILON &&
 		point.x <= high.x &&
-		point.y >= volume.min.y &&
+		point.y >= volume.min.y - PROBE_VOLUME_EDGE_EPSILON &&
 		point.y <= high.y &&
-		point.z >= volume.min.z &&
+		point.z >= volume.min.z - PROBE_VOLUME_EDGE_EPSILON &&
 		point.z <= high.z \
 	)
 }

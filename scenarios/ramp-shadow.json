@@ -2,6 +2,7 @@
   "size": "1280x720",
   "view": {"hud": false, "debug": false, "hint": false, "perf": false},
   "analysis": false,
+  "note": "The ramp shadow must stay smooth. Gate the step amplitude, not the step count: the 2 m probe field crosses the output dither threshold more often, and those sub-level steps are not banding.",
   "commands": [
     {"cmd": "camera", "position": [2.9, 0.8, -2.5], "look_at": [5.2, 0.0, -2.5]},
     {"cmd": "settle", "frames": 600},
@@ -11,7 +12,6 @@
   "checks": [
     {"field": "capture.count", "op": "eq", "value": 2},
     {"field": "capture.1.region.w", "op": "eq", "value": 550},
-    {"field": "capture.1.stats.steps.count", "op": "le", "value": 50},
-    {"field": "capture.1.stats.steps.max", "op": "lt", "value": 2}
+    {"field": "capture.1.stats.steps.max", "op": "lt", "value": 1.0}
   ]
 }

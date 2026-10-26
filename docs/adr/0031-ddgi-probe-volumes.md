@@ -1,9 +1,10 @@
 # DDGI probe volumes
 
 Superseded in part by
-[ADR 0033](0033-ddgi-irradiance-and-gather.md). The probe volume, relocation,
-the atlas layout, and the pass order stay. The update and the gather now follow
-the DDGI irradiance formulation.
+[ADR 0033](0033-ddgi-irradiance-and-gather.md) and
+[ADR 0036](0036-ddgi-probe-validity-and-contact.md). The probe volume, atlas
+layout, and pass order stay. The update and the gather now follow the DDGI
+irradiance formulation. A probe inside a box is invalid, not relocated.
 
 ## Context
 

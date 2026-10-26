@@ -12,6 +12,7 @@
     "ddgi-door",
     "ddgi-move",
     "ddgi-arena",
+    "ddgi-platform",
     "ddgi-sealed"
   ]
 }
