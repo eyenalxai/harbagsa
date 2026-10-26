@@ -160,7 +160,7 @@ compare :: proc(
 		gpu_sum += gpu_luma
 
 		// The direct term validates the estimator itself: it is the lamp and
-		// the sun with hard shadows, which a path tracer reproduces exactly.
+		// the point lights with hard shadows, which a path tracer reproduces exactly.
 		// Emissive faces are skipped because the lit pass adds the emission to
 		// the same pixel.
 		direct_luma := luma(

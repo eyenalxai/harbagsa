@@ -93,16 +93,6 @@ edit_apply :: proc(
 		return edit_light_set_intensity(dm, sim, value.intensity)
 	case Light_Set_Range:
 		return edit_light_set_range(dm, sim, value.range)
-	case Sun_Toggle:
-		return edit_sun_toggle(dm, sim)
-	case Sun_Enter:
-		return edit_sun_enter(dm, sim)
-	case Sun_Exit:
-		return edit_sun_exit(dm)
-	case Sun_Cancel:
-		return edit_sun_cancel(dm)
-	case Sun_Set_Position:
-		return edit_sun_set_position(dm, value.position)
 	case Cancel:
 		return edit_cancel(dm)
 	}
