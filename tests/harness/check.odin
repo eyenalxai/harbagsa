@@ -139,3 +139,42 @@ bare_state_field_reports_an_error_without_crashing :: proc(t: ^testing.T) {
 	defer harness.check_result_destroy(&result, context.allocator)
 	testing.expect(t, result.error != "", "a bare sun field did not report an error")
 }
+
+@(test)
+object_check_reads_the_state_by_name :: proc(t: ^testing.T) {
+	state := harness.State {
+		objects = []harness.Object_State {
+			{
+				id = 4,
+				name = "room-a-lamp",
+				prefab = "Lamp",
+				body = "static",
+				position = {x = 1, y = 2, z = 3},
+				rotation = {w = 1},
+			},
+		},
+	}
+	command := harness.Check_Command {
+		field = "objects.room-a-lamp.position.z",
+		op    = .Eq,
+		value = {kind = .Number, number = 3},
+	}
+	result := harness.check_evaluate(command, state, {}, nil, context.allocator)
+	defer harness.check_result_destroy(&result, context.allocator)
+	testing.expectf(t, result.ok, "named object check failed: %s", result.error)
+}
+
+@(test)
+advisory_is_recorded_on_the_result :: proc(t: ^testing.T) {
+	command := harness.Check_Command {
+		field = "capture.worst_mean_delta",
+		op = .Le,
+		value = {kind = .Number, number = 0.1},
+		advisory = true,
+	}
+	captures := []harness.Capture_Result{{delta_mean = 0.2}}
+	result := harness.check_evaluate(command, {}, captures, nil, context.allocator)
+	defer harness.check_result_destroy(&result, context.allocator)
+	testing.expect(t, result.advisory, "the result lost the advisory flag")
+	testing.expect(t, !result.ok, "the advisory check passed")
+}

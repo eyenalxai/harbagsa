@@ -153,6 +153,7 @@ scene_snapshot_keeps_every_renderer_debug_field :: proc(t: ^testing.T) {
 		frame.Options{captured = true},
 		nil,
 		&expected,
+		nil,
 		context.temp_allocator,
 	)
 	defer frame.scene_destroy(&scene, context.temp_allocator)
@@ -182,6 +183,7 @@ scene_snapshot_omits_the_automatic_history_weight :: proc(t: ^testing.T) {
 		frame.Options{captured = true},
 		nil,
 		&debug,
+		nil,
 		context.temp_allocator,
 	)
 	defer frame.scene_destroy(&scene, context.temp_allocator)
@@ -251,6 +253,7 @@ scene_text :: proc(t: ^testing.T, session: ^harness.Session, options: frame.Opti
 		&session.sim,
 		&session.debug,
 		options,
+		nil,
 		nil,
 		nil,
 		context.temp_allocator,

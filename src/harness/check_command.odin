@@ -36,6 +36,7 @@ Check_Command :: struct {
 	other:     string,
 	has_other: bool,
 	tolerance: Maybe(f64),
+	advisory:  bool,
 	warmup:    int,
 	window:    Capture_Window,
 }

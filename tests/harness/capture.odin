@@ -73,7 +73,7 @@ capture_stats_reports_channels_and_velocity_median :: proc(t: ^testing.T) {
 		2, 0, 1, 0,
 		3, 0, 1, 0,
 	}
-	stats := harness.capture_stats(values, 2, 2, .Velocity, nil, nil, nil, context.allocator)
+	stats := harness.capture_stats(values, 2, 2, .Velocity, nil, nil, nil, nil, context.allocator)
 	testing.expect_value(t, stats.min.x, f32(0))
 	testing.expect_value(t, stats.max.x, f32(3))
 	testing.expect_value(t, stats.mean.x, f32(1.5))
@@ -87,7 +87,7 @@ capture_stats_reports_channels_and_velocity_median :: proc(t: ^testing.T) {
 		testing.expect_value(t, median, f32(4))
 	}
 
-	depth := harness.capture_stats(values, 2, 2, .Depth, nil, nil, nil, context.allocator)
+	depth := harness.capture_stats(values, 2, 2, .Depth, nil, nil, nil, nil, context.allocator)
 	_, has_depth_median := depth.velocity_median_texels.?
 	testing.expect(t, !has_depth_median, "depth stats reported a velocity median")
 }
@@ -96,7 +96,7 @@ capture_stats_reports_channels_and_velocity_median :: proc(t: ^testing.T) {
 capture_stats_gradient_without_a_neighbour_is_zero :: proc(t: ^testing.T) {
 	values := []f32{0.25, 0.5, 0.75, 1}
 	region := harness.Capture_Region{x = 0, y = 0, w = 1, h = 1}
-	stats := harness.capture_stats(values, 1, 1, .Color, region, nil, nil, context.allocator)
+	stats := harness.capture_stats(values, 1, 1, .Color, region, nil, nil, nil, context.allocator)
 	testing.expect_value(t, stats.stddev.x, f32(0))
 	testing.expect_value(t, stats.gradient.x, f32(0))
 }
@@ -285,6 +285,7 @@ color_key_counts_matching_pixels :: proc(t: ^testing.T) {
 		nil,
 		nil,
 		harness.Capture_Color_Key{r = 255, g = 204, b = 51, tolerance = 0},
+		nil,
 		context.allocator,
 	)
 	key, has_key := stats.color_key.?

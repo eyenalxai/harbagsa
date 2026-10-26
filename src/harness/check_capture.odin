@@ -240,6 +240,34 @@ capture_stats_field :: proc(stats: Capture_Stats, path: string) -> (Check_Value,
 		}
 		return {}, fmt.aprintf("unknown capture step field %q", path, allocator = context.allocator)
 	}
+	if strings.has_prefix(path, "coverage.") {
+		tail := path[len("coverage."):]
+		switch tail {
+		case "zero_fraction":
+			return {kind = .Number, number = f64(stats.coverage.zero_fraction)}, ""
+		case "black":
+			if value, has := stats.coverage.black.?; has {
+				return {kind = .Number, number = f64(value)}, ""
+			}
+			return {}, format_error("%s", "the capture has no black threshold")
+		case "black_fraction":
+			if value, has := stats.coverage.black_fraction.?; has {
+				return {kind = .Number, number = f64(value)}, ""
+			}
+			return {}, format_error("%s", "the capture has no black fraction; set 'coverage.black'")
+		case "lit":
+			if value, has := stats.coverage.lit.?; has {
+				return {kind = .Number, number = f64(value)}, ""
+			}
+			return {}, format_error("%s", "the capture has no lit threshold")
+		case "lit_fraction":
+			if value, has := stats.coverage.lit_fraction.?; has {
+				return {kind = .Number, number = f64(value)}, ""
+			}
+			return {}, format_error("%s", "the capture has no lit fraction; set 'coverage.lit'")
+		}
+		return {}, fmt.aprintf("unknown coverage field %q", tail, allocator = context.allocator)
+	}
 	head, tail, has_tail := split_field(path)
 	if !has_tail {
 		return {}, fmt.aprintf("unknown capture statistics field %q", path, allocator = context.allocator)

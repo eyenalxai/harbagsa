@@ -139,8 +139,8 @@ _Avoid_: Air lock, light trap
 The two-room harness scene at (-10, -8). Eight static placed Walls and two
 Platform roofs form room A and room B around a solid shared wall. A removable
 Wall segment fills the shared doorway, so one scenario gates both a wall leak
-and doorway transport. The pair has its own 1 m probe volume, after the room
-volume and before the arena strips.
+and doorway transport. The pair owns its own 1 m probe volumes through the
+scenario's `scene` block, after the room volume and before the arena strips.
 _Avoid_: Leak box, test room
 
 **World palette**:
@@ -193,8 +193,16 @@ The forward lighting path that builds a light index list per cluster in a comput
 _Avoid_: Tiled forward, light grid
 
 **Probe volume**:
-A box in world space with a probe spacing and a 3D count. The scene supplies them as data: the room network, the sealed pair, the roof over the room, and four perimeter strips over the open arena. The room volume comes first, the two sealed-pair volumes come next, and the arena strips follow, so the sampler never picks an arena probe for an interior surface. The renderer allocates one probe per cell and samples the eight probes around a surface.
+A box in world space with a probe spacing and a 3D count. The production scene supplies six: the room network, the roof over the room, and four perimeter strips over the open arena. A test scene adds its own interior volumes with a `scene` block. The room volume comes first, the scene extras come next, and the arena strips follow, so the sampler never picks an arena probe for an interior surface. The renderer allocates one probe per cell and samples the eight probes around a surface.
 _Avoid_: Light grid, lightmap
+
+**Probe map**:
+The `probes` harness command. It prints each volume's name, bounds, spacing, counts, probe count, and first atlas index, and it reports which volume owns a point. `--coverage` samples the visible static-box faces and lists the points that no volume owns. It runs without a renderer.
+_Avoid_: Probe dump, heat map
+
+**Coverage fraction**:
+The share of the sampled capture region that is exactly zero, at or below a black threshold, or at or above a lit threshold. A `coverage` block on a stats capture reports it as `capture.stats.coverage.zero_fraction`, `.black_fraction`, and `.lit_fraction`. A threshold is in the target's own values.
+_Avoid_: Black ratio, lit ratio
 
 **DDGI**:
 Dynamic diffuse global illumination. Each probe traces 256 rays, stores an 8 by 8 octahedral irradiance map and a depth moment, and the lit pass blends the surrounding probes. It adds one diffuse bounce without a bake.
@@ -962,10 +970,10 @@ run's scenario, revision, and dirty flag. It is evidence, not a numeric check.
 **Avoid**: montage, contact sheet.
 
 ### Scene snapshot
-One `scene` command that carries the exact camera, sun, placed objects,
-settings, display list, view flags, and renderer debug overrides of a live
-view. `F5` writes one, and `record` starts with one. **Avoid**: state dump,
-replay file.
+One `scene` command that carries the exact camera, sun, placed objects (with
+names), settings, display list, view flags, custom probe volumes, and renderer
+debug overrides of a live view. `F5` writes one, and `record` starts with one.
+**Avoid**: state dump, replay file.
 
 ### Repro
 The `F5` action and its harness twin, the `repro` command: write one scene
@@ -973,6 +981,18 @@ snapshot to a file and show the notice. The key writes
 `runs/repro/repro-<unix-ms>.json`. A harness `repro` path is relative to the run
 directory (or the `session --out` directory), and an absolute path stays
 absolute. **Avoid**: replay file, state dump.
+
+### Object name
+An optional unique handle on a placed object. `place` and a scene object set it;
+`remove`, a check path (`objects.<name>.<field>`), and `editor.select_object`
+accept it. It uses at most 31 letters, digits, `-`, or `_`, is not all digits,
+and is not `count`. It survives undo and a scene snapshot and stays out of the
+simulation digest. **Avoid**: label, tag, alias.
+
+### Advisory check
+A check with `"advisory": true`. A miss is recorded with the result and printed
+as `ADVISE`, but it does not enter `failures` or change the run's exit code.
+**Avoid**: soft gate, warning check.
 
 ### Place command
 The harness `place` command creates one object from a prefab at an exact

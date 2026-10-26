@@ -34,7 +34,7 @@ session_check_command :: proc(
 	append(&session.checks, result)
 	reply.check = &session.checks[len(session.checks) - 1]
 	reply.ok = result.ok
-	if !result.ok {
+	if !result.ok && !command.advisory {
 		tolerance := check_tolerance_note(result, session.allocator)
 		message := fmt.aprintf(
 			"check failed: %s %s %s%s (actual %s)",

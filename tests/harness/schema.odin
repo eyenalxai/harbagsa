@@ -17,6 +17,9 @@ collect_state_paths :: proc(t: typeid, prefix: string, paths: ^[dynamic]string) 
 	case runtime.Type_Info_Struct:
 		for field in reflect.struct_fields_zipped(t) {
 			name := reflect.struct_tag_get(field.tag, "json")
+			if option := strings.index_byte(name, ','); option >= 0 {
+				name = name[:option]
+			}
 			if name == "" {
 				name = field.name
 			}
