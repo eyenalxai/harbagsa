@@ -19,6 +19,9 @@ parse_scene_objects :: proc(value: json.Value, allocator: mem.Allocator) -> ([]f
 	ok := false
 	defer if !ok {
 		for object in objects {
+			if object.name != "" {
+				delete(object.name, allocator)
+			}
 			delete(object.prefab, allocator)
 			delete(object.body, allocator)
 			delete(object.light.color, allocator)
@@ -32,7 +35,7 @@ parse_scene_objects :: proc(value: json.Value, allocator: mem.Allocator) -> ([]f
 		}
 		if key, unknown := json_unknown_key(
 			object,
-			{"id", "prefab", "body", "position", "rotation", "color", "light"},
+			{"id", "name", "prefab", "body", "position", "rotation", "color", "light"},
 		); unknown {
 			return nil, format_error("unknown scene object key %q", key)
 		}
@@ -66,8 +69,20 @@ parse_scene_objects :: proc(value: json.Value, allocator: mem.Allocator) -> ([]f
 			}
 			light = parsed_light
 		}
+		name := ""
+		if name_value, has := json_get(object, "name"); has {
+			text, text_ok := json_string(name_value)
+			if !text_ok || !game.object_name_valid(text) {
+				return nil, format_error(
+					"scene object %d name must use at most 31 letters, digits, '-' or '_'",
+					index,
+				)
+			}
+			name = strings.clone(text, allocator)
+		}
 		objects[index] = {
 			id = u32(id),
+			name = name,
 			prefab = strings.clone(prefab_name, allocator),
 			body = strings.clone(body_name, allocator),
 			position = position,

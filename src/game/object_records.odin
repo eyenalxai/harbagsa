@@ -11,13 +11,15 @@ import b3 "libs:box3d"
 // appear where the old one was. Rotation is a quaternion, not a yaw, because a
 // yaw round trip through the Box3D trigonometric approximation drifts.
 Object_Record :: struct {
-	id:        Object_Id,
-	prefab:    Prefab_Id,
-	body_mode: Body_Mode,
-	center:    b3.Vec3,
-	rotation:  b3.Quat,
-	color:     [4]f32,
-	light:     Light_Settings,
+	id:          Object_Id,
+	name:        [OBJECT_NAME_BYTES]u8,
+	name_length: u8,
+	prefab:      Prefab_Id,
+	body_mode:   Body_Mode,
+	center:      b3.Vec3,
+	rotation:    b3.Quat,
+	color:       [4]f32,
+	light:       Light_Settings,
 }
 
 Object_Snapshot :: struct {
@@ -36,13 +38,15 @@ object_snapshot_capture :: proc(sim: ^Simulation, allocator: mem.Allocator) -> O
 	snapshot.objects = make([]Object_Record, count, allocator)
 	for object, index in simulation_objects(sim) {
 		snapshot.objects[index] = {
-			id        = object.id,
-			prefab    = object.prefab,
-			body_mode = object.body_mode,
-			center    = b3.Body_GetPosition(object.body),
-			rotation  = b3.Body_GetRotation(object.body),
-			color     = object.color,
-			light     = object.light,
+			id          = object.id,
+			name        = object.name,
+			name_length = object.name_length,
+			prefab      = object.prefab,
+			body_mode   = object.body_mode,
+			center      = b3.Body_GetPosition(object.body),
+			rotation    = b3.Body_GetRotation(object.body),
+			color       = object.color,
+			light       = object.light,
 		}
 	}
 	return snapshot
@@ -71,7 +75,9 @@ simulation_apply_snapshot :: proc(sim: ^Simulation, snapshot: Object_Snapshot) -
 
 	next_id := snapshot.next_object_id
 	for record in snapshot.objects {
+		name_buffer := record.name
 		spawn := Object_Spawn {
+			name      = string(name_buffer[:record.name_length]),
 			prefab    = record.prefab,
 			body_mode = record.body_mode,
 			center    = record.center,
@@ -133,6 +139,9 @@ spawn_object :: proc(
 	light: Light_Settings,
 	settled: bool,
 ) -> bool {
+	if !object_name_valid(spawn.name) || object_name_taken(sim, spawn.name) {
+		return false
+	}
 	box_color := color
 	if light.active {
 		box_color = light_color4(light.color)
@@ -150,15 +159,18 @@ spawn_object :: proc(
 		return false
 	}
 
-	append(&sim.objects, Placed_Object {
-		id         = id,
-		prefab     = spawn.prefab,
-		body_mode  = spawn.body_mode,
-		body       = body,
-		color      = box_color,
-		light      = light,
-		spawn_time = sim.time,
-		settled    = settled,
-	})
+	object := Placed_Object {
+		id          = id,
+		name_length = u8(len(spawn.name)),
+		prefab      = spawn.prefab,
+		body_mode   = spawn.body_mode,
+		body        = body,
+		color       = box_color,
+		light       = light,
+		spawn_time  = sim.time,
+		settled     = settled,
+	}
+	copy(object.name[:], spawn.name)
+	append(&sim.objects, object)
 	return true
 }

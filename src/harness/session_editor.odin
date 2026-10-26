@@ -51,6 +51,20 @@ session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 			return failure
 		}
 	}
+	if command.object.has_select_name {
+		select_name := command.object.select_name
+		name := object_name_text(&select_name)
+		object, found := game.simulation_object_find_by_name(&session.sim, name)
+		if !found {
+			return format_error("object name %q does not exist", name)
+		}
+		if failure := apply_editor_action(
+			session,
+			game.Select_Object{id = object.id},
+		); failure != "" {
+			return failure
+		}
+	}
 	if command.object.has_select_object {
 		if failure := apply_editor_action(
 			session,

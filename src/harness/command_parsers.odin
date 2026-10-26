@@ -51,7 +51,7 @@ parse_view_fields :: proc(object: json.Object) -> (view: View_Command, error: st
 parse_check :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(
 		object,
-		{"cmd", "field", "op", "value", "other", "tolerance", "warmup", "window"},
+		{"cmd", "field", "op", "value", "other", "tolerance", "advisory", "warmup", "window"},
 	); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
@@ -92,6 +92,9 @@ parse_check :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 		op     = op,
 		warmup = warmup,
 		window = window,
+	}
+	if field_error := json_bool(object, "advisory", &check.advisory); field_error != "" {
+		return {}, field_error
 	}
 	if tolerance_value, has := json_get(object, "tolerance"); has {
 		tolerance, tolerance_ok := json_number(tolerance_value)

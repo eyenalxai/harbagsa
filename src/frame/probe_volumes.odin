@@ -1,5 +1,9 @@
 #+vet explicit-allocators
+#+vet !unused-procedures // the agent harness and tests read the probe map
 package frame
+
+import "core:mem"
+import "core:strings"
 
 import "src:game"
 import "src:renderer"
@@ -10,27 +14,16 @@ import "src:renderer"
 ROOM_PROBE_SPACING :: 1.04
 ROOM_PROBE_COUNTS :: [3]u32{10, 3, 10}
 
-// The sealed-pair scenario builds two placed rooms around (-10, -8). One
-// volume per room owns that room's interior before the 4 m arena strips, so a
-// surface inside either room never samples a probe across the shared wall. The
-// 0.05 m edge offset keeps every probe centre in air and still covers each
-// inner wall face.
-SEALED_PAIR_X :: f32(-10.0)
-SEALED_PAIR_Z :: f32(-8.0)
-SEALED_PAIR_PROBE_MIN_A :: [3]f32{SEALED_PAIR_X - 3.8, 0.0, SEALED_PAIR_Z - 1.8}
-SEALED_PAIR_PROBE_MIN_B :: [3]f32{SEALED_PAIR_X + 0.2, 0.0, SEALED_PAIR_Z - 1.8}
-SEALED_PAIR_PROBE_SPACING :: f32(1.0)
-SEALED_PAIR_PROBE_COUNTS :: [3]u32{4, 3, 4}
-
 // Sky fill is low frequency, so the open arena uses a 4 m cell. The north strip
-// is 5.5 m deep and needs two rows that both stay outside the room, which fixes
-// its spacing at 2.775 m.
+// runs from the room's inner face to the arena wall, 5.8 m, and needs two rows
+// that both stay outside the room, which fixes its spacing at 2.9 m.
 ARENA_PROBE_SPACING :: f32(4.0)
-NORTH_PROBE_SPACING :: f32(2.775)
+NORTH_PROBE_SPACING :: f32(2.9)
 
-// The room's outer wall face. An arena bound sits 0.05 m inside it, so a face
-// fragment that rounds outward still lands in the arena volume. The 0.3 m wall
-// keeps the arena grid at least 0.25 m from the room's inner face.
+// The room's outer wall face. The side strips end on the inner face, so the
+// wall thickness and the door threshold are owned by the strip, while the room
+// volume still wins the inner face and every interior point because it is
+// first. A fragment on the outer face therefore lands in the strip.
 ROOM_OUTER_LOW_X :: f32(game.ARENA_ROOM_X - game.ARENA_ROOM_HALF_SIZE)
 ROOM_OUTER_HIGH_X :: f32(game.ARENA_ROOM_X + game.ARENA_ROOM_HALF_SIZE)
 ROOM_OUTER_LOW_Z :: f32(game.ARENA_ROOM_Z - game.ARENA_ROOM_HALF_SIZE)
@@ -46,6 +39,19 @@ EAST_PROBE_COUNTS :: [3]u32{1, 2, 3}
 SOUTH_PROBE_COUNTS :: [3]u32{10, 2, 6}
 NORTH_PROBE_COUNTS :: [3]u32{15, 2, 2}
 
+// A test scene adds its own interior volumes after the room volume and before
+// the arena strips, so a placed room wins the sampler over the open-arena fill.
+// The cap keeps a malformed scenario from allocating an atlas the device cannot
+// hold.
+MAX_SCENE_PROBE_VOLUMES :: 8
+MAX_SCENE_PROBES :: 4096
+SCENE_PROBE_NAME_BYTES :: 31
+
+// The gather shader adds this to the high bound, so a face exactly on the
+// volume edge does not fall out after a float round trip. The probe map must
+// read the same bound or it reports a gap the renderer does not have.
+PROBE_VOLUME_EDGE_EPSILON :: f32(1e-3)
+
 // The four perimeter volumes tile the open floor and stop at the room
 // footprint. Each centre is outside the footprint: a south centre at z <= 1.55,
 // a north centre at z >= 15.84, and a side centre at x <= 4.55 or x >= 19.45.
@@ -55,23 +61,11 @@ NORTH_PROBE_COUNTS :: [3]u32{15, 2, 2}
 // The roof volume lights the room's exterior roof. Its floor is the room
 // ceiling height, and its probes sit above the roof; none of them is inside
 // the room.
-PROBE_VOLUMES := [8]renderer.Probe_Volume {
+PROBE_VOLUMES := [6]renderer.Probe_Volume {
 	{
 		min = {game.ARENA_ROOM_INNER_LOW_X, 0.0, game.ARENA_ROOM_INNER_LOW_Z},
 		spacing = ROOM_PROBE_SPACING,
 		counts = ROOM_PROBE_COUNTS,
-		probe_offset = 0,
-	},
-	{
-		min = SEALED_PAIR_PROBE_MIN_A,
-		spacing = SEALED_PAIR_PROBE_SPACING,
-		counts = SEALED_PAIR_PROBE_COUNTS,
-		probe_offset = 0,
-	},
-	{
-		min = SEALED_PAIR_PROBE_MIN_B,
-		spacing = SEALED_PAIR_PROBE_SPACING,
-		counts = SEALED_PAIR_PROBE_COUNTS,
 		probe_offset = 0,
 	},
 	{
@@ -86,8 +80,7 @@ PROBE_VOLUMES := [8]renderer.Probe_Volume {
 	},
 	{
 		min = {
-			ROOM_OUTER_LOW_X +
-			ARENA_PROBE_EDGE -
+			game.ARENA_ROOM_INNER_LOW_X -
 			f32(WEST_PROBE_COUNTS.x) * ARENA_PROBE_SPACING,
 			0.0,
 			ROOM_OUTER_LOW_Z - ARENA_PROBE_EDGE,
@@ -98,7 +91,7 @@ PROBE_VOLUMES := [8]renderer.Probe_Volume {
 	},
 	{
 		min = {
-			ROOM_OUTER_HIGH_X - ARENA_PROBE_EDGE,
+			game.ARENA_ROOM_INNER_HIGH_X,
 			0.0,
 			ROOM_OUTER_LOW_Z - ARENA_PROBE_EDGE,
 		},
@@ -110,8 +103,7 @@ PROBE_VOLUMES := [8]renderer.Probe_Volume {
 		min = {
 			ARENA_LOW,
 			0.0,
-			ROOM_OUTER_LOW_Z +
-			ARENA_PROBE_EDGE -
+			game.ARENA_ROOM_INNER_LOW_Z -
 			f32(SOUTH_PROBE_COUNTS.z) * ARENA_PROBE_SPACING,
 		},
 		spacing = ARENA_PROBE_SPACING,
@@ -119,9 +111,135 @@ PROBE_VOLUMES := [8]renderer.Probe_Volume {
 		probe_offset = 0,
 	},
 	{
-		min = {ARENA_LOW, 0.0, ROOM_OUTER_HIGH_Z - ARENA_PROBE_EDGE},
+		min = {ARENA_LOW, 0.0, game.ARENA_ROOM_INNER_HIGH_Z},
 		spacing = NORTH_PROBE_SPACING,
 		counts = NORTH_PROBE_COUNTS,
 		probe_offset = 0,
 	},
+}
+
+PROBE_VOLUME_NAMES := [6]string{"room", "roof", "west", "east", "south", "north"}
+
+// A scene block carries the probe layout that belongs to one test scene, not
+// the production arena. The session composes it with the room and arena data.
+Scene_Probe_Volume :: struct {
+	name:    string  `json:"name,omitempty"`,
+	min:     [3]f32  `json:"min"`,
+	spacing: f32     `json:"spacing"`,
+	counts:  [3]u32  `json:"counts"`,
+}
+
+probe_volume_probe_count :: proc(volume: renderer.Probe_Volume) -> int {
+	return int(volume.counts.x) * int(volume.counts.y) * int(volume.counts.z)
+}
+
+probe_volume_high :: proc(volume: renderer.Probe_Volume) -> [3]f32 {
+	return volume.min +
+	       [3]f32{f32(volume.counts.x), f32(volume.counts.y), f32(volume.counts.z)} *
+	           volume.spacing
+}
+
+probe_volume_contains :: proc(volume: renderer.Probe_Volume, point: [3]f32) -> bool {
+	high := probe_volume_high(volume) + PROBE_VOLUME_EDGE_EPSILON
+	return(
+		point.x >= volume.min.x &&
+		point.x <= high.x &&
+		point.y >= volume.min.y &&
+		point.y <= high.y &&
+		point.z >= volume.min.z &&
+		point.z <= high.z \
+	)
+}
+
+// The renderer and the probe map use the same first-match order.
+probe_volume_owner :: proc(volumes: []renderer.Probe_Volume, point: [3]f32) -> int {
+	for volume, index in volumes {
+		if probe_volume_contains(volume, point) {
+			return index
+		}
+	}
+	return -1
+}
+
+probe_volume_centre :: proc(volume: renderer.Probe_Volume, x, y, z: int) -> [3]f32 {
+	return volume.min + ([3]f32{f32(x), f32(y), f32(z)} + 0.5) * volume.spacing
+}
+
+// The extras sit after the room volume, so a placed room owns its interior,
+// and before the arena strips, so the open-arena fill cannot reach it.
+probe_volumes_compose :: proc(
+	extras: []Scene_Probe_Volume,
+	allocator: mem.Allocator,
+) -> ([]renderer.Probe_Volume, string) {
+	volumes := make(
+		[]renderer.Probe_Volume,
+		len(PROBE_VOLUMES) + len(extras),
+		allocator,
+	)
+	volumes[0] = PROBE_VOLUMES[0]
+	for extra, index in extras {
+		total := int(extra.counts.x) * int(extra.counts.y) * int(extra.counts.z)
+		if total == 0 || !(extra.spacing > 0) {
+			delete(volumes, allocator)
+			return nil, "a probe volume needs positive counts and spacing"
+		}
+		volumes[index + 1] = {
+			min     = extra.min,
+			spacing = extra.spacing,
+			counts  = extra.counts,
+		}
+	}
+	copy(volumes[len(extras) + 1:], PROBE_VOLUMES[1:])
+	return volumes, ""
+}
+
+scene_probe_volumes_clone :: proc(
+	specs: []Scene_Probe_Volume,
+	allocator: mem.Allocator,
+) -> []Scene_Probe_Volume {
+	clones := make([]Scene_Probe_Volume, len(specs), allocator)
+	for spec, index in specs {
+		clones[index] = spec
+		clones[index].name = strings.clone(spec.name, allocator)
+	}
+	return clones
+}
+
+scene_probe_volumes_destroy :: proc(
+	specs: []Scene_Probe_Volume,
+	allocator: mem.Allocator,
+) {
+	for spec in specs {
+		if spec.name != "" {
+			delete(spec.name, allocator)
+		}
+	}
+	if specs != nil {
+		delete(specs, allocator)
+	}
+}
+
+scene_probe_name_valid :: proc(name: string) -> bool {
+	if name == "" {
+		return true
+	}
+	if len(name) > SCENE_PROBE_NAME_BYTES {
+		return false
+	}
+	for character in name {
+		if character >= 'a' && character <= 'z' {
+			continue
+		}
+		if character >= 'A' && character <= 'Z' {
+			continue
+		}
+		if character >= '0' && character <= '9' {
+			continue
+		}
+		if character == '-' || character == '_' {
+			continue
+		}
+		return false
+	}
+	return true
 }

@@ -195,7 +195,7 @@ editor_body_follows_the_palette_rule_and_delete_undoes :: proc(t: ^testing.T) {
 editor_object_fields_reject_bad_values :: proc(t: ^testing.T) {
 	lines := []string {
 		`{"cmd": "editor", "select_object": -1}`,
-		`{"cmd": "editor", "select_object": "one"}`,
+		`{"cmd": "editor", "select_object": "bad name"}`,
 		`{"cmd": "editor", "move": [0, 1]}`,
 		`{"cmd": "editor", "move": "up"}`,
 		`{"cmd": "editor", "rotate": "left"}`,

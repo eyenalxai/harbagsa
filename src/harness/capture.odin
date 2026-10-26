@@ -63,6 +63,7 @@ Capture_Spec :: struct {
 	histogram: Maybe(int),
 	steps:     Maybe(Capture_Steps_Options),
 	color_key: Maybe(Capture_Color_Key),
+	coverage:  Maybe(Capture_Coverage),
 }
 
 Capture_Request :: struct {

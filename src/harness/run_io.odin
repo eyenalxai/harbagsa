@@ -51,7 +51,12 @@ build_summary :: proc(report: Report, out_dir: string) -> Run_Summary {
 	}
 	summary.checks_total = len(report.checks)
 	for check in report.checks {
-		if !check.ok {
+		if check.ok {
+			continue
+		}
+		if check.advisory && check.error == "" {
+			summary.checks_advisory += 1
+		} else {
 			summary.checks_failed += 1
 		}
 	}

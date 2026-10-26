@@ -6,7 +6,6 @@ import "core:testing"
 
 import "src:frame"
 import "src:game"
-import "src:renderer"
 
 ROOM_LOW :: [3]f32{
 	game.ARENA_ROOM_INNER_LOW_X,
@@ -28,66 +27,7 @@ ROOM_OUTER_HIGH :: [2]f32{
 }
 ROOM_TOP :: f32(game.ARENA_ROOM_HEIGHT + game.ARENA_ROOM_CEILING_THICKNESS)
 
-PAIR_VOLUME_A_INDEX :: 1
-PAIR_VOLUME_B_INDEX :: 2
-PAIR_ROOM_AIR_LOW := [2][3]f32 {
-	{frame.SEALED_PAIR_X - 3.75, 0, frame.SEALED_PAIR_Z - 1.75},
-	{frame.SEALED_PAIR_X + 0.25, 0, frame.SEALED_PAIR_Z - 1.75},
-}
-PAIR_ROOM_AIR_HIGH := [2][3]f32 {
-	{frame.SEALED_PAIR_X - 0.25, game.ARENA_ROOM_HEIGHT, frame.SEALED_PAIR_Z + 1.75},
-	{frame.SEALED_PAIR_X + 3.75, game.ARENA_ROOM_HEIGHT, frame.SEALED_PAIR_Z + 1.75},
-}
-
-@(private)
-volume_high :: proc(volume: renderer.Probe_Volume) -> [3]f32 {
-	counts := [3]f32 {
-		f32(volume.counts.x),
-		f32(volume.counts.y),
-		f32(volume.counts.z),
-	}
-	return volume.min + counts * volume.spacing
-}
-
-@(private)
-volume_contains :: proc(volume: renderer.Probe_Volume, point: [3]f32) -> bool {
-	high := volume_high(volume)
-	return(
-		point.x >= volume.min.x &&
-		point.x <= high.x &&
-		point.y >= volume.min.y &&
-		point.y <= high.y &&
-		point.z >= volume.min.z &&
-		point.z <= high.z \
-	)
-}
-
-@(private)
-first_volume :: proc(point: [3]f32) -> int {
-	for volume, index in frame.PROBE_VOLUMES {
-		if volume_contains(volume, point) {
-			return index
-		}
-	}
-	return -1
-}
-
-@(private)
-inside_pair_air :: proc(point: [3]f32) -> bool {
-	for room in 0 ..< 2 {
-		low := PAIR_ROOM_AIR_LOW[room]
-		high := PAIR_ROOM_AIR_HIGH[room]
-		if point.x > low.x &&
-		   point.x < high.x &&
-		   point.y > low.y &&
-		   point.y < high.y &&
-		   point.z > low.z &&
-		   point.z < high.z {
-			return true
-		}
-	}
-	return false
-}
+DEFAULT_PROBE_COUNT :: 537
 
 @(private)
 inside_room_footprint :: proc(point: [3]f32) -> bool {
@@ -101,90 +41,60 @@ inside_room_footprint :: proc(point: [3]f32) -> bool {
 
 @(test)
 room_volume_is_first :: proc(t: ^testing.T) {
-	testing.expect(t, len(frame.PROBE_VOLUMES) > 1, "the scene must supply arena volumes")
+	testing.expect_value(t, len(frame.PROBE_VOLUMES), 6)
 	room := frame.PROBE_VOLUMES[0]
 	testing.expect_value(t, room.min, ROOM_LOW)
 	testing.expect_value(t, room.counts, [3]u32{10, 3, 10})
 	testing.expect_value(t, room.spacing, f32(1.04))
-
-	pair_a := frame.PROBE_VOLUMES[PAIR_VOLUME_A_INDEX]
-	testing.expect_value(t, pair_a.min, frame.SEALED_PAIR_PROBE_MIN_A)
-	testing.expect_value(t, pair_a.counts, [3]u32{4, 3, 4})
-	testing.expect_value(t, pair_a.spacing, f32(1.0))
-	pair_b := frame.PROBE_VOLUMES[PAIR_VOLUME_B_INDEX]
-	testing.expect_value(t, pair_b.min, frame.SEALED_PAIR_PROBE_MIN_B)
-	testing.expect_value(t, pair_b.counts, [3]u32{4, 3, 4})
-	testing.expect_value(t, pair_b.spacing, f32(1.0))
+	testing.expect_value(t, frame.PROBE_VOLUME_NAMES[0], "room")
+	testing.expect_value(t, frame.PROBE_VOLUME_NAMES[5], "north")
 }
 
 @(test)
-sealed_pair_probes_sit_in_room_air :: proc(t: ^testing.T) {
-	probe_count := 0
-	for pair_index in PAIR_VOLUME_A_INDEX ..= PAIR_VOLUME_B_INDEX {
-		pair := frame.PROBE_VOLUMES[pair_index]
-		for z in 0 ..< int(pair.counts.z) {
-			for y in 0 ..< int(pair.counts.y) {
-				for x in 0 ..< int(pair.counts.x) {
-					centre :=
-						pair.min +
-						([3]f32{f32(x), f32(y), f32(z)} + 0.5) * pair.spacing
-					probe_count += 1
-					testing.expectf(
-						t,
-						inside_pair_air(centre),
-						"pair probe %v is not in room air",
-						centre,
-					)
-					testing.expectf(
-						t,
-						abs(centre.x - frame.SEALED_PAIR_X) > 0.25,
-						"pair probe %v is inside the shared wall",
-						centre,
-					)
-				}
-			}
-		}
+default_probe_count_matches_the_atlas :: proc(t: ^testing.T) {
+	total := 0
+	for volume in frame.PROBE_VOLUMES {
+		total += frame.probe_volume_probe_count(volume)
 	}
-	testing.expect_value(t, probe_count, 96)
+	testing.expect_value(t, total, DEFAULT_PROBE_COUNT)
 }
 
 @(test)
-sealed_pair_interior_selects_the_pair_volume :: proc(t: ^testing.T) {
-	points := [2][3]f32 {
-		{(PAIR_ROOM_AIR_LOW[0].x + PAIR_ROOM_AIR_HIGH[0].x) * 0.5, 1.5, frame.SEALED_PAIR_Z},
-		{(PAIR_ROOM_AIR_LOW[1].x + PAIR_ROOM_AIR_HIGH[1].x) * 0.5, 1.5, frame.SEALED_PAIR_Z},
-	}
-	testing.expect_value(t, first_volume(points[0]), PAIR_VOLUME_A_INDEX)
-	testing.expect_value(t, first_volume(points[1]), PAIR_VOLUME_B_INDEX)
+probe_centre_and_high_agree :: proc(t: ^testing.T) {
+	volume := frame.PROBE_VOLUMES[0]
+	high := frame.probe_volume_high(volume)
+	testing.expect_value(t, high, [3]f32{ROOM_LOW.x + 10 * 1.04, ROOM_LOW.y + 3 * 1.04, ROOM_LOW.z + 10 * 1.04})
+	centre := frame.probe_volume_centre(volume, 0, 0, 0)
+	testing.expect_value(t, centre, ROOM_LOW + [3]f32{0.5, 0.5, 0.5} * 1.04)
+	testing.expect(t, frame.probe_volume_contains(volume, centre))
+	testing.expect(t, !frame.probe_volume_contains(volume, high + {0.01, 0, 0}))
+}
 
-	faces := [8][3]f32 {
-		{frame.SEALED_PAIR_X - 3.75, 1.5, frame.SEALED_PAIR_Z},
-		{frame.SEALED_PAIR_X - 0.25, 1.5, frame.SEALED_PAIR_Z},
-		{frame.SEALED_PAIR_X + 0.25, 1.5, frame.SEALED_PAIR_Z},
-		{frame.SEALED_PAIR_X + 3.75, 1.5, frame.SEALED_PAIR_Z},
-		{frame.SEALED_PAIR_X - 2.0, 1.5, frame.SEALED_PAIR_Z - 1.75},
-		{frame.SEALED_PAIR_X + 2.0, 1.5, frame.SEALED_PAIR_Z + 1.75},
-		{frame.SEALED_PAIR_X - 2.0, 0.0, frame.SEALED_PAIR_Z},
-		{frame.SEALED_PAIR_X + 2.0, game.ARENA_ROOM_HEIGHT, frame.SEALED_PAIR_Z},
-	}
-	for point, index in faces {
-		expected := index == 2 || index == 3 || index == 5 || index == 7 ? PAIR_VOLUME_B_INDEX : PAIR_VOLUME_A_INDEX
-		testing.expect_value(t, first_volume(point), expected)
-	}
+@(test)
+ownership_picks_the_first_matching_volume :: proc(t: ^testing.T) {
+	room_point := [3]f32{(ROOM_LOW.x + ROOM_HIGH.x) * 0.5, 1.5, (ROOM_LOW.z + ROOM_HIGH.z) * 0.5}
+	testing.expect_value(t, frame.probe_volume_owner(frame.PROBE_VOLUMES[:], room_point), 0)
+
+	roof_point := [3]f32{game.ARENA_ROOM_X, game.ARENA_ROOM_HEIGHT + 1.0, game.ARENA_ROOM_Z}
+	testing.expect_value(t, frame.probe_volume_owner(frame.PROBE_VOLUMES[:], roof_point), 1)
+
+	north_point := [3]f32{0, 1.5, game.ARENA_ROOM_Z + 10}
+	testing.expect_value(t, frame.probe_volume_owner(frame.PROBE_VOLUMES[:], north_point), 5)
+
+	outside := [3]f32{0, 1.5, game.ARENA_HALF_SIZE * 2}
+	testing.expect_value(t, frame.probe_volume_owner(frame.PROBE_VOLUMES[:], outside), -1)
 }
 
 @(test)
 arena_probe_centres_stay_out_of_the_room :: proc(t: ^testing.T) {
 	for volume, index in frame.PROBE_VOLUMES {
-		if index <= PAIR_VOLUME_B_INDEX {
+		if index == 0 {
 			continue
 		}
 		for z in 0 ..< int(volume.counts.z) {
 			for y in 0 ..< int(volume.counts.y) {
 				for x in 0 ..< int(volume.counts.x) {
-					centre :=
-						volume.min +
-						([3]f32{f32(x), f32(y), f32(z)} + 0.5) * volume.spacing
+					centre := frame.probe_volume_centre(volume, x, y, z)
 					inside_room := centre.y < ROOM_TOP && inside_room_footprint(centre)
 					testing.expectf(
 						t,
@@ -202,10 +112,10 @@ arena_probe_centres_stay_out_of_the_room :: proc(t: ^testing.T) {
 @(test)
 arena_bounds_stop_before_the_room_interior :: proc(t: ^testing.T) {
 	for volume, index in frame.PROBE_VOLUMES {
-		if index <= PAIR_VOLUME_B_INDEX || volume.min.y >= ROOM_HIGH.y {
+		if index == 0 || volume.min.y >= ROOM_HIGH.y {
 			continue
 		}
-		high := volume_high(volume)
+		high := frame.probe_volume_high(volume)
 		overlaps :=
 			high.x > ROOM_LOW.x &&
 			volume.min.x < ROOM_HIGH.x &&
@@ -229,7 +139,7 @@ open_arena_is_covered :: proc(t: ^testing.T) {
 			x: f32 = -game.ARENA_HALF_SIZE
 			for x <= game.ARENA_HALF_SIZE {
 				point := [3]f32{x, y, z}
-				index := first_volume(point)
+				index := frame.probe_volume_owner(frame.PROBE_VOLUMES[:], point)
 				room_interior :=
 					x >= ROOM_LOW.x &&
 					x <= ROOM_HIGH.x &&

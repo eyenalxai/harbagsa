@@ -1,7 +1,10 @@
 #+vet explicit-allocators
+#+vet !unused-procedures // the harness probe map calls the contains helper
 package game
 
 import b3 "libs:box3d"
+
+import "src:geometry"
 
 LOCAL_BOX_CORNERS :: [8][3]f32 {
 	{-1.0, -1.0, -1.0},
@@ -51,4 +54,29 @@ oriented_aabb_half_extents :: proc(half_extents: [3]f32, rotation: b3.Quat) -> [
 		upper.z = max(upper.z, corner.z)
 	}
 	return (upper - lower) * 0.5
+}
+
+// A point is inside when its local coordinates are inside the half extents.
+// The tolerance keeps a point on a shared face from counting as hidden by the
+// neighbour, while a point on the neighbour's floor-level face still counts.
+oriented_box_contains :: proc(box: geometry.Box, point: [3]f32) -> bool {
+	rotation := quaternion(
+		x = box.rotation[0],
+		y = box.rotation[1],
+		z = box.rotation[2],
+		w = box.rotation[3],
+	)
+	local := rotate_vector(
+		quaternion(x = -rotation.x, y = -rotation.y, z = -rotation.z, w = rotation.w),
+		b3.Vec3(point - box.center),
+	)
+	half := box.half_extents
+	return(
+		local.x > -half.x + 0.001 &&
+		local.x < half.x - 0.001 &&
+		local.z > -half.z + 0.001 &&
+		local.z < half.z - 0.001 &&
+		local.y >= -half.y - 0.001 &&
+		local.y <= half.y + 0.001 \
+	)
 }

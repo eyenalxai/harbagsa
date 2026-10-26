@@ -139,3 +139,94 @@ bare_state_field_reports_an_error_without_crashing :: proc(t: ^testing.T) {
 	defer harness.check_result_destroy(&result, context.allocator)
 	testing.expect(t, result.error != "", "a bare sun field did not report an error")
 }
+
+@(test)
+object_check_reads_the_state_by_name :: proc(t: ^testing.T) {
+	state := harness.State {
+		objects = []harness.Object_State {
+			{
+				id = 4,
+				name = "room-a-lamp",
+				prefab = "Lamp",
+				body = "static",
+				position = {x = 1, y = 2, z = 3},
+				rotation = {w = 1},
+			},
+		},
+	}
+	command := harness.Check_Command {
+		field = "objects.room-a-lamp.position.z",
+		op    = .Eq,
+		value = {kind = .Number, number = 3},
+	}
+	result := harness.check_evaluate(command, state, {}, nil, context.allocator)
+	defer harness.check_result_destroy(&result, context.allocator)
+	testing.expectf(t, result.ok, "named object check failed: %s", result.error)
+}
+
+@(test)
+advisory_is_recorded_on_the_result :: proc(t: ^testing.T) {
+	command := harness.Check_Command {
+		field = "capture.worst_mean_delta",
+		op = .Le,
+		value = {kind = .Number, number = 0.1},
+		advisory = true,
+	}
+	captures := []harness.Capture_Result{{delta_mean = 0.2}}
+	result := harness.check_evaluate(command, {}, captures, nil, context.allocator)
+	defer harness.check_result_destroy(&result, context.allocator)
+	testing.expect(t, result.advisory, "the result lost the advisory flag")
+	testing.expect(t, !result.ok, "the advisory check passed")
+}
+
+@(test)
+advisory_miss_keeps_the_session_running_but_an_error_does_not :: proc(t: ^testing.T) {
+	session, create_error := harness.session_create(context.allocator)
+	if create_error != "" {
+		testing.expectf(t, false, "session create failed: %s", create_error)
+		return
+	}
+	defer harness.session_destroy(&session)
+
+	miss_line := `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 100, "advisory": true}`
+	miss_command, miss_parse := harness.command_parse_string(miss_line, context.allocator)
+	defer harness.command_destroy(&miss_command, context.allocator)
+	if miss_parse != "" {
+		testing.expectf(t, false, "miss parse failed: %s", miss_parse)
+		return
+	}
+	miss_reply := harness.session_execute(&session, miss_command, miss_line)
+	testing.expectf(t, miss_reply.ok, "an advisory miss failed the command: %s", miss_reply.error)
+	testing.expect(t, miss_reply.check != nil && !miss_reply.check.ok, "the advisory miss was not recorded")
+	harness.reply_destroy(&miss_reply, context.allocator)
+
+	error_line := `{"cmd": "check", "field": "player.position.nope", "op": "eq", "value": 1, "advisory": true}`
+	error_command, error_parse := harness.command_parse_string(error_line, context.allocator)
+	defer harness.command_destroy(&error_command, context.allocator)
+	if error_parse != "" {
+		testing.expectf(t, false, "error parse failed: %s", error_parse)
+		return
+	}
+	error_reply := harness.session_execute(&session, error_command, error_line)
+	testing.expect(t, !error_reply.ok, "an advisory field error passed the command")
+	testing.expect(t, error_reply.check != nil && error_reply.check.error != "", "the field error was not recorded")
+	harness.reply_destroy(&error_reply, context.allocator)
+}
+
+@(test)
+object_paths_that_are_not_decimal_ids_read_names :: proc(t: ^testing.T) {
+	state := harness.State {
+		objects = []harness.Object_State {
+			{id = 1, prefab = "Crate", body = "dynamic", rotation = {w = 1}},
+			{id = 2, name = "0x1", prefab = "Lamp", body = "static", rotation = {w = 1}},
+		},
+	}
+	command := harness.Check_Command {
+		field = "objects.0x1.prefab",
+		op = .Eq,
+		value = {kind = .String, text = "Lamp"},
+	}
+	result := harness.check_evaluate(command, state, {}, nil, context.allocator)
+	defer harness.check_result_destroy(&result, context.allocator)
+	testing.expectf(t, result.ok, "a non-decimal handle did not read the name: %s", result.error)
+}

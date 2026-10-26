@@ -37,6 +37,12 @@ follow them: a roof volume and four perimeter strips at a 4 m cell, with a
 along the shallowest local axis before the rays run. The layout and the leak
 argument are in `docs/adr/0034-ddgi-arena-coverage.md`.
 
+This measurement predates [ADR 0035](../adr/0035-scenario-probe-data.md). The
+sealed pair is now a `scene` block in `scenarios/ddgi-sealed.json`, the default
+scene is six volumes and 537 probes, the perimeter strips meet the room's inner
+faces, and the north strip uses 2.9 m. The cost rows at 537 and 633 probes
+remain the two layouts.
+
 ## Result
 
 | Capture | Mean green |
@@ -48,7 +54,7 @@ argument are in `docs/adr/0034-ddgi-arena-coverage.md`.
 
 The scenario checks `probe_count`, `probe_volume_count`, `probe_energy`, the
 GI on/off order, and the AO on/off order: 10 checks, 0 failed. The probe energy
-is 0.082 over the whole atlas with the lamp on. The arena sky fill is dimmer than
+is 0.085 over the whole atlas with the lamp on. The arena sky fill is dimmer than
 the lamp-lit room. The four captures are deterministic: a repeat run produces
 the same PNG hashes.
 
@@ -98,7 +104,7 @@ Removing the door segment is transport, and the same run gates it:
 The far wall is in the shadow of the remaining shared wall: the direct lamp line
 crosses the solid part, so the far-wall lift comes through the opening and the
 probe field. It is brighter than the sealed baseline and dimmer than the doorway.
-That ordering is the doorway gate, not a wall leak. The scenario has 17 checks,
+That ordering is the doorway gate, not a wall leak. The scenario has 18 checks,
 0 failed.
 
 The old `ddgi-leak` scenario is retired. Its camera looked out of the room door,
@@ -133,10 +139,10 @@ colour key, writes a 4x crop, and then repeats the chamber view from
 The remaining 0.30% of the frame is the room doorway, which is the unlit
 interior. The shaded face is a smooth sky gradient with soft 4 m probe blotches,
 not the old black. The chamber stays at the dither floor because the room volume
-comes first and the arena bounds stop at the room's outer wall; the arena probes
+comes first and the arena strips meet the room's inner faces; the arena probes
 add no light to a room or a lane through a wall.
 
-The scenario has 7 checks, 0 failed:
+The scenario has 10 checks, 0 failed:
 
 ```sh
 make shot SCENARIO=ddgi-arena OUT=runs/ddgi-arena

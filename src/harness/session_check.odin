@@ -33,21 +33,34 @@ session_check_command :: proc(
 	state_destroy(&state, session.allocator)
 	append(&session.checks, result)
 	reply.check = &session.checks[len(session.checks) - 1]
-	reply.ok = result.ok
-	if !result.ok {
-		tolerance := check_tolerance_note(result, session.allocator)
-		message := fmt.aprintf(
-			"check failed: %s %s %s%s (actual %s)",
-			result.field,
-			result.op,
-			result.expected,
-			tolerance,
-			result.actual,
-			allocator = session.allocator,
-		)
-		session_failure(session, message)
-		delete(tolerance, session.allocator)
-		delete(message, session.allocator)
+	// An advisory miss is not a command error; an advisory field error is.
+	advisory_miss := command.advisory && result.error == ""
+	reply.ok = result.ok || advisory_miss
+	if !result.ok && !advisory_miss {
+		if result.error != "" {
+			message := fmt.aprintf(
+				"check failed: %s: %s",
+				result.field,
+				result.error,
+				allocator = session.allocator,
+			)
+			session_failure(session, message)
+			delete(message, session.allocator)
+		} else {
+			tolerance := check_tolerance_note(result, session.allocator)
+			message := fmt.aprintf(
+				"check failed: %s %s %s%s (actual %s)",
+				result.field,
+				result.op,
+				result.expected,
+				tolerance,
+				result.actual,
+				allocator = session.allocator,
+			)
+			session_failure(session, message)
+			delete(tolerance, session.allocator)
+			delete(message, session.allocator)
+		}
 	}
 	return ""
 }

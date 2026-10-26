@@ -7,7 +7,7 @@ import "core:mem"
 
 import "src:game"
 
-PLACE_KEYS := [?]string{"cmd", "prefab", "position", "yaw_deg", "body", "light"}
+PLACE_KEYS := [?]string{"cmd", "prefab", "position", "yaw_deg", "body", "light", "name"}
 PLACE_LIGHT_KEYS := [?]string{"color", "intensity", "range"}
 
 Place_Light :: struct {
@@ -20,6 +20,7 @@ Place_Light :: struct {
 }
 
 Place_Command :: struct {
+	name:     Object_Name,
 	prefab:   game.Prefab_Id,
 	position: [3]f32,
 	yaw_deg:  f32,
@@ -28,7 +29,10 @@ Place_Command :: struct {
 }
 
 Remove_Command :: struct {
-	id: game.Object_Id,
+	id:   game.Object_Id,
+	name: Object_Name,
+	has_id: bool,
+	has_name: bool,
 }
 
 @(private)
@@ -74,6 +78,17 @@ parse_place :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 			return {}, light_error
 		}
 		command.place.light = light
+	}
+	if value, has := json_get(object, "name"); has {
+		text, text_ok := json_string(value)
+		parsed, parsed_ok := object_name_from_text(text)
+		if !text_ok || !parsed_ok {
+			return {}, format_error(
+				"%s",
+				"'name' must use at most 31 letters, digits, '-' or '_' and not be all digits",
+			)
+		}
+		command.place.name = parsed
 	}
 	return command, ""
 }
@@ -138,17 +153,40 @@ parse_place_light :: proc(value: json.Value, prefab: game.Prefab_Id) -> (Place_L
 @(private)
 parse_remove :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
 	_ = allocator
-	if key, unknown := json_unknown_key(object, {"cmd", "id"}); unknown {
+	if key, unknown := json_unknown_key(object, {"cmd", "id", "name"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
-	id, ok := integer_field(object, "id")
-	if !ok || id <= 0 {
-		return {}, format_error("%s", "remove needs a positive integer 'id'")
+	id_value, has_id := json_get(object, "id")
+	name_value, has_name := json_get(object, "name")
+	if has_id == has_name {
+		return {}, format_error("%s", "remove needs 'id' or 'name'")
 	}
-	return {kind = .Remove, remove = {id = game.Object_Id(id)}}, ""
+	command := Command{kind = .Remove}
+	if has_id {
+		id, ok := json_integer(id_value)
+		if !ok || id <= 0 {
+			return {}, format_error("%s", "remove needs a positive integer 'id'")
+		}
+		command.remove.id = game.Object_Id(id)
+		command.remove.has_id = true
+	} else {
+		text, text_ok := json_string(name_value)
+		name, name_ok := object_name_from_text(text)
+		if !text_ok || !name_ok || text == "" {
+			return {}, format_error("%s", "remove 'name' must be a placed object name")
+		}
+		command.remove.name = name
+		command.remove.has_name = true
+	}
+	return command, ""
 }
 
 session_place :: proc(session: ^Session, command: Place_Command, reply: ^Reply) -> string {
+	place_name := command.name
+	name := object_name_text(&place_name)
+	if name != "" && game.object_name_taken(&session.sim, name) {
+		return format_error("object name %q is taken", name)
+	}
 	light := game.prefab_light(command.prefab)
 	if command.light.has_color {
 		light.color = command.light.color
@@ -163,6 +201,7 @@ session_place :: proc(session: ^Session, command: Place_Command, reply: ^Reply) 
 	id := game.simulation_create_object(
 		&session.sim,
 		{
+			name = name,
 			prefab = command.prefab,
 			body_mode = command.body,
 			center = {command.position[0], command.position[1], command.position[2]},
@@ -178,8 +217,18 @@ session_place :: proc(session: ^Session, command: Place_Command, reply: ^Reply) 
 }
 
 session_remove :: proc(session: ^Session, command: Remove_Command) -> string {
-	if !game.simulation_remove_object(&session.sim, command.id) {
-		return format_error("object id %d does not exist", command.id)
+	id := command.id
+	if command.has_name {
+		remove_name := command.name
+		name := object_name_text(&remove_name)
+		object, found := game.simulation_object_find_by_name(&session.sim, name)
+		if !found {
+			return format_error("object name %q does not exist", name)
+		}
+		id = object.id
+	}
+	if !game.simulation_remove_object(&session.sim, id) {
+		return format_error("object id %d does not exist", id)
 	}
 	return ""
 }

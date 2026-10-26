@@ -56,6 +56,7 @@ Static_Box_State :: struct {
 
 Object_State :: struct {
 	id:        u32         `json:"id"`,
+	name:      string      `json:"name,omitempty" digest:"-"`,
 	prefab:    string      `json:"prefab"`,
 	body:      string      `json:"body"`,
 	position:  Vec_State   `json:"position"`,
