@@ -31,7 +31,7 @@ state_field :: proc(state: State, path: string) -> (Check_Value, string) {
 		handle, object_path, has_object_path := split_field(rest)
 		object: Object_State
 		found: bool
-		if id, id_ok := strconv.parse_int(handle); id_ok {
+		if id, id_ok := parse_object_id(handle); id_ok {
 			if id <= 0 {
 				return {}, fmt.aprintf("object id %q is not valid", handle, allocator = context.allocator)
 			}
@@ -145,6 +145,19 @@ struct_field_by_json_name :: proc(value: any, name: string) -> any {
 		}
 	}
 	return nil
+}
+
+@(private)
+parse_object_id :: proc(text: string) -> (int, bool) {
+	if text == "" {
+		return 0, false
+	}
+	for character in text {
+		if character < '0' || character > '9' {
+			return 0, false
+		}
+	}
+	return strconv.parse_int(text, 10)
 }
 
 @(private)

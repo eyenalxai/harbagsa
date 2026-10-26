@@ -315,4 +315,20 @@ capture_json_fields :: proc(
 			key.tolerance,
 		)
 	}
+	if coverage, has := capture.coverage.?; has {
+		json_write_separator(builder, has_previous)
+		fmt.sbprint(builder, `"coverage": {`)
+		first := true
+		if value, has_black := coverage.black.?; has_black {
+			fmt.sbprintf(builder, `"black": %g`, value)
+			first = false
+		}
+		if value, has_lit := coverage.lit.?; has_lit {
+			if !first {
+				fmt.sbprint(builder, `, `)
+			}
+			fmt.sbprintf(builder, `"lit": %g`, value)
+		}
+		fmt.sbprint(builder, `}`)
+	}
 }
