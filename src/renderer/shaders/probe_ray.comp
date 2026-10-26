@@ -173,6 +173,9 @@ void main() {
     }
     uint probe_index = push.first_probe + local_probe;
     uint probe_ray = ray_index % uint(PROBE_RAYS);
+    if (probe_positions.positions[probe_index].w < 0.5) {
+        return;
+    }
     vec3 probe_position = probe_positions.positions[probe_index].xyz;
 
     float hit_distance;
