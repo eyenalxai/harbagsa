@@ -30,39 +30,37 @@ while GI stays on.
 make shot SCENARIO=ddgi OUT=runs/ddgi
 ```
 
-The room volume is 10 x 3 x 10 probes at 1.04 m spacing. The two sealed-pair
-volumes come next: 4 x 3 x 4 probes per room at 1 m spacing. Five arena volumes
-follow them: a roof volume and four perimeter strips at a 4 m cell, with a
-2.775 m cell for the north strip. Probes inside a box are pushed out
-along the shallowest local axis before the rays run. The layout and the leak
-argument are in `docs/adr/0034-ddgi-arena-coverage.md`.
+The production scene supplies six volumes: the room at 1.04 m, the roof, and
+four perimeter strips at 2 m with a y=0.5 ground layer. The east strip uses 1 m.
+The sealed pair is a `scene` block in `scenarios/ddgi-sealed.json` with two 1 m
+volumes. A probe inside a box is invalid: the ray, blend, and gather skip it,
+and the blend clears its atlas. The layout and the contact argument are in
+`docs/adr/0036-ddgi-probe-validity-and-contact.md`; the scenario data is in
+`docs/adr/0035-scenario-probe-data.md`.
 
-This measurement predates [ADR 0035](../adr/0035-scenario-probe-data.md). The
-sealed pair is now a `scene` block in `scenarios/ddgi-sealed.json`, the default
-scene is six volumes and 537 probes, the perimeter strips meet the room's inner
-faces, and the north strip uses 2.9 m. The cost rows at 537 and 633 probes
-remain the two layouts.
+The result below uses the 2205-probe production field; the sealed run adds its
+96 pair probes for 2301.
 
 ## Result
 
 | Capture | Mean green |
 | --- | ---: |
-| `gi-on` | 164.79 |
+| `gi-on` | 164.99 |
 | `gi-off` | 123.78 |
-| `ao-on` | 164.78 |
-| `ao-off` | 168.34 |
+| `ao-on` | 164.98 |
+| `ao-off` | 168.54 |
 
 The scenario checks `probe_count`, `probe_volume_count`, `probe_energy`, the
 GI on/off order, and the AO on/off order: 10 checks, 0 failed. The probe energy
-is 0.085 over the whole atlas with the lamp on. The arena sky fill is dimmer than
+is 0.081 over the whole atlas with the lamp on. The arena sky fill is dimmer than
 the lamp-lit room. The four captures are deterministic: a repeat run produces
 the same PNG hashes.
 
 The room gate is `scenarios/room-lighting.json`: 19 checks, 0 failed. The first
-lane is 40.45 mean green under the west sun and 9.59 under the east sun. The
+lane is 39.65 mean green under the west sun and 8.26 under the east sun. The
 east value is transport through the connected four-turn light lock, not a wall
-leak. The chamber is 0.18 to 0.24 under the sun alone, 164.77 with the lamp, and
-0.24 after the lamp is removed. A backface ray no longer leaks into the sealed
+leak. The chamber is 0.165 under the sun alone, 164.98 with the lamp, and 0.165
+after the lamp is removed. A backface ray no longer leaks into the sealed
 end of the lock.
 
 ## Sealed pair
@@ -133,11 +131,11 @@ colour key, writes a 4x crop, and then repeats the chamber view from
 | --- | ---: | ---: |
 | `outside` pure-black pixels | 26.8% | 0.30% |
 | shaded face pure-black pixels | 83.8% | 0.0% |
-| shaded face mean green | 0.16 | 119.25 |
-| chamber mean green | 0.26 | 0.24 |
+| shaded face mean green | 0.16 | 109.40 |
+| chamber mean green | 0.26 | 0.165 |
 
 The remaining 0.30% of the frame is the room doorway, which is the unlit
-interior. The shaded face is a smooth sky gradient with soft 4 m probe blotches,
+interior. The shaded face is a smooth sky gradient with 2 m probe cells,
 not the old black. The chamber stays at the dither floor because the room volume
 comes first and the arena strips meet the room's inner faces; the arena probes
 add no light to a room or a lane through a wall.
@@ -156,7 +154,7 @@ make shot SCENARIO=ddgi-arena OUT=runs/ddgi-arena
 
 Ambient occlusion multiplies direct light only. The indirect term has its own
 probe visibility, so multiplying it by AO would count the corner twice. In the
-same chamber view, turning AO off raises mean green from 164.78 to 168.34 while
+same chamber view, turning AO off raises mean green from 164.98 to 168.54 while
 the probe atlas is unchanged. The decision is recorded in
 `docs/adr/0032-direct-ao-and-probe-indirect.md`.
 
@@ -164,21 +162,22 @@ the probe atlas is unchanged. The decision is recorded in
 
 `scenarios/perf-probes.json` uses 64 synthetic lights and the chamber camera at
 1280 x 720. The probe pass covers the ray trace and the blend. It costs 0.232 ms
-with 64 rays, 0.413 ms with 256 rays and 300 room probes, 0.672 ms with 256 rays
-and 537 probes after arena coverage, and 0.735 ms with 256 rays and 633 probes
-after the sealed pair. The 633-probe full GPU pass set is:
+with 64 rays, 0.413 ms with 256 rays and 300 room probes, 0.672 ms with 256
+rays and 537 probes after the first arena coverage, 0.735 ms with 256 rays and 633
+probes after the sealed pair, and 1.732 ms with 256 rays and 2205 probes after
+the contact grid. The 2205-probe full GPU pass set is:
 
 | Pass | ms |
 | --- | ---: |
-| TLAS | 0.277 |
+| TLAS | 0.291 |
 | Cluster | 0.033 |
-| Probe | 0.735 |
-| Depth | 0.014 |
-| Scene | 2.729 |
-| Sky | 0.004 |
-| TAA | 0.144 |
-| Overlay | 0.002 |
-| Total | 3.937 |
+| Probe | 1.732 |
+| Depth | 0.017 |
+| Scene | 3.061 |
+| Sky | 0.033 |
+| TAA | 0.379 |
+| Overlay | 0.003 |
+| Total | 5.549 |
 
 ## Limits
 
@@ -186,15 +185,15 @@ The room, its lane network, and the chamber share one grid, and that grid does
 not classify probes into disconnected rooms. The sealed pair uses two 1 m grids,
 one per room, so a room B surface never samples a room A probe. A larger
 building still needs a volume authoring and classification scheme. The arena grid
-is coarse, so the perimeter walls show soft 4 m blotches.
+resolves the crate and platform contact at 2 m; sub-metre detail still needs a
+finer volume.
 
-The probe atlas stores encoded irradiance and depth moments. Moving geometry
-relocates probe centres but does not reset the irradiance blend; a crate that
-moves inside a lit room keeps its old indirect until the blend converges.
+The probe atlas stores encoded irradiance and depth moments. A probe that moves
+inside a box becomes invalid; its atlas is cleared, and a later valid frame
+starts from a reset texel. A moving crate therefore does not keep stale light
+across a validity change.
 
 The path-traced reference is [`docs/evidence/ddgi-reference.md`](ddgi-reference.md).
-It measures the probe field against a 3-bounce CPU estimator and fails the
-current tree: the probe ray omits the hit surface albedo, and the room volume's
-high z bound sits one ULP below the north wall, so that face reads zero. The
-probe field is one diffuse bounce; it is not a path-traced renderer and does not
-claim modern-game parity.
+It measures the probe field against a one-bounce CPU estimator; the chamber,
+lane, and dive-platform gates pass. The probe field is one diffuse bounce; it is
+not a path-traced renderer and does not claim modern-game parity.
