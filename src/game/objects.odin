@@ -11,8 +11,16 @@ Object_Id :: u32
 
 INVALID_OBJECT_ID :: Object_Id(0)
 
+// A name is a fixed inline buffer: an object record is copied into history,
+// scene snapshots, and the check state, so an owned string would need a free on
+// every path. The cap is one short scenario handle, not a label.
+OBJECT_NAME_BYTES :: 32
+OBJECT_NAME_MAX :: OBJECT_NAME_BYTES - 1
+
 Placed_Object :: struct {
 	id:         Object_Id,
+	name:       [OBJECT_NAME_BYTES]u8,
+	name_length: u8,
 	prefab:     Prefab_Id,
 	body_mode:  Body_Mode,
 	body:       b3.BodyId,
@@ -23,6 +31,7 @@ Placed_Object :: struct {
 }
 
 Object_Spawn :: struct {
+	name:      string,
 	prefab:    Prefab_Id,
 	body_mode: Body_Mode,
 	center:    b3.Vec3,
@@ -45,6 +54,78 @@ simulation_object_find :: proc(sim: ^Simulation, id: Object_Id) -> (Placed_Objec
 		return {}, false
 	}
 	return sim.objects[index], true
+}
+
+object_name :: proc(object: ^Placed_Object) -> string {
+	return string(object.name[:object.name_length])
+}
+
+// An empty name is unnamed. A name may not be all digits, because a check path
+// reads `objects.<id>` when the handle parses as a number, and it may not be
+// `count`, which is the list length.
+object_name_valid :: proc(name: string) -> bool {
+	if name == "" {
+		return true
+	}
+	if len(name) > OBJECT_NAME_MAX || name == "count" {
+		return false
+	}
+	digits_only := true
+	for character in name {
+		if character >= '0' && character <= '9' {
+			continue
+		}
+		digits_only = false
+		if character >= 'a' && character <= 'z' {
+			continue
+		}
+		if character >= 'A' && character <= 'Z' {
+			continue
+		}
+		if character == '-' || character == '_' {
+			continue
+		}
+		return false
+	}
+	return !digits_only
+}
+
+object_name_taken :: proc(sim: ^Simulation, name: string) -> bool {
+	if name == "" {
+		return false
+	}
+	for &object in simulation_objects(sim) {
+		if object_name(&object) == name {
+			return true
+		}
+	}
+	return false
+}
+
+simulation_object_name :: proc(sim: ^Simulation, id: Object_Id) -> string {
+	index, ok := object_index_for_id(sim, id)
+	if !ok {
+		return ""
+	}
+	return object_name(&sim.objects[index])
+}
+
+simulation_object_find_by_name :: proc(
+	sim: ^Simulation,
+	name: string,
+) -> (
+	Placed_Object,
+	bool,
+) {
+	if name == "" {
+		return {}, false
+	}
+	for &object in simulation_objects(sim) {
+		if object_name(&object) == name {
+			return object, true
+		}
+	}
+	return {}, false
 }
 
 simulation_object_body :: proc(sim: ^Simulation, id: Object_Id) -> b3.BodyId {

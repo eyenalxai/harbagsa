@@ -15,6 +15,7 @@ Check_Result :: struct {
 	other:     string     `json:"other,omitempty"`,
 	actual:    string     `json:"actual,omitempty"`,
 	tolerance: Maybe(f64) `json:"tolerance,omitempty"`,
+	advisory:  bool       `json:"advisory,omitempty"`,
 	ok:        bool       `json:"ok"`,
 	error:     string     `json:"error,omitempty"`,
 }
@@ -30,6 +31,7 @@ check_evaluate :: proc(
 		field = command.field,
 		op = check_op_name(command.op),
 		tolerance = command.tolerance,
+		advisory = command.advisory,
 	}
 	actual, field_error := check_field(state, captures, analysis, command.field)
 	if field_error != "" {

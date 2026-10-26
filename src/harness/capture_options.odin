@@ -98,6 +98,33 @@ parse_region_value :: proc(value: json.Value) -> (Capture_Region_Spec, string) {
 }
 
 @(private)
+parse_capture_coverage :: proc(raw: json.Value) -> (Capture_Coverage, string) {
+	fields, fields_ok := json_object(raw)
+	if !fields_ok {
+		return {}, format_error("%s", "'coverage' must be an object")
+	}
+	if key, unknown := json_unknown_key(fields, {"black", "lit"}); unknown {
+		return {}, format_error("unknown coverage key %q", key)
+	}
+	coverage: Capture_Coverage
+	if value, has := json_get(fields, "black"); has {
+		black, ok := json_number(value)
+		if !ok || black < 0 {
+			return {}, format_error("%s", "'coverage.black' must be a non-negative number")
+		}
+		coverage.black = f32(black)
+	}
+	if value, has := json_get(fields, "lit"); has {
+		lit, ok := json_number(value)
+		if !ok || lit < 0 {
+			return {}, format_error("%s", "'coverage.lit' must be a non-negative number")
+		}
+		coverage.lit = f32(lit)
+	}
+	return coverage, ""
+}
+
+@(private)
 parse_capture_color_key :: proc(value: json.Value) -> (Capture_Color_Key, string) {
 	fields, fields_ok := json_object(value)
 	if !fields_ok {

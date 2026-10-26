@@ -8,6 +8,11 @@ page is the short operational guide for agents.
 
 ## Quick start
 
+Run `./bin/harbagsa-agent schema` first. It prints every scenario command and
+its fields, the capture targets and formats, the check operators and paths, and
+the state tree as JSON. `schema capture --text` prints one command alone. This
+page explains how to use them.
+
 Five recipes. Each writes a run directory; read `report.json` for the result.
 For a visual bug, start with `make shot`; it builds, runs, and prints the capture
 paths. `make quick` runs the short suite, and `make test-simulation` is the
@@ -84,6 +89,7 @@ serializes Make with `flock`.
 | read renderer state, the debug vertex counts, or the render digest | **Renderer state** |
 | change a renderer input for a diagnosis | **Renderer debug overrides** |
 | inspect the static arena boxes | `harbagsa-agent boxes` or **Interior room** |
+| read the probe layout and its gaps | `harbagsa-agent probes` or **Probe map** |
 | read every check gate and margin | `harbagsa-agent checks runs/<stem>` |
 | run a scenario on two builds and write a panel | **Visual A/B** |
 | check the sky and the direct-light occlusion | **Sky and ambient occlusion** |
@@ -100,7 +106,7 @@ serializes Make with `flock`.
 | measure frame time | **Performance** |
 | prove a capture-free sequence is deterministic | **Screenshots** and `scenarios/capture-free.json` |
 | reproduce a live view | **Live session** and `docs/adr/0025` |
-| understand a design choice | `docs/adr/0008` to `docs/adr/0026` |
+| understand a design choice | `docs/adr/0008` to `docs/adr/0035` |
 
 ## What one run writes
 
@@ -122,8 +128,8 @@ serializes Make with `flock`.
 - `state.json`: the final state alone. It holds the player, camera, placed
   objects, window and input settings, the debug mode, menu, rows, settle, frame,
   renderer, render digest, and simulation digest. Each object carries `id`,
-  `prefab`, `body`, `position`, `rotation`, `scale`, `spawn_age`, and `light`
-  (`active`, `color`, `intensity`, `range`). `static_boxes` carries the
+  `name`, `prefab`, `body`, `position`, `rotation`, `scale`, `spawn_age`, and
+  `light` (`active`, `color`, `intensity`, `range`). `static_boxes` carries the
   immutable arena geometry: `center`, `half_extents`, `color`, `rotation`,
   `emissive`, and `visual_only`. The debug mode carries the palette,
   the placement tool, the sun, the inspector, the light budget, and the history.
@@ -138,7 +144,9 @@ serializes Make with `flock`.
 
 Standard output is one JSON summary. Standard error holds logs. `--summary`
 writes the check table and every capture to standard error; `--verbose` adds
-the setup and perf reports.
+the setup and perf reports. The summary counts blocking misses in
+`checks_failed` and advisory misses in `checks_advisory`, so a run can exit 0
+with an advisory miss.
 
 `run -` reads the scenario from standard input. `--tag NAME` appends a directory
 to the run path, so `runs/smoke/before` and `runs/smoke/after` coexist.
@@ -186,16 +194,17 @@ Rules:
   future frame queues.
 - A check uses the `state.json` shape. Operators: `eq`, `ne`, `lt`, `le`, `gt`,
   `ge`. A numeric check takes an optional absolute `tolerance`; it applies to
-  `eq` and `ne`. A tolerance on an ordering op or a non-number is an error. Examples: `player.position.y`, `player.stance`, `objects.count`, `settings.window_mode`,
+  `eq` and `ne`. A tolerance on an ordering op or a non-number is an error.
+  `"advisory": true` records a miss without failing the run. Examples: `player.position.y`, `player.stance`, `objects.count`, `settings.window_mode`,
   `settings.resolution`, `settings.sprint_mode`, `settings.type_weight`,
   `menu.open`, `debug.active`, `debug.palette.open`, `debug.placement.armed`,
   `debug.placement.prefab`, `debug.sun.active`, `debug.sun.angular_diameter_deg`,
   `debug.inspector.body`, `debug.inspector.size.x`, `debug.inspector.yaw_deg`,
   `debug.inspector.snap`, and `debug.history.depth`.
-- An object check addresses a placed object by id: `objects.7.position.z`,
-  `objects.7.rotation.w`, `objects.7.prefab`, `objects.7.body`,
-  `objects.7.scale`, and `objects.7.spawn_age`. The id is stable while the object
-  exists. `objects.count` is the list length.
+- An object check addresses a placed object by id or name: `objects.7.position.z`
+  or `objects.room-a-lamp.position.z`. The fields are `name`, `prefab`, `body`,
+  `position`, `rotation`, `scale`, and `spawn_age`. The id and the name are
+  stable while the object exists. `objects.count` is the list length.
 - A capture check reads the capture summary. Fields: `capture.count`,
   `capture.worst_mean_delta`, `capture.worst_max_delta`,
   `capture.worst_over_16`, and `capture.worst_over_16_fraction`. A check can read
@@ -274,7 +283,9 @@ and crops are pixels. `turn` and `wheel` are step counts.
 - `{"cmd": "displays", "set": [{"name": "Solo", "desktop": "1280x720", "modes": ["1280x720"]}]}`
 - `{"cmd": "displays", "clear": true}`
 - `{"cmd": "rows"}`
-- `{"cmd": "scene", "camera": {...}, "sun": {...}, "objects": [...], "settings": {...}, "view": {...}, "displays": [...]}`
+- `{"cmd": "scene", "camera": {...}, "sun": {...}, "objects": [...], "probe_volumes": [...], "settings": {...}, "view": {...}, "displays": [...]}`
+- `{"cmd": "place", "prefab": "Lamp", "position": [13.5, 2.75, 10.5], "name": "key-lamp"}`
+- `{"cmd": "remove", "name": "key-lamp"}`
 - `{"cmd": "repro", "path": "runs/repro/live.json"}`
 - `{"cmd": "debug_mode", "active": true}`
 - `{"cmd": "editor", "open": true, "select": 4, "pick": true, "height": 0.5}`
@@ -313,19 +324,24 @@ A `shot` is only valid in a scenario. It expands in order to the `camera`, the
 every other shot key. `scenarios/shot.json` is the worked example.
 
 A `scene` command applies one exact scene. Its blocks are `camera`, `sun`,
-`objects`, `settings`, `view`, `displays`, and `renderer_debug`, and every block
-is optional. A `settings` block may carry any subset of its fields; an omitted
-field keeps the live value. A `view` block may carry any subset of its four
-flags. A `renderer_debug` block uses the same keys as the command and needs the
-same gate. The camera source is `player`, `debug`, or `override`; a player source
+`objects`, `probe_volumes`, `settings`, `view`, `displays`, and
+`renderer_debug`, and every block is optional. A `settings` block may carry any
+subset of its fields; an omitted field keeps the live value. A `view` block may
+carry any subset of its four flags. A `renderer_debug` block uses the same keys
+as the command and needs the same gate. A `probe_volumes` block adds interior
+volumes after the room volume and before the arena strips; each entry carries
+`name`, `min`, `spacing`, and `counts`. This is the scenario-owned test data:
+the production scene keeps no sealed-pair probes. The camera source is `player`,
+`debug`, or `override`; a player source
 carries a `player` block with the feet position, yaw, pitch, stance, velocity,
 grounded state, step smoothing, and eye height. An object carries its id,
-prefab, body, position, rotation quaternion, colour, and light. The settings
+optional name, prefab, body, position, rotation quaternion, colour, and light. The settings
 carry the window mode, display index, windowed resolution, input modes, and type
 weight. The display list replaces the menu list. `F5` writes one scene, and
 `record` starts with one, so a live view replays as a normal scenario. A scene
-snapshot writes every effective renderer override field, so a repro restores the
-exact debug state. A scene load closes the settings menu.
+snapshot writes every effective renderer override field and the custom probe
+volumes, so a repro restores the exact debug state. A scene load closes the
+settings menu.
 
 `repro` writes the same scene snapshot the `F5` key writes and sets the same
 notice. `path` is required and holds at most 160 bytes, so the notice can name
@@ -432,8 +448,8 @@ scenario, scenario stem, or label; repeat either flag to add a filter. A filter
 that matches no entry is an error. Suite names and scenario names resolve from
 the repository root, so the command works from any directory.
 
-`suites/fast.json` is the short visual loop: smoke, the interior room, the
-stairs AO, and the lamp wall plane. `make quick` builds the agent and runs it.
+`suites/fast.json` is the short loop: the advisory check, smoke, the interior
+room, the stairs AO, and the lamp wall plane. `make quick` builds the agent and runs it.
 The full suites stay the final gate.
 
 `harbagsa-agent suite offscreen` is the validation target. `make
@@ -454,24 +470,28 @@ the field table for a scenario command such as `capture`.
 
 `place` is the scene-setup path. It creates one object without entering debug
 mode, so a lighting scenario draws no sun gizmo, ghost, or inspector outline.
-`prefab` and `position` are required. `yaw_deg` and `body` are optional; `body`
-defaults to the prefab's body. A `light` block is allowed only for a prefab with
-a light, and its omitted fields keep the prefab defaults:
+`prefab` and `position` are required. `yaw_deg`, `body`, and `name` are
+optional; `body` defaults to the prefab's body. A name is unique in the scene,
+uses at most 31 letters, digits, `-`, or `_`, and is not all digits. A `light`
+block is allowed only for a prefab with a light, and its omitted fields keep the
+prefab defaults:
 
 ```json
 {"cmd":"place","prefab":"Lamp","position":[13.5,2.75,10.5],"body":"static",
- "light":{"color":"warm","intensity":1.5,"range":8}}
+ "name":"key-lamp","light":{"color":"warm","intensity":1.5,"range":8}}
 ```
 
-`remove` deletes one object by id:
+`remove` deletes one object by id or by name:
 
 ```json
-{"cmd":"remove","id":4}
+{"cmd":"remove","name":"key-lamp"}
 ```
 
-`place` replies with the new id in `placed`. The editor still owns palette
-selection, armed placement, undo and redo, and the inspector; use `place` and
-`remove` when a scenario needs a fixed scene rather than an edit.
+`place` replies with the new id in `placed`. The name survives undo and a scene
+snapshot, so a check and a later command can address the object without
+depending on placement order. The editor still owns palette selection, armed
+placement, undo and redo, and the inspector; use `place` and `remove` when a
+scenario needs a fixed scene rather than an edit.
 
 ## Editor
 
@@ -517,7 +537,7 @@ with no active mode is a no-op.
 | `cancel` | clear the armed tool without placing |
 | `camera` | `{"position", "look_at"}` or `{"position", "yaw_deg", "pitch_deg"}` for the debug camera; angles are degrees |
 | `place` | `{"prefab", "position", "yaw_deg", "body"}` creates at an exact transform |
-| `select_object` | placed object id; 0 clears the selection |
+| `select_object` | placed object id or name; 0 clears the selection |
 | `move` | `[x, y, z]` centre for the selected object; y clamps above the floor |
 | `rotate_deg` | degrees to turn the selected object; negative turns the other way |
 | `delete` | remove the selected object |
@@ -808,6 +828,15 @@ per-channel tolerance of one 0..255 colour. It needs the color target and
 `.fraction`. `scenarios/editor-sun.json` uses it to prove that the amber sun
 gizmo is gone after placement, without guessing from vertex totals.
 
+`"coverage": {"black": 1.0, "lit": 16.0}` adds coverage fractions to the
+statistics. `capture.stats.coverage.zero_fraction` is always present and counts
+the pixels whose RGB is exactly zero. `black_fraction` counts the pixels with
+Rec. 709 luma at or below `black`; `lit_fraction` counts the pixels at or above
+`lit`. A threshold is in the target's own values, so a color capture uses 0..255
+levels and a `scene_color` float capture uses linear radiance. A threshold you
+omit leaves its fraction out of the report. A float capture can gate a missing
+indirect term with `zero_fraction` alone.
+
 A capture with `"crop": {"x","y","w","h","scale"}` writes a nearest-neighbor
 scaled PNG. `width` and `height` stay the source extent; `written_width` and
 `written_height` name the file. A crop stays out of the analysis window and the
@@ -875,8 +904,8 @@ series and the analysis window. A crop and a sidecar cannot be combined.
 
 `{"cmd":"captures","name":"pair","outputs":[...]}` renders one frame and writes
 one or more outputs from that frame. Each output carries one capture's `target`,
-`format`, `png`, `region`, `profile`, `crop`, `histogram`, and `steps`, plus an
-optional `name`; `frame` and `alpha` belong to the group. The outputs share the
+`format`, `png`, `region`, `profile`, `crop`, `histogram`, `steps`,
+`color_key`, and `coverage`, plus an optional `name`; `frame` and `alpha` belong to the group. The outputs share the
 frame, so a PNG, history statistics, and a linear profile describe the same
 pixels. A group holds at most eight outputs and a name must be unique in the
 group and the run. `scenarios/capture-group.json` covers all six output forms.
@@ -893,6 +922,9 @@ the render and before the capture joins the list.
 A check reads the last capture in its window: `capture.target`,
 `capture.format`, `capture.note`, and `capture.stats.min.x`, `capture.stats.max.x`,
 `capture.stats.mean.x`, `capture.stats.stddev.x`, `capture.stats.gradient.x`,
+`capture.stats.coverage.zero_fraction`,
+`capture.stats.coverage.black_fraction`,
+`capture.stats.coverage.lit_fraction`,
 `capture.stats.steps.count`, `capture.stats.steps.pairs`,
 `capture.stats.steps.max`, `capture.stats.steps.over_cap`,
 `capture.stats.steps.blur`, `capture.stats.steps.min`,
@@ -1129,8 +1161,8 @@ run never created a renderer, and `renderer.active` is `false`.
 | `shadow_phase` | the sun sample phase the last frame used |
 | `light_count` | the point lights the last frame uploaded |
 | `cluster_overflow` | lights a cluster kept beyond its 256-index stride |
-| `probe_volume_count` | probe volumes the scene supplied; 8 in the current scene |
-| `probe_count` | probes in the live atlas; 633 in the current scene |
+| `probe_volume_count` | probe volumes the scene supplied; 6 in the default scene |
+| `probe_count` | probes in the live atlas; 537 in the default scene |
 | `probe_frame` | probe-update frames since the atlas was created |
 | `probe_energy` | mean linear RGB irradiance across the probe atlas |
 | `atlas_weight` | the type weight the active coverage atlas holds |
@@ -1369,32 +1401,32 @@ the atlas energy, and that the on frame is brighter. The off frame still shows
 the direct lamp, so the difference is the bounce.
 
 `scenarios/ddgi-sealed.json` builds a sealed two-room pair from static placed
-Walls and Platforms at (-10, -8). A lamp sits in room A and the camera in room B
-behind a solid shared wall. The wall capture stays at the dither floor before
-and after the lamp, and a depth capture proves the wall is in front of the
-camera. The scenario then removes the placed door segment from the shared wall
-in the same run. The doorway view brightens, and a view of the far wall is
-dimmer than the doorway. The opening is transport; the solid wall is the leak
-gate. `scenarios/ddgi-door.json` still looks through the room's static west door
-with the sun below the horizon, and `scenarios/ddgi-move.json` moves the lamp
-with the editor and checks both views stay lit.
+Walls and Platforms at (-10, -8). The scenario supplies its own two 1 m probe
+volumes in a `scene` block, so the production scene keeps no test-room probes.
+Every placed wall and roof has a name. A lamp sits in room A and the camera in
+room B behind a solid shared wall. The wall capture stays at the dither floor
+before and after the lamp, and a depth capture proves the wall is in front of
+the camera. The scenario then removes `shared-north`, the door segment of the
+shared wall, by name in the same run. The doorway view brightens, and a view of
+the far wall is dimmer than the doorway. The opening is transport; the solid
+wall is the leak gate. `scenarios/ddgi-door.json` still looks through the room's
+static west door with the sun below the horizon, and `scenarios/ddgi-move.json`
+moves the lamp with the editor and checks both views stay lit.
 
 `scenarios/ddgi-arena.json` covers the open arena and the room exterior. It uses
 the `outside` camera from `room-lighting`, captures the whole frame, and measures
 the room's west face, which no sun ray reaches. The face mean must clear the old
 black level and its pure-black colour-key fraction must fall below 0.1. A second
 view at the chamber camera proves the sealed room stays at the dither floor and
-that its depth target holds no sky pixel. The scene supplies eight probe volumes:
-the room first, two sealed-pair volumes next, a roof volume, and four perimeter
-volumes that stop at the room's outer wall. The room and pair volumes win the
-sampler for their interior points, so the arena sky fill cannot light a room or
-a lane through a wall. The pair uses one volume per room, so a room B surface
-never samples a room A probe; the gather keeps the reference 5 percent Chebyshev
-floor as a fallback inside the room.
-`tests/frame/probe_volumes.odin` keeps that ordering in the build: it checks the
-first three volumes, that no pair probe centre is inside a wall, that no arena
-probe centre is inside the room footprint, that the arena bounds stop before the
-room interior, and that the open floor is covered.
+that its depth target holds no sky pixel. The default scene supplies six probe
+volumes: the room first, a roof volume, and four perimeter volumes that meet
+the room's inner faces. The room volume wins the sampler for the interior, and
+the perimeter volumes own the wall thickness, the door threshold, and the open
+floor. `scenarios/ddgi-sealed.json` adds its two pair volumes after the room and
+before the arena strips, which gives that run eight volumes and 633 probes.
+`tests/frame/probe_volumes.odin` keeps the default ordering and bounds in the
+build; `tests/harness/probe_map.odin` parses the sealed scenario and checks its
+eight volumes, 633 probes, names, and ownership.
 
 The chamber is black, not merely shaded, before the lamp exists. The depth check
 proves the room is closed. The four-turn check proves that no straight sun ray
@@ -1402,6 +1434,33 @@ passes the door. With the lamp on, the probe volume adds one diffuse bounce and
 the occlusion term darkens the direct corners. `scenarios/ddgi.json` captures the
 same lamp view with the probe indirect term on and off; the on frame is brighter
 on the floor and the far wall, where no lamp ray reaches.
+
+### Probe map
+
+```sh
+./bin/harbagsa-agent probes
+./bin/harbagsa-agent probes scenarios/ddgi-sealed.json --coverage
+./bin/harbagsa-agent probes --point 12,1.5,9 --json
+```
+
+`probes` prints the effective layout: each volume's name, bounds, spacing,
+counts, probe count, and first atlas index. Without a scenario it prints the
+production scene. With a scenario it reads the last `scene` block's
+`probe_volumes` and composes the run's list without a renderer; it reads the
+last scene block and does not run the commands. With no
+`--point`, it samples each volume's centre and reports the volume that owns it.
+`--point X,Y,Z` asks for one point; repeat it. `--coverage` samples the visible
+faces of every static arena box and reports the points that no volume owns.
+Faces on the floor, inside another box, within 0.25 m of a face edge, outside
+the arena walls, or above the wall height are excluded: they are hidden or a
+boundary case. A
+non-zero `outside` count is the cheap signal that a surface has no probe. It is
+the layout gate that the ULP bound bug needed.
+
+`--step M` sets the coverage sample spacing (default 0.5 m, minimum 0.1). The
+JSON form carries `{scenario, count, probe_count, volumes, points, coverage}`.
+`probes` exits 0; it reports, it does not fail. Add a scenario gate when the
+layout must be fixed.
 
 ### Plan view and static boxes
 
@@ -1446,6 +1505,10 @@ What the numbers mean:
   separate passes; the lit pass does not include the depth prepass, the cluster
   assignment, or the probe update. Both sky timestamps are written even when the sky is off, so
   that pass reads near zero and the set is always complete.
+- The `--verbose` line labels the wall interval and, when the device supplies
+  timestamps, the GPU total. `ab.sh` labels both columns in its table. Use the
+  interval for throughput and the GPU total for the render cost; do not mix
+  them.
 - A device without timestamp support, a failed query pool, or a run without a
   device reports the CPU numbers and leaves the GPU fields empty.
 - Perf data never enters `State`, the state digest, or the pixel hash. A perf
@@ -1569,6 +1632,9 @@ frame-rate change.
 - `src/harness/session_draw.odin`: the frame draw and the capture dispatch.
 - `src/harness/ab_command.odin`: the `ab` wrapper over `tools/ab.sh` and `tools/visual-ab.sh`.
 - `src/harness/boxes.odin`: the `boxes` command over `game.arena_static_boxes`.
+- `src/harness/probes.odin`: the `probes` CLI, scenario-volume load, and print.
+- `src/harness/probe_map.odin`: the probe map report, ownership samples, and
+  static-box coverage.
 - `src/harness/checks.odin`: the `checks` table over a run's `report.json`.
 - `src/harness/shot_command.odin`: the scenario-only `shot` shorthand.
 - `src/harness/run_backend.odin`: the lazy run backend.
@@ -1625,8 +1691,13 @@ frame-rate change.
 - `src/frame/scene_write.odin`: the scene snapshot file writer that the key and
   the harness share.
 - `src/harness/scene_command.odin`: the scene command and its blocks.
+- `src/harness/scene_probe_volumes.odin`: the scene `probe_volumes` parser.
 - `src/harness/scene_objects.odin`: scene objects, lights, and displays.
 - `src/harness/session_scene.odin`: applies a scene to a session.
+- `src/harness/session_probe_volumes.odin`: composes the run's probe list and
+  frees the scene extras.
+- `src/harness/object_name.odin`: the inline placed-object name a command
+  carries.
 - `repro.odin`: the `F5` key wrapper over the scene snapshot writer.
 - `suites/renderer.json`, `suites/offscreen.json`, and `suites/ui.json`: the
   first manifests.
@@ -1644,12 +1715,12 @@ frame-rate change.
 - `src/renderer/text_shaper.odin`: FreeType and HarfBuzz shaping for the 2D layer.
 - `src/renderer/capture.odin`: the target copy and RGBA f32 decode.
 - `src/frame/`: shared scene assembly and draw for the game and the harness.
-- `src/frame/probe_volumes.odin`: the room, sealed-pair, roof, and open-arena
-  probe volumes, and the room-first ordering.
+- `src/frame/probe_volumes.odin`: the room, roof, and open-arena probe volumes,
+  the first-match helpers, and the scene-extra composition.
 - `src/game/prefabs.odin`: the placed-object body modes, prefab catalog, and
   starting crate layout.
 - `src/game/objects.odin`: the placed-object list and the create, remove, move,
-  yaw, convert, and reset API.
+  yaw, convert, reset, and name API.
 - `src/game/lights.odin`: the light type, the colour cycle, the intensity and
   range steps, the active light collection, and the light count.
 - `src/game/debug_light_tools.odin`: the keyboard and harness light edit target.
@@ -1697,9 +1768,12 @@ frame-rate change.
 - `src/platform/`: SDL and headless adapters. `display.odin` queries displays and
   applies the window state.
 - `tests/harness/` (including `analysis.odin`, `renderer_debug.odin`,
-  `renderer_state.odin`, `suite.odin`, `scene.odin`, and `compare.odin`), `tests/frame/`, `tests/display/display.odin`,
+  `renderer_state.odin`, `suite.odin`, `scene.odin`, `probe_map.odin`,
+  `object_names.odin`, `coverage.odin`, and `compare.odin`),
+  `tests/frame/`, `tests/display/display.odin`,
   `tests/renderer/` (including `target.odin`, `render_digest.odin`,
-  `capture_values.odin`, and `debug.odin`).
+  `capture_values.odin`, and `debug.odin`), and `tests/docs/harness.odin` for
+  the registry-to-docs check.
 - `scenarios/smoke.json`, `scenarios/taa-static.json`,
   `scenarios/taa-motion.json`, `scenarios/settings-menu.json`,
   `scenarios/window-settings.json`, `scenarios/renderer-state.json`,
@@ -1773,8 +1847,22 @@ and prints the capture paths; use it for every visual loop. `make ui` runs
 `harbagsa-agent checks runs/<stem>` prints every check with its gate, actual
 value, and margin, including the checks that passed. `--json` writes the same
 rows. A positive margin is the distance from the gate in the pass direction;
-the command exits 1 when a check failed. Use it instead of a hand-written `jq`
+the command exits 1 when a blocking check failed. An advisory miss prints
+`ADVISE` and does not fail the command. Use it instead of a hand-written `jq`
 table when re-baselining.
+
+`harbagsa-agent probes [scenario]` prints the effective probe layout and its
+coverage without a renderer; see **Probe map**. It is the cheap layout gate
+beside `boxes`.
+
+`scenarios/advisory.json` runs one advisory miss and one pass. The run exits 0,
+the report carries `advisory: true` on the miss, and `checks` prints `ADVISE`.
+`scenarios/ddgi-arena.json` gates a color `black_fraction` and `lit_fraction`
+and a float `zero_fraction` from the same `coverage` block.
+
+`tests/docs/harness.odin` reads the command registry and fails when the README
+or this page stops naming a command, capture target, format, or check operator.
+Run `make test-docs` after a rename or a removal.
 
 `make check-references` scans every Markdown page and suite for a missing
 `scenarios/*.json` or `suites/*.json` reference. Run it after a rename. Test
@@ -1839,9 +1927,18 @@ harness in the same change. Do not leave the automation behind the game.
   analysis report, the docs, and a unit test. `analysis_bands.odin` owns the
   flat-run metric.
 - New capture block: add it to `Capture_Spec`, the backend, `capture_field`,
-  the docs, and a synthetic image test. A block that writes no file must still be readable by a check. A check must read the same value
-  the file records. `color_key` is the worked example: parser, builder,
-  report field, check field, schema path, and a unit test.
+  the docs, and a synthetic image test. A block that writes no file must still
+  be readable by a check. A check must read the same value the file records.
+  `color_key` and `coverage` are the worked examples: parser, builder, report
+  field, check field, schema path, and a unit test.
+- New scene block: add it to `SCENE_KEYS`, `Scene_Command`, the parser, the
+  session apply, `Scene`, the snapshot writer and destroy, the docs, and a
+  scenario test. `probe_volumes` is the worked example: it is also composed by
+  `session_set_probe_volumes` and read by the `probes` command.
+- New placed-object field: add it to `Placed_Object`, `Object_Record`,
+  `Object_Spawn`, the snapshot copy and restore, the scene object, the state,
+  the digest exclusion when it is not behaviour, and the docs. `name` is the
+  worked example.
 - New scenario shorthand: compile it to explicit commands in
   `scenario_commands`, not to a new session command, so a live session and a
   recorded scenario cannot depend on it. `shot` is the example.
@@ -1895,6 +1992,9 @@ gap. Do not silently ship a game feature that the harness cannot see.
   must not import `src:platform`.
 - Keep the harness tests in the normal `make test` run. Do not hide them behind a
   manual target.
+- A test scene owns its probe volumes. Do not put the sealed pair or another
+  test room in `PROBE_VOLUMES`; that gives every run probes for a room it does
+  not have. Use a `scene` block and `probes --coverage`.
 - Do not make a renderer debug override reachable without the define or
   `--debug-renderer`.
 - Do not widen a capture target without a readback path; an unread target is not

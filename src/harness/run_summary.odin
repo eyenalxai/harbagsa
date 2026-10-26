@@ -35,8 +35,13 @@ verbose_summary_lines :: proc(report: Report, allocator: mem.Allocator) -> []str
 	}
 	append(&lines, fmt.aprintf("perf: %d", len(report.perf), allocator = allocator))
 	for perf in report.perf {
+		gpu_note: [64]byte
+		note := ""
+		if gpu, has_gpu := perf.gpu.?; has_gpu {
+			note = fmt.bprintf(gpu_note[:], " gpu total p50 %.3f", gpu.total.p50)
+		}
 		append(&lines, fmt.aprintf(
-			"  %s measured %d warmup %d prime %d frames interval p50 %.3f p95 %.3f mean %.3f spikes %d",
+			"  %s measured %d warmup %d prime %d frames interval p50 %.3f p95 %.3f mean %.3f spikes %d%s",
 			perf.name,
 			perf.measured,
 			perf.warmup,
@@ -45,6 +50,7 @@ verbose_summary_lines :: proc(report: Report, allocator: mem.Allocator) -> []str
 			perf.interval.p95,
 			perf.interval.mean,
 			perf.spikes,
+			note,
 			allocator = allocator,
 		))
 	}
@@ -62,7 +68,7 @@ summary_lines :: proc(report: Report, allocator: mem.Allocator) -> []string {
 	}
 	failed := 0
 	for check in report.checks {
-		if !check.ok {
+		if !check.ok && !check.advisory {
 			failed += 1
 		}
 	}
@@ -101,6 +107,9 @@ capture_line :: proc(capture: Capture_Result, allocator: mem.Allocator) -> strin
 @(private)
 check_line :: proc(check: Check_Result, allocator: mem.Allocator) -> string {
 	status := check.ok ? "PASS" : "FAIL"
+	if !check.ok && check.advisory {
+		status = "ADVISE"
+	}
 	tolerance := check_tolerance_note(check, allocator)
 	defer delete(tolerance, allocator)
 	if check.error != "" {

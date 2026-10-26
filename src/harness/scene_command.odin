@@ -8,19 +8,20 @@ import "core:strings"
 import "src:frame"
 import "src:game"
 
-SCENE_KEYS := [?]string{"cmd", "camera", "sun", "objects", "settings", "view", "displays", "renderer_debug"}
+SCENE_KEYS := [?]string{"cmd", "camera", "sun", "objects", "settings", "view", "displays", "probe_volumes", "renderer_debug"}
 
 Scene_Command :: struct {
-	scene:          frame.Scene,
-	settings:       Scene_Settings_Patch,
-	view:           Scene_View_Patch,
-	has_camera:     bool,
-	has_sun:        bool,
-	has_objects:    bool,
-	has_settings:   bool,
-	has_view:       bool,
-	has_displays:   bool,
-	renderer_debug: Maybe(Renderer_Debug_Command),
+	scene:              frame.Scene,
+	settings:           Scene_Settings_Patch,
+	view:               Scene_View_Patch,
+	has_camera:         bool,
+	has_sun:            bool,
+	has_objects:        bool,
+	has_settings:       bool,
+	has_view:           bool,
+	has_displays:       bool,
+	has_probe_volumes:  bool,
+	renderer_debug:     Maybe(Renderer_Debug_Command),
 }
 
 @(private)
@@ -97,6 +98,14 @@ parse_scene :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 		command.scene.scene.displays = displays
 		command.scene.has_displays = true
 	}
+	if value, has := json_get(object, "probe_volumes"); has {
+		volumes, volumes_error := parse_scene_probe_volumes(value, allocator)
+		if volumes_error != "" {
+			return {}, volumes_error
+		}
+		command.scene.scene.probe_volumes = volumes
+		command.scene.has_probe_volumes = true
+	}
 	_, has_renderer_debug := command.scene.renderer_debug.?
 	if !command.scene.has_camera &&
 	   !command.scene.has_sun &&
@@ -104,6 +113,7 @@ parse_scene :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 	   !command.scene.has_settings &&
 	   !command.scene.has_view &&
 	   !command.scene.has_displays &&
+	   !command.scene.has_probe_volumes &&
 	   !has_renderer_debug {
 		return {}, format_error("%s", "scene needs at least one block")
 	}
