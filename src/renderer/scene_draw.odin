@@ -32,24 +32,10 @@ record_scene :: proc(
 	if !ensure_scene_capacity(r, box_count, len(lights)) {
 		return false
 	}
-	if !ensure_acceleration_capacity(r, box_count) {
-		return false
-	}
 	if !write_light_data(r, lights) {
 		return false
 	}
 	input.lights = lights[:r.light_count]
-	if !ensure_probe_resources(r, input.probe_volumes) {
-		return false
-	}
-	write_probe_positions(r, input.boxes)
-	light_hash := probe_light_hash(input.lights)
-	if !r.probe.has_hash || light_hash != r.probe.light_hash {
-		r.probe.light_hash = light_hash
-		r.probe.has_hash = true
-		r.probe.reset = true
-	}
-
 	// The recorder owns the renderer-internal inputs, so one value goes to the
 	// uniform, the digest, and the pass list.
 	extent := target_extent_vk(r)
@@ -59,15 +45,8 @@ record_scene :: proc(
 	input.width = extent.width
 	input.height = extent.height
 	input.jitter = taa_frame_jitter(r, extent)
-	input.shadow_phase = taa_shadow_phase(r)
-	r.taa.shadow_phase = input.shadow_phase
 	input.atlas_weight = text_atlas_applied_weight(r)
 	debug := renderer_debug(r)
-	input.sky = debug.sky
-	input.gi = debug.gi
-	input.ao = debug.ao
-	input.ao_radius = debug.ao_radius
-	input.ao_strength = debug.ao_strength
 	input.clip_height = debug.clip_height
 	r.render_digest = render_digest(input)
 	r.has_render_digest = true

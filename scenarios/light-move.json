@@ -1,0 +1,22 @@
+{
+  "size": "1280x720",
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "analysis": false,
+  "commands": [
+    {"cmd": "camera", "position": [17.5, 1.7, -17.2], "look_at": [20.0, 1.75, -19.5]},
+    {"cmd": "place", "prefab": "Lamp", "position": [20.0, 2.0, -19.5], "body": "static", "name": "key-lamp",
+     "light": {"color": "warm", "intensity": 4.0, "range": 10}},
+    {"cmd": "settle", "frames": 40},
+    {"cmd": "capture", "name": "near", "format": "stats", "png": true},
+    {"cmd": "debug_mode", "active": true},
+    {"cmd": "editor", "select_object": "key-lamp", "move": [20.0, 2.0, -10.0]},
+    {"cmd": "check", "field": "objects.key-lamp.position.z", "op": "eq", "value": -10},
+    {"cmd": "settle", "frames": 40},
+    {"cmd": "capture", "name": "far", "format": "stats", "png": true}
+  ],
+  "checks": [
+    {"field": "capture.named.near.stats.mean.y", "op": "gt", "other": "capture.named.far.stats.mean.y"},
+    {"field": "capture.named.far.stats.mean.y", "op": "gt", "value": 5},
+    {"field": "capture.named.far.render_digest", "op": "ne", "other": "capture.named.near.render_digest"}
+  ]
+}

@@ -17,13 +17,6 @@ Camera :: struct {
 	fov_x:    f32,
 }
 
-// The occlusion rays darken the direct point light. Crates are 1 m and the
-// tunnel clearances are 0.9 to 1.35 m, so a 1.5 m ray reaches the surfaces that
-// should darken without reaching across the arena.
-AO_RADIUS :: 1.5
-AO_STRENGTH :: 0.5
-AO_SAMPLES :: #config(AO_SAMPLES, 8) // The Makefile sets it and the shader reads the same value.
-
 Scene :: struct {
 	vertex_buffer: vk.Buffer,
 	vertex_memory: vk.DeviceMemory,
@@ -35,8 +28,6 @@ Scene :: struct {
 	pipeline:              vk.Pipeline,
 	depth_layout:          vk.PipelineLayout,
 	depth_pipeline:        vk.Pipeline,
-	sky_pipeline:          vk.Pipeline,
-	sky_layout:            vk.PipelineLayout,
 	descriptor_set_layout: vk.DescriptorSetLayout,
 	descriptor_pool:       vk.DescriptorPool,
 	descriptor_sets:       [MAX_FRAMES_IN_FLIGHT]vk.DescriptorSet,
@@ -69,9 +60,6 @@ Scene :: struct {
 }
 
 init_scene :: proc(r: ^Renderer) -> Error {
-	if !create_probe_resources(r) {
-		return .Create_Scene
-	}
 	if !create_scene_resources(r) {
 		return .Create_Scene
 	}
@@ -84,15 +72,6 @@ init_scene :: proc(r: ^Renderer) -> Error {
 	if !create_cluster_pipeline(r) {
 		return .Create_Pipeline
 	}
-	if !create_probe_pipelines(r) {
-		return .Create_Pipeline
-	}
-	if !create_sky_pipeline(r) {
-		return .Create_Pipeline
-	}
-	if !create_acceleration_resources(r) {
-		return .Create_Acceleration
-	}
 	return .None
 }
 
@@ -101,10 +80,8 @@ destroy_scene :: proc(r: ^Renderer) {
 		return
 	}
 
-	destroy_acceleration(r)
 	destroy_pipeline_pair(r, &r.scene.depth_pipeline, &r.scene.depth_layout)
 	destroy_pipeline_pair(r, &r.scene.pipeline, &r.scene.pipeline_layout)
-	destroy_pipeline_pair(r, &r.scene.sky_pipeline, &r.scene.sky_layout)
 	destroy_pipeline_pair(r, &r.scene.cluster_pipeline, &r.scene.cluster_layout)
 	if r.scene.descriptor_pool != 0 {
 		vk.DestroyDescriptorPool(r.device, r.scene.descriptor_pool, nil)
@@ -167,38 +144,13 @@ update_camera :: proc(r: ^Renderer, input: Render_Input) -> bool {
 		view = view,
 		projection = projection,
 		prev_view_projection = previous,
-		// The visibility pattern rotates only while TAA can average it.
-		screen = {
-			srgb_gamma(r),
-			f32(extent.width),
-			height,
-			f32(input.shadow_phase),
-		},
-		lights = {
-			f32(len(input.lights)),
-			r.debug.active && !r.debug.light_shadows ? 0 : 1,
-			CAMERA_FAR,
-			0,
-		},
+		screen = {srgb_gamma(r), f32(extent.width), height, input.clip_height},
+		lights = {f32(len(input.lights)), 0, 0, 0},
 		jitter = {input.jitter.x, input.jitter.y, 0, 0},
-		occlusion = {
-			input.ao_radius,
-			input.ao_strength,
-			input.ao ? 1.0 : 0.0,
-			input.clip_height,
-		},
-		probe = {
-			f32(r.probe.volume_count),
-			f32(r.probe.probe_count),
-			input.gi ? 1.0 : 0.0,
-			0,
-		},
 	}
 	return true
 }
 
-// Jitter advances once per recorded frame. The digest, the uniform, and the
-// report all read the value this call stores in the input.
 taa_frame_jitter :: proc(r: ^Renderer, extent: vk.Extent2D) -> [2]f32 {
 	jitter: [2]f32
 	jitter_enabled := r.taa.enabled && !(r.debug.active && !r.debug.jitter)

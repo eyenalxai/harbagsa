@@ -20,17 +20,6 @@ session_renderer_debug :: proc(session: ^Session, command: Renderer_Debug_Comman
 	debug := session.render.backend.get_debug(session.render.backend.ctx)
 	debug.active = true
 	debug = renderer.renderer_debug_apply_patch(debug, command.patch)
-	if _, has_phase := command.shadow_phase.?; has_phase {
-		debug.freeze_shadow_phase = true
-	}
-	if freeze, has_freeze := command.freeze_shadow_phase.?; has_freeze {
-		debug.freeze_shadow_phase = freeze
-		if freeze {
-			if _, has_phase := command.shadow_phase.?; !has_phase {
-				debug.shadow_phase = session.render.report.shadow_phase
-			}
-		}
-	}
 	debug = renderer.renderer_debug_apply_patch(debug, renderer_debug_reset_patch(command.reset))
 	session.render.backend.set_debug(session.render.backend.ctx, debug)
 	session_refresh_renderer(session)

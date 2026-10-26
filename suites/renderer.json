@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "renderer",
-  "description": "Renderer state, temporal stability, gated debug overrides, sky and ambient occlusion, banding, capture targets, and shadows.",
+  "description": "Renderer state, temporal stability, debug overrides, banding, capture targets, and direct lights.",
   "entries": [
     "renderer-state",
     "renderer-reset",
@@ -10,14 +10,10 @@
     "renderer-debug-jitter",
     "taa-static",
     "taa-motion",
-    "sky",
-    "stairs-ao",
     "banding",
     "capture-targets",
     "capture-free",
     "settle-converged",
-    "ramp-shadow",
-    "ramp-shadow-crouch",
     "lamp-wall-plane"
   ]
 }

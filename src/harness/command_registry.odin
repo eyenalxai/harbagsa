@@ -58,11 +58,10 @@ COMMANDS := [?]Command_Row {
 	{.Renderer_Debug, "renderer_debug", "Apply gated renderer overrides. A field set to null restores its default.", parse_renderer_debug, execute_renderer_debug, .Raw, nil, .Optional, Renderer_Debug_Command},
 	{.Displays, "displays", "Replace the display list.", parse_displays, execute_displays, .Raw, destroy_displays, .None, Displays_Command},
 	{.Rows, "rows", "Dump the HUD and menu rows.", parse_no_fields, execute_rows, .Skip, nil, .None, No_Fields_Command},
-	{.Scene, "scene", "Apply an exact scene: camera, objects, probe volumes, settings, view, and displays.", parse_scene, execute_scene, .Raw, destroy_scene, .None, Scene_Command},
+	{.Scene, "scene", "Apply an exact scene: camera, objects, settings, view, and displays.", parse_scene, execute_scene, .Raw, destroy_scene, .None, Scene_Command},
 	{.Place, "place", "Create one named object from a prefab without entering debug mode.", parse_place, execute_place, .Raw, nil, .None, Place_Command},
 	{.Remove, "remove", "Delete one object by id or name without entering debug mode.", parse_remove, execute_remove, .Raw, nil, .None, Remove_Command},
 	{.Get, "get", "Resolve one state or capture field and return its JSON scalar.", parse_get, execute_get, .Raw, destroy_get, .None, Get_Command},
-	{.Reference, "reference", "Compare the probe indirect term with a path-traced reference.", parse_reference, execute_reference, .Raw, destroy_reference, .None, Reference_Command},
 	{.Quit, "quit", "Close the session.", parse_no_fields, execute_quit, .Skip, nil, .None, No_Fields_Command},
 }
 

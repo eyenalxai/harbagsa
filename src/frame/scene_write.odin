@@ -37,17 +37,12 @@ scene_write :: proc(
 			allocator = context.allocator,
 		)
 	}
-	probe_volumes: []Scene_Probe_Volume
-	if specs, has := view.scene_probe_volumes.?; has {
-		probe_volumes = specs
-	}
 	scene := scene_capture(
 		sim,
 		debug,
 		view,
 		camera_override,
 		renderer_debug,
-		probe_volumes,
 		context.temp_allocator,
 	)
 	defer scene_destroy(&scene, context.temp_allocator)

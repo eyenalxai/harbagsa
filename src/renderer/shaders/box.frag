@@ -1,5 +1,4 @@
 #version 460
-#extension GL_EXT_ray_query : require
 
 layout(early_fragment_tests) in;
 
@@ -27,12 +26,7 @@ layout(set = 0, binding = 1) readonly buffer Objects {
 
 #include "camera.glsl"
 #include "cluster.glsl"
-#include "probe.glsl"
 
-layout(set = 0, binding = 2) uniform accelerationStructureEXT scene_tlas;
-
-// std430: position.xyz is the light position and position.w its intensity;
-// color.rgb is the light color and color.w its range.
 struct Light {
     vec4 position;
     vec4 color;
@@ -50,88 +44,7 @@ layout(set = 0, binding = 5) readonly buffer ClusterIndices {
     uint indices[];
 } cluster_indices;
 
-struct ProbeVolume {
-    vec4 min_spacing;
-    uvec4 counts_offset;
-};
-
-layout(set = 0, binding = 6) readonly buffer ProbeVolumes {
-    ProbeVolume volumes[];
-} probe_volumes;
-
-layout(set = 0, binding = 7) readonly buffer ProbeIrradiance {
-    vec4 irradiance[];
-} probe_irradiance_set;
-
-layout(set = 0, binding = 8) readonly buffer ProbeDepth {
-    vec2 depth[];
-} probe_depth_set;
-
-layout(set = 0, binding = 9) readonly buffer ProbePositions {
-    vec4 positions[];
-} probe_positions;
-
-#include "probe_gather.glsl"
-
-const float GOLDEN_ANGLE = 2.39996323;
-// A lamp instance carries 0x01. The point shadow ray tests 0x02, so a lamp
-// never blocks its own light.
-const uint POINT_RAY_MASK = 0x02u;
-// A light on a surface ends its shadow ray on that surface. The ray query
-// reports that endpoint as a hit for some pixels and misses it for others, so
-// the surface the lamp is mounted on paints a fan of shadows on every surface
-// it lights. Stop the ray short of the light instead.
-const float POINT_SHADOW_END_BIAS = 0.001;
-
-vec2 vogel_disk(int index, int count, float phase) {
-    float radius = sqrt((float(index) + 0.5) / float(count));
-    float angle = float(index) * GOLDEN_ANGLE + phase;
-    return radius * vec2(cos(angle), sin(angle));
-}
-
-float interleaved_gradient_noise(vec2 pixel) {
-    return fract(52.9829189 * fract(dot(pixel, vec2(0.06711056, 0.00583715))));
-}
-
-// A visibility count is a coarse fraction. The surface occlusion uses eight
-// rays, and its step survives the TAA average as a band. Offset the count inside
-// its own step so the resolve sees a continuous value. The hash takes the
-// sample phase, so the offset changes each frame and TAA averages it.
-float visibility_rounding(uint frame) {
-    uint hash = uint(gl_FragCoord.x) * 1973u + uint(gl_FragCoord.y) * 9277u + frame * 26699u;
-    hash = (hash ^ 61u) ^ (hash >> 16u);
-    hash *= 9u;
-    hash ^= hash >> 4u;
-    hash *= 0x27d4eb2du;
-    hash ^= hash >> 15u;
-    return float(hash) / 4294967295.0;
-}
-
-// A fully lit or fully occluded pixel is exact. Only the partial counts carry
-// the one-step offset, so a surface with no occlusion does not flicker each frame.
-float dithered_visibility(int visible, int count) {
-    if (visible <= 0 || visible >= count) {
-        return float(visible) / float(count);
-    }
-    float fraction = float(visible) + visibility_rounding(uint(camera.screen.w)) - 0.5;
-    return clamp(fraction / float(count), 0.0, 1.0);
-}
-
-bool occluded(vec3 origin, vec3 direction, uint mask, float max_distance) {
-    rayQueryEXT query;
-    rayQueryInitializeEXT(
-        query,
-        scene_tlas,
-        gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT,
-        mask,
-        origin,
-        0.001,
-        direction,
-        max_distance
-    );
-    while (rayQueryProceedEXT(query)) {}
-    return rayQueryGetIntersectionTypeEXT(query, true) != gl_RayQueryCommittedIntersectionNoneEXT;
-}
+const vec3 AMBIENT_FLOOR = vec3(0.055, 0.060, 0.070);
 
 vec3 point_light_radiance(vec3 world_position, vec3 normal) {
     float view_z = -(camera.view * vec4(world_position, 1.0)).z;
@@ -151,7 +64,6 @@ vec3 point_light_radiance(vec3 world_position, vec3 normal) {
     uint cluster = uint(cluster_x + CLUSTER_X * (cluster_y + CLUSTER_Y * cluster_z));
 
     uint count = cluster_counts.counts[cluster];
-    bool shadows = camera.lights.y > 0.5;
     vec3 sum = vec3(0.0);
     for (uint index = 0; index < count; ++index) {
         uint light_index = cluster_indices.indices[cluster * uint(CLUSTER_LIGHT_STRIDE) + index];
@@ -163,88 +75,23 @@ vec3 point_light_radiance(vec3 world_position, vec3 normal) {
         }
         vec3 direction = offset / distance;
         float diffuse = max(dot(normal, direction), 0.0);
-        if (diffuse <= 0.0) {
-            continue;
-        }
         float reach = distance / light.color.w;
         float falloff = 1.0 - reach * reach;
         falloff *= falloff;
-        float visibility = 1.0;
-        if (shadows) {
-            // Keep the endpoint short of the light. A surface the light sits on
-            // would otherwise shadow it for a subset of the pixels, which reads
-            // as a fan across every surface the lamp lights.
-            float shadow_distance = max(distance - POINT_SHADOW_END_BIAS, 0.0);
-            if (occluded(
-                world_position + normal * 0.002,
-                direction,
-                POINT_RAY_MASK,
-                shadow_distance
-            )) {
-                visibility = 0.0;
-            }
-        }
-        sum += light.color.rgb * (light.position.w * diffuse * falloff * visibility);
+        sum += light.color.rgb * (light.position.w * diffuse * falloff);
     }
     return sum;
 }
 
-// The Makefile compiles this with -DAO_SAMPLE_COUNT and passes the same value
-// to the Odin build. A cosine-weighted hemisphere sample already carries the
-// cosine and the 1/pi of the occlusion integral, so the visible fraction is the
-// occlusion term.
-#ifndef AO_SAMPLE_COUNT
-#define AO_SAMPLE_COUNT 8
-#endif
-const int AO_SAMPLES = AO_SAMPLE_COUNT;
-
-// The probes add the indirect term; surface occlusion scales the direct point
-// light. A corner the light still reaches darkens; a surface no light reaches
-// receives only the probe term.
-float surface_occlusion(vec3 position, vec3 normal, float radius, float phase) {
-    vec3 origin = position + normal * 0.01;
-    vec3 up = abs(normal.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
-    vec3 tangent = normalize(cross(up, normal));
-    vec3 bitangent = cross(normal, tangent);
-
-    int visible = 0;
-    for (int i = 0; i < AO_SAMPLES; ++i) {
-        vec2 disk = vogel_disk(i, AO_SAMPLES, phase);
-        float height = sqrt(max(0.0, 1.0 - dot(disk, disk)));
-        vec3 direction = normalize(tangent * disk.x + bitangent * disk.y + normal * height);
-        if (!occluded(origin, direction, 0xFFu, radius)) {
-            visible += 1;
-        }
-    }
-    return dithered_visibility(visible, AO_SAMPLES);
-}
-
 void main() {
-    // A plan view lowers the clip to drop the roof and the upper walls. The
-    // default keeps every fragment, so a normal run pays one compare.
-    if (v_world_position.y > camera.occlusion.w) {
+    if (v_world_position.y > camera.screen.w) {
         discard;
     }
 
     ObjectData object = scene.objects[draw.object_index];
-
     vec3 normal = normalize(v_normal);
-    float ao = 1.0;
-    if (camera.occlusion.z > 0.5) {
-        // A different irrational than the visibility dither keeps the two sample
-        // sets from sharing a rotation.
-        float phase = fract(
-            interleaved_gradient_noise(gl_FragCoord.xy) + camera.screen.w * 0.7548776662
-        ) * 6.2831853;
-        ao = surface_occlusion(v_world_position, normal, camera.occlusion.x, phase);
-        ao = mix(1.0, ao, camera.occlusion.y);
-    }
-    // Direct light is the point lights, each with its own shadow ray. The
-    // occlusion darkens the light that reaches a corner. The probes add the
-    // indirect term.
-    vec3 lit = point_light_radiance(v_world_position, normal) * ao;
-    vec3 indirect = probe_indirect(v_world_position, normal);
-    vec3 color = v_color * (lit + indirect) + v_color * object.color.a;
+    vec3 lit = AMBIENT_FLOOR + point_light_radiance(v_world_position, normal);
+    vec3 color = v_color * lit + v_color * object.color.a;
 
     vec4 world_position = vec4(v_world_position, 1.0);
     vec4 previous_world = object.prev_model * vec4(v_local_position, 1.0);
@@ -253,9 +100,6 @@ void main() {
     if (previous_clip.w > 0.0) {
         previous_uv = (previous_clip.xy / previous_clip.w) * 0.5 + 0.5;
     }
-    // The vertex shader jitters the clip position. The velocity target needs
-    // unjittered screen motion, so project the current world point with the
-    // unjittered current view-projection.
     vec2 current_uv = vec2(2.0);
     vec4 current_clip = camera.projection * camera.view * world_position;
     if (current_clip.w > 0.0) {
