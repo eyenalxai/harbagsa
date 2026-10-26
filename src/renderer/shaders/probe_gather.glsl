@@ -61,7 +61,7 @@ vec3 probe_indirect(vec3 world_position, vec3 normal) {
         vec3 high = volume.min_spacing.xyz +
                     vec3(volume.counts_offset.xyz) * volume.min_spacing.w +
                     vec3(1e-3);
-        if (all(greaterThanEqual(world_position, volume.min_spacing.xyz)) &&
+        if (all(greaterThanEqual(world_position, volume.min_spacing.xyz - vec3(1e-3))) &&
             all(lessThanEqual(world_position, high))) {
             volume_index = index;
             break;
@@ -76,6 +76,7 @@ vec3 probe_indirect(vec3 world_position, vec3 normal) {
     vec3 local = (world_position - volume.min_spacing.xyz) / volume.min_spacing.w - 0.5;
     vec3 base = floor(local);
     vec3 fraction = local - base;
+    float bias = max(PROBE_VISIBILITY_MIN_BIAS, volume.min_spacing.w * PROBE_VISIBILITY_BIAS);
 
     vec3 sum = vec3(0.0);
     float total_weight = 0.0;
@@ -87,14 +88,18 @@ vec3 probe_indirect(vec3 world_position, vec3 normal) {
                     ivec3(0),
                     ivec3(counts) - 1
                 );
-                float weight_x = max(0.001, x == 0 ? 1.0 - fraction.x : fraction.x);
-                float weight_y = max(0.001, y == 0 ? 1.0 - fraction.y : fraction.y);
-                float weight_z = max(0.001, z == 0 ? 1.0 - fraction.z : fraction.z);
+                float weight_x = max(0.0, x == 0 ? 1.0 - fraction.x : fraction.x);
+                float weight_y = max(0.0, y == 0 ? 1.0 - fraction.y : fraction.y);
+                float weight_z = max(0.0, z == 0 ? 1.0 - fraction.z : fraction.z);
 
                 uint probe_index = volume.counts_offset.w + uint(
                     (cell.z * int(counts.y) + cell.y) * int(counts.x) + cell.x
                 );
-                vec3 probe_position = probe_positions.positions[probe_index].xyz;
+                vec4 probe_data = probe_positions.positions[probe_index];
+                if (probe_data.w < 0.5) {
+                    continue;
+                }
+                vec3 probe_position = probe_data.xyz;
                 vec3 to_surface = world_position - probe_position;
                 float distance2 = dot(to_surface, to_surface);
                 if (distance2 < 1e-6) {
@@ -107,20 +112,20 @@ vec3 probe_indirect(vec3 world_position, vec3 normal) {
                 float weight = weight_x * weight_y * weight_z * (wrap * wrap + 0.2);
 
                 vec2 moments = 2.0 * probe_sample_depth(probe_index, direction);
+                if (moments.x <= 0.0) {
+                    continue;
+                }
                 float mean = moments.x;
                 float variance = abs(mean * mean - moments.y);
                 float chebyshev = 1.0;
-                if (distance > mean) {
-                    float difference = distance - mean;
+                if (distance > mean + bias) {
+                    float difference = distance - mean - bias;
                     chebyshev = variance / (variance + difference * difference);
                     chebyshev = max(chebyshev * chebyshev * chebyshev, 0.0);
                 }
                 weight *= max(0.05, chebyshev);
-                weight = max(weight, 1e-6);
-                const float crush_threshold = 0.2;
-                if (weight < crush_threshold) {
-                    weight *= (weight * weight) /
-                        (crush_threshold * crush_threshold);
+                if (weight <= 0.0) {
+                    continue;
                 }
 
                 vec3 encoded = probe_sample_irradiance(probe_index, normal);

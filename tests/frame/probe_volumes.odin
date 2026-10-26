@@ -27,7 +27,7 @@ ROOM_OUTER_HIGH :: [2]f32{
 }
 ROOM_TOP :: f32(game.ARENA_ROOM_HEIGHT + game.ARENA_ROOM_CEILING_THICKNESS)
 
-DEFAULT_PROBE_COUNT :: 537
+DEFAULT_PROBE_COUNT :: 2205
 
 @(private)
 inside_room_footprint :: proc(point: [3]f32) -> bool {
@@ -126,6 +126,30 @@ arena_bounds_stop_before_the_room_interior :: proc(t: ^testing.T) {
 			!overlaps,
 			"volume %d bounds reach the room interior at or below the ceiling",
 			index,
+		)
+	}
+}
+
+@(test)
+open_arena_has_a_ground_layer :: proc(t: ^testing.T) {
+	for volume, index in frame.PROBE_VOLUMES {
+		if index == 0 || volume.min.y >= ROOM_HIGH.y {
+			continue
+		}
+		lowest := volume.min.y + 0.5 * volume.spacing
+		testing.expectf(
+			t,
+			lowest <= 1.05,
+			"volume %d lowest probe layer is %.2f, above the ground contact",
+			index,
+			lowest,
+		)
+		testing.expectf(
+			t,
+			volume.spacing <= 2.07,
+			"volume %d spacing %.2f is too coarse for a contact",
+			index,
+			volume.spacing,
 		)
 	}
 }

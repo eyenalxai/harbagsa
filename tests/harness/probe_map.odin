@@ -45,7 +45,7 @@ sealed_scenario_supplies_its_own_probe_volumes :: proc(t: ^testing.T) {
 	for volume in volumes {
 		total += frame.probe_volume_probe_count(volume)
 	}
-	testing.expect_value(t, total, 633)
+	testing.expect_value(t, total, 2301)
 
 	// The pair volumes sit after the room and before the arena strips, so a
 	// room B surface samples room B's own probes.
@@ -62,7 +62,7 @@ default_scene_has_no_test_room :: proc(t: ^testing.T) {
 		total += frame.probe_volume_probe_count(volume)
 	}
 	testing.expect_value(t, len(frame.PROBE_VOLUMES), 6)
-	testing.expect_value(t, total, 537)
+	testing.expect_value(t, total, 2205)
 }
 
 @(test)

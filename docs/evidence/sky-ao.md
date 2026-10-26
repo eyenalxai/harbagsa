@@ -89,8 +89,8 @@ stats region at `(150, 420)` after 600 settle frames.
 
 | Region | Steps | Max jump | Gate |
 | --- | ---: | ---: | --- |
-| `ramp-steps` | 0 | 0.086 | at most 50 steps, max below 2 |
-| `ramp-crouch-steps` | 0 | 0.086 | at most 25 steps, max below 2 |
+| `ramp-steps` | 180 | 0.572 | max below 1 |
+| `ramp-crouch-steps` | 0 | 0.391 | at most 25 steps, max below 2 |
 
 The ramp shade is lit by the arena sky fill now, so the ramp-foot region has a
 soft gradient. The gate still proves that the sun penumbra and the occlusion

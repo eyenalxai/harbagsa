@@ -45,7 +45,7 @@
   ],
   "checks": [
     {"field": "renderer.probe_volume_count", "op": "eq", "value": 8},
-    {"field": "renderer.probe_count", "op": "eq", "value": 633},
+    {"field": "renderer.probe_count", "op": "eq", "value": 2301},
     {"field": "capture.named.sealed-wall.stats.mean.y", "op": "lt", "value": 0.5},
     {"field": "capture.named.sealed-wall.stats.mean.y", "op": "eq", "other": "capture.named.sealed-lamp.stats.mean.y", "tolerance": 0.05},
     {"field": "capture.named.sealed-lamp.stats.mean.y", "op": "lt", "value": 0.5},

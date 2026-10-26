@@ -72,13 +72,15 @@ direction to the probe, then weights them by facing, distance, and depth
 visibility. A probe behind a wall is rejected by its depth moment.
 
 A lamp change resets the blend on the next frame, and a large texel change skips
-the hysteresis, so a removed lamp does not leave its bounce behind. A moving
-crate does not reset the probes yet; the leak ticket owns that dirty state.
-`renderer_debug.gi` turns the indirect term off for a paired capture.
+the hysteresis, so a removed lamp does not leave its bounce behind. A probe that
+becomes invalid clears its atlas, so a moving crate cannot keep stale light
+across a validity change. `renderer_debug.gi` turns the indirect term off for a
+paired capture.
 
-The probe pass runs the ray trace and the blend every frame. The room has 300
-probes, and the pass costs about 0.41 ms with 256 rays and 64 synthetic lights
-at 1280 x 720. The same pass costs 0.23 ms at 64 rays.
+The probe pass runs the ray trace and the blend every frame. The scene has 2205
+probes, and the pass costs about 1.73 ms with 256 rays and 64 synthetic lights
+at 1280 x 720; the room's 300 probes alone cost about 0.41 ms. The same pass
+costs 0.23 ms at 64 rays.
 
 The occlusion uses 8 rays and the sun 16. A partial count carries a per-pixel,
 per-frame offset inside its own step; a full or empty count stays exact. Without

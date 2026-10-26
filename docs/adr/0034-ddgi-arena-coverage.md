@@ -5,7 +5,9 @@ Builds on [ADR 0031](0031-ddgi-probe-volumes.md) and
 room volume stay.
 
 Amended by [ADR 0035](0035-scenario-probe-data.md): the sealed pair is scenario
-data, and the perimeter bounds meet the room's inner faces.
+data, and the perimeter bounds meet the room's inner faces. The 4 m density and
+the contact grid are superseded by
+[ADR 0036](0036-ddgi-probe-validity-and-contact.md).
 
 ## Context
 

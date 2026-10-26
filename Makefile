@@ -307,6 +307,7 @@ shot: agent
 
 reference: agent
 	$(AGENT_BIN) run scenarios/ddgi-reference.json --out runs/ddgi-reference $(AGENT_FLAGS)
+	$(AGENT_BIN) run scenarios/ddgi-platform.json --out runs/ddgi-platform $(AGENT_FLAGS)
 
 quick: agent
 	$(AGENT_BIN) suite fast --out runs/fast $(AGENT_FLAGS)
