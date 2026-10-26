@@ -211,7 +211,7 @@ For the short loop, use `make shot SCENARIO=editor-sun OUT=runs/editor-sun`
 and `make test-simulation`. `make quick` builds the agent and runs
 `suites/fast.json`. Read `report.json` with `jq`; `harbagsa-agent checks
 runs/editor-sun` prints every gate and its margin, and `harbagsa-agent probes`
-prints the probe layout and its coverage.
+prints the probe layout and its sample ownership.
 
 ### Run a scenario
 
@@ -417,7 +417,7 @@ points that no volume owns; the ULP bound gap would have shown here first.
 A positive margin is the distance from the gate in the pass direction. The
 command exits 0 when every blocking check passed, 1 when one failed, and 2 when
 the report cannot be read. An advisory miss prints `ADVISE` and does not change
-the exit code.
+the exit code. A field or type error in an advisory check still fails the run.
 
 ### Compare two runs
 
@@ -565,8 +565,8 @@ region. `.top.N.x`, `.top.N.y`, `.top.N.axis`, and `.top.N.levels` name the
 largest counted jumps, and `over_cap` counts jumps at or above the cap. Tune it
 with `"steps": {"blur": 9, "min": 0.5, "max": 8}`; `blur` is an odd kernel size
 in [1, 31]. `capture.stats.color_key.matches` and `.fraction` read the colour
-key. `capture.stats.coverage.zero_fraction`, `.black_fraction`, and
-`.lit_fraction` read the coverage block. A named capture exposes the renderer
+key. `capture.stats.coverage.zero_fraction`, `.black`, `.black_fraction`, `.lit`,
+and `.lit_fraction` read the coverage block. A named capture exposes the renderer
 state of its own frame:
 `capture.named.idle.renderer.debug_vertices.sun` and
 `capture.named.idle.renderer.debug_vertex_count`. Add
@@ -613,10 +613,11 @@ The batch runner and the live session share one command set:
 - `{"cmd": "place", "prefab": "Lamp", "position": [13.5, 2.75, 10.5], "yaw_deg": 0, "body": "static", "name": "key-lamp", "light": {"color": "warm", "intensity": 1.5, "range": 8}}`:
   create one object from a prefab without debug mode. `prefab` and `position`
   are required; `body` defaults to the prefab's body; `yaw_deg` is degrees. A
-  `name` is optional, unique, and uses at most 31 letters, digits, `-`, or `_`.
-  It survives undo and a scene snapshot. A `light` block is allowed only for a
-  prefab with a light, and its omitted fields keep the prefab defaults. The
-  reply carries the new object id in `placed`.
+  `name` is optional, unique, uses at most 31 letters, digits, `-`, or `_`, and
+  is neither all digits nor `count`. It survives undo and a scene snapshot. A
+  `light` block is allowed only for a prefab with a light, and its omitted
+  fields keep the prefab defaults. The reply carries the new object id in
+  `placed`.
 - `{"cmd": "remove", "name": "key-lamp"}`: delete one object by id or name
   without debug mode.
 - `{"cmd": "state"}`: player, eye, velocity, `yaw_deg`, `pitch_deg`, stance, grounded, camera,

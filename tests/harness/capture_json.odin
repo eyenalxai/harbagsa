@@ -23,6 +23,7 @@ capture_json_round_trips_every_option :: proc(t: ^testing.T) {
 				histogram = 8,
 				steps = {blur = 5, min = 0.5, max = 4},
 				color_key = {r = 1, g = 2, b = 3, tolerance = 2.5},
+				coverage = {black = 1.0, lit = 16.0},
 			},
 			has_frame = true,
 			frame = 3,

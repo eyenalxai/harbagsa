@@ -118,16 +118,24 @@ probe_scenario_volumes :: proc(
 		return nil, load_error
 	}
 	defer scenario_destroy(&scenario, allocator)
-	for index := len(scenario.commands) - 1; index >= 0; index -= 1 {
-		command := scenario.commands[index]
-		if command.kind != .Scene || !command.scene.has_probe_volumes {
-			continue
+	extras: []frame.Scene_Probe_Volume
+	for command in scenario.commands {
+		#partial switch command.kind {
+		case .Reset:
+			frame.scene_probe_volumes_destroy(extras, allocator)
+			extras = nil
+		case .Scene:
+			if command.scene.has_probe_volumes {
+				frame.scene_probe_volumes_destroy(extras, allocator)
+				extras = frame.scene_probe_volumes_clone(
+					command.scene.scene.probe_volumes,
+					allocator,
+				)
+			}
 		}
-		return frame.scene_probe_volumes_clone(command.scene.scene.probe_volumes, allocator), ""
 	}
-	return nil, ""
+	return extras, ""
 }
-
 
 @(private)
 parse_probe_point :: proc(text: string) -> ([3]f32, bool) {

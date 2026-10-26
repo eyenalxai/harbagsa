@@ -53,17 +53,6 @@ parse_scene_objects :: proc(value: json.Value, allocator: mem.Allocator) -> ([]f
 				index,
 			)
 		}
-		name := ""
-		if name_value, has := json_get(object, "name"); has {
-			text, text_ok := json_string(name_value)
-			if !text_ok || !game.object_name_valid(text) {
-				return nil, format_error(
-					"scene object %d name must use at most 31 letters, digits, '-' or '_'",
-					index,
-				)
-			}
-			name = strings.clone(text, allocator)
-		}
 		color := game.prefab_color(prefab)
 		if color_value, has := json_get(object, "color"); has {
 			parsed_color, color_ok := vec4_float_value(color_value)
@@ -79,6 +68,17 @@ parse_scene_objects :: proc(value: json.Value, allocator: mem.Allocator) -> ([]f
 				return nil, light_error
 			}
 			light = parsed_light
+		}
+		name := ""
+		if name_value, has := json_get(object, "name"); has {
+			text, text_ok := json_string(name_value)
+			if !text_ok || !game.object_name_valid(text) {
+				return nil, format_error(
+					"scene object %d name must use at most 31 letters, digits, '-' or '_'",
+					index,
+				)
+			}
+			name = strings.clone(text, allocator)
 		}
 		objects[index] = {
 			id = u32(id),

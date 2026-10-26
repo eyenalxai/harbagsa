@@ -2,6 +2,7 @@
 package harness
 
 import "core:fmt"
+import "core:math"
 import "core:mem"
 import "core:strings"
 
@@ -97,7 +98,10 @@ probes_report :: proc(
 				int(volume.counts.y / 2),
 				int(volume.counts.z / 2),
 			)
-			report.points[index] = {point = centre, volume = index}
+			report.points[index] = {
+				point  = centre,
+				volume = frame.probe_volume_owner(volumes, centre),
+			}
 		}
 	}
 	if coverage {
@@ -146,23 +150,30 @@ probe_point_hidden :: proc(point: [3]f32, boxes: []geometry.Box, skip: int) -> b
 		if index == skip {
 			continue
 		}
-		rotation := quaternion(
-			x = box.rotation[0],
-			y = box.rotation[1],
-			z = box.rotation[2],
-			w = box.rotation[3],
-		)
-		half := game.oriented_aabb_half_extents(box.half_extents, rotation)
-		if point.x > box.center.x - half.x + 0.001 &&
-		   point.x < box.center.x + half.x - 0.001 &&
-		   point.z > box.center.z - half.z + 0.001 &&
-		   point.z < box.center.z + half.z - 0.001 &&
-		   point.y >= box.center.y - half.y - 0.001 &&
-		   point.y <= box.center.y + half.y + 0.001 {
+		if game.oriented_box_contains(box, point) {
 			return true
 		}
 	}
 	return false
+}
+
+// The eight box corners in the order `game.oriented_box_corners` returns them.
+// Each face is one cyclic quad, so a bilinear sample stays on a rotated face.
+PROBE_FACE_CORNERS := [3][2][4]int {
+	{{0, 3, 7, 4}, {1, 2, 6, 5}},
+	{{0, 1, 5, 4}, {3, 2, 6, 7}},
+	{{0, 1, 2, 3}, {4, 5, 6, 7}},
+}
+
+@(private)
+probe_lerp :: proc(a, b: [3]f32, t: f32) -> [3]f32 {
+	return a + (b - a) * t
+}
+
+@(private)
+probe_distance :: proc(a, b: [3]f32) -> f32 {
+	delta := b - a
+	return math.sqrt(delta.x * delta.x + delta.y * delta.y + delta.z * delta.z)
 }
 
 @(private)
@@ -177,29 +188,37 @@ sample_probe_face :: proc(
 ) {
 	center := [3]f32{box.center.x, box.center.y, box.center.z}
 	half := [3]f32{box.half_extents.x, box.half_extents.y, box.half_extents.z}
-	sign := f32(side * 2 - 1)
-	first := (axis + 1) % 3
-	second := (axis + 2) % 3
-	first_span := half[first] * 2
-	second_span := half[second] * 2
-	if first_span <= PROBE_COVERAGE_EDGE_MARGIN * 2 ||
-	   second_span <= PROBE_COVERAGE_EDGE_MARGIN * 2 {
+	rotation := quaternion(
+		x = box.rotation[0],
+		y = box.rotation[1],
+		z = box.rotation[2],
+		w = box.rotation[3],
+	)
+	corners := game.oriented_box_corners(center, half, rotation)
+	face := PROBE_FACE_CORNERS[axis][side]
+	corner_0 := corners[face[0]]
+	corner_1 := corners[face[1]]
+	corner_2 := corners[face[2]]
+	corner_3 := corners[face[3]]
+	span_u := probe_distance(corner_0, corner_1)
+	span_v := probe_distance(corner_0, corner_3)
+	if span_u <= PROBE_COVERAGE_EDGE_MARGIN * 2 ||
+	   span_v <= PROBE_COVERAGE_EDGE_MARGIN * 2 {
 		return
 	}
-	first_count := max(int(first_span / step) + 1, 2)
-	second_count := max(int(second_span / step) + 1, 2)
-	for first_index in 0 ..= first_count {
-		for second_index in 0 ..= second_count {
-			point: [3]f32
-			point[axis] = center[axis] + sign * half[axis]
-			point[first] = center[first] - half[first] + first_span * f32(first_index) / f32(first_count)
-			point[second] = center[second] - half[second] + second_span * f32(second_index) / f32(second_count)
-			first_distance := min(point[first] - (center[first] - half[first]), (center[first] + half[first]) - point[first])
-			second_distance := min(point[second] - (center[second] - half[second]), (center[second] + half[second]) - point[second])
-			if first_distance < PROBE_COVERAGE_EDGE_MARGIN ||
-			   second_distance < PROBE_COVERAGE_EDGE_MARGIN {
+	u_count := max(int(span_u / step) + 1, 2)
+	v_count := max(int(span_v / step) + 1, 2)
+	for u_index in 0 ..= u_count {
+		for v_index in 0 ..= v_count {
+			u := f32(u_index) / f32(u_count)
+			v := f32(v_index) / f32(v_count)
+			if min(u, 1 - u) * span_u < PROBE_COVERAGE_EDGE_MARGIN ||
+			   min(v, 1 - v) * span_v < PROBE_COVERAGE_EDGE_MARGIN {
 				continue
 			}
+			top := probe_lerp(corner_0, corner_1, u)
+			bottom := probe_lerp(corner_3, corner_2, u)
+			point := probe_lerp(top, bottom, v)
 			// The covered set is the surfaces the camera can see from inside the
 			// arena. The outside of the arena walls, the floor underside, and a
 			// box face that lies on the floor are not gaps when no volume owns
@@ -229,7 +248,6 @@ sample_probe_face :: proc(
 		}
 	}
 }
-
 
 @(private)
 probes_report_destroy :: proc(report: ^Probes_Report, allocator: mem.Allocator) {

@@ -83,3 +83,59 @@ scene_probe_names_are_validated :: proc(t: ^testing.T) {
 	testing.expect(t, !frame.scene_probe_name_valid("room a"))
 	testing.expect(t, !frame.scene_probe_name_valid("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
 }
+
+@(test)
+sealed_pair_probes_sit_in_room_air :: proc(t: ^testing.T) {
+	scenario, load_error := harness.scenario_load(SEALED_SCENARIO, context.allocator)
+	if load_error != "" {
+		testing.expectf(t, false, "cannot load %s: %s", SEALED_SCENARIO, load_error)
+		return
+	}
+	defer harness.scenario_destroy(&scenario, context.allocator)
+
+	extras: []frame.Scene_Probe_Volume
+	for command in scenario.commands {
+		if command.kind == .Scene && command.scene.has_probe_volumes {
+			extras = command.scene.scene.probe_volumes
+		}
+	}
+	testing.expect_value(t, len(extras), 2)
+	if len(extras) != 2 {
+		return
+	}
+
+	air_low := [2][3]f32 {
+		{-13.75, 0, -9.75},
+		{-9.75, 0, -9.75},
+	}
+	air_high := [2][3]f32 {
+		{-10.25, 3.0, -6.25},
+		{-6.25, 3.0, -6.25},
+	}
+	for extra in extras {
+		for z in 0 ..< int(extra.counts.z) {
+			for y in 0 ..< int(extra.counts.y) {
+				for x in 0 ..< int(extra.counts.x) {
+					centre := extra.min + ([3]f32{f32(x), f32(y), f32(z)} + 0.5) * extra.spacing
+					in_air := false
+					for room in 0 ..< 2 {
+						low := air_low[room]
+						high := air_high[room]
+						if centre.x > low.x && centre.x < high.x &&
+						   centre.y > low.y && centre.y < high.y &&
+						   centre.z > low.z && centre.z < high.z {
+							in_air = true
+						}
+					}
+					testing.expectf(t, in_air, "pair probe %v is not in room air", centre)
+					testing.expectf(
+						t,
+						abs(centre.x + 10.0) > 0.25,
+						"pair probe %v is inside the shared wall",
+						centre,
+					)
+				}
+			}
+		}
+	}
+}

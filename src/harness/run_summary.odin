@@ -68,7 +68,7 @@ summary_lines :: proc(report: Report, allocator: mem.Allocator) -> []string {
 	}
 	failed := 0
 	for check in report.checks {
-		if !check.ok && !check.advisory {
+		if !check.ok && (!check.advisory || check.error != "") {
 			failed += 1
 		}
 	}
@@ -107,7 +107,7 @@ capture_line :: proc(capture: Capture_Result, allocator: mem.Allocator) -> strin
 @(private)
 check_line :: proc(check: Check_Result, allocator: mem.Allocator) -> string {
 	status := check.ok ? "PASS" : "FAIL"
-	if !check.ok && check.advisory {
+	if !check.ok && check.advisory && check.error == "" {
 		status = "ADVISE"
 	}
 	tolerance := check_tolerance_note(check, allocator)

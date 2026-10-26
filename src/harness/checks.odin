@@ -84,7 +84,7 @@ cli_checks :: proc(args: []string) -> int {
 
 	table := Check_Table{ok = true, run = run_dir, rows = rows}
 	for row in rows {
-		if !row.ok && !row.advisory {
+		if !row.ok && (!row.advisory || row.error != "") {
 			table.ok = false
 		}
 	}
@@ -199,7 +199,7 @@ print_check_table :: proc(table: Check_Table) {
 	fmt.printf("%-6s %-42s %-3s %-12s %-12s %-12s %s\n", "STATUS", "FIELD", "OP", "GATE", "ACTUAL", "MARGIN", "ERROR")
 	for row in table.rows {
 		status := row.ok ? "PASS" : "FAIL"
-		if !row.ok && row.advisory {
+		if !row.ok && row.advisory && row.error == "" {
 			status = "ADVISE"
 		}
 		margin := "-"
