@@ -11,10 +11,11 @@
   },
   "commands": [
     {
-      "cmd": "sun",
-      "azimuth_deg": 52.1,
-      "elevation_deg": 25,
-      "diameter_deg": 0.53
+      "cmd": "place",
+      "prefab": "Lamp",
+      "position": [0.0, 2.2, -2.0],
+      "body": "static",
+      "light": {"intensity": 3, "range": 10}
     },
     {
       "cmd": "camera",
@@ -32,7 +33,7 @@
     },
     {
       "cmd": "capture",
-      "name": "sun-on",
+      "name": "lamp-on",
       "format": "stats",
       "png": true,
       "region": {
@@ -52,7 +53,7 @@
     },
     {
       "cmd": "capture",
-      "name": "sun-off",
+      "name": "lamp-off",
       "format": "stats",
       "png": true,
       "region": {
@@ -110,9 +111,9 @@
       "value": 4
     },
     {
-      "field": "capture.named.sun-on.stats.mean.y",
+      "field": "capture.named.lamp-on.stats.mean.y",
       "op": "lt",
-      "other": "capture.named.sun-off.stats.mean.y"
+      "other": "capture.named.lamp-off.stats.mean.y"
     },
     {
       "field": "capture.named.shade-on.stats.mean.y",
@@ -120,12 +121,12 @@
       "other": "capture.named.shade-off.stats.mean.y"
     },
     {
-      "field": "capture.named.sun-on.stats.mean.y",
+      "field": "capture.named.lamp-on.stats.mean.y",
       "op": "gt",
       "other": "capture.named.shade-on.stats.mean.y"
     },
     {
-      "field": "capture.named.sun-on.png",
+      "field": "capture.named.lamp-on.png",
       "op": "eq",
       "value": true
     }

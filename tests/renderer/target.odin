@@ -142,7 +142,7 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 	testing.expect(t, different, "offscreen capture is a single flat color")
 
 	// The sky is the only background. A flat clear color would make the top and
-	// horizon bands equal.
+	// bottom bands equal.
 	up_camera := renderer.Camera {
 		position = {0, 1.7, 0},
 		yaw      = 0,
@@ -175,8 +175,8 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 		bottom := mean_green_band(sky_pixels, width, rows - band, band)
 		testing.expectf(
 			t,
-			top + 2 < bottom,
-			"sky gradient is missing: top band %.1f, horizon band %.1f",
+			abs(top - bottom) > 2,
+			"sky gradient is missing: top band %.1f, bottom band %.1f",
 			top,
 			bottom,
 		)

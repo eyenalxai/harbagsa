@@ -55,7 +55,7 @@ void main() {
     }
 
     int count = 0;
-    int light_count = int(camera.sun.z);
+    int light_count = int(camera.lights.x);
     for (int index = 0; index < light_count; ++index) {
         vec3 center = (camera.view * vec4(light_set.lights[index].position.xyz, 1.0)).xyz;
         float radius = light_set.lights[index].color.w;
