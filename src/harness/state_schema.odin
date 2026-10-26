@@ -3,8 +3,9 @@ package harness
 
 import "core:fmt"
 import "core:reflect"
-import "base:runtime"
 import "core:strconv"
+import "core:strings"
+import "base:runtime"
 
 // The State struct and its json tags are the schema. A path walks the same
 // fields the JSON writer emits, so a check cannot drift from the document.
@@ -27,14 +28,19 @@ state_field :: proc(state: State, path: string) -> (Check_Value, string) {
 		if !has_tail {
 			return {}, format_error("%s", "objects needs a field")
 		}
-		id_text, object_path, has_object_path := split_field(rest)
-		id, id_ok := strconv.parse_int(id_text)
-		if !id_ok || id <= 0 {
-			return {}, fmt.aprintf("object id %q is not valid", id_text, allocator = context.allocator)
+		handle, object_path, has_object_path := split_field(rest)
+		object: Object_State
+		found: bool
+		if id, id_ok := strconv.parse_int(handle); id_ok {
+			if id <= 0 {
+				return {}, fmt.aprintf("object id %q is not valid", handle, allocator = context.allocator)
+			}
+			object, found = find_object_state(state.objects, id)
+		} else {
+			object, found = find_object_state_by_name(state.objects, handle)
 		}
-		object, found := find_object_state(state.objects, id)
 		if !found {
-			return {}, fmt.aprintf("object id %d is out of range", id, allocator = context.allocator)
+			return {}, fmt.aprintf("object %q is not in the list", handle, allocator = context.allocator)
 		}
 		if !has_object_path {
 			return {}, format_error("%s", "object needs a field")
@@ -131,6 +137,9 @@ struct_field_by_json_name :: proc(value: any, name: string) -> any {
 		if json_name == "" {
 			json_name = field.name
 		}
+		if option := strings.index_byte(json_name, ','); option >= 0 {
+			json_name = json_name[:option]
+		}
 		if json_name == name {
 			return reflect.struct_field_value(value, field)
 		}
@@ -142,6 +151,19 @@ struct_field_by_json_name :: proc(value: any, name: string) -> any {
 find_object_state :: proc(objects: []Object_State, id: int) -> (Object_State, bool) {
 	for object in objects {
 		if object.id == u32(id) {
+			return object, true
+		}
+	}
+	return {}, false
+}
+
+@(private)
+find_object_state_by_name :: proc(objects: []Object_State, name: string) -> (Object_State, bool) {
+	if name == "" {
+		return {}, false
+	}
+	for object in objects {
+		if object.name == name {
 			return object, true
 		}
 	}

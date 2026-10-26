@@ -146,6 +146,7 @@ backend_capture_stats :: proc(
 		region,
 		request.steps,
 		request.color_key,
+		request.coverage,
 		data.allocator,
 	)
 	if histogram, has_histogram := request.histogram.?; has_histogram {

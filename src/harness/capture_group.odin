@@ -21,6 +21,7 @@ CAPTURE_OUTPUT_KEYS := []string {
 	"histogram",
 	"steps",
 	"color_key",
+	"coverage",
 }
 
 @(private)

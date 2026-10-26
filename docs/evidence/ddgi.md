@@ -37,6 +37,12 @@ follow them: a roof volume and four perimeter strips at a 4 m cell, with a
 along the shallowest local axis before the rays run. The layout and the leak
 argument are in `docs/adr/0034-ddgi-arena-coverage.md`.
 
+This measurement predates [ADR 0035](../adr/0035-scenario-probe-data.md). The
+sealed pair is now a `scene` block in `scenarios/ddgi-sealed.json`, the default
+scene is six volumes and 537 probes, the perimeter strips meet the room's inner
+faces, and the north strip uses 2.9 m. The cost rows at 537 and 633 probes
+remain the two layouts.
+
 ## Result
 
 | Capture | Mean green |
@@ -48,7 +54,7 @@ argument are in `docs/adr/0034-ddgi-arena-coverage.md`.
 
 The scenario checks `probe_count`, `probe_volume_count`, `probe_energy`, the
 GI on/off order, and the AO on/off order: 10 checks, 0 failed. The probe energy
-is 0.082 over the whole atlas with the lamp on. The arena sky fill is dimmer than
+is 0.085 over the whole atlas with the lamp on. The arena sky fill is dimmer than
 the lamp-lit room. The four captures are deterministic: a repeat run produces
 the same PNG hashes.
 

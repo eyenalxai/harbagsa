@@ -44,6 +44,7 @@ session_record_start :: proc(session: ^Session, path: string, include_scene := t
 			options,
 			camera,
 			debug,
+			session.scene_probe_volumes,
 			session.allocator,
 		)
 		_, has_scene_debug := scene.renderer_debug.?
