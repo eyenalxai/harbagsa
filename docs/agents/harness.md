@@ -472,9 +472,9 @@ the field table for a scenario command such as `capture`.
 mode, so a lighting scenario draws no sun gizmo, ghost, or inspector outline.
 `prefab` and `position` are required. `yaw_deg`, `body`, and `name` are
 optional; `body` defaults to the prefab's body. A name is unique in the scene,
-uses at most 31 letters, digits, `-`, or `_`, and is not all digits. A `light`
-block is allowed only for a prefab with a light, and its omitted fields keep the
-prefab defaults:
+uses at most 31 letters, digits, `-`, or `_`, and is neither all digits nor
+`count`. A `light` block is allowed only for a prefab with a light, and its
+omitted fields keep the prefab defaults:
 
 ```json
 {"cmd":"place","prefab":"Lamp","position":[13.5,2.75,10.5],"body":"static",
@@ -923,8 +923,8 @@ A check reads the last capture in its window: `capture.target`,
 `capture.format`, `capture.note`, and `capture.stats.min.x`, `capture.stats.max.x`,
 `capture.stats.mean.x`, `capture.stats.stddev.x`, `capture.stats.gradient.x`,
 `capture.stats.coverage.zero_fraction`,
-`capture.stats.coverage.black_fraction`,
-`capture.stats.coverage.lit_fraction`,
+`capture.stats.coverage.black`, `capture.stats.coverage.black_fraction`,
+`capture.stats.coverage.lit`, `capture.stats.coverage.lit_fraction`,
 `capture.stats.steps.count`, `capture.stats.steps.pairs`,
 `capture.stats.steps.max`, `capture.stats.steps.over_cap`,
 `capture.stats.steps.blur`, `capture.stats.steps.min`,
@@ -1505,8 +1505,8 @@ What the numbers mean:
   separate passes; the lit pass does not include the depth prepass, the cluster
   assignment, or the probe update. Both sky timestamps are written even when the sky is off, so
   that pass reads near zero and the set is always complete.
-- The `--verbose` line labels the wall interval and, when the device supplies
-  timestamps, the GPU total. `ab.sh` labels both columns in its table. Use the
+- The `--verbose` line labels the frame interval (wall clock) and, when the
+device supplies timestamps, the GPU total. `ab.sh` labels both columns in its table. Use the
   interval for throughput and the GPU total for the render cost; do not mix
   them.
 - A device without timestamp support, a failed query pool, or a run without a
@@ -1745,8 +1745,8 @@ frame-rate change.
 - `src/game/palette.odin`: the object palette state and the debug palette API.
 - `src/game/placement.odin`: the armed placement state, the ray anchor, the
   ghost transform, the height and yaw steps, the snap, and place.
-- `src/game/oriented_box.odin`: the oriented box corners and the AABB half
-  extents.
+- `src/game/oriented_box.odin`: the oriented box corners, the AABB half
+  extents, and the point-inside test the coverage sampler uses.
 - `src/game/debug_draw_ghost.odin`: the ghost outline, footprint, and height
   guide lines.
 - `src/game/debug_sun.odin`: the sun placement mode, the sky dome projection,
@@ -1857,6 +1857,8 @@ beside `boxes`.
 
 `scenarios/advisory.json` runs one advisory miss and one pass. The run exits 0,
 the report carries `advisory: true` on the miss, and `checks` prints `ADVISE`.
+An advisory check that cannot resolve its field is still an error and fails the
+run; the flag suppresses a miss, not a broken gate.
 `scenarios/ddgi-arena.json` gates a color `black_fraction` and `lit_fraction`
 and a float `zero_fraction` from the same `coverage` block.
 

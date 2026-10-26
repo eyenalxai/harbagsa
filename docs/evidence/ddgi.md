@@ -104,7 +104,7 @@ Removing the door segment is transport, and the same run gates it:
 The far wall is in the shadow of the remaining shared wall: the direct lamp line
 crosses the solid part, so the far-wall lift comes through the opening and the
 probe field. It is brighter than the sealed baseline and dimmer than the doorway.
-That ordering is the doorway gate, not a wall leak. The scenario has 17 checks,
+That ordering is the doorway gate, not a wall leak. The scenario has 18 checks,
 0 failed.
 
 The old `ddgi-leak` scenario is retired. Its camera looked out of the room door,
@@ -139,10 +139,10 @@ colour key, writes a 4x crop, and then repeats the chamber view from
 The remaining 0.30% of the frame is the room doorway, which is the unlit
 interior. The shaded face is a smooth sky gradient with soft 4 m probe blotches,
 not the old black. The chamber stays at the dither floor because the room volume
-comes first and the arena bounds stop at the room's outer wall; the arena probes
+comes first and the arena strips meet the room's inner faces; the arena probes
 add no light to a room or a lane through a wall.
 
-The scenario has 7 checks, 0 failed:
+The scenario has 10 checks, 0 failed:
 
 ```sh
 make shot SCENARIO=ddgi-arena OUT=runs/ddgi-arena

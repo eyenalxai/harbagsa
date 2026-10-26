@@ -54,7 +54,7 @@ build_summary :: proc(report: Report, out_dir: string) -> Run_Summary {
 		if check.ok {
 			continue
 		}
-		if check.advisory {
+		if check.advisory && check.error == "" {
 			summary.checks_advisory += 1
 		} else {
 			summary.checks_failed += 1
