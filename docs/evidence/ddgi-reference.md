@@ -14,8 +14,7 @@ Estimator, per camera-hit surface point:
 R(v) = emission + albedo * (E_direct + mean_cos(R(next)))
 ```
 
-- `E_direct` is the sun (16 Vogel-disk samples at the camera hit, one centre ray
-  after a bounce) and every active point light, with the lit pass falloff
+- `E_direct` is every active point light, with the lit pass falloff
   `(1 - (d / range)^2)^2` and a hard shadow ray.
 - `mean_cos(R(next))` is one cosine-weighted hemisphere sample of the radiance
   that arrives from the next surface or the sky.
@@ -29,8 +28,8 @@ radiance. The comparison pairs `albedo * probe_indirect` with `albedo *
 mean_cos`. Nothing is divided or multiplied to make the numbers meet.
 
 The direct term validates the estimator: the median GPU/reference direct ratio
-is 0.9997 in the chamber and 0.9998 in the lane, with a median error of 0.03
-percent. The remaining difference is the probe field.
+is 0.9997 in the chamber, 0.9997 in the lane, and 0.9997 on the platform, with a
+median error of 0.03 percent. The remaining difference is the probe field.
 
 ## Two references
 
@@ -48,9 +47,9 @@ fail the run.
 
 | Scene | Camera and light |
 | --- | --- |
-| chamber | camera (15.5, 1.7, 5.0) looking at (11, 1.5, 11), fov 90; sun azimuth 270, elevation -20, diameter 0.53; one warm Lamp at (14.5, 2.75, 7.0), intensity 2.5, range 10 |
-| lane | camera (7.4, 1.7, 13.2), yaw -90, pitch -5; sun azimuth 270, elevation 20, diameter 0.53; no lamp |
-| platform | camera (-8.1236, 1.655, -16.7168), yaw -115.2095, pitch 3.5065, fov 90; sun azimuth 67.2, elevation 18.5, diameter 0.53; the three spawn crates |
+| chamber | camera (15.5, 1.7, 5.0) looking at (11, 1.5, 11), fov 90; one warm Lamp at (14.5, 2.75, 7.0), intensity 2.5, range 10 |
+| lane | camera (7.4, 1.7, 13.2), yaw -90, pitch -5; one warm Lamp at (8.2, 2.0, 13.2), intensity 4, range 10 |
+| platform | camera (-8.1236, 1.655, -16.7168), yaw -115.2095, pitch 3.5065, fov 90; one Lamp at (-2.5, 2.0, -14.0), intensity 3, range 10; the three spawn crates |
 
 Renderer inputs: `taa`, `jitter`, and `ao` off. AO must be off because the
 reference has no AO term; TAA and jitter are off so the two captures have
@@ -58,10 +57,9 @@ identical direct shading. The command rejects a run that leaves any of them on,
 or that leaves the sky, point-light shadows, HUD, or menu in a state the
 estimator does not model.
 
-Budget: 48 paths per sample point, a 16-pixel stride, and 16 sun-disk samples at
-the camera hit. The grid is 80 x 45 at 1280 x 720. The platform scene uses 32
-paths and an 8-pixel stride at 640 x 360, because its reference runs in the
-lighting suite. A point is excluded when the
+Budget: 48 paths per sample point and a 16-pixel stride. The grid is 80 x 45 at
+1280 x 720. The platform scene uses 32 paths and an 8-pixel stride at 640 x 360,
+because its reference runs in the lighting suite. A point is excluded when the
 sky is hit, when a half-pixel neighbour hits a different box or a distance more
 than 2 percent away, or when the reference indirect is below 1e-5. The RNG is a
 fixed LCG, so a repeat run gives the same metrics.
@@ -72,22 +70,22 @@ One-bounce gate:
 
 | Metric | Chamber | Lane |
 | --- | ---: | ---: |
-| used points | 3556 | 3347 |
-| median ratio | 1.025 | 0.963 |
-| ratio p10 / p90 | 0.871 / 1.291 | 0.578 / 1.510 |
-| median error | 0.092 | 0.248 |
-| energy ratio r, g, b | 1.027 / 1.035 / 1.035 | 0.937 / 0.943 / 0.943 |
-| colour spread | 0.008 | 0.006 |
+| used points | 3556 | 3559 |
+| median ratio | 1.025 | 1.010 |
+| ratio p10 / p90 | 0.871 / 1.291 | 0.848 / 1.160 |
+| median error | 0.092 | 0.068 |
+| energy ratio r, g, b | 1.027 / 1.035 / 1.035 | 0.985 / 1.000 / 1.020 |
+| colour spread | 0.008 | 0.035 |
 | zero GPU, reference lit | 0 | 0 |
 
 Three-bounce advisory:
 
 | Metric | Chamber | Lane |
 | --- | ---: | ---: |
-| median ratio | 0.563 | 0.439 |
-| median error | 0.437 | 0.562 |
-| colour spread | 0.101 | 0.126 |
-| zero GPU, reference lit | 0 | 0.00056 |
+| median ratio | 0.563 | 0.571 |
+| median error | 0.437 | 0.429 |
+| colour spread | 0.101 | 0.096 |
+| zero GPU, reference lit | 0 | 0 |
 
 The one-bounce reference matches the probe field. The three-bounce reference is
 about twice as bright in the chamber and the lane, which is the expected gap
@@ -95,31 +93,28 @@ between one diffuse bounce and full multi-bounce transport.
 
 One-bounce platform gate:
 
-| Metric | Old field | New field |
-| --- | ---: | ---: |
-| used points | 1842 | 1842 |
-| median ratio | 1.094 | 1.014 |
-| ratio p10 / p90 | 0.820 / 1.347 | 0.897 / 1.149 |
-| median error | 0.139 | 0.059 |
-| mean reference / GPU | 0.089 / 0.097 | 0.089 / 0.091 |
-| colour spread | 0.058 | 0.015 |
+| Metric | Current field |
+| --- | ---: |
+| used points | 1839 |
+| median ratio | 1.002 |
+| ratio p10 / p90 | 0.840 / 1.174 |
+| median error | 0.080 |
+| mean reference / GPU | 0.102 / 0.100 |
+| colour spread | 0.030 |
 
-With the sun below the horizon, the same field falls from mean GPU 0.086 to
-0.079 against a 0.078 reference, and the error falls from 0.151 to 0.069. The
-direct term is unchanged at 0.04 percent. The old field's dark lobe and dashed
-tunnel edge are the visibility cut described in
-[ADR 0036](../adr/0036-ddgi-probe-validity-and-contact.md); the new field
-removes the lobe, the specks, and the missing contact.
+The direct term stays within 0.04 percent. The platform's shaded face, tunnel
+corner, and contact gate the probe visibility. The probe-validity contact work
+is described in
+[ADR 0036](../adr/0036-ddgi-probe-validity-and-contact.md).
 
 ## Bugs found and fixed
 
 The reference exposed two real defects:
 
-1. `probe_ray.comp` added the sun and point-light terms without multiplying by
-   the hit surface albedo. The probe atlas kept the light source's colour
-   instead of the bounced surface colour. Before the fix, the three-bounce
-   colour spread was 0.566 in the chamber and 0.279 in the lane. The probe ray
-   now multiplies both direct terms by `object.color.rgb`.
+1. `probe_ray.comp` added the point-light term without multiplying by the hit
+   surface albedo. The probe atlas kept the light source's colour instead of the
+   bounced surface colour. The probe ray now multiplies the direct term by
+   `object.color.rgb`.
 2. The room volume's high z bound was one ULP below the north wall's inner face.
    The gather rejected the whole face: 10.9 percent of the chamber points and
    35.3 percent of the lane points had zero GPU indirect where the reference saw

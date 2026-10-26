@@ -12,8 +12,6 @@ edit_primary_press :: proc(dm: ^Debug_Mode, sim: ^Simulation, captured: bool) ->
 	switch active_tool(dm) {
 	case .Palette:
 		return edit_no_change()
-	case .Sun:
-		return edit_sun_exit(dm)
 	case .Placement:
 		if !captured {
 			return edit_no_change()
@@ -56,8 +54,6 @@ edit_secondary_press :: proc(dm: ^Debug_Mode) -> Edit_Result {
 	switch active_tool(dm) {
 	case .Palette:
 		return edit_palette_close(dm)
-	case .Sun:
-		return edit_sun_cancel(dm)
 	case .Placement:
 		debug_placement_cancel(dm)
 		return edit_ok()
@@ -109,7 +105,7 @@ edit_wheel :: proc(
 	captured: bool,
 ) -> Edit_Result {
 	switch active_tool(dm) {
-	case .Palette, .Sun:
+	case .Palette:
 		return edit_no_change()
 	case .Placement:
 		if !captured {
@@ -147,8 +143,6 @@ edit_cancel :: proc(dm: ^Debug_Mode) -> Edit_Result {
 	switch active_tool(dm) {
 	case .Palette:
 		return edit_palette_close(dm)
-	case .Sun:
-		return edit_sun_cancel(dm)
 	case .Placement:
 		debug_placement_cancel(dm)
 		return edit_ok()
