@@ -195,7 +195,7 @@ update_camera :: proc(r: ^Renderer, input: Render_Input) -> bool {
 			math.tan(input.sun_angular_diameter * 0.5),
 			CAMERA_FAR,
 			f32(len(input.lights)),
-			r.taa.debug.active && !r.taa.debug.light_shadows ? 0 : 1,
+			r.debug.active && !r.debug.light_shadows ? 0 : 1,
 		},
 		jitter = {input.jitter.x, input.jitter.y, 0, 0},
 		occlusion = {
@@ -218,7 +218,7 @@ update_camera :: proc(r: ^Renderer, input: Render_Input) -> bool {
 // report all read the value this call stores in the input.
 taa_frame_jitter :: proc(r: ^Renderer, extent: vk.Extent2D) -> [2]f32 {
 	jitter: [2]f32
-	jitter_enabled := r.taa.enabled && !(r.taa.debug.active && !r.taa.debug.jitter)
+	jitter_enabled := r.taa.enabled && !(r.debug.active && !r.debug.jitter)
 	if jitter_enabled {
 		r.taa.applied_jitter_index = r.taa.jitter_index
 		jitter = taa_jitter(r.taa.jitter_index, extent)

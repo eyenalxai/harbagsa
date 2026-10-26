@@ -27,6 +27,7 @@ Error :: enum {
 	No_Suitable_Device,
 	Create_Device,
 	Create_Target,
+	Create_Frame_Targets,
 	Create_Swapchain,
 	Create_Frames,
 	Create_Scene,
@@ -94,12 +95,14 @@ Renderer :: struct {
 	render_digest:        digest.FNV,
 	has_render_digest:    bool,
 
-	target:       Target,
-	scene:        Scene,
-	probe:        Probe,
-	acceleration: Acceleration,
-	taa:          TAA,
-	overlay:      Overlay,
+	target:        Target,
+	frame_targets: Frame_Targets,
+	scene:         Scene,
+	probe:         Probe,
+	acceleration:  Acceleration,
+	taa:           TAA,
+	debug:         Renderer_Debug,
+	overlay:       Overlay,
 }
 
 // The validation callback runs outside the normal call stack, so it needs the
@@ -121,6 +124,7 @@ init :: proc(config: Config, allocator: mem.Allocator) -> (r: Renderer, err: Err
 	r.synthetic_lights = make([dynamic]Light, 0, 0, allocator)
 	r.recorder = config.recorder
 	r.clear_color = DEFAULT_CLEAR_COLOR
+	r.debug = renderer_debug_default()
 	r.target.kind = config.target
 
 	if err = init_instance(&r); err != .None {
@@ -138,6 +142,10 @@ init :: proc(config: Config, allocator: mem.Allocator) -> (r: Renderer, err: Err
 		return
 	}
 	if err = create_target(&r, config.width, config.height); err != .None {
+		deinit(&r)
+		return
+	}
+	if err = init_frame_targets(&r); err != .None {
 		deinit(&r)
 		return
 	}
@@ -178,6 +186,7 @@ deinit :: proc(r: ^Renderer) {
 
 	destroy_overlay(r)
 	destroy_taa(r)
+	destroy_frame_targets(r)
 	destroy_probe(r)
 	destroy_scene(r)
 	destroy_target(r)

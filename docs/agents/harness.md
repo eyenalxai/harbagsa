@@ -1708,6 +1708,8 @@ frame-rate change.
 - `src/renderer/timing.odin`: the timestamp pools, the pass boundaries, and the
   read.
 - `src/renderer/debug.odin`: the debug gate, overrides, and shadow phase.
+- `src/renderer/frame_targets.odin`: the depth, scene-colour, and velocity
+  attachments and their lifecycle.
 - `src/renderer/lights.odin`: the point-light type, instance masks, synthetic
   lights, and upload.
 - `src/renderer/state.odin`: the renderer report and setup.
@@ -1975,7 +1977,9 @@ harness in the same change. Do not leave the automation behind the game.
   `state_digest`. Put them in the render digest and `Renderer_State` instead.
 - New renderer pass or target: keep it behind `Target` or `Render_Input`. Add a
   `Pass` builder, a barrier proc on that pass, a pass-order test, and an
-  offscreen test when the pass must match the game.
+  offscreen test when the pass must match the game. A frame-sized attachment
+  belongs in `Frame_Targets`, so create, destroy, and resize stay in
+  `frame_targets.odin`.
 - New screenshot or evidence path: update the README and this page.
 - New prefab: add it to `Prefab_Id` and `PREFABS` in `src/game/prefabs.odin`,
   including its `short_name` for the palette card, and its `light` defaults when

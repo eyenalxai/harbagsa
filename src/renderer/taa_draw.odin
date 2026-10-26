@@ -50,10 +50,10 @@ taa_draw :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
 		clamp_enabled  = 1,
 		force_trust    = 0,
 	}
-	if taa.debug.active {
-		params.history_weight = taa.debug.history_weight
-		params.clamp_enabled = taa.debug.clamp ? 1 : 0
-		params.force_trust = taa.debug.force_depth_trust ? 1 : 0
+	if r.debug.active {
+		params.history_weight = r.debug.history_weight
+		params.clamp_enabled = r.debug.clamp ? 1 : 0
+		params.force_trust = r.debug.force_depth_trust ? 1 : 0
 	}
 	vk.CmdPushConstants(
 		command_buffer,
@@ -87,8 +87,8 @@ taa_after :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
 
 @(private)
 record_scene_read_barriers :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer) {
-	color := r.taa.scene_color[r.frame_index]
-	velocity := r.taa.velocity[r.frame_index]
+	color := r.frame_targets.scene_color[r.frame_index]
+	velocity := r.frame_targets.velocity[r.frame_index]
 
 	image_barrier(
 		command_buffer,

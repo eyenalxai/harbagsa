@@ -138,16 +138,16 @@ renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
 			placement = r.overlay.debug_kind_vertices[int(geometry.Line_Kind.Placement)],
 		},
 		debug = {
-			active = r.taa.debug.active,
+			active = r.debug.active,
 			taa = r.taa.enabled,
-			jitter = r.taa.debug.active ? r.taa.debug.jitter : r.taa.enabled,
-			history_weight = r.taa.debug.history_weight,
-			clamp = r.taa.debug.active ? r.taa.debug.clamp : true,
-			depth_trust = r.taa.debug.active && r.taa.debug.force_depth_trust,
-			freeze_shadow_phase = r.taa.debug.active && r.taa.debug.freeze_shadow_phase,
-			shadow_phase = r.taa.debug.shadow_phase,
-			light_shadows = r.taa.debug.active ? r.taa.debug.light_shadows : true,
-			synthetic_lights = r.taa.debug.active ? r.taa.debug.synthetic_lights : 0,
+			jitter = r.debug.active ? r.debug.jitter : r.taa.enabled,
+			history_weight = r.debug.history_weight,
+			clamp = r.debug.active ? r.debug.clamp : true,
+			depth_trust = r.debug.active && r.debug.force_depth_trust,
+			freeze_shadow_phase = r.debug.active && r.debug.freeze_shadow_phase,
+			shadow_phase = r.debug.shadow_phase,
+			light_shadows = r.debug.active ? r.debug.light_shadows : true,
+			synthetic_lights = r.debug.active ? r.debug.synthetic_lights : 0,
 			sky = debug_effective.sky,
 			gi = debug_effective.gi,
 			ao = debug_effective.ao,
@@ -156,8 +156,8 @@ renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
 			clip_height = debug_effective.clip_height,
 		},
 	}
-	if r.taa.debug.active && r.taa.debug.history_weight >= 0 {
-		report.history_weight = r.taa.debug.history_weight
+	if r.debug.active && r.debug.history_weight >= 0 {
+		report.history_weight = r.debug.history_weight
 	} else if r.taa.enabled && r.taa.history_valid && r.taa.convergence_frames > 0 {
 		count := f32(r.taa.convergence_frames)
 		report.history_weight = count / (count + 1)

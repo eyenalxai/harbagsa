@@ -705,6 +705,12 @@ The state while the settings menu is open. The simulation and debug camera do
 not update.
 _Avoid_: Freeze
 
+**Frame targets**:
+The depth, lit colour, and velocity images that the depth, scene, and sky
+passes render into. They belong to the frame, not to TAA: TAA samples the two
+colour images and adds its own history.
+_Avoid_: TAA targets, render targets
+
 **Temporal anti-aliasing (TAA)**:
 The render path that jitters the camera and averages frames through a history buffer to smooth edges.
 _Avoid_: Temporal filtering, accumulation

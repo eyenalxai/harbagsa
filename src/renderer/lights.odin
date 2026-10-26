@@ -34,8 +34,8 @@ SYNTHETIC_LIGHT_RANGE :: 8.0
 // full light budget before the game has lamp prefabs. The positions form a
 // square grid, so the count has no upper bound.
 frame_lights :: proc(r: ^Renderer, lights: []Light) -> []Light {
-	if r.taa.debug.active && r.taa.debug.synthetic_lights > 0 {
-		return synthetic_lights(r, r.taa.debug.synthetic_lights)
+	if r.debug.active && r.debug.synthetic_lights > 0 {
+		return synthetic_lights(r, r.debug.synthetic_lights)
 	}
 	return lights
 }
