@@ -29,13 +29,10 @@ debug_mode_update :: proc(
 	}
 
 	debug_fly(dm, motion, delta)
-	// The aim belongs to the camera, so refresh both tools before an action reads
-	// the ghost or the sun point.
+	// The aim belongs to the camera, so refresh the tool before an action reads
+	// the ghost.
 	if dm.placement.armed {
 		debug_placement_refresh(dm, sim)
-	}
-	if dm.sun.active {
-		debug_sun_refresh(dm, sim)
 	}
 	if _, ok := debug_selected_object_id(dm, sim); !ok && dm.selection == .Object {
 		debug_mode_clear_selection(dm)
@@ -46,9 +43,6 @@ debug_mode_update :: proc(
 	}
 	if dm.placement.armed {
 		debug_placement_refresh(dm, sim)
-	}
-	if dm.sun.active {
-		debug_sun_refresh(dm, sim)
 	}
 }
 

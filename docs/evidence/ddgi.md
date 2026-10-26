@@ -1,5 +1,8 @@
 # DDGI probe volumes
 
+> Historical note: the sun was removed after this capture. Current direct light
+> is point lights.
+
 ## Method
 
 Each probe traces 256 deterministic rays every frame. The ray pass stores
