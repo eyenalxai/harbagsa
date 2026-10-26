@@ -5,6 +5,7 @@
   "note": "Sealed two-room pair at (-10, -8): a lamp in room A must not light room B; removing the door segment in the shared wall then admits light through the opening.",
   "commands": [
     {"cmd": "scene", "probe_volumes": [{"name": "room-a", "min": [-13.8, 0, -9.8], "spacing": 1.0, "counts": [4, 3, 4]}, {"name": "room-b", "min": [-9.8, 0, -9.8], "spacing": 1.0, "counts": [4, 3, 4]}]},
+    {"cmd": "sun", "azimuth_deg": 270, "elevation_deg": -20, "diameter_deg": 0.53},
     {"cmd": "place", "prefab": "Wall", "position": [-10.0, 1.5, -9.75], "yaw_deg": 90, "body": "static", "name": "shared-south"},
     {"cmd": "place", "prefab": "Wall", "position": [-10.0, 1.5, -6.25], "yaw_deg": 90, "body": "static", "name": "shared-north"},
     {"cmd": "place", "prefab": "Wall", "position": [-14.0, 1.5, -8.0], "yaw_deg": 90, "body": "static", "name": "room-a-west"},

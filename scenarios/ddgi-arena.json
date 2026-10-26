@@ -3,6 +3,9 @@
   "view": {"hud": false, "debug": false, "hint": false, "perf": false},
   "analysis": false,
   "note": "Arena sky fill: the room's shaded west face must not be black, and the sealed chamber must stay dark.",
+  "parameters": {
+    "sun_elevation_deg": 20
+  },
   "commands": [
     {"cmd": "camera", "position": [1.5, 5.0, 18.0], "look_at": [12.0, 1.0, 11.0], "fov_deg": 90},
     {"cmd": "settle", "frames": 30},
@@ -12,10 +15,11 @@
      "region": {"x": 330, "y": 390, "w": 140, "h": 80},
      "color_key": {"r": 0, "g": 0, "b": 0, "tolerance": 0},
      "coverage": {"black": 0.5, "lit": 20},
-     "note": "the room's west face, which no direct light reaches"},
+     "note": "the room's west face, which the sun never reaches"},
     {"cmd": "capture", "name": "arena-shade-zoom",
      "crop": {"x": 330, "y": 390, "w": 140, "h": 80, "scale": 4}},
 
+    {"cmd": "sun", "azimuth_deg": 270, "elevation_deg": "${sun_elevation_deg}", "diameter_deg": 0.53},
     {"cmd": "camera", "position": [15.5, 1.7, 5.0], "look_at": [11.0, 1.5, 11.0], "fov_deg": 90},
     {"cmd": "settle", "frames": 40},
     {"cmd": "capture", "name": "chamber", "format": "stats", "png": true},

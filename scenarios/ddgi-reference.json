@@ -19,6 +19,12 @@
       "ao": false
     },
     {
+      "cmd": "sun",
+      "azimuth_deg": 270,
+      "elevation_deg": -20,
+      "diameter_deg": 0.53
+    },
+    {
       "cmd": "camera",
       "position": [
         15.5,
@@ -116,11 +122,10 @@
       "id": 4
     },
     {
-      "cmd": "place",
-      "prefab": "Lamp",
-      "position": [8.2, 2.0, 13.2],
-      "body": "static",
-      "light": {"intensity": 4, "range": 10}
+      "cmd": "sun",
+      "azimuth_deg": 270,
+      "elevation_deg": 20,
+      "diameter_deg": 0.53
     },
     {
       "cmd": "camera",

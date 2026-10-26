@@ -130,6 +130,11 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 		}
 	}
 
+	if command.has_sun {
+		session.debug.sun.position = scene.sun.position
+		session.debug.sun_angular_diameter = f32(math.to_radians(f64(scene.sun.angular_diameter_deg)))
+	}
+
 	if command.has_camera {
 		yaw := f32(math.to_radians(f64(scene.camera.yaw_deg)))
 		pitch := f32(math.to_radians(f64(scene.camera.pitch_deg)))

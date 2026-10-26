@@ -4,13 +4,15 @@ A first-person movement demo. The player walks, sprints, crouches, crawls,
 jumps, dives, slides, and mantles in a fixed arena with stairs, ramps, tunnels,
 mantle walls, a dive platform, a closed room with a four-turn light lock, and
 pushable crates. SDL3 provides the window and input, raw Vulkan 1.3 with
-ray-query shadows draws the scene, and Box3D runs the physics. Lamps are the
-only direct light. DDGI probe volumes add one diffuse bounce inside the room and
-sky fill across the open arena, so a lit wall fills the corner beside it and a
-surface outside the room is no longer black. A surface that no light and no
-probe reaches is black. An analytic sky gradient fills the background.
-Ray-traced ambient occlusion uses the same scene acceleration structure to
-darken the direct light in contact, corners, and tunnels.
+ray-query shadows draws the scene, and Box3D runs the physics. A directional sun
+casts hard contact shadows and softer distant shadows from the walls and
+crates. The sun and the lamps are direct light. DDGI probe volumes add one
+diffuse bounce inside the room and sky fill across the open arena, so a lit wall
+fills the corner beside it and a shaded face outside the room is no longer
+black. A surface that no light and no probe reaches is black. An analytic sky
+gradient fills the background. Ray-traced ambient occlusion uses the same scene
+acceleration structure to darken the direct light in contact, corners, and
+tunnels.
 
 ## Requirements
 
@@ -50,14 +52,14 @@ sets the AO ray count in both the shader and the Odin report:
 - `Z`: prone. The settings menu switches the input mode between Hold and
   Toggle. Crawl while prone. Dive in the air or from a sprint.
 - `R`: return the player to spawn.
-- `Shift+R`: reset the placed objects and the player.
+- `Shift+R`: reset the placed objects, the sun, and the player.
 - `F1`: toggle the debug draw.
 - `F2`: toggle debug mode.
 - `F3`: toggle temporal anti-aliasing (TAA). TAA is on by default.
 - `F4`: toggle the perf overlay. It shows the frame interval, the CPU frame
   time, and the GPU pass times.
-- `F5`: write a repro scenario to `runs/repro/`. It holds the camera, placed
-  objects, settings, view flags, display list, and active renderer debug
+- `F5`: write a repro scenario to `runs/repro/`. It holds the camera, sun,
+  placed objects, settings, view flags, display list, and active renderer debug
   overrides. A notice names the file it wrote, or says the write failed.
   `--repro-dir DIR` or `HARBAGSA_REPRO_DIR` moves the directory.
 - `Esc`: open the settings menu. The menu pauses the game and releases the
@@ -149,14 +151,17 @@ stairs.
   The light settings stick to the next placement until the prefab changes. A
   non-lamp object ignores them. The palette preview, the inspector, and the
   ghost show the current light.
+- `L`: toggle the sun placement. The sun follows the crosshair on a sky dome
+  and the lighting updates live. A click commits the position; `Esc` or a right
+  click restores the sun from before the mode.
 - `R`: reset the player and return the camera to spawn.
-- `Shift+R`: reset the placed objects and the player.
+- `Shift+R`: reset the placed objects, the sun, and the player.
 - `F5`: write a repro scenario to `runs/repro/` and show the notice that names
   the file.
 - `F2`: leave debug mode. The player returns to the saved position and view.
-- `Esc`: close the palette, cancel the placement, or open the settings menu, in
-  that order. The settings menu closes the palette and cancels the placement
-  when it opens.
+- `Esc`: close the palette, cancel the placement, cancel the sun placement, or
+  open the settings menu, in that order. The settings menu closes the palette and
+  cancels the placement and the sun placement when it opens.
 
 The palette shows the eleven box prefabs in a six by two grid with a preview
 pane. Hover or use the arrow keys to change the selection, `1`-`9` selects one of
@@ -171,8 +176,9 @@ size, position, yaw, and snap state, its light values for a lamp, and the active
 light count against the lamp count. Every changing value uses a fixed field and
 the mono face, so the panel does not resize with the selection. While the
 placement tool is armed, it shows the armed prefab, body, height, yaw, snap,
-object count, and the next lamp light instead. Every placed lamp is active, and
-the inspector shows the active count against the lamp count.
+object count, and the next lamp light instead. While sun placement is active, it
+adds a sun placement row. Every placed lamp is active, and the inspector shows
+the active count against the lamp count.
 The settings menu shows the control list. Borderless fills the selected display;
 Windowed uses the chosen resolution.
 
@@ -201,10 +207,10 @@ operational notes are in `docs/agents/harness.md`. Run
 the capture targets and formats, the check paths, and the state tree.
 `./bin/harbagsa-agent --help` (or `-h`) lists the CLI commands.
 
-For the short loop, use `make shot SCENARIO=editor-lamps OUT=runs/editor-lamps`
+For the short loop, use `make shot SCENARIO=editor-sun OUT=runs/editor-sun`
 and `make test-simulation`. `make quick` builds the agent and runs
 `suites/fast.json`. Read `report.json` with `jq`; `harbagsa-agent checks
-runs/editor-lamps` prints every gate and its margin, and `harbagsa-agent probes`
+runs/editor-sun` prints every gate and its margin, and `harbagsa-agent probes`
 prints the probe layout and its sample ownership.
 
 ### Run a scenario
@@ -404,8 +410,8 @@ points that no volume owns; the ULP bound gap would have shown here first.
 `checks` reads one run and prints every check with its gate and margin:
 
 ```sh
-./bin/harbagsa-agent checks runs/editor-lamps
-./bin/harbagsa-agent checks runs/editor-lamps --json
+./bin/harbagsa-agent checks runs/editor-sun
+./bin/harbagsa-agent checks runs/editor-sun --json
 ```
 
 A positive margin is the distance from the gate in the pass direction. The
@@ -448,7 +454,7 @@ compare panel:
 
 ```sh
 ./bin/harbagsa-agent ab --visual \
-  --ref origin/main --scenario scenarios/editor-lamps.json --out runs/visual-ab
+  --ref origin/main --scenario scenarios/editor-sun.json --out runs/visual-ab
 ```
 
 The wrapper delegates to `tools/visual-ab.sh`. It builds each side with `make
@@ -471,9 +477,9 @@ file is a normal scenario with one `scene` command; run it directly:
 ```
 
 The scene carries the camera source and view, the player pose when the source is
-`player`, every placed object with its exact rotation and light, the window and
-input settings, the type weight, the display list, the view flags, and the
-active renderer debug overrides. A file with overrides declares
+`player`, the sun, every placed object with its exact rotation and light, the
+window and input settings, the type weight, the display list, the view flags,
+and the active renderer debug overrides. A file with overrides declares
 `"requires": {"renderer_debug": true}` itself, so it replays without a flag.
 `--repro-dir DIR` or `HARBAGSA_REPRO_DIR` moves the directory. Milliseconds in
 the name keep two presses apart.
@@ -545,8 +551,9 @@ Check fields use the `state.json` shape, for example `player.position.y`,
 `static_boxes.count`, `static_boxes.0.center.x`, `static_boxes.0.emissive`,
 `settings.window_mode`, `settings.resolution`, `settings.type_weight`,
 `menu.open`, `menu.status`, `menu.blocked`, `notice.text`, `debug.active`,
-`debug.placement.armed`, `debug.palette.open`, `camera.yaw_deg`, `camera.fov_deg`,
-`camera.source`, `camera.overridden`, `player.yaw_deg`, `settle.converged`,
+`debug.placement.armed`, `debug.sun.angular_diameter_deg`, `sun.elevation_deg`,
+`sun.angular_diameter_deg`, `camera.yaw_deg`, `camera.fov_deg`, `camera.source`,
+`camera.overridden`, `player.yaw_deg`, `settle.converged`,
 `rows.menu.3.kind`, `renderer.taa_enabled`, `renderer.text_truncated_runs`, or
 `render_digest`. A capture check can also read `capture.target`,
 `capture.format`, `capture.stats.*`, `capture.region.*`, `capture.profile.*`,
@@ -561,7 +568,7 @@ in [1, 31]. `capture.stats.color_key.matches` and `.fraction` read the colour
 key. `capture.stats.coverage.zero_fraction`, `.black`, `.black_fraction`, `.lit`,
 and `.lit_fraction` read the coverage block. A named capture exposes the renderer
 state of its own frame:
-`capture.named.idle.renderer.debug_vertices.world` and
+`capture.named.idle.renderer.debug_vertices.sun` and
 `capture.named.idle.renderer.debug_vertex_count`. Add
 `"window": {"start": 2, "count": 8}` to aggregate over part of
 the captures; `warmup` stays the shorthand for skipping the first N. A
@@ -587,8 +594,8 @@ or an overlay out of the band metric.
 The batch runner and the live session share one command set:
 
 - `{"cmd": "reset"}`: fresh simulation. Placed objects return to spawn, the
-  settings return to their defaults, the menu closes, and the debug palette and
-  placement return to their defaults.
+  settings return to their defaults, the menu closes, and the debug palette,
+  placement, and sun return to their defaults.
 - `{"cmd": "look", "dx": 220, "dy": 0}`: pixel look delta through the game
   sensitivity and pitch clamp.
 - `{"cmd": "face", "yaw_deg": 0, "pitch_deg": 0}`: set the player view directly.
@@ -621,7 +628,8 @@ The batch runner and the live session share one command set:
   `active`,
   `selection`, `selected_id`, the palette (`open`, `selected`, `body`), the
   placement (`armed`, `prefab`, `position`, `height`, `yaw_deg`, `snap`, `light`),
-  the inspector (`prefab`, `body`, `size`, `position`,
+  the sun (`active`, `position`, `azimuth_deg`, `elevation_deg`,
+  `angular_diameter_deg`), the inspector (`prefab`, `body`, `size`, `position`,
   `yaw_deg`, `snap`, `light`),
   the light budget (`lights.active`, `lights.lamps`), and the history (`depth`,
   `redo`). Every angle field ends in `_deg` and is in degrees. `camera` reports
@@ -632,15 +640,16 @@ The batch runner and the live session share one command set:
   count, TAA state, jitter index, history validity, convergence frames, history
   read index and weight, reset count and reason, shadow phase, the active light
   count, the applied atlas weight, text truncations and dropped fonts, the
-  debug line vertex count, a per-source `debug_vertices` count (`world`,
+  debug line vertex count, a per-source `debug_vertices` count (`world`, `sun`,
   `selection`, `placement`), and the debug override values. `static_boxes`
   carries the immutable arena geometry, so a check can inspect the room plan
   without a render.
   `setup.renderer.shader_digest` is the FNV hash of the SPIR-V embedded in the
   binary, so a shader edit is visible even when `render_digest` stays the same.
-  `render_digest` covers the target extent, the effective camera, boxes, point
-  lights, emissive strengths, jitter, shadow phase, applied atlas weight, the
-  sky and AO flags, and view flags.
+  `render_digest` covers the target extent, the effective
+  camera, sun direction and angular diameter, boxes, point lights, emissive
+  strengths, jitter, shadow phase, applied atlas weight, the sky and AO flags,
+  and view flags.
 - `{"cmd": "capture", "name": "shot", "frame": 90, "alpha": 1.0}`: write a PNG.
   `frame` is optional. A past frame is an error; a future frame queues. Add
   `"target": "velocity"`, `"history"`, `"depth"`, or `"scene_color"` to read an
@@ -658,7 +667,7 @@ The batch runner and the live session share one command set:
   with `zero_fraction` alone. A capture and a scenario
   also accept a `"note"` string, echoed into `report.json`; the capture result
   carries the `renderer` state of the frame that wrote it, so
-  `capture.named.idle.renderer.debug_vertices.world` is exact. Add
+  `capture.named.idle.renderer.debug_vertices.sun` is exact. Add
   `"unit": "normalized"` to a region to give `x`, `y`, `w`, and `h` as
   fractions of the frame. A color capture accepts
   `"crop": {"x","y","w","h","scale"}` to write a scaled PNG, and a `"profile"`
@@ -678,17 +687,23 @@ The batch runner and the live session share one command set:
   `capture-<target>-<index>`. This keeps a PNG, the history statistics, and a
   profile on the same frame. A group holds at most eight outputs.
   `scenarios/capture-group.json` demonstrates all six output forms.
-- `{"cmd": "shot", "name": "lane", "camera": {...}, "settle": 40, "format": "stats"}`:
-  a scenario-only shorthand. It expands, in order, to an optional `camera`, a
-  `settle` frame count or object, and a `capture` that takes every other field
-  on the shot. It keeps the scenario short without hiding the sequence.
-  `scenarios/shot.json` is the worked example.
+- `{"cmd": "shot", "name": "lane", "camera": {...}, "sun": {...}, "settle": 40, "format": "stats"}`:
+  a scenario-only shorthand. It expands, in order, to an optional `camera`, an
+  optional `sun`, a `settle` frame count or object, and a `capture` that takes
+  every other field on the shot. It keeps the scenario short without hiding the
+  sequence. `scenarios/shot.json` is the worked example.
 - `{"cmd": "camera", "position": [0, 2, 12], "yaw_deg": 0, "pitch_deg": 0}`: inspection
   camera. It does not move the player. It accepts `look_at` instead of
   `yaw_deg`/`pitch_deg`, and `fov_deg` in degrees (1..170). `look_at` with
   `yaw_deg`/`pitch_deg` is an error. `{"cmd": "camera", "clear": true}` drops the override.
 - `{"cmd": "view", "hud": true, "debug": false, "hint": false, "perf": false}`:
   toggle the HUD, the debug draw, the capture hint, and the perf overlay.
+- `{"cmd": "sun", "azimuth_deg": 52.1, "elevation_deg": 15, "diameter_deg": 0.53}`: move the
+  sun or resize its disk. `azimuth_deg` is degrees from `+z` toward `+x`,
+  `elevation_deg` is degrees above the horizon, and `diameter_deg` is the angle
+  the sun disk subtends in degrees. Omitted fields keep the value, and at least one field is
+  required. `{"cmd":"sun","clear":true}` restores the default direction and
+  diameter. A change resets TAA history, like a scene change.
 - `{"cmd": "debug_mode", "active": true}`: enter or leave the `F2` debug mode.
   Entering swaps the player for the free-fly camera; leaving restores the player.
   Repeating the same value is a no-op.
@@ -701,8 +716,9 @@ The batch runner and the live session share one command set:
   `green`, or `blue`; `light_intensity` is in [0.2, 4.0] and `light_range` in
   [2, 20]. The light fields tune the next lamp placement, or the selected lamp
   when neither the palette nor the placement tool owns the editor. `cancel`
-  clears the armed tool. Every field is optional; fields apply in that order.
-  A rejected edit returns `ok: false` with a reason.
+  clears the armed tool. Every field is optional; fields apply in that order,
+  and the `sun` group applies last. A rejected edit returns `ok: false` with a
+  reason.
   The pointer and relative fields mirror the keyboard: `palette_step` and
   `palette_number` select a card, `flip_body` is `M`, `snap_toggle` is `G`,
   `turn` and `wheel` step the armed tool or the selection, `large` applies the
@@ -723,6 +739,11 @@ The batch runner and the live session share one command set:
   `body` flips between `static` and `dynamic`. The open palette or the armed
   placement tool owns it; otherwise it converts the selection. `delete`, `duplicate`,
   `undo`, and `redo` are actions. A duplicate at the cap does nothing.
+- `{"cmd": "editor", "sun": {"active": true, "position": [0, 40, -30], "place": false, "cancel": false}}`:
+  drive the sun placement. `active` enters or leaves the mode, `position` is
+  projected onto the 50 m sky dome and clamped above the arena floor, `place`
+  commits and leaves, and `cancel` restores the sun from before the mode. The
+  fields apply in that order and every field is optional.
 - `{"cmd": "menu", "open": true, "item": "Type weight", "activate": true, "direction": -1, "set": 900}`:
   open or close the settings menu, select a row by name, activate the selected
   row, or set the Type weight. `item` is `Window mode`, `Display`, `Resolution`,
@@ -730,7 +751,8 @@ The batch runner and the live session share one command set:
   needs an open menu. `activate` and `set` also need an open menu. `direction`
   is `-1` or `1` (default `1`) and needs `activate`; `set` is a weight in
   100..900. Omitted fields keep the state. Opening the menu closes the object
-  palette and cancels placement. An open menu renders even when `hud` is off.
+  palette and cancels placement and sun placement. An open menu renders even
+  when `hud` is off.
 - `{"cmd": "check", "field": "player.position.y", "op": "gt", "value": 0}`:
   evaluate a predicate now. Use `other` to compare two fields.
 - `{"cmd": "get", "field": "notice.text"}`: resolve one state, capture, or
@@ -752,7 +774,7 @@ The batch runner and the live session share one command set:
 - `{"cmd": "renderer_debug", "jitter": false, "shadow_phase": 12}`: change
   renderer inputs. It needs `--debug-renderer` or a build with
   `-define:ENABLE_RENDERER_DEBUG=true`. `sky` turns the sky pass off, `ao` turns the
-  occlusion on the direct point light off, `light_shadows` turns the point-light shadows off,
+  occlusion on direct light off, `light_shadows` turns the point-light shadows off,
   `gi` turns the probe indirect term off, and `synthetic_lights` replaces the
   frame's lamps with a generated test field. Set a
   count to choose how many lights it holds. `ao_radius` (0.01..50 m) and
@@ -760,7 +782,7 @@ The batch runner and the live session share one command set:
   discards fragments above that world height for a plan view. Set one field to
   `null` to restore that field's default without touching the others.
   `clear` resets every override. Changing an input resets history.
-- `{"cmd": "scene", ...}`: apply an exact scene with `camera`, `objects`,
+- `{"cmd": "scene", ...}`: apply an exact scene with `camera`, `sun`, `objects`,
   `probe_volumes`, `settings`, `view`, `displays`, and `renderer_debug` blocks.
   Every block is optional, and a `settings` or `view` block may carry only the
   fields it changes; omitted fields keep their live value. A `renderer_debug`
@@ -840,7 +862,7 @@ The scene-pass before/after is in
 
 `scenarios/perf-arena.json` measures the whole arena from above, and
 `scenarios/perf-backface.json` measures the near wall where every covered pixel
-faces away from the camera. Both are regression probes for the scene pass; run
+faces away from the sun. Both are regression probes for the scene pass; run
 them at the same size to compare two builds. `scenarios/perf-crates.json`
 places 60 objects in a grid with the Crate prefab and measures them, so the box
 count is part of the probe.
@@ -932,9 +954,12 @@ sets 900 and 100, captures both, and checks the stored value.
 
 `scenarios/sky.json` captures the sky at the zenith and the horizon with the
 sky pass on and off, so the gradient and the clear-colour fallback can be
-compared at the same camera. `scenarios/stairs-ao.json` places a lamp above the
-dive stairs and checks that the AO darkens the lit floor and the shaded wall
-when it is on.
+compared at the same camera. `scenarios/stairs-ao.json` captures the dive stairs
+at a 25° sun and checks that the AO darkens the sunlit floor and the shaded wall
+when it is on. `scenarios/shadow-angle.json` puts the sun 15 degrees above the horizon
+and captures a wall shadow twice: once with a 3-degree sun disk, then with the
+0.53-degree disk the build uses. The penumbra width follows the diameter, so
+the small disk gives a shadow edge about 5.7 times narrower.
 `scenarios/ramp-shadow.json` looks at the shaded floor below the 20 degree ramp
 and gates the step amplitude in a region that holds no geometry edge. The step
 metric box-filters the luma, so the output dither drops out and a ray-count
@@ -943,7 +968,7 @@ crouched view under the ramp, where the steps are widest; that view keeps the
 step count gate. It also catches the
 TAA history precision: a 16-bit history keeps the count steps, and the 32-bit
 history reaches zero steps. `scenarios/banding-phase.json` captures one frozen
-sample phase as `scene_color` float; the banding recipe in
+sun phase as `scene_color` float; the banding recipe in
 `docs/agents/harness.md` runs 32 phases and averages them.
 
 `scenarios/editor-ghost.json` enters debug mode, picks the platform prefab, and
@@ -954,6 +979,9 @@ tool. It checks the palette, placement, and object state without a window.
 captures the Platform and Ramp previews. Run it with `--size 800x600` to check
 that the bottom dock still fits and clears the crosshair.
 
+`scenarios/editor-sun.json` captures the player view and the idle sun with no
+debug lines, enters sun placement to capture the gizmo on the sky dome, sets a
+sun position through the dome projection, and captures the committed lighting.
 `scenarios/editor-object.json` edits a placed object, captures the inspector,
 then captures the undo and redo restores. `scenarios/editor-lamps.json` captures
 the three lamp previews, places a warm lamp, a cool panel, a red beacon, and a
@@ -970,18 +998,20 @@ no flag, and `make validate-offscreen` runs it.
 
 `scenarios/room-lighting.json` enters the closed room in the arena's +x/+z
 corner. The door opens into a four-turn light lock: east, south, west, south,
-and east into the chamber. A depth capture proves the chamber contains no sky
-pixel. The chamber is dark before a lamp exists; a warm lamp is placed with
-`place` and the same view is compared with the lamp on and off. The lamp
-intensity and lamp range are scenario parameters, so `--param lamp_intensity=2`
-runs the same checks with another setup. The room is static arena geometry:
-walk in through the west door and follow the four turns.
+and east into the chamber. Two depth captures prove the tunnel and the chamber
+contain no sky pixel. The first lane is captured with the sun west and east;
+only the west sun enters the door. The same chamber view is black at both sun
+azimuths, then a warm lamp is placed with `place` and the same view is compared
+with the lamp on and off. The sun elevation, lamp intensity, and lamp range are
+scenario parameters, so `--param sun_elevation_deg=25` and
+`--param lamp_intensity=2` run the same checks with another setup. The room is
+static arena geometry: walk in through the west door and follow the four turns.
 
 `scenarios/ddgi.json` isolates the indirect term. It puts the camera in the
-chamber and places one lamp. It captures the same view with the probe indirect
-on and off, checks the probe count and atlas energy, and requires the on frame
-to be brighter. The off frame still shows the direct lamp, so the difference is
-the bounce.
+chamber, turns the sun below the horizon, and places one lamp. It captures the
+same view with the probe indirect on and off, checks the probe count and atlas
+energy, and requires the on frame to be brighter. The off frame still shows the
+direct lamp, so the difference is the bounce.
 
 `scenarios/ddgi-sealed.json` builds a sealed two-room pair from static placed
 Walls and Platforms at (-10, -8): a lamp in room A, the camera in room B, and a
@@ -997,8 +1027,7 @@ the editor and checks the room stays lit.
 
 `scenarios/ddgi-arena.json` uses the `outside` camera, gates the room's shaded
 west face above the old black level, and checks that the sealed chamber stays
-dark with no sky depth pixel. No direct light reaches that face; the probe field
-supplies the fill. It also gates the coverage `black_fraction` and
+dark with no sky depth pixel. It also gates the coverage `black_fraction` and
 `lit_fraction` and a float `zero_fraction`. The result is in
 [docs/evidence/ddgi.md](docs/evidence/ddgi.md). The probe field is one diffuse
 bounce on a 1.04 m room grid, a 1 m sealed-pair scenario grid, and a 2 m arena
@@ -1010,8 +1039,8 @@ chamber and the room lane as `scene_color` float frames. A one-bounce CPU
 reference at an 80 x 45 pixel grid gates the probe field; a three-bounce run is
 advisory and reports the missing multi-bounce transport. The gate fails when the
 probe indirect term misses the stated luminance, colour, or coverage tolerance.
-`scenarios/ddgi-platform.json` adds the dive platform under a point lamp, where
-the shaded face, the tunnel corner, and the contact expose the probe visibility.
+`scenarios/ddgi-platform.json` adds the dive platform at a low sun, where the
+shaded face, the tunnel corner, and the contact expose the probe visibility.
 `make reference` runs both. The estimator, the scene, the tolerance, and the
 current measured gap are in
 [docs/evidence/ddgi-reference.md](docs/evidence/ddgi-reference.md).

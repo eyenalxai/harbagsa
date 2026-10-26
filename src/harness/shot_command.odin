@@ -5,7 +5,7 @@ import "core:encoding/json"
 import "core:fmt"
 import "core:mem"
 
-// A shot is a scenario-only shorthand. It compiles to the explicit camera,
+// A shot is a scenario-only shorthand. It compiles to the explicit camera, sun,
 // settle, and capture commands before the run starts, so the command list stays
 // deterministic and a live session never sees it.
 SHOT_KEYS := []string {
@@ -13,6 +13,7 @@ SHOT_KEYS := []string {
 	"name",
 	"note",
 	"camera",
+	"sun",
 	"settle",
 	"frame",
 	"alpha",
@@ -68,6 +69,19 @@ scenario_shot :: proc(
 		append(commands, command)
 	}
 
+	if sun_value, has := json_get(object, "sun"); has {
+		sun_object, sun_ok := json_object(sun_value)
+		if !sun_ok {
+			return format_error("%s", "shot 'sun' must be an object")
+		}
+		synthetic := with_command(sun_object, "sun")
+		command, error := parse_sun(synthetic, allocator)
+		if error != "" {
+			return error
+		}
+		append(commands, command)
+	}
+
 	if settle_value, has := json_get(object, "settle"); has {
 		command, error := shot_settle(settle_value)
 		if error != "" {
@@ -79,7 +93,7 @@ scenario_shot :: proc(
 	capture_object := make(json.Object, len(object) + 1, context.temp_allocator)
 	for key, value in object {
 		switch key {
-		case "cmd", "camera", "settle":
+		case "cmd", "camera", "sun", "settle":
 			continue
 		}
 		capture_object[key] = value
