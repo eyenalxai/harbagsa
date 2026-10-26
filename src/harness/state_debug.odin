@@ -11,7 +11,6 @@ Debug_State :: struct {
 	selected_id: u32              `json:"selected_id"`,
 	palette:     Palette_State    `json:"palette"`,
 	placement:   Placement_State  `json:"placement"`,
-	sun:         Sun_State        `json:"sun"`,
 	inspector:   Inspector_State  `json:"inspector"`,
 	history:     History_State    `json:"history"`,
 	lights:      Light_Budget_State `json:"lights"`,
@@ -31,14 +30,6 @@ Placement_State :: struct {
 	yaw_deg:  f32         `json:"yaw_deg"`,
 	snap:     bool        `json:"snap"`,
 	light:    Light_State `json:"light"`,
-}
-
-Sun_State :: struct {
-	active:               bool      `json:"active" digest:"-"`,
-	position:             Vec_State `json:"position"`,
-	azimuth_deg:          f32       `json:"azimuth_deg" digest:"-"`,
-	elevation_deg:        f32       `json:"elevation_deg" digest:"-"`,
-	angular_diameter_deg: f32       `json:"angular_diameter_deg" digest:"-"`,
 }
 
 // The selected-object half of the debug inspector. Every number is in metres
@@ -61,7 +52,6 @@ History_State :: struct {
 debug_state_build :: proc(
 	debug: ^game.Debug_Mode,
 	sim: ^game.Simulation,
-	sun: Sun_State,
 ) -> Debug_State {
 	state := Debug_State {
 		active = debug.active,
@@ -81,7 +71,6 @@ debug_state_build :: proc(
 			snap = debug.placement.snap,
 			light = placement_light_state(debug),
 		},
-		sun = sun,
 		history = {
 			depth = game.debug_history_depth(debug),
 			redo = game.debug_history_redo_depth(debug),

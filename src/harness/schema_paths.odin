@@ -73,7 +73,6 @@ schema_check_fields :: proc(allocator: runtime.Allocator) -> []string {
 		"capture.png",
 		"capture.note",
 		"capture.named.<name>.renderer.debug_vertex_count",
-		"capture.named.<name>.renderer.debug_vertices.sun",
 		"capture.stats.color_key.matches",
 		"capture.stats.color_key.fraction",
 		"capture.stats.color_key.r",

@@ -31,16 +31,15 @@ DEFAULT_REFERENCE_TOLERANCE :: reference.Tolerance {
 parse_reference :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(
 		object,
-		{"cmd", "name", "gi", "direct", "samples", "bounces", "stride", "sun_samples", "tolerance", "advisory"},
+		{"cmd", "name", "gi", "direct", "samples", "bounces", "stride", "tolerance", "advisory"},
 	); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 	command := Command{kind = .Reference}
 	command.reference.settings = {
-		samples     = reference.DEFAULT_SAMPLES,
-		bounces     = reference.DEFAULT_BOUNCES,
-		stride      = reference.DEFAULT_STRIDE,
-		sun_samples = reference.DEFAULT_SUN_SAMPLES,
+		samples = reference.DEFAULT_SAMPLES,
+		bounces = reference.DEFAULT_BOUNCES,
+		stride  = reference.DEFAULT_STRIDE,
 	}
 	command.reference.tolerance = DEFAULT_REFERENCE_TOLERANCE
 
@@ -84,13 +83,6 @@ parse_reference :: proc(object: json.Object, allocator: mem.Allocator) -> (Comma
 			return {}, format_error("%s", "'stride' must be an integer in [1, 512]")
 		}
 		settings.stride = stride
-	}
-	if value, has := json_get(object, "sun_samples"); has {
-		sun_samples, ok := json_integer(value)
-		if !ok || sun_samples < 1 || sun_samples > 256 {
-			return {}, format_error("%s", "'sun_samples' must be an integer in [1, 256]")
-		}
-		settings.sun_samples = sun_samples
 	}
 	if bool_error := json_bool(object, "advisory", &command.reference.advisory); bool_error != "" {
 		return {}, bool_error

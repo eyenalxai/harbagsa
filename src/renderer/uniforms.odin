@@ -20,20 +20,18 @@ CLUSTER_COUNTS_SIZE :: (CLUSTER_COUNT + 1) * size_of(u32)
 
 // The uniform block mirrors camera.glsl. Mat4 is column-major, so the
 // matrices upload directly. screen carries the gamma flag in .x, the render
-// extent in .y and .z, and the TAA sample phase in .w. sun.x is the tangent
-// of the sun angular radius, sun.y the camera far plane, so the sky pass
-// writes the same depth as the velocity clear, sun.z the point light count,
-// and sun.w the point-light shadow flag. occlusion.x is the AO radius in
-// metres, y the strength, z the enabled flag, and w the plan-view clip height.
-// probe.x is the probe volume count, probe.y the total probe count, and probe.z
-// the probe indirect flag.
+// extent in .y and .z, and the TAA sample phase in .w. lights.x is the point
+// light count, lights.y the point-light shadow flag, and lights.z the camera
+// far plane, so the sky pass writes the same depth as the velocity clear.
+// occlusion.x is the AO radius in metres, y the strength, z the enabled flag,
+// and w the plan-view clip height. probe.x is the probe volume count, probe.y
+// the total probe count, and probe.z the probe indirect flag.
 Camera_Uniform :: struct {
 	view:                 Mat4,
 	projection:           Mat4,
 	prev_view_projection: Mat4,
-	light_direction:      [4]f32,
 	screen:               [4]f32,
-	sun:                  [4]f32,
+	lights:               [4]f32,
 	jitter:               [4]f32,
 	occlusion:            [4]f32,
 	probe:                [4]f32,
@@ -59,7 +57,7 @@ TAA_Params :: struct {
 	force_trust:    f32,
 }
 
-#assert(size_of(Camera_Uniform) == 288)
+#assert(size_of(Camera_Uniform) == 272)
 #assert(size_of(Object_Data) == 144)
 #assert(size_of(Object_Index) == 4)
 #assert(size_of(TAA_Params) == 24)

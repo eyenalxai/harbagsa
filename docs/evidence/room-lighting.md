@@ -1,5 +1,8 @@
 # Room lighting evidence
 
+> Historical note: the sun was removed after this capture. Current direct light
+> is point lights; the room scenario now uses a lamp.
+
 Captured on 2026-10-25 from the DDGI gather branch. GPU: AMD Radeon RX 9060 XT
 (RADV GFX1200). All runs are offscreen through `bin/harbagsa-agent`.
 

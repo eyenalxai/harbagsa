@@ -3,7 +3,6 @@
   "view": {"hud": false, "debug": false, "hint": false, "perf": false},
   "analysis": false,
   "parameters": {
-    "sun_elevation_deg": 20,
     "lamp_intensity": 2.5,
     "lamp_range": 10
   },
@@ -12,26 +11,10 @@
     {"cmd": "settle", "frames": 30},
     {"cmd": "capture", "name": "outside"},
 
-    {"cmd": "sun", "azimuth_deg": 270, "elevation_deg": "${sun_elevation_deg}", "diameter_deg": 0.53},
-    {"cmd": "camera", "position": [7.4, 1.7, 13.2], "yaw_deg": 90, "pitch_deg": -5},
-    {"cmd": "settle", "frames": 40},
-    {"cmd": "capture", "name": "door-out"},
-
-    {"cmd": "camera", "position": [7.4, 1.7, 13.2], "yaw_deg": -90, "pitch_deg": -5},
-    {"cmd": "settle", "frames": 40},
-    {"cmd": "capture", "name": "lane1-west", "format": "stats", "png": true},
-    {"cmd": "sun", "azimuth_deg": 90, "elevation_deg": "${sun_elevation_deg}", "diameter_deg": 0.53},
-    {"cmd": "settle", "frames": 40},
-    {"cmd": "capture", "name": "lane1-east", "format": "stats", "png": true},
-    {"cmd": "capture", "name": "lane-depth", "target": "depth", "format": "stats"},
-
     {"cmd": "camera", "position": [15.5, 1.7, 5.0], "look_at": [11.0, 1.5, 11.0], "fov_deg": 90},
     {"cmd": "settle", "frames": 40},
-    {"cmd": "capture", "name": "chamber-east", "format": "stats", "png": true},
+    {"cmd": "capture", "name": "chamber-dark", "format": "stats", "png": true},
     {"cmd": "capture", "name": "chamber-depth", "target": "depth", "format": "stats"},
-    {"cmd": "sun", "azimuth_deg": 270, "elevation_deg": "${sun_elevation_deg}", "diameter_deg": 0.53},
-    {"cmd": "settle", "frames": 40},
-    {"cmd": "capture", "name": "chamber-west", "format": "stats", "png": true},
 
     {"cmd": "place", "prefab": "Lamp", "position": [14.5, 2.75, 7.0], "body": "static",
      "light": {"intensity": "${lamp_intensity}", "range": "${lamp_range}"}},
@@ -51,14 +34,8 @@
     {"cmd": "capture", "name": "lamp-off", "format": "stats", "png": true}
   ],
   "checks": [
-    {"field": "capture.named.lane-depth.stats.max.x", "op": "lt", "value": 0.999},
     {"field": "capture.named.chamber-depth.stats.max.x", "op": "lt", "value": 0.999},
-    {"field": "capture.named.lane1-west.stats.mean.y", "op": "gt", "value": 2},
-    {"field": "capture.named.lane1-east.stats.mean.y", "op": "lt", "value": 20},
-    {"field": "capture.named.lane1-east.stats.mean.y", "op": "lt", "other": "capture.named.lane1-west.stats.mean.y"},
-    {"field": "capture.named.chamber-west.stats.mean.y", "op": "lt", "value": 0.5},
-    {"field": "capture.named.chamber-east.stats.mean.y", "op": "lt", "value": 0.5},
-    {"field": "capture.named.chamber-west.stats.mean.y", "op": "eq", "other": "capture.named.chamber-east.stats.mean.y", "tolerance": 0.1},
+    {"field": "capture.named.chamber-dark.stats.mean.y", "op": "lt", "value": 0.5},
     {"field": "capture.named.lamp-on.stats.mean.y", "op": "gt", "value": 80},
     {"field": "capture.named.lamp-off.stats.mean.y", "op": "lt", "value": 0.5},
     {"field": "capture.named.lamp-on.stats.mean.y", "op": "gt", "other": "capture.named.lamp-off.stats.mean.y"}
