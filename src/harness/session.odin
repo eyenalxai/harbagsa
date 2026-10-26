@@ -24,6 +24,10 @@ Session :: struct {
 	camera_override:     renderer.Camera,
 	has_camera_override: bool,
 
+	probe_volumes:       []renderer.Probe_Volume,
+	scene_probe_volumes: []frame.Scene_Probe_Volume,
+	has_probe_volumes:   bool,
+
 	frame:      int,
 	output_dir: string,
 
@@ -97,6 +101,7 @@ session_destroy :: proc(session: ^Session) {
 	if game.simulation_is_valid(&session.sim) {
 		game.simulation_destroy(&session.sim)
 	}
+	session_clear_probe_volumes(session)
 	session_results_destroy(session)
 	capture_run_destroy(&session.capture, session.allocator)
 	recorder_destroy(&session.recorder, session.allocator)
@@ -127,6 +132,7 @@ session_reset :: proc(session: ^Session) -> string {
 	session.input = {}
 	session.camera_override = {}
 	session.has_camera_override = false
+	session_clear_probe_volumes(session)
 	session.settle.frames = 0
 	session.settle.converged = false
 	// The debug mode holds a saved player from the world that just went away.

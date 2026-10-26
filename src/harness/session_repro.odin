@@ -35,6 +35,9 @@ session_repro :: proc(session: ^Session, path: string, reply: ^Reply) -> string 
 		captured   = !session.view.hint,
 		perf       = session.view.perf,
 	}
+	if session.has_probe_volumes {
+		options.scene_probe_volumes = session.scene_probe_volumes
+	}
 	camera: ^renderer.Camera
 	if session.has_camera_override {
 		camera = &session.camera_override

@@ -35,8 +35,9 @@ Run_Summary :: struct {
 	state:         string   `json:"state"`,
 	captures:   []string `json:"captures"`,
 	digest:        string   `json:"digest"`,
-	checks_total:  int      `json:"checks_total"`,
-	checks_failed: int      `json:"checks_failed"`,
+	checks_total:    int      `json:"checks_total"`,
+	checks_failed:   int      `json:"checks_failed"`,
+	checks_advisory: int      `json:"checks_advisory,omitempty"`,
 	error:         string   `json:"error,omitempty"`,
 	failure:       string   `json:"failure,omitempty"`,
 }

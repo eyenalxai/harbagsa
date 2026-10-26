@@ -46,6 +46,7 @@ Scene_Light :: struct {
 
 Scene_Object :: struct {
 	id:       u32        `json:"id"`,
+	name:     string     `json:"name,omitempty"`,
 	prefab:   string     `json:"prefab"`,
 	body:     string     `json:"body"`,
 	position: [3]f32     `json:"position"`,
@@ -84,6 +85,7 @@ Scene :: struct {
 	settings:       Scene_Settings       `json:"settings"`,
 	view:           Scene_View           `json:"view"`,
 	displays:       []Scene_Display      `json:"displays,omitempty"`,
+	probe_volumes:  []Scene_Probe_Volume `json:"probe_volumes,omitempty"`,
 	renderer_debug: Maybe(renderer.Renderer_Debug_Patch) `json:"renderer_debug,omitempty"`,
 }
 
@@ -93,6 +95,7 @@ scene_capture :: proc(
 	view: Options,
 	camera_override: ^renderer.Camera,
 	renderer_debug: ^renderer.Renderer_Debug,
+	probe_volumes: []Scene_Probe_Volume,
 	allocator: mem.Allocator,
 ) -> Scene {
 	scene := Scene {
@@ -106,6 +109,9 @@ scene_capture :: proc(
 			position = debug.sun.position,
 			angular_diameter_deg = f32(math.to_degrees(debug.sun_angular_diameter)),
 		},
+	}
+	if probe_volumes != nil {
+		scene.probe_volumes = scene_probe_volumes_clone(probe_volumes, allocator)
 	}
 	scene.camera.fov_deg = f32(math.to_degrees(PLAYER_FOV_X))
 	if camera_override != nil {
@@ -154,6 +160,7 @@ scene_capture :: proc(
 	for object, index in objects.objects {
 		scene.objects[index] = {
 			id = u32(object.id),
+			name = strings.clone(game.simulation_object_name(sim, object.id), allocator),
 			prefab = strings.clone(game.prefab_name(object.prefab), allocator),
 			body = strings.clone(game.body_mode_name(object.body_mode), allocator),
 			position = object.center,
@@ -196,11 +203,15 @@ scene_destroy :: proc(scene: ^Scene, allocator: mem.Allocator) {
 		delete(player.stance, allocator)
 	}
 	for object in scene.objects {
+		if object.name != "" {
+			delete(object.name, allocator)
+		}
 		delete(object.prefab, allocator)
 		delete(object.body, allocator)
 		delete(object.light.color, allocator)
 	}
 	delete(scene.objects, allocator)
+	scene_probe_volumes_destroy(scene.probe_volumes, allocator)
 	delete(scene.settings.window_mode, allocator)
 	delete(scene.settings.sprint_mode, allocator)
 	delete(scene.settings.crouch_mode, allocator)

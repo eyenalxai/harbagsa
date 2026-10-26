@@ -70,6 +70,16 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 	}
 
 	if command.has_objects {
+		for object, index in scene.objects {
+			if object.name == "" {
+				continue
+			}
+			for previous in scene.objects[:index] {
+				if previous.name == object.name {
+					return format_error("scene object name %q is given twice", object.name)
+				}
+			}
+		}
 		records := make([]game.Object_Record, len(scene.objects), session.allocator)
 		defer delete(records, session.allocator)
 		next_id := game.Object_Id(1)
@@ -80,7 +90,7 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 			if !prefab_ok || !body_ok || !color_ok {
 				return format_error("%s", "scene object holds an unknown prefab, body, or light colour")
 			}
-			records[index] = {
+			record := game.Object_Record {
 				id = game.Object_Id(object.id),
 				prefab = prefab,
 				body_mode = body,
@@ -100,6 +110,9 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 					emissive = object.light.emissive,
 				},
 			}
+			record.name_length = u8(len(object.name))
+			copy(record.name[:], object.name)
+			records[index] = record
 			next_id = max(next_id, game.Object_Id(object.id) + 1)
 		}
 		snapshot := game.Object_Snapshot {
@@ -108,6 +121,12 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 		}
 		if !game.simulation_apply_snapshot(&session.sim, snapshot) {
 			return format_error("%s", "cannot apply the scene objects")
+		}
+	}
+
+	if command.has_probe_volumes {
+		if probe_error := session_set_probe_volumes(session, scene.probe_volumes); probe_error != "" {
+			return probe_error
 		}
 	}
 

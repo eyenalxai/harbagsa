@@ -7,7 +7,9 @@ import "core:encoding/json"
 // shared with the palette, exactly like the keyboard M key.
 Editor_Object :: struct {
 	select_object:     u32,
+	select_name:       Object_Name,
 	has_select_object: bool,
+	has_select_name:   bool,
 	move:              [3]f32,
 	has_move:          bool,
 	rotate_deg:        f32,
@@ -22,12 +24,22 @@ Editor_Object :: struct {
 parse_editor_object :: proc(object: json.Object) -> (Editor_Object, string) {
 	editor: Editor_Object
 	if value, has := json_get(object, "select_object"); has {
-		id, ok := json_integer(value)
-		if !ok || id < 0 {
-			return {}, format_error("%s", "'select_object' must be a non-negative integer object id")
+		if id, id_ok := json_integer(value); id_ok {
+			if id < 0 {
+				return {}, format_error("%s", "'select_object' must be a non-negative id or an object name")
+			}
+			editor.select_object = u32(id)
+			editor.has_select_object = true
+		} else if text, text_ok := json_string(value); text_ok {
+			name, name_ok := object_name_from_text(text)
+			if !name_ok || text == "" {
+				return {}, format_error("%s", "'select_object' name must be a placed object name")
+			}
+			editor.select_name = name
+			editor.has_select_name = true
+		} else {
+			return {}, format_error("%s", "'select_object' must be a non-negative id or an object name")
 		}
-		editor.select_object = u32(id)
-		editor.has_select_object = true
 	}
 	if _, has := json_get(object, "move"); has {
 		position, ok := vec3_field(object, "move")

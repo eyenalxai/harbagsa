@@ -12,7 +12,7 @@ import "src:renderer"
 parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(
 		object,
-		{"cmd", "name", "note", "frame", "alpha", "target", "format", "png", "region", "rect", "profile", "crop", "histogram", "steps", "color_key"},
+		{"cmd", "name", "note", "frame", "alpha", "target", "format", "png", "region", "rect", "profile", "crop", "histogram", "steps", "color_key", "coverage"},
 	); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
@@ -116,6 +116,13 @@ parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command
 		}
 		command.capture.color_key = color_key
 	}
+	if value, has := json_get(object, "coverage"); has {
+		coverage, coverage_error := parse_capture_coverage(value)
+		if coverage_error != "" {
+			return {}, coverage_error
+		}
+		command.capture.coverage = coverage
+	}
 	// A region and a histogram read the statistics path, a crop writes a PNG,
 	// and a profile decodes the color image.
 	_, has_region := command.capture.region.?
@@ -132,6 +139,10 @@ parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command
 	}
 	if has_color_key && command.capture.target != .Color {
 		return {}, format_error("%s", "'color_key' needs the color target")
+	}
+	_, has_coverage := command.capture.coverage.?
+	if has_coverage && command.capture.format != .Stats {
+		return {}, format_error("%s", "'coverage' needs format 'stats'")
 	}
 	_, has_crop := command.capture.crop.?
 	if has_crop && command.capture.format != .Png {
@@ -303,5 +314,21 @@ capture_json_fields :: proc(
 			key.b,
 			key.tolerance,
 		)
+	}
+	if coverage, has := capture.coverage.?; has {
+		json_write_separator(builder, has_previous)
+		fmt.sbprint(builder, `"coverage": {`)
+		first := true
+		if value, has_black := coverage.black.?; has_black {
+			fmt.sbprintf(builder, `"black": %g`, value)
+			first = false
+		}
+		if value, has_lit := coverage.lit.?; has_lit {
+			if !first {
+				fmt.sbprint(builder, `, `)
+			}
+			fmt.sbprintf(builder, `"lit": %g`, value)
+		}
+		fmt.sbprint(builder, `}`)
 	}
 }

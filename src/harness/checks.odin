@@ -9,13 +9,14 @@ import "core:strconv"
 import "core:strings"
 
 Check_Table_Row :: struct {
-	field:  string     `json:"field"`,
-	op:     string     `json:"op"`,
-	value:  string     `json:"value"`,
-	actual: string     `json:"actual"`,
-	ok:     bool       `json:"ok"`,
-	error:  string     `json:"error,omitempty"`,
-	margin: Maybe(f64) `json:"margin,omitempty"`,
+	field:    string     `json:"field"`,
+	op:       string     `json:"op"`,
+	value:    string     `json:"value"`,
+	actual:   string     `json:"actual"`,
+	advisory: bool       `json:"advisory,omitempty"`,
+	ok:       bool       `json:"ok"`,
+	error:    string     `json:"error,omitempty"`,
+	margin:   Maybe(f64) `json:"margin,omitempty"`,
 }
 
 Check_Table :: struct {
@@ -83,7 +84,7 @@ cli_checks :: proc(args: []string) -> int {
 
 	table := Check_Table{ok = true, run = run_dir, rows = rows}
 	for row in rows {
-		if !row.ok {
+		if !row.ok && (!row.advisory || row.error != "") {
 			table.ok = false
 		}
 	}
@@ -145,6 +146,9 @@ check_table_row :: proc(entry: json.Object, allocator: mem.Allocator) -> (Check_
 	if ok_value, has := json_get(entry, "ok"); has {
 		row.ok, _ = json_boolean(ok_value)
 	}
+	if advisory_value, has := json_get(entry, "advisory"); has {
+		row.advisory, _ = json_boolean(advisory_value)
+	}
 	if row.error == "" {
 		row.margin = check_table_margin(row.op, row.value, row.actual)
 	}
@@ -195,6 +199,9 @@ print_check_table :: proc(table: Check_Table) {
 	fmt.printf("%-6s %-42s %-3s %-12s %-12s %-12s %s\n", "STATUS", "FIELD", "OP", "GATE", "ACTUAL", "MARGIN", "ERROR")
 	for row in table.rows {
 		status := row.ok ? "PASS" : "FAIL"
+		if !row.ok && row.advisory && row.error == "" {
+			status = "ADVISE"
+		}
 		margin := "-"
 		if value, has := row.margin.?; has {
 			margin_text: [32]byte
