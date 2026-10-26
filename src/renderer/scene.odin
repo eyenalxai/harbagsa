@@ -17,12 +17,9 @@ Camera :: struct {
 	fov_x:    f32,
 }
 
-// The renderer accepts any sun the scene names, but a zero or absurd angular
-// diameter has no valid tangent and would break every shadow ray.
-SUN_ANGULAR_DIAMETER_LIMIT :: 45.0 * math.PI / 180.0
-// The scene has no ambient term, so the occlusion rays darken the direct light.
-// Crates are 1 m and the tunnel clearances are 0.9 to 1.35 m, so a 1.5 m ray
-// reaches the surfaces that should darken without reaching across the arena.
+// The occlusion rays darken the direct point light. Crates are 1 m and the
+// tunnel clearances are 0.9 to 1.35 m, so a 1.5 m ray reaches the surfaces that
+// should darken without reaching across the arena.
 AO_RADIUS :: 1.5
 AO_STRENGTH :: 0.5
 AO_SAMPLES :: #config(AO_SAMPLES, 8) // The Makefile sets it and the shader reads the same value.
@@ -131,14 +128,6 @@ update_camera :: proc(r: ^Renderer, input: Render_Input) -> bool {
 		log.error("renderer: cannot build a projection for a zero-height target")
 		return false
 	}
-	if !(input.sun_angular_diameter > 0 &&
-	   input.sun_angular_diameter < SUN_ANGULAR_DIAMETER_LIMIT) {
-		log.errorf(
-			"renderer: sun angular diameter %v is out of range",
-			input.sun_angular_diameter,
-		)
-		return false
-	}
 	aspect := f32(extent.width) / height
 
 	buffer := cast(^Camera_Uniform)r.scene.camera_mapped[r.frame_index]
@@ -178,24 +167,18 @@ update_camera :: proc(r: ^Renderer, input: Render_Input) -> bool {
 		view = view,
 		projection = projection,
 		prev_view_projection = previous,
-		light_direction = {
-			input.light_direction.x,
-			input.light_direction.y,
-			input.light_direction.z,
-			0,
-		},
-		// The sun sample pattern rotates only while TAA can average it.
+		// The visibility pattern rotates only while TAA can average it.
 		screen = {
 			srgb_gamma(r),
 			f32(extent.width),
 			height,
 			f32(input.shadow_phase),
 		},
-		sun = {
-			math.tan(input.sun_angular_diameter * 0.5),
-			CAMERA_FAR,
+		lights = {
 			f32(len(input.lights)),
 			r.taa.debug.active && !r.taa.debug.light_shadows ? 0 : 1,
+			CAMERA_FAR,
+			0,
 		},
 		jitter = {input.jitter.x, input.jitter.y, 0, 0},
 		occlusion = {

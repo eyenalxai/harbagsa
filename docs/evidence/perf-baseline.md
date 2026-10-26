@@ -1,5 +1,8 @@
 # Performance baseline
 
+> Historical note: the sun was removed after this capture. Current direct light
+> is point lights.
+
 Measured on 2026-10-24 from branch `add-gpu-frametime-instrumentation`, after
 the perf command, the report, and the trace landed. Machine: AMD Radeon RX 9060
 XT (RADV GFX1200), Mesa 26.2.5, Hyprland on Wayland. Displays: `HDMI-A-1`

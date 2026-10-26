@@ -10,7 +10,7 @@
     "perf": false
   },
   "analysis": false,
-  "note": "Path-traced reference for the dive platform at a low sun. The shaded face, the tunnel corner, and the contact gate the probe field.",
+  "note": "Path-traced reference for the dive platform under a point lamp. The shaded face, the tunnel corner, and the contact gate the probe field.",
   "commands": [
     {
       "cmd": "scene",
@@ -24,14 +24,6 @@
         "yaw_deg": -115.20948792,
         "pitch_deg": 3.50650144,
         "fov_deg": 90.0
-      },
-      "sun": {
-        "position": [
-          43.7210083,
-          15.82657146,
-          18.38458252
-        ],
-        "angular_diameter_deg": 0.53000003
       },
       "objects": [
         {
@@ -128,6 +120,13 @@
         "hint": false,
         "perf": false
       }
+    },
+    {
+      "cmd": "place",
+      "prefab": "Lamp",
+      "position": [-2.5, 2.0, -14.0],
+      "body": "static",
+      "light": {"intensity": 3, "range": 10}
     },
     {
       "cmd": "renderer_debug",
