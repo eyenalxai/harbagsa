@@ -79,7 +79,6 @@ Scene :: struct {
 	settings:       Scene_Settings       `json:"settings"`,
 	view:           Scene_View           `json:"view"`,
 	displays:       []Scene_Display      `json:"displays,omitempty"`,
-	probe_volumes:  []Scene_Probe_Volume `json:"probe_volumes,omitempty"`,
 	renderer_debug: Maybe(renderer.Renderer_Debug_Patch) `json:"renderer_debug,omitempty"`,
 }
 
@@ -89,7 +88,6 @@ scene_capture :: proc(
 	view: Options,
 	camera_override: ^renderer.Camera,
 	renderer_debug: ^renderer.Renderer_Debug,
-	probe_volumes: []Scene_Probe_Volume,
 	allocator: mem.Allocator,
 ) -> Scene {
 	scene := Scene {
@@ -99,9 +97,6 @@ scene_capture :: proc(
 			hint = !view.captured,
 			perf = view.perf,
 		},
-	}
-	if probe_volumes != nil {
-		scene.probe_volumes = scene_probe_volumes_clone(probe_volumes, allocator)
 	}
 	scene.camera.fov_deg = f32(math.to_degrees(PLAYER_FOV_X))
 	if camera_override != nil {
@@ -201,7 +196,6 @@ scene_destroy :: proc(scene: ^Scene, allocator: mem.Allocator) {
 		delete(object.light.color, allocator)
 	}
 	delete(scene.objects, allocator)
-	scene_probe_volumes_destroy(scene.probe_volumes, allocator)
 	delete(scene.settings.window_mode, allocator)
 	delete(scene.settings.sprint_mode, allocator)
 	delete(scene.settings.crouch_mode, allocator)

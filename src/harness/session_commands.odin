@@ -25,7 +25,6 @@ Reply :: struct {
 	capture:   ^Capture_Result   `json:"capture,omitempty"`,
 	check:     ^Check_Result     `json:"check,omitempty"`,
 	perf:      ^Perf_Report      `json:"perf,omitempty"`,
-	reference: ^Reference_Report `json:"reference,omitempty"`,
 	trace:     string            `json:"trace,omitempty"`,
 }
 

@@ -1,7 +1,7 @@
 # A live view writes one scene snapshot
 
 `F5` in the game writes a normal scenario with one `scene` command. The command
-carries the exact camera, sun, placed objects, settings, display list, and view
+carries the exact camera, placed objects, settings, display list, and view
 flags. `record` starts with the same command, so a recording and a keyed repro
 share one writer and one load path.
 
@@ -20,7 +20,7 @@ share one writer and one load path.
 
 ## Decisions
 
-- **One `scene` command.** It applies a camera, sun, object list, settings,
+- **One `scene` command.** It applies a camera, object list, settings,
   display list, and view flags. A block is optional, so a hand-written scenario
   can set only what it needs.
 - **The serializer lives below both binaries.** `src/frame/scene.odin` owns the

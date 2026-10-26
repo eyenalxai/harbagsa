@@ -41,6 +41,7 @@ point_light_lights_a_box_and_reaches_the_buffer :: proc(t: ^testing.T) {
 	dark := mean_luminance(dark_values)
 	dark_digest := state.render_digest
 	testing.expect(t, dark_ok, "the unlit frame did not render")
+	testing.expectf(t, dark > 0, "the ambient floor is black: %f", dark)
 
 	lights := []renderer.Light {
 		{position = {0, 0, 3}, intensity = 4, color = {1, 1, 1}, range = 10},
@@ -82,53 +83,6 @@ point_light_lights_a_box_and_reaches_the_buffer :: proc(t: ^testing.T) {
 	testing.expect(t, again_ok, "the second unlit frame did not render")
 	dark_again := mean_luminance(dark_again_values)
 	testing.expectf(t, dark_again < lit, "removing the light left the contribution: %f", dark_again)
-}
-
-@(test)
-lamp_mask_does_not_block_its_point_light :: proc(t: ^testing.T) {
-	device: Test_Device
-	if !open_test_device(&device) {
-		log.info("skipping the lamp mask test: no Vulkan device")
-		return
-	}
-	defer close_test_device(&device)
-	state := &device.state
-	disable_taa(state)
-
-	normal := geometry.Box {
-		center       = {0, 1, 0},
-		half_extents = {0.3, 0.3, 0.3},
-		color        = {0.9, 0.8, 0.6, 1},
-	}
-	lamp := normal
-	lamp.emissive = 0.01
-	floor := geometry.Box {
-		center       = {0, -0.5, 0},
-		half_extents = {3, 0.5, 3},
-		color        = {0.5, 0.5, 0.5, 1},
-	}
-
-	testing.expect_value(t, renderer.box_instance_mask(normal), u32(renderer.BOX_INSTANCE_MASK))
-	testing.expect_value(t, renderer.box_instance_mask(lamp), u32(renderer.LAMP_INSTANCE_MASK))
-
-	lights := []renderer.Light {
-		{position = {0, 1.9, 0}, intensity = 3, color = {1, 1, 1}, range = 8},
-	}
-	view := renderer.Render_Input {
-		camera = TEST_CAMERA,
-		boxes  = []geometry.Box{floor, normal},
-		lights = lights,
-	}
-	shadowed := sample_floor(state, view)
-	view.boxes = []geometry.Box{floor, lamp}
-	lit := sample_floor(state, view)
-	testing.expectf(
-		t,
-		lit > shadowed + 0.2,
-		"the lamp box blocked its own point light: %f -> %f",
-		shadowed,
-		lit,
-	)
 }
 
 @(test)

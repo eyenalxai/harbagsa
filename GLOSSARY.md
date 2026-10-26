@@ -135,14 +135,6 @@ reaches the space behind it. The room's lock turns four times: east, south,
 west, south, and east. The tunnel is 2.0 m wide and 2.4 m high.
 _Avoid_: Air lock, light trap
 
-**Sealed pair**:
-The two-room harness scene at (-10, -8). Eight static placed Walls and two
-Platform roofs form room A and room B around a solid shared wall. A removable
-Wall segment fills the shared doorway, so one scenario gates both a wall leak
-and doorway transport. The pair owns its own 1 m probe volumes through the
-scenario's `scene` block, after the room volume and before the arena strips.
-_Avoid_: Leak box, test room
-
 **World palette**:
 The scene colours, authored as linear RGBA floats because the renderer shades in
 linear space. The 2D layer authors sRGB hex instead; a value does not move
@@ -150,8 +142,12 @@ between the two tables.
 _Avoid_: Scene colours, 3D palette
 
 **Point light**:
-A light with a position, colour, intensity, and range. The renderer holds every active point light in a growable buffer, and each costs one hard shadow ray per fragment. A lamp prefab owns one.
+A light with a position, colour, intensity, and range. The renderer holds every active point light in a growable buffer. The lit pass reads the current position, colour, intensity, and range each frame. A lamp prefab owns one.
 _Avoid_: Lamp (the prefab), bulb
+
+**Ambient floor**:
+The small constant radiance that keeps albedo readable outside every point-light range. It has no visibility test, cache, or bounce. It is not a placed light or global illumination.
+_Avoid_: Ambient light, GI, baked light
 
 **Cluster**:
 A cell of the camera frustum, 16 by 9 by 24 with logarithmic depth slices. A light belongs to a cluster when its range sphere overlaps the cell. The lit pass shades only the lights of the fragment's cluster.
@@ -161,37 +157,9 @@ _Avoid_: Tile, bin
 The forward lighting path that builds a light index list per cluster in a compute pass, then reads that list in the lit pass. It keeps the per-pixel light loop proportional to the lights that can reach the surface.
 _Avoid_: Tiled forward, light grid
 
-**Probe volume**:
-A box in world space with a probe spacing and a 3D count. The production scene supplies six: the room network, the roof over the room, and four perimeter strips over the open arena. A test scene adds its own interior volumes with a `scene` block. The room volume comes first, the scene extras come next, and the arena strips follow, so the sampler never picks an arena probe for an interior surface. The renderer allocates one probe per cell and samples the eight probes around a surface.
-_Avoid_: Light grid, lightmap
-
-**Probe validity**:
-A probe is valid when its centre is outside every box. An invalid probe has zero in its position's `.w`: the ray pass, the blend, and the gather skip it, and the blend clears its atlas. A probe is not moved out of a box.
-_Avoid_: Probe relocation (the old rule)
-
-**Probe map**:
-The `probes` harness command. It prints each volume's name, bounds, spacing, counts, probe count, and first atlas index, and it reports which volume owns a point. `--coverage` samples the visible static-box faces and lists the points that no volume owns. It runs without a renderer.
-_Avoid_: Probe dump, heat map
-
 **Coverage fraction**:
 The share of the sampled capture region that is exactly zero, at or below a black threshold, or at or above a lit threshold. A `coverage` block on a stats capture reports it as `capture.stats.coverage.zero_fraction`, `.black_fraction`, and `.lit_fraction`. A threshold is in the target's own values.
 _Avoid_: Black ratio, lit ratio
-
-**DDGI**:
-Dynamic diffuse global illumination. Each probe traces 256 rays, stores an 8 by 8 octahedral irradiance map and a depth moment, and the lit pass blends the surrounding probes. It adds one diffuse bounce without a bake.
-_Avoid_: GI bake, irradiance volume (that is the static form)
-
-**Probe indirect**:
-The diffuse radiance the lit pass adds from the probe volumes. It is separate from ambient occlusion: the occlusion scales direct light, and the probe term adds the bounce. In the open arena the same term carries the sky fill.
-_Avoid_: Ambient term, AO
-
-**Path-traced reference**:
-The CPU estimator that traces cosine-weighted diffuse paths from a fixed grid of pixel centres and compares the result with the probe field. The `reference` harness command runs it on two `scene_color` captures of one view and writes a JSON and CSV comparison plus one headless image per scene. `scenarios/ddgi-reference.json` is the chamber and the room lane; `scenarios/ddgi-platform.json` is the dive platform under a point lamp.
-_Avoid_: Ground truth, CPU renderer (it traces a sample grid, not a frame)
-
-**Reference tolerance**:
-The four limits a reference comparison must meet: the median luminance ratio, the median per-point error, the per-channel colour spread, and the fraction of lit sample points with zero probe indirect. A miss is a run failure, not a tuned constant.
-_Avoid_: Threshold, slack
 
 **Lamp prefab**:
 A prefab with an active point light and an emissive box. The catalog has the Lamp, the Light panel, and the Beacon. A lamp is placed like any other object and can be static or dynamic.
@@ -201,60 +169,19 @@ _Avoid_: Light object, bulb
 The set of active point lights. Every placed lamp with an active light is in the budget; the renderer no longer keeps a nearest subset. The inspector shows the active count against the lamp count.
 _Avoid_: Light cap, light count (that is the reported number)
 
-**Lamp shadow**:
-The hard point-light shadow. One ray runs from the shaded point to each active lamp per fragment, so the edge is sharp and the cost follows the covered pixels and the active light count. The ray stops one millimetre short of the light, so a surface the lamp sits on cannot shadow it.
-_Avoid_: Point shadow map, soft lamp shadow
-
 **Emissive box**:
-A box whose colour adds to its shaded colour after the point lights and the probe indirect term. It carries an emissive strength in the box data. Lamps are emissive so they glow even when their light is inactive.
+A box whose colour adds to its shaded colour after the ambient floor and point lights. It carries an emissive strength in the box data. Lamps are emissive so they glow even when their light is inactive.
 _Avoid_: Glow shader, unlit material
-
-**Light mask**:
-The TLAS instance mask that decides which acceleration-structure ray queries see a box. Normal boxes use `0xFF`, lamps use `0x01`, and the point-light shadow ray and the probe point-light shadow test use `0x02`. The occlusion ray and the probe radiance ray test `0xFF`.
-_Avoid_: Layer mask, collision mask
 
 **Synthetic light**:
 A generated test light that the renderer debug override injects, so a perf run can
 fill the frame with an arbitrary light count without placing lamps.
 _Avoid_: Fake light
 
-**Ambient occlusion**:
-The cosine-weighted fraction of the hemisphere at a surface point that visible geometry does not block. It scales the direct point light. It darkens a lit corner or contact band; it is not global illumination, because it adds no bounce light. The probe volumes add that bounce separately.
-_Avoid_: SSAO (that is one estimator), GI (the probe volumes own that)
-
-**Sky**:
-The analytic gradient that fills the background: a horizon-to-zenith ramp and a darker ground color below the horizon. It draws after the lit pass and shades only the pixels that no box covers. It is a background for the camera; a probe ray that escapes through an opening uses the same gradient as its miss radiance.
-_Avoid_: Skybox, cubemap, backdrop
-
-**AO radius**:
-The maximum distance an ambient occlusion ray travels: 1.5 m. A surface beyond that distance does not count as an occluder.
-_Avoid_: AO distance, occlusion range
-
-**AO strength**:
-The multiplier on the ambient occlusion term. `0` leaves the direct light
-unchanged and `1` applies the full occlusion. The scene uses 0.5.
-_Avoid_: AO amount, AO weight
-
 **Degree boundary**:
 The scenario, `state.json`, and `report.json` express every angle in degrees.
 Every angle key ends in `_deg`. The engine converts to radians at the edge.
 _Avoid_: mixed angle units, implicit units
-
-**Top-level acceleration structure (TLAS)**:
-The acceleration structure that holds the box instances for ray queries. The renderer rebuilds it each frame from the box transforms.
-_Avoid_: Scene BVH
-
-**Bottom-level acceleration structure (BLAS)**:
-The acceleration structure for the unit cube mesh. Every TLAS instance shares it.
-_Avoid_: Mesh BVH
-
-**Ray query**:
-A shader ray test against an acceleration structure. Each point light traces one ray for its hard shadow.
-_Avoid_: Ray trace, RTX
-
-**Shadow ray**:
-A ray from a surface point toward a point light. A hit means the light is blocked.
-_Avoid_: Light ray
 
 **Crate**:
 The 1 m dynamic box prefab. The three starting objects use it.
@@ -509,19 +436,19 @@ _Avoid_: UI layer
 
 **Scene pass**:
 The scopes that draw the scene into the depth, color, and velocity targets: the
-depth prepass, the lit pass, and the sky pass. The perf report times the depth
-prepass, the lit pass, and the sky pass as separate GPU passes.
+depth prepass and the lit pass. The perf report times them as separate GPU
+passes.
 _Avoid_: Main pass
 
 **Depth prepass**:
 The depth-only scope of the scene pass. It writes the nearest box surface before
-the lit pass, so the point-light shadow rays run for the surface that reaches
-the frame.
+the lit pass, so point-light loops run only for the surface that reaches the
+frame.
 _Avoid_: Z prepass
 
 **Lit pass**:
 The color scope of the scene pass. It loads the depth the prepass wrote and
-shades the boxes, including the point-light shadows and the emissive term.
+shades the boxes with the ambient floor, point lights, and emissive term.
 _Avoid_: Main pass, color pass
 
 **Backface culling**:
@@ -676,11 +603,11 @@ The subpixel camera offset applied each frame for TAA.
 _Avoid_: Shake, offset
 
 **History**:
-The previous resolved frame, with linear color, view depth, and sample count, that TAA blends into the current frame. The color is 32-bit so the 1/513 update at the sample cap survives the round.
+The previous resolved frame, with linear color, view depth, and sample count, that TAA blends into the current frame. The color is 32-bit so small updates survive at the 512-sample cap.
 _Avoid_: Accumulation buffer, cache
 
 **History precision**:
-The bit width of the resolved history. A 32-bit history holds the running average at 512 samples; a 16-bit history rounds the 1/513 update away and keeps the ray-count field.
+The bit width of the resolved history. A 32-bit history holds small running-average updates at 512 samples; a 16-bit history loses more of those updates to rounding.
 _Avoid_: Bit depth, accuracy
 
 **Sample count**:
@@ -727,13 +654,13 @@ builds only that part; `digest` is the only check that needs every section.
 _Avoid_: State slice, partial document
 
 **Renderer state**:
-The harness state block that describes the last rendered frame: frame count, TAA state, jitter index, history validity, convergence frames, history read index and weight, reset count and reason, shadow phase, active point-light count, and the debug vertex counts by source. A capture carries the same block for the frame that wrote it.
+The harness state block that describes the last rendered frame: frame count, TAA state, jitter index, history validity, convergence frames, history read index and weight, reset count and reason, active point-light count, and the debug vertex counts by source. A capture carries the same block for the frame that wrote it.
 _Avoid_: Render stats, GPU state
 
 **Render digest**:
-The FNV-1a hash of the effective render inputs: camera, boxes, box emissive
-strengths, point lights, jitter, shadow phase, and view flags. It is separate
-from the simulation digest.
+The FNV-1a hash of the effective render inputs: extent, camera, boxes, box
+emissive strengths, point lights, jitter, atlas weight, clip height, and view
+flags. It is separate from the simulation digest.
 _Avoid_: Frame hash, image hash
 
 **History reset reason**:
@@ -742,10 +669,9 @@ _Avoid_: Reset flag
 
 **Renderer debug override**:
 A gated change to a renderer input for diagnosis: TAA, jitter, history weight,
-clamp, depth trust, shadow phase, point-light shadows, synthetic lights, the sky,
-probe indirect, ambient occlusion, the AO radius and strength, or the plan-view
-clip height. Every change resets history. A field set to `null` restores that
-field's default without clearing the others.
+clamp, depth trust, synthetic lights, or the plan-view clip height. Every change
+resets history. A field set to `null` restores that field's default without
+clearing the others.
 _Avoid_: Debug flag
 
 **Renderer debug patch**:
@@ -939,8 +865,7 @@ run's scenario, revision, and dirty flag. It is evidence, not a numeric check.
 
 ### Scene snapshot
 One `scene` command that carries the exact camera, placed objects (with names),
-settings, display list, view flags, custom probe volumes, and renderer debug
-overrides of a live view. `F5` writes one, and `record` starts with one.
+settings, display list, view flags, and renderer debug overrides of a live view. `F5` writes one, and `record` starts with one.
 **Avoid**: state dump, replay file.
 
 ### Repro

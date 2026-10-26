@@ -2,8 +2,7 @@
 
 One shader over one mesh. `src/renderer/shaders/box.frag` shades a unit cube,
 and every object in the scene is that cube, scaled and rotated. There is no
-texture, normal map, fog, bloom, or tone map. Point lights cast ray-query
-shadows.
+texture, normal map, fog, bloom, or tone map. Point lights supply direct light.
 
 ## The palette
 
@@ -13,119 +12,83 @@ space. This is the opposite of the 2D layer, which authors sRGB hex
 
 | Surface | Linear RGBA | Source |
 | --- | --- | --- |
-| Sky | `0.10 0.45 0.75` | `src/renderer/renderer.odin:18` |
-| Floor | `0.42 0.43 0.46` | `src/game/arena.odin:18` |
-| Wall | `0.55 0.34 0.26` | `src/game/arena.odin:19` |
-| Stairs, ramps, steps | `0.30 0.55 0.85` | `src/game/arena_props.odin:86` |
-| Tunnel | `0.85 0.50 0.20` | `src/game/arena_props.odin:87` |
-| Dive set | `0.25 0.75 0.40` | `src/game/arena_props.odin:88` |
-| Slide lane | `0.90 0.80 0.20` | `src/game/arena_props.odin:89` |
-| Mantle wall | `0.60 0.35 0.80` | `src/game/arena_props.odin:90` |
-| Room | `0.38 0.60 0.56` | `src/game/arena_room.odin:50` |
-| Crate, green | `0.30 0.68 0.38` | `src/game/prefabs.odin:44` |
-| Crate, orange | `0.86 0.56 0.20` | `src/game/prefabs.odin:45` |
-| Crate, blue | `0.26 0.48 0.84` | `src/game/prefabs.odin:46` |
-| Debug selection | `1.00 0.80 0.20` | `src/game/debug_draw_objects.odin:6` |
+| Clear colour | `0.012 0.016 0.024` | `src/renderer/renderer.odin` |
+| Ambient floor | `0.055 0.060 0.070` | `src/renderer/shaders/box.frag` |
+| Floor | `0.42 0.43 0.46` | `src/game/arena.odin` |
+| Wall | `0.55 0.34 0.26` | `src/game/arena.odin` |
+| Stairs, ramps, steps | `0.30 0.55 0.85` | `src/game/arena_props.odin` |
+| Tunnel | `0.85 0.50 0.20` | `src/game/arena_props.odin` |
+| Dive set | `0.25 0.75 0.40` | `src/game/arena_props.odin` |
+| Slide lane | `0.90 0.80 0.20` | `src/game/arena_props.odin` |
+| Mantle wall | `0.60 0.35 0.80` | `src/game/arena_props.odin` |
+| Room | `0.38 0.60 0.56` | `src/game/arena_room.odin` |
+| Crate, green | `0.30 0.68 0.38` | `src/game/prefabs.odin` |
+| Crate, orange | `0.86 0.56 0.20` | `src/game/prefabs.odin` |
+| Crate, blue | `0.26 0.48 0.84` | `src/game/prefabs.odin` |
+| Debug selection | `1.00 0.80 0.20` | `src/game/debug_draw_objects.odin` |
 
 Rules:
 
-- A new arena feature takes a hue that is not already in use. The arena carries
-  eight, and the hue is how a player names the feature.
+- A new arena feature takes a hue that is not already in use. The hue is how a
+  player names the feature.
 - Crates use their own high-chroma palette, never a wall hue, so a pushed crate
   reads against every surface.
 - The debug selection amber is `1.00 0.80 0.20` in linear space. The UI accent is
   `#E6AF3A` in sRGB. They are different colours in different spaces. Keep both
   values. Do not merge them into one token.
 
-## Point lights
+## Direct light
 
-The lamps are the only direct light. Each active lamp has a position, colour,
-intensity, and range. The renderer holds every active light in a growable buffer
-and each one costs one hard shadow ray per fragment. A lamp prefab owns one
-light; a lamp placed in the editor can be tuned live.
+Every active lamp contributes from its current transform. The clustered forward+
+pass assigns each light to the camera clusters its range overlaps. The lit pass
+then shades only the lights that can reach the fragment.
 
-A DDGI probe volume adds one diffuse bounce inside the room, so a lit wall fills
-the corner beside it. A surface that no light and no probe reaches is black.
-
-The ambient-occlusion rays stay; they scale the direct light. The formula is:
+The formula is:
 
 ```text
-albedo * (direct * occlusion + probe_indirect)
+albedo * (ambient_floor + direct_point_lights) + albedo * emissive
 ```
 
-The occlusion is a local visibility term. It darkens a lit corner or a contact
-band; it does not add bounce. The probe volume owns the bounce. The occlusion
-applies to the lamps at strength 0.5.
+A point light uses the surface normal and a squared range falloff. It has no
+visibility term, so it can cross a wall. That is deliberate. Do not add a shadow
+map, a ray, a probe, or a screen-space visibility pass to repair it.
 
-## Probe volume
-
-The room, its lanes, and the chamber share one probe volume. Probes sit at
-1.04 m spacing, inside the wall faces. Each probe traces 256 deterministic rays,
-and a blend pass accumulates them into 64 octahedral irradiance texels with a
-cosine kernel plus 64 depth texels. The lit pass samples the eight probes around
-the surface, reads irradiance in the surface-normal direction and depth in the
-direction to the probe, then weights them by facing, distance, and depth
-visibility. A probe behind a wall is rejected by its depth moment.
-
-A lamp change resets the blend on the next frame, and a large texel change skips
-the hysteresis, so a removed lamp does not leave its bounce behind. A probe that
-becomes invalid clears its atlas, so a moving crate cannot keep stale light
-across a validity change. `renderer_debug.gi` turns the indirect term off for a
-paired capture.
-
-The probe pass runs the ray trace and the blend every frame. The scene has 2205
-probes, and the pass costs about 1.73 ms with 256 rays and 64 synthetic lights
-at 1280 x 720; the room's 300 probes alone cost about 0.41 ms. The same pass
-costs 0.23 ms at 64 rays.
-
-The occlusion uses 8 rays. A partial count carries a per-pixel, per-frame offset
-inside its own step; a full or empty count stays exact. Without the offset a
-partial count steps in eighths and a contact band shows a contour.
-The TAA history is 32-bit, so the resolve can average the offset over the phase
-sequence; a 16-bit history rounds that average away and keeps the count field.
-The output dither is a separate, last step for the 8-bit write.
-
-If a surface must look different, change its albedo. Do not add a lighting term.
+The ambient floor is constant and small. It is not global illumination and not a
+static placed light. It keeps unlit albedo readable without hiding which areas
+the lamps reach. `scenarios/room-lighting.json` checks that floor.
+`scenarios/light-move.json` checks that a transform change updates the image and
+render digest.
 
 ## No texture
 
 There is no sampler in the scene shader. A face is one flat colour with one
 constant normal. No smooth shading exists anywhere in the 3D scene, and no
-material distinguishes one box from another except its colour.
+material distinguishes one box from another except its colour and light.
 
-## The sky
+## Clear colour
 
-The sky is an analytic gradient, not a texture. `sky.glsl` gives one ramp for
-the sky pass. The sky is a background for the camera and a radiance source for a
-probe ray that escapes through an opening; it does not directly light a surface.
-With the sky pass off, `DEFAULT_CLEAR_COLOR` is
-`(0.10, 0.45, 0.75)`, written linear into an RGBA16F target.
-
-The gradient is the only large soft field in the frame. Keep the horizon band
-narrow so it does not compete with a lamp edge, and do not add a skybox or a
-cloud.
+The clear colour is constant. It fills only a pixel that no box covers. It is not
+a background pass and not a light source. A closed interior should cover it in
+normal play. Plan-view and inspection captures can still expose it.
 
 ## Geometry
 
 - Every shape is a box. A ramp is a thin box rotated about X.
 - No rounded, bevelled, or non-box primitive. A curve in the world would be the
   only curve on screen.
-- The arena is 40 m square with 4 m walls: 63 static boxes and 3 crates at
-  spawn. The floor is 1 m thick, the arena walls 0.5 m, and a crate 1 m. The
-  closed room in the +x/+z corner is 11 m square with 3 m walls, a 0.3 m
-  ceiling, and one 1.6 m by 2.2 m door in the west wall.
-- The door opens into a four-turn light lock: east, south, west, south, and east
-  into the chamber. The tunnel is 2.0 m wide and 2.4 m high. No straight direct
-  light reaches the chamber. The base is total darkness, so the chamber is black
-  until a lamp is placed.
-- The player has no body and casts no shadow.
-- No fog and no depth cue beyond perspective. The near plane is 0.05 m and the
-  far plane 200 m.
+- The arena is 40 m square with 4 m walls. The floor is 1 m thick, the arena
+  walls 0.5 m, and a crate 1 m.
+- The closed room in the +x/+z corner is 11 m square with 3 m walls, a 0.3 m
+  ceiling, and one 1.6 m by 2.2 m door in the west wall. It remains only as a
+  direct-light inspection fixture until the outer arena closes.
+- The player has no body.
+- No fog and no depth cue beyond perspective and lamp range. The near plane is
+  0.05 m and the far plane 200 m.
 
 ## What a new prop must do
 
 1. Be a box.
 2. Take a hue that is not in the palette.
-3. Cast and receive the same point-light shadow as everything else.
+3. Receive the same ambient floor and direct point lights as everything else.
 4. Add nothing to the shader.
 5. If it moves, add nothing to the camera. [motion.md](motion.md) explains why.

@@ -22,15 +22,8 @@ RENDER_DIGEST_FIELDS := [?]Render_Digest_Field {
 	{"camera", true, write_camera, ""},
 	{"boxes", true, write_boxes, ""},
 	{"lights", true, write_lights, ""},
-	{"probe_volumes", true, write_probe_volumes, ""},
 	{"jitter", true, write_jitter, ""},
-	{"shadow_phase", true, write_shadow_phase, ""},
 	{"atlas_weight", true, write_atlas_weight, ""},
-	{"sky", true, write_sky, ""},
-	{"gi", true, write_gi, ""},
-	{"ao", true, write_ao, ""},
-	{"ao_radius", true, write_ao_radius, ""},
-	{"ao_strength", true, write_ao_strength, ""},
 	{"clip_height", true, write_clip_height, ""},
 	{"view_flags", true, write_view_flags, ""},
 	{"debug_lines", false, nil, "draws after the resolve"},
@@ -111,28 +104,9 @@ write_lights :: proc(hash: ^digest.FNV, input: Render_Input) {
 }
 
 @(private)
-write_probe_volumes :: proc(hash: ^digest.FNV, input: Render_Input) {
-	digest.write_u64(hash, u64(len(input.probe_volumes)))
-	for volume in input.probe_volumes {
-		digest.write_f32(hash, volume.min.x)
-		digest.write_f32(hash, volume.min.y)
-		digest.write_f32(hash, volume.min.z)
-		digest.write_f32(hash, volume.spacing)
-		digest.write_u32(hash, volume.counts.x)
-		digest.write_u32(hash, volume.counts.y)
-		digest.write_u32(hash, volume.counts.z)
-	}
-}
-
-@(private)
 write_jitter :: proc(hash: ^digest.FNV, input: Render_Input) {
 	digest.write_f32(hash, input.jitter.x)
 	digest.write_f32(hash, input.jitter.y)
-}
-
-@(private)
-write_shadow_phase :: proc(hash: ^digest.FNV, input: Render_Input) {
-	digest.write_u32(hash, input.shadow_phase)
 }
 
 @(private)
@@ -140,31 +114,6 @@ write_atlas_weight :: proc(hash: ^digest.FNV, input: Render_Input) {
 	// The applied atlas weight changes the text pixels, so it belongs to the
 	// render digest, not the simulation digest.
 	digest.write_f32(hash, input.atlas_weight)
-}
-
-@(private)
-write_sky :: proc(hash: ^digest.FNV, input: Render_Input) {
-	digest.write_bool(hash, input.sky)
-}
-
-@(private)
-write_gi :: proc(hash: ^digest.FNV, input: Render_Input) {
-	digest.write_bool(hash, input.gi)
-}
-
-@(private)
-write_ao :: proc(hash: ^digest.FNV, input: Render_Input) {
-	digest.write_bool(hash, input.ao)
-}
-
-@(private)
-write_ao_radius :: proc(hash: ^digest.FNV, input: Render_Input) {
-	digest.write_f32(hash, input.ao_radius)
-}
-
-@(private)
-write_ao_strength :: proc(hash: ^digest.FNV, input: Render_Input) {
-	digest.write_f32(hash, input.ao_strength)
 }
 
 @(private)

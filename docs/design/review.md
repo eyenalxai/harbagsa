@@ -49,8 +49,8 @@ The order is the triage order. A broken interaction outranks a weak colour.
    drag, and no action hides behind a hover.
 2. **Fits at 800x600.** The menu and every panel are fully visible at the
    smallest supported window. Nothing clips and nothing is cut.
-3. **Contrast on the brightest frame.** Read the text over the brightest sky the
-   renderer can produce, not over a dim test scene. The floors are in
+3. **Contrast on the brightest frame.** Read the text over the brightest lamp
+   field the renderer can produce, not over a dim test scene. The floors are in
    [colour.md](../ui/colour.md).
 4. **Fixed fields.** Every number that changes during play is in a fixed-width
    field and drawn in mono. The panel width must not move on a selection or a

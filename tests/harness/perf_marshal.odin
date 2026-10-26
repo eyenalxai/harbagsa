@@ -26,12 +26,9 @@ perf_report_marshals_with_and_without_gpu :: proc(t: ^testing.T) {
 	testing.expect(t, !strings.contains(string(cpu_data), `"gpu"`), "CPU-only report has GPU fields")
 
 	report.gpu = harness.Perf_Gpu_Report {
-		tlas    = {p50 = 0.1, p95 = 0.1, mean = 0.1},
 		cluster = {p50 = 0.0, p95 = 0.0, mean = 0.0},
-		probe   = {p50 = 0.0, p95 = 0.0, mean = 0.0},
 		depth   = {p50 = 0.4, p95 = 0.5, mean = 0.45},
 		scene   = {p50 = 2.6, p95 = 2.7, mean = 2.65},
-		sky     = {p50 = 0.3, p95 = 0.3, mean = 0.3},
 		taa     = {p50 = 0.2, p95 = 0.2, mean = 0.2},
 		overlay = {p50 = 0.1, p95 = 0.1, mean = 0.1},
 		total   = {p50 = 3.7, p95 = 3.8, mean = 3.75},
@@ -40,7 +37,7 @@ perf_report_marshals_with_and_without_gpu :: proc(t: ^testing.T) {
 	defer delete(gpu_data, context.allocator)
 	testing.expectf(t, gpu_error == nil, "GPU marshal failed: %v", gpu_error)
 	testing.expect(t, strings.contains(string(gpu_data), `"depth"`), "depth pass is missing")
-	testing.expect(t, strings.contains(string(gpu_data), `"sky"`), "sky pass is missing")
+	testing.expect(t, strings.contains(string(gpu_data), `"cluster"`), "cluster pass is missing")
 
 	warm := report
 	warm.name = "warm"

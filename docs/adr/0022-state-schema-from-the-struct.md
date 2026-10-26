@@ -30,9 +30,8 @@ render-only field out of the simulation digest.
   `session_refresh_hud` before the build, not inside it.
 - `digest:"-"` excludes a field from the simulation digest. The camera, debug
   state, rows, settle, renderer, render digests, object scale and spawn age,
-  menu status/item/blocked, and the sun angles are excluded. The digest covers
-  the frame, the player, the objects, the settings, the sun position, and the
-  menu open/selected fields.
+  menu status/item/blocked are excluded. The digest covers the frame, the
+  player, the objects, the settings, and the menu open/selected fields.
 - The JSON names come from the same tags. The reply envelope stays hand-written
   because `json.marshal` does not dereference a pointer to a struct; the state
   itself is marshaled by value.

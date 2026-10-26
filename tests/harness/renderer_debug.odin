@@ -14,10 +14,7 @@ import "src:renderer"
 renderer_debug_parses_every_override :: proc(t: ^testing.T) {
 	command, error := harness.command_parse_string(
 		`{"cmd": "renderer_debug", "taa": false, "jitter": false, "history_weight": 0.25,
-		  "clamp": false, "depth_trust": true, "freeze_shadow_phase": true,
-		  "shadow_phase": 9, "light_shadows": false, "synthetic_lights": 9,
-		  "sky": false, "gi": false, "ao": false, "ao_radius": 2.0, "ao_strength": 0.25,
-		  "clip_height": 3.0}`,
+		  "clamp": false, "depth_trust": true, "synthetic_lights": 9, "clip_height": 3.0}`,
 		context.allocator,
 	)
 	defer harness.command_destroy(&command, context.allocator)
@@ -32,30 +29,18 @@ renderer_debug_parses_every_override :: proc(t: ^testing.T) {
 	expect_patch_value(t, debug.history_weight, f32(0.25), "weight")
 	expect_patch_value(t, debug.clamp, false, "clamp")
 	expect_patch_value(t, debug.depth_trust, true, "depth trust")
-	expect_patch_value(t, debug.freeze_shadow_phase, true, "freeze")
-	expect_patch_value(t, debug.shadow_phase, 9, "phase")
-	expect_patch_value(t, debug.light_shadows, false, "light shadows")
 	expect_patch_value(t, debug.synthetic_lights, 9, "synthetic lights")
-	expect_patch_value(t, debug.sky, false, "sky")
-	expect_patch_value(t, debug.gi, false, "gi")
-	expect_patch_value(t, debug.ao, false, "ao")
-	expect_patch_value(t, debug.ao_radius, f32(2.0), "ao radius")
-	expect_patch_value(t, debug.ao_strength, f32(0.25), "ao strength")
 	expect_patch_value(t, debug.clip_height, f32(3.0), "clip height")
 }
 
 @(test)
 renderer_debug_rejects_bad_fields :: proc(t: ^testing.T) {
 	bad := []string{
-		`{"cmd": "renderer_debug", "shadow_phase": 64}`,
 		`{"cmd": "renderer_debug", "history_weight": 1.5}`,
 		`{"cmd": "renderer_debug", "clear": true, "jitter": false}`,
 		`{"cmd": "renderer_debug", "clear": true, "synthetic_lights": 2}`,
 		`{"cmd": "renderer_debug", "clear": true, "taa": null}`,
-		`{"cmd": "renderer_debug", "light_shadows": 1}`,
-		`{"cmd": "renderer_debug", "speed": 2}`,
-		`{"cmd": "renderer_debug", "ao_radius": 0}`,
-		`{"cmd": "renderer_debug", "ao_strength": 2}`,
+		`{"cmd": "renderer_debug", "synthetic_lights": "many"}`,		`{"cmd": "renderer_debug", "speed": 2}`,
 		`{"cmd": "renderer_debug", "clip_height": 1001}`,
 	}
 	for line in bad {
@@ -70,7 +55,7 @@ renderer_debug_rejects_bad_fields :: proc(t: ^testing.T) {
 @(test)
 renderer_debug_parses_a_null_reset :: proc(t: ^testing.T) {
 	command, error := harness.command_parse_string(
-		`{"cmd":"renderer_debug","history_weight":null,"sky":null,"ao_radius":null,"clip_height":null}`,
+		`{"cmd":"renderer_debug","history_weight":null,"synthetic_lights":null,"clip_height":null}`,
 		context.allocator,
 	)
 	defer harness.command_destroy(&command, context.allocator)
@@ -80,17 +65,16 @@ renderer_debug_parses_a_null_reset :: proc(t: ^testing.T) {
 	}
 	debug := command.renderer_debug
 	expect_patch_unset(t, debug.history_weight, "weight")
-	expect_patch_unset(t, debug.sky, "sky")
+	expect_patch_unset(t, debug.synthetic_lights, "synthetic lights")
 	testing.expect(t, .History_Weight in debug.reset, "the weight reset was dropped")
-	testing.expect(t, .Sky in debug.reset, "the sky reset was dropped")
-	testing.expect(t, .AO_Radius in debug.reset, "the ao radius reset was dropped")
+	testing.expect(t, .Synthetic_Lights in debug.reset, "the synthetic light reset was dropped")
 	testing.expect(t, .Clip_Height in debug.reset, "the clip height reset was dropped")
 }
 
 @(test)
 scenario_compiles_a_renderer_debug_block :: proc(t: ^testing.T) {
 	scenario, error := harness.scenario_parse(
-		`{"renderer_debug": {"jitter": false, "shadow_phase": 2, "sky": false, "ao": false},
+		`{"renderer_debug": {"jitter": false, "synthetic_lights": 2, "clip_height": 4},
 		  "commands": [{"cmd": "step", "frames": 1}]}`,
 		context.allocator,
 	)
@@ -106,9 +90,8 @@ scenario_compiles_a_renderer_debug_block :: proc(t: ^testing.T) {
 	first := scenario.commands[0]
 	testing.expect(t, first.kind == .Renderer_Debug, "debug block is not the first command")
 	expect_patch_value(t, first.renderer_debug.jitter, false, "jitter")
-	expect_patch_value(t, first.renderer_debug.shadow_phase, 2, "shadow phase")
-	expect_patch_value(t, first.renderer_debug.sky, false, "sky")
-	expect_patch_value(t, first.renderer_debug.ao, false, "ao")
+	expect_patch_value(t, first.renderer_debug.synthetic_lights, 2, "synthetic lights")
+	expect_patch_value(t, first.renderer_debug.clip_height, f32(4), "clip height")
 }
 
 @(test)
@@ -161,26 +144,23 @@ renderer_debug_needs_the_gate :: proc(t: ^testing.T) {
 	reply = execute(
 		t,
 		&session,
-		`{"cmd": "renderer_debug", "jitter": false, "history_weight": 0.5, "shadow_phase": 3,
-		  "light_shadows": false, "synthetic_lights": 8}`,
+		`{"cmd": "renderer_debug", "jitter": false, "history_weight": 0.5,
+		  "synthetic_lights": 8, "clip_height": 3}`,
 	)
 	testing.expectf(t, reply.ok, "gated debug command failed: %s", reply.error)
 	harness.reply_destroy(&reply, context.allocator)
 	testing.expect(t, fake.debug.active, "debug overrides were not activated")
 	testing.expect(t, !fake.debug.jitter, "jitter was not disabled")
 	testing.expect(t, fake.debug.history_weight == 0.5, "history weight was not set")
-	testing.expect(t, fake.debug.freeze_shadow_phase, "shadow phase was not frozen")
-	testing.expect(t, fake.debug.shadow_phase == 3, "shadow phase was not set")
-	testing.expect(t, !fake.debug.light_shadows, "light shadows were not disabled")
+	testing.expect(t, fake.debug.clip_height == 3, "clip height was not set")
 	testing.expect(t, fake.debug.synthetic_lights == 8, "synthetic lights were not set")
 
-	reply = execute(t, &session, `{"cmd": "renderer_debug", "history_weight": null, "sky": null}`)
+	reply = execute(t, &session, `{"cmd": "renderer_debug", "history_weight": null, "clip_height": null}`)
 	testing.expectf(t, reply.ok, "null reset failed: %s", reply.error)
 	harness.reply_destroy(&reply, context.allocator)
 	testing.expect_value(t, fake.debug.history_weight, f32(-1))
-	testing.expect(t, fake.debug.sky, "the sky reset did not restore the default")
-	testing.expect(t, fake.debug.synthetic_lights == 8, "the sky reset cleared another override")
-	testing.expect(t, fake.debug.shadow_phase == 3, "the sky reset cleared the shadow phase")
+	testing.expect(t, fake.debug.clip_height == 1000, "the clip reset did not restore the default")
+	testing.expect(t, fake.debug.synthetic_lights == 8, "the clip reset cleared another override")
 
 	reply = execute(t, &session, `{"cmd": "renderer_debug", "clear": true}`)
 	testing.expectf(t, reply.ok, "clear failed: %s", reply.error)

@@ -116,12 +116,12 @@ scene_applies_renderer_debug_overrides :: proc(t: ^testing.T) {
 	harness.session_set_backend(&session, &backend, false)
 	session.debug_renderer = true
 
-	reply := execute(t, &session, `{"cmd":"scene","renderer_debug":{"taa":false,"sky":false}}`)
+	reply := execute(t, &session, `{"cmd":"scene","renderer_debug":{"taa":false,"clip_height":4}}`)
 	defer harness.reply_destroy(&reply, context.allocator)
 	testing.expectf(t, reply.ok, "scene renderer debug failed: %s", reply.error)
 	testing.expect(t, state.debug.active, "the override is not active")
 	testing.expect(t, !state.debug.taa, "taa was not disabled")
-	testing.expect(t, !state.debug.sky, "sky was not disabled")
+	testing.expect_value(t, state.debug.clip_height, f32(4))
 }
 
 @(test)
@@ -151,12 +151,11 @@ scene_snapshot_keeps_every_renderer_debug_field :: proc(t: ^testing.T) {
 		frame.Options{captured = true},
 		nil,
 		&expected,
-		nil,
 		context.temp_allocator,
 	)
 	defer frame.scene_destroy(&scene, context.temp_allocator)
 	text := frame.scene_json(scene, context.temp_allocator)
-	testing.expectf(t, strings.contains(text, `"gi": false`), "the snapshot lost gi: %s", text)
+	testing.expectf(t, strings.contains(text, `"clip_height": 3`), "the snapshot lost clip height: %s", text)
 	testing.expectf(t, strings.contains(text, `"depth_trust": true`), "the snapshot lost depth trust")
 
 	reply := execute(t, &session, text)
@@ -181,7 +180,6 @@ scene_snapshot_omits_the_automatic_history_weight :: proc(t: ^testing.T) {
 		frame.Options{captured = true},
 		nil,
 		&debug,
-		nil,
 		context.temp_allocator,
 	)
 	defer frame.scene_destroy(&scene, context.temp_allocator)
@@ -202,15 +200,7 @@ full_renderer_debug :: proc() -> renderer.Renderer_Debug {
 	debug.history_weight = 0.25
 	debug.clamp = false
 	debug.force_depth_trust = true
-	debug.freeze_shadow_phase = true
-	debug.shadow_phase = 9
-	debug.light_shadows = false
 	debug.synthetic_lights = 9
-	debug.sky = false
-	debug.gi = false
-	debug.ao = false
-	debug.ao_radius = 2.0
-	debug.ao_strength = 0.25
 	debug.clip_height = 3.0
 	return debug
 }
@@ -251,7 +241,6 @@ scene_text :: proc(t: ^testing.T, session: ^harness.Session, options: frame.Opti
 		&session.sim,
 		&session.debug,
 		options,
-		nil,
 		nil,
 		nil,
 		context.temp_allocator,

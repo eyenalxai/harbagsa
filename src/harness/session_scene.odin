@@ -124,11 +124,6 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 		}
 	}
 
-	if command.has_probe_volumes {
-		if probe_error := session_set_probe_volumes(session, scene.probe_volumes); probe_error != "" {
-			return probe_error
-		}
-	}
 
 	if command.has_camera {
 		yaw := f32(math.to_radians(f64(scene.camera.yaw_deg)))

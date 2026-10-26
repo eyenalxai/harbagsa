@@ -24,10 +24,7 @@ digest_input :: proc() -> renderer.Render_Input {
 		boxes = {},
 		lights = {},
 		jitter = {0.001, -0.002},
-		shadow_phase = 7,
 		atlas_weight = 400,
-		sky = true,
-		ao = true,
 		view_flags = {.HUD, .Debug_Draw},
 	}
 }
@@ -97,21 +94,13 @@ render_digest_changes_with_each_render_input :: proc(t: ^testing.T) {
 	jitter.jitter.x += 0.01
 	testing.expect(t, renderer.render_digest(jitter).value != baseline.value, "jitter did not change the digest")
 
-	phase := base
-	phase.shadow_phase += 1
-	testing.expect(t, renderer.render_digest(phase).value != baseline.value, "shadow phase did not change the digest")
-
 	weight := base
 	weight.atlas_weight = 900
 	testing.expect(t, renderer.render_digest(weight).value != baseline.value, "atlas weight did not change the digest")
 
-	sky := base
-	sky.sky = false
-	testing.expect(t, renderer.render_digest(sky).value != baseline.value, "sky flag did not change the digest")
-
-	ao := base
-	ao.ao = false
-	testing.expect(t, renderer.render_digest(ao).value != baseline.value, "ao flag did not change the digest")
+	clip := base
+	clip.clip_height = 4
+	testing.expect(t, renderer.render_digest(clip).value != baseline.value, "clip height did not change the digest")
 
 	view := base
 	view.view_flags = {.HUD}

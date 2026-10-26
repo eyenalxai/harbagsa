@@ -24,7 +24,7 @@ so it is the only place that can copy them safely.
 - The readback buffer is sized for the largest texel, eight bytes. The color
   path uses a prefix of it, so one buffer serves every target.
 - Velocity statistics use the median over pixels with a covered depth. The
-  clear value has zero motion and would otherwise dominate a sky-heavy view.
+  clear value has zero motion and would otherwise dominate a background-heavy view.
 - A color PNG keeps the delta baseline. Another target does not move it,
   because a delta between a color image and a depth image means nothing.
 

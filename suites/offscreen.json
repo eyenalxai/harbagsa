@@ -9,12 +9,8 @@
     "ui",
     "capture-group",
     "box-plan",
-    "ramp-shadow",
-    "ramp-shadow-crouch",
     "perf-crates",
     "lamp-wall-plane",
-    "room-lighting",
-    "ddgi-arena",
-    "ddgi-sealed"
+    "room-lighting"
   ]
 }

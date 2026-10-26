@@ -1,7 +1,7 @@
 {
   "requires": {"renderer_debug": true},
   "view": {"hud": false, "debug": false, "hint": false},
-  "renderer_debug": {"jitter": true, "shadow_phase": 0},
+  "renderer_debug": {"jitter": true},
   "analysis": {"maps": true},
   "commands": [
     {"cmd": "camera", "position": [-12, 1.7, 6.0], "yaw_deg": 0, "pitch_deg": -12.6051},

@@ -91,7 +91,6 @@ editor_selects_by_name_and_the_scene_keeps_it :: proc(t: ^testing.T) {
 		frame.Options{captured = true},
 		nil,
 		nil,
-		nil,
 		context.temp_allocator,
 	)
 	defer frame.scene_destroy(&scene, context.temp_allocator)

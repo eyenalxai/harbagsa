@@ -30,7 +30,6 @@ TAA :: struct {
 	// The values the last recorded frame used, so the renderer report names the
 	// frame the state describes rather than the next one.
 	applied_jitter_index: int,
-	shadow_phase:         u32,
 	convergence_frames:   int,
 	reset_count:          int,
 	last_reset:           History_Reset_Reason,

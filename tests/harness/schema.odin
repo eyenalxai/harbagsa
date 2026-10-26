@@ -134,7 +134,7 @@ schema_covers_every_command_and_the_new_fields :: proc(t: ^testing.T) {
 			strings.contains(debug.description, "null"),
 			"the renderer_debug schema does not name the null reset",
 		)
-		for name in ([?]string{"taa", "depth_trust", "gi", "ao_radius"}) {
+		for name in ([?]string{"taa", "depth_trust", "synthetic_lights", "clip_height"}) {
 			field, found := harness.schema_field_named(debug, name)
 			testing.expectf(t, found, "renderer_debug field %q is missing from the schema", name)
 			if found {

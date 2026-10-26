@@ -101,7 +101,7 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 		log.info("skipping GPU timestamp assertions: timestamps are unavailable")
 	} else {
 		testing.expect(t, times.frame > 0, "GPU timing has no frame number")
-		testing.expect(t, times.passes[perf.Pass.Sky] >= 0, "the sky pass is missing")
+		testing.expect(t, times.passes[perf.Pass.Scene] >= 0, "the scene pass is missing")
 		total: time.Duration
 		for index in 0 ..< perf.PASS_COUNT {
 			pass := perf.Pass(index)
@@ -141,45 +141,39 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 	}
 	testing.expect(t, different, "offscreen capture is a single flat color")
 
-	// The sky is the only background. A flat clear color would make the top and
-	// bottom bands equal.
-	up_camera := renderer.Camera {
+	background_camera := renderer.Camera {
 		position = {0, 1.7, 0},
 		yaw      = 0,
 		pitch    = 1.2,
 		fov_x    = 1.5,
 	}
-	sky_scene := frame.build(
+	background_scene := frame.build(
 		&sim,
 		&debug,
 		{alpha = 1.0, captured = true},
-		&up_camera,
+		&background_camera,
 		&hud,
 		&scratch,
 	)
-	sky_draw_ok := true
+	background_draw_ok := true
 	for _ in 0 ..< 40 {
-		if frame.draw(&state, sky_scene) != .Ok {
-			sky_draw_ok = false
+		if frame.draw(&state, background_scene) != .Ok {
+			background_draw_ok = false
 			break
 		}
 	}
-	testing.expect(t, sky_draw_ok, "sky draw failed")
-	sky_pixels, sky_width, _, _, sky_error := renderer.read_capture_target(&state, .Color)
-	testing.expectf(t, sky_error == "", "sky capture readback failed: %s", sky_error)
-	if sky_error == "" {
-		width := int(sky_width)
-		rows := len(sky_pixels) / (4 * width)
+	testing.expect(t, background_draw_ok, "background draw failed")
+	testing.expect(t, frame.draw(&state, background_scene, {targets = {.Color}}) == .Ok, "background capture failed")
+	background_pixels, background_width, _, _, background_error := renderer.read_capture_target(&state, .Color)
+	testing.expectf(t, background_error == "", "background capture readback failed: %s", background_error)
+	if background_error == "" {
+		width := int(background_width)
+		rows := len(background_pixels) / (4 * width)
 		band := 20
-		top := mean_green_band(sky_pixels, width, 0, band)
-		bottom := mean_green_band(sky_pixels, width, rows - band, band)
-		testing.expectf(
-			t,
-			abs(top - bottom) > 2,
-			"sky gradient is missing: top band %.1f, bottom band %.1f",
-			top,
-			bottom,
-		)
+		top := mean_green_band(background_pixels, width, 0, band)
+		bottom := mean_green_band(background_pixels, width, rows - band, band)
+		testing.expectf(t, top > 0 && bottom > 0, "the clear background is black: %.1f, %.1f", top, bottom)
+		testing.expectf(t, abs(top - bottom) < 0.1, "the clear background is not constant: %.1f, %.1f", top, bottom)
 	}
 
 	_ = os.remove(TEST_PNG)

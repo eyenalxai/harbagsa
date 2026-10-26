@@ -13,7 +13,7 @@
 
     {"cmd": "camera", "position": [15.5, 1.7, 5.0], "look_at": [11.0, 1.5, 11.0], "fov_deg": 90},
     {"cmd": "settle", "frames": 40},
-    {"cmd": "capture", "name": "chamber-dark", "format": "stats", "png": true},
+    {"cmd": "capture", "name": "chamber-ambient", "format": "stats", "png": true},
     {"cmd": "capture", "name": "chamber-depth", "target": "depth", "format": "stats"},
 
     {"cmd": "place", "prefab": "Lamp", "position": [14.5, 2.75, 7.0], "body": "static",
@@ -35,9 +35,9 @@
   ],
   "checks": [
     {"field": "capture.named.chamber-depth.stats.max.x", "op": "lt", "value": 0.999},
-    {"field": "capture.named.chamber-dark.stats.mean.y", "op": "lt", "value": 0.5},
-    {"field": "capture.named.lamp-on.stats.mean.y", "op": "gt", "value": 80},
-    {"field": "capture.named.lamp-off.stats.mean.y", "op": "lt", "value": 0.5},
+    {"field": "capture.named.chamber-ambient.stats.mean.y", "op": "gt", "value": 5},
+    {"field": "capture.named.lamp-on.stats.mean.y", "op": "gt", "other": "capture.named.chamber-ambient.stats.mean.y"},
+    {"field": "capture.named.lamp-off.stats.mean.y", "op": "gt", "value": 5},
     {"field": "capture.named.lamp-on.stats.mean.y", "op": "gt", "other": "capture.named.lamp-off.stats.mean.y"}
   ]
 }

@@ -35,9 +35,9 @@ renderer_state_reaches_the_state_and_checks :: proc(t: ^testing.T) {
 		history_weight     = 12.0 / 13.0,
 		reset_count        = 2,
 		last_reset         = "teleport",
-		shadow_phase       = 12,
+		cluster_overflow   = 2,
 		light_count        = 3,
-		debug              = {light_shadows = true},
+		debug              = {synthetic_lights = 4},
 		atlas_weight       = 900,
 		debug_vertex_count = 92,
 		debug_vertices = {world = 92},
@@ -49,7 +49,7 @@ renderer_state_reaches_the_state_and_checks :: proc(t: ^testing.T) {
 	testing.expect_value(t, state.renderer.last_reset, "teleport")
 	testing.expect(t, state.renderer.taa_enabled, "TAA flag was dropped")
 	testing.expect_value(t, state.renderer.light_count, 3)
-	testing.expect(t, state.renderer.debug.light_shadows, "light shadow default was dropped")
+	testing.expect_value(t, state.renderer.debug.synthetic_lights, 4)
 	testing.expect_value(t, state.renderer.atlas_weight, f32(900))
 	testing.expect_value(t, state.renderer.debug_vertex_count, 92)
 	testing.expect_value(t, state.renderer.debug_vertices.world, 92)

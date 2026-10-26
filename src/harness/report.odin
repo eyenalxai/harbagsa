@@ -24,7 +24,6 @@ Report :: struct {
 	perf:        []Perf_Report    `json:"perf,omitempty"`,
 	trace:       string           `json:"trace,omitempty"`,
 	analysis:    string           `json:"analysis,omitempty"`,
-	references:  []Reference_Report `json:"references,omitempty"`,
 }
 
 Run_Summary :: struct {
