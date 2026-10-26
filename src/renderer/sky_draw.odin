@@ -8,8 +8,8 @@ import vk "vendor:vulkan"
 // attachment layout the prepass left it in.
 sky_barriers :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
 	frame := r.frame_index
-	color := r.taa.scene_color[frame]
-	velocity := r.taa.velocity[frame]
+	color := r.frame_targets.scene_color[frame]
+	velocity := r.frame_targets.velocity[frame]
 
 	image_barrier(
 		command_buffer,
