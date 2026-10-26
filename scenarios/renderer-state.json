@@ -15,7 +15,6 @@
     {"field": "renderer.jitter_index", "op": "eq", "value": 0},
     {"field": "renderer.history_weight", "op": "gt", "value": 0.8},
     {"field": "renderer.last_reset", "op": "eq", "value": "create"},
-    {"field": "renderer.shadow_phase", "op": "ge", "value": 0},
     {"field": "render_digest", "op": "ne", "value": ""}
   ]
 }

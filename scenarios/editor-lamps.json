@@ -50,7 +50,7 @@
     {"cmd": "check", "field": "debug.inspector.light.intensity", "op": "eq", "value": 1.2},
     {"cmd": "capture", "name": "lamp-scene"},
     {"cmd": "editor", "camera": {"position": [4, 3.0, 16], "yaw_deg": 5.7296, "pitch_deg": -17.1887}},
-    {"cmd": "capture", "name": "lamp-shadows"},
+    {"cmd": "capture", "name": "lamp-angle"},
     {"cmd": "editor", "light_color": "green"},
     {"cmd": "check", "field": "debug.inspector.light.color", "op": "eq", "value": "green"},
     {"cmd": "check", "field": "debug.history.depth", "op": "eq", "value": 5},

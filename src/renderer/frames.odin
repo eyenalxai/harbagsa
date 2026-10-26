@@ -82,18 +82,6 @@ begin_frame :: proc(
 	if counts := cast([^]u32)r.scene.cluster_counts_mapped[r.frame_index]; counts != nil {
 		r.cluster_overflow = counts[CLUSTER_COUNT]
 	}
-	if r.probe.probe_count > 0 {
-		if data := cast([^][4]f32)r.probe.irradiance[r.frame_index].mapped; data != nil {
-			total := f32(0)
-			for index in 0 ..< int(r.probe.probe_count) * PROBE_TEXELS {
-				encoded := (data[index].x + data[index].y + data[index].z) / 3.0
-				square := encoded * encoded
-				total += square * square * encoded
-			}
-			r.probe.energy = total / f32(r.probe.probe_count * PROBE_TEXELS)
-		}
-	}
-
 	image_index: u32
 	if r.target.kind == .Swapchain {
 		acquire := vk.AcquireNextImageKHR(

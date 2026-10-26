@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the harness probe map calls the contains helper
+#+vet !unused-procedures // the harness box report calls the contains helper
 package game
 
 import b3 "libs:box3d"

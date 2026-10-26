@@ -79,9 +79,6 @@ cli_help :: proc(args: []string) -> int {
 	case "boxes":
 		print_boxes_usage()
 		return EXIT_OK
-	case "probes":
-		print_probes_usage()
-		return EXIT_OK
 	case "checks":
 		print_checks_usage()
 		return EXIT_OK
@@ -112,7 +109,6 @@ print_usage :: proc() {
 	fmt.eprintln("  harbagsa-agent ab [options]")
 	fmt.eprintln("  harbagsa-agent schema [command] [--text]")
 	fmt.eprintln("  harbagsa-agent boxes [--json]")
-	fmt.eprintln("  harbagsa-agent probes [scenario] [--json] [--coverage]")
 	fmt.eprintln("  harbagsa-agent checks <run-dir> [--json]")
 	fmt.eprintln("  harbagsa-agent help [command] | -h | --help")
 	fmt.eprintln("")

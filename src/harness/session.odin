@@ -24,10 +24,6 @@ Session :: struct {
 	camera_override:     renderer.Camera,
 	has_camera_override: bool,
 
-	probe_volumes:       []renderer.Probe_Volume,
-	scene_probe_volumes: []frame.Scene_Probe_Volume,
-	has_probe_volumes:   bool,
-
 	frame:      int,
 	output_dir: string,
 
@@ -39,7 +35,6 @@ Session :: struct {
 	render:   Render_State,
 
 	checks:     [dynamic]Check_Result,
-	references: [dynamic]Reference_Report,
 	failures:   [dynamic]string,
 
 	quit: bool,
@@ -75,7 +70,6 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 	session.recorder = recorder_create(allocator)
 	session.perf = perf_run_create(allocator)
 	session.checks = make([dynamic]Check_Result, 0, 8, allocator)
-	session.references = make([dynamic]Reference_Report, 0, 2, allocator)
 	session.failures = make([dynamic]string, 0, 8, allocator)
 	return session, ""
 }
@@ -86,10 +80,6 @@ session_results_destroy :: proc(session: ^Session) {
 		check_result_destroy(&check, session.allocator)
 	}
 	delete(session.checks)
-	for &report in session.references {
-		reference_report_destroy(&report, session.allocator)
-	}
-	delete(session.references)
 	for failure in session.failures {
 		delete(failure, session.allocator)
 	}
@@ -101,7 +91,6 @@ session_destroy :: proc(session: ^Session) {
 	if game.simulation_is_valid(&session.sim) {
 		game.simulation_destroy(&session.sim)
 	}
-	session_clear_probe_volumes(session)
 	session_results_destroy(session)
 	capture_run_destroy(&session.capture, session.allocator)
 	recorder_destroy(&session.recorder, session.allocator)
@@ -132,7 +121,6 @@ session_reset :: proc(session: ^Session) -> string {
 	session.input = {}
 	session.camera_override = {}
 	session.has_camera_override = false
-	session_clear_probe_volumes(session)
 	session.settle.frames = 0
 	session.settle.converged = false
 	// The debug mode holds a saved player from the world that just went away.

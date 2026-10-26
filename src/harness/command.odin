@@ -34,7 +34,6 @@ Command_Kind :: enum {
 	Place,
 	Remove,
 	Get,
-	Reference,
 	Quit,
 }
 
@@ -135,15 +134,7 @@ Renderer_Debug_Field :: enum {
 	History_Weight,
 	Clamp,
 	Depth_Trust,
-	Freeze_Shadow_Phase,
-	Shadow_Phase,
-	Light_Shadows,
 	Synthetic_Lights,
-	Sky,
-	GI,
-	AO,
-	AO_Radius,
-	AO_Strength,
 	Clip_Height,
 }
 
@@ -180,7 +171,6 @@ Command :: struct {
 	place:          Place_Command,
 	remove:         Remove_Command,
 	get:            Get_Command,
-	reference:      Reference_Command,
 }
 
 command_name :: proc(kind: Command_Kind) -> string {

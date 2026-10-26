@@ -1,17 +1,12 @@
 {
   "version": 1,
   "name": "lighting",
-  "description": "Interior light, probe GI, sky and ambient occlusion, ramps, and lamp shadows.",
+  "description": "Ambient coverage, direct point lights, light placement, and light gradients.",
   "entries": [
     "room-lighting",
-    "ddgi",
-    "sky",
-    "stairs-ao",
-    "ramp-shadow",
-    "ddgi-door",
-    "ddgi-move",
-    "ddgi-arena",
-    "ddgi-platform",
-    "ddgi-sealed"
+    "light-move",
+    "lamp-wall-plane",
+    "editor-lamps",
+    "banding"
   ]
 }

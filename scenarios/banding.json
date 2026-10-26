@@ -1,11 +1,13 @@
 {
   "size": "1280x720",
   "view": {"hud": false, "debug": false, "hint": false, "perf": false},
-  "analysis": {"start": 0, "count": 1},
+  "analysis": {"start": 0, "count": 1, "region": {"x": 0, "y": 0, "w": 0.45, "h": 0.94, "unit": "normalized"}},
   "commands": [
-    {"cmd": "camera", "position": [0, 1.7, 0], "yaw_deg": 0, "pitch_deg": 68.7549},
+    {"cmd": "camera", "position": [17.5, 1.7, -17.2], "look_at": [20.0, 1.75, -19.5]},
+    {"cmd": "place", "prefab": "Lamp", "position": [20.0, 2.0, -19.5], "body": "static",
+     "light": {"color": "warm", "intensity": 4.0, "range": 10}},
     {"cmd": "settle", "frames": 40},
-    {"cmd": "capture", "name": "sky"}
+    {"cmd": "capture", "name": "lamp-gradient"}
   ],
   "checks": [
     {"field": "analysis.bands.longest_run", "op": "lt", "value": 64},
