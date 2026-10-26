@@ -66,6 +66,8 @@ cli_main :: proc() -> int {
 		return cli_schema(args[1:])
 	case "boxes":
 		return cli_boxes(args[1:])
+	case "probes":
+		return cli_probes(args[1:])
 	case "checks":
 		return cli_checks(args[1:])
 	case "help", "--help", "-h":

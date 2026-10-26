@@ -100,6 +100,7 @@ build_state_objects :: proc(state: ^State, ctx: ^State_Context) {
 		box := game.simulation_object_box(ctx.sim, object.id)
 		state.objects[index] = {
 			id        = u32(object.id),
+			name      = game.simulation_object_name(ctx.sim, object.id),
 			prefab    = game.prefab_name(object.prefab),
 			body      = game.body_mode_name(object.body_mode),
 			position  = vec_state(box.center),

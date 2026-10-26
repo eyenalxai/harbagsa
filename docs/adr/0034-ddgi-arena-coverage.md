@@ -4,6 +4,9 @@ Builds on [ADR 0031](0031-ddgi-probe-volumes.md) and
 [ADR 0033](0033-ddgi-irradiance-and-gather.md). The update, the gather, and the
 room volume stay.
 
+Amended by [ADR 0035](0035-scenario-probe-data.md): the sealed pair is scenario
+data, and the perimeter bounds meet the room's inner faces.
+
 ## Context
 
 The scene supplied one probe volume: the room, its lane network, and the

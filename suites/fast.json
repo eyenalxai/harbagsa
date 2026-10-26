@@ -1,8 +1,12 @@
 {
   "version": 1,
   "name": "fast",
-  "description": "The short visual loop: smoke, interior light, ambient occlusion, and a lamp wall plane.",
+  "description": "The short loop: advisory checks, smoke, interior light, ambient occlusion, and a lamp wall plane.",
   "entries": [
+    {
+      "scenario": "advisory",
+      "no_render": true
+    },
     "smoke",
     "room-lighting",
     "stairs-ao",

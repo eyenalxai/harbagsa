@@ -234,6 +234,9 @@ reference_scene_input :: proc(session: ^Session) -> renderer.Render_Input {
 		hud = false,
 		perf = false,
 	}
+	if session.has_probe_volumes {
+		options.probe_volumes = session.probe_volumes
+	}
 	camera_override: ^renderer.Camera
 	if session.has_camera_override {
 		camera_override = &session.camera_override
