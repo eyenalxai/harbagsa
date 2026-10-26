@@ -105,12 +105,6 @@ execute_view :: proc(session: ^Session, command: Command, reply: ^Reply) -> stri
 }
 
 @(private)
-execute_sun :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
-	session_sun(session, command.sun)
-	return ""
-}
-
-@(private)
 execute_scene :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	return session_scene(session, command.scene)
 }
