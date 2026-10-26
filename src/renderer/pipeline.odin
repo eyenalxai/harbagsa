@@ -56,7 +56,7 @@ create_pipeline :: proc(r: ^Renderer) -> bool {
 	}
 
 	// A depth-only prepass pays the vertex and raster cost once per pixel, so a
-	// dense overlap of boxes traces the sun rays only for the surface in front.
+	// dense overlap of boxes traces the shadow rays only for the surface in front.
 	return create_graphics_pipeline(
 		r,
 		{

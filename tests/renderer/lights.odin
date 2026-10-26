@@ -16,8 +16,6 @@ TEST_CAMERA :: renderer.Camera {
 	fov_x    = math.PI * 0.5,
 }
 
-TEST_SUN_ANGULAR_DIAMETER :: f32(0.53 * math.PI / 180.0)
-
 @(test)
 point_light_lights_a_box_and_reaches_the_buffer :: proc(t: ^testing.T) {
 	device: Test_Device
@@ -35,10 +33,8 @@ point_light_lights_a_box_and_reaches_the_buffer :: proc(t: ^testing.T) {
 		color        = {0.5, 0.5, 0.5, 1},
 	}
 	view := renderer.Render_Input {
-		camera          = renderer.Camera{position = {0, 0, 5}, fov_x = math.PI * 0.5},
-		light_direction      = {0, -1, 0},
-		sun_angular_diameter = TEST_SUN_ANGULAR_DIAMETER,
-		boxes                = []geometry.Box{box},
+		camera = renderer.Camera{position = {0, 0, 5}, fov_x = math.PI * 0.5},
+		boxes = []geometry.Box{box},
 	}
 
 	dark_values, _, _, dark_ok := draw_scene(state, view)
@@ -89,7 +85,7 @@ point_light_lights_a_box_and_reaches_the_buffer :: proc(t: ^testing.T) {
 }
 
 @(test)
-lamp_mask_blocks_neither_its_point_light_nor_the_sun :: proc(t: ^testing.T) {
+lamp_mask_does_not_block_its_point_light :: proc(t: ^testing.T) {
 	device: Test_Device
 	if !open_test_device(&device) {
 		log.info("skipping the lamp mask test: no Vulkan device")
@@ -119,11 +115,9 @@ lamp_mask_blocks_neither_its_point_light_nor_the_sun :: proc(t: ^testing.T) {
 		{position = {0, 1.9, 0}, intensity = 3, color = {1, 1, 1}, range = 8},
 	}
 	view := renderer.Render_Input {
-		camera               = TEST_CAMERA,
-		light_direction      = {0, 1, 0},
-		sun_angular_diameter = TEST_SUN_ANGULAR_DIAMETER,
-		boxes                = []geometry.Box{floor, normal},
-		lights          = lights,
+		camera = TEST_CAMERA,
+		boxes  = []geometry.Box{floor, normal},
+		lights = lights,
 	}
 	shadowed := sample_floor(state, view)
 	view.boxes = []geometry.Box{floor, lamp}
@@ -134,20 +128,6 @@ lamp_mask_blocks_neither_its_point_light_nor_the_sun :: proc(t: ^testing.T) {
 		"the lamp box blocked its own point light: %f -> %f",
 		shadowed,
 		lit,
-	)
-
-	view.lights = nil
-	view.light_direction = {0, -1, 0}
-	view.boxes = []geometry.Box{floor}
-	no_lamp := sample_floor(state, view)
-	view.boxes = []geometry.Box{floor, lamp}
-	with_lamp := sample_floor(state, view)
-	testing.expectf(
-		t,
-		with_lamp < no_lamp - 0.2,
-		"the sun did not see the lamp box: %f -> %f",
-		no_lamp,
-		with_lamp,
 	)
 }
 
@@ -168,10 +148,8 @@ emissive_box_draws_without_a_light :: proc(t: ^testing.T) {
 		color        = {0.5, 0.5, 0.5, 1},
 	}
 	view := renderer.Render_Input {
-		camera          = TEST_CAMERA,
-		light_direction      = {0, -1, 0},
-		sun_angular_diameter = TEST_SUN_ANGULAR_DIAMETER,
-		boxes                = []geometry.Box{box},
+		camera = TEST_CAMERA,
+		boxes  = []geometry.Box{box},
 	}
 	dark := sample_point(state, view, {0, 1, 0.3})
 	box.emissive = 1

@@ -9,13 +9,10 @@ import "src:input"
 import "src:platform"
 
 @(test)
-light_keys_follow_the_palette_and_stop_at_the_sun :: proc(t: ^testing.T) {
+light_keys_follow_the_palette_and_the_placement_tool :: proc(t: ^testing.T) {
 	r: input.Resolver
 	palette := resolve_edge(&r, .C, {}, focus(debug_active = true, tool = .Palette))
 	expect_action(t, palette, game.Light_Adjust)
-
-	sun := resolve_edge(&r, .C, {}, focus(debug_active = true, tool = .Sun))
-	testing.expect_value(t, sun.action_count, 0)
 
 	world := resolve_edge(&r, .C, {}, focus(debug_active = true))
 	expect_action(t, world, game.Light_Adjust)
@@ -38,36 +35,16 @@ tab_and_a_light_key_share_a_frame :: proc(t: ^testing.T) {
 }
 
 @(test)
-sun_toggle_drops_light_and_world_keys_in_the_same_frame :: proc(t: ^testing.T) {
+l_key_does_not_intercept_light_or_world_keys :: proc(t: ^testing.T) {
 	r: input.Resolver
 	frame := resolve_keys(
 		&r,
 		[]platform.Key_Edge{{.L, {}}, {.C, {}}, {.Q, {}}},
 		focus(debug_active = true),
 	)
-	testing.expect_value(t, frame.action_count, 1)
-	testing.expect(t, has_action(frame, game.Sun_Toggle), "L did not toggle the sun")
-	testing.expect(t, !has_action(frame, game.Light_Adjust), "a light key ran on the sun frame")
-	testing.expect(t, !has_action(frame, game.Turn), "a turn ran on the sun frame")
-}
-
-@(test)
-palette_pointer_still_runs_on_a_sun_toggle_frame :: proc(t: ^testing.T) {
-	r: input.Resolver
-	events := platform.Events {
-		captured = true,
-		pointer_pressed = true,
-		key_count = 1,
-	}
-	events.keys[0] = {.L, {}}
-	frame := input.resolve(
-		&r,
-		events,
-		focus(debug_active = true, tool = .Palette, pointer_available = true),
-		{card = 1, inside = true},
-	)
-	testing.expect(t, has_action(frame, game.Sun_Toggle), "L did not toggle the sun")
-	testing.expect(t, has_action(frame, game.Palette_Pick), "the palette click was dropped")
+	testing.expect_value(t, frame.action_count, 2)
+	testing.expect(t, has_action(frame, game.Light_Adjust), "L dropped the light key")
+	testing.expect(t, has_action(frame, game.Turn), "L dropped the world key")
 }
 
 @(test)

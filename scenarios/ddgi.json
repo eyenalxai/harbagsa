@@ -10,12 +10,6 @@
   },
   "commands": [
     {
-      "cmd": "sun",
-      "azimuth_deg": 270,
-      "elevation_deg": -20,
-      "diameter_deg": 0.53
-    },
-    {
       "cmd": "camera",
       "position": [
         15.5,

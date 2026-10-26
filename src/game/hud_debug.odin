@@ -3,8 +3,7 @@ package game
 
 import "core:math"
 
-HUD_INSPECTOR_ROW_COUNT :: 12
-HUD_INSPECTOR_SUN_ROW_COUNT :: 13
+HUD_INSPECTOR_ROW_COUNT :: 11
 HUD_PLACEMENT_ROW_COUNT :: 8
 
 HUD_SNAP_OFF :: "off"
@@ -39,7 +38,6 @@ hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_
 		}
 	}
 
-	azimuth, elevation := debug_mode_sun_angles(debug)
 	camera := debug.camera.position
 
 	hud.rows[0] = {kind = .Header, label = "Debug mode"}
@@ -123,38 +121,17 @@ hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_
 	}
 	hud.rows[9] = {
 		kind    = .Detail,
-		label   = "Sun",
-		value   = line_format(
-			&hud.storage,
-			8,
-			"az % 4.0f  el % 4.0f",
-			azimuth * 180.0 / math.PI,
-			elevation * 180.0 / math.PI,
-		),
+		label   = "Light",
+		value   = hud_light_line(hud, 9, light),
 		numeric = true,
 	}
 	hud.rows[10] = {
 		kind    = .Detail,
-		label   = "Light",
-		value   = hud_light_line(hud, 10, light),
-		numeric = true,
-	}
-	hud.rows[11] = {
-		kind    = .Detail,
 		label   = "Lights",
-		value   = hud_light_budget(hud, 11, sim),
+		value   = hud_light_budget(hud, 10, sim),
 		numeric = true,
 	}
-	row_count := HUD_INSPECTOR_ROW_COUNT
-	if debug.sun.active {
-		hud.rows[HUD_INSPECTOR_ROW_COUNT] = {
-			kind  = .Metric,
-			label = "Sun mode",
-			value = "click place · Esc cancel",
-		}
-		row_count = HUD_INSPECTOR_SUN_ROW_COUNT
-	}
-	hud.view.rows = hud.rows[:row_count]
+	hud.view.rows = hud.rows[:HUD_INSPECTOR_ROW_COUNT]
 }
 
 @(private)

@@ -1,5 +1,8 @@
 # Sky and ambient occlusion evidence
 
+> Historical note: the sun was removed after this capture. Current direct light
+> is point lights; the AO scales the point lights.
+
 Captured on 2026-10-25. The sky and AO numbers were re-taken on the coverage
 branch. GPU: AMD Radeon RX 9060 XT (RADV GFX1200). All runs are offscreen through
 `bin/harbagsa-agent`.

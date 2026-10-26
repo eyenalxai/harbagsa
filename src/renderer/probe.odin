@@ -64,7 +64,6 @@ Probe :: struct {
 	energy:       f32,
 	reset:        bool,
 	light_hash:   u64,
-	sun_hash:     u64,
 	has_hash:     bool,
 }
 
@@ -329,14 +328,6 @@ probe_light_hash :: proc(lights: []Light) -> u64 {
 		for value in ([?]f32{light.position.x, light.position.y, light.position.z, light.intensity, light.color.x, light.color.y, light.color.z, light.range}) {
 			hash = (hash ~ u64(transmute(u32)value)) * 1099511628211
 		}
-	}
-	return hash
-}
-
-probe_sun_hash :: proc(direction: [3]f32, angular_diameter: f32) -> u64 {
-	hash := u64(1469598103934665603)
-	for value in ([?]f32{direction.x, direction.y, direction.z, angular_diameter}) {
-		hash = (hash ~ u64(transmute(u32)value)) * 1099511628211
 	}
 	return hash
 }
