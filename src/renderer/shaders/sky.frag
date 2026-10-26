@@ -29,11 +29,12 @@ vec2 project_direction(mat4 view_projection, vec3 direction) {
 void main() {
     vec3 direction = direction_from_ndc(v_ndc);
     vec3 stable = direction_from_ndc(v_ndc - camera.jitter.xy);
+    vec3 sun_direction = normalize(-camera.light_direction.xyz);
 
-    out_color = vec4(sky_gradient(direction), 1.0);
+    out_color = vec4(sky_color(direction, sun_direction, camera.sun.x), 1.0);
 
     mat4 current_view_projection = camera.projection * camera.view;
     vec2 previous_uv = project_direction(camera.prev_view_projection, stable);
     vec2 current_uv = project_direction(current_view_projection, stable);
-    out_velocity = vec4(previous_uv - current_uv, camera.lights.z, 0.0);
+    out_velocity = vec4(previous_uv - current_uv, camera.sun.y, 0.0);
 }

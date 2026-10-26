@@ -9,7 +9,7 @@ HUD_ROW_COUNT :: 6
 // The debug inspector rows live in hud_debug.odin; the panel still reserves the
 // widest debug mode so the perf rows fit after it.
 HUD_PERF_ROW_COUNT :: 2
-HUD_MAX_ROWS :: HUD_INSPECTOR_ROW_COUNT + HUD_PERF_ROW_COUNT
+HUD_MAX_ROWS :: HUD_INSPECTOR_SUN_ROW_COUNT + HUD_PERF_ROW_COUNT
 
 HUD_CAPTURE_HINT :: "Click to capture mouse"
 HUD_HEADER_SEPARATOR :: " · "

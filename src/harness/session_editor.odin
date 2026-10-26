@@ -226,6 +226,41 @@ session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 			return failure
 		}
 	}
+	if command.has_sun {
+		if failure := apply_editor_sun(session, command.sun); failure != "" {
+			return failure
+		}
+	}
+	return ""
+}
+
+@(private)
+apply_editor_sun :: proc(session: ^Session, sun: Editor_Sun) -> string {
+	if sun.has_active {
+		action: game.Edit_Action = game.Sun_Exit{}
+		if sun.active {
+			action = game.Sun_Enter{}
+		}
+		if failure := apply_editor_action(session, action); failure != "" {
+			return failure
+		}
+	}
+	if sun.has_position {
+		if failure := apply_editor_action(
+			session,
+			game.Sun_Set_Position{position = sun.position},
+		); failure != "" {
+			return failure
+		}
+	}
+	if sun.place {
+		if failure := apply_editor_action(session, game.Sun_Exit{}); failure != "" {
+			return failure
+		}
+	}
+	if sun.cancel {
+		_ = apply_editor_action(session, game.Sun_Cancel{})
+	}
 	return ""
 }
 

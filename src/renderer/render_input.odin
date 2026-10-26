@@ -21,6 +21,8 @@ Render_Input :: struct {
 	width:                u32,
 	height:               u32,
 	camera:               Camera,
+	light_direction:      [3]f32,
+	sun_angular_diameter: f32,
 	boxes:                []geometry.Box,
 	lights:               []Light,
 	probe_volumes:        []Probe_Volume,

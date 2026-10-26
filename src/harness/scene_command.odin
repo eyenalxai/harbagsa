@@ -8,13 +8,14 @@ import "core:strings"
 import "src:frame"
 import "src:game"
 
-SCENE_KEYS := [?]string{"cmd", "camera", "objects", "settings", "view", "displays", "probe_volumes", "renderer_debug"}
+SCENE_KEYS := [?]string{"cmd", "camera", "sun", "objects", "settings", "view", "displays", "probe_volumes", "renderer_debug"}
 
 Scene_Command :: struct {
 	scene:              frame.Scene,
 	settings:           Scene_Settings_Patch,
 	view:               Scene_View_Patch,
 	has_camera:         bool,
+	has_sun:            bool,
 	has_objects:        bool,
 	has_settings:       bool,
 	has_view:           bool,
@@ -40,6 +41,14 @@ parse_scene :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 		}
 		command.scene.scene.camera = camera
 		command.scene.has_camera = true
+	}
+	if value, has := json_get(object, "sun"); has {
+		sun, sun_error := parse_scene_sun(value)
+		if sun_error != "" {
+			return {}, sun_error
+		}
+		command.scene.scene.sun = sun
+		command.scene.has_sun = true
 	}
 	if value, has := json_get(object, "objects"); has {
 		objects, objects_error := parse_scene_objects(value, allocator)
@@ -99,6 +108,7 @@ parse_scene :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 	}
 	_, has_renderer_debug := command.scene.renderer_debug.?
 	if !command.scene.has_camera &&
+	   !command.scene.has_sun &&
 	   !command.scene.has_objects &&
 	   !command.scene.has_settings &&
 	   !command.scene.has_view &&
@@ -220,4 +230,21 @@ parse_scene_player :: proc(value: json.Value, allocator: mem.Allocator) -> (fram
 		player.eye_height = f32(eye_height)
 	}
 	return player, ""
+}
+
+@(private)
+parse_scene_sun :: proc(value: json.Value) -> (frame.Scene_Sun, string) {
+	object, object_ok := json_object(value)
+	if !object_ok {
+		return {}, format_error("%s", "scene 'sun' must be an object")
+	}
+	if key, unknown := json_unknown_key(object, {"position", "angular_diameter_deg"}); unknown {
+		return {}, format_error("unknown sun key %q", key)
+	}
+	position, position_ok := vec3_field(object, "position")
+	diameter, diameter_ok := number_field(object, "angular_diameter_deg")
+	if !position_ok || !diameter_ok || diameter <= 0 {
+		return {}, format_error("%s", "sun needs 'position' and a positive 'angular_diameter_deg'")
+	}
+	return {position = position, angular_diameter_deg = f32(diameter)}, ""
 }

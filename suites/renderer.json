@@ -16,6 +16,7 @@
     "capture-targets",
     "capture-free",
     "settle-converged",
+    "shadow-angle",
     "ramp-shadow",
     "ramp-shadow-crouch",
     "lamp-wall-plane"
