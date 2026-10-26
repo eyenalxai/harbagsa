@@ -21,8 +21,7 @@ LAMP_INSTANCE_MASK :: 0x01
 BOX_INSTANCE_MASK :: 0xFF
 
 // A lamp must not block its own point light, so it gets a mask the point shadow
-// ray does not test. The occlusion rays use every mask bit and still see the
-// lamp.
+// ray does not test. The sun ray uses every mask bit and still sees the lamp.
 box_instance_mask :: proc(box: geometry.Box) -> u32 {
 	return box.emissive > 0 ? LAMP_INSTANCE_MASK : BOX_INSTANCE_MASK
 }

@@ -1,8 +1,5 @@
 # Scene pass performance
 
-> Historical note: the sun was removed after this capture. Current direct light
-> is point lights.
-
 Measured on 2026-10-24 from `ea769e1` on AMD Radeon RX 9060 XT (RADV GFX1200),
 Mesa 26.2.5. Both sides are the same checkout and the same compiler; the scene
 pass change was stashed for the baseline runs.

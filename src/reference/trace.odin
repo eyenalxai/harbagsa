@@ -16,14 +16,16 @@ import "core:mem"
 // the probe atlas. The comparison therefore needs no fudge factor.
 
 Settings :: struct {
-	samples: int `json:"samples"`,
-	bounces: int `json:"bounces"`,
-	stride:  int `json:"stride"`,
+	samples:     int `json:"samples"`,
+	bounces:     int `json:"bounces"`,
+	stride:      int `json:"stride"`,
+	sun_samples: int `json:"sun_samples"`,
 }
 
 DEFAULT_SAMPLES :: 48
 DEFAULT_BOUNCES :: 3
 DEFAULT_STRIDE :: 16
+DEFAULT_SUN_SAMPLES :: 16
 
 MAX_BOUNCES :: 8
 
@@ -90,14 +92,51 @@ cosine_hemisphere :: proc(normal: [3]f32, u1, u2: f32) -> [3]f32 {
 	return linalg.vector_normalize0(local + normal * math.sqrt(max(0.0, 1.0 - u1)))
 }
 
-// Direct irradiance at a vertex, in the lit pass scale: the point term is the
-// same falloff the lit pass and probe_ray.comp use.
+vogel_disk :: proc(index, count: int, phase: f32) -> [2]f32 {
+	radius := math.sqrt((f32(index) + 0.5) / f32(count))
+	angle := f32(index) * 2.39996323 + phase
+	return radius * [2]f32{math.cos(angle), math.sin(angle)}
+}
+
+// Mirrors sun_direction() in box.frag with a zero phase. The lit pass rotates
+// the pattern per pixel and TAA averages it; the reference takes the fixed
+// phase, which differs only inside a penumbra.
+sun_sample_direction :: proc(to_light: [3]f32, tangent: f32, index, count: int) -> [3]f32 {
+	up: [3]f32 = {0, 1, 0} if abs(to_light.y) < 0.99 else {1, 0, 0}
+	side := linalg.vector_normalize0(linalg.vector_cross3(up, to_light))
+	upward := linalg.vector_cross3(to_light, side)
+	disk := vogel_disk(index, count, 0.0) * tangent
+	return linalg.vector_normalize0(to_light + side * disk.x + upward * disk.y)
+}
+
+// Direct irradiance at a vertex, in the lit pass scale: the sun term is
+// `SUN_COLOR * cos` and the point term is the same falloff the lit pass uses.
+// The sun uses the disk set at the camera hit and one centre ray after a
+// bounce, which is what probe_ray.comp traces.
 direct_irradiance :: proc(
 	scene: Scene,
 	position, normal: [3]f32,
+	sun_samples: int,
 ) -> [3]f32 {
 	origin := position + normal * 0.002
 	sum := [3]f32{}
+	to_light := scene.sun_direction
+	tangent := math.tan(scene.sun_angle * 0.5)
+	if sun_samples <= 1 {
+		cosine := max(linalg.vector_dot(normal, to_light), 0.0)
+		if cosine > 0.0 && !occluded(scene, origin, to_light, false, RAY_FAR) {
+			sum += SUN_COLOR * cosine
+		}
+	} else {
+		scale := SUN_COLOR * (1.0 / f32(sun_samples))
+		for index in 0 ..< sun_samples {
+			direction := sun_sample_direction(to_light, tangent, index, sun_samples)
+			cosine := max(linalg.vector_dot(normal, direction), 0.0)
+			if cosine > 0.0 && !occluded(scene, origin, direction, false, RAY_FAR) {
+				sum += scale * cosine
+			}
+		}
+	}
 
 	for light in scene.lights {
 		offset := light.position - position
@@ -135,7 +174,8 @@ trace_path :: proc(
 	settings: Settings,
 	rng: ^Rng,
 ) -> Trace {
-	direct := hit.albedo * direct_irradiance(scene, hit.position, hit.normal)
+	sun_samples := settings.sun_samples if depth == 0 else 1
+	direct := hit.albedo * direct_irradiance(scene, hit.position, hit.normal, sun_samples)
 	indirect := [3]f32{}
 	if depth < settings.bounces {
 		direction := cosine_hemisphere(
@@ -148,7 +188,8 @@ trace_path :: proc(
 		if next.hit {
 			radiance = trace_path(scene, next, depth + 1, settings, rng).radiance
 		} else {
-			radiance = sky_gradient(direction)
+			tangent := math.tan(scene.sun_angle * 0.5)
+			radiance = sky_color(direction, scene.sun_direction, tangent)
 		}
 		indirect = hit.albedo * radiance
 	}
@@ -206,7 +247,11 @@ estimate :: proc(
 			hit := intersect(scene, scene.camera.position, direction)
 			if !hit.hit {
 				sample.sky = true
-				sample.radiance = sky_gradient(direction)
+				sample.radiance = sky_color(
+					direction,
+					scene.sun_direction,
+					math.tan(scene.sun_angle * 0.5),
+				)
 				grid.samples[gy * grid.width + gx] = sample
 				continue
 			}

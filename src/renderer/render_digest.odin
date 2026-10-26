@@ -20,6 +20,8 @@ RENDER_DIGEST_FIELDS := [?]Render_Digest_Field {
 	{"width", true, write_width, ""},
 	{"height", true, write_height, ""},
 	{"camera", true, write_camera, ""},
+	{"light_direction", true, write_light_direction, ""},
+	{"sun_angular_diameter", true, write_sun_angular_diameter, ""},
 	{"boxes", true, write_boxes, ""},
 	{"lights", true, write_lights, ""},
 	{"probe_volumes", true, write_probe_volumes, ""},
@@ -70,6 +72,18 @@ write_camera :: proc(hash: ^digest.FNV, input: Render_Input) {
 	digest.write_f32(hash, input.camera.yaw)
 	digest.write_f32(hash, input.camera.pitch)
 	digest.write_f32(hash, input.camera.fov_x)
+}
+
+@(private)
+write_light_direction :: proc(hash: ^digest.FNV, input: Render_Input) {
+	digest.write_f32(hash, input.light_direction.x)
+	digest.write_f32(hash, input.light_direction.y)
+	digest.write_f32(hash, input.light_direction.z)
+}
+
+@(private)
+write_sun_angular_diameter :: proc(hash: ^digest.FNV, input: Render_Input) {
+	digest.write_f32(hash, input.sun_angular_diameter)
 }
 
 @(private)

@@ -17,7 +17,7 @@
   "checks": [
     {"field": "capture.count", "op": "eq", "value": 3},
     {"field": "capture.named.sky-zenith.stats.mean.y", "op": "le", "value": 138},
-    {"field": "capture.named.sky-horizon.stats.mean.y", "op": "ge", "value": 138},
+    {"field": "capture.named.sky-horizon.stats.mean.y", "op": "ge", "value": 140},
     {"field": "capture.named.sky-horizon.stats.mean.y", "op": "gt", "other": "capture.named.sky-zenith.stats.mean.y"},
     {"field": "capture.named.flat-zenith.stats.mean.y", "op": "ge", "value": 170}
   ]

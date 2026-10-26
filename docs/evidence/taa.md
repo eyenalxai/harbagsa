@@ -1,8 +1,5 @@
 # TAA evidence
 
-> Historical note: the sun was removed after this capture. Current direct light
-> is point lights.
-
 Captured on 2026-10-23 from `main` at `363041e` (merge of #62). GPU: AMD Radeon
 RX 9060 XT (RADV GFX1200). Window: 2536x1386. This is larger than the 1280x720
 acceptance target.
