@@ -75,6 +75,30 @@ create_image :: proc(
 	return result, true
 }
 
+format_supports :: proc(r: ^Renderer, format: vk.Format, required: vk.FormatFeatureFlags) -> bool {
+	properties: vk.FormatProperties
+	vk.GetPhysicalDeviceFormatProperties(r.physical_device, format, &properties)
+	return (properties.optimalTilingFeatures & required) == required
+}
+
+create_color_attachment :: proc(
+	r: ^Renderer,
+	extent: vk.Extent2D,
+	format: vk.Format,
+) -> (
+	Image,
+	bool,
+) {
+	return create_image(
+		r,
+		extent.width,
+		extent.height,
+		format,
+		{.COLOR_ATTACHMENT, .SAMPLED, .TRANSFER_SRC},
+		{.COLOR},
+	)
+}
+
 destroy_image :: proc(r: ^Renderer, image: ^Image) {
 	if r.device == nil {
 		return
