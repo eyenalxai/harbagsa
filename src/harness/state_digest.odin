@@ -1,6 +1,7 @@
 #+vet explicit-allocators
 package harness
 
+import "core:math"
 import "core:mem"
 
 import "core:reflect"
@@ -91,6 +92,18 @@ quat_state :: proc(value: [4]f32) -> Quat_State {
 @(private)
 color_state :: proc(value: [4]f32) -> Color_State {
 	return {r = value[0], g = value[1], b = value[2], a = value[3]}
+}
+
+@(private)
+sun_state :: proc(debug: ^game.Debug_Mode) -> Sun_State {
+	azimuth, elevation := game.debug_mode_sun_angles(debug)
+	return {
+		active = debug.sun.active,
+		position = vec_state(debug.sun.position),
+		azimuth_deg = f32(math.to_degrees(azimuth)),
+		elevation_deg = f32(math.to_degrees(elevation)),
+		angular_diameter_deg = f32(math.to_degrees(debug.sun_angular_diameter)),
+	}
 }
 
 @(private)

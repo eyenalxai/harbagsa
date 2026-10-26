@@ -12,7 +12,7 @@
 #define PROBE_VISIBILITY_BIAS 0.05
 #define PROBE_VISIBILITY_MIN_BIAS 0.05
 #define PROBE_PI 3.14159265358979
-// The reference gather returns irradiance. The lit pass adds the point light as
+// The reference gather returns irradiance. The lit pass adds the sun as
 // albedo * NdotL, so the diffuse BRDF's 1/pi keeps both terms on one scale.
 #define PROBE_INDIRECT_SCALE (1.0 / PROBE_PI)
 

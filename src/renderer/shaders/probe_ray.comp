@@ -44,6 +44,8 @@ layout(push_constant) uniform ProbePush {
     uint pad;
 } push;
 
+const vec3 SUN_COLOR = vec3(1.0, 0.98, 0.94);
+const uint SUN_RAY_MASK = 0xFFu;
 const uint POINT_RAY_MASK = 0x02u;
 const float POINT_SHADOW_END_BIAS = 0.001;
 const float PROBE_ORIGIN_BIAS = 0.001;
@@ -96,7 +98,7 @@ vec3 hit_radiance(vec3 origin, vec3 direction, float distance, out float hit_dis
 
     if (rayQueryGetIntersectionTypeEXT(query, true) == gl_RayQueryCommittedIntersectionNoneEXT) {
         hit_distance = distance;
-        return sky_gradient(direction);
+        return sky_color(direction, normalize(-camera.light_direction.xyz), camera.sun.x);
     }
 
     uint instance_index = rayQueryGetIntersectionInstanceCustomIndexEXT(query, true);
@@ -120,8 +122,16 @@ vec3 hit_radiance(vec3 origin, vec3 direction, float distance, out float hit_dis
     vec3 albedo = object.color.rgb;
     vec3 radiance = albedo * object.color.a;
 
-    bool shadows = camera.lights.y > 0.5;
-    int light_count = int(camera.lights.x);
+    vec3 to_light = normalize(-camera.light_direction.xyz);
+    float diffuse = max(dot(normal, to_light), 0.0);
+    if (diffuse > 0.0) {
+        if (!occluded(hit_position + normal * 0.002, to_light, SUN_RAY_MASK, 1000.0)) {
+            radiance += albedo * SUN_COLOR * diffuse;
+        }
+    }
+
+    bool shadows = camera.sun.w > 0.5;
+    int light_count = int(camera.sun.z);
     for (int index = 0; index < light_count; ++index) {
         Light light = light_set.lights[index];
         vec3 offset = light.position.xyz - hit_position;
@@ -129,8 +139,8 @@ vec3 hit_radiance(vec3 origin, vec3 direction, float distance, out float hit_dis
         if (light_distance <= 0.0 || light_distance >= light.color.w) {
             continue;
         }
-        vec3 to_light = offset / light_distance;
-        float light_diffuse = max(dot(normal, to_light), 0.0);
+        vec3 light_direction = offset / light_distance;
+        float light_diffuse = max(dot(normal, light_direction), 0.0);
         if (light_diffuse <= 0.0) {
             continue;
         }
@@ -141,7 +151,7 @@ vec3 hit_radiance(vec3 origin, vec3 direction, float distance, out float hit_dis
             float shadow_distance = max(light_distance - POINT_SHADOW_END_BIAS, 0.0);
             if (occluded(
                 hit_position + normal * 0.002,
-                to_light,
+                light_direction,
                 POINT_RAY_MASK,
                 shadow_distance
             )) {
@@ -172,7 +182,7 @@ void main() {
     vec3 radiance = hit_radiance(
         probe_position,
         probe_ray_direction(probe_ray),
-        camera.lights.z,
+        camera.sun.y,
         hit_distance
     );
     probe_rays.rays[probe_index * uint(PROBE_RAYS) + probe_ray] = vec4(

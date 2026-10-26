@@ -2,8 +2,8 @@
 
 One shader over one mesh. `src/renderer/shaders/box.frag` shades a unit cube,
 and every object in the scene is that cube, scaled and rotated. There is no
-texture, normal map, fog, bloom, or tone map. Point lights cast ray-query
-shadows.
+texture, normal map, fog, bloom, or tone map. One directional sun casts
+ray-query shadows.
 
 ## The palette
 
@@ -25,6 +25,7 @@ space. This is the opposite of the 2D layer, which authors sRGB hex
 | Crate, green | `0.30 0.68 0.38` | `src/game/prefabs.odin:44` |
 | Crate, orange | `0.86 0.56 0.20` | `src/game/prefabs.odin:45` |
 | Crate, blue | `0.26 0.48 0.84` | `src/game/prefabs.odin:46` |
+| Sun light | `1.00 0.98 0.94` | `src/renderer/shaders/box.frag:43` |
 | Debug selection | `1.00 0.80 0.20` | `src/game/debug_draw_objects.odin:6` |
 
 Rules:
@@ -37,15 +38,18 @@ Rules:
   `#E6AF3A` in sRGB. They are different colours in different spaces. Keep both
   values. Do not merge them into one token.
 
-## Point lights
+## One sun
 
-The lamps are the only direct light. Each active lamp has a position, colour,
-intensity, and range. The renderer holds every active light in a growable buffer
-and each one costs one hard shadow ray per fragment. A lamp prefab owns one
-light; a lamp placed in the editor can be tuned live.
+The sun is one directional light. Its angular diameter is a scene input, not a
+renderer constant: it defaults to the real 0.53°
+(`src/game/debug_mode.odin:12`) and the harness `sun` command can change it. A
+wider disk widens every penumbra, so the shadow stops reading as a shadow. The
+shader takes 16 samples on a Vogel disk, so a penumbra has 17 levels and softens
+with blocker distance.
 
-A DDGI probe volume adds one diffuse bounce inside the room, so a lit wall fills
-the corner beside it. A surface that no light and no probe reaches is black.
+The sun and the point lights are direct. A DDGI probe volume adds one diffuse
+bounce inside the room, so a lit wall fills the corner beside it. A surface that
+no light and no probe reaches is black.
 
 The ambient-occlusion rays stay; they scale the direct light. The formula is:
 
@@ -55,7 +59,7 @@ albedo * (direct * occlusion + probe_indirect)
 
 The occlusion is a local visibility term. It darkens a lit corner or a contact
 band; it does not add bounce. The probe volume owns the bounce. The occlusion
-applies to the lamps at strength 0.5.
+applies to the sun and the lamps, at strength 0.5.
 
 ## Probe volume
 
@@ -78,9 +82,9 @@ probes, and the pass costs about 1.73 ms with 256 rays and 64 synthetic lights
 at 1280 x 720; the room's 300 probes alone cost about 0.41 ms. The same pass
 costs 0.23 ms at 64 rays.
 
-The occlusion uses 8 rays. A partial count carries a per-pixel, per-frame offset
-inside its own step; a full or empty count stays exact. Without the offset a
-partial count steps in eighths and a contact band shows a contour.
+The occlusion uses 8 rays and the sun 16. A partial count carries a per-pixel,
+per-frame offset inside its own step; a full or empty count stays exact. Without
+the offset a partial count steps in eighths and a contact band shows a contour.
 The TAA history is 32-bit, so the resolve can average the offset over the phase
 sequence; a 16-bit history rounds that average away and keeps the count field.
 The output dither is a separate, last step for the 8-bit write.
@@ -102,7 +106,7 @@ With the sky pass off, `DEFAULT_CLEAR_COLOR` is
 `(0.10, 0.45, 0.75)`, written linear into an RGBA16F target.
 
 The gradient is the only large soft field in the frame. Keep the horizon band
-narrow so it does not compete with a lamp edge, and do not add a skybox or a
+narrow so it does not compete with the penumbra, and do not add a skybox or a
 cloud.
 
 ## Geometry
@@ -115,9 +119,9 @@ cloud.
   closed room in the +x/+z corner is 11 m square with 3 m walls, a 0.3 m
   ceiling, and one 1.6 m by 2.2 m door in the west wall.
 - The door opens into a four-turn light lock: east, south, west, south, and east
-  into the chamber. The tunnel is 2.0 m wide and 2.4 m high. No straight direct
-  light reaches the chamber. The base is total darkness, so the chamber is black
-  until a lamp is placed.
+  into the chamber. The tunnel is 2.0 m wide and 2.4 m high. No straight sun ray
+  reaches the chamber. The base is total darkness, so the chamber is black until
+  a lamp is placed. There is no bounce.
 - The player has no body and casts no shadow.
 - No fog and no depth cue beyond perspective. The near plane is 0.05 m and the
   far plane 200 m.
@@ -126,6 +130,6 @@ cloud.
 
 1. Be a box.
 2. Take a hue that is not in the palette.
-3. Cast and receive the same point-light shadow as everything else.
+3. Cast and receive the same sun shadow as everything else.
 4. Add nothing to the shader.
 5. If it moves, add nothing to the camera. [motion.md](motion.md) explains why.

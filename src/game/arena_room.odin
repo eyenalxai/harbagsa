@@ -26,7 +26,7 @@ ARENA_ROOM_INNER_HIGH_Z :: ARENA_ROOM_Z + ARENA_ROOM_HALF_SIZE - ARENA_ROOM_WALL
 
 // The entry is a light lock: door, east, south, west, south, east into the
 // chamber. Four right-angle turns leave no straight line from the door, so no
-// direct light reaches the chamber from outside.
+// sun ray reaches the chamber at any angle.
 ARENA_ROOM_WALL_A_LOW_Z :: 11.9
 ARENA_ROOM_WALL_A_HIGH_Z :: 12.2
 ARENA_ROOM_LANE_2_HIGH_Z :: 11.9

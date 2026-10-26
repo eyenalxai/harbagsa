@@ -42,6 +42,7 @@ reset_reason_name :: proc(reason: History_Reset_Reason) -> string {
 
 Debug_Lines_Report :: struct {
 	world:     int `json:"world"`,
+	sun:       int `json:"sun"`,
 	selection: int `json:"selection"`,
 	placement: int `json:"placement"`,
 }
@@ -132,6 +133,7 @@ renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
 		debug_vertex_count  = r.overlay.debug_count,
 		debug_vertices = {
 			world     = r.overlay.debug_kind_vertices[int(geometry.Line_Kind.World)],
+			sun       = r.overlay.debug_kind_vertices[int(geometry.Line_Kind.Sun)],
 			selection = r.overlay.debug_kind_vertices[int(geometry.Line_Kind.Selection)],
 			placement = r.overlay.debug_kind_vertices[int(geometry.Line_Kind.Placement)],
 		},
