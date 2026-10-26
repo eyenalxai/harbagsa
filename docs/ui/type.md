@@ -120,6 +120,7 @@ number must not use the sans face.
 | Arena position | `"X % 5.1f  Y % 5.1f  Z % 5.1f"` | `"X   0.0  Y   0.0  Z  14.0"` |
 | Debug position | `"X % 7.1f  Y % 7.1f  Z % 7.1f"` | for the unclamped debug camera |
 | Crate count | `"% 2d"` | `" 3"`, `"64"` |
+| Sun angles | `"az % 4.0f  el % 4.0f"` | `"az -128  el  -60"` |
 
 The leading space flag is not cosmetic. Odin's `fmt` zero-pads when a width is
 given, so `"%5.1f"` renders `"000.0"`; `"% 5.1f"` renders `"  0.0"`. Every fixed

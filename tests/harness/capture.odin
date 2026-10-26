@@ -325,11 +325,11 @@ capture_check_reads_the_renderer_state_of_that_frame :: proc(t: ^testing.T) {
 	captures := []harness.Capture_Result {
 		{
 			name = "idle",
-			renderer = {debug_vertex_count = 0, debug_vertices = {world = 0}},
+			renderer = {debug_vertex_count = 0, debug_vertices = {sun = 0, world = 0}},
 		},
 	}
 	command := harness.Check_Command {
-		field = "capture.named.idle.renderer.debug_vertices.world",
+		field = "capture.named.idle.renderer.debug_vertices.sun",
 		op    = .Eq,
 		value = {kind = .Number, number = 0},
 	}

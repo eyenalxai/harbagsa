@@ -7,13 +7,14 @@ import "core:math/linalg"
 import "src:geometry"
 
 // A path-traced reference for the renderer's diffuse term. It mirrors the
-// renderer's shading scale: a point light is an irradiance, a box emits
+// renderer's shading scale: the sun is a directional irradiance, a box emits
 // `color.rgb * emissive`, and a diffuse surface returns
 // `albedo * (direct + indirect)` with no 1/pi. The estimator is documented in
 // docs/evidence/ddgi-reference.md.
 
 RAY_BIAS :: f32(0.001)
 RAY_FAR :: f32(1000.0)
+SUN_COLOR :: [3]f32{1.0, 0.98, 0.94}
 CAMERA_UP :: [3]f32{0, 1, 0}
 
 Light :: struct {
@@ -31,9 +32,11 @@ Camera :: struct {
 }
 
 Scene :: struct {
-	boxes:  []geometry.Box,
-	lights: []Light,
-	camera: Camera,
+	boxes:         []geometry.Box,
+	lights:        []Light,
+	sun_direction: [3]f32,
+	sun_angle:     f32,
+	camera:        Camera,
 }
 
 // A hit carries the surface the path or the camera reached. `box` is the index
@@ -136,7 +139,8 @@ intersect :: proc(scene: Scene, origin, direction: [3]f32) -> Hit {
 }
 
 // The renderer's point-light shadow mask (0x02) does not match a lamp instance
-// (0x01), so a lamp never blocks its own point light.
+// (0x01), so a lamp never blocks its own point light. The sun ray uses every
+// mask bit and still sees the lamp.
 occluded :: proc(
 	scene: Scene,
 	origin, direction: [3]f32,

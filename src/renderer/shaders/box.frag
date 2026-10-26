@@ -73,9 +73,12 @@ layout(set = 0, binding = 9) readonly buffer ProbePositions {
 
 #include "probe_gather.glsl"
 
+const vec3 SUN_COLOR = vec3(1.0, 0.98, 0.94);
+const int SUN_SAMPLES = 16;
 const float GOLDEN_ANGLE = 2.39996323;
+const uint SUN_RAY_MASK = 0xFFu;
 // A lamp instance carries 0x01. The point shadow ray tests 0x02, so a lamp
-// never blocks its own light.
+// never blocks its own light while the sun ray still sees it.
 const uint POINT_RAY_MASK = 0x02u;
 // A light on a surface ends its shadow ray on that surface. The ray query
 // reports that endpoint as a hit for some pixels and misses it for others, so
@@ -93,10 +96,11 @@ float interleaved_gradient_noise(vec2 pixel) {
     return fract(52.9829189 * fract(dot(pixel, vec2(0.06711056, 0.00583715))));
 }
 
-// A visibility count is a coarse fraction. The surface occlusion uses eight
-// rays, and its step survives the TAA average as a band. Offset the count inside
-// its own step so the resolve sees a continuous value. The hash takes the
-// sample phase, so the offset changes each frame and TAA averages it.
+// A visibility count is a coarse fraction: the sun uses sixteen rays and the
+// surface occlusion eight, and either step survives the TAA average as a band.
+// Offset the count inside its own step so the resolve sees a continuous value.
+// The hash takes the shadow phase, so the offset changes each frame and TAA
+// averages it.
 float visibility_rounding(uint frame) {
     uint hash = uint(gl_FragCoord.x) * 1973u + uint(gl_FragCoord.y) * 9277u + frame * 26699u;
     hash = (hash ^ 61u) ^ (hash >> 16u);
@@ -108,13 +112,21 @@ float visibility_rounding(uint frame) {
 }
 
 // A fully lit or fully occluded pixel is exact. Only the partial counts carry
-// the one-step offset, so a surface with no occlusion does not flicker each frame.
+// the one-step offset, so a surface in full sun does not flicker each frame.
 float dithered_visibility(int visible, int count) {
     if (visible <= 0 || visible >= count) {
         return float(visible) / float(count);
     }
     float fraction = float(visible) + visibility_rounding(uint(camera.screen.w)) - 0.5;
     return clamp(fraction / float(count), 0.0, 1.0);
+}
+
+vec3 sun_direction(vec3 to_light, int index, int count, float phase) {
+    vec3 up = abs(to_light.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+    vec3 tangent = normalize(cross(up, to_light));
+    vec3 bitangent = cross(to_light, tangent);
+    vec2 disk = vogel_disk(index, count, phase) * camera.sun.x;
+    return normalize(to_light + tangent * disk.x + bitangent * disk.y);
 }
 
 bool occluded(vec3 origin, vec3 direction, uint mask, float max_distance) {
@@ -131,6 +143,22 @@ bool occluded(vec3 origin, vec3 direction, uint mask, float max_distance) {
     );
     while (rayQueryProceedEXT(query)) {}
     return rayQueryGetIntersectionTypeEXT(query, true) != gl_RayQueryCommittedIntersectionNoneEXT;
+}
+
+float sun_visibility(vec3 world_position, vec3 normal, vec3 to_light) {
+    vec3 origin = world_position + normal * 0.002;
+    float phase = fract(
+        interleaved_gradient_noise(gl_FragCoord.xy) + camera.screen.w * 0.61803398875
+    ) * 6.2831853;
+
+    int visible = 0;
+    for (int i = 0; i < SUN_SAMPLES; ++i) {
+        vec3 direction = sun_direction(to_light, i, SUN_SAMPLES, phase);
+        if (!occluded(origin, direction, SUN_RAY_MASK, 1000.0)) {
+            visible += 1;
+        }
+    }
+    return dithered_visibility(visible, SUN_SAMPLES);
 }
 
 vec3 point_light_radiance(vec3 world_position, vec3 normal) {
@@ -151,7 +179,7 @@ vec3 point_light_radiance(vec3 world_position, vec3 normal) {
     uint cluster = uint(cluster_x + CLUSTER_X * (cluster_y + CLUSTER_Y * cluster_z));
 
     uint count = cluster_counts.counts[cluster];
-    bool shadows = camera.lights.y > 0.5;
+    bool shadows = camera.sun.w > 0.5;
     vec3 sum = vec3(0.0);
     for (uint index = 0; index < count; ++index) {
         uint light_index = cluster_indices.indices[cluster * uint(CLUSTER_LIGHT_STRIDE) + index];
@@ -198,9 +226,9 @@ vec3 point_light_radiance(vec3 world_position, vec3 normal) {
 #endif
 const int AO_SAMPLES = AO_SAMPLE_COUNT;
 
-// The probes add the indirect term; surface occlusion scales the direct point
-// light. A corner the light still reaches darkens; a surface no light reaches
-// receives only the probe term.
+// The scene has no ambient term, so surface occlusion scales the direct sun and
+// point light instead. A corner the light still reaches darkens; a surface no
+// light reaches stays black.
 float surface_occlusion(vec3 position, vec3 normal, float radius, float phase) {
     vec3 origin = position + normal * 0.01;
     vec3 up = abs(normal.y) < 0.99 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
@@ -229,20 +257,27 @@ void main() {
     ObjectData object = scene.objects[draw.object_index];
 
     vec3 normal = normalize(v_normal);
+    vec3 to_light = normalize(-camera.light_direction.xyz);
+    float diffuse = max(dot(normal, to_light), 0.0);
+    float visibility = 0.0;
+    if (diffuse > 0.0) {
+        visibility = sun_visibility(v_world_position, normal, to_light);
+    }
+
     float ao = 1.0;
     if (camera.occlusion.z > 0.5) {
-        // A different irrational than the visibility dither keeps the two sample
-        // sets from sharing a rotation.
+        // A different irrational than the sun phase keeps the two sample sets
+        // from sharing a rotation.
         float phase = fract(
             interleaved_gradient_noise(gl_FragCoord.xy) + camera.screen.w * 0.7548776662
         ) * 6.2831853;
         ao = surface_occlusion(v_world_position, normal, camera.occlusion.x, phase);
         ao = mix(1.0, ao, camera.occlusion.y);
     }
-    // Direct light is the point lights, each with its own shadow ray. The
-    // occlusion darkens the light that reaches a corner. The probes add the
-    // indirect term.
-    vec3 lit = point_light_radiance(v_world_position, normal) * ao;
+    // Direct light only: the sun and the point lights, each with its own shadow
+    // ray. The occlusion darkens the light that reaches a corner. There is no
+    // ambient term, so a surface that no light reaches is black.
+    vec3 lit = (diffuse * SUN_COLOR * visibility + point_light_radiance(v_world_position, normal)) * ao;
     vec3 indirect = probe_indirect(v_world_position, normal);
     vec3 color = v_color * (lit + indirect) + v_color * object.color.a;
 

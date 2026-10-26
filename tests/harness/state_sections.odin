@@ -17,6 +17,7 @@ state_sections_name_the_check_namespaces :: proc(t: ^testing.T) {
 		{"objects.1.position", .Objects},
 		{"settings.display", .Settings},
 		{"debug.palette.open", .Debug},
+		{"sun.position", .Sun},
 		{"menu.open", .Menu},
 		{"notice.text", .Notice},
 		{"rows.0.label", .Rows},
@@ -38,7 +39,7 @@ state_sections_name_the_check_namespaces :: proc(t: ^testing.T) {
 		harness.state_section_for_field("digest"),
 		harness.state_all_sections(),
 	)
-	testing.expect_value(t, card(harness.state_all_sections()), 9)
+	testing.expect_value(t, card(harness.state_all_sections()), 10)
 }
 
 @(test)
@@ -50,11 +51,14 @@ check_other_builds_both_namespaces :: proc(t: ^testing.T) {
 	}
 	defer harness.session_destroy(&session)
 
-	reply := execute(
+	reply := execute(t, &session, `{"cmd":"sun","azimuth_deg":120,"elevation_deg":30}`)
+	harness.reply_destroy(&reply, context.allocator)
+
+	reply = execute(
 		t,
 		&session,
-		`{"cmd":"check","field":"debug.palette.open","op":"eq","other":"debug.placement.armed"}`,
+		`{"cmd":"check","field":"sun.azimuth_deg","op":"eq","other":"debug.sun.azimuth_deg","tolerance":0.01}`,
 	)
 	defer harness.reply_destroy(&reply, context.allocator)
-	testing.expectf(t, reply.ok, "cross-field check failed: %s", reply.error)
+	testing.expectf(t, reply.ok, "cross-namespace check failed: %s", reply.error)
 }

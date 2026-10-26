@@ -31,7 +31,6 @@ MENU_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
 
 MENU_DEBUG_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
 	{keys = "WASD", action = "fly"},
-	{keys = "Mouse", action = "look"},
 	{keys = "Space/Ctrl", action = "up / down"},
 	{keys = "Click", action = "select or place"},
 	{keys = "Drag", action = "move"},
@@ -41,6 +40,7 @@ MENU_DEBUG_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
 	{keys = "G", action = "snap"},
 	{keys = "M", action = "body"},
 	{keys = "Delete or X", action = "remove"},
+	{keys = "L", action = "sun place"},
 	{keys = "R", action = "reset player"},
 	{keys = "Shift+R", action = "scene"},
 	{keys = "F1", action = "debug view"},

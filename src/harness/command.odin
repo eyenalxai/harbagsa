@@ -19,6 +19,7 @@ Command_Kind :: enum {
 	Captures,
 	Camera,
 	View,
+	Sun,
 	Debug_Mode,
 	Editor,
 	Menu,
@@ -85,6 +86,16 @@ Camera_Command :: struct {
 	has_fov:      bool,
 	has_angles:   bool,
 	clear:        bool,
+}
+
+Sun_Command :: struct {
+	azimuth_deg:   f32,
+	elevation_deg: f32,
+	diameter_deg:  f32,
+	has_azimuth:   bool,
+	has_elevation: bool,
+	has_diameter:  bool,
+	clear:         bool,
 }
 
 Display_Mode_Def :: struct {
@@ -166,6 +177,7 @@ Command :: struct {
 	captures:       Captures_Command,
 	camera:         Camera_Command,
 	view:           View_Command,
+	sun:            Sun_Command,
 	debug_mode:     Debug_Mode_Command,
 	editor:         Editor_Command,
 	menu:           Menu_Command,

@@ -3,6 +3,7 @@ package harness
 
 import "core:fmt"
 import "core:math"
+import "core:math/linalg"
 import "core:mem"
 import "core:os"
 import "core:strings"
@@ -26,11 +27,13 @@ Reference_Camera :: struct {
 }
 
 Reference_Scene :: struct {
-	width:  u32              `json:"width"`,
-	height: u32              `json:"height"`,
-	boxes:  int              `json:"boxes"`,
-	lights: int              `json:"lights"`,
-	camera: Reference_Camera `json:"camera"`,
+	width:                    u32              `json:"width"`,
+	height:                   u32              `json:"height"`,
+	boxes:                    int              `json:"boxes"`,
+	lights:                   int              `json:"lights"`,
+	sun_direction:            [3]f32           `json:"sun_direction"`,
+	sun_angular_diameter_deg: f32              `json:"sun_angular_diameter_deg"`,
+	camera:                   Reference_Camera `json:"camera"`,
 }
 
 Reference_Image :: struct {
@@ -86,6 +89,8 @@ execute_reference :: proc(session: ^Session, command: Command, reply: ^Reply) ->
 	scene_input := reference_scene_input(session)
 	scene := reference.Scene {
 		boxes = scene_input.boxes,
+		sun_direction = linalg.vector_normalize0(-scene_input.light_direction),
+		sun_angle = scene_input.sun_angular_diameter,
 		camera = {
 			position = scene_input.camera.position,
 			yaw = scene_input.camera.yaw,
@@ -261,6 +266,8 @@ reference_report_new :: proc(
 			height = height,
 			boxes = len(scene.boxes),
 			lights = len(scene.lights),
+			sun_direction = scene.sun_direction,
+			sun_angular_diameter_deg = f32(math.to_degrees(scene.sun_angle)),
 			camera = {
 				position = scene.camera.position,
 				yaw_deg = f32(math.to_degrees(scene.camera.yaw)),

@@ -30,6 +30,7 @@ collect_world_lines :: proc(sim: ^Simulation, collector: ^Debug_Lines) {
 
 collect_editor_lines :: proc(dm: ^Debug_Mode, sim: ^Simulation, collector: ^Debug_Lines) {
 	collect_object_editor_lines(dm, sim, collector)
+	collect_sun_editor_lines(dm, collector)
 	collect_placement_lines(dm, collector)
 }
 

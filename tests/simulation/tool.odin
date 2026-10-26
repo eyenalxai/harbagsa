@@ -34,6 +34,22 @@ arming_placement_closes_the_palette :: proc(t: ^testing.T) {
 }
 
 @(test)
+sun_placement_takes_the_tool :: proc(t: ^testing.T) {
+	sim, dm := object_editor_setup(t)
+	defer game.debug_mode_destroy(&dm)
+	defer game.simulation_destroy(&sim)
+
+	apply_expect(t, &dm, &sim, game.Palette_Open{}, "open failed")
+	apply_expect(t, &dm, &sim, game.Placement_Arm{prefab = .Block}, "arm failed")
+	apply_expect(t, &dm, &sim, game.Sun_Toggle{}, "sun failed")
+
+	testing.expect_value(t, game.active_tool(&dm), game.Active_Tool.Sun)
+	testing.expect(t, !dm.palette.open, "the palette is still open")
+	testing.expect(t, !dm.placement.armed, "placement is still armed")
+	testing.expect(t, dm.sun.active, "the sun is not active")
+}
+
+@(test)
 take_tool_keeps_the_requested_tool :: proc(t: ^testing.T) {
 	sim, dm := object_editor_setup(t)
 	defer game.debug_mode_destroy(&dm)
@@ -47,20 +63,25 @@ take_tool_keeps_the_requested_tool :: proc(t: ^testing.T) {
 }
 
 @(test)
-cancel_walks_palette_then_placement :: proc(t: ^testing.T) {
+cancel_walks_palette_then_sun_then_placement :: proc(t: ^testing.T) {
 	sim, dm := object_editor_setup(t)
 	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
 
-	// Force both tools at once. One order must win, and Cancel must follow it.
+	// Force the state the old code allowed through the harness: all three
+	// tools set at once. One order must win, and Cancel must follow it.
 	dm.palette.open = true
+	dm.sun.active = true
 	dm.placement.armed = true
 
 	apply_expect(t, &dm, &sim, game.Cancel{}, "first cancel failed")
 	testing.expect(t, !dm.palette.open, "the palette did not close first")
 
 	apply_expect(t, &dm, &sim, game.Cancel{}, "second cancel failed")
-	testing.expect(t, !dm.placement.armed, "placement did not close second")
+	testing.expect(t, !dm.sun.active, "the sun did not close second")
+
+	apply_expect(t, &dm, &sim, game.Cancel{}, "third cancel failed")
+	testing.expect(t, !dm.placement.armed, "placement did not close third")
 	testing.expect_value(t, game.active_tool(&dm), game.Active_Tool.None)
 
 	result := apply(&dm, &sim, game.Cancel{})
@@ -78,11 +99,13 @@ world_reason_matches_the_active_tool :: proc(t: ^testing.T) {
 		reason: game.Edit_Reason,
 	} {
 		{.Palette, .Palette_Open},
+		{.Sun, .Sun_Active},
 		{.Placement, .Placement_Armed},
 	}
 
 	for value in cases {
 		dm.palette.open = value.tool == .Palette
+		dm.sun.active = value.tool == .Sun
 		dm.placement.armed = value.tool == .Placement
 		result := apply(&dm, &sim, game.Move_Selected{center = {0, 0, 0}})
 		testing.expectf(
@@ -103,11 +126,13 @@ cancel_editing_clears_every_tool :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 
 	dm.palette.open = true
+	dm.sun.active = true
 	dm.placement.armed = true
 
 	game.debug_mode_cancel_editing(&dm)
 
 	testing.expect(t, !dm.palette.open, "the palette is still open")
+	testing.expect(t, !dm.sun.active, "the sun is still active")
 	testing.expect(t, !dm.placement.armed, "placement is still armed")
 	testing.expect_value(t, game.active_tool(&dm), game.Active_Tool.None)
 }

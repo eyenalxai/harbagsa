@@ -63,6 +63,8 @@ build :: proc(
 ) -> renderer.Render_Input {
 	scene: renderer.Render_Input
 	scene.hud.weight = sim.settings.type_weight
+	scene.light_direction = game.debug_mode_sun_direction(debug)
+	scene.sun_angular_diameter = debug.sun_angular_diameter
 
 	snapshot := game.simulation_snapshot(sim)
 	scene.camera = snapshot_camera(snapshot, options.alpha)

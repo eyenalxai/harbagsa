@@ -42,6 +42,9 @@ light_target :: proc(
 
 @(private)
 edit_light_change :: proc(dm: ^Debug_Mode, sim: ^Simulation, change: Light_Change) -> Edit_Result {
+	if dm.sun.active {
+		return edit_fail(.Sun_Active)
+	}
 	target, id, settings, ok := light_target(dm, sim)
 	if !ok {
 		return edit_fail(.No_Lamp)
@@ -51,6 +54,9 @@ edit_light_change :: proc(dm: ^Debug_Mode, sim: ^Simulation, change: Light_Chang
 
 @(private)
 edit_light_set_color :: proc(dm: ^Debug_Mode, sim: ^Simulation, color: Light_Color) -> Edit_Result {
+	if dm.sun.active {
+		return edit_fail(.Sun_Active)
+	}
 	target, id, settings, ok := light_target(dm, sim)
 	if !ok {
 		return edit_fail(.No_Lamp)
@@ -64,6 +70,9 @@ edit_light_set_intensity :: proc(
 	sim: ^Simulation,
 	intensity: f32,
 ) -> Edit_Result {
+	if dm.sun.active {
+		return edit_fail(.Sun_Active)
+	}
 	target, id, settings, ok := light_target(dm, sim)
 	if !ok {
 		return edit_fail(.No_Lamp)
@@ -73,6 +82,9 @@ edit_light_set_intensity :: proc(
 
 @(private)
 edit_light_set_range :: proc(dm: ^Debug_Mode, sim: ^Simulation, range: f32) -> Edit_Result {
+	if dm.sun.active {
+		return edit_fail(.Sun_Active)
+	}
 	target, id, settings, ok := light_target(dm, sim)
 	if !ok {
 		return edit_fail(.No_Lamp)

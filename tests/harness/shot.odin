@@ -7,11 +7,11 @@ import "core:testing"
 import "src:harness"
 
 @(test)
-shot_expands_camera_settle_and_capture :: proc(t: ^testing.T) {
+shot_expands_camera_sun_settle_and_capture :: proc(t: ^testing.T) {
 	scenario, error := harness.scenario_parse(
 		`{"commands":[
 			{"cmd":"shot","name":"lane","note":"west lane","camera":{"position":[1,2,3],"yaw_deg":0,"pitch_deg":0},
-			 "settle":40,"format":"stats",
+			 "sun":{"azimuth_deg":52,"elevation_deg":15},"settle":40,"format":"stats",
 			 "region":{"x":0,"y":0,"w":10,"h":10}}
 		]}`,
 		context.allocator,
@@ -21,16 +21,17 @@ shot_expands_camera_settle_and_capture :: proc(t: ^testing.T) {
 	if error != "" {
 		return
 	}
-	testing.expect_value(t, len(scenario.commands), 3)
-	if len(scenario.commands) != 3 {
+	testing.expect_value(t, len(scenario.commands), 4)
+	if len(scenario.commands) != 4 {
 		return
 	}
 	testing.expect_value(t, scenario.commands[0].kind, harness.Command_Kind.Camera)
-	testing.expect_value(t, scenario.commands[1].kind, harness.Command_Kind.Settle)
-	testing.expect_value(t, scenario.commands[2].kind, harness.Command_Kind.Capture)
-	testing.expect_value(t, scenario.commands[2].capture.name, "lane")
-	testing.expect_value(t, scenario.commands[2].capture.note, "west lane")
-	testing.expect_value(t, scenario.commands[2].capture.format, harness.Capture_Format.Stats)
+	testing.expect_value(t, scenario.commands[1].kind, harness.Command_Kind.Sun)
+	testing.expect_value(t, scenario.commands[2].kind, harness.Command_Kind.Settle)
+	testing.expect_value(t, scenario.commands[3].kind, harness.Command_Kind.Capture)
+	testing.expect_value(t, scenario.commands[3].capture.name, "lane")
+	testing.expect_value(t, scenario.commands[3].capture.note, "west lane")
+	testing.expect_value(t, scenario.commands[3].capture.format, harness.Capture_Format.Stats)
 }
 
 @(test)

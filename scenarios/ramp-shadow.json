@@ -4,8 +4,6 @@
   "analysis": false,
   "note": "The ramp shadow must stay smooth. Gate the step amplitude, not the step count: the 2 m probe field crosses the output dither threshold more often, and those sub-level steps are not banding.",
   "commands": [
-    {"cmd": "place", "prefab": "Lamp", "position": [5.0, 1.2, -1.0], "body": "static",
-     "light": {"intensity": 3, "range": 8}},
     {"cmd": "camera", "position": [2.9, 0.8, -2.5], "look_at": [5.2, 0.0, -2.5]},
     {"cmd": "settle", "frames": 600},
     {"cmd": "capture", "name": "ramp-shadow"},

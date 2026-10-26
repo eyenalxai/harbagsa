@@ -44,11 +44,21 @@ record_scene :: proc(
 	}
 	write_probe_positions(r, input.boxes)
 	light_hash := probe_light_hash(input.lights)
-	if !r.probe.has_hash || light_hash != r.probe.light_hash {
+	sun_hash := probe_sun_hash(input.light_direction, input.sun_angular_diameter)
+	if !r.probe.has_hash || light_hash != r.probe.light_hash || sun_hash != r.probe.sun_hash {
 		r.probe.light_hash = light_hash
+		r.probe.sun_hash = sun_hash
 		r.probe.has_hash = true
 		r.probe.reset = true
 	}
+	if r.taa.has_prev_sun &&
+	   (r.taa.prev_light_direction != input.light_direction ||
+		   r.taa.prev_sun_angular_diameter != input.sun_angular_diameter) {
+		reset_history(r, .Scene_Change)
+	}
+	r.taa.prev_light_direction = input.light_direction
+	r.taa.prev_sun_angular_diameter = input.sun_angular_diameter
+	r.taa.has_prev_sun = true
 
 	// The recorder owns the renderer-internal inputs, so one value goes to the
 	// uniform, the digest, and the pass list.
