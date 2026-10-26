@@ -5,10 +5,11 @@ layer. Read this file first, then the topic file for the job.
 
 ## The point of view
 
-A flat-shaded box world under one widened sun, with overlay text drawn at the
-exact size of its pixels. Nothing is textured, rounded, blurred, or glossy. Every
-surface is a box and every panel is square. Colour says what a thing does; it
-never decorates. The type carries the personality, because nothing else does.
+A flat-shaded box world under a field of point lights, with overlay text drawn
+at the exact size of its pixels. Nothing is textured, rounded, blurred, or
+glossy. Every surface is a box and every panel is square. Colour says what a
+thing does; it never decorates. The type carries the personality, because
+nothing else does.
 
 Two constraints produce that look, and both are deliberate:
 
@@ -20,16 +21,16 @@ Two constraints produce that look, and both are deliberate:
 
 ## The signature
 
-The one choice a competitor cannot paste in: a hard-edged box arena lit by a
-single sun at the real 0.53° disk, so the penumbra is the only gradient in the
-frame, with overlay text that is exact on the pixel grid.
+The one choice a competitor cannot paste in: a hard-edged box arena lit by
+point lights, with a narrow sky gradient and a DDGI fill, and overlay text that
+is exact on the pixel grid.
 
 Defend it. A texture, a gloss, a bloom, or a rounded corner removes it.
 
 ## Files
 
-- [world.md](world.md): the scene palette, the one sun, the geometry rule, and
-  what a new prop must do.
+- [world.md](world.md): the scene palette, the point lights, the geometry rule,
+  and what a new prop must do.
 - [motion.md](motion.md): what may move, the smoothing formula, the settle
   times, and the motions that must never exist.
 - [review.md](review.md): the ordered check and the evidence rule for a visual

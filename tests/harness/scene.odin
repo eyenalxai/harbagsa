@@ -48,7 +48,6 @@ scene_round_trips_a_debug_scene :: proc(t: ^testing.T) {
 		`{"cmd": "debug_mode", "active": true}`,
 		`{"cmd": "editor", "camera": {"position": [2, 3, 12], "yaw_deg": 12, "pitch_deg": -18}}`,
 		`{"cmd": "editor", "place": {"prefab": "Lamp", "position": [1.5, 0.25, 8], "yaw_deg": 30, "body": "static"}}`,
-		`{"cmd": "sun", "azimuth_deg": 52.1, "elevation_deg": 25, "diameter_deg": 0.53}`,
 		`{"cmd": "view", "hud": false, "debug": true, "hint": false, "perf": false}`,
 	}) {
 		reply := execute(t, &session, line)
@@ -82,7 +81,6 @@ scene_rejects_bad_blocks :: proc(t: ^testing.T) {
 		`{"cmd":"scene"}`,
 		`{"cmd":"scene","camera":{"source":"override","position":[0,1,0]}}`,
 		`{"cmd":"scene","camera":{"source":"orbit","position":[0,1,0],"yaw_deg":0,"pitch_deg":0}}`,
-		`{"cmd":"scene","sun":{"position":[0,50,0]}}`,
 		`{"cmd":"scene","objects":[{"id":1,"prefab":"Nope","body":"static","position":[0,0,0],"rotation":[0,0,0,1]}]}`,
 		`{"cmd":"scene","settings":{"window_mode":"Orbit"}}`,
 		`{"cmd":"scene","settings":{"display":-1}}`,

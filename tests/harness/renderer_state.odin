@@ -40,7 +40,7 @@ renderer_state_reaches_the_state_and_checks :: proc(t: ^testing.T) {
 		debug              = {light_shadows = true},
 		atlas_weight       = 900,
 		debug_vertex_count = 92,
-		debug_vertices = {sun = 92},
+		debug_vertices = {world = 92},
 	}
 	state := harness.session_state(&session)
 	defer harness.state_destroy(&state, context.allocator)
@@ -52,7 +52,7 @@ renderer_state_reaches_the_state_and_checks :: proc(t: ^testing.T) {
 	testing.expect(t, state.renderer.debug.light_shadows, "light shadow default was dropped")
 	testing.expect_value(t, state.renderer.atlas_weight, f32(900))
 	testing.expect_value(t, state.renderer.debug_vertex_count, 92)
-	testing.expect_value(t, state.renderer.debug_vertices.sun, 92)
+	testing.expect_value(t, state.renderer.debug_vertices.world, 92)
 
 	command := harness.Check_Command {
 		field = "renderer.atlas_weight",
@@ -63,14 +63,14 @@ renderer_state_reaches_the_state_and_checks :: proc(t: ^testing.T) {
 	defer harness.check_result_destroy(&weight_result, context.allocator)
 	testing.expect(t, weight_result.ok, "applied atlas weight check did not pass")
 
-	sun_count := harness.Check_Command {
-		field = "renderer.debug_vertices.sun",
+	world_count := harness.Check_Command {
+		field = "renderer.debug_vertices.world",
 		op    = .Eq,
 		value = {kind = .Number, number = 92},
 	}
-	sun_result := harness.check_evaluate(sun_count, state, {}, nil, context.allocator)
-	defer harness.check_result_destroy(&sun_result, context.allocator)
-	testing.expectf(t, sun_result.ok, "sun vertex count check failed: %s", sun_result.error)
+	world_result := harness.check_evaluate(world_count, state, {}, nil, context.allocator)
+	defer harness.check_result_destroy(&world_result, context.allocator)
+	testing.expectf(t, world_result.ok, "world vertex count check failed: %s", world_result.error)
 
 	command = harness.Check_Command {
 		field = "renderer.convergence_frames",

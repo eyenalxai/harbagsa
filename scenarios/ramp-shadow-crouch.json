@@ -3,6 +3,8 @@
   "view": {"hud": false, "debug": false, "hint": false, "perf": false},
   "analysis": false,
   "commands": [
+    {"cmd": "place", "prefab": "Lamp", "position": [5.0, 1.2, -1.0], "body": "static",
+     "light": {"intensity": 3, "range": 8}},
     {"cmd": "camera",
      "position": [4.09399128, 1.05499995, -4.17171907],
      "yaw_deg": -156.68086243,
