@@ -1162,7 +1162,7 @@ run never created a renderer, and `renderer.active` is `false`.
 | `light_count` | the point lights the last frame uploaded |
 | `cluster_overflow` | lights a cluster kept beyond its 256-index stride |
 | `probe_volume_count` | probe volumes the scene supplied; 6 in the default scene |
-| `probe_count` | probes in the live atlas; 537 in the default scene |
+| `probe_count` | probes in the live atlas; 2205 in the default scene and 2301 with the sealed pair |
 | `probe_frame` | probe-update frames since the atlas was created |
 | `probe_energy` | mean linear RGB irradiance across the probe atlas |
 | `atlas_weight` | the type weight the active coverage atlas holds |
@@ -1345,7 +1345,9 @@ Rules:
 
 `scenarios/ddgi-reference.json` is the worked example: the `ddgi` chamber with
 the lamp and sun below the horizon, then the `room-lighting` lane with the west
-sun. `make reference` runs it. The estimator, the scene, the tolerance, and the
+sun. `scenarios/ddgi-platform.json` adds the dive platform at a low sun; its
+shaded face, tunnel corner, and contact gate the probe visibility. `make
+reference` runs both. The estimator, the scene, the tolerance, and the
 current numbers are in
 [`docs/evidence/ddgi-reference.md`](../evidence/ddgi-reference.md).
 
@@ -1423,10 +1425,10 @@ volumes: the room first, a roof volume, and four perimeter volumes that meet
 the room's inner faces. The room volume wins the sampler for the interior, and
 the perimeter volumes own the wall thickness, the door threshold, and the open
 floor. `scenarios/ddgi-sealed.json` adds its two pair volumes after the room and
-before the arena strips, which gives that run eight volumes and 633 probes.
+before the arena strips, which gives that run eight volumes and 2301 probes.
 `tests/frame/probe_volumes.odin` keeps the default ordering and bounds in the
 build; `tests/harness/probe_map.odin` parses the sealed scenario and checks its
-eight volumes, 633 probes, names, and ownership.
+eight volumes, 2301 probes, names, and ownership.
 
 The chamber is black, not merely shaded, before the lamp exists. The depth check
 proves the room is closed. The four-turn check proves that no straight sun ray

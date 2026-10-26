@@ -1,8 +1,9 @@
 # DDGI irradiance update and gather
 
 Supersedes the update and gather details in
-[ADR 0031](0031-ddgi-probe-volumes.md). The probe volume, relocation, and the
-pass order stay.
+[ADR 0031](0031-ddgi-probe-volumes.md). The probe volume and the pass order stay.
+[ADR 0036](0036-ddgi-probe-validity-and-contact.md) supersedes the relocation
+rule, the backface gate, the gather bias, the zero-texel rule, and the crush.
 
 ## Context
 

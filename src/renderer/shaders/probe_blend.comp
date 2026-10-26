@@ -21,6 +21,10 @@ layout(set = 0, binding = 8) buffer ProbeDepth {
     vec2 depth[];
 } probe_depth;
 
+layout(set = 0, binding = 9) readonly buffer ProbePositions {
+    vec4 positions[];
+} probe_positions;
+
 layout(set = 0, binding = 10) readonly buffer ProbeRays {
     vec4 rays[];
 } probe_rays;
@@ -39,6 +43,15 @@ void main() {
     }
     uint probe_index = push.first_probe + local_probe;
     uint texel = gl_GlobalInvocationID.x % uint(PROBE_TEXELS);
+    uint probe_texel = probe_index * uint(PROBE_TEXELS) + texel;
+
+    // A probe inside a box has no field. Clear its atlas so a later valid
+    // frame starts with a reset texel rather than stale light.
+    if (probe_positions.positions[probe_index].w < 0.5) {
+        probe_irradiance.irradiance[probe_texel] = vec4(0.0);
+        probe_depth.depth[probe_texel] = vec2(0.0);
+        return;
+    }
 
     ProbeVolume volume;
     bool found = false;
@@ -66,15 +79,12 @@ void main() {
     float distance_sum = 0.0;
     float distance2_sum = 0.0;
     float distance_weight = 0.0;
-    uint backfaces = 0;
     uint first_ray = probe_index * uint(PROBE_RAYS);
     for (uint ray_index = 0; ray_index < uint(PROBE_RAYS); ++ray_index) {
         vec3 ray_direction = probe_ray_direction(ray_index);
         float cosine = max(dot(texel_normal, ray_direction), 0.0);
         vec4 ray = probe_rays.rays[first_ray + ray_index];
-        if (ray.a < 0.0) {
-            backfaces++;
-        } else {
+        if (ray.a >= 0.0) {
             irradiance_sum += ray.rgb * cosine;
             cosine_sum += cosine;
         }
@@ -85,9 +95,6 @@ void main() {
         distance2_sum += hit_distance * hit_distance * weight;
         distance_weight += weight;
     }
-    if (float(backfaces) > float(PROBE_RAYS) * PROBE_BACKFACE_THRESHOLD) {
-        return;
-    }
 
     vec3 new_irradiance = pow(
         irradiance_sum / (2.0 * max(cosine_sum, 1e-9)),
@@ -96,7 +103,6 @@ void main() {
     vec2 new_depth = vec2(distance_sum, distance2_sum) /
         (2.0 * max(distance_weight, 1e-9));
 
-    uint probe_texel = probe_index * uint(PROBE_TEXELS) + texel;
     vec4 previous = probe_irradiance.irradiance[probe_texel];
     float alpha = 1.0 - PROBE_HYSTERESIS;
     if (push.reset != 0 || previous.a < 0.5) {

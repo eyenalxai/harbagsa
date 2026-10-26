@@ -196,6 +196,10 @@ _Avoid_: Tiled forward, light grid
 A box in world space with a probe spacing and a 3D count. The production scene supplies six: the room network, the roof over the room, and four perimeter strips over the open arena. A test scene adds its own interior volumes with a `scene` block. The room volume comes first, the scene extras come next, and the arena strips follow, so the sampler never picks an arena probe for an interior surface. The renderer allocates one probe per cell and samples the eight probes around a surface.
 _Avoid_: Light grid, lightmap
 
+**Probe validity**:
+A probe is valid when its centre is outside every box. An invalid probe has zero in its position's `.w`: the ray pass, the blend, and the gather skip it, and the blend clears its atlas. A probe is not moved out of a box.
+_Avoid_: Probe relocation (the old rule)
+
 **Probe map**:
 The `probes` harness command. It prints each volume's name, bounds, spacing, counts, probe count, and first atlas index, and it reports which volume owns a point. `--coverage` samples the visible static-box faces and lists the points that no volume owns. It runs without a renderer.
 _Avoid_: Probe dump, heat map
@@ -213,7 +217,7 @@ The diffuse radiance the lit pass adds from the probe volumes. It is separate fr
 _Avoid_: Ambient term, AO
 
 **Path-traced reference**:
-The CPU estimator that traces cosine-weighted diffuse paths from a fixed grid of pixel centres and compares the result with the probe field. The `reference` harness command runs it on two `scene_color` captures of one view and writes a JSON and CSV comparison plus one headless image per scene. `scenarios/ddgi-reference.json` is the chamber and the room lane.
+The CPU estimator that traces cosine-weighted diffuse paths from a fixed grid of pixel centres and compares the result with the probe field. The `reference` harness command runs it on two `scene_color` captures of one view and writes a JSON and CSV comparison plus one headless image per scene. `scenarios/ddgi-reference.json` is the chamber and the room lane; `scenarios/ddgi-platform.json` is the dive platform at a low sun.
 _Avoid_: Ground truth, CPU renderer (it traces a sample grid, not a frame)
 
 **Reference tolerance**:
