@@ -135,7 +135,7 @@ build_probe_pass :: proc(r: ^Renderer, pass: ^Pass) {
 @(private)
 build_depth_pass :: proc(r: ^Renderer, pass: ^Pass) {
 	extent := target_extent_vk(r)
-	depth := r.taa.depth[r.frame_index]
+	depth := r.frame_targets.depth[r.frame_index]
 	pass.depth = make_depth_attachment(depth.view, .DEPTH_ATTACHMENT_OPTIMAL)
 	pass.rendering = {
 		sType           = .RENDERING_INFO,
@@ -154,16 +154,16 @@ build_depth_pass :: proc(r: ^Renderer, pass: ^Pass) {
 
 @(private)
 depth_barriers :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
-	record_depth_write_barrier(command_buffer, r.taa.depth[r.frame_index].image)
+	record_depth_write_barrier(command_buffer, r.frame_targets.depth[r.frame_index].image)
 }
 
 @(private)
 build_scene_pass :: proc(r: ^Renderer, pass: ^Pass) {
 	extent := target_extent_vk(r)
 	frame := r.frame_index
-	color := r.taa.scene_color[frame]
-	velocity := r.taa.velocity[frame]
-	depth := r.taa.depth[frame]
+	color := r.frame_targets.scene_color[frame]
+	velocity := r.frame_targets.velocity[frame]
+	depth := r.frame_targets.depth[frame]
 
 	color_clear := vk.ClearValue{}
 	color_clear.color.float32 = r.clear_color
@@ -206,9 +206,9 @@ build_scene_pass :: proc(r: ^Renderer, pass: ^Pass) {
 @(private)
 scene_barriers :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
 	frame := r.frame_index
-	color := r.taa.scene_color[frame]
-	velocity := r.taa.velocity[frame]
-	depth := r.taa.depth[frame]
+	color := r.frame_targets.scene_color[frame]
+	velocity := r.frame_targets.velocity[frame]
+	depth := r.frame_targets.depth[frame]
 
 	image_barrier(
 		command_buffer,
@@ -239,9 +239,9 @@ scene_barriers :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pa
 build_sky_pass :: proc(r: ^Renderer, pass: ^Pass) {
 	extent := target_extent_vk(r)
 	frame := r.frame_index
-	color := r.taa.scene_color[frame]
-	velocity := r.taa.velocity[frame]
-	depth := r.taa.depth[frame]
+	color := r.frame_targets.scene_color[frame]
+	velocity := r.frame_targets.velocity[frame]
+	depth := r.frame_targets.depth[frame]
 
 	pass.attachments[0] = {
 		sType = .RENDERING_ATTACHMENT_INFO,

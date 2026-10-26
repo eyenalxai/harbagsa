@@ -93,12 +93,12 @@ write_taa_descriptors :: proc(r: ^Renderer) -> bool {
 			images := [4]vk.DescriptorImageInfo {
 				{
 					sampler = taa.sampler,
-					imageView = taa.scene_color[frame].view,
+					imageView = r.frame_targets.scene_color[frame].view,
 					imageLayout = .SHADER_READ_ONLY_OPTIMAL,
 				},
 				{
 					sampler = taa.sampler,
-					imageView = taa.velocity[frame].view,
+					imageView = r.frame_targets.velocity[frame].view,
 					imageLayout = .SHADER_READ_ONLY_OPTIMAL,
 				},
 				{
