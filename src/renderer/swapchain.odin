@@ -11,14 +11,6 @@ COLOR_SUBRESOURCE :: vk.ImageSubresourceRange{
 	layerCount = 1,
 }
 
-DEPTH_FORMAT :: vk.Format.D32_SFLOAT
-
-DEPTH_SUBRESOURCE :: vk.ImageSubresourceRange {
-	aspectMask = {.DEPTH},
-	levelCount = 1,
-	layerCount = 1,
-}
-
 create_platform_surface :: proc(r: ^Renderer) -> Error {
 	if r.platform.create_surface == nil {
 		log.error("renderer: no platform surface adapter")
@@ -185,8 +177,12 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	}
 
 	if r.target.config.width != old_extent.width || r.target.config.height != old_extent.height {
-		if !create_taa_targets(r, .Extent) {
-			log.error("renderer: could not recreate the TAA targets")
+		if !recreate_frame_targets(r) {
+			log.error("renderer: could not recreate the frame targets")
+			return .Fatal
+		}
+		if !create_taa_history(r, .Extent) {
+			log.error("renderer: could not recreate the TAA history")
 			return .Fatal
 		}
 		if !write_taa_descriptors(r) {

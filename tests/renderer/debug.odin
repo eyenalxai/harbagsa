@@ -60,13 +60,13 @@ debug_taa_inputs_reset_history :: proc(t: ^testing.T) {
 	testing.expect(t, !renderer.renderer_debug(state).ao, "ao override did not stick")
 
 	renderer.clear_renderer_debug(state)
-	testing.expect(t, !state.taa.debug.active, "clear left the overrides active")
+	testing.expect(t, !state.debug.active, "clear left the overrides active")
 	testing.expect(t, state.taa.enabled, "clear left TAA off")
-	testing.expect(t, state.taa.debug.light_shadows, "clear left light shadows off")
-	testing.expect_value(t, state.taa.debug.synthetic_lights, 0)
+	testing.expect(t, state.debug.light_shadows, "clear left light shadows off")
+	testing.expect_value(t, state.debug.synthetic_lights, 0)
 	testing.expect(t, state.taa.last_reset == .Debug_Override, "clear did not record a reset")
-	testing.expect(t, state.taa.debug.sky, "clear left the sky off")
-	testing.expect(t, state.taa.debug.ao, "clear left AO off")
+	testing.expect(t, state.debug.sky, "clear left the sky off")
+	testing.expect(t, state.debug.ao, "clear left AO off")
 }
 
 @(test)

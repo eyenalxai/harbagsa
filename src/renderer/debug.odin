@@ -144,7 +144,7 @@ renderer_debug_apply_patch :: proc(debug: Renderer_Debug, patch: Renderer_Debug_
 }
 
 renderer_debug :: proc(r: ^Renderer) -> Renderer_Debug {
-	debug := r.taa.debug
+	debug := r.debug
 	if !debug.active {
 		debug = renderer_debug_default()
 		debug.taa = r.taa.enabled
@@ -154,9 +154,9 @@ renderer_debug :: proc(r: ^Renderer) -> Renderer_Debug {
 }
 
 set_renderer_debug :: proc(r: ^Renderer, debug: Renderer_Debug) -> bool {
-	previous := r.taa.debug
+	previous := r.debug
 	changed := previous != debug
-	r.taa.debug = debug
+	r.debug = debug
 	if debug.active {
 		r.taa.enabled = debug.taa
 	}
@@ -167,14 +167,14 @@ set_renderer_debug :: proc(r: ^Renderer, debug: Renderer_Debug) -> bool {
 }
 
 clear_renderer_debug :: proc(r: ^Renderer) {
-	r.taa.debug = renderer_debug_default()
+	r.debug = renderer_debug_default()
 	r.taa.enabled = true
 	reset_history(r, .Debug_Override)
 }
 
 taa_shadow_phase :: proc(r: ^Renderer) -> u32 {
-	if r.taa.debug.active && r.taa.debug.freeze_shadow_phase {
-		return r.taa.debug.shadow_phase
+	if r.debug.active && r.debug.freeze_shadow_phase {
+		return r.debug.shadow_phase
 	}
 	return r.taa.enabled ? r.frame_count % 64 : 0
 }

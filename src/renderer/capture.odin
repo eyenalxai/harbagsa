@@ -48,13 +48,13 @@ target_image :: proc(r: ^Renderer, image_index: u32, target: Capture_Target) -> 
 		}
 		return r.target.images[image_index], r.target.config.format, true
 	case .Velocity:
-		return r.taa.velocity[r.frame_index].image, VELOCITY_FORMAT, true
+		return r.frame_targets.velocity[r.frame_index].image, VELOCITY_FORMAT, true
 	case .History:
 		return r.taa.history[r.taa.history_read].image, HISTORY_FORMAT, true
 	case .Depth:
-		return r.taa.depth[r.frame_index].image, DEPTH_FORMAT, true
+		return r.frame_targets.depth[r.frame_index].image, DEPTH_FORMAT, true
 	case .Scene_Color:
-		return r.taa.scene_color[r.frame_index].image, SCENE_COLOR_FORMAT, true
+		return r.frame_targets.scene_color[r.frame_index].image, SCENE_COLOR_FORMAT, true
 	}
 	return 0, .UNDEFINED, false
 }

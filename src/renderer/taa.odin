@@ -6,8 +6,6 @@ import "core:math"
 
 import vk "vendor:vulkan"
 
-SCENE_COLOR_FORMAT :: vk.Format.R16G16B16A16_SFLOAT
-VELOCITY_FORMAT :: vk.Format.R16G16B16A16_SFLOAT
 // The history is the only accumulated value. At the 512-sample cap a new
 // sample carries weight 1/513, below one fp16 step at the shaded floor's
 // linear value. Rounding then keeps the ray-count steps instead of the
@@ -36,7 +34,6 @@ TAA :: struct {
 	convergence_frames:   int,
 	reset_count:          int,
 	last_reset:           History_Reset_Reason,
-	debug:                Renderer_Debug,
 
 	prev_models:              [dynamic]Mat4,
 	prev_model_count:         int,
@@ -51,11 +48,8 @@ TAA :: struct {
 	prev_sun_angular_diameter: f32,
 	has_prev_sun:              bool,
 
-	depth:       [MAX_FRAMES_IN_FLIGHT]Image,
-	scene_color: [MAX_FRAMES_IN_FLIGHT]Image,
-	velocity:    [MAX_FRAMES_IN_FLIGHT]Image,
-	history:     [TAA_HISTORY_IMAGES]Image,
-	counts:      [TAA_HISTORY_IMAGES]Image,
+	history: [TAA_HISTORY_IMAGES]Image,
+	counts:  [TAA_HISTORY_IMAGES]Image,
 
 	history_read:    int,
 	applied_history_read: int,
@@ -76,11 +70,10 @@ TAA :: struct {
 init_taa :: proc(r: ^Renderer) -> Error {
 	r.taa.enabled = true
 	r.taa.prev_models = make([dynamic]Mat4, 0, 0, r.allocator)
-	r.taa.debug = renderer_debug_default()
 	if !check_taa_formats(r) {
 		return .Create_TAA
 	}
-	if !create_taa_targets(r, .Create) {
+	if !create_taa_history(r, .Create) {
 		return .Create_TAA
 	}
 	if !create_taa_sampler(r) {
@@ -111,101 +104,43 @@ destroy_taa :: proc(r: ^Renderer) {
 			r.taa.sampler = 0
 		}
 	}
-	destroy_taa_targets(r)
+	destroy_taa_history(r)
 	if r.taa.prev_models != nil {
 		delete(r.taa.prev_models)
 	}
 }
 
 check_taa_formats :: proc(r: ^Renderer) -> bool {
-	required := vk.FormatFeatureFlags {
-		.COLOR_ATTACHMENT,
-		.SAMPLED_IMAGE,
-		.SAMPLED_IMAGE_FILTER_LINEAR,
-		.TRANSFER_SRC,
-	}
-	formats := [4]vk.Format{SCENE_COLOR_FORMAT, VELOCITY_FORMAT, HISTORY_FORMAT, COUNT_FORMAT}
+	formats := [2]vk.Format{HISTORY_FORMAT, COUNT_FORMAT}
 	for format in formats {
-		properties: vk.FormatProperties
-		vk.GetPhysicalDeviceFormatProperties(r.physical_device, format, &properties)
-		if (properties.optimalTilingFeatures & required) != required {
+		if !format_supports(r, format, COLOR_TARGET_FEATURES) {
 			log.errorf("renderer: format %v lacks the TAA color, sample, filter, or transfer features", format)
 			return false
 		}
 	}
-	depth_required := vk.FormatFeatureFlags{.DEPTH_STENCIL_ATTACHMENT, .TRANSFER_SRC}
-	depth_properties: vk.FormatProperties
-	vk.GetPhysicalDeviceFormatProperties(r.physical_device, DEPTH_FORMAT, &depth_properties)
-	if (depth_properties.optimalTilingFeatures & depth_required) != depth_required {
-		log.errorf("renderer: format %v lacks the depth or transfer features", DEPTH_FORMAT)
-		return false
-	}
 	return true
 }
 
-// Any color target failure leaves no partial TAA state behind.
-@(private)
-create_taa_color_target :: proc(r: ^Renderer, extent: vk.Extent2D, format: vk.Format) -> (Image, bool) {
-	image, ok := create_image(
-		r,
-		extent.width,
-		extent.height,
-		format,
-		{.COLOR_ATTACHMENT, .SAMPLED, .TRANSFER_SRC},
-		{.COLOR},
-	)
-	if !ok {
-		destroy_taa_targets(r)
-	}
-	return image, ok
-}
+create_taa_history :: proc(r: ^Renderer, reason: History_Reset_Reason) -> bool {
+	destroy_taa_history(r)
 
-create_taa_targets :: proc(r: ^Renderer, reason: History_Reset_Reason) -> bool {
-	destroy_taa_targets(r)
-
-	extent := vk.Extent2D{r.target.config.width, r.target.config.height}
+	extent := target_extent_vk(r)
 	if extent.width == 0 || extent.height == 0 {
-		log.error("renderer: cannot create TAA targets without a target extent")
+		log.error("renderer: cannot create TAA history without a target extent")
 		return false
 	}
 
-	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		depth, depth_ok := create_image(
-			r,
-			extent.width,
-			extent.height,
-			DEPTH_FORMAT,
-			{.DEPTH_STENCIL_ATTACHMENT, .TRANSFER_SRC},
-			{.DEPTH},
-		)
-		if !depth_ok {
-			destroy_taa_targets(r)
-			return false
-		}
-		r.taa.depth[i] = depth
-
-		color, color_ok := create_taa_color_target(r, extent, SCENE_COLOR_FORMAT)
-		if !color_ok {
-			return false
-		}
-		r.taa.scene_color[i] = color
-
-		velocity, velocity_ok := create_taa_color_target(r, extent, VELOCITY_FORMAT)
-		if !velocity_ok {
-			return false
-		}
-		r.taa.velocity[i] = velocity
-	}
-
 	for i in 0 ..< TAA_HISTORY_IMAGES {
-		history, history_ok := create_taa_color_target(r, extent, HISTORY_FORMAT)
+		history, history_ok := create_color_attachment(r, extent, HISTORY_FORMAT)
 		if !history_ok {
+			destroy_taa_history(r)
 			return false
 		}
 		r.taa.history[i] = history
 
-		count, count_ok := create_taa_color_target(r, extent, COUNT_FORMAT)
+		count, count_ok := create_color_attachment(r, extent, COUNT_FORMAT)
 		if !count_ok {
+			destroy_taa_history(r)
 			return false
 		}
 		r.taa.counts[i] = count
@@ -255,19 +190,14 @@ taa_note_camera :: proc(r: ^Renderer, camera: Camera) {
 
 toggle_taa :: proc(r: ^Renderer) {
 	r.taa.enabled = !r.taa.enabled
-	if r.taa.debug.active {
-		r.taa.debug.taa = r.taa.enabled
+	if r.debug.active {
+		r.debug.taa = r.taa.enabled
 	}
 	reset_history(r, .Toggle)
 	log.infof("renderer: TAA %s", r.taa.enabled ? "on" : "off")
 }
 
-destroy_taa_targets :: proc(r: ^Renderer) {
-	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		destroy_image(r, &r.taa.depth[i])
-		destroy_image(r, &r.taa.scene_color[i])
-		destroy_image(r, &r.taa.velocity[i])
-	}
+destroy_taa_history :: proc(r: ^Renderer) {
 	for i in 0 ..< TAA_HISTORY_IMAGES {
 		destroy_image(r, &r.taa.history[i])
 		destroy_image(r, &r.taa.counts[i])
