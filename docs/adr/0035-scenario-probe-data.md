@@ -22,8 +22,8 @@ the remaining strips.
   after the room volume and before the arena strips. A volume carries a name,
   a minimum corner, a spacing, and a 3D count.
 - `scenarios/ddgi-sealed.json` supplies its two pair volumes and names every
-  placed object. The default scene stays at six volumes and 537 probes; the
-  sealed run has eight volumes and 633 probes.
+  placed object. The default scene stays at six volumes; ADR 0036 raises the
+  count from 537 to 2205, and the sealed run from 633 to 2301.
 - The perimeter strips meet the room's inner faces instead of stopping inside
   the outer face. The room volume is first, so it still owns the inner face and
   every interior point; the strips own the wall thickness, the door threshold,
@@ -48,13 +48,14 @@ the remaining strips.
 
 ## Consequences
 
-- `scenarios/ddgi-arena.json` and `scenarios/ddgi.json` now check six volumes and
-  537 probes. `scenarios/ddgi-sealed.json` checks eight and 633.
+- `scenarios/ddgi-arena.json` and `scenarios/ddgi.json` now check six volumes;
+  ADR 0036 raises the count to 2205. `scenarios/ddgi-sealed.json` checks eight
+  and 2301.
 - `scenarios/ddgi-sealed.json` owns the pair layout and uses names instead of
   `objects.14` and `remove id 5`.
-- The perimeter probe centres move slightly toward the room. The default probe
-  count is unchanged. The path-traced reference must be re-run after a layout
-  change; it is the energy gate, not this decision.
+- The perimeter probe centres move slightly toward the room. ADR 0036 changes
+  the grid and the count to 2205 and 2301. The path-traced reference must be
+  re-run after a layout change; it is the energy gate, not this decision.
 - The coverage command excludes hidden faces, floor-on-floor faces, and the
   0.25 m band at a face edge. A non-zero count is a real surface with no probe,
   not a boundary artifact.
