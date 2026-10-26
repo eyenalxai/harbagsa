@@ -31,6 +31,7 @@ STATE_SECTION_ROWS := [?]State_Section_Row {
 	{.Objects, "objects", build_state_objects},
 	{.Settings, "settings", build_state_settings},
 	{.Debug, "debug", build_state_debug},
+	{.Sun, "sun", build_state_sun},
 	{.Menu, "menu", build_state_menu},
 	{.Notice, "notice", build_state_notice},
 	{.Rows, "rows", build_state_rows},
@@ -141,7 +142,13 @@ build_state_settings :: proc(state: ^State, ctx: ^State_Context) {
 
 @(private)
 build_state_debug :: proc(state: ^State, ctx: ^State_Context) {
-	state.debug = debug_state_build(ctx.debug, ctx.sim)
+	sun := sun_state(ctx.debug)
+	state.debug = debug_state_build(ctx.debug, ctx.sim, sun)
+}
+
+@(private)
+build_state_sun :: proc(state: ^State, ctx: ^State_Context) {
+	state.sun = sun_state(ctx.debug)
 }
 
 @(private)

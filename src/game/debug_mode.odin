@@ -7,6 +7,10 @@ import "core:mem"
 
 import b3 "libs:box3d"
 
+// The real sun subtends about 0.53 degrees. A wider disk softens every shadow
+// by the same factor and smears a wall shadow when the sun sits low.
+SUN_ANGULAR_DIAMETER :: 0.53 * math.PI / 180.0
+
 DEBUG_FLY_SPEED :: 10.0
 
 Debug_Selection :: enum {
@@ -31,10 +35,17 @@ Saved_Player :: struct {
 	pitch:    f32,
 }
 
+Sun_Placement :: struct {
+	active:         bool,
+	saved_position: [3]f32,
+	position:       [3]f32,
+}
+
 Debug_Mode :: struct {
 	active:             bool,
 	camera:             Debug_Camera,
 	saved_player:       Saved_Player,
+	sun:                Sun_Placement,
 	selection:          Debug_Selection,
 	selected_object_id: Object_Id,
 	dragging:           Debug_Drag,
@@ -44,6 +55,7 @@ Debug_Mode :: struct {
 	history_allocator:  mem.Allocator,
 	palette:            Palette,
 	placement:          Placement,
+	sun_angular_diameter: f32,
 }
 
 Debug_Motion :: struct {
@@ -56,6 +68,7 @@ Debug_Motion :: struct {
 
 debug_mode_create :: proc(allocator: mem.Allocator) -> Debug_Mode {
 	return {
+		sun = {position = DEFAULT_SUN_POSITION},
 		history_allocator = allocator,
 		palette = {
 			selected = 0,
@@ -64,6 +77,7 @@ debug_mode_create :: proc(allocator: mem.Allocator) -> Debug_Mode {
 		placement = {
 			prefab = .Crate,
 		},
+		sun_angular_diameter = SUN_ANGULAR_DIAMETER,
 	}
 }
 
@@ -93,6 +107,14 @@ debug_mode_toggle :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	} else {
 		debug_mode_enter(dm, sim)
 	}
+}
+
+debug_mode_sun_direction :: proc(dm: ^Debug_Mode) -> [3]f32 {
+	return sun_direction_from_position(dm.sun.position)
+}
+
+debug_mode_sun_angles :: proc(dm: ^Debug_Mode) -> (azimuth, elevation: f32) {
+	return sun_angles_from_direction(sun_direction_from_light(debug_mode_sun_direction(dm)))
 }
 
 debug_mode_clear_selection :: proc(dm: ^Debug_Mode) {
@@ -158,13 +180,15 @@ debug_mode_reset_scene :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	if dm.history != nil {
 		object_history_clear(dm.history)
 	}
+	debug_sun_reset(dm)
+	dm.sun_angular_diameter = SUN_ANGULAR_DIAMETER
 	debug_mode_clear_selection(dm)
 	save_player_and_sync_camera(dm, sim)
 }
 
 
-// The palette and the placement tool are mutually exclusive, and the settings
-// menu owns the input while it is open.
+// The palette, the placement tool, and the sun placement are mutually
+// exclusive, and the settings menu owns the input while it is open.
 debug_mode_cancel_editing :: proc(dm: ^Debug_Mode) {
 	debug_mode_end_drag(dm)
 	take_tool(dm, .None)

@@ -131,13 +131,13 @@ object_check_reads_the_state_by_id :: proc(t: ^testing.T) {
 @(test)
 bare_state_field_reports_an_error_without_crashing :: proc(t: ^testing.T) {
 	command := harness.Check_Command {
-		field = "debug",
+		field = "sun",
 		op    = .Eq,
 		value = {kind = .Number, number = 0},
 	}
 	result := harness.check_evaluate(command, {}, {}, nil, context.allocator)
 	defer harness.check_result_destroy(&result, context.allocator)
-	testing.expect(t, result.error != "", "a bare struct field did not report an error")
+	testing.expect(t, result.error != "", "a bare sun field did not report an error")
 }
 
 @(test)

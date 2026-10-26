@@ -11,6 +11,8 @@ edit_world_reason :: proc(dm: ^Debug_Mode) -> Edit_Reason {
 	switch active_tool(dm) {
 	case .Palette:
 		return .Palette_Open
+	case .Sun:
+		return .Sun_Active
 	case .Placement:
 		return .Placement_Armed
 	case .None:

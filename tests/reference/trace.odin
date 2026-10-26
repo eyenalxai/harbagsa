@@ -13,6 +13,11 @@ EMITTER_COLOR :: [4]f32{0.5, 0.5, 0.5, 1.0}
 EMITTER_STRENGTH :: f32(2.0)
 RECEIVER_ALBEDO :: RECEIVER_COLOR.r
 EMITTER_EMISSION :: EMITTER_COLOR.r * EMITTER_STRENGTH
+SUN_ANGLE :: 0.53 * math.PI / 180.0
+
+// A horizontal sun direction gives every horizontal face a zero cosine, so a
+// test that compares only the indirect term does not carry a direct term.
+HORIZONTAL_SUN :: [3]f32{1, 0, 0}
 
 box :: proc(center, half_extents: [3]f32, color: [4]f32, emissive: f32 = 0) -> geometry.Box {
 	return {
@@ -39,9 +44,11 @@ test_furnace_plane :: proc(t: ^testing.T) {
 	}
 	scene := reference.Scene {
 		boxes = boxes,
+		sun_direction = HORIZONTAL_SUN,
+		sun_angle = SUN_ANGLE,
 		camera = {position = {0, 0.05, 0}, pitch = -math.PI * 0.5, fov_x = math.PI * 0.5},
 	}
-	settings := reference.Settings{samples = 512, bounces = 2, stride = 1}
+	settings := reference.Settings{samples = 512, bounces = 2, stride = 1, sun_samples = 1}
 	grid := reference.estimate(scene, settings, 1, 1, context.allocator)
 	defer reference.Grid_Destroy(&grid, context.allocator)
 	testing.expect_value(t, len(grid.samples), 1)
@@ -58,6 +65,37 @@ test_furnace_plane :: proc(t: ^testing.T) {
 }
 
 @(test)
+test_direct_sun_and_occlusion :: proc(t: ^testing.T) {
+	floor := box({0, -1, 0}, {10, 1, 10}, RECEIVER_COLOR)
+	scene := reference.Scene {
+		boxes = []geometry.Box{floor},
+		sun_direction = {0.5, 0.8660254, 0},
+		sun_angle = SUN_ANGLE,
+		camera = {position = {0, 2, 0}, pitch = -math.PI * 0.5, fov_x = math.PI * 0.5},
+	}
+	settings := reference.Settings{samples = 4, bounces = 2, stride = 1, sun_samples = 1}
+	grid := reference.estimate(scene, settings, 1, 1, context.allocator)
+	defer reference.Grid_Destroy(&grid, context.allocator)
+	direct := grid.samples[0].direct
+	expected := RECEIVER_ALBEDO * 0.8660254
+	testing.expectf(t, abs(direct.x - expected) < 1e-3, "sun direct %v", direct)
+	testing.expectf(t, abs(direct.y - expected * 0.98) < 1e-3, "sun direct %v", direct)
+
+	origin := [3]f32{0, 0.002, 0}
+	direction := scene.sun_direction
+	testing.expect(t, !reference.occluded(scene, origin, direction, false, 1000))
+	blocker := box({0.577, 1, 0}, {0.2, 0.2, 0.2}, RECEIVER_COLOR)
+	scene.boxes = []geometry.Box{floor, blocker}
+	testing.expect(t, reference.occluded(scene, origin, direction, false, 1000))
+
+	// A lamp box is invisible to the point-light shadow path.
+	lamp := box({0.577, 1, 0}, {0.2, 0.2, 0.2}, {1, 0.78, 0.45, 1}, 0.8)
+	scene.boxes = []geometry.Box{floor, lamp}
+	testing.expect(t, !reference.occluded(scene, origin, direction, true, 1000))
+	testing.expect(t, reference.occluded(scene, origin, direction, false, 1000))
+}
+
+@(test)
 test_point_light :: proc(t: ^testing.T) {
 	floor := box({0, -1, 0}, {10, 1, 10}, RECEIVER_COLOR)
 	lamp := box({0, 2, 0}, {0.2, 0.2, 0.2}, {1, 0.78, 0.45, 1}, 0.8)
@@ -66,9 +104,11 @@ test_point_light :: proc(t: ^testing.T) {
 		lights = []reference.Light {
 			{position = {0, 2, 0}, color = {1, 0.5, 0.25}, intensity = 1, range = 10},
 		},
+		sun_direction = HORIZONTAL_SUN,
+		sun_angle = SUN_ANGLE,
 		camera = {position = {0.5, 2, 0}, pitch = -math.PI * 0.5, fov_x = math.PI * 0.5},
 	}
-	settings := reference.Settings{samples = 4, bounces = 2, stride = 1}
+	settings := reference.Settings{samples = 4, bounces = 2, stride = 1, sun_samples = 1}
 	grid := reference.estimate(scene, settings, 1, 1, context.allocator)
 	defer reference.Grid_Destroy(&grid, context.allocator)
 	sample := grid.samples[0]
@@ -134,14 +174,20 @@ test_compare_ratio :: proc(t: ^testing.T) {
 @(test)
 test_sky_miss :: proc(t: ^testing.T) {
 	scene := reference.Scene {
+		sun_direction = {0, 0.5, -0.8660254},
+		sun_angle = SUN_ANGLE,
 		camera = {position = {0, 0, 0}, fov_x = math.PI * 0.5},
 	}
-	settings := reference.Settings{samples = 1, bounces = 2, stride = 1}
+	settings := reference.Settings{samples = 1, bounces = 2, stride = 1, sun_samples = 1}
 	grid := reference.estimate(scene, settings, 1, 1, context.allocator)
 	defer reference.Grid_Destroy(&grid, context.allocator)
 	sample := grid.samples[0]
 	testing.expect(t, sample.sky)
 	direction := reference.camera_ray(scene.camera, 1, 1, 0, 0)
-	expected := reference.sky_gradient(direction)
+	expected := reference.sky_color(
+		direction,
+		scene.sun_direction,
+		math.tan(scene.sun_angle * 0.5),
+	)
 	testing.expect_value(t, sample.radiance, expected)
 }

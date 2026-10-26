@@ -18,6 +18,7 @@ EDITOR_KEYS := [?]string {
 	"cancel",
 	"camera",
 	"place",
+	"sun",
 	"select_object",
 	"move",
 	"rotate_deg",
@@ -73,6 +74,8 @@ Editor_Command :: struct {
 	has_camera: bool,
 	place:      Editor_Place,
 	has_place:  bool,
+	sun:        Editor_Sun,
+	has_sun:    bool,
 	object:     Editor_Object,
 	light:      Editor_Light,
 	input:      Editor_Input,
@@ -146,6 +149,14 @@ parse_editor :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command
 		}
 		command.editor.place = place
 		command.editor.has_place = true
+	}
+	if value, has := json_get(object, "sun"); has {
+		sun, sun_error := parse_editor_sun(value)
+		if sun_error != "" {
+			return {}, sun_error
+		}
+		command.editor.sun = sun
+		command.editor.has_sun = true
 	}
 	editor_object, object_error := parse_editor_object(object)
 	if object_error != "" {

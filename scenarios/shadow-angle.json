@@ -1,0 +1,27 @@
+{
+  "commands": [
+    {"cmd": "view", "hud": false, "debug": false, "hint": false, "perf": false},
+    {"cmd": "camera", "position": [0, 1.7, -1], "yaw_deg": 180.0, "pitch_deg": -10.3132},
+    {"cmd": "sun", "azimuth_deg": 52.1, "elevation_deg": 15, "diameter_deg": 3},
+    {"cmd": "settle", "frames": 60},
+    {"cmd": "capture", "name": "wall-wide-sun"},
+    {"cmd": "sun", "diameter_deg": 0.53},
+    {"cmd": "settle", "frames": 60},
+    {"cmd": "capture", "name": "wall-real-sun"},
+    {"cmd": "camera", "position": [0, 20, 5], "yaw_deg": 0, "pitch_deg": -85.9437},
+    {"cmd": "sun", "azimuth_deg": 0, "diameter_deg": 3},
+    {"cmd": "settle", "frames": 60},
+    {"cmd": "capture", "name": "penumbra-wide-sun"},
+    {"cmd": "sun", "diameter_deg": 0.53},
+    {"cmd": "settle", "frames": 60},
+    {"cmd": "capture", "name": "penumbra-real-sun"}
+  ],
+  "checks": [
+    {"field": "sun.azimuth_deg", "op": "gt", "value": -0.2},
+    {"field": "sun.azimuth_deg", "op": "lt", "value": 0.2},
+    {"field": "sun.elevation_deg", "op": "gt", "value": 14.99},
+    {"field": "sun.elevation_deg", "op": "lt", "value": 15.01},
+    {"field": "sun.angular_diameter_deg", "op": "gt", "value": 0.52},
+    {"field": "sun.angular_diameter_deg", "op": "lt", "value": 0.54}
+  ]
+}

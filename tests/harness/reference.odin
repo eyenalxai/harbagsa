@@ -25,6 +25,7 @@ reference_parse_defaults_and_tolerance :: proc(t: ^testing.T) {
 	testing.expect_value(t, command.reference.settings.samples, 48)
 	testing.expect_value(t, command.reference.settings.bounces, 3)
 	testing.expect_value(t, command.reference.settings.stride, 16)
+	testing.expect_value(t, command.reference.settings.sun_samples, 16)
 	testing.expect_value(t, command.reference.tolerance.ratio_min, 0.8)
 	testing.expect_value(t, command.reference.tolerance.ratio_max, 1.25)
 	testing.expect(t, command.reference.advisory, "advisory was not parsed")

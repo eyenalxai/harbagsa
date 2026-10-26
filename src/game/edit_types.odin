@@ -44,6 +44,11 @@ Edit_Action :: union #no_nil {
 	Light_Set_Color,
 	Light_Set_Intensity,
 	Light_Set_Range,
+	Sun_Toggle,
+	Sun_Enter,
+	Sun_Exit,
+	Sun_Cancel,
+	Sun_Set_Position,
 	Cancel,
 }
 
@@ -129,6 +134,13 @@ Light_Set_Intensity :: struct {
 Light_Set_Range :: struct {
 	range: f32,
 }
+Sun_Toggle :: struct {}
+Sun_Enter :: struct {}
+Sun_Exit :: struct {}
+Sun_Cancel :: struct {}
+Sun_Set_Position :: struct {
+	position: [3]f32,
+}
 Cancel :: struct {}
 
 Edit_Context :: struct {
@@ -142,6 +154,7 @@ Edit_Reason :: enum {
 	Menu_Open,
 	Palette_Open,
 	Placement_Armed,
+	Sun_Active,
 	Unknown_Object,
 	No_Selection,
 	No_Lamp,
@@ -188,6 +201,8 @@ edit_reason_message :: proc(reason: Edit_Reason) -> string {
 		return "the object palette is open"
 	case .Placement_Armed:
 		return "the placement tool is armed"
+	case .Sun_Active:
+		return "the sun placement is active"
 	case .Unknown_Object:
 		return "the object id does not exist"
 	case .No_Selection:

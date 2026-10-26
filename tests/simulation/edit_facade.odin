@@ -79,3 +79,15 @@ body_target_follows_the_palette_and_the_armed_tool :: proc(t: ^testing.T) {
 	object, _ = game.simulation_object_find(&sim, id)
 	testing.expect_value(t, object.body_mode, game.Body_Mode.Static)
 }
+
+@(test)
+sun_position_has_one_rule :: proc(t: ^testing.T) {
+	sim, dm := object_editor_setup(t)
+	defer game.debug_mode_destroy(&dm)
+	defer game.simulation_destroy(&sim)
+
+	position := [3]f32{10, 20, -5}
+	expected := game.sun_dome_point(position)
+	apply_expect(t, &dm, &sim, game.Sun_Set_Position{position = position}, "sun position failed")
+	testing.expect_value(t, dm.sun.position, expected)
+}

@@ -31,6 +31,11 @@ Scene_Camera :: struct {
 	player:    Maybe(Scene_Player) `json:"player,omitempty"`,
 }
 
+Scene_Sun :: struct {
+	position:             [3]f32 `json:"position"`,
+	angular_diameter_deg: f32    `json:"angular_diameter_deg"`,
+}
+
 Scene_Light :: struct {
 	active:    bool   `json:"active"`,
 	color:     string `json:"color"`,
@@ -75,6 +80,7 @@ Scene_Display :: struct {
 
 Scene :: struct {
 	camera:   Scene_Camera   `json:"camera"`,
+	sun:      Scene_Sun      `json:"sun"`,
 	objects:  []Scene_Object `json:"objects"`,
 	settings:       Scene_Settings       `json:"settings"`,
 	view:           Scene_View           `json:"view"`,
@@ -98,6 +104,10 @@ scene_capture :: proc(
 			debug = view.debug_view,
 			hint = !view.captured,
 			perf = view.perf,
+		},
+		sun = {
+			position = debug.sun.position,
+			angular_diameter_deg = f32(math.to_degrees(debug.sun_angular_diameter)),
 		},
 	}
 	if probe_volumes != nil {
