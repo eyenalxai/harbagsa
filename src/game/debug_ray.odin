@@ -15,7 +15,7 @@ debug_aim_ray :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> b3.RayResult {
 }
 
 // A hit uses the surface point. A miss uses a point ahead of the camera, so the
-// caller always has a target even when no box is under the crosshair.
+// caller always has a target even when no box is under the aim.
 debug_aim_point :: proc(dm: ^Debug_Mode, sim: ^Simulation, fallback_distance: f32) -> [3]f32 {
 	hit := debug_aim_ray(dm, sim)
 	if hit.hit {

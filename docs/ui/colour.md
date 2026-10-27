@@ -31,8 +31,6 @@ others. Hue is undefined when chroma is zero.
 | `line_separator` | `#FFFFFF` | 0.16 | 1.000 | 0.000 | 0.0 | a divider inside a panel |
 | `slider_track` | `#FFFFFF` | 0.20 | 1.000 | 0.000 | 0.0 | the slider track, 3.4:1 on `surface_raised` |
 | `scrim` | `#000000` | 0.62 | 0.000 | 0.000 | 0.0 | the dim behind the settings panel |
-| `crosshair` | `#FFFFFF` | 0.90 | 1.000 | 0.000 | 0.0 | the crosshair arms |
-| `crosshair_edge` | `#000000` | 0.55 | 0.000 | 0.000 | 0.0 | the crosshair outline, so it reads on any background |
 
 The hairline is `max(1, round(density))` device pixels: 1 px at 720p, 2 px at
 1080p and above. A ring, divider, or outline is one hairline wide, not one pixel.

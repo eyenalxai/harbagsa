@@ -34,7 +34,7 @@ arena_ceiling_stops_upward_motion :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 
 	game.player_place(&sim.player, b3.Vec3{0, 2.0, 0}, 0, 0)
-	sim.player.velocity.y = 8.0
+	sim.player.velocity.y = 12.0
 
 	peak := sim.player.position.y
 	for _ in 0 ..< 30 {
@@ -42,7 +42,7 @@ arena_ceiling_stops_upward_motion :: proc(t: ^testing.T) {
 		peak = max(peak, sim.player.position.y)
 	}
 
-	max_feet: f32 = game.ARENA_WALL_HEIGHT - game.PLAYER_STANDING_HEIGHT
+	max_feet: f32 = game.ARENA_WALL_HEIGHT - game.PLAYER_HEIGHT
 	testing.expectf(t, peak > max_feet - 0.1, "the player never reached the ceiling: peak=%v", peak)
 	testing.expectf(t, peak <= max_feet + 0.02, "the player crossed the ceiling: peak=%v", peak)
 }

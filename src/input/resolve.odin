@@ -67,12 +67,7 @@ resolve :: proc(
 		move_right     = focus.captured ? events.move_right : 0,
 		sprint_held    = focus.captured && events.sprint_held,
 		sprint_pressed = r.sprint,
-		crouch_held    = focus.captured && events.crouch_held,
-		crouch_pressed = r.crouch,
-		prone_held     = focus.captured && events.prone_held,
-		prone_pressed  = r.prone,
 		jump_pressed   = r.jump,
-		jump_held      = focus.captured && events.jump_held,
 	}
 	return out
 }
@@ -141,8 +136,6 @@ apply_key :: proc(
 	case .C:
 		if focus.game.debug_active {
 			add_action(out, game.Light_Adjust{change = .Color})
-		} else if focus.captured {
-			r.crouch = true
 		}
 	case .Left_Bracket:
 		if focus.game.debug_active {
@@ -177,8 +170,6 @@ apply_key :: proc(
 					add_action(out, game.Undo{})
 				}
 			}
-		} else if focus.captured && !(.Ctrl in edge.mods) {
-			r.prone = true
 		}
 	case .Space:
 		if !focus.game.debug_active && focus.captured {

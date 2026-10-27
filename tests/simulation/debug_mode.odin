@@ -21,10 +21,15 @@ debug_mode_toggle_saves_and_restores_player :: proc(t: ^testing.T) {
 	testing.expect(t, dm.active, "debug mode did not open")
 
 	camera := dm.camera
-	expected_eye := before.position + b3.Vec3{0.0, game.PLAYER_STANDING_EYE, 0.0}
-	testing.expect_value(t, camera.position, expected_eye)
-	testing.expect_value(t, camera.yaw, before.yaw)
-	testing.expect_value(t, camera.pitch, before.pitch)
+	pivot := before.position + b3.Vec3{0.0, game.SPIDER_BODY_HEIGHT + game.CAMERA_PIVOT_RISE, 0.0}
+	testing.expect_value(t, camera.yaw, before.camera_yaw)
+	testing.expect_value(t, camera.pitch, before.camera_pitch)
+	testing.expectf(
+		t,
+		abs(b3.Length(camera.position - pivot) - game.CAMERA_DISTANCE) < 0.2,
+		"debug camera is not on the orbit arm: %v",
+		b3.Length(camera.position - pivot),
+	)
 
 	dm.camera.position = {10, 20, 30}
 	dm.camera.yaw = 1.0
@@ -34,7 +39,8 @@ debug_mode_toggle_saves_and_restores_player :: proc(t: ^testing.T) {
 	testing.expect(t, !dm.active, "debug mode did not close")
 	testing.expect_value(t, sim.player.position, before.position)
 	testing.expect_value(t, sim.player.yaw, before.yaw)
-	testing.expect_value(t, sim.player.pitch, before.pitch)
+	testing.expect_value(t, sim.player.camera_yaw, before.camera_yaw)
+	testing.expect_value(t, sim.player.camera_pitch, before.camera_pitch)
 	testing.expect_value(t, sim.player.velocity, b3.Vec3_zero)
 }
 
@@ -97,7 +103,7 @@ reset_player_moves_the_debug_camera_to_spawn :: proc(t: ^testing.T) {
 
 	game.debug_mode_reset_player(&dm, &sim)
 
-	expected := game.SPAWN_POSITION + b3.Vec3{0.0, game.PLAYER_STANDING_EYE, 0.0}
+	expected := game.spider_camera(&sim, 1.0).position
 	testing.expect_value(t, dm.camera.position, expected)
 	testing.expect_value(t, sim.player.position, game.SPAWN_POSITION)
 }
@@ -129,6 +135,6 @@ reset_scene_restores_objects_and_player :: proc(t: ^testing.T) {
 	testing.expect_value(t, dm.selected_object_id, game.INVALID_OBJECT_ID)
 	testing.expect_value(t, dm.dragging, game.Debug_Drag.None)
 	testing.expect_value(t, sim.player.position, game.SPAWN_POSITION)
-	expected_eye := game.SPAWN_POSITION + b3.Vec3{0.0, game.PLAYER_STANDING_EYE, 0.0}
+	expected_eye := game.spider_camera(&sim, 1.0).position
 	testing.expect_value(t, dm.camera.position, expected_eye)
 }

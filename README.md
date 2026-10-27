@@ -1,9 +1,10 @@
 # harbagsa
 
-A first-person movement demo. The player walks, sprints, crouches, crawls,
-jumps, dives, slides, and mantles in a fixed arena with stairs, ramps, tunnels,
-mantle walls, a dive platform, a closed ceiling, pushable crates, and three
-dynamic coloured lamps.
+A third-person movement demo. The player controls an eight-legged spider that
+walks, sprints, and jumps through a fixed arena with stairs, ramps, tunnels,
+tall west walls, a high platform, a closed ceiling, pushable crates, and three
+dynamic coloured lamps. Two-bone inverse kinematics plant the feet on the floor,
+and a spring-arm camera orbits behind the body.
 SDL3 provides the window and input, Vulkan 1.3 draws the scene, and Box3D runs
 physics. Direct point lights, hard ray-query shadows, one-bounce probe GI, and
 emissive boxes shade every frame. An unlit surface is black. There is no
@@ -35,12 +36,10 @@ binary.
 
 ## Controls
 
-- `WASD`: move relative to the view.
-- Mouse: look. Left click captures the cursor.
+- `WASD`: move relative to the camera. The spider turns toward the movement.
+- Mouse: orbit the camera. Left click captures the cursor.
 - `Left Shift`: sprint. The settings menu switches Hold and Toggle.
-- `Space`: jump. Hold it while moving toward a ledge to mantle.
-- `C`: crouch. While sprinting, start a crouch slide.
-- `Z`: prone. Crawl while prone. Dive in the air or from a sprint.
+- `Space`: jump.
 - `R`: return the player to spawn.
 - `Shift+R`: reset placed objects and the player.
 - `F1`: toggle physics debug draw.
@@ -50,14 +49,20 @@ binary.
 - `F5`: write a repro scenario to `runs/repro/`.
 - `Esc`: open or close the settings menu.
 
-Movement follows the walkable ground plane. A straight climb keeps stance speed
-along the slope, so horizontal speed drops by the slope cosine. Step-ups and
-step-downs use a short camera lag.
+Movement follows the walkable ground plane. A straight climb keeps the gait
+speed along the slope, so horizontal speed drops by the slope cosine. The camera
+holds a fixed distance until a wall, floor, or prop shortens the arm. Step-ups
+and step-downs use a short camera lag.
+
+Each leg has a hip, a femur, and a tibia. The solver bends the knee up and out.
+A planted foot stays in the world; a leg swings to a new ground point when its
+foot drifts past the step trigger. Even legs and odd legs step in turns, and
+the eight feet tuck under the body in the air.
 
 ### Settings menu
 
 The menu pauses the simulation and releases the cursor. It changes window mode,
-display, resolution, type weight, and sprint, crouch, and prone input modes.
+display, resolution, type weight, and the sprint input mode.
 `Up` and `Down` select a row. `Left`, `Right`, and `Enter` change it. `Resume`
 closes the menu. The Type weight track also accepts a drag.
 
@@ -171,7 +176,7 @@ capture paths include `capture.named.<name>.*`.
 
 - `reset`: restore the simulation.
 - `look`: apply a pixel look delta.
-- `face`: set player yaw and pitch.
+- `face`: set the camera yaw and pitch.
 - `input`: set persistent movement input.
 - `step`: advance fixed frames.
 - `settle`: render fixed frames without a capture, or wait for convergence.
@@ -241,7 +246,11 @@ placement and a smooth wall gradient. `scenarios/banding.json` checks output
 dither on that gradient. `scenarios/gi.json` pairs indirect light on and off;
 `scenarios/gi-dark.json` keeps a lamp-free view black; `scenarios/gi-move.json`
 checks a moved lamp's bounce; `scenarios/gi-sealed.json` checks that a sealed
-wall stops the bounce.
+wall stops the bounce. `scenarios/spider-ik.json` checks the planted feet, the
+gait, and the airborne tuck. `scenarios/spider-camera.json` checks the orbit
+distance, the wall pull-in, and the pitch clamp. `scenarios/spider-view.json`
+renders the spawn, walk, and lit views and checks that the emissive markings are
+visible.
 
 For a visible change, capture before and after with the same scenario and
 command. Put numeric assertions in the scenario. Point at the run directory as

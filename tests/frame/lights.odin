@@ -22,7 +22,7 @@ build_includes_the_initial_dynamic_lamps :: proc(t: ^testing.T) {
 			emissive += 1
 		}
 	}
-	testing.expect_value(t, emissive, game.INITIAL_LAMP_COUNT)
+	testing.expect_value(t, emissive, game.INITIAL_LAMP_COUNT + game.SPIDER_EMISSIVE_COUNT)
 }
 
 @(test)

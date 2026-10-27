@@ -138,16 +138,22 @@ settle_steps_without_a_backend :: proc(t: ^testing.T) {
 look_uses_the_real_sensitivity :: proc(t: ^testing.T) {
 	session, _ := harness.session_create(context.allocator)
 	defer harness.session_destroy(&session)
+	start_pitch := session.sim.player.camera_pitch
 	reply := execute(t, &session, `{"cmd": "look", "dx": 100, "dy": 10}`)
 	defer harness.reply_destroy(&reply, context.allocator)
 	expected_yaw := -f32(100.0) * game.YAW_SENSITIVITY
-	expected_pitch := -f32(10.0) * game.PITCH_SENSITIVITY
-	testing.expectf(t, abs(session.sim.player.yaw - expected_yaw) < 0.0001, "yaw %v", session.sim.player.yaw)
+	expected_pitch := start_pitch - f32(10.0) * game.PITCH_SENSITIVITY
 	testing.expectf(
 		t,
-		abs(session.sim.player.pitch - expected_pitch) < 0.0001,
+		abs(session.sim.player.camera_yaw - expected_yaw) < 0.0001,
+		"yaw %v",
+		session.sim.player.camera_yaw,
+	)
+	testing.expectf(
+		t,
+		abs(session.sim.player.camera_pitch - expected_pitch) < 0.0001,
 		"pitch %v",
-		session.sim.player.pitch,
+		session.sim.player.camera_pitch,
 	)
 }
 
@@ -157,8 +163,16 @@ face_sets_the_view_directly :: proc(t: ^testing.T) {
 	defer harness.session_destroy(&session)
 	reply := execute(t, &session, `{"cmd": "face", "yaw_deg": 71.6197, "pitch_deg": -28.6479}`)
 	defer harness.reply_destroy(&reply, context.allocator)
-	testing.expect(t, abs(session.sim.player.yaw - math.to_radians(f32(71.6197))) < 0.0001, "yaw not set")
-	testing.expect(t, abs(session.sim.player.pitch - math.to_radians(f32(-28.6479))) < 0.0001, "pitch not set")
+	testing.expect(
+		t,
+		abs(session.sim.player.camera_yaw - math.to_radians(f32(71.6197))) < 0.0001,
+		"yaw not set",
+	)
+	testing.expect(
+		t,
+		abs(session.sim.player.camera_pitch - math.to_radians(f32(-28.6479))) < 0.0001,
+		"pitch not set",
+	)
 }
 
 @(test)

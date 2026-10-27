@@ -62,34 +62,7 @@ sprint_jump_keeps_the_sprint_air_cap :: proc(t: ^testing.T) {
 	)
 }
 
-@(test)
-jump_from_crouch_stands_first :: proc(t: ^testing.T) {
-	sim := create(t)
-	defer game.simulation_destroy(&sim)
 
-	step(&sim, {}, 10)
-	step(&sim, game.Input_Snapshot{crouch_pressed = true}, 1)
-	testing.expect_value(t, sim.player.stance, game.Stance.Crouching)
-
-	step(&sim, game.Input_Snapshot{jump_pressed = true}, 1)
-	testing.expect_value(t, sim.player.stance, game.Stance.Standing)
-	testing.expectf(t, sim.player.velocity.y > 0.0, "crouch jump did not fire: vy=%v", sim.player.velocity.y)
-}
-
-@(test)
-jump_from_crouch_fails_under_a_low_ceiling :: proc(t: ^testing.T) {
-	sim := create(t)
-	defer game.simulation_destroy(&sim)
-
-	sim.player.position = game.ARENA_TUNNEL_122_POSITION
-	sim.player.velocity = {}
-	step(&sim, {}, 2)
-	testing.expect_value(t, sim.player.stance, game.Stance.Crouching)
-
-	step(&sim, game.Input_Snapshot{jump_pressed = true}, 1)
-	testing.expect_value(t, sim.player.stance, game.Stance.Crouching)
-	testing.expectf(t, sim.player.velocity.y < 1.0, "blocked jump gained height: vy=%v", sim.player.velocity.y)
-}
 
 @(test)
 ground_snap_descends_the_twenty_degree_ramp :: proc(t: ^testing.T) {
@@ -98,7 +71,7 @@ ground_snap_descends_the_twenty_degree_ramp :: proc(t: ^testing.T) {
 
 	sim.player.position = {game.ARENA_RAMP_20_X, 2.06, -6.5}
 	sim.player.velocity = {}
-	sim.player.yaw = math.PI
+	sim.player.camera_yaw = math.PI
 	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 60)
 
 	testing.expect(t, sim.player.grounded, "player left the ramp while descending")
@@ -112,7 +85,7 @@ ground_snap_descends_the_staircase :: proc(t: ^testing.T) {
 
 	sim.player.position = {game.ARENA_STAIR_X, game.ARENA_STAIR_TOP + game.GROUND_OFFSET, -1.0}
 	sim.player.velocity = {}
-	sim.player.yaw = math.PI
+	sim.player.camera_yaw = math.PI
 	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 60)
 
 	testing.expect(t, sim.player.grounded, "player left the staircase")
@@ -141,18 +114,4 @@ jump_works_in_eight_directions :: proc(t: ^testing.T) {
 		expect_near(t, game.horizontal_speed(sim.player.velocity), game.PLAYER_WALK_SPEED, 0.05, "jump speed")
 		game.simulation_destroy(&sim)
 	}
-}
-
-@(test)
-jump_from_prone_stands_first :: proc(t: ^testing.T) {
-	sim := create(t)
-	defer game.simulation_destroy(&sim)
-
-	step(&sim, {}, 10)
-	step(&sim, game.Input_Snapshot{prone_pressed = true}, 1)
-	testing.expect_value(t, sim.player.stance, game.Stance.Prone)
-
-	step(&sim, game.Input_Snapshot{jump_pressed = true}, 1)
-	testing.expect_value(t, sim.player.stance, game.Stance.Standing)
-	testing.expectf(t, sim.player.velocity.y > 0.0, "prone jump did not fire: vy=%v", sim.player.velocity.y)
 }

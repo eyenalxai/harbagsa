@@ -15,7 +15,7 @@ status_panel_width_stays_fixed_per_density :: proc(t: ^testing.T) {
 	defer game.simulation_destroy(&sim)
 
 	positions := [5][3]f32{{0, 0, 14}, {-19.9, 0.1, -19.9}, {19.9, 0, 0}, {-0.1, 0, 0.1}, {9.9, 9.9, 9.9}}
-	stances := [3]game.Stance{.Standing, .Crouching, .Prone}
+	planted_counts := [3]int{0, 4, 8}
 	gaits := [2]game.Gait{.Walk, .Sprint}
 	densities := [3]u32{720, 1080, 1440}
 
@@ -34,10 +34,10 @@ status_panel_width_stays_fixed_per_density :: proc(t: ^testing.T) {
 			&atlas,
 			theme,
 			positions[0],
-			stances[0],
+			planted_counts[0],
 			gaits[0],
 		)
-		for stance in stances {
+		for planted in planted_counts {
 			for gait in gaits {
 				for position in positions {
 					actual := measure_status_panel(
@@ -48,7 +48,7 @@ status_panel_width_stays_fixed_per_density :: proc(t: ^testing.T) {
 						&atlas,
 						theme,
 						position,
-						stance,
+						planted,
 						gait,
 					)
 					testing.expectf(
@@ -58,7 +58,7 @@ status_panel_width_stays_fixed_per_density :: proc(t: ^testing.T) {
 						expected.width,
 						actual.width,
 						density,
-						stance,
+						planted,
 						gait,
 						position,
 					)
@@ -95,7 +95,7 @@ menu_dividers_and_band_share_the_panel_inner_edge :: proc(t: ^testing.T) {
 	for quad in separators[:separator_count] {
 		testing.expectf(
 			t,
-			quad.x == inner_x && quad.width == inner_width,
+			abs(quad.x - inner_x) < 0.01 && abs(quad.width - inner_width) < 0.01,
 			"a divider runs %v..%v, the inner edge is %v..%v",
 			quad.x,
 			quad.x + quad.width,
@@ -107,7 +107,7 @@ menu_dividers_and_band_share_the_panel_inner_edge :: proc(t: ^testing.T) {
 	testing.expect(t, band.width > 0, "the selection band is missing")
 	testing.expectf(
 		t,
-		band.x == inner_x && band.width == inner_width,
+		abs(band.x - inner_x) < 0.01 && abs(band.width - inner_width) < 0.01,
 		"the band is not flush with the panel's inner edge",
 	)
 	testing.expectf(
@@ -118,7 +118,7 @@ menu_dividers_and_band_share_the_panel_inner_edge :: proc(t: ^testing.T) {
 }
 
 @(test)
-capture_hint_clears_the_crosshair :: proc(t: ^testing.T) {
+capture_hint_sits_on_the_bottom_margin :: proc(t: ^testing.T) {
 	theme := renderer.ui_theme_init(720)
 	atlas, built := build_atlas(t, theme)
 	testing.expect(t, built, "the atlas did not build")
@@ -138,16 +138,16 @@ capture_hint_clears_the_crosshair :: proc(t: ^testing.T) {
 	renderer.build_hud(&overlay, 1280, 720, frame)
 
 	hint := widest_quad(overlay, theme.surface_hud)
-	crosshair := bounds_of(overlay, theme.crosshair)
 	testing.expect(t, hint.width > 0, "the hint box is missing")
-	testing.expect(t, crosshair.width > 0, "the crosshair is missing")
-
-	overlaps :=
-		hint.x < crosshair.x + crosshair.width &&
-		crosshair.x < hint.x + hint.width &&
-		hint.y < crosshair.y + crosshair.height &&
-		crosshair.y < hint.y + hint.height
-	testing.expectf(t, !overlaps, "the hint %v overlaps the crosshair %v", hint, crosshair)
+	centre := hint.x + hint.width * 0.5
+	testing.expectf(t, abs(centre - 640) < 0.5, "the hint is not centred: %v", centre)
+	testing.expectf(t, hint.y > 360, "the hint covers the spider: y=%v", hint.y)
+	testing.expectf(
+		t,
+		hint.y + hint.height <= 720 - theme.spacing.xl + 0.5,
+		"the hint leaves the bottom margin: %v",
+		hint.y + hint.height,
+	)
 }
 
 @(test)
@@ -182,16 +182,17 @@ measure_status_panel :: proc(
 	atlas: ^renderer.Text_Atlas,
 	theme: renderer.UI_Theme,
 	position: [3]f32,
-	stance: game.Stance,
+	planted: int,
 	gait: game.Gait,
 ) -> renderer.Rows_Layout {
 	snapshot := game.simulation_snapshot(sim)
 	snapshot.position = position
 	snapshot.velocity = {}
-	snapshot.stance = stance
 	snapshot.gait = gait
-	snapshot.movement_state = .None
 	snapshot.grounded = true
+	for &leg, index in snapshot.legs {
+		leg.planted = index < planted
+	}
 
 	game.hud_state_update(hud, sim, debug, snapshot, true, 0)
 	testing.expect(t, len(hud.view.rows) == game.HUD_ROW_COUNT, "the status rows went missing")

@@ -108,12 +108,15 @@ spawn_pop_keeps_taa_history :: proc(t: ^testing.T) {
 		return
 	}
 	before := state.taa.reset_count
-	box_before := scene.boxes[len(scene.boxes) - 1].half_extents.y
-	model_before := state.taa.prev_models[state.taa.prev_model_count - 1]
+	// The spider boxes are appended after the placed objects, so address the
+	// created block by its own index.
+	block_index := len(game.arena_static_boxes()) + game.simulation_object_count(&sim) - 1
+	box_before := scene.boxes[block_index].half_extents.y
+	model_before := state.taa.prev_models[block_index]
 
 	game.simulation_step_world(&sim, game.SIMULATION_STEP)
 	scene = frame.build(&sim, &editor, {alpha = 1.0}, nil, &hud, &scratch)
-	box_after := scene.boxes[len(scene.boxes) - 1].half_extents.y
+	box_after := scene.boxes[block_index].half_extents.y
 	if frame.draw(state, scene) != .Ok {
 		return
 	}
@@ -121,7 +124,7 @@ spawn_pop_keeps_taa_history :: proc(t: ^testing.T) {
 	testing.expect(t, box_after > box_before, "the visual box did not grow")
 	testing.expect(
 		t,
-		state.taa.prev_models[state.taa.prev_model_count - 1] != model_before,
+		state.taa.prev_models[block_index] != model_before,
 		"the pop did not change the model",
 	)
 	testing.expect_value(t, state.taa.reset_count, before)

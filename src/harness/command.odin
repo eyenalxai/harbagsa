@@ -51,9 +51,11 @@ Input_Command :: struct {
 	forward:     f32,
 	right:       f32,
 	jump:        bool,
+	sprint:      bool,
 	has_forward: bool,
 	has_right:   bool,
 	has_jump:    bool,
+	has_sprint:  bool,
 }
 
 Step_Command :: struct {

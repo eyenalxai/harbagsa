@@ -59,6 +59,9 @@ run path. `--out DIR` chooses the whole run directory.
 | test direct lighting | `scenarios/lighting.json`, `scenarios/light-move.json` |
 | test point-light shadows | `scenarios/shadows.json`, `scenarios/shadow-move.json`, `scenarios/lamp-wall-plane.json` |
 | test indirect light | `scenarios/gi.json`, `scenarios/gi-dark.json`, `scenarios/gi-move.json`, `scenarios/gi-sealed.json` |
+| test the spider gait and IK | `scenarios/spider-ik.json` |
+| test the third-person camera | `scenarios/spider-camera.json` |
+| view the spider | `scenarios/spider-view.json` |
 | measure the shadow budget | `scenarios/perf-shadows.json` |
 | measure the GI budget | `scenarios/perf-gi.json` |
 | measure stability or banding | **Analysis** |
@@ -131,8 +134,8 @@ is seconds. Capture regions and crops are pixels unless `unit` is `normalized`.
 
 - `reset`: fresh simulation, settings, menu, and debug state.
 - `look`: `dx`, `dy` through game sensitivity.
-- `face`: direct player `yaw_deg` and `pitch_deg`.
-- `input`: persistent `forward`, `right`, and `jump`.
+- `face`: direct camera `yaw_deg` and `pitch_deg`. The body keeps its heading.
+- `input`: persistent `forward`, `right`, and `sprint`; `jump` is a one-step edge.
 - `step`: `frames` in the allowed fixed-step range.
 - `settle`: `frames`, or `until: converged`.
 - `state`: full current state.
@@ -165,6 +168,18 @@ session remains usable. `step` and `settle` are errors while the menu is open.
 
 A `shot` is scenario-only shorthand. It expands to an optional camera, a settle,
 and one capture. It is not a live-session command.
+
+## Player state
+
+`state.player` reports the body position, the body yaw, the camera yaw and pitch,
+the gait, the grounded flag, `legs_planted`, and one entry per leg. Each leg
+entry holds `foot` and `planted`. `state.camera` reports the computed
+third-person camera with the source `third_person`.
+
+A scene player block takes `position` and `yaw_deg`, plus optional
+`camera_yaw_deg`, `camera_pitch_deg`, `velocity`, and `grounded`. A scene camera
+source may be `third_person` or `player`; both mean the orbit camera. Older
+stance, eye-height, and step-smoothing keys are command errors.
 
 ## Place and remove
 

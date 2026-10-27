@@ -55,7 +55,7 @@ probe_step :: proc(
 		return {}
 	}
 
-	capsule := player_capsule(sim.player.stance)
+	capsule := player_capsule()
 	query := b3.DefaultQueryFilter()
 	forward_fraction := b3.World_CastMover(
 		sim.world_id,
@@ -126,10 +126,7 @@ probe_step :: proc(
 @(private)
 try_step :: proc(sim: ^Simulation, time_step: f32) -> f32 {
 	player := &sim.player
-	if player.movement_state != .None ||
-	   !player.grounded ||
-	   player.velocity.y > 0.0 ||
-	   player.on_steep_slope {
+	if !player.grounded || player.velocity.y > 0.0 || player.on_steep_slope {
 		return 0.0
 	}
 
@@ -163,9 +160,6 @@ try_step :: proc(sim: ^Simulation, time_step: f32) -> f32 {
 snap_to_ground :: proc(sim: ^Simulation, was_grounded: bool) {
 	player := &sim.player
 	if player.velocity.y > 0.0 && !player.grounded {
-		return
-	}
-	if player.movement_state == .Diving || player.movement_state == .Mantling {
 		return
 	}
 	if player.step_grace > 0.0 &&

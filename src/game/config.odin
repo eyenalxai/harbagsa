@@ -5,23 +5,9 @@ package game
 import "core:math"
 import b3 "libs:box3d"
 
-Stance :: enum {
-	Standing,
-	Crouching,
-	Prone,
-}
-
 Gait :: enum {
 	Walk,
 	Sprint,
-}
-
-Movement_State :: enum {
-	None,
-	Diving,
-	Sliding_Dive,
-	Sliding_Crouch,
-	Mantling,
 }
 
 Input_Mode :: enum {
@@ -30,28 +16,14 @@ Input_Mode :: enum {
 }
 
 DEFAULT_SPRINT_INPUT_MODE :: Input_Mode.Hold
-DEFAULT_CROUCH_INPUT_MODE :: Input_Mode.Toggle
-DEFAULT_PRONE_INPUT_MODE :: Input_Mode.Toggle
 
-PLAYER_RADIUS :: 0.35
-PLAYER_STANDING_HEIGHT :: 1.80
-PLAYER_CROUCH_HEIGHT :: 1.20
-PLAYER_PRONE_HEIGHT :: 0.70
-PLAYER_STANDING_EYE :: 1.65
-PLAYER_CROUCH_EYE :: 1.05
-PLAYER_PRONE_EYE :: 0.30
+// The collision capsule is the spider body. The legs are visual, so the capsule
+// stays low enough for the 0.90 m tunnel.
+PLAYER_RADIUS :: 0.42
+PLAYER_HEIGHT :: 0.84
 
 PLAYER_WALK_SPEED :: 5.0
 PLAYER_SPRINT_SPEED :: 8.0
-PLAYER_CROUCH_SPEED :: 2.4
-PLAYER_CRAWL_SPEED :: 1.2
-PLAYER_DIVE_SPEED :: 11.0
-PLAYER_DIVE_HOP_SPEED :: 2.5
-PLAYER_CROUCH_SLIDE_SPEED :: 10.0
-PLAYER_DIVE_SLIDE_FRACTION :: 0.55
-PLAYER_SLIDE_DECELERATION :: 18.0
-PLAYER_SLIDE_END_EPSILON :: 0.02
-PLAYER_CROUCH_SLIDE_JUMP_DELAY :: 0.15
 
 PLAYER_GROUND_ACCELERATION :: 60.0
 PLAYER_GROUND_DECELERATION :: 80.0
@@ -82,26 +54,54 @@ STEP_SMOOTH_EPSILON :: 0.001
 STEP_GRACE_TIME :: 0.35
 STEP_GRACE_SPEED :: 0.1
 
-MANTLE_MIN_HEIGHT :: 0.20
-MANTLE_MAX_HEIGHT :: 1.50
-MANTLE_REACH :: 0.50
-MANTLE_ACROSS_DISTANCE :: 0.45
-MANTLE_DOWN_EXTRA :: 0.20
-MANTLE_DURATION :: 0.25
-MANTLE_UP_FRACTION :: 0.60
-// The probe is inset from the capsule side and lifted off the floor, so a
-// tangent wall or the floor does not count as an obstruction.
-HEADROOM_PROBE_LIFT :: 0.002
-HEADROOM_SIDE_INSET :: 0.02
+// Body geometry. The body center sits this high above the feet, and the leg
+// rest points lie on the ground at the radius the legs reach comfortably.
+SPIDER_BODY_HEIGHT :: 0.58
+SPIDER_CEPHALOTHORAX_HALF :: b3.Vec3{0.32, 0.14, 0.26}
+SPIDER_CEPHALOTHORAX_OFFSET :: b3.Vec3{0.0, 0.04, -0.22}
+SPIDER_ABDOMEN_HALF :: b3.Vec3{0.40, 0.18, 0.34}
+SPIDER_ABDOMEN_OFFSET :: b3.Vec3{0.0, 0.06, 0.26}
 
-EYE_HEIGHT_SMOOTH_RATE :: 25.0
+// Legs. The rest and hip tables are in body space, with local -Z as forward.
+LEG_COUNT :: 8
+LEG_FEMUR_LENGTH :: f32(0.62)
+LEG_TIBIA_LENGTH :: f32(0.70)
+LEG_THICKNESS :: f32(0.062)
+LEG_KNEE_HALF :: f32(0.078)
+LEG_REACH_FRACTION :: 0.94
+LEG_STEP_TRIGGER :: 0.30
+LEG_STEP_DURATION :: 0.14
+LEG_STEP_LIFT :: 0.13
+LEG_STEP_LEAD :: 0.16
+LEG_LANDING_DURATION :: 0.10
+LEG_GROUND_PROBE :: 1.80
+LEG_PLANT_LIFT :: 0.015
+LEG_TUCK_SCALE :: 0.55
+LEG_TUCK_LIFT :: 0.06
+
+// The body turns toward the movement direction. Look never turns the body.
+SPIDER_TURN_RATE :: 14.0
+SPIDER_TURN_MIN_SPEED :: 0.20
+
+// Third-person camera. The pivot sits above the body center. A capsule cast
+// keeps the arm short of the first surface.
+CAMERA_DISTANCE :: f32(4.40)
+CAMERA_PIVOT_RISE :: 0.45
+CAMERA_MIN_DISTANCE :: f32(0.75)
+CAMERA_WALL_PAD :: f32(0.12)
+CAMERA_PROBE_RADIUS :: 0.16
+CAMERA_PROBE_HALF :: 0.0
+CAMERA_PITCH_MIN :: -70.0 * b3.DEG_TO_RAD
+CAMERA_PITCH_MAX :: 45.0 * b3.DEG_TO_RAD
+CAMERA_DEFAULT_PITCH :: -15.0 * b3.DEG_TO_RAD
+CAMERA_CEILING_PROBE :: 1.60
+CAMERA_CEILING_PAD :: 0.20
 
 FALL_RESET_Y :: -10.0
 YAW_SENSITIVITY :: 0.0022
 PITCH_SENSITIVITY :: 0.0018
-PITCH_LIMIT :: 89.0 * b3.DEG_TO_RAD
 
-SPAWN_POSITION :: b3.Vec3{0.0, 0.05, 14.0}
+SPAWN_POSITION :: b3.Vec3{0.0, 0.01, 14.0}
 
 SIMULATION_STEP :: 1.0 / 60.0
 SIMULATION_SUB_STEPS :: 4
@@ -112,78 +112,12 @@ MOVE_TOLERANCE :: 0.01
 
 MENU_STATUS_SECONDS :: 2.0
 
-Stance_Info :: struct {
-	height:       f32,
-	eye:          f32,
-	walk_speed:   f32,
-	sprint_speed: f32,
-	name:         string,
-}
-
-STANCE_INFO := [Stance]Stance_Info {
-	.Standing = {
-		PLAYER_STANDING_HEIGHT,
-		PLAYER_STANDING_EYE,
-		PLAYER_WALK_SPEED,
-		PLAYER_SPRINT_SPEED,
-		"Standing",
-	},
-	.Crouching = {
-		PLAYER_CROUCH_HEIGHT,
-		PLAYER_CROUCH_EYE,
-		PLAYER_CROUCH_SPEED,
-		PLAYER_CROUCH_SPEED,
-		"Crouching",
-	},
-	.Prone = {
-		PLAYER_PRONE_HEIGHT,
-		PLAYER_PRONE_EYE,
-		PLAYER_CRAWL_SPEED,
-		PLAYER_CRAWL_SPEED,
-		"Prone",
-	},
-}
-
-MOVEMENT_STATE_NAMES := [Movement_State]string {
-	.None = "None",
-	.Diving = "Diving",
-	.Sliding_Dive = "Sliding",
-	.Sliding_Crouch = "Sliding",
-	.Mantling = "Mantling",
-}
-
-stance_height :: proc(stance: Stance) -> f32 {
-	return STANCE_INFO[stance].height
-}
-
-stance_eye_height :: proc(stance: Stance) -> f32 {
-	return STANCE_INFO[stance].eye
-}
-
-stance_speed :: proc(stance: Stance, gait: Gait) -> f32 {
-	info := STANCE_INFO[stance]
-	return gait == .Sprint ? info.sprint_speed : info.walk_speed
-}
-
-stance_name :: proc(stance: Stance) -> string {
-	return STANCE_INFO[stance].name
-}
-
-stance_parse :: proc(name: string) -> (Stance, bool) {
-	for stance in Stance {
-		if STANCE_INFO[stance].name == name {
-			return stance, true
-		}
-	}
-	return .Standing, false
-}
-
 gait_name :: proc(gait: Gait) -> string {
 	return gait == .Sprint ? "Sprint" : "Walk"
 }
 
-movement_state_name :: proc(state: Movement_State) -> string {
-	return MOVEMENT_STATE_NAMES[state]
+gait_speed :: proc(gait: Gait) -> f32 {
+	return gait == .Sprint ? PLAYER_SPRINT_SPEED : PLAYER_WALK_SPEED
 }
 
 horizontal_speed :: proc(velocity: b3.Vec3) -> f32 {

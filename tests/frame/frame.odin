@@ -24,7 +24,7 @@ build_combines_arena_and_objects :: proc(t: ^testing.T) {
 	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	scene := frame.build(&sim, &debug, {}, nil, &hud, &scratch)
-	expected := len(game.arena_static_boxes()) + game.simulation_object_count(&sim)
+	expected := len(game.arena_static_boxes()) + game.simulation_object_count(&sim) + game.SPIDER_BOX_COUNT
 	testing.expect_value(t, len(scene.boxes), expected)
 	testing.expect_value(t, len(scene.debug_lines), 0)
 	testing.expect(t, !scene.hud.enabled, "headless defaults must leave the HUD off")
@@ -42,7 +42,7 @@ placed_objects_render_after_the_arena :: proc(t: ^testing.T) {
 	scene := frame.build(&sim, &debug, {}, nil, &hud, &scratch)
 	arena_count := len(game.arena_static_boxes())
 	testing.expect(t, len(scene.boxes) > arena_count, "placed object was not added")
-	box := scene.boxes[len(scene.boxes) - 1]
+	box := scene.boxes[arena_count + game.simulation_object_count(&sim) - 1]
 	visual := game.simulation_object_visual_box(&sim, id)
 	testing.expect_value(t, box.half_extents, visual.half_extents)
 	testing.expect_value(t, box.color, game.prefab(.Platform).color)
@@ -80,7 +80,7 @@ scene_grows_past_the_old_box_cap :: proc(t: ^testing.T) {
 	testing.expect_value(
 		t,
 		len(scene.boxes),
-		len(game.arena_static_boxes()) + game.INITIAL_OBJECT_COUNT + 300,
+		len(game.arena_static_boxes()) + game.INITIAL_OBJECT_COUNT + 300 + game.SPIDER_BOX_COUNT,
 	)
 }
 
@@ -100,7 +100,7 @@ hud_can_be_enabled :: proc(t: ^testing.T) {
 	testing.expect(t, scene.hud.enabled, "HUD flag was dropped")
 	testing.expect_value(t, len(scene.hud.view.rows), game.HUD_ROW_COUNT)
 	testing.expect_value(t, scene.hud.view.rows[0].kind, ui.Row_Kind.Header)
-	testing.expect_value(t, scene.hud.view.rows[0].label, "Standing · Walk")
+	testing.expect_value(t, scene.hud.view.rows[0].label, "Spider · Walk")
 }
 
 @(test)
@@ -199,16 +199,16 @@ camera_interpolates_between_snapshots :: proc(t: ^testing.T) {
 	defer frame.scratch_destroy(&scratch)
 	defer game.simulation_destroy(&sim)
 	game.simulation_step(&sim, game.Input_Snapshot{move_forward = 1.0}, game.SIMULATION_STEP)
-	snapshot := game.simulation_snapshot(&sim)
 
 	before := frame.build(&sim, &debug, {alpha = 0.0}, nil, &hud, &scratch)
 	after := frame.build(&sim, &debug, {alpha = 1.0}, nil, &hud, &scratch)
 	mid := frame.build(&sim, &debug, {alpha = 0.5}, nil, &hud, &scratch)
 
-	expect_eye(t, before.camera.position, snapshot.previous_eye_position, "alpha 0 is not the previous eye")
-	expect_eye(t, after.camera.position, snapshot.eye_position, "alpha 1 is not the current eye")
-	expected := snapshot.previous_eye_position +
-	            (snapshot.eye_position - snapshot.previous_eye_position) * 0.5
+	previous := game.spider_camera(&sim, 0.0).position
+	current := game.spider_camera(&sim, 1.0).position
+	expect_eye(t, before.camera.position, previous, "alpha 0 is not the previous camera")
+	expect_eye(t, after.camera.position, current, "alpha 1 is not the current camera")
+	expected := previous + (current - previous) * 0.5
 	expect_eye(t, mid.camera.position, expected, "alpha 0.5 is not the midpoint")
 }
 
@@ -283,7 +283,9 @@ debug_hud_reports_the_armed_placement :: proc(t: ^testing.T) {
 expect_eye :: proc(t: ^testing.T, actual: [3]f32, expected: b3.Vec3, message: string) {
 	testing.expectf(
 		t,
-		actual[0] == expected.x && actual[1] == expected.y && actual[2] == expected.z,
+		abs(actual[0] - expected.x) < 0.0001 &&
+		abs(actual[1] - expected.y) < 0.0001 &&
+		abs(actual[2] - expected.z) < 0.0001,
 		"%s: got %v, want %v",
 		message,
 		actual,

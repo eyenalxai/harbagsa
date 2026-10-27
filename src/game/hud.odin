@@ -59,7 +59,7 @@ hud_player_state_update :: proc(hud: ^HUD_State, snapshot: Render_Snapshot) {
 			&hud.storage,
 			0,
 			"%s%s%s",
-			stance_name(snapshot.stance),
+			"Spider",
 			HUD_HEADER_SEPARATOR,
 			gait_name(snapshot.gait),
 		),
@@ -70,7 +70,12 @@ hud_player_state_update :: proc(hud: ^HUD_State, snapshot: Render_Snapshot) {
 		value   = line_format(&hud.storage, 1, "% 4.1f m/s", horizontal_speed(snapshot.velocity)),
 		numeric = true,
 	}
-	hud.rows[2] = {kind = .Metric, label = "State", value = movement_state_name(snapshot.movement_state)}
+	hud.rows[2] = {
+		kind    = .Metric,
+		label   = "Feet",
+		value   = line_format(&hud.storage, 4, "%d planted", snapshot_planted_count(snapshot)),
+		numeric = true,
+	}
 	hud.rows[3] = {kind = .Divider}
 	hud.rows[4] = {kind = .Detail, label = "Grounded", value = grounded_name(snapshot.grounded)}
 	hud.rows[5] = {

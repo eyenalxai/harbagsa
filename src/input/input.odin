@@ -59,8 +59,6 @@ Frame_Input :: struct {
 Resolver :: struct {
 	jump:   bool,
 	sprint: bool,
-	crouch: bool,
-	prone:  bool,
 }
 
 clear_latches :: proc(r: ^Resolver) {

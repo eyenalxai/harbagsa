@@ -31,7 +31,7 @@ scene_round_trips_a_player_view :: proc(t: ^testing.T) {
 
 	after := harness.session_state(&session)
 	defer harness.state_destroy(&after, context.allocator)
-	testing.expect_value(t, after.camera.source, "player")
+	testing.expect_value(t, after.camera.source, "third_person")
 	testing.expect_value(t, after.settings.type_weight, f32(640))
 	testing.expect_value(t, after.digest, digest)
 }
