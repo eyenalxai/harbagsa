@@ -1,5 +1,8 @@
 # Point light performance
 
+> Historical note: this run predates point-light shadows. The current paired
+> shadow cost is in [point-light shadows](point-light-shadows.md).
+
 Measured on 2026-10-27 with AMD Radeon RX 9060 XT (RADV GFX1200). `scenarios/perf-lamps.json` injects eight synthetic lights through the renderer debug override. The baseline is the starting scene from `scenarios/perf.json`, with three dynamic lamps, at the same 1280x720 extent.
 
 ## Results

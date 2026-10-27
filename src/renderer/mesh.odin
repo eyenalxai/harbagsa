@@ -52,7 +52,7 @@ create_mesh :: proc(r: ^Renderer) -> bool {
 		r,
 		raw_data(CUBE_VERTICES[:]),
 		vk.DeviceSize(size_of(CUBE_VERTICES)),
-		{.VERTEX_BUFFER},
+		{.VERTEX_BUFFER, .SHADER_DEVICE_ADDRESS, .ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_KHR},
 		&r.scene.vertex_buffer,
 		&r.scene.vertex_memory,
 	) {
@@ -62,7 +62,7 @@ create_mesh :: proc(r: ^Renderer) -> bool {
 		r,
 		raw_data(CUBE_INDICES[:]),
 		vk.DeviceSize(size_of(CUBE_INDICES)),
-		{.INDEX_BUFFER},
+		{.INDEX_BUFFER, .SHADER_DEVICE_ADDRESS, .ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_KHR},
 		&r.scene.index_buffer,
 		&r.scene.index_memory,
 	) {

@@ -23,7 +23,8 @@ Two constraints produce that look, and both are deliberate:
 The one choice a competitor cannot paste in: a hard-edged box interior lit by
 movable coloured lamps, with soft range falloff on flat faces and overlay text
 that is exact on the pixel grid. A small ambient floor keeps unlit colour
-readable. No cached lighting or shadow system competes with the lamps.
+readable. Hard point-light shadows ground the props and walls. No cached lighting
+competes with the lamps.
 
 Defend it. A texture, a gloss, a bloom, a baked light, or a rounded corner
 removes it.

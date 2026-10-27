@@ -1,6 +1,6 @@
 # Direct lighting evidence
 
-Captured on 2026-10-26 with AMD Radeon RX 9060 XT (RADV GFX1200). All runs are offscreen through `bin/harbagsa-agent`. The rendering decision is [ADR 0037](../adr/0037-direct-dynamic-point-lights.md).
+Captured on 2026-10-26 with AMD Radeon RX 9060 XT (RADV GFX1200). All runs are offscreen through `bin/harbagsa-agent`. The rendering decision is [ADR 0037](../adr/0037-direct-dynamic-point-lights.md). Point-light shadows are separate evidence in [point-light shadows](point-light-shadows.md).
 
 ## Ambient and lamp response
 
