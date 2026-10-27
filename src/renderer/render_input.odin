@@ -27,4 +27,6 @@ Render_Input :: struct {
 	atlas_weight: f32,
 	clip_height:  f32,
 	light_shadows: bool,
+	probe_volumes: []Probe_Volume,
+	gi:            bool,
 }

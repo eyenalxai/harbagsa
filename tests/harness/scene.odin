@@ -203,6 +203,7 @@ full_renderer_debug :: proc() -> renderer.Renderer_Debug {
 	debug.synthetic_lights = 9
 	debug.clip_height = 3.0
 	debug.light_shadows = false
+	debug.gi = false
 	return debug
 }
 

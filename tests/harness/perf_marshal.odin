@@ -27,6 +27,7 @@ perf_report_marshals_with_and_without_gpu :: proc(t: ^testing.T) {
 
 	report.gpu = harness.Perf_Gpu_Report {
 		cluster = {p50 = 0.0, p95 = 0.0, mean = 0.0},
+		probe   = {p50 = 0.8, p95 = 0.9, mean = 0.85},
 		depth   = {p50 = 0.4, p95 = 0.5, mean = 0.45},
 		scene   = {p50 = 2.6, p95 = 2.7, mean = 2.65},
 		taa     = {p50 = 0.2, p95 = 0.2, mean = 0.2},
@@ -38,6 +39,7 @@ perf_report_marshals_with_and_without_gpu :: proc(t: ^testing.T) {
 	testing.expectf(t, gpu_error == nil, "GPU marshal failed: %v", gpu_error)
 	testing.expect(t, strings.contains(string(gpu_data), `"depth"`), "depth pass is missing")
 	testing.expect(t, strings.contains(string(gpu_data), `"cluster"`), "cluster pass is missing")
+	testing.expect(t, strings.contains(string(gpu_data), `"probe"`), "probe pass is missing")
 
 	warm := report
 	warm.name = "warm"

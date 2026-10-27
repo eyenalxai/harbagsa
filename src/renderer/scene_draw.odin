@@ -39,6 +39,16 @@ record_scene :: proc(
 		return false
 	}
 	input.lights = lights[:r.light_count]
+	if !ensure_probe_resources(r, input.probe_volumes) {
+		return false
+	}
+	write_probe_positions(r, input.boxes)
+	light_hash := probe_light_hash(input.lights)
+	if !r.probe.has_hash || light_hash != r.probe.light_hash {
+		r.probe.light_hash = light_hash
+		r.probe.has_hash = true
+		r.probe.reset = true
+	}
 	// The recorder owns the renderer-internal inputs, so one value goes to the
 	// uniform, the digest, and the pass list.
 	extent := target_extent_vk(r)
@@ -53,6 +63,7 @@ record_scene :: proc(
 	input.clip_height = debug.clip_height
 	if r.debug.active {
 		input.light_shadows = debug.light_shadows
+		input.gi = debug.gi
 	}
 	r.render_digest = render_digest(input)
 	r.has_render_digest = true

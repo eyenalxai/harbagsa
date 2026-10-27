@@ -50,10 +50,10 @@ write_session_traces :: proc(session: ^Session, run_dir: string) -> string {
 }
 
 write_perf_trace :: proc(path: string, samples: []perf.Sample) -> string {
-	out := make([dynamic]u8, 0, len(samples) * 220, context.allocator)
+	out := make([dynamic]u8, 0, len(samples) * 250, context.allocator)
 	defer delete(out)
 
-	line: [512]u8
+	line: [768]u8
 	for sample in samples {
 		builder := strings.builder_from_bytes(line[:])
 		fmt.sbprintf(
@@ -70,9 +70,10 @@ write_perf_trace :: proc(path: string, samples: []perf.Sample) -> string {
 		if sample.gpu.available {
 			fmt.sbprintf(
 				&builder,
-				`,"gpu":{{"tlas":%.3f,"cluster":%.3f,"depth":%.3f,"scene":%.3f,"taa":%.3f,"overlay":%.3f,"total":%.3f}}`,
+				`,"gpu":{{"tlas":%.3f,"cluster":%.3f,"probe":%.3f,"depth":%.3f,"scene":%.3f,"taa":%.3f,"overlay":%.3f,"total":%.3f}}`,
 				perf.milliseconds(sample.gpu.passes[.Tlas]),
 				perf.milliseconds(sample.gpu.passes[.Cluster]),
+				perf.milliseconds(sample.gpu.passes[.Probe]),
 				perf.milliseconds(sample.gpu.passes[.Depth]),
 				perf.milliseconds(sample.gpu.passes[.Scene]),
 				perf.milliseconds(sample.gpu.passes[.Taa]),

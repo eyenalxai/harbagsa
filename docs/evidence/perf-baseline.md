@@ -8,7 +8,7 @@ The current baseline is the direct-light renderer measured on 2026-10-26 with AM
 
 Each scenario runs one priming phase, 60 warmup frames, and 120 measured frames. Every measured frame steps the simulation once and draws once. Offscreen intervals measure throughput. A `--present` run measures display pacing instead.
 
-The report separates five GPU passes: cluster, depth, scene, TAA, and overlay. It also reports CPU phases and frame intervals. GPU values belong to the last completed frame. A device without timestamp support reports CPU data only.
+At that time the report separated five GPU passes: cluster, depth, scene, TAA, and overlay. The current pass list is TLAS, cluster, probe, depth, scene, TAA, and overlay. It also reports CPU phases and frame intervals. GPU values belong to the last completed frame. A device without timestamp support reports CPU data only.
 
 At 1280x720 on the baseline machine, the starting scene's GPU mean was 0.2672 ms. The eight-lamp GPU mean was 0.3911 ms. The detailed table and reproduction commands are in [point light performance](perf-lamps.md).
 
