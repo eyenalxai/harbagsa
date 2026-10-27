@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "fast",
-  "description": "The short loop: advisory checks, smoke, ambient coverage, and a lamp wall plane.",
+  "description": "The short loop: advisory checks, smoke, black unlit coverage, and a lamp wall plane.",
   "entries": [
     {
       "scenario": "advisory",

@@ -5,9 +5,9 @@ jumps, dives, slides, and mantles in a fixed arena with stairs, ramps, tunnels,
 mantle walls, a dive platform, a closed ceiling, pushable crates, and three
 dynamic coloured lamps.
 SDL3 provides the window and input, Vulkan 1.3 draws the scene, and Box3D runs
-physics. A constant ambient floor, direct point lights, hard ray-query shadows,
-and emissive boxes shade every frame. There is no directional light, background
-pass, shadow map, or cached global illumination.
+physics. Direct point lights, hard ray-query shadows, and emissive boxes shade
+every frame. An unlit surface is black. There is no ambient floor, directional
+light, background pass, shadow map, or cached global illumination.
 
 ## Requirements
 
@@ -230,7 +230,7 @@ placed objects. `tools/ab.sh` and `harbagsa-agent ab` compare two builds.
 `scenarios/closed-arena.json` checks the shell count, the ceiling, and a ceiling
 view with no visible background. `scenarios/initial-lamps.json` checks the three
 starting lamps, their dynamic bodies, and a moved light. `scenarios/lighting.json`
-checks non-black ambient coverage and the direct lamp response.
+checks a black lamp-free view and the direct lamp response.
 `scenarios/light-move.json` checks that a moved lamp changes the captured light
 field and render digest. `scenarios/shadows.json` checks a blocked surface and
 the paired shadow toggle. `scenarios/shadow-move.json` checks that a moved lamp
