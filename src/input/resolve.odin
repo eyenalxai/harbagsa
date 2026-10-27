@@ -36,20 +36,12 @@ resolve :: proc(
 		return out
 	}
 
-	// The tool that owns this frame's pointer can change during the frame (Tab,
-	// Esc, L). The old flags changed immediately for Tab and only after the
+	// The tool that owns this frame's pointer can change during the frame (Tab
+	// and Esc). The old flags changed immediately for Tab and only after the
 	// apply for Esc, so keep both facts: one for the pointer, one for the cursor.
 	state := Key_State {
 		pointer_tool = focus.game.tool,
 		cursor_tool  = focus.game.tool,
-	}
-	if focus.game.debug_active {
-		for index in 0 ..< events.key_count {
-			if events.keys[index].key == .L {
-				state.sun_action = true
-				break
-			}
-		}
 	}
 	for index in 0 ..< events.key_count {
 		apply_key(r, &out, &state, events.keys[index], focus)
@@ -89,7 +81,6 @@ resolve :: proc(
 Key_State :: struct {
 	pointer_tool: game.Active_Tool,
 	cursor_tool:  game.Active_Tool,
-	sun_action:   bool,
 }
 
 @(private)
@@ -100,11 +91,9 @@ apply_key :: proc(
 	edge: platform.Key_Edge,
 	focus: Focus,
 ) {
-	// The old handlers ran the palette block before the light keys, then the sun
-	// block, then the world keys. Tab, Esc, L, M, and G ran before that gate.
-	light_editing := state.pointer_tool != .Sun && !state.sun_action
-	editing := state.pointer_tool != .Palette && state.pointer_tool != .Sun
-	editing = editing && !state.sun_action
+	// The old handlers ran the palette block before the light keys, then the
+	// world keys. Tab, Esc, M, and G ran before that gate.
+	editing := state.pointer_tool != .Palette
 	#partial switch edge.key {
 	case .Escape:
 		if focus.game.debug_active && focus.game.tool != .None {
@@ -123,11 +112,6 @@ apply_key :: proc(
 				state.pointer_tool = .Palette
 			}
 			state.cursor_tool = state.pointer_tool
-		}
-	case .L:
-		if focus.game.debug_active {
-			add_action(out, game.Sun_Toggle{})
-			state.cursor_tool = state.cursor_tool == .Sun ? .None : .Sun
 		}
 	case .Up, .Down, .Left, .Right, .Enter:
 		if state.pointer_tool == .Palette {
@@ -156,26 +140,24 @@ apply_key :: proc(
 		}
 	case .C:
 		if focus.game.debug_active {
-			if light_editing {
-				add_action(out, game.Light_Adjust{change = .Color})
-			}
+			add_action(out, game.Light_Adjust{change = .Color})
 		} else if focus.captured {
 			r.crouch = true
 		}
 	case .Left_Bracket:
-		if focus.game.debug_active && light_editing {
+		if focus.game.debug_active {
 			add_action(out, game.Light_Adjust{change = .Intensity_Down})
 		}
 	case .Right_Bracket:
-		if focus.game.debug_active && light_editing {
+		if focus.game.debug_active {
 			add_action(out, game.Light_Adjust{change = .Intensity_Up})
 		}
 	case .Comma:
-		if focus.game.debug_active && light_editing {
+		if focus.game.debug_active {
 			add_action(out, game.Light_Adjust{change = .Range_Down})
 		}
 	case .Period:
-		if focus.game.debug_active && light_editing {
+		if focus.game.debug_active {
 			add_action(out, game.Light_Adjust{change = .Range_Up})
 		}
 	case .Delete, .X:
@@ -300,20 +282,8 @@ apply_debug_pointer :: proc(
 		}
 		return
 	}
-	if state.sun_action {
-		return
-	}
 	switch state.pointer_tool {
-	case .Sun:
-		if events.primary_pressed {
-			add_action(out, game.Primary_Press{})
-		}
-		if events.secondary_pressed {
-			add_action(out, game.Secondary_Press{})
-		}
-	case .Placement:
-		apply_world_pointer(out, events, focus)
-	case .None:
+	case .Placement, .None:
 		apply_world_pointer(out, events, focus)
 	case .Palette:
 	}

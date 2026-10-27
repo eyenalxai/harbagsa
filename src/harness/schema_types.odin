@@ -71,7 +71,6 @@ SCHEMA_UNITS := [?]Schema_Unit {
 	{"type_weight", "font weight"},
 	{"scale", "factor"},
 	{"histogram", "bins"},
-	{"shadow_phase", "phase"},
 	{"synthetic_lights", "count"},
 }
 

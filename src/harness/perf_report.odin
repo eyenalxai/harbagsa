@@ -27,12 +27,9 @@ Perf_Cpu_Report :: struct {
 }
 
 Perf_Gpu_Report :: struct {
-	tlas:    Perf_Duration_Report `json:"tlas"`,
 	cluster: Perf_Duration_Report `json:"cluster"`,
-	probe:   Perf_Duration_Report `json:"probe"`,
 	depth:   Perf_Duration_Report `json:"depth"`,
 	scene:   Perf_Duration_Report `json:"scene"`,
-	sky:     Perf_Duration_Report `json:"sky"`,
 	taa:     Perf_Duration_Report `json:"taa"`,
 	overlay: Perf_Duration_Report `json:"overlay"`,
 	total:   Perf_Duration_Report `json:"total"`,
@@ -82,12 +79,9 @@ perf_report_fill :: proc(
 	}
 	if summary.stats.gpu.available {
 		out.gpu = Perf_Gpu_Report {
-			tlas    = perf_duration(summary.stats.gpu.passes[.Tlas]),
 			cluster = perf_duration(summary.stats.gpu.passes[.Cluster]),
-			probe   = perf_duration(summary.stats.gpu.passes[.Probe]),
 			depth   = perf_duration(summary.stats.gpu.passes[.Depth]),
 			scene   = perf_duration(summary.stats.gpu.passes[.Scene]),
-			sky     = perf_duration(summary.stats.gpu.passes[.Sky]),
 			taa     = perf_duration(summary.stats.gpu.passes[.Taa]),
 			overlay = perf_duration(summary.stats.gpu.passes[.Overlay]),
 			total   = perf_duration(summary.stats.gpu.total),

@@ -30,7 +30,6 @@ TAA :: struct {
 	// The values the last recorded frame used, so the renderer report names the
 	// frame the state describes rather than the next one.
 	applied_jitter_index: int,
-	shadow_phase:         u32,
 	convergence_frames:   int,
 	reset_count:          int,
 	last_reset:           History_Reset_Reason,
@@ -44,12 +43,11 @@ TAA :: struct {
 	prev_camera:     Camera,
 	has_prev_camera: bool,
 
-	prev_light_direction:      [3]f32,
-	prev_sun_angular_diameter: f32,
-	has_prev_sun:              bool,
-
-	history: [TAA_HISTORY_IMAGES]Image,
-	counts:  [TAA_HISTORY_IMAGES]Image,
+	depth:       [MAX_FRAMES_IN_FLIGHT]Image,
+	scene_color: [MAX_FRAMES_IN_FLIGHT]Image,
+	velocity:    [MAX_FRAMES_IN_FLIGHT]Image,
+	history:     [TAA_HISTORY_IMAGES]Image,
+	counts:      [TAA_HISTORY_IMAGES]Image,
 
 	history_read:    int,
 	applied_history_read: int,
@@ -159,7 +157,6 @@ reset_history :: proc(r: ^Renderer, reason: History_Reset_Reason) {
 	r.taa.has_prev_view_projection = false
 	r.taa.prev_model_count = 0
 	r.taa.has_prev_models = false
-	r.taa.has_prev_sun = false
 	r.taa.applied_history_read = 0
 	r.taa.convergence_frames = 0
 	r.taa.reset_count += 1

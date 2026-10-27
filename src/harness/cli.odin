@@ -66,8 +66,6 @@ cli_main :: proc() -> int {
 		return cli_schema(args[1:])
 	case "boxes":
 		return cli_boxes(args[1:])
-	case "probes":
-		return cli_probes(args[1:])
 	case "checks":
 		return cli_checks(args[1:])
 	case "help", "--help", "-h":
@@ -222,7 +220,7 @@ parse_common_option :: proc(
 		}
 		key := override[:separator]
 		if !valid_capture_name(key) {
-			return index, true, "--renderer-debug needs a field name like sky"
+			return index, true, "--renderer-debug needs a field name like taa"
 		}
 		options.debug_overrides[options.debug_override_count] = {
 			key   = key,
