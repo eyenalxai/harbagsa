@@ -2,7 +2,8 @@
 
 A first-person movement demo. The player walks, sprints, crouches, crawls,
 jumps, dives, slides, and mantles in a fixed arena with stairs, ramps, tunnels,
-mantle walls, a dive platform, a closed ceiling, and pushable crates.
+mantle walls, a dive platform, a closed ceiling, pushable crates, and three
+dynamic coloured lamps.
 SDL3 provides the window and input, Vulkan 1.3 draws the scene, and Box3D runs
 physics. A constant ambient floor, direct point lights, and emissive boxes shade
 every frame. There is no directional light, background pass, shadow system, or
@@ -73,7 +74,8 @@ the current run.
 - Wheel: raise or lower the ghost or selected object.
 - `Q` / `E`: rotate in 15 degree steps. Hold `Shift` for 45 degree steps.
 - `G`: toggle 0.25 m grid snap.
-- `M`: flip the target body mode between static and dynamic.
+- `M`: flip a non-lamp target between static and dynamic. A lamp always stays
+  dynamic.
 - `Ctrl+D`: duplicate the selected object.
 - `Delete` or `X`: remove it.
 - `Ctrl+Z` / `Ctrl+Shift+Z`: undo / redo.
@@ -86,8 +88,10 @@ the current run.
 - `F2`: leave debug mode.
 
 The palette shows eleven box prefabs. Lamp, Light panel, and Beacon carry point
-lights. The preview and inspector show colour, intensity, and range. Every
-active lamp enters the light budget.
+lights and always use a dynamic body. The preview and inspector show colour,
+intensity, and range. Every active lamp enters the light budget. The starting
+arena holds one of each lamp prefab, so its first view shows warm, cool, and red
+pools on the closed shell.
 
 ### Perf overlay
 
@@ -221,9 +225,11 @@ objects. `tools/ab.sh` and `harbagsa-agent ab` compare two builds.
 ### Lighting and visual evidence
 
 `scenarios/closed-arena.json` checks the shell count, the ceiling, and a ceiling
-view with no visible background. `scenarios/lighting.json` checks non-black
-ambient coverage and the direct lamp response. `scenarios/light-move.json` checks that a moved lamp changes the
-captured light field and render digest. `scenarios/lamp-wall-plane.json` checks
+view with no visible background. `scenarios/initial-lamps.json` checks the three
+starting lamps, their dynamic bodies, and a moved light. `scenarios/lighting.json`
+checks non-black ambient coverage and the direct lamp response.
+`scenarios/light-move.json` checks that a moved lamp changes the captured light
+field and render digest. `scenarios/lamp-wall-plane.json` checks
 placement and a smooth wall gradient. `scenarios/banding.json` checks output
 dither on that gradient.
 
