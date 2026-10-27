@@ -141,6 +141,7 @@ perf_pass_line_joins_the_hud :: proc(t: ^testing.T) {
 		cpu      = {mean = 0.42},
 	}
 	stats.gpu.available = true
+	stats.gpu.passes[.Tlas] = perf.Distribution{mean = 0.30}
 	stats.gpu.passes[.Cluster] = perf.Distribution{mean = 0.08}
 	stats.gpu.passes[.Depth] = perf.Distribution{mean = 0.42}
 	stats.gpu.passes[.Scene] = perf.Distribution{mean = 2.70}

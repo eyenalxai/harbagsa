@@ -14,7 +14,8 @@ import "src:renderer"
 renderer_debug_parses_every_override :: proc(t: ^testing.T) {
 	command, error := harness.command_parse_string(
 		`{"cmd": "renderer_debug", "taa": false, "jitter": false, "history_weight": 0.25,
-		  "clamp": false, "depth_trust": true, "synthetic_lights": 9, "clip_height": 3.0}`,
+		  "clamp": false, "depth_trust": true, "synthetic_lights": 9, "clip_height": 3.0,
+		  "light_shadows": false}`,
 		context.allocator,
 	)
 	defer harness.command_destroy(&command, context.allocator)
@@ -31,6 +32,7 @@ renderer_debug_parses_every_override :: proc(t: ^testing.T) {
 	expect_patch_value(t, debug.depth_trust, true, "depth trust")
 	expect_patch_value(t, debug.synthetic_lights, 9, "synthetic lights")
 	expect_patch_value(t, debug.clip_height, f32(3.0), "clip height")
+	expect_patch_value(t, debug.light_shadows, false, "light shadows")
 }
 
 @(test)
@@ -55,7 +57,7 @@ renderer_debug_rejects_bad_fields :: proc(t: ^testing.T) {
 @(test)
 renderer_debug_parses_a_null_reset :: proc(t: ^testing.T) {
 	command, error := harness.command_parse_string(
-		`{"cmd":"renderer_debug","history_weight":null,"synthetic_lights":null,"clip_height":null}`,
+		`{"cmd":"renderer_debug","history_weight":null,"synthetic_lights":null,"clip_height":null,"light_shadows":null}`,
 		context.allocator,
 	)
 	defer harness.command_destroy(&command, context.allocator)
@@ -66,8 +68,10 @@ renderer_debug_parses_a_null_reset :: proc(t: ^testing.T) {
 	debug := command.renderer_debug
 	expect_patch_unset(t, debug.history_weight, "weight")
 	expect_patch_unset(t, debug.synthetic_lights, "synthetic lights")
+	expect_patch_unset(t, debug.light_shadows, "light shadows")
 	testing.expect(t, .History_Weight in debug.reset, "the weight reset was dropped")
 	testing.expect(t, .Synthetic_Lights in debug.reset, "the synthetic light reset was dropped")
+	testing.expect(t, .Light_Shadows in debug.reset, "the light shadow reset was dropped")
 	testing.expect(t, .Clip_Height in debug.reset, "the clip height reset was dropped")
 }
 

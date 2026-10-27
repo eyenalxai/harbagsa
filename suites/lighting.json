@@ -7,6 +7,8 @@
     "initial-lamps",
     "lighting",
     "light-move",
+    "shadows",
+    "shadow-move",
     "lamp-wall-plane",
     "editor-lamps",
     "banding"

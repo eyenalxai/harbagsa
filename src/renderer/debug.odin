@@ -14,6 +14,7 @@ Renderer_Debug :: struct {
 	force_depth_trust: bool,
 	synthetic_lights:  int,
 	clip_height:       f32,
+	light_shadows:     bool,
 }
 
 Renderer_Debug_Patch :: struct {
@@ -24,6 +25,7 @@ Renderer_Debug_Patch :: struct {
 	depth_trust:      Maybe(bool) `json:"depth_trust,omitempty"`,
 	synthetic_lights: Maybe(int)  `json:"synthetic_lights,omitempty"`,
 	clip_height:      Maybe(f32)  `json:"clip_height,omitempty"`,
+	light_shadows:    Maybe(bool) `json:"light_shadows,omitempty"`,
 }
 
 renderer_debug_default :: proc() -> Renderer_Debug {
@@ -33,6 +35,7 @@ renderer_debug_default :: proc() -> Renderer_Debug {
 		history_weight = -1,
 		clamp = true,
 		clip_height = DEBUG_CLIP_HEIGHT_MAX,
+		light_shadows = true,
 	}
 }
 
@@ -44,6 +47,7 @@ renderer_debug_patch :: proc(debug: Renderer_Debug) -> Renderer_Debug_Patch {
 		depth_trust = debug.force_depth_trust,
 		synthetic_lights = debug.synthetic_lights,
 		clip_height = debug.clip_height,
+		light_shadows = debug.light_shadows,
 	}
 	if debug.history_weight >= 0 {
 		patch.history_weight = debug.history_weight
@@ -73,6 +77,9 @@ renderer_debug_apply_patch :: proc(debug: Renderer_Debug, patch: Renderer_Debug_
 	}
 	if value, has := patch.clip_height.?; has {
 		updated.clip_height = value
+	}
+	if value, has := patch.light_shadows.?; has {
+		updated.light_shadows = value
 	}
 	return updated
 }

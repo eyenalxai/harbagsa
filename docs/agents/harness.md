@@ -57,6 +57,8 @@ run path. `--out DIR` chooses the whole run directory.
 | test the closed shell | `scenarios/closed-arena.json` |
 | test the starting lamps | `scenarios/initial-lamps.json` |
 | test direct lighting | `scenarios/lighting.json`, `scenarios/light-move.json` |
+| test point-light shadows | `scenarios/shadows.json`, `scenarios/shadow-move.json`, `scenarios/lamp-wall-plane.json` |
+| measure the shadow budget | `scenarios/perf-shadows.json` |
 | measure stability or banding | **Analysis** |
 | measure performance | **Performance** |
 | reproduce a live view | **Live repro** |
@@ -299,8 +301,9 @@ gates output quantization on a direct-lamp gradient.
 convergence frames, history read index and weight, reset count and reason,
 active light count, cluster overflow, atlas weight, text counters, and debug
 line counts. `state.render_digest` covers target extent, camera, boxes,
-emissive strengths, point lights, jitter, atlas weight, clip height, and view
-flags. `setup.renderer.shader_digest` covers the embedded SPIR-V.
+emissive strengths, point lights, jitter, atlas weight, clip height, shadow
+visibility, and view flags. `setup.renderer.shader_digest` covers the embedded
+SPIR-V.
 
 ## Renderer debug overrides
 
@@ -309,6 +312,8 @@ Supported fields:
 - `taa`, `jitter`, `history_weight`, `clamp`, and `depth_trust`.
 - `synthetic_lights`: replace frame lights with a generated field of any count.
 - `clip_height`: discard fragments above a world height for a plan view.
+- `light_shadows`: trace point-light shadow rays. It defaults true. Use false for
+  paired captures and performance runs.
 - `clear`: restore every default. Set one field to `null` to reset only that field.
 
 A scenario declares `requires.renderer_debug`, or the run uses
@@ -346,12 +351,13 @@ A `perf` command measures frames and can write one trace. `frames` defaults to
 120, `warmup` to 60, and `prime` to 2 seconds. `prime: 0` disables the time loop.
 Offscreen measures throughput. `--present` measures pacing.
 
-GPU passes are cluster, depth, scene, TAA, and overlay. The report carries
+GPU passes are TLAS, cluster, depth, scene, TAA, and overlay. The report carries
 `p50`, `p95`, and `mean` for each CPU phase and GPU pass. Perf data is wall-clock
 data and is not deterministic.
 
 Use `scenarios/perf.json` for the default view, `scenarios/perf-lamps.json` for
-direct lights, and `scenarios/perf-crates.json` for many objects.
+direct lights, `scenarios/perf-shadows.json` for the 96-light paired shadow cost,
+and `scenarios/perf-crates.json` for many objects.
 `harbagsa-agent ab` compares two builds. `ab --visual` runs one scenario on both
 and writes a compare panel.
 

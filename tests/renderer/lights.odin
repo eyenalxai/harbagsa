@@ -86,6 +86,66 @@ point_light_lights_a_box_and_reaches_the_buffer :: proc(t: ^testing.T) {
 }
 
 @(test)
+point_light_shadow_hides_a_blocked_surface :: proc(t: ^testing.T) {
+	device: Test_Device
+	if !open_test_device(&device) {
+		log.info("skipping the point light shadow test: no Vulkan device")
+		return
+	}
+	defer close_test_device(&device)
+	state := &device.state
+	disable_taa(state)
+
+	wall := geometry.Box {
+		center       = {0, 0, -0.25},
+		half_extents = {4, 4, 0.25},
+		color        = {0.8, 0.8, 0.8, 1},
+	}
+	occluder := geometry.Box {
+		center       = {1, 0.5, 1},
+		half_extents = {0.5, 0.5, 0.5},
+		color        = {0.2, 0.2, 0.2, 1},
+	}
+	target := [3]f32{0, 0, 0}
+	offset := [3]f32{target.x - (-2), target.y - 1.5, target.z - 4}
+	horizontal := math.sqrt(offset.x * offset.x + offset.z * offset.z)
+	view := renderer.Render_Input {
+		camera = renderer.Camera {
+			position = {-2, 1.5, 4},
+			yaw      = math.atan2(-offset.x, -offset.z),
+			pitch    = math.atan2(offset.y, horizontal),
+			fov_x    = math.PI * 0.5,
+		},
+		boxes = []geometry.Box{wall, occluder},
+		lights = []renderer.Light {
+			{position = {2, 1, 2}, intensity = 4, color = {1, 1, 1}, range = 10},
+		},
+	}
+	debug := renderer.renderer_debug(state)
+	debug.light_shadows = false
+	renderer.set_renderer_debug(state, debug)
+	open_value := sample_point(state, view, {0, 0, 0.01})
+	open_digest := state.render_digest
+
+	debug.light_shadows = true
+	renderer.set_renderer_debug(state, debug)
+	shadow_value := sample_point(state, view, {0, 0, 0.01})
+
+	testing.expectf(
+		t,
+		open_value > shadow_value + 0.2,
+		"the blocked surface did not darken: %f -> %f",
+		open_value,
+		shadow_value,
+	)
+	testing.expect(
+		t,
+		state.render_digest.value != open_digest.value,
+		"the shadow toggle did not change the render digest",
+	)
+}
+
+@(test)
 emissive_box_draws_without_a_light :: proc(t: ^testing.T) {
 	device: Test_Device
 	if !open_test_device(&device) {

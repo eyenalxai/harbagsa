@@ -51,12 +51,13 @@ TAA_Params :: struct {
 
 CAMERA_BINDING :: 0
 OBJECT_BINDING :: 1
+ACCELERATION_BINDING :: 2
 LIGHT_BINDING :: 3
 CLUSTER_COUNTS_BINDING :: 4
 CLUSTER_INDICES_BINDING :: 5
 
 create_scene_resources :: proc(r: ^Renderer) -> bool {
-	bindings := [5]vk.DescriptorSetLayoutBinding {
+	bindings := [6]vk.DescriptorSetLayoutBinding {
 		{
 			binding = CAMERA_BINDING,
 			descriptorType = .UNIFORM_BUFFER,
@@ -68,6 +69,12 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 			descriptorType = .STORAGE_BUFFER,
 			descriptorCount = 1,
 			stageFlags = {.VERTEX, .FRAGMENT},
+		},
+		{
+			binding = ACCELERATION_BINDING,
+			descriptorType = .ACCELERATION_STRUCTURE_KHR,
+			descriptorCount = 1,
+			stageFlags = {.FRAGMENT},
 		},
 		{
 			binding = LIGHT_BINDING,
@@ -100,9 +107,10 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 		return false
 	}
 
-	pool_sizes := [2]vk.DescriptorPoolSize {
+	pool_sizes := [3]vk.DescriptorPoolSize {
 		{type = .UNIFORM_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT},
 		{type = .STORAGE_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT * 4},
+		{type = .ACCELERATION_STRUCTURE_KHR, descriptorCount = MAX_FRAMES_IN_FLIGHT},
 	}
 	pool_info := vk.DescriptorPoolCreateInfo {
 		sType = .DESCRIPTOR_POOL_CREATE_INFO,

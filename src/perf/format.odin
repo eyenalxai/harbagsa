@@ -42,7 +42,8 @@ format_passes :: proc(buffer: []byte, summary: Stats) -> string {
 	}
 	return fmt.bprintf(
 		buffer,
-		"last  cluster %.2f  depth %.2f  scene %.2f  taa %.2f  overlay %.2f",
+		"last  tlas %.2f  cluster %.2f  depth %.2f  scene %.2f  taa %.2f  overlay %.2f",
+		summary.gpu.passes[.Tlas].mean,
 		summary.gpu.passes[.Cluster].mean,
 		summary.gpu.passes[.Depth].mean,
 		summary.gpu.passes[.Scene].mean,
@@ -53,6 +54,8 @@ format_passes :: proc(buffer: []byte, summary: Stats) -> string {
 
 pass_name :: proc(pass: Pass) -> string {
 	switch pass {
+	case .Tlas:
+		return "tlas"
 	case .Cluster:
 		return "cluster"
 	case .Depth:
