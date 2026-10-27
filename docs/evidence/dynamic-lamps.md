@@ -15,7 +15,7 @@ Captured on 2026-10-27 with AMD Radeon RX 9060 XT (RADV GFX1200). The decision i
 
 The check run reports `objects.count = 6` and `debug.lights.active = 3`. The exact `place` command requests a static Beacon with name `static-request`; the resulting body is `dynamic`.
 
-Moving `initial-lamp` from `(-6, 1.2, 6)` to `(-2, 0.25, 4)` changes the next capture's mean delta by 8.336 levels and changes the render digest. The unit test also compares the collected light position with the moved body centre.
+Moving `initial-lamp` from `(-6, 1.2, 6)` to `(-2, 0.25, 4)` changes the next capture's mean delta by 12.469 levels and changes the render digest. The unit test also compares the collected light position with the moved body centre.
 
 ## Before and after
 

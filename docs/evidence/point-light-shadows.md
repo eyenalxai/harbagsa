@@ -11,8 +11,8 @@ without. Values are green-channel means at 1280x720.
 
 | Capture | Mean | Change from previous |
 | --- | ---: | ---: |
-| Shadows on | 119.18 | -- |
-| Shadows off | 131.02 | +15.79 |
+| Shadows on | 98.65 | -- |
+| Shadows off | 113.63 | +19.78 |
 
 The blocked wall is darker with shadows. The two captures have different render
 digests. The render digest change is expected because the paired switch is a
@@ -25,8 +25,8 @@ from `x = -1, z = -15` to `x = -3, z = -16` through the editor.
 
 | Capture | Mean | Change from previous |
 | --- | ---: | ---: |
-| Before move | 119.18 | -- |
-| After move | 102.24 | +59.23 |
+| Before move | 98.65 | -- |
+| After move | 76.19 | +73.67 |
 
 The shadow and the light field follow the lamp. The render digest also changes.
 
@@ -38,8 +38,8 @@ stops short of the light.
 
 | Comparison | Value |
 | --- | ---: |
-| On vs off delta | 0.000004 |
-| Wall region mean | 157.87 |
+| On vs off delta | 0.0000065 |
+| Wall region mean | 153.11 |
 
 The wall gradient check stays below `1.0`. A fan of shadow lines would fail.
 
@@ -51,15 +51,14 @@ run. The table is the median of three runs.
 
 | Pass or pair | Shadows on | Shadows off | Paired difference |
 | --- | ---: | ---: | ---: |
-| TLAS | 0.260 ms | 0.000 ms | +0.260 ms |
-| Scene | 5.655 ms | 1.080 ms | +4.567 ms |
-| GPU total | 6.454 ms | 1.648 ms | +4.806 ms |
+| TLAS | 0.265 ms | 0.000 ms | +0.265 ms |
+| Scene | 5.439 ms | 1.088 ms | +4.351 ms |
+| GPU total | 6.235 ms | 1.653 ms | +4.582 ms |
 
 The paired difference includes the TLAS pass and the shadow rays. The scene pass
 includes the depth prepass. The 96-light grid is a dense worst case for overlap,
-not a typical room. The current result is higher than the older research build:
-the current renderer measures 4.57 ms of shadow work at this scale. It still fits
-a 60 Hz frame on this GPU, but it is the budget to watch.
+not a typical room. The current renderer measures 4.35 ms of shadow work at this
+scale. It still fits a 60 Hz frame on this GPU, but it is the budget to watch.
 
 Run it with:
 

@@ -14,7 +14,7 @@
     {"cmd": "check", "field": "debug.lights.active", "op": "eq", "value": 0},
     {"cmd": "camera", "position": [-12, 1.7, 6], "look_at": [0, 1, 0], "fov_deg": 90},
     {"cmd": "settle", "frames": 40},
-    {"cmd": "capture", "name": "ambient", "format": "stats", "png": true},
+    {"cmd": "capture", "name": "unlit", "format": "stats", "png": true},
     {"cmd": "place", "prefab": "Lamp", "position": [-12, 2.0, 2.0], "body": "static", "name": "scenario-lamp",
      "light": {"intensity": "${lamp_intensity}", "range": "${lamp_range}"}},
     {"cmd": "check", "field": "objects.count", "op": "eq", "value": 4},
@@ -32,9 +32,9 @@
     {"cmd": "capture", "name": "lamp-off", "format": "stats", "png": true}
   ],
   "checks": [
-    {"field": "capture.named.ambient.stats.mean.y", "op": "gt", "value": 5},
-    {"field": "capture.named.lamp-on.stats.mean.y", "op": "gt", "other": "capture.named.ambient.stats.mean.y"},
-    {"field": "capture.named.lamp-off.stats.mean.y", "op": "gt", "value": 5},
+    {"field": "capture.named.unlit.stats.mean.y", "op": "lt", "value": 0.5},
+    {"field": "capture.named.lamp-on.stats.mean.y", "op": "gt", "other": "capture.named.unlit.stats.mean.y"},
+    {"field": "capture.named.lamp-off.stats.mean.y", "op": "lt", "value": 0.5},
     {"field": "capture.named.lamp-on.stats.mean.y", "op": "gt", "other": "capture.named.lamp-off.stats.mean.y"}
   ]
 }

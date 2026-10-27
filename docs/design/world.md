@@ -46,8 +46,12 @@ then shades only the lights that can reach the fragment.
 The formula is:
 
 ```text
-albedo * (ambient_floor + direct_point_lights) + albedo * emissive
+albedo * direct_point_lights + albedo * emissive
 ```
+
+A surface receives no light unless a current point light reaches it or the
+surface is emissive. A lamp-free view is black. There is no ambient floor, fill
+light, probe, or indirect term.
 
 A point light uses the surface normal and a squared range falloff. A hard shadow
 ray also tests visibility for each lamp that can reach the fragment. A blocked
@@ -66,13 +70,12 @@ on every frame. A static or baked lamp is not an alternate mode. The starting
 arena places one warm Lamp, one cool Light panel, and one red Beacon in front of
 the spawn.
 
-The ambient floor is constant and small. It is not global illumination and not a
-static placed light. It keeps unlit albedo readable without hiding which areas
-the lamps reach. `scenarios/lighting.json` checks that floor.
-`scenarios/initial-lamps.json` checks the three starting lamps and a moved light.
-`scenarios/light-move.json` checks that a transform change updates the image and
-render digest. `scenarios/shadows.json` checks a blocked surface and the paired
-toggle. `scenarios/lamp-wall-plane.json` checks the wall-plane regression.
+`scenarios/lighting.json` checks that a lamp-free view is black and that one
+lamp restores readable light. `scenarios/initial-lamps.json` checks the three
+starting lamps and a moved light. `scenarios/light-move.json` checks that a
+transform change updates the image and render digest.
+`scenarios/shadows.json` checks a blocked surface and the paired toggle.
+`scenarios/lamp-wall-plane.json` checks the wall-plane regression.
 `scenarios/shadow-move.json` checks that a moved lamp moves its shadow.
 
 ## No texture
@@ -105,6 +108,6 @@ normal play. Plan-view and inspection captures can still expose it.
 
 1. Be a box.
 2. Take a hue that is not in the palette.
-3. Receive the same ambient floor and direct point lights as everything else.
+3. Receive the same direct point lights and shadows as everything else.
 4. Add nothing to the shader.
 5. If it moves, add nothing to the camera. [motion.md](motion.md) explains why.
