@@ -22,6 +22,8 @@ build_pass :: proc(
 		build_tlas_pass(r, pass)
 	case .Cluster:
 		build_cluster_pass(r, pass)
+	case .Probe:
+		build_probe_pass(r, pass)
 	case .Depth:
 		build_depth_pass(r, pass)
 	case .Scene:
@@ -41,7 +43,10 @@ build_tlas_pass :: proc(r: ^Renderer, pass: ^Pass) {
 
 @(private)
 draw_tlas :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
-	if !renderer_debug(r).light_shadows {
+	debug := renderer_debug(r)
+	// The probe rays trace the same TLAS as the shadow rays, so GI still needs
+	// a current structure when the shadow toggle is off.
+	if !debug.light_shadows && !debug.gi {
 		return
 	}
 	record_acceleration(r, command_buffer, pass.boxes)
@@ -133,6 +138,13 @@ cluster_after :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pas
 		0,
 		nil,
 	)
+}
+
+@(private)
+build_probe_pass :: proc(r: ^Renderer, pass: ^Pass) {
+	pass.has_rendering = false
+	pass.draw = draw_probes
+	pass.after = probe_after
 }
 
 @(private)

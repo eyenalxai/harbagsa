@@ -18,7 +18,7 @@ All values are mean milliseconds over 120 measured frames after 60 warmup frames
 | Overlay | 0.0015 | 0.0016 |
 | GPU total | 0.2672 | 0.3911 |
 
-The scene pass rises by 0.0084 ms with eight synthetic lights against the three starting lamps. The cluster assignment is within run variance. The TAA difference belongs to the changed input and run variance, not a second lighting pass. There are no other lighting passes in the report.
+The scene pass rises by 0.0084 ms with eight synthetic lights against the three starting lamps. The cluster assignment is within run variance. The TAA difference belongs to the changed input and run variance, not a second lighting pass. The probe pass is disabled for this direct-light budget, so there is no other active lighting pass in the report.
 
 ## Reproduce
 

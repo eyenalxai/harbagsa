@@ -10,7 +10,7 @@ The lit pass traces one ray query per clustered point light. A hit removes that 
 - The scene has one cube mesh, so one BLAS serves every box and a TLAS follows the current transforms.
 - A point light has no area. A hard edge is the correct visibility result for that light model and fits the flat box look.
 - The long-term target is interiors with many lights. The renderer keeps one shadow path for every clustered lamp instead of a hero light or a fixed light cap.
-- The measured shadow term is 4.35 ms at 1080p for a dense 96-light grid on the RX 9060 XT. The full frame is 6.23 ms with shadows on and 1.65 ms with them off. The TLAS pass is about 0.27 ms. This fits 60 Hz, but it is a real budget.
+- The measured shadow term is 4.29 ms at 1080p for a dense 96-light grid on the RX 9060 XT. The full frame is 5.94 ms with shadows on and 1.65 ms with them off. The TLAS pass is about 0.30 ms. This fits 60 Hz, but it is a real budget.
 
 ## Considered Options
 

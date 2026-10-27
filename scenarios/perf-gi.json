@@ -1,0 +1,17 @@
+{
+  "requires": {"renderer_debug": true},
+  "size": "1920x1080",
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "renderer_debug": {"synthetic_lights": 96},
+  "commands": [
+    {"cmd": "camera", "position": [0, 2.2, 12], "yaw_deg": 0, "pitch_deg": -8.5944},
+    {"cmd": "settle", "frames": 1},
+    {"cmd": "check", "field": "renderer.light_count", "op": "eq", "value": 96},
+    {"cmd": "check", "field": "renderer.probe_count", "op": "eq", "value": 1200},
+    {"cmd": "perf", "name": "gi-on", "frames": 120, "warmup": 60, "trace": "trace-gi-on.jsonl"},
+    {"cmd": "renderer_debug", "gi": false},
+    {"cmd": "check", "field": "renderer.debug.gi", "op": "eq", "value": false},
+    {"cmd": "check", "field": "renderer.light_count", "op": "eq", "value": 96},
+    {"cmd": "perf", "name": "gi-off", "frames": 120, "warmup": 60}
+  ]
+}

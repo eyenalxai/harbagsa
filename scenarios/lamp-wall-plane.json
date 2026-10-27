@@ -1,5 +1,6 @@
 {
   "requires": {"renderer_debug": true},
+  "renderer_debug": {"gi": false},
   "size": "1280x720",
   "view": {"hud": false, "debug": false, "hint": false, "perf": false},
   "commands": [

@@ -98,6 +98,7 @@ Renderer :: struct {
 	target:        Target,
 	frame_targets: Frame_Targets,
 	scene:         Scene,
+	probe:         Probe,
 	acceleration:  Acceleration,
 	taa:           TAA,
 	debug:         Renderer_Debug,

@@ -13,7 +13,6 @@ space. This is the opposite of the 2D layer, which authors sRGB hex
 | Surface | Linear RGBA | Source |
 | --- | --- | --- |
 | Clear colour | `0.012 0.016 0.024` | `src/renderer/renderer.odin` |
-| Ambient floor | `0.055 0.060 0.070` | `src/renderer/shaders/box.frag` |
 | Floor | `0.42 0.43 0.46` | `src/game/arena.odin` |
 | Wall | `0.55 0.34 0.26` | `src/game/arena.odin` |
 | Stairs, ramps, steps | `0.30 0.55 0.85` | `src/game/arena_props.odin` |
@@ -46,12 +45,13 @@ then shades only the lights that can reach the fragment.
 The formula is:
 
 ```text
-albedo * direct_point_lights + albedo * emissive
+albedo * (direct_point_lights + probe_indirect) + albedo * emissive
 ```
 
-A surface receives no light unless a current point light reaches it or the
-surface is emissive. A lamp-free view is black. There is no ambient floor, fill
-light, probe, or indirect term.
+A surface receives no light unless a current point light reaches it, a probe
+carries a bounce from a current light, or the surface is emissive. A lamp-free
+view is black. There is no ambient floor or fill light; the probe field is
+transport, not a default term.
 
 A point light uses the surface normal and a squared range falloff. A hard shadow
 ray also tests visibility for each lamp that can reach the fragment. A blocked
@@ -60,10 +60,30 @@ lit pass traces against the same cube TLAS as the rest of the scene. The ray
 starts just above the surface, stops just short of the lamp, and excludes lamp
 boxes. This keeps a wall-mounted lamp from shading the wall it sits on.
 
-There is no shadow map, soft-shadow sampling, probe, or screen-space visibility
-pass. The `light_shadows` renderer override exists only for paired captures and
+There is no shadow map, soft-shadow sampling, or screen-space visibility pass.
+The `light_shadows` renderer override exists only for paired captures and
 performance runs. It is not a per-lamp editor control. A future lamp radius or
 soft shadow is a new decision, not a hidden shader option.
+
+## Indirect light
+
+One probe volume covers the closed arena. Probes sit every 2 m on a 20 x 3 x 20
+grid. Each probe traces 64 rays into the same point lights and emissive boxes as
+the lit pass and stores an 8 x 8 octahedral irradiance and depth atlas. The lit
+pass blends the eight surrounding probes, rejects probes behind the surface, and
+adds the result as `probe_indirect`. There is one diffuse bounce. A ray that
+misses returns zero; there is no sky or sun term.
+
+A probe inside a box is invalid and is skipped. A probe behind the shaded
+surface is rejected by the facing weight; the depth test alone lets a probe on
+the far side of a thin wall carry light across it. The field follows a moving
+lamp on the next frame. Probe rays use the scene TLAS, so the renderer builds
+that structure when either shadows or GI is enabled.
+
+The `gi` renderer override, default true, exists for paired captures and
+performance runs. It is not a per-lamp or per-room control. Multi-volume probe
+fields, a denser grid, more rays, and more than one bounce are new decisions, not
+hidden shader options.
 
 Every lamp prefab uses a dynamic body. Its light position comes from that body
 on every frame. A static or baked lamp is not an alternate mode. The starting
@@ -77,6 +97,10 @@ transform change updates the image and render digest.
 `scenarios/shadows.json` checks a blocked surface and the paired toggle.
 `scenarios/lamp-wall-plane.json` checks the wall-plane regression.
 `scenarios/shadow-move.json` checks that a moved lamp moves its shadow.
+`scenarios/gi.json` pairs GI on and off around a corner. `scenarios/gi-dark.json`
+keeps the lamp-free view black. `scenarios/gi-move.json` moves the lamp and
+changes the bounce. `scenarios/gi-sealed.json` proves a sealed wall stops the
+bounce.
 
 ## No texture
 
@@ -108,6 +132,7 @@ normal play. Plan-view and inspection captures can still expose it.
 
 1. Be a box.
 2. Take a hue that is not in the palette.
-3. Receive the same direct point lights and shadows as everything else.
+3. Receive the same direct point lights, shadows, and probe bounce as everything
+   else.
 4. Add nothing to the shader.
 5. If it moves, add nothing to the camera. [motion.md](motion.md) explains why.
