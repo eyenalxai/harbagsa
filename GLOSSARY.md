@@ -148,7 +148,7 @@ The share of the sampled capture region that is exactly zero, at or below a blac
 _Avoid_: Black ratio, lit ratio
 
 **Lamp prefab**:
-A prefab with an active point light and an emissive box. The catalog has the Lamp, the Light panel, and the Beacon. A lamp is placed like any other object and can be static or dynamic.
+A prefab with an active point light and an emissive box. The catalog has the Lamp, the Light panel, and the Beacon. A lamp is placed like any other object and always uses a dynamic body, so its light follows its current transform.
 _Avoid_: Light object, bulb
 
 **Light budget**:
@@ -170,7 +170,8 @@ Every angle key ends in `_deg`. The engine converts to radians at the edge.
 _Avoid_: mixed angle units, implicit units
 
 **Crate**:
-The 1 m dynamic box prefab. The three starting objects use it.
+The 1 m dynamic box prefab. Three crates and three lamps make up the six
+starting objects.
 _Avoid_: Prop, box
 
 **Placed object**:
@@ -187,7 +188,9 @@ _Avoid_: Template, class, prototype
 
 **Body mode**:
 Static or dynamic. A static placed object collides and never moves. A dynamic
-placed object uses the prefab density and can be pushed.
+placed object uses the prefab density and can be pushed. A lamp prefab always
+uses a dynamic body; a static request is normalized on creation and refused on
+conversion.
 _Avoid_: Body type
 
 **Object id**:
@@ -237,7 +240,7 @@ _Avoid_: Preview, hologram
 The short scale animation that a newly placed or duplicated object plays. It
 starts at a 0.01 floor, overshoots by about 8 percent, and settles at full size
 in 0.28 s with the AABB bottom fixed. The physics body keeps its full size.
-Initial crates and undo or redo restores do not pop.
+Initial objects and undo or redo restores do not pop.
 _Avoid_: Spawn animation, grow effect
 
 **Grid snap**:
@@ -705,7 +708,7 @@ the spawn pop.
 _Avoid_: Journal, transaction log
 
 **Scene reset**:
-The `Shift+R` action that restores the starting crates and the player.
+The `Shift+R` action that restores the starting crates, lamps, and player.
 _Avoid_: Reload, wipe
 
 **Frame interval**:

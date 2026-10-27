@@ -5,7 +5,7 @@ Debug mode turns the player into a free-fly camera and edits placed objects thro
 ## Decisions
 
 - The object palette, placement tool, selection, and inspector share one edit facade. Keyboard and harness actions use the same rules.
-- A placed object has a stable id, prefab, body mode, transform, colour, and optional light. Static and dynamic body modes remain object properties.
+- A placed object has a stable id, prefab, body mode, transform, colour, and optional light. Static and dynamic body modes remain available to non-lamp prefabs. Every lamp prefab is dynamic on every creation path, and a static conversion is refused.
 - Lamp colour, intensity, and range are editable. Emissive strength follows intensity.
 - Every active lamp enters the frame light list. Cluster assignment limits the per-fragment loop to lights whose ranges overlap the view cluster.
 - Placement, deletion, duplication, movement, rotation, and body conversion use the undo history. Light edits use the same selection and inspector.
@@ -19,6 +19,6 @@ Debug mode turns the player into a free-fly camera and edits placed objects thro
 
 ## Consequences
 
-- `scenarios/editor-lamps.json` covers all lamp previews, placement, light values, selection, editing, and undo.
+- `scenarios/initial-lamps.json` covers the three starting lamps and a moved light. `scenarios/editor-lamps.json` covers all lamp previews, placement, light values, selection, editing, and undo.
 - `scenarios/light-move.json` proves that the current transform drives the light field.
 - Direct lights have no shadow visibility term. The editor does not expose lighting systems that the renderer does not have.

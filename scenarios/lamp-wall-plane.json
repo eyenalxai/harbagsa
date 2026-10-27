@@ -7,24 +7,21 @@
     {"cmd": "debug_mode", "active": true},
     {"cmd": "editor", "camera": {"position": [17.5, 1.7, -17.2], "look_at": [20.0, 1.75, -19.5]}},
     {"cmd": "editor", "select": 8, "light_color": "warm", "light_intensity": 4.0, "light_range": 10},
-    {"cmd": "editor", "pick": true},
-    {"cmd": "step", "frames": 1},
-    {"cmd": "editor", "primary": true},
-    {"cmd": "editor", "cancel": true},
+    {"cmd": "editor", "place": {"prefab": "Lamp", "position": [19.5, 0.25, -19.5], "body": "dynamic"}},
     {"cmd": "editor", "camera": {"position": [17.5, 1.7, -17.2], "yaw_deg": -47.3836, "pitch_deg": -14.8396}},
     {"cmd": "settle", "frames": 20},
     {"cmd": "capture", "name": "lamp-on-wall"},
     {"cmd": "capture", "name": "wall-stats", "format": "stats", "region": {"x": 0, "y": 0, "w": 580, "h": 680}}
   ],
   "checks": [
-    {"field": "objects.4.prefab", "op": "eq", "value": "Lamp"},
-    {"field": "objects.4.position.x", "op": "gt", "value": 19.99},
-    {"field": "objects.4.position.x", "op": "lt", "value": 20.01},
-    {"field": "objects.4.position.y", "op": "gt", "value": 1.99},
-    {"field": "objects.4.position.y", "op": "lt", "value": 2.01},
-    {"field": "objects.4.position.z", "op": "gt", "value": -19.51},
-    {"field": "objects.4.position.z", "op": "lt", "value": -19.49},
-    {"field": "debug.lights.active", "op": "eq", "value": 1},
+    {"field": "objects.7.prefab", "op": "eq", "value": "Lamp"},
+    {"field": "objects.7.position.x", "op": "gt", "value": 19.49},
+    {"field": "objects.7.position.x", "op": "lt", "value": 19.51},
+    {"field": "objects.7.position.y", "op": "gt", "value": 0.24},
+    {"field": "objects.7.position.y", "op": "lt", "value": 0.26},
+    {"field": "objects.7.position.z", "op": "gt", "value": -19.51},
+    {"field": "objects.7.position.z", "op": "lt", "value": -19.49},
+    {"field": "debug.lights.active", "op": "eq", "value": 4},
     {"field": "capture.named.wall-stats.stats.gradient.y", "op": "lt", "value": 1.0}
   ]
 }

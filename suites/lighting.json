@@ -4,6 +4,7 @@
   "description": "Ambient coverage, direct point lights, light placement, and light gradients.",
   "entries": [
     "closed-arena",
+    "initial-lamps",
     "lighting",
     "light-move",
     "lamp-wall-plane",
