@@ -88,6 +88,7 @@ placement_ray_miss_uses_the_fallback_distance :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
 	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
+	dm.camera.position = {0, 100, 0}
 	dm.camera.pitch = PLACEMENT_HIGH_PITCH
 	placement_arm(t, &dm, &sim, .Crate)
 

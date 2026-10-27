@@ -30,7 +30,7 @@ dynamic_objects_fall_and_settle :: proc(t: ^testing.T) {
 
 	id := game.simulation_create_object(
 		&sim,
-		{prefab = .Small_Crate, body_mode = .Dynamic, center = {20, 5, 0}, yaw_rad = 0},
+		{prefab = .Small_Crate, body_mode = .Dynamic, center = {18, 5, 0}, yaw_rad = 0},
 	)
 	for _ in 0 ..< 240 {
 		game.simulation_step_world(&sim, game.SIMULATION_STEP)
@@ -71,7 +71,7 @@ step_world_leaves_player_alone_and_settles_objects :: proc(t: ^testing.T) {
 
 	id := game.simulation_create_object(
 		&sim,
-		{prefab = .Crate, body_mode = .Dynamic, center = {20, 4, 0}, yaw_rad = 0},
+		{prefab = .Crate, body_mode = .Dynamic, center = {18, 4, 0}, yaw_rad = 0},
 	)
 	before := sim.player
 

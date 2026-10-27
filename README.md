@@ -2,7 +2,7 @@
 
 A first-person movement demo. The player walks, sprints, crouches, crawls,
 jumps, dives, slides, and mantles in a fixed arena with stairs, ramps, tunnels,
-mantle walls, a dive platform, an interior light-lock room, and pushable crates.
+mantle walls, a dive platform, a closed ceiling, and pushable crates.
 SDL3 provides the window and input, Vulkan 1.3 draws the scene, and Box3D runs
 physics. A constant ambient floor, direct point lights, and emissive boxes shade
 every frame. There is no directional light, background pass, shadow system, or
@@ -114,9 +114,9 @@ Useful loops:
 ```sh
 make test-simulation
 make quick
-make shot SCENARIO=room-lighting OUT=runs/room-lighting
+make shot SCENARIO=lighting OUT=runs/lighting
 ./bin/harbagsa-agent suite lighting --out runs/lighting
-./bin/harbagsa-agent checks runs/room-lighting
+./bin/harbagsa-agent checks runs/lighting
 ```
 
 A run writes `report.json`, `state.json`, `run.log`, and any requested frames
@@ -220,8 +220,9 @@ objects. `tools/ab.sh` and `harbagsa-agent ab` compare two builds.
 
 ### Lighting and visual evidence
 
-`scenarios/room-lighting.json` checks non-black ambient coverage and the direct
-lamp response. `scenarios/light-move.json` checks that a moved lamp changes the
+`scenarios/closed-arena.json` checks the shell count, the ceiling, and a ceiling
+view with no visible background. `scenarios/lighting.json` checks non-black
+ambient coverage and the direct lamp response. `scenarios/light-move.json` checks that a moved lamp changes the
 captured light field and render digest. `scenarios/lamp-wall-plane.json` checks
 placement and a smooth wall gradient. `scenarios/banding.json` checks output
 dither on that gradient.

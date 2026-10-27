@@ -154,18 +154,18 @@ suite_filters_select_by_scenario_stem_or_label :: proc(t: ^testing.T) {
 	entries := []harness.Suite_Entry{
 		{scenario = "smoke", label = "smoke"},
 		{scenario = "taa-motion", label = "taa-motion-800"},
-		{scenario = "room-lighting", label = "room"},
+		{scenario = "lighting", label = "light"},
 	}
 	options := harness.Suite_Options{}
 	options.only[0] = "taa-motion"
-	options.only[1] = "room"
+	options.only[1] = "light"
 	options.only_count = 2
 	filtered, error := harness.suite_entries_filter(entries, &options, context.allocator)
 	testing.expectf(t, error == "", "only filter failed: %s", error)
 	testing.expect_value(t, len(filtered.entries), 2)
 	if len(filtered.entries) == 2 {
 		testing.expect_value(t, filtered.entries[0].label, "taa-motion-800")
-		testing.expect_value(t, filtered.entries[1].label, "room")
+		testing.expect_value(t, filtered.entries[1].label, "light")
 	}
 	delete(filtered.entries, context.allocator)
 
