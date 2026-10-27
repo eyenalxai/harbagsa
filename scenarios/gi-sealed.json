@@ -1,0 +1,29 @@
+{
+  "requires": {"renderer_debug": true},
+  "size": "1280x720",
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "analysis": false,
+  "commands": [
+    {"cmd": "remove", "name": "initial-lamp"},
+    {"cmd": "remove", "name": "initial-panel"},
+    {"cmd": "remove", "name": "initial-beacon"},
+    {"cmd": "place", "prefab": "Wall", "position": [16, 1.5, 18], "yaw_deg": 90, "body": "static", "name": "sealed-west-low"},
+    {"cmd": "place", "prefab": "Wall", "position": [16, 4.0, 18], "yaw_deg": 90, "body": "static", "name": "sealed-west-high"},
+    {"cmd": "place", "prefab": "Wall", "position": [18, 1.5, 16], "body": "static", "name": "sealed-south-low"},
+    {"cmd": "place", "prefab": "Wall", "position": [18, 4.0, 16], "body": "static", "name": "sealed-south-high"},
+    {"cmd": "place", "prefab": "Lamp", "position": [13, 1.5, 18], "body": "dynamic", "name": "outside-lamp",
+     "light": {"color": "warm", "intensity": 4.0, "range": 10}},
+    {"cmd": "camera", "position": [18.5, 1.7, 18.3], "look_at": [16, 1.7, 18.3], "fov_deg": 50},
+    {"cmd": "settle", "frames": 90},
+    {"cmd": "check", "field": "renderer.probe_count", "op": "eq", "value": 1200},
+    {"cmd": "capture", "name": "sealed-gi", "format": "stats", "png": true},
+    {"cmd": "renderer_debug", "gi": false},
+    {"cmd": "settle", "frames": 40},
+    {"cmd": "capture", "name": "sealed-direct", "format": "stats", "png": true}
+  ],
+  "checks": [
+    {"field": "capture.named.sealed-gi.stats.mean.y", "op": "lt", "value": 0.5},
+    {"field": "capture.named.sealed-gi.stats.coverage.zero_fraction", "op": "gt", "value": 0.8},
+    {"field": "capture.named.sealed-direct.delta_mean", "op": "lt", "value": 0.001}
+  ]
+}
