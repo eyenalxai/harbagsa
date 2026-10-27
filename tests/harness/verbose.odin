@@ -12,7 +12,7 @@ compact_summary_lists_the_check_table_and_capture_paths :: proc(t: ^testing.T) {
 	report := harness.Report {
 		ok = false,
 		exit_code = 1,
-		scenario = {path = "scenarios/room-lighting.json"},
+		scenario = {path = "scenarios/lighting.json"},
 		captures = []harness.Capture_Result {
 			{name = "lamp-on", target = "color", format = "png", path = "/tmp/lamp-on.png"},
 			{name = "lamp-stats", target = "color", format = "stats"},

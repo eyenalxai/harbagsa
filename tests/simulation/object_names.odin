@@ -57,8 +57,8 @@ object_names_are_unique_and_survive_a_snapshot :: proc(t: ^testing.T) {
 @(test)
 object_name_rules :: proc(t: ^testing.T) {
 	testing.expect(t, game.object_name_valid(""))
-	testing.expect(t, game.object_name_valid("room-a"))
-	testing.expect(t, !game.object_name_valid("room a"))
+	testing.expect(t, game.object_name_valid("west-a"))
+	testing.expect(t, !game.object_name_valid("west a"))
 	testing.expect(t, !game.object_name_valid("123"))
 	testing.expect(t, !game.object_name_valid("count"))
 	testing.expect(t, !game.object_name_valid("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))

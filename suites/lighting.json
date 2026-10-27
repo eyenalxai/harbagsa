@@ -3,7 +3,8 @@
   "name": "lighting",
   "description": "Ambient coverage, direct point lights, light placement, and light gradients.",
   "entries": [
-    "room-lighting",
+    "closed-arena",
+    "lighting",
     "light-move",
     "lamp-wall-plane",
     "editor-lamps",

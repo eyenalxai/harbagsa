@@ -146,7 +146,7 @@ object_check_reads_the_state_by_name :: proc(t: ^testing.T) {
 		objects = []harness.Object_State {
 			{
 				id = 4,
-				name = "room-a-lamp",
+				name = "key-lamp",
 				prefab = "Lamp",
 				body = "static",
 				position = {x = 1, y = 2, z = 3},
@@ -155,7 +155,7 @@ object_check_reads_the_state_by_name :: proc(t: ^testing.T) {
 		},
 	}
 	command := harness.Check_Command {
-		field = "objects.room-a-lamp.position.z",
+		field = "objects.key-lamp.position.z",
 		op    = .Eq,
 		value = {kind = .Number, number = 3},
 	}
