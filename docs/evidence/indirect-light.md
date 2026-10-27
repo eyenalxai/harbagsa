@@ -17,7 +17,9 @@ with no light at all; it is the direct-only black area that the bounce fills.
 | GI off | 123.15 | 98.66 | 67.98 | 0.239 |
 
 The bounce raises every channel and removes the black region. The two render
-digests differ because `gi` is a render input.
+digests differ because `gi` is a render input. The same scenario repeats the
+pair with shadows off, so the probe pass still builds and traces the TLAS when
+only GI needs it.
 
 ## Lamp-free darkness
 
