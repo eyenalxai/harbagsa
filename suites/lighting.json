@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "lighting",
-  "description": "Black default, direct point lights, light placement, and light gradients.",
+  "description": "Black default, direct point lights, shadows, indirect GI, light placement, and light gradients.",
   "entries": [
     "closed-arena",
     "initial-lamps",
@@ -10,6 +10,10 @@
     "shadows",
     "shadow-move",
     "lamp-wall-plane",
+    "gi",
+    "gi-dark",
+    "gi-move",
+    "gi-sealed",
     "editor-lamps",
     "banding"
   ]
