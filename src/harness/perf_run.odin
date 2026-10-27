@@ -104,6 +104,7 @@ session_perf_frame :: proc(session: ^Session) -> string {
 	input := session.input
 	game.simulation_step(&session.sim, input, game.SIMULATION_STEP)
 	session.input.jump_pressed = false
+	session.input.sprint_pressed = false
 	session.frame += 1
 	perf.mark(&session.perf.state, .Simulation)
 	if session.render.backend != nil {

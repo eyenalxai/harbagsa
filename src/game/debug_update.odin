@@ -23,8 +23,8 @@ debug_mode_update :: proc(
 		dm.camera.yaw = b3.UnwindAngle(dm.camera.yaw - motion.look_delta.x * YAW_SENSITIVITY)
 		dm.camera.pitch = clamp(
 			dm.camera.pitch - motion.look_delta.y * PITCH_SENSITIVITY,
-			-PITCH_LIMIT,
-			PITCH_LIMIT,
+			CAMERA_PITCH_MIN,
+			CAMERA_PITCH_MAX,
 		)
 	}
 

@@ -7,7 +7,7 @@ these, read [README.md](README.md#adding-a-surface) first.
 
 Use for the player's live state. It is the persistent overlay while the menu is
 closed. `build_hud` returns after building the menu, so the status panel, the
-notice, the capture hint, and the crosshair are all hidden while the menu is
+notice and the capture hint are both hidden while the menu is
 open. It draws in the top-left margin and never moves.
 
 Use instead when the game is paused: the settings panel. The capture hint may
@@ -47,16 +47,17 @@ Use instead when the game is paused: the settings panel, which hides the hint.
 The status panel may draw at the same time.
 
 ```odin
-box_y := height * 0.5 + hud_crosshair_reach(theme) + theme.spacing.md
+box_y := height - box_height - theme.spacing.xl
 ```
 
-Incorrect: centring it on the crosshair.
+Incorrect: centring it over the spider.
 
 ```odin
-box_y := height * 0.5 - box_height * 0.5
+box_y := (height - box_height) * 0.5
 ```
 
-The crosshair draws last, so it cuts through the text.
+The spider sits at the centre of the third-person view, so a centred hint
+covers the body.
 
 ## Notice
 
@@ -92,19 +93,8 @@ Incorrect: centring it over the scene.
 box_x := (width - box_width) * 0.5
 ```
 
-The notice never covers the crosshair or the status panel. It sits on the
-top-right margin, where no other surface lives.
-
-## Crosshair
-
-Always present while the menu is closed. Four arms, one hairline thick, with a
-dark outline so it reads against bright and dark surfaces alike. Arm and gap scale with
-density.
-
-Use instead when the game is paused: the settings panel, which replaces the
-crosshair. The capture hint sits below the crosshair, never in place of it.
-
-Do not animate it, do not give it a colour, and do not draw it above a menu.
+The notice never covers the status panel. It sits on the top-right margin, where
+no other surface lives.
 
 ## Settings panel
 

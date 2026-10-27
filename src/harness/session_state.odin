@@ -69,12 +69,12 @@ session_camera :: proc(session: ^Session) -> Camera_State {
 			overridden = true,
 		}
 	}
-	snapshot := game.simulation_snapshot(&session.sim)
+	camera := game.spider_camera(&session.sim, 1.0)
 	return {
-		position = vec_state(snapshot.eye_position),
-		yaw_deg = f32(math.to_degrees(snapshot.yaw)),
-		pitch_deg = f32(math.to_degrees(snapshot.pitch)),
+		position = vec_state(camera.position),
+		yaw_deg = f32(math.to_degrees(camera.yaw)),
+		pitch_deg = f32(math.to_degrees(camera.pitch)),
 		fov_deg = f32(math.to_degrees(frame.PLAYER_FOV_X)),
-		source = "player",
+		source = "third_person",
 	}
 }

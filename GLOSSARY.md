@@ -1,12 +1,17 @@
 # harbagsa
 
-A first-person game. The current slice is a walking demo.
+A third-person game. The current slice is a spider movement demo.
 
 ## Language
 
 **Player**:
-The single first-person character.
+The single third-person spider.
 _Avoid_: Avatar, pawn
+
+**Spider**:
+The player creature: a cephalothorax, an abdomen, and eight legs. The body hangs
+above the feet, and the legs plant on the floor.
+_Avoid_: Character model, monster
 
 **Character controller**:
 The component that moves the player through the world and resolves walls and floors by collide-and-slide.
@@ -17,12 +22,92 @@ Box3D's capsule query API. It gathers contact planes, sweeps the capsule, solves
 _Avoid_: Character controller
 
 **Capsule**:
-The player's collision shape: a vertical cylinder with rounded ends. It sets the player's height and radius.
+The spider body's collision shape: a vertical cylinder with rounded ends. It is
+0.84 m high and 0.42 m in radius. The legs are visual, so they do not widen the
+collision shape.
 _Avoid_: Collider, cylinder
 
-**Eye height**:
-The camera height above the player's feet.
-_Avoid_: Camera offset
+**Leg**:
+One two-bone chain from a hip to a foot, with a knee between them. The femur runs
+from the hip to the knee; the tibia runs from the knee to the foot.
+_Avoid_: Limb
+
+**Hip**:
+The leg's body-space anchor. Four hips sit on each side of the body, between the
+cephalothorax and the abdomen.
+_Avoid_: Shoulder, root
+
+**Foot**:
+The world point a leg ends at. A planted foot does not move.
+_Avoid_: End effector, toe
+
+**Knee**:
+The joint between the femur and the tibia. The solver puts it above the body
+line, so the leg folds the way an arachnid leg does.
+_Avoid_: Elbow, joint
+
+**Inverse kinematics**:
+The solve that finds the knee for a hip and a foot. The game uses one analytic
+two-bone solve per leg and clamps the foot inside the reach, so the chain never
+straightens into a lock.
+_Avoid_: IK rig, animation IK
+
+**Reach**:
+The longest hip-to-foot distance a leg may use: 94 percent of the femur plus the
+tibia. A foot target past the reach is pulled toward the hip.
+_Avoid_: Leg length, range
+
+**Rest point**:
+The body-space ground point a leg stands on when the body is still. It moves with
+the body yaw.
+_Avoid_: Home pose, default foot
+
+**Planted**:
+A foot that rests on the floor and holds its world position between steps.
+_Avoid_: Locked, grounded
+
+**Swing**:
+The short arc from one foot position to the next. A swing lifts the foot and
+returns it to the floor.
+_Avoid_: Step animation, stride
+
+**Step trigger**:
+The 0.30 m drift from the rest point that starts a swing. A planted foot that
+lags farther than this steps forward.
+_Avoid_: Threshold, tolerance
+
+**Gait group**:
+One half of the alternating tetrapod. The front-left, rear-left, front-right,
+and rear-right legs move together; the other four hold the floor.
+_Avoid_: Leg set, phase
+
+**Body yaw**:
+The direction the spider faces. It turns toward the movement direction; the
+camera yaw does not turn it.
+_Avoid_: Heading, facing
+
+**Orbit camera**:
+The third-person camera that circles the body. The mouse sets its yaw and pitch.
+_Avoid_: Follow camera, chase camera
+
+**Camera pivot**:
+The point the orbit camera looks along, 1.03 m above the feet. It follows the
+interpolated body and the step-smoothing offset.
+_Avoid_: Camera target, look-at
+
+**Spring arm**:
+The camera distance that a capsule cast shortens before the arm crosses a wall,
+floor, or prop. The arm never leaves the cast's safe distance.
+_Avoid_: Camera boom, collision camera
+
+**Orbit yaw**:
+The camera's horizontal angle. Movement input is relative to it.
+_Avoid_: Look yaw
+
+**Orbit pitch**:
+The camera's vertical angle, clamped from -70 degrees (looking down) to +45
+degrees (looking up). A new player starts at -15 degrees.
+_Avoid_: Look pitch
 
 **Grounded**:
 The state where the character controller finds a floor under the player.
@@ -32,30 +117,13 @@ _Avoid_: On floor
 Steering while airborne. It changes direction up to the air cap; it never exceeds the cap.
 _Avoid_: Air strafe
 
-**Stance**:
-The player's body height: Standing, Crouching, or Prone. It sets the capsule height, the eye height, and the movement speed.
-_Avoid_: Posture, state
-
-**Standing**:
-The tallest stance. The capsule is 1.80 m high and the eye is 1.65 m above the feet.
-
-**Crouching**:
-The middle stance. The capsule is 1.20 m high and the eye is 1.05 m above the feet.
-
-**Prone**:
-The lowest stance. The capsule is 0.70 m high and the eye is 0.30 m above the feet. A prone player can crawl.
-
-**Crawl**:
-Movement while Prone. The crawl speed is 1.2 m/s along the walkable ground plane.
-_Avoid_: Prone walk
-
 **Gait**:
-The ground movement mode: Walk or Sprint. Sprint applies only while Standing.
+The ground movement mode: Walk or Sprint.
 _Avoid_: Run mode
 
 **Input mode**:
 The way a key engages a setting: Hold while the key is down, or Toggle on each
-press. The settings menu changes the sprint, crouch, and prone input modes.
+press. The settings menu changes the sprint input mode.
 _Avoid_: Key mode
 
 **Sprint**:
@@ -66,26 +134,6 @@ _Avoid_: Run
 The speed along the walkable ground plane. On a straight climb the horizontal speed is `ground speed * cos(slope)`.
 _Avoid_: Surface speed
 
-**Headroom**:
-The clear space above the feet that a taller stance needs. The controller tests it before the capsule grows. A floor, a step, a crate, or a wall that only grazes the capsule side does not reduce headroom; a shape that crosses the inset probe does.
-_Avoid_: Ceiling check
-
-**Dive**:
-An 11.0 m/s lunge that starts in the air or from a sprint. The player lands Prone and slides.
-_Avoid_: Lunge
-
-**Slide**:
-The locked-direction glide after a dive or a crouch slide. A dive slide ends Prone; a crouch slide ends Crouching.
-_Avoid_: Skid
-
-**Crouch slide**:
-A 10.0 m/s slide that starts from Sprint. It ends Crouching.
-_Avoid_: Power slide
-
-**Mantle**:
-A 0.25 s climb onto a ledge up to 1.5 m above the feet. A fresh jump press or a held jump with movement input starts it.
-_Avoid_: Climb, vault
-
 **Step-up**:
 The automatic climb onto a near-vertical obstacle up to 0.35 m high while grounded. The top must be near flat; a walkable ramp is not a step-up.
 _Avoid_: Autostep
@@ -95,14 +143,13 @@ The downward correction that keeps a grounded player on a walkable surface withi
 _Avoid_: Stick to ground
 
 **Step smoothing**:
-The short vertical camera lag after a step-up or step-down. It decays after the capsule settles and does not move the player.
+The short vertical camera lag after a step-up or step-down. It decays after the capsule settles.
 _Avoid_: Camera lag
 
 **Settle time**:
-The time a smoothed value takes to close 99% of the gap to its target. The eye
-height settles in 0.184 s and the step offset in 0.256 s, both continuous
-values from the exponential rate constants. At 60 Hz the next whole step lands
-at 0.20 s and 0.27 s.
+The time a smoothed value takes to close 99% of the gap to its target. The step
+offset settles in 0.256 s, a continuous value from the exponential rate constant.
+At 60 Hz the next whole step lands at 0.27 s.
 _Avoid_: Smoothing time, decay time
 
 **Coyote time**:
@@ -113,12 +160,9 @@ _Avoid_: Grace period
 The 0.12 s before landing during which a jump press is remembered.
 _Avoid_: Input buffer
 
-**Movement state**:
-The exclusive action state: None, Diving, Sliding, or Mantling. Stance and gait are separate.
-_Avoid_: Action state
-
 **Arena**:
-The fixed test level: a floor, walls, ceiling, stairs, ramps, tunnels, mantle walls, a dive platform, a slide lane, and a few crates.
+The fixed test level: a floor, walls, ceiling, stairs, ramps, tunnels, the tall
+west walls, the high platform, a marked strip, and a few crates.
 _Avoid_: Map, level
 
 **World palette**:
@@ -276,17 +320,19 @@ The optional 0.25 m X/Z rounding of the ghost's bottom anchor. It is off by
 default.
 _Avoid_: Grid, quantization
 
-**Slide lane**:
-The marked arena strip for crouch slides.
-_Avoid_: Runway
+**Marked strip**:
+The yellow arena strip on the east side. It is left from the crouch slide that
+the arena used to train.
+_Avoid_: Slide lane, runway
 
-**Mantle wall**:
-The arena wall with a top at mantle height.
-_Avoid_: Ledge
+**West wall**:
+One of the two 1.2 m and 1.5 m walls on the west side. The spider walks around
+them; it cannot climb.
+_Avoid_: Mantle wall, ledge
 
-**Dive platform**:
-The 2.5 m arena platform that starts dives.
-_Avoid_: Tower
+**High platform**:
+The 2.5 m arena platform at the north end.
+_Avoid_: Dive platform, tower
 
 **Spawn**:
 The point where the player starts and returns after a reset.
@@ -298,7 +344,8 @@ settings.
 _Avoid_: Game loop, engine
 
 **Input snapshot**:
-One frame of player intent: movement axes, sprint, crouch, prone, jump, and reset. Look is a separate frame call.
+One frame of player intent: movement axes, sprint, jump, and reset. Look is a
+separate frame call.
 _Avoid_: Input state, controls
 
 **Frame input**:
@@ -310,9 +357,9 @@ _Avoid_: Input state, input command
 
 **Settings**:
 The runtime window and input-mode choices: window mode, display, resolution,
-and the sprint, crouch, and prone input modes. A new simulation starts Borderless
-on display 0; the stored Windowed size is 1280x720, with sprint Hold, crouch
-Toggle, and prone Toggle. A player reset keeps the current settings.
+and the sprint input mode. A new simulation starts Borderless on display 0; the
+stored Windowed size is 1280x720, with sprint Hold. A player reset keeps the
+current settings.
 _Avoid_: Options, preferences
 
 **Window mode**:
