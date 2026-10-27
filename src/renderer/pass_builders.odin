@@ -18,6 +18,8 @@ build_pass :: proc(
 		boxes       = boxes,
 	}
 	switch kind {
+	case .Tlas:
+		build_tlas_pass(r, pass)
 	case .Cluster:
 		build_cluster_pass(r, pass)
 	case .Depth:
@@ -29,6 +31,20 @@ build_pass :: proc(
 	case .Overlay:
 		build_overlay_pass(r, pass)
 	}
+}
+
+@(private)
+build_tlas_pass :: proc(r: ^Renderer, pass: ^Pass) {
+	pass.has_rendering = false
+	pass.draw = draw_tlas
+}
+
+@(private)
+draw_tlas :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
+	if !renderer_debug(r).light_shadows {
+		return
+	}
+	record_acceleration(r, command_buffer, pass.boxes)
 }
 
 @(private)

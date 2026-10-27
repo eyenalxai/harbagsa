@@ -11,6 +11,9 @@
     {"cmd": "editor", "camera": {"position": [17.5, 1.7, -17.2], "yaw_deg": -47.3836, "pitch_deg": -14.8396}},
     {"cmd": "settle", "frames": 20},
     {"cmd": "capture", "name": "lamp-on-wall"},
+    {"cmd": "renderer_debug", "taa": false, "light_shadows": false},
+    {"cmd": "settle", "frames": 20},
+    {"cmd": "capture", "name": "lamp-on-wall-shadows-off"},
     {"cmd": "capture", "name": "wall-stats", "format": "stats", "region": {"x": 0, "y": 0, "w": 580, "h": 680}}
   ],
   "checks": [
@@ -22,6 +25,7 @@
     {"field": "objects.7.position.z", "op": "gt", "value": -19.51},
     {"field": "objects.7.position.z", "op": "lt", "value": -19.49},
     {"field": "debug.lights.active", "op": "eq", "value": 4},
+    {"field": "capture.named.lamp-on-wall-shadows-off.delta_mean", "op": "lt", "value": 0.001},
     {"field": "capture.named.wall-stats.stats.gradient.y", "op": "lt", "value": 1.0}
   ]
 }

@@ -27,6 +27,7 @@ Perf_Cpu_Report :: struct {
 }
 
 Perf_Gpu_Report :: struct {
+	tlas:    Perf_Duration_Report `json:"tlas"`,
 	cluster: Perf_Duration_Report `json:"cluster"`,
 	depth:   Perf_Duration_Report `json:"depth"`,
 	scene:   Perf_Duration_Report `json:"scene"`,
@@ -79,6 +80,7 @@ perf_report_fill :: proc(
 	}
 	if summary.stats.gpu.available {
 		out.gpu = Perf_Gpu_Report {
+			tlas    = perf_duration(summary.stats.gpu.passes[.Tlas]),
 			cluster = perf_duration(summary.stats.gpu.passes[.Cluster]),
 			depth   = perf_duration(summary.stats.gpu.passes[.Depth]),
 			scene   = perf_duration(summary.stats.gpu.passes[.Scene]),

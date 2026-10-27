@@ -1,5 +1,7 @@
 # Closed arena shell
 
+> Shadow visibility is added by [ADR 0040](0040-hard-point-light-shadows.md). The no-shadow statements in this decision describe the state at the time.
+
 The arena is one closed box. A solid ceiling spans the top of the four outer walls. The inner light-lock room and its four-turn entry tunnel are removed.
 
 ## Why

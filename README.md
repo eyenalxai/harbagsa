@@ -5,15 +5,17 @@ jumps, dives, slides, and mantles in a fixed arena with stairs, ramps, tunnels,
 mantle walls, a dive platform, a closed ceiling, pushable crates, and three
 dynamic coloured lamps.
 SDL3 provides the window and input, Vulkan 1.3 draws the scene, and Box3D runs
-physics. A constant ambient floor, direct point lights, and emissive boxes shade
-every frame. There is no directional light, background pass, shadow system, or
-cached global illumination.
+physics. A constant ambient floor, direct point lights, hard ray-query shadows,
+and emissive boxes shade every frame. There is no directional light, background
+pass, shadow map, or cached global illumination.
 
 ## Requirements
 
 - [Odin](https://odin-lang.org/) tested with `dev-2026-10`
 - SDL3 and a Vulkan 1.3 driver with the Vulkan loader
-- A GPU with Vulkan 1.3 dynamic rendering and the shader demote feature
+- A GPU with Vulkan 1.3 dynamic rendering, shader demote, and the ray-query
+  extensions (`VK_KHR_acceleration_structure`, `VK_KHR_ray_query`, and
+  `VK_KHR_deferred_host_operations`)
 - `glslc` from shaderc to compile the GLSL shaders
 - `spirv-val` from SPIRV-Tools to validate the compiled shaders (optional)
 - A C and C++ compiler for the vendored Box3D, FreeType, and HarfBuzz libraries
@@ -96,7 +98,7 @@ pools on the closed shell.
 ### Perf overlay
 
 The summary shows FPS, frame interval, CPU frame time, p95 interval, spike
-count, and GPU total with the costliest pass. The pass row shows cluster
+count, and GPU total with the costliest pass. The pass row shows TLAS, cluster
 assignment, depth prepass, lit scene, TAA resolve, and overlay times. GPU numbers
 belong to the last completed frame. A device without timestamp support shows CPU
 numbers only.
@@ -219,8 +221,9 @@ and `ui`. Run one with `harbagsa-agent suite <name>`. Use `--list`, `--only`,
 `--skip`, or `--fail-fast` to select work.
 
 `scenarios/perf.json` measures the default view. `scenarios/perf-lamps.json`
-measures direct point lights. `scenarios/perf-crates.json` measures many placed
-objects. `tools/ab.sh` and `harbagsa-agent ab` compare two builds.
+measures direct point lights. `scenarios/perf-shadows.json` measures the paired
+shadow cost at 96 lights and 1080p. `scenarios/perf-crates.json` measures many
+placed objects. `tools/ab.sh` and `harbagsa-agent ab` compare two builds.
 
 ### Lighting and visual evidence
 
@@ -229,7 +232,9 @@ view with no visible background. `scenarios/initial-lamps.json` checks the three
 starting lamps, their dynamic bodies, and a moved light. `scenarios/lighting.json`
 checks non-black ambient coverage and the direct lamp response.
 `scenarios/light-move.json` checks that a moved lamp changes the captured light
-field and render digest. `scenarios/lamp-wall-plane.json` checks
+field and render digest. `scenarios/shadows.json` checks a blocked surface and
+the paired shadow toggle. `scenarios/shadow-move.json` checks that a moved lamp
+moves its shadow. `scenarios/lamp-wall-plane.json` checks
 placement and a smooth wall gradient. `scenarios/banding.json` checks output
 dither on that gradient.
 

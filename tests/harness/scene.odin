@@ -202,6 +202,7 @@ full_renderer_debug :: proc() -> renderer.Renderer_Debug {
 	debug.force_depth_trust = true
 	debug.synthetic_lights = 9
 	debug.clip_height = 3.0
+	debug.light_shadows = false
 	return debug
 }
 

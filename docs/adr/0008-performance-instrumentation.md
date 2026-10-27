@@ -1,5 +1,7 @@
 # Performance instrumentation
 
+> The TLAS pass adds a sixth GPU pass. See [ADR 0040](0040-hard-point-light-shadows.md).
+
 The demo measures its own frame. One perf sample holds the frame interval, five CPU phase durations from six ordered marks, and five GPU pass times from six timestamps. The passes are cluster assignment, depth prepass, lit scene, TAA resolve, and overlay. One timestamp query pool per frame in flight serves the GPU timestamps. The existing fence wait retires a slot before the results are read.
 
 ## Why

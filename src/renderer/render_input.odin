@@ -26,4 +26,5 @@ Render_Input :: struct {
 	jitter:       [2]f32,
 	atlas_weight: f32,
 	clip_height:  f32,
+	light_shadows: bool,
 }

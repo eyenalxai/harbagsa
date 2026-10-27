@@ -73,6 +73,7 @@ spikes_count_frames_above_the_median :: proc(t: ^testing.T) {
 gpu_stats_aggregate_available_samples :: proc(t: ^testing.T) {
 	with_gpu := make_sample(16, 1, 1, 1, 1, 1)
 	with_gpu.gpu.available = true
+	with_gpu.gpu.passes[.Tlas] = 500 * time.Microsecond
 	with_gpu.gpu.passes[.Cluster] = 1 * time.Millisecond
 	with_gpu.gpu.passes[.Depth] = 1 * time.Millisecond
 	with_gpu.gpu.passes[.Scene] = 4 * time.Millisecond
@@ -83,6 +84,7 @@ gpu_stats_aggregate_available_samples :: proc(t: ^testing.T) {
 	samples := [2]perf.Sample{with_gpu, make_sample(16, 1, 1, 1, 1, 1)}
 	stats := perf.stats_from_samples(samples[:])
 	testing.expect(t, stats.gpu.available, "GPU stats are missing")
+	expect_near(t, stats.gpu.passes[.Tlas].mean, 0.5, "tlas mean")
 	expect_near(t, stats.gpu.passes[.Depth].mean, 1, "depth mean")
 	expect_near(t, stats.gpu.passes[.Scene].mean, 4, "scene mean")
 	expect_near(t, stats.gpu.passes[.Taa].mean, 2, "taa mean")
@@ -110,6 +112,7 @@ gpu_fields_appear_in_the_overlay_text :: proc(t: ^testing.T) {
 	testing.expect(t, strings.contains(line, "gpu"), "summary has no GPU total")
 
 	pass_line := perf.format_passes(buffer[:], summary)
+	testing.expect(t, strings.contains(pass_line, "tlas"), "pass line has no tlas entry")
 	testing.expect(t, strings.contains(pass_line, "depth"), "pass line has no depth entry")
 	testing.expect(t, strings.contains(pass_line, "scene"), "pass line has no scene entry")
 	testing.expect(t, strings.contains(pass_line, "cluster"), "pass line has no cluster entry")

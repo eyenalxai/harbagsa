@@ -102,6 +102,10 @@ render_digest_changes_with_each_render_input :: proc(t: ^testing.T) {
 	clip.clip_height = 4
 	testing.expect(t, renderer.render_digest(clip).value != baseline.value, "clip height did not change the digest")
 
+	shadows := base
+	shadows.light_shadows = true
+	testing.expect(t, renderer.render_digest(shadows).value != baseline.value, "shadows did not change the digest")
+
 	view := base
 	view.view_flags = {.HUD}
 	testing.expect(t, renderer.render_digest(view).value != baseline.value, "view flags did not change the digest")

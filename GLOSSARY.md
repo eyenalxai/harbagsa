@@ -131,6 +131,14 @@ _Avoid_: Scene colours, 3D palette
 A light with a position, colour, intensity, and range. The renderer holds every active point light in a growable buffer. The lit pass reads the current position, colour, intensity, and range each frame. A lamp prefab owns one.
 _Avoid_: Lamp (the prefab), bulb
 
+**Point-light shadow**:
+The visibility term for one point light. The lit pass traces one hard ray from the surface to the lamp against the scene TLAS. A hit removes that lamp's contribution. Lamp instances are excluded so a lamp does not block its own light, and the ray stops one millimetre short of the light. The edge is hard because the light has no radius.
+_Avoid_: Shadow map, soft shadow, baked shadow
+
+**TLAS**:
+The top-level acceleration structure. It holds one instance per current box and points at the one cube BLAS. The renderer rebuilds it each frame while point-light shadows are enabled.
+_Avoid_: Scene BVH, instance list
+
 **Ambient floor**:
 The small constant radiance that keeps albedo readable outside every point-light range. It has no visibility test, cache, or bounce. It is not a placed light or global illumination.
 _Avoid_: Ambient light, GI, baked light

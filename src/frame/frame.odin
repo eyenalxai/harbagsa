@@ -58,6 +58,7 @@ build :: proc(
 ) -> renderer.Render_Input {
 	scene: renderer.Render_Input
 	scene.hud.weight = sim.settings.type_weight
+	scene.light_shadows = true
 
 	snapshot := game.simulation_snapshot(sim)
 	scene.camera = snapshot_camera(snapshot, options.alpha)

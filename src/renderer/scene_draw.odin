@@ -32,6 +32,9 @@ record_scene :: proc(
 	if !ensure_scene_capacity(r, box_count, len(lights)) {
 		return false
 	}
+	if !ensure_acceleration_capacity(r, box_count) {
+		return false
+	}
 	if !write_light_data(r, lights) {
 		return false
 	}
@@ -48,6 +51,9 @@ record_scene :: proc(
 	input.atlas_weight = text_atlas_applied_weight(r)
 	debug := renderer_debug(r)
 	input.clip_height = debug.clip_height
+	if r.debug.active {
+		input.light_shadows = debug.light_shadows
+	}
 	r.render_digest = render_digest(input)
 	r.has_render_digest = true
 	if !update_camera(r, input) {
