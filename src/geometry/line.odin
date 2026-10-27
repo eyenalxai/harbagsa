@@ -1,12 +1,11 @@
 #+vet explicit-allocators
 package geometry
 
-// The renderer shares one debug buffer between the world, the sun gizmo, the
-// selection outline, and the placement ghost. The source names which owner
-// added the line, so a report can tell an empty gizmo from a dim one.
+// The renderer shares one debug buffer between the world, the selection outline,
+// and the placement ghost. The source names which owner added the line, so a
+// report can tell an empty gizmo from a dim one.
 Line_Kind :: enum u8 {
 	World,
-	Sun,
 	Selection,
 	Placement,
 }

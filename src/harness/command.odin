@@ -19,7 +19,6 @@ Command_Kind :: enum {
 	Captures,
 	Camera,
 	View,
-	Sun,
 	Debug_Mode,
 	Editor,
 	Menu,
@@ -35,7 +34,6 @@ Command_Kind :: enum {
 	Place,
 	Remove,
 	Get,
-	Reference,
 	Quit,
 }
 
@@ -88,16 +86,6 @@ Camera_Command :: struct {
 	clear:        bool,
 }
 
-Sun_Command :: struct {
-	azimuth_deg:   f32,
-	elevation_deg: f32,
-	diameter_deg:  f32,
-	has_azimuth:   bool,
-	has_elevation: bool,
-	has_diameter:  bool,
-	clear:         bool,
-}
-
 Display_Mode_Def :: struct {
 	width:  i32,
 	height: i32,
@@ -146,15 +134,7 @@ Renderer_Debug_Field :: enum {
 	History_Weight,
 	Clamp,
 	Depth_Trust,
-	Freeze_Shadow_Phase,
-	Shadow_Phase,
-	Light_Shadows,
 	Synthetic_Lights,
-	Sky,
-	GI,
-	AO,
-	AO_Radius,
-	AO_Strength,
 	Clip_Height,
 }
 
@@ -177,7 +157,6 @@ Command :: struct {
 	captures:       Captures_Command,
 	camera:         Camera_Command,
 	view:           View_Command,
-	sun:            Sun_Command,
 	debug_mode:     Debug_Mode_Command,
 	editor:         Editor_Command,
 	menu:           Menu_Command,
@@ -192,7 +171,6 @@ Command :: struct {
 	place:          Place_Command,
 	remove:         Remove_Command,
 	get:            Get_Command,
-	reference:      Reference_Command,
 }
 
 command_name :: proc(kind: Command_Kind) -> string {

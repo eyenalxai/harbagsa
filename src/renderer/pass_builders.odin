@@ -18,18 +18,12 @@ build_pass :: proc(
 		boxes       = boxes,
 	}
 	switch kind {
-	case .Tlas:
-		pass.draw = draw_tlas
 	case .Cluster:
 		build_cluster_pass(r, pass)
-	case .Probe:
-		build_probe_pass(r, pass)
 	case .Depth:
 		build_depth_pass(r, pass)
 	case .Scene:
 		build_scene_pass(r, pass)
-	case .Sky:
-		build_sky_pass(r, pass)
 	case .Taa:
 		build_taa_pass(r, pass)
 	case .Overlay:
@@ -123,13 +117,6 @@ cluster_after :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pas
 		0,
 		nil,
 	)
-}
-
-@(private)
-build_probe_pass :: proc(r: ^Renderer, pass: ^Pass) {
-	pass.has_rendering = false
-	pass.draw = draw_probes
-	pass.after = probe_after
 }
 
 @(private)
@@ -236,45 +223,6 @@ scene_barriers :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pa
 }
 
 @(private)
-build_sky_pass :: proc(r: ^Renderer, pass: ^Pass) {
-	extent := target_extent_vk(r)
-	frame := r.frame_index
-	color := r.frame_targets.scene_color[frame]
-	velocity := r.frame_targets.velocity[frame]
-	depth := r.frame_targets.depth[frame]
-
-	pass.attachments[0] = {
-		sType = .RENDERING_ATTACHMENT_INFO,
-		imageView = color.view,
-		imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
-		loadOp = .LOAD,
-		storeOp = .STORE,
-	}
-	pass.attachments[1] = {
-		sType = .RENDERING_ATTACHMENT_INFO,
-		imageView = velocity.view,
-		imageLayout = .COLOR_ATTACHMENT_OPTIMAL,
-		loadOp = .LOAD,
-		storeOp = .STORE,
-	}
-	pass.depth = make_depth_attachment(depth.view, .DEPTH_ATTACHMENT_OPTIMAL, .LOAD)
-	pass.rendering = {
-		sType = .RENDERING_INFO,
-		renderArea = {extent = extent},
-		layerCount = 1,
-		colorAttachmentCount = 2,
-		pColorAttachments = &pass.attachments[0],
-		pDepthAttachment = &pass.depth,
-	}
-	pass.barriers = sky_barriers
-	pass.pipeline = r.scene.sky_pipeline
-	pass.layout = r.scene.sky_layout
-	pass.bind_camera = true
-	pass.has_rendering = true
-	pass.draw = draw_sky
-}
-
-@(private)
 build_taa_pass :: proc(r: ^Renderer, pass: ^Pass) {
 	extent := target_extent_vk(r)
 	read_index := r.taa.history_read
@@ -343,11 +291,6 @@ build_overlay_pass :: proc(r: ^Renderer, pass: ^Pass) {
 }
 
 @(private)
-draw_tlas :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
-	record_acceleration(r, command_buffer, pass.boxes)
-}
-
-@(private)
 draw_box_pass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
 	draw_boxes_indexed(
 		r,
@@ -356,12 +299,4 @@ draw_box_pass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pas
 		pass.stages,
 		len(pass.boxes),
 	)
-}
-
-@(private)
-draw_sky :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
-	if !renderer_debug(r).sky {
-		return
-	}
-	vk.CmdDraw(command_buffer, 3, 1, 0, 0)
 }

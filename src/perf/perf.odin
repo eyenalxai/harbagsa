@@ -25,12 +25,9 @@ Phase :: enum u8 {
 }
 
 Pass :: enum u8 {
-	Tlas,
 	Cluster,
-	Probe,
 	Depth,
 	Scene,
-	Sky,
 	Taa,
 	Overlay,
 }
@@ -43,12 +40,9 @@ PASS_COUNT :: int(Pass.Overlay) + 1
 // the same list, so a pass cannot be recorded without a timestamp or timed
 // without being recorded.
 PASS_ORDER := [?]Pass {
-	.Tlas,
 	.Cluster,
-	.Probe,
 	.Depth,
 	.Scene,
-	.Sky,
 	.Taa,
 	.Overlay,
 }
