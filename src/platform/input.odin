@@ -21,9 +21,6 @@ Events :: struct {
 	move_forward: f32,
 	move_right:   f32,
 	sprint_held:  bool,
-	crouch_held:  bool,
-	prone_held:   bool,
-	jump_held:    bool,
 	fly_up:       bool,
 	fly_down:     bool,
 
@@ -94,9 +91,6 @@ read_movement :: proc(events: ^Events) {
 		events.move_right -= 1.0
 	}
 	events.sprint_held = keys[int(sdl3.Scancode.LSHIFT)]
-	events.crouch_held = keys[int(sdl3.Scancode.C)]
-	events.prone_held = keys[int(sdl3.Scancode.Z)]
-	events.jump_held = keys[int(sdl3.Scancode.SPACE)]
 	if keys[int(sdl3.Scancode.SPACE)] {
 		events.fly_up = true
 	}

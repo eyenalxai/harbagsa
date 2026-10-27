@@ -50,20 +50,6 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 			}
 			session.sim.settings.sprint_mode = mode
 		}
-		if name, has := settings.crouch_mode.?; has {
-			mode, mode_ok := game.input_mode_parse(name)
-			if !mode_ok {
-				return format_error("%s", "scene settings hold an unknown crouch mode")
-			}
-			session.sim.settings.crouch_mode = mode
-		}
-		if name, has := settings.prone_mode.?; has {
-			mode, mode_ok := game.input_mode_parse(name)
-			if !mode_ok {
-				return format_error("%s", "scene settings hold an unknown prone mode")
-			}
-			session.sim.settings.prone_mode = mode
-		}
 		if weight, has := settings.type_weight.?; has {
 			session.sim.settings.type_weight = weight
 		}
@@ -140,22 +126,23 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 				pitch = pitch,
 			}
 			session.has_camera_override = false
-		case "player":
+		case "player", "third_person":
 			if session.debug.active {
 				game.debug_mode_toggle(&session.debug, &session.sim)
 			}
 			if player, has_player := scene.camera.player.?; has_player {
-				stance, stance_ok := game.stance_parse(player.stance)
-				if !stance_ok {
-					return format_error("%s", "scene player holds an unknown stance")
-				}
 				game.player_place(
 					&session.sim.player,
 					b3.Vec3{player.position[0], player.position[1], player.position[2]},
 					f32(math.to_radians(f64(player.yaw_deg))),
-					f32(math.to_radians(f64(player.pitch_deg))),
+					0.0,
 				)
-				game.commit_stance(&session.sim.player, stance)
+				session.sim.player.camera_yaw = f32(
+					math.to_radians(f64(player.camera_yaw_deg)),
+				)
+				session.sim.player.camera_pitch = f32(
+					math.to_radians(f64(player.camera_pitch_deg)),
+				)
 				session.sim.player.velocity = {
 					player.velocity[0],
 					player.velocity[1],
@@ -163,14 +150,8 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 				}
 				session.sim.player.grounded = player.grounded
 				session.sim.player.grounded_last_step = player.grounded
-				session.sim.player.step_smoothing = player.step_smoothing
-				session.sim.player.eye_height = player.eye_height
-				if session.sim.player.eye_height <= 0 {
-					session.sim.player.eye_height = game.stance_eye_height(stance)
-				}
-				session.sim.player.previous_eye_height = session.sim.player.eye_height
+				game.spider_plant_legs(&session.sim)
 			}
-			game.simulation_face(&session.sim, yaw, pitch)
 			session.has_camera_override = false
 		case "override":
 			session.camera_override = {

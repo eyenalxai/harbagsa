@@ -35,8 +35,6 @@ UI_LEADING_CAPTION :: 1.45
 UI_TRACKING_TITLE :: -0.01
 UI_TRACKING_CAPS :: 0.06
 
-UI_CROSSHAIR_ARM :: 10.0
-UI_CROSSHAIR_GAP :: 4.0
 UI_MENU_MIN_WIDTH :: 200.0
 
 Text_Type :: struct {
@@ -54,8 +52,6 @@ UI_Theme :: struct {
 	density: f32,
 	hairline: f32,
 	spacing: UI_Spacing,
-	crosshair_arm: f32,
-	crosshair_gap: f32,
 	menu_min_width: f32,
 
 	type_title:        Text_Type,
@@ -75,8 +71,6 @@ UI_Theme :: struct {
 	line_separator: [4]f32,
 	slider_track:   [4]f32,
 	scrim:          [4]f32,
-	crosshair:      [4]f32,
-	crosshair_edge: [4]f32,
 }
 
 ui_theme_init :: proc(render_height: u32, base_weight: f32 = BASE_WEIGHT) -> UI_Theme {
@@ -89,8 +83,6 @@ ui_theme_init :: proc(render_height: u32, base_weight: f32 = BASE_WEIGHT) -> UI_
 	theme.density = density
 	theme.hairline = max(1.0, math.round(density))
 
-	theme.crosshair_arm = UI_CROSSHAIR_ARM * density
-	theme.crosshair_gap = UI_CROSSHAIR_GAP * density
 	theme.menu_min_width = UI_MENU_MIN_WIDTH * density
 
 	theme.spacing = {
@@ -128,8 +120,6 @@ ui_theme_init :: proc(render_height: u32, base_weight: f32 = BASE_WEIGHT) -> UI_
 	theme.line_separator = ui_color(UI_COLOR_SEPARATOR, 0.16)
 	theme.slider_track = ui_color(UI_COLOR_SLIDER_TRACK, 0.20)
 	theme.scrim = ui_color(UI_COLOR_SCRIM, 0.62)
-	theme.crosshair = ui_color(UI_COLOR_HAIRLINE, 0.9)
-	theme.crosshair_edge = ui_color(UI_COLOR_SCRIM, 0.55)
 	return theme
 }
 

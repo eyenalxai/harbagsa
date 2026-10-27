@@ -1,7 +1,7 @@
 # UI evidence
 
 The 2D layer is drawn by the overlay pass: a status panel, a capture hint, a
-crosshair, and the settings panel. The captures come from `bin/harbagsa-agent` at
+and the settings panel. The captures come from `bin/harbagsa-agent` at
 1280x720. Evidence is a run directory plus a scenario. Run the scenario into
 `runs/<scenario-stem>/` and read the frames from `frames/`. Screenshots stay out
 of the repository.
@@ -106,7 +106,7 @@ spread of the six neutrals is 7.8 degrees.
 
 What changed:
 
-- One heading carries the stance and the gait. Speed and movement state are
+- One heading carries the spider and the gait. Speed and the planted foot count are
   body rows. Grounded and position are caption rows. The old panel drew six
   lines at one size and one colour.
 - Every number that changes during play is formatted into a fixed field and drawn
@@ -115,8 +115,8 @@ What changed:
 - A numeric Detail row now draws at 14 px. It used to fall back to the 15 px mono
   layer.
 - The position names its axes.
-- The capture hint sits below the crosshair. The old hint was centre-anchored
-  and the crosshair drew straight through the text.
+- The capture hint sits on the bottom margin. The old hint was centre-anchored
+  and covered the third-person body.
 
 ## Debug readout
 
