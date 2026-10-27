@@ -21,7 +21,7 @@ space. This is the opposite of the 2D layer, which authors sRGB hex
 | Dive set | `0.25 0.75 0.40` | `src/game/arena_props.odin` |
 | Slide lane | `0.90 0.80 0.20` | `src/game/arena_props.odin` |
 | Mantle wall | `0.60 0.35 0.80` | `src/game/arena_props.odin` |
-| Room | `0.38 0.60 0.56` | `src/game/arena_room.odin` |
+| Ceiling | `0.20 0.23 0.27` | `src/game/arena.odin` |
 | Crate, green | `0.30 0.68 0.38` | `src/game/prefabs.odin` |
 | Crate, orange | `0.86 0.56 0.20` | `src/game/prefabs.odin` |
 | Crate, blue | `0.26 0.48 0.84` | `src/game/prefabs.odin` |
@@ -55,7 +55,7 @@ map, a ray, a probe, or a screen-space visibility pass to repair it.
 
 The ambient floor is constant and small. It is not global illumination and not a
 static placed light. It keeps unlit albedo readable without hiding which areas
-the lamps reach. `scenarios/room-lighting.json` checks that floor.
+the lamps reach. `scenarios/lighting.json` checks that floor.
 `scenarios/light-move.json` checks that a transform change updates the image and
 render digest.
 
@@ -76,11 +76,11 @@ normal play. Plan-view and inspection captures can still expose it.
 - Every shape is a box. A ramp is a thin box rotated about X.
 - No rounded, bevelled, or non-box primitive. A curve in the world would be the
   only curve on screen.
-- The arena is 40 m square with 4 m walls. The floor is 1 m thick, the arena
-  walls 0.5 m, and a crate 1 m.
-- The closed room in the +x/+z corner is 11 m square with 3 m walls, a 0.3 m
-  ceiling, and one 1.6 m by 2.2 m door in the west wall. It remains only as a
-  direct-light inspection fixture until the outer arena closes.
+- The arena is 40 m square with 5.5 m walls and a solid ceiling. The floor is 1 m
+  thick, the walls and ceiling 0.5 m, and a crate 1 m. The ceiling spans the
+  outer wall faces, so the shell has no gap.
+- The arena is one closed box. There is no interior test room and no path to a
+  background.
 - The player has no body.
 - No fog and no depth cue beyond perspective and lamp range. The near plane is
   0.05 m and the far plane 200 m.

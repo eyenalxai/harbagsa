@@ -118,22 +118,8 @@ The exclusive action state: None, Diving, Sliding, or Mantling. Stance and gait 
 _Avoid_: Action state
 
 **Arena**:
-The fixed test level: a floor, walls, stairs, ramps, tunnels, mantle walls, a dive platform, a slide lane, a closed room with a four-turn light lock, and a few crates.
+The fixed test level: a floor, walls, ceiling, stairs, ramps, tunnels, mantle walls, a dive platform, a slide lane, and a few crates.
 _Avoid_: Map, level
-
-**Room**:
-The closed 11 m square arena structure in the +x/+z corner. It has one
-1.6 m by 2.2 m door in its west wall. The door opens into a four-turn light
-lock; the chamber behind it has no straight path to the door. It is twelve
-static arena boxes, not a placed object, and it exists to test interior
-lighting.
-_Avoid_: Building, house
-
-**Light lock**:
-A bent entry tunnel with enough right-angle turns that no straight direct light
-reaches the space behind it. The room's lock turns four times: east, south,
-west, south, and east. The tunnel is 2.0 m wide and 2.4 m high.
-_Avoid_: Air lock, light trap
 
 **World palette**:
 The scene colours, authored as linear RGBA floats because the renderer shades in
@@ -366,7 +352,7 @@ The `analysis.json` file from a run with color captures. It holds the capture wi
 _Avoid_: Diff report
 
 **Static box**:
-An immutable box in the arena: the floor, a wall, a prop, or a room part. It is not a placed object and it does not enter the simulation digest. `static_boxes` reports every static box; `harbagsa-agent boxes` prints the same list without a renderer.
+An immutable box in the arena: the floor, a wall, the ceiling, or a prop. It is not a placed object and it does not enter the simulation digest. `static_boxes` reports every static box; `harbagsa-agent boxes` prints the same list without a renderer.
 _Avoid_: Arena mesh, level mesh
 
 **Shot**:

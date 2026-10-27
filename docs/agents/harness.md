@@ -54,7 +54,8 @@ run path. `--out DIR` chooses the whole run directory.
 | inspect static arena boxes | `harbagsa-agent boxes` |
 | read check gates and margins | `harbagsa-agent checks RUN` |
 | compare two runs | `compare`, `diff`, or `ab --visual` |
-| test direct lighting | `scenarios/room-lighting.json`, `scenarios/light-move.json` |
+| test the closed shell | `scenarios/closed-arena.json` |
+| test direct lighting | `scenarios/lighting.json`, `scenarios/light-move.json` |
 | measure stability or banding | **Analysis** |
 | measure performance | **Performance** |
 | reproduce a live view | **Live repro** |
