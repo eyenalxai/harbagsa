@@ -6,7 +6,6 @@ import "core:mem"
 import "core:strings"
 
 import "src:frame"
-import "src:game"
 
 SCENE_KEYS := [?]string{"cmd", "camera", "objects", "settings", "view", "displays", "renderer_debug"}
 
@@ -110,12 +109,6 @@ destroy_scene :: proc(command: ^Command, allocator: mem.Allocator) {
 	if value, has := command.scene.settings.sprint_mode.?; has {
 		delete(value, allocator)
 	}
-	if value, has := command.scene.settings.crouch_mode.?; has {
-		delete(value, allocator)
-	}
-	if value, has := command.scene.settings.prone_mode.?; has {
-		delete(value, allocator)
-	}
 	command^ = {}
 }
 
@@ -132,8 +125,12 @@ parse_scene_camera :: proc(value: json.Value, allocator: mem.Allocator) -> (fram
 		return {}, format_error("unknown camera key %q", key)
 	}
 	source, source_ok := string_field(object, "source")
-	if !source_ok || (source != "override" && source != "debug" && source != "player") {
-		return {}, format_error("%s", "camera 'source' must be override, debug, or player")
+	if !source_ok ||
+	   (source != "override" && source != "debug" && source != "player" && source != "third_person") {
+		return {}, format_error(
+			"%s",
+			"camera 'source' must be override, debug, third_person, or player",
+		)
 	}
 	position, position_ok := vec3_field(object, "position")
 	yaw, yaw_ok := number_field(object, "yaw_deg")
@@ -159,15 +156,15 @@ parse_scene_camera :: proc(value: json.Value, allocator: mem.Allocator) -> (fram
 		camera.fov_deg = f32(fov)
 	}
 	if player_value, has := json_get(object, "player"); has {
-		player, player_error := parse_scene_player(player_value, allocator)
+		player, player_error := parse_scene_player(player_value)
 		if player_error != "" {
 			return {}, player_error
 		}
 		camera.player = player
 	}
-	if source == "player" {
+	if source == "player" || source == "third_person" {
 		if _, has_player := camera.player.?; !has_player {
-			return {}, format_error("%s", "a player camera needs a 'player' block")
+			return {}, format_error("%s", "a third-person camera needs a 'player' block")
 		}
 	}
 	ok = true
@@ -175,39 +172,38 @@ parse_scene_camera :: proc(value: json.Value, allocator: mem.Allocator) -> (fram
 }
 
 @(private)
-parse_scene_player :: proc(value: json.Value, allocator: mem.Allocator) -> (frame.Scene_Player, string) {
+parse_scene_player :: proc(value: json.Value) -> (frame.Scene_Player, string) {
 	object, object_ok := json_object(value)
 	if !object_ok {
 		return {}, format_error("%s", "camera 'player' must be an object")
 	}
-	if key, unknown := json_unknown_key(object, {"position", "yaw_deg", "pitch_deg", "stance", "velocity", "grounded", "step_smoothing", "eye_height"}); unknown {
+	if key, unknown := json_unknown_key(
+		object,
+		{"position", "yaw_deg", "camera_yaw_deg", "camera_pitch_deg", "velocity", "grounded", "legs_planted"},
+	); unknown {
 		return {}, format_error("unknown player key %q", key)
 	}
 	position, position_ok := vec3_field(object, "position")
 	yaw, yaw_ok := number_field(object, "yaw_deg")
-	pitch, pitch_ok := number_field(object, "pitch_deg")
-	stance_name, stance_ok := string_field(object, "stance")
-	stance, stance_parsed := game.stance_parse(stance_name)
-	if !position_ok || !yaw_ok || !pitch_ok || !stance_ok || !stance_parsed {
-		return {}, format_error("%s", "player needs 'position', 'yaw_deg', 'pitch_deg', and a valid 'stance'")
+	if !position_ok || !yaw_ok {
+		return {}, format_error("%s", "player needs 'position' and 'yaw_deg'")
 	}
 	player := frame.Scene_Player {
 		position = position,
 		yaw_deg = f32(yaw),
-		pitch_deg = f32(pitch),
-		stance = strings.clone(game.stance_name(stance), allocator),
+		camera_yaw_deg = f32(yaw),
+	}
+	if camera_yaw, has := number_field(object, "camera_yaw_deg"); has {
+		player.camera_yaw_deg = f32(camera_yaw)
+	}
+	if camera_pitch, has := number_field(object, "camera_pitch_deg"); has {
+		player.camera_pitch_deg = f32(camera_pitch)
 	}
 	if velocity, has := vec3_field(object, "velocity"); has {
 		player.velocity = velocity
 	}
 	if grounded, has := json_get(object, "grounded"); has {
 		player.grounded, _ = json_boolean(grounded)
-	}
-	if step_smoothing, has := number_field(object, "step_smoothing"); has {
-		player.step_smoothing = f32(step_smoothing)
-	}
-	if eye_height, has := number_field(object, "eye_height"); has {
-		player.eye_height = f32(eye_height)
 	}
 	return player, ""
 }

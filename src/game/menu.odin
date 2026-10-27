@@ -7,13 +7,13 @@ import "core:math"
 import "src:display"
 import "src:ui"
 
-MENU_ITEM_COUNT :: 8
-MENU_ROW_COUNT :: 10
-MENU_ROW_DIVIDER :: 7
-MENU_ROW_RESUME :: 8
-MENU_ROW_HEADER :: 9
+MENU_ITEM_COUNT :: 6
+MENU_ROW_COUNT :: 8
+MENU_ROW_DIVIDER :: 5
+MENU_ROW_RESUME :: 6
+MENU_ROW_HEADER :: 7
 MENU_HINT_COLUMNS :: 3
-MENU_CONTROL_HINT_COUNT :: 19
+MENU_CONTROL_HINT_COUNT :: 13
 MENU_HINT_COUNT :: 23
 TYPE_WEIGHT_STEP :: f32(10)
 
@@ -31,14 +31,12 @@ MENU_ITEM_NAMES := [MENU_ITEM_COUNT]string {
 	"Resolution",
 	"Type weight",
 	"Sprint mode",
-	"Crouch mode",
-	"Prone mode",
 	"Resume",
 }
 
 // One row per menu item, in item order, so the harness item name and the
 // drawn row index stay independent of where the dividers sit.
-MENU_ITEM_ROWS := [MENU_ITEM_COUNT]int{0, 1, 2, 3, 4, 5, 6, MENU_ROW_RESUME}
+MENU_ITEM_ROWS := [MENU_ITEM_COUNT]int{0, 1, 2, 3, 4, MENU_ROW_RESUME}
 
 Menu_Item :: enum {
 	Window_Mode,
@@ -46,8 +44,6 @@ Menu_Item :: enum {
 	Resolution,
 	Type_Weight,
 	Sprint,
-	Crouch,
-	Prone,
 	Resume,
 }
 
@@ -154,10 +150,6 @@ menu_change_setting :: proc(
 		settings.type_weight = weight
 	case .Sprint:
 		settings.sprint_mode = toggle_input_mode(settings.sprint_mode)
-	case .Crouch:
-		settings.crouch_mode = toggle_input_mode(settings.crouch_mode)
-	case .Prone:
-		settings.prone_mode = toggle_input_mode(settings.prone_mode)
 	}
 	return .Changed
 }
@@ -213,10 +205,8 @@ menu_view :: proc(menu: ^Menu_State, settings: ^Settings, debug_active: bool, de
 		ticks   = 9,
 	}
 	menu_setting_row(menu, 4, MENU_ITEM_NAMES[4], input_mode_name(settings.sprint_mode))
-	menu_setting_row(menu, 5, MENU_ITEM_NAMES[5], input_mode_name(settings.crouch_mode))
-	menu_setting_row(menu, 6, MENU_ITEM_NAMES[6], input_mode_name(settings.prone_mode))
 	menu.rows[MENU_ROW_DIVIDER] = {kind = .Divider}
-	menu.rows[MENU_ROW_RESUME] = {kind = .Action, label = MENU_ITEM_NAMES[7]}
+	menu.rows[MENU_ROW_RESUME] = {kind = .Action, label = MENU_ITEM_NAMES[5]}
 	menu.rows[MENU_ROW_HEADER] = {kind = .Header, label = "Controls"}
 
 	info := display.info_at(&settings.display, settings.window.display)

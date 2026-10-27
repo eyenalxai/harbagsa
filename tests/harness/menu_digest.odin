@@ -16,8 +16,6 @@ every_window_setting_changes_the_digest :: proc(t: ^testing.T) {
 			resolution        = "1920x1080",
 			window_resolution = "1280x720",
 			sprint_mode       = "Hold",
-			crouch_mode       = "Toggle",
-			prone_mode        = "Toggle",
 			type_weight       = 400,
 		},
 		menu = {selected = 0, item = "Window mode"},

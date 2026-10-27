@@ -9,7 +9,7 @@ A review works from a capture, not a memory. Use the harness and name the
 scenario:
 
 ```sh
-./bin/harbagsa-agent run scenarios/settings-menu.json --out runs/design-review
+./bin/harbagsa-agent run scenarios/spider-view.json --out runs/design-review
 ```
 
 Point the review at `runs/design-review`. Do not commit the PNG. The repository
@@ -38,6 +38,10 @@ order for the full review.
 - Any fade, slide, or scale on the overlay.
 - A new `Row_Kind` without the five touch points.
 - A third hue.
+- A player light, or an emissive spider part that is not an eye or one of the two
+  abdomen marks.
+- A foot that hovers above the floor or sinks through it.
+- A camera that crosses a wall, the floor, or a ceiling.
 - A value column that moves.
 
 ## Order
@@ -61,7 +65,7 @@ The order is the triage order. A broken interaction outranks a weak colour.
    exception is the documented 2 px accent-bar floor. Every other value belongs in
    `src/renderer/ui_theme.odin`.
 6. **One of the documented components.** A new panel is a status panel, a capture
-   hint, a crosshair, or the settings panel; the selection band, legend, rows,
+   hint, or the settings panel; the selection band, legend, rows,
    and slider are parts of those. Otherwise read
    [README.md](../ui/README.md#adding-a-surface) first.
 7. **No new row kind.** The kind set is closed. A new kind must extend

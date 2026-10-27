@@ -1,0 +1,105 @@
+{
+  "size": "1280x720",
+  "view": {
+    "hud": false,
+    "debug": false,
+    "hint": false,
+    "perf": false
+  },
+  "commands": [
+    {
+      "cmd": "step",
+      "frames": 10
+    },
+    {
+      "cmd": "capture",
+      "name": "spawn"
+    },
+    {
+      "cmd": "capture",
+      "name": "spawn-marks",
+      "format": "stats",
+      "region": {
+        "x": 540,
+        "y": 330,
+        "w": 220,
+        "h": 220
+      }
+    },
+    {
+      "cmd": "input",
+      "forward": 1
+    },
+    {
+      "cmd": "step",
+      "frames": 45
+    },
+    {
+      "cmd": "capture",
+      "name": "walk"
+    },
+    {
+      "cmd": "input",
+      "forward": 0
+    },
+    {
+      "cmd": "scene",
+      "camera": {
+        "source": "third_person",
+        "position": [
+          0,
+          1,
+          8
+        ],
+        "yaw_deg": 130,
+        "pitch_deg": -18,
+        "player": {
+          "position": [
+            -4.6,
+            0.01,
+            7.8
+          ],
+          "yaw_deg": 130,
+          "camera_yaw_deg": 130,
+          "camera_pitch_deg": -18
+        }
+      }
+    },
+    {
+      "cmd": "step",
+      "frames": 20
+    },
+    {
+      "cmd": "capture",
+      "name": "lit"
+    },
+    {
+      "cmd": "capture",
+      "name": "lit-stats",
+      "format": "stats",
+      "region": {
+        "x": 420,
+        "y": 240,
+        "w": 460,
+        "h": 380
+      }
+    }
+  ],
+  "checks": [
+    {
+      "field": "capture.named.spawn-marks.stats.max.x",
+      "op": "gt",
+      "value": 160
+    },
+    {
+      "field": "capture.named.spawn-marks.stats.max.z",
+      "op": "lt",
+      "value": 150
+    },
+    {
+      "field": "capture.named.lit-stats.stats.mean.y",
+      "op": "gt",
+      "value": 5
+    }
+  ]
+}

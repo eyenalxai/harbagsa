@@ -26,14 +26,21 @@ Color_State :: struct {
 	a: f32 `json:"a"`,
 }
 
+Leg_State :: struct {
+	foot:    Vec_State `json:"foot"`,
+	planted: bool      `json:"planted"`,
+}
+
 Player_State :: struct {
-	position:  Vec_State `json:"position"`,
-	eye:       Vec_State `json:"eye"`,
-	velocity:  Vec_State `json:"velocity"`,
-	yaw_deg:   f32       `json:"yaw_deg"`,
-	pitch_deg: f32       `json:"pitch_deg"`,
-	stance:    string    `json:"stance"`,
-	grounded:  bool      `json:"grounded"`,
+	position:        Vec_State `json:"position"`,
+	velocity:        Vec_State `json:"velocity"`,
+	yaw_deg:         f32       `json:"yaw_deg"`,
+	camera_yaw_deg:  f32       `json:"camera_yaw_deg"`,
+	camera_pitch_deg: f32      `json:"camera_pitch_deg"`,
+	gait:            string    `json:"gait"`,
+	grounded:        bool      `json:"grounded"`,
+	legs_planted:    int       `json:"legs_planted"`,
+	legs:            [game.LEG_COUNT]Leg_State `json:"legs"`,
 }
 
 Camera_State :: struct {
@@ -73,8 +80,6 @@ Settings_State :: struct {
 	resolution:        string `json:"resolution"`,
 	window_resolution: string `json:"window_resolution"`,
 	sprint_mode:       string `json:"sprint_mode"`,
-	crouch_mode:       string `json:"crouch_mode"`,
-	prone_mode:        string `json:"prone_mode"`,
 	type_weight:       f32    `json:"type_weight"`,
 }
 

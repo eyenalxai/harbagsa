@@ -40,13 +40,13 @@ stair_camera_y_is_smoothed :: proc(t: ^testing.T) {
 	sim.player.yaw = 0
 	step(&sim, {}, 2)
 
-	previous := game.simulation_snapshot(&sim).eye_position
+	previous := game.spider_camera(&sim, 1.0).position
 	max_delta: f32 = 0
 	for _ in 0 ..< 40 {
 		step(&sim, game.Input_Snapshot{move_forward = 1.0}, 1)
-		snapshot := game.simulation_snapshot(&sim)
-		max_delta = max(max_delta, abs(snapshot.eye_position.y - previous.y))
-		previous = snapshot.eye_position
+		position := game.spider_camera(&sim, 1.0).position
+		max_delta = max(max_delta, abs(position.y - previous.y))
+		previous = position
 	}
 	testing.expectf(t, max_delta <= 0.10, "camera jumped on the stairs: %v", max_delta)
 	testing.expectf(
@@ -103,16 +103,16 @@ stair_descent_camera_y_is_smoothed :: proc(t: ^testing.T) {
 		-1.0,
 	}
 	sim.player.velocity = {}
-	sim.player.yaw = 3.14159265
+	sim.player.camera_yaw = 3.14159265
 	step(&sim, {}, 2)
 
-	previous := game.simulation_snapshot(&sim).eye_position
+	previous := game.spider_camera(&sim, 1.0).position
 	max_delta: f32 = 0
 	for _ in 0 ..< 60 {
 		step(&sim, game.Input_Snapshot{move_forward = 1.0}, 1)
-		snapshot := game.simulation_snapshot(&sim)
-		max_delta = max(max_delta, abs(snapshot.eye_position.y - previous.y))
-		previous = snapshot.eye_position
+		position := game.spider_camera(&sim, 1.0).position
+		max_delta = max(max_delta, abs(position.y - previous.y))
+		previous = position
 	}
 	testing.expectf(t, max_delta <= 0.10, "camera jumped on the way down: %v", max_delta)
 }

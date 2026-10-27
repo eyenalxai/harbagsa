@@ -116,7 +116,7 @@ camera_state_reports_the_override_and_the_player :: proc(t: ^testing.T) {
 	defer harness.state_destroy(&cleared, context.allocator)
 	testing.expect(t, !cleared.camera.overridden, "the cleared camera still reports an override")
 	testing.expect_value(t, cleared.camera.fov_deg, f32(90))
-	testing.expect_value(t, cleared.camera.source, "player")
+	testing.expect_value(t, cleared.camera.source, "third_person")
 }
 
 @(test)
@@ -160,6 +160,6 @@ camera_state_reports_the_debug_view :: proc(t: ^testing.T) {
 	harness.reply_destroy(&reply, context.allocator)
 	restored := harness.session_state(&session)
 	defer harness.state_destroy(&restored, context.allocator)
-	testing.expect_value(t, restored.camera.source, "player")
+	testing.expect_value(t, restored.camera.source, "third_person")
 	testing.expect(t, !restored.camera.overridden, "leaving debug mode still reports an override")
 }

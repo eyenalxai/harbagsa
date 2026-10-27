@@ -14,6 +14,14 @@
     "shadows",
     "lamp-wall-plane",
     "gi",
-    "gi-dark"
+    "gi-dark",
+    {
+      "scenario": "spider-ik",
+      "no_render": true
+    },
+    {
+      "scenario": "spider-camera",
+      "no_render": true
+    }
   ]
 }

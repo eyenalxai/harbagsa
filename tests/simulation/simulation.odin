@@ -78,7 +78,7 @@ walk_follows_camera_yaw :: proc(t: ^testing.T) {
 
 	turn := b3.Vec2{-math.PI / 2.0 / game.YAW_SENSITIVITY, 0.0}
 	game.simulation_look(&sim, turn)
-	expect_near(t, sim.player.yaw, math.PI / 2.0, 0.0001, "yaw")
+	expect_near(t, sim.player.camera_yaw, math.PI / 2.0, 0.0001, "camera yaw")
 
 	step(&sim, game.Input_Snapshot{move_forward = 1.0}, 30)
 

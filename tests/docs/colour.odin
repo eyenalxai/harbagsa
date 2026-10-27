@@ -9,7 +9,7 @@ import "core:testing"
 
 import "src:renderer"
 
-COLOUR_ROWS :: 13
+COLOUR_ROWS :: 11
 CONTRAST_ROWS :: 4
 CONTRAST_TOLERANCE :: f32(0.05)
 
@@ -211,10 +211,6 @@ colour_token :: proc(token: string, theme: renderer.UI_Theme) -> (spec: Colour_T
 			true
 	case "scrim":
 		return {renderer.UI_COLOR_SCRIM, theme.scrim, "UI_COLOR_SCRIM", "scrim"}, true
-	case "crosshair":
-		return {renderer.UI_COLOR_HAIRLINE, theme.crosshair, "UI_COLOR_HAIRLINE", "crosshair"}, true
-	case "crosshair_edge":
-		return {renderer.UI_COLOR_SCRIM, theme.crosshair_edge, "UI_COLOR_SCRIM", "crosshair_edge"}, true
 	}
 	return {}, false
 }

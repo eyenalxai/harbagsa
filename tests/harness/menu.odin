@@ -24,19 +24,19 @@ menu_command_opens_selects_and_toggles :: proc(t: ^testing.T) {
 	harness.reply_destroy(&reply, context.allocator)
 	testing.expect(t, session.hud.menu.open, "menu did not open")
 
-	reply = execute(t, &session, `{"cmd": "menu", "item": "Crouch mode"}`)
+	reply = execute(t, &session, `{"cmd": "menu", "item": "Sprint mode"}`)
 	harness.reply_destroy(&reply, context.allocator)
-	testing.expect_value(t, session.hud.menu.selected, game.Menu_Item.Crouch)
+	testing.expect_value(t, session.hud.menu.selected, game.Menu_Item.Sprint)
 
 	reply = execute(t, &session, `{"cmd": "menu", "activate": true}`)
 	harness.reply_destroy(&reply, context.allocator)
-	testing.expect_value(t, session.sim.settings.crouch_mode, game.Input_Mode.Hold)
+	testing.expect_value(t, session.sim.settings.sprint_mode, game.Input_Mode.Toggle)
 
 	state := harness.session_state(&session)
 	defer harness.state_destroy(&state, context.allocator)
-	testing.expect_value(t, state.settings.crouch_mode, "Hold")
+	testing.expect_value(t, state.settings.sprint_mode, "Toggle")
 	testing.expect(t, state.menu.open, "state did not report the open menu")
-	testing.expect_value(t, state.menu.item, "Crouch mode")
+	testing.expect_value(t, state.menu.item, "Sprint mode")
 
 	reply = execute(t, &session, `{"cmd": "menu", "open": false}`)
 	harness.reply_destroy(&reply, context.allocator)
@@ -72,10 +72,10 @@ menu_and_settings_are_checkable :: proc(t: ^testing.T) {
 	reply = execute(
 		t,
 		&session,
-		`{"cmd": "check", "field": "settings.crouch_mode", "op": "eq", "value": "Toggle"}`,
+		`{"cmd": "check", "field": "settings.sprint_mode", "op": "eq", "value": "Hold"}`,
 	)
 	defer harness.reply_destroy(&reply, context.allocator)
-	testing.expect(t, reply.ok, "settings.crouch_mode check failed")
+	testing.expect(t, reply.ok, "settings.sprint_mode check failed")
 }
 
 @(test)
@@ -111,20 +111,20 @@ menu_activate_false_is_accepted :: proc(t: ^testing.T) {
 rejected_menu_command_leaves_the_menu_unchanged :: proc(t: ^testing.T) {
 	session, _ := harness.session_create(context.allocator)
 	defer harness.session_destroy(&session)
-	reply := execute(t, &session, `{"cmd": "menu", "open": true, "item": "Prone mode"}`)
+	reply := execute(t, &session, `{"cmd": "menu", "open": true, "item": "Sprint mode"}`)
 	harness.reply_destroy(&reply, context.allocator)
 
-	reply = execute(t, &session, `{"cmd": "menu", "open": false, "item": "Prone mode"}`)
+	reply = execute(t, &session, `{"cmd": "menu", "open": false, "item": "Sprint mode"}`)
 	harness.reply_destroy(&reply, context.allocator)
 	testing.expect(t, session.hud.menu.open, "a rejected command closed the menu")
-	testing.expect_value(t, session.hud.menu.selected, game.Menu_Item.Prone)
+	testing.expect_value(t, session.hud.menu.selected, game.Menu_Item.Sprint)
 }
 
 @(test)
 reset_restores_the_menu_and_the_settings :: proc(t: ^testing.T) {
 	session, _ := harness.session_create(context.allocator)
 	defer harness.session_destroy(&session)
-	reply := execute(t, &session, `{"cmd": "menu", "open": true, "item": "Prone mode"}`)
+	reply := execute(t, &session, `{"cmd": "menu", "open": true, "item": "Sprint mode"}`)
 	harness.reply_destroy(&reply, context.allocator)
 	reply = execute(t, &session, `{"cmd": "menu", "activate": true}`)
 	harness.reply_destroy(&reply, context.allocator)
@@ -135,7 +135,7 @@ reset_restores_the_menu_and_the_settings :: proc(t: ^testing.T) {
 	defer harness.state_destroy(&state, context.allocator)
 	testing.expect(t, !state.menu.open, "reset left the menu open")
 	testing.expect_value(t, state.menu.item, "Window mode")
-	testing.expect_value(t, state.settings.prone_mode, "Toggle")
+	testing.expect_value(t, state.settings.sprint_mode, "Hold")
 }
 
 @(test)

@@ -152,18 +152,13 @@ player_jump_latches_and_survives_a_frame :: proc(t: ^testing.T) {
 }
 
 @(test)
-sprint_and_prone_latches_gate_on_capture :: proc(t: ^testing.T) {
+sprint_latch_gates_on_capture :: proc(t: ^testing.T) {
 	r: input.Resolver
 	sprint := resolve_edge(&r, .LShift, {}, focus())
 	testing.expect(t, sprint.snapshot.sprint_pressed, "Shift did not latch sprint")
 
-	input.clear_latches(&r)
-	prone := resolve_edge(&r, .Z, {}, focus())
-	testing.expect(t, prone.snapshot.prone_pressed, "Z did not latch prone")
-
-	input.clear_latches(&r)
-	ctrl_z := resolve_edge(&r, .Z, {.Ctrl}, focus())
-	testing.expect(t, !ctrl_z.snapshot.prone_pressed, "Ctrl+Z latched prone in play")
+	free := resolve_edge(&r, .LShift, {}, focus(captured = false))
+	testing.expect(t, !free.snapshot.sprint_pressed, "a free cursor latched a sprint")
 }
 
 @(test)

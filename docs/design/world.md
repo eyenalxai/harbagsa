@@ -17,14 +17,18 @@ space. This is the opposite of the 2D layer, which authors sRGB hex
 | Wall | `0.55 0.34 0.26` | `src/game/arena.odin` |
 | Stairs, ramps, steps | `0.30 0.55 0.85` | `src/game/arena_props.odin` |
 | Tunnel | `0.85 0.50 0.20` | `src/game/arena_props.odin` |
-| Dive set | `0.25 0.75 0.40` | `src/game/arena_props.odin` |
+| High platform set | `0.25 0.75 0.40` | `src/game/arena_props.odin` |
 | Slide lane | `0.90 0.80 0.20` | `src/game/arena_props.odin` |
-| Mantle wall | `0.60 0.35 0.80` | `src/game/arena_props.odin` |
+| West wall | `0.60 0.35 0.80` | `src/game/arena_props.odin` |
 | Ceiling | `0.20 0.23 0.27` | `src/game/arena.odin` |
 | Crate, green | `0.30 0.68 0.38` | `src/game/prefabs.odin` |
 | Crate, orange | `0.86 0.56 0.20` | `src/game/prefabs.odin` |
 | Crate, blue | `0.26 0.48 0.84` | `src/game/prefabs.odin` |
 | Debug selection | `1.00 0.80 0.20` | `src/game/debug_draw_objects.odin` |
+| Spider body | `0.30 0.10 0.13` | `src/game/spider.odin` |
+| Spider legs | `0.20 0.07 0.09` | `src/game/spider.odin` |
+| Spider markings | `0.90 0.42 0.10`, emissive 0.55 | `src/game/spider.odin` |
+| Spider eyes | `1.00 0.62 0.16`, emissive 2.4 | `src/game/spider.odin` |
 
 Rules:
 
@@ -35,6 +39,12 @@ Rules:
 - The debug selection amber is `1.00 0.80 0.20` in linear space. The UI accent is
   `#E6AF3A` in sRGB. They are different colours in different spaces. Keep both
   values. Do not merge them into one token.
+- The spider owns the red family. No arena surface uses it, so the player never
+  reads as a prop. Its four eyes and two abdomen markings are the only emissive
+  surfaces that are not lamp prefabs: the eyes read at the front, and two bars on
+  the abdomen carry the silhouette from behind. They enter the probe field like
+  any emissive box, but they do not join the lamp budget. Do not add a player
+  light; it would break the darkness rule.
 
 ## Direct light
 

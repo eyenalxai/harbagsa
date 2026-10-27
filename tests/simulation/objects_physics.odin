@@ -82,7 +82,7 @@ step_world_leaves_player_alone_and_settles_objects :: proc(t: ^testing.T) {
 	testing.expect_value(t, sim.player.position, before.position)
 	testing.expect_value(t, sim.player.velocity, before.velocity)
 	testing.expect_value(t, sim.player.yaw, before.yaw)
-	testing.expect_value(t, sim.player.pitch, before.pitch)
+	testing.expect_value(t, sim.player.camera_pitch, before.camera_pitch)
 	testing.expect_value(t, sim.player.grounded, before.grounded)
 	testing.expectf(
 		t,

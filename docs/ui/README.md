@@ -16,8 +16,7 @@ renderer or an atlas. `src/renderer/ui_theme.odin` holds the tokens.
 `src/renderer/hud_rows.odin` emits rows, `src/renderer/hud_slider.odin` draws the
 slider row, `src/renderer/hud_menu.odin` builds the settings panel and its
 legend, `src/renderer/hud_notice.odin` draws the notice, and
-`src/renderer/hud.odin` draws the status panel, capture hint, and
-crosshair. `src/renderer/overlay.odin`,
+`src/renderer/hud.odin` draws the status panel and the capture hint. `src/renderer/overlay.odin`,
 `src/renderer/overlay_draw.odin`, and `src/renderer/overlay_pipeline.odin` own
 the vertex stream, pass, and pipelines. `src/renderer/text.odin`,
 `src/renderer/text_shaper.odin`, `src/renderer/text_atlas.odin`,
@@ -57,16 +56,16 @@ startup; later changes use the worker. See [type.md](type.md).
   and the fixed-width number rule.
 - [colour.md](colour.md): the ramp, the contrast table, and the alpha rules.
 - [spacing.md](spacing.md): the spacing scale, panel anatomy, and hairlines.
-- [components.md](components.md): the nine components: the status panel, the
-  capture hint, the notice, the crosshair, the settings panel, the selection
-  band, the legend grid, the rows, and the slider row.
+- [components.md](components.md): the eight components: the status panel, the
+  capture hint, the notice, the settings panel, the selection band, the legend
+  grid, the rows, and the slider row.
 - [states.md](states.md): the six row inputs, the six drawn states, blocked
   rows, and the status note.
 
 ## The object palette
 
-The debug object palette is a bottom dock, not a menu: the scene, the status
-panel, and the crosshair stay visible. `ui.palette_layout` owns the geometry: a
+The debug object palette is a bottom dock, not a menu: the scene and the status
+panel stay visible. `ui.palette_layout` owns the geometry: a
 6x2 grid of `PALETTE_CARD_SIZE` cards in a `PALETTE_PANEL_WIDTH` x
 `PALETTE_PANEL_HEIGHT` panel, centred with `spacing.xl` below it, plus a preview
 pane and a footer of key hints. The draw, the hit test, and the tests read that
@@ -134,6 +133,6 @@ and returns its travel rect in the layout. The `Slider` does that in
 - Every changing number is mono, in a fixed field. See [type.md](type.md).
 - A `Slider` is a settings control, not a selection state. Its filled track and
   knob show the value; `accent` still means selection.
-- The capture hint sits below the crosshair, never across it.
-- The status panel, the notice, the capture hint, and the crosshair are hidden
+- The capture hint sits on the bottom margin, clear of the spider.
+- The status panel, the notice, and the capture hint are hidden
   while the menu is open; the menu replaces them.

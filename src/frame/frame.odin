@@ -75,7 +75,6 @@ build :: proc(
 	scene.gi = true
 
 	snapshot := game.simulation_snapshot(sim)
-	scene.camera = snapshot_camera(snapshot, options.alpha)
 	if camera_override != nil {
 		scene.camera = camera_override^
 	} else if debug.active {
@@ -83,6 +82,14 @@ build :: proc(
 			position = debug.camera.position,
 			yaw      = debug.camera.yaw,
 			pitch    = debug.camera.pitch,
+			fov_x    = PLAYER_FOV_X,
+		}
+	} else {
+		camera := game.spider_camera(sim, options.alpha)
+		scene.camera = renderer.Camera {
+			position = camera.position,
+			yaw      = camera.yaw,
+			pitch    = camera.pitch,
 			fov_x    = PLAYER_FOV_X,
 		}
 	}
@@ -96,6 +103,7 @@ build :: proc(
 		box := game.simulation_object_visual_box(sim, object.id)
 		append(&scratch.boxes, box)
 	}
+	spider_boxes(&scratch.boxes, snapshot, options.alpha)
 	scene.boxes = scratch.boxes[:]
 
 	active := game.simulation_collect_lights(sim)
@@ -174,17 +182,4 @@ draw :: proc(
 		return begin_status
 	}
 	return renderer.end_frame(state, frame)
-}
-
-@(private)
-snapshot_camera :: proc(snapshot: game.Render_Snapshot, alpha: f32) -> renderer.Camera {
-	weight := clamp(alpha, 0, 1)
-	eye := snapshot.previous_eye_position +
-	       (snapshot.eye_position - snapshot.previous_eye_position) * weight
-	return {
-		position = eye,
-		yaw      = snapshot.yaw,
-		pitch    = snapshot.pitch,
-		fov_x    = PLAYER_FOV_X,
-	}
 }
