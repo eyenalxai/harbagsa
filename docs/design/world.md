@@ -77,7 +77,8 @@ misses returns zero; there is no sky or sun term.
 A probe inside a box is invalid and is skipped. A probe behind the shaded
 surface is rejected by the facing weight; the depth test alone lets a probe on
 the far side of a thin wall carry light across it. The field follows a moving
-lamp on the next frame.
+lamp on the next frame. Probe rays use the scene TLAS, so the renderer builds
+that structure when either shadows or GI is enabled.
 
 The `gi` renderer override, default true, exists for paired captures and
 performance runs. It is not a per-lamp or per-room control. Multi-volume probe

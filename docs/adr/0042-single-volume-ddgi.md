@@ -21,6 +21,7 @@ The renderer adds one diffuse bounce from the current point lights. A single pro
 - Mark a probe inside any box invalid. Skip it in the ray, blend, and gather passes.
 - Reject a probe behind the shaded surface in the gather. The depth test alone lets a probe on the far side of a thin wall agree on distance and carry light across the wall. The facing weight removes that leak.
 - Add a `Probe` compute pass after the TLAS and cluster passes. Add descriptor bindings 6 to 10.
+- Keep the TLAS current when either shadows or GI is enabled. The probe rays trace the same structure as the shadow rays.
 - Add `camera.probe`: volume count, probe count, and GI flag. The camera uniform grows to 256 bytes.
 - Add a gated `gi` debug override, default true.
 - Add `probe_indirect` to the lit formula:

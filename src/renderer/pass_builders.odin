@@ -43,7 +43,10 @@ build_tlas_pass :: proc(r: ^Renderer, pass: ^Pass) {
 
 @(private)
 draw_tlas :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
-	if !renderer_debug(r).light_shadows {
+	debug := renderer_debug(r)
+	// The probe rays trace the same TLAS as the shadow rays, so GI still needs
+	// a current structure when the shadow toggle is off.
+	if !debug.light_shadows && !debug.gi {
 		return
 	}
 	record_acceleration(r, command_buffer, pass.boxes)
