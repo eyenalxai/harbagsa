@@ -47,7 +47,6 @@ layout(set = 0, binding = 5) readonly buffer ClusterIndices {
     uint indices[];
 } cluster_indices;
 
-const vec3 AMBIENT_FLOOR = vec3(0.055, 0.060, 0.070);
 const uint POINT_RAY_MASK = 0x02u;
 // A lamp that sits on a wall ends its shadow ray on that wall. Stop short of
 // the light so the surface cannot paint a fan of false shadows.
@@ -126,7 +125,7 @@ void main() {
 
     ObjectData object = scene.objects[draw.object_index];
     vec3 normal = normalize(v_normal);
-    vec3 lit = AMBIENT_FLOOR + point_light_radiance(v_world_position, normal);
+    vec3 lit = point_light_radiance(v_world_position, normal);
     vec3 color = v_color * lit + v_color * object.color.a;
 
     vec4 world_position = vec4(v_world_position, 1.0);

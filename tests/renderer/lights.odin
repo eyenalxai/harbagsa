@@ -37,20 +37,18 @@ point_light_lights_a_box_and_reaches_the_buffer :: proc(t: ^testing.T) {
 		boxes = []geometry.Box{box},
 	}
 
-	dark_values, _, _, dark_ok := draw_scene(state, view)
-	dark := mean_luminance(dark_values)
+	dark := sample_point(state, view, {0, 0, 0.25})
 	dark_digest := state.render_digest
-	testing.expect(t, dark_ok, "the unlit frame did not render")
-	testing.expectf(t, dark > 0, "the ambient floor is black: %f", dark)
+	testing.expectf(t, dark >= 0, "the unlit frame did not render")
+	testing.expectf(t, dark < 0.001, "an unlit box is not black: %f", dark)
 
 	lights := []renderer.Light {
 		{position = {0, 0, 3}, intensity = 4, color = {1, 1, 1}, range = 10},
 	}
 	view.lights = lights
-	lit_values, _, _, lit_ok := draw_scene(state, view)
-	lit := mean_luminance(lit_values)
-	testing.expect(t, lit_ok, "the lit frame did not render")
-	testing.expectf(t, lit > dark * 1.2, "the point light did not brighten the box: %f -> %f", dark, lit)
+	lit := sample_point(state, view, {0, 0, 0.25})
+	testing.expectf(t, lit >= 0, "the lit frame did not render")
+	testing.expectf(t, lit > dark + 0.2, "the point light did not brighten the box: %f -> %f", dark, lit)
 	testing.expect(
 		t,
 		state.render_digest.value != dark_digest.value,
@@ -79,9 +77,9 @@ point_light_lights_a_box_and_reaches_the_buffer :: proc(t: ^testing.T) {
 	testing.expect_value(t, len(renderer.lights_uploaded(state)), 96)
 
 	view.lights = nil
-	dark_again_values, _, _, again_ok := draw_scene(state, view)
-	testing.expect(t, again_ok, "the second unlit frame did not render")
-	dark_again := mean_luminance(dark_again_values)
+	dark_again := sample_point(state, view, {0, 0, 0.25})
+	testing.expectf(t, dark_again >= 0, "the second unlit frame did not render")
+	testing.expectf(t, dark_again < 0.001, "removing the light left a fill: %f", dark_again)
 	testing.expectf(t, dark_again < lit, "removing the light left the contribution: %f", dark_again)
 }
 

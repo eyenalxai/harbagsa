@@ -71,18 +71,6 @@ sample_point :: proc(
 	return sum / count
 }
 
-@(private)
-mean_luminance :: proc(values: []f32) -> f32 {
-	if len(values) == 0 {
-		return 0
-	}
-	sum: f32
-	for index := 0; index + 3 < len(values); index += 4 {
-		sum += values[index] + values[index + 1] + values[index + 2]
-	}
-	return sum / f32(len(values) / 4 * 3)
-}
-
 // Projects a world point with the same camera math the renderer uses.
 @(private)
 scene_pixel :: proc(camera: renderer.Camera, width, height: u32, point: [3]f32) -> (x, y: int) {
