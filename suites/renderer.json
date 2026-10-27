@@ -16,6 +16,7 @@
     "settle-converged",
     "shadows",
     "shadow-move",
-    "lamp-wall-plane"
+    "lamp-wall-plane",
+    "spider-view"
   ]
 }

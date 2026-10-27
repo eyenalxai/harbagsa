@@ -6,7 +6,9 @@ layer. Read this file first, then the topic file for the job.
 ## The point of view
 
 A flat-shaded box world with direct coloured light and overlay text drawn at the
-exact size of its pixels. Nothing is textured, rounded, blurred, or glossy.
+exact size of its pixels. The player is an eight-legged box spider with planted
+feet; its eyes and two abdomen marks are the only self-lit surfaces that are not
+lamps. Nothing is textured, rounded, blurred, or glossy.
 Every surface is a box and every panel is square. Colour says what a thing does;
 it never decorates. The type carries the personality, because nothing else does.
 

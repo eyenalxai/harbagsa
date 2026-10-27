@@ -12,14 +12,13 @@ import "src:game"
 import "src:renderer"
 
 Scene_Player :: struct {
-	position:       [3]f32 `json:"position"`,
-	yaw_deg:        f32    `json:"yaw_deg"`,
-	pitch_deg:      f32    `json:"pitch_deg"`,
-	stance:         string `json:"stance"`,
-	velocity:       [3]f32 `json:"velocity"`,
-	grounded:       bool   `json:"grounded"`,
-	step_smoothing: f32    `json:"step_smoothing"`,
-	eye_height:     f32    `json:"eye_height"`,
+	position:      [3]f32 `json:"position"`,
+	yaw_deg:       f32    `json:"yaw_deg"`,
+	camera_yaw_deg: f32   `json:"camera_yaw_deg"`,
+	camera_pitch_deg: f32 `json:"camera_pitch_deg"`,
+	velocity:      [3]f32 `json:"velocity"`,
+	grounded:      bool   `json:"grounded"`,
+	legs_planted:  int    `json:"legs_planted"`,
 }
 
 Scene_Camera :: struct {
@@ -55,8 +54,6 @@ Scene_Settings :: struct {
 	display:      int    `json:"display"`,
 	resolution:   [2]i32 `json:"resolution"`,
 	sprint_mode:  string `json:"sprint_mode"`,
-	crouch_mode:  string `json:"crouch_mode"`,
-	prone_mode:   string `json:"prone_mode"`,
 	type_weight:  f32    `json:"type_weight"`,
 }
 
@@ -112,19 +109,19 @@ scene_capture :: proc(
 		scene.camera.pitch_deg = f32(math.to_degrees(debug.camera.pitch))
 	} else {
 		snapshot := game.simulation_snapshot(sim)
-		scene.camera.source = strings.clone("player", allocator)
-		scene.camera.position = snapshot.eye_position
-		scene.camera.yaw_deg = f32(math.to_degrees(snapshot.yaw))
-		scene.camera.pitch_deg = f32(math.to_degrees(snapshot.pitch))
+		camera := game.spider_camera(sim, 1.0)
+		scene.camera.source = strings.clone("third_person", allocator)
+		scene.camera.position = camera.position
+		scene.camera.yaw_deg = f32(math.to_degrees(camera.yaw))
+		scene.camera.pitch_deg = f32(math.to_degrees(camera.pitch))
 		scene.camera.player = Scene_Player {
 			position = snapshot.position,
-			yaw_deg = f32(math.to_degrees(snapshot.yaw)),
-			pitch_deg = f32(math.to_degrees(snapshot.pitch)),
-			stance = strings.clone(game.stance_name(snapshot.stance), allocator),
+			yaw_deg = f32(math.to_degrees(snapshot.body_yaw)),
+			camera_yaw_deg = f32(math.to_degrees(snapshot.camera_yaw)),
+			camera_pitch_deg = f32(math.to_degrees(snapshot.camera_pitch)),
 			velocity = {snapshot.velocity.x, snapshot.velocity.y, snapshot.velocity.z},
 			grounded = snapshot.grounded,
-			step_smoothing = snapshot.step_smoothing,
-			eye_height = sim.player.eye_height,
+			legs_planted = game.snapshot_planted_count(snapshot),
 		}
 	}
 
@@ -134,8 +131,6 @@ scene_capture :: proc(
 		display = settings.window.display,
 		resolution = {i32(settings.window.resolution.width), i32(settings.window.resolution.height)},
 		sprint_mode = strings.clone(game.input_mode_name(settings.sprint_mode), allocator),
-		crouch_mode = strings.clone(game.input_mode_name(settings.crouch_mode), allocator),
-		prone_mode = strings.clone(game.input_mode_name(settings.prone_mode), allocator),
 		type_weight = settings.type_weight,
 	}
 
@@ -184,9 +179,6 @@ scene_capture :: proc(
 
 scene_destroy :: proc(scene: ^Scene, allocator: mem.Allocator) {
 	delete(scene.camera.source, allocator)
-	if player, has_player := scene.camera.player.?; has_player {
-		delete(player.stance, allocator)
-	}
 	for object in scene.objects {
 		if object.name != "" {
 			delete(object.name, allocator)
@@ -198,8 +190,6 @@ scene_destroy :: proc(scene: ^Scene, allocator: mem.Allocator) {
 	delete(scene.objects, allocator)
 	delete(scene.settings.window_mode, allocator)
 	delete(scene.settings.sprint_mode, allocator)
-	delete(scene.settings.crouch_mode, allocator)
-	delete(scene.settings.prone_mode, allocator)
 	for display_info in scene.displays {
 		delete(display_info.name, allocator)
 		delete(display_info.modes, allocator)

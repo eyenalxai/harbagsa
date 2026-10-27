@@ -26,9 +26,10 @@ Debug_Camera :: struct {
 }
 
 Saved_Player :: struct {
-	position: b3.Vec3,
-	yaw:      f32,
-	pitch:    f32,
+	position:     b3.Vec3,
+	yaw:          f32,
+	camera_yaw:   f32,
+	camera_pitch: f32,
 }
 
 Debug_Mode :: struct {
@@ -183,7 +184,10 @@ debug_mode_exit :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	debug_mode_clear_selection(dm)
 	debug_mode_cancel_editing(dm)
 
-	player_place(&sim.player, dm.saved_player.position, dm.saved_player.yaw, dm.saved_player.pitch)
+	player_place(&sim.player, dm.saved_player.position, dm.saved_player.yaw, 0.0)
+	sim.player.camera_yaw = dm.saved_player.camera_yaw
+	sim.player.camera_pitch = dm.saved_player.camera_pitch
+	spider_plant_legs(sim)
 }
 
 @(private)
@@ -191,7 +195,8 @@ saved_player :: proc(sim: ^Simulation) -> Saved_Player {
 	return {
 		position = sim.player.position,
 		yaw = sim.player.yaw,
-		pitch = sim.player.pitch,
+		camera_yaw = sim.player.camera_yaw,
+		camera_pitch = sim.player.camera_pitch,
 	}
 }
 
@@ -205,10 +210,11 @@ save_player_and_sync_camera :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 
 @(private)
 camera_from_player :: proc(sim: ^Simulation) -> Debug_Camera {
+	camera := spider_camera(sim, 1.0)
 	return {
-		position = sim.player.position + b3.Vec3{0.0, sim.player.eye_height, 0.0},
-		yaw = sim.player.yaw,
-		pitch = sim.player.pitch,
+		position = camera.position,
+		yaw = camera.yaw,
+		pitch = camera.pitch,
 	}
 }
 

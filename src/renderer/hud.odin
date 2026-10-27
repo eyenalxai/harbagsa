@@ -58,9 +58,6 @@ hud_emit_frame :: proc(o: ^Overlay, x, y, width, height, thickness: f32, color: 
 	hud_emit_rect(o, x + width - thickness, y + thickness, thickness, height - thickness * 2, color)
 }
 
-hud_crosshair_reach :: proc(theme: UI_Theme) -> f32 {
-	return theme.crosshair_gap + theme.crosshair_arm + theme.hairline
-}
 
 build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
 	if !hud.enabled {
@@ -77,7 +74,6 @@ build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
 		build_palette(o, width, height, hud.palette)
 	}
 	build_capture_hint(o, width, height, hud)
-	build_crosshair(o, width * 0.5, height * 0.5)
 }
 
 @(private)
@@ -115,8 +111,9 @@ build_capture_hint :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
 	box_width := text_width + padding * 2
 	box_height := style.type.line_height + padding * 2
 	box_x := (width - box_width) * 0.5
-	// Below the crosshair, so the arms never cut through the text.
-	box_y := height * 0.5 + hud_crosshair_reach(theme) + theme.spacing.md
+	// The spider sits at the centre of the third-person view. Keep the hint on
+	// the bottom margin so it never covers the body.
+	box_y := height - box_height - theme.spacing.xl
 
 	hud_emit_rect(o, box_x, box_y, box_width, box_height, theme.surface_hud)
 	hud_emit_frame(o, box_x, box_y, box_width, box_height, theme.hairline, theme.line_hairline)
@@ -130,59 +127,6 @@ build_capture_hint :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
 }
 
 @(private)
-build_crosshair :: proc(o: ^Overlay, center_x, center_y: f32) {
-	theme := o.theme
-	arm := hud_snap(theme.crosshair_arm)
-	gap := hud_snap(theme.crosshair_gap)
-	thickness := theme.hairline
-
-	// The crosshair is emitted last so it stays on top of the panels. Its edges
-	// snap to whole pixels: a hairline on a fraction turns into two grey ones.
-	hud_crosshair_arm(
-		o,
-		hud_snap(center_x - gap - arm),
-		hud_snap(center_y - thickness * 0.5),
-		arm,
-		thickness,
-	)
-	hud_crosshair_arm(
-		o,
-		hud_snap(center_x + gap),
-		hud_snap(center_y - thickness * 0.5),
-		arm,
-		thickness,
-	)
-	hud_crosshair_arm(
-		o,
-		hud_snap(center_x - thickness * 0.5),
-		hud_snap(center_y - gap - arm),
-		thickness,
-		arm,
-	)
-	hud_crosshair_arm(
-		o,
-		hud_snap(center_x - thickness * 0.5),
-		hud_snap(center_y + gap),
-		thickness,
-		arm,
-	)
-}
-
 hud_snap :: proc(value: f32) -> f32 {
 	return math.round(value)
-}
-
-@(private)
-hud_crosshair_arm :: proc(o: ^Overlay, x, y, width, height: f32) {
-	theme := o.theme
-	outline := theme.hairline
-	hud_emit_rect(
-		o,
-		x - outline,
-		y - outline,
-		width + outline * 2,
-		height + outline * 2,
-		theme.crosshair_edge,
-	)
-	hud_emit_rect(o, x, y, width, height, theme.crosshair)
 }

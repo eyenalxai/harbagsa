@@ -8,35 +8,36 @@ import b3 "libs:box3d"
 
 import "src:geometry"
 
-// Jump, reset, and the stance edges are frame edges: apply them on one fixed
-// step. Look is a separate call so it works when no fixed step runs.
+// Jump and reset are frame edges: apply them on one fixed step. Look is a
+// separate call so it works when no fixed step runs.
 Input_Snapshot :: struct {
 	move_forward:   f32,
 	move_right:     f32,
 	sprint_held:    bool,
 	sprint_pressed: bool,
-	crouch_held:    bool,
-	crouch_pressed: bool,
-	prone_held:     bool,
-	prone_pressed:  bool,
 	jump_pressed:   bool,
-	jump_held:      bool,
 	reset_pressed:  bool,
 }
 
+Leg_Snapshot :: struct {
+	foot:          b3.Vec3,
+	previous_foot: b3.Vec3,
+	planted:       bool,
+}
+
 Render_Snapshot :: struct {
-	position:              b3.Vec3,
-	previous_position:     b3.Vec3,
-	eye_position:          b3.Vec3,
-	previous_eye_position: b3.Vec3,
-	velocity:              b3.Vec3,
-	yaw:                   f32,
-	pitch:                 f32,
-	grounded:              bool,
-	stance:                Stance,
-	gait:                  Gait,
-	movement_state:        Movement_State,
-	step_smoothing:        f32,
+	position:                b3.Vec3,
+	previous_position:       b3.Vec3,
+	velocity:                b3.Vec3,
+	camera_yaw:              f32,
+	camera_pitch:            f32,
+	body_yaw:                f32,
+	previous_body_yaw:       f32,
+	grounded:                bool,
+	gait:                    Gait,
+	step_smoothing:          f32,
+	previous_step_smoothing: f32,
+	legs:                    [LEG_COUNT]Leg_Snapshot,
 }
 
 Simulation :: struct {
@@ -88,13 +89,11 @@ simulation_is_valid :: proc(sim: ^Simulation) -> bool {
 }
 
 simulation_reset :: proc(sim: ^Simulation) {
-	player_place(&sim.player, SPAWN_POSITION, 0.0, 0.0)
-	commit_stance(&sim.player, .Standing)
+	player_place(&sim.player, SPAWN_POSITION, 0.0, CAMERA_DEFAULT_PITCH)
 	sim.player.gait = .Walk
 	sim.player.sprint_toggled = false
 	sim.player.sprint_wanted = false
-	sim.player.eye_height = PLAYER_STANDING_EYE
-	sim.player.previous_eye_height = PLAYER_STANDING_EYE
+	spider_plant_legs(sim)
 }
 
 simulation_step :: proc(sim: ^Simulation, input: Input_Snapshot, time_step: f32) {
@@ -108,7 +107,7 @@ simulation_step :: proc(sim: ^Simulation, input: Input_Snapshot, time_step: f32)
 	}
 
 	sim.player.previous_position = sim.player.position
-	sim.player.previous_eye_height = sim.player.eye_height
+	sim.player.previous_yaw = sim.player.yaw
 	sim.player.previous_step_smoothing = sim.player.step_smoothing
 	sim.player.step_grace = max(sim.player.step_grace - time_step, 0.0)
 
@@ -136,39 +135,29 @@ simulation_step :: proc(sim: ^Simulation, input: Input_Snapshot, time_step: f32)
 	}
 	was_grounded := sim.player.grounded
 
-	_ = try_mantle(sim, input)
-	try_dive(sim, input)
-	_ = try_crouch_slide(sim, input)
-	update_stance_input(&sim.player, input, sim.settings)
 	update_sprint_input(&sim.player, input, sim.settings.sprint_mode)
-	resolve_stance(sim, input)
-	update_eye_height(&sim.player, time_step)
+	sim.player.gait = sim.player.sprint_wanted ? .Sprint : .Walk
 
 	update_jump_timers(sim, input, time_step)
-	try_crouch_slide_jump(sim, input)
 
 	// Use ground acceleration on the jump frame too. The jump only changes the
 	// vertical velocity; the horizontal controller still has the floor.
 	update_horizontal_velocity(&sim.player, input, time_step)
 	try_jump(sim)
 
-	if sim.player.movement_state == .Mantling {
-		update_mantle(sim, time_step)
-	} else {
-		if !sim.player.grounded {
-			sim.player.velocity.y -= PLAYER_GRAVITY * time_step
-		}
-
-		lift := try_step(sim, time_step)
-		if lift > 0.0 {
-			sim.player.step_smoothing = clamp(
-				sim.player.step_smoothing + lift,
-				-STEP_SMOOTH_MAX,
-				STEP_SMOOTH_MAX,
-			)
-		}
-		move_player(sim, time_step)
+	if !sim.player.grounded {
+		sim.player.velocity.y -= PLAYER_GRAVITY * time_step
 	}
+
+	lift := try_step(sim, time_step)
+	if lift > 0.0 {
+		sim.player.step_smoothing = clamp(
+			sim.player.step_smoothing + lift,
+			-STEP_SMOOTH_MAX,
+			STEP_SMOOTH_MAX,
+		)
+	}
+	move_player(sim, time_step)
 	simulation_step_world(sim, time_step)
 
 	probe = probe_ground(sim)
@@ -183,40 +172,48 @@ simulation_step :: proc(sim: ^Simulation, input: Input_Snapshot, time_step: f32)
 	   horizontal_speed(sim.player.velocity) >= STEP_GRACE_SPEED {
 		sim.player.grounded = true
 	}
-	if was_grounded &&
-	   !sim.player.grounded &&
-	   sim.player.movement_state == .None &&
-	   sim.player.velocity.y <= 0.0 {
+	if was_grounded && !sim.player.grounded && sim.player.velocity.y <= 0.0 {
 		sim.player.air_cap = max(PLAYER_WALK_SPEED, horizontal_speed(sim.player.velocity))
 	}
 
-	update_dive(sim, time_step)
-	update_crouch_slide(sim, time_step)
 	update_step_smoothing(&sim.player, time_step)
+	update_body_yaw(&sim.player, time_step)
+	spider_update_legs(sim, time_step)
 	sim.player.grounded_last_step = sim.player.grounded
 }
 
 simulation_snapshot :: proc(sim: ^Simulation) -> Render_Snapshot {
-	eye_offset := b3.Vec3{0.0, sim.player.eye_height - sim.player.step_smoothing, 0.0}
-	previous_eye_offset := b3.Vec3 {
-		0.0,
-		sim.player.previous_eye_height - sim.player.previous_step_smoothing,
-		0.0,
-	}
-	return {
+	snapshot := Render_Snapshot {
 		position = sim.player.position,
 		previous_position = sim.player.previous_position,
-		eye_position = sim.player.position + eye_offset,
-		previous_eye_position = sim.player.previous_position + previous_eye_offset,
 		velocity = sim.player.velocity,
-		yaw = sim.player.yaw,
-		pitch = sim.player.pitch,
+		camera_yaw = sim.player.camera_yaw,
+		camera_pitch = sim.player.camera_pitch,
+		body_yaw = sim.player.yaw,
+		previous_body_yaw = sim.player.previous_yaw,
 		grounded = sim.player.grounded,
-		stance = sim.player.stance,
 		gait = sim.player.gait,
-		movement_state = sim.player.movement_state,
 		step_smoothing = sim.player.step_smoothing,
+		previous_step_smoothing = sim.player.previous_step_smoothing,
 	}
+	for leg, index in sim.player.legs {
+		snapshot.legs[index] = {
+			foot = leg.foot,
+			previous_foot = leg.previous_foot,
+			planted = leg.planted,
+		}
+	}
+	return snapshot
+}
+
+snapshot_planted_count :: proc(snapshot: Render_Snapshot) -> int {
+	count := 0
+	for leg in snapshot.legs {
+		if leg.planted {
+			count += 1
+		}
+	}
+	return count
 }
 
 // The debug mode keeps the placed objects alive while the player is not
@@ -252,7 +249,9 @@ create_static_box :: proc(world_id: b3.WorldId, box: geometry.Box) {
 	)
 }
 
+// The harness aims the camera, not the body. The body keeps its heading until
+// the movement input turns it.
 simulation_face :: proc(sim: ^Simulation, yaw, pitch: f32) {
-	sim.player.yaw = b3.UnwindAngle(yaw)
-	sim.player.pitch = clamp(pitch, -PITCH_LIMIT, PITCH_LIMIT)
+	sim.player.camera_yaw = b3.UnwindAngle(yaw)
+	sim.player.camera_pitch = clamp(pitch, CAMERA_PITCH_MIN, CAMERA_PITCH_MAX)
 }

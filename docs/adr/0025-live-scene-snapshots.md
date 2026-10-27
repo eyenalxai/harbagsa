@@ -1,5 +1,8 @@
 # A live view writes one scene snapshot
 
+> Superseded in part by ADR 0043: the scene player block reports body and camera
+> yaw plus planted feet, not a stance, eye height, or step smoothing.
+
 `F5` in the game writes a normal scenario with one `scene` command. The command
 carries the exact camera, placed objects, settings, display list, and view
 flags. `record` starts with the same command, so a recording and a keyed repro

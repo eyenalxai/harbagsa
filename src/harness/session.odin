@@ -173,6 +173,10 @@ session_apply_input :: proc(session: ^Session, command: Input_Command) {
 	if command.has_jump {
 		session.input.jump_pressed = command.jump
 	}
+	if command.has_sprint {
+		session.input.sprint_held = command.sprint
+		session.input.sprint_pressed = command.sprint
+	}
 }
 session_step :: proc(session: ^Session, frames: int) -> string {
 	if frames < 1 || frames > MAX_STEP_FRAMES {
@@ -192,6 +196,7 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 		input := session.input
 		if index > 0 {
 			input.jump_pressed = false
+			input.sprint_pressed = false
 		}
 		if session.debug.active {
 			game.simulation_step_world(&session.sim, game.SIMULATION_STEP)

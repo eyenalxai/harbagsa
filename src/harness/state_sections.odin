@@ -66,12 +66,19 @@ build_state_player :: proc(state: ^State, ctx: ^State_Context) {
 	snapshot := game.simulation_snapshot(ctx.sim)
 	state.player = {
 		position = vec_state(snapshot.position),
-		eye = vec_state(snapshot.eye_position),
 		velocity = vec_state(snapshot.velocity),
-		yaw_deg = f32(math.to_degrees(snapshot.yaw)),
-		pitch_deg = f32(math.to_degrees(snapshot.pitch)),
-		stance = game.stance_name(snapshot.stance),
+		yaw_deg = f32(math.to_degrees(snapshot.body_yaw)),
+		camera_yaw_deg = f32(math.to_degrees(snapshot.camera_yaw)),
+		camera_pitch_deg = f32(math.to_degrees(snapshot.camera_pitch)),
+		gait = game.gait_name(snapshot.gait),
 		grounded = snapshot.grounded,
+		legs_planted = game.snapshot_planted_count(snapshot),
+	}
+	for leg, index in snapshot.legs {
+		state.player.legs[index] = {
+			foot = vec_state(leg.foot),
+			planted = leg.planted,
+		}
 	}
 }
 
@@ -133,8 +140,6 @@ build_state_settings :: proc(state: ^State, ctx: ^State_Context) {
 			allocator = ctx.allocator,
 		),
 		sprint_mode = game.input_mode_name(settings.sprint_mode),
-		crouch_mode = game.input_mode_name(settings.crouch_mode),
-		prone_mode = game.input_mode_name(settings.prone_mode),
 		type_weight = settings.type_weight,
 	}
 }

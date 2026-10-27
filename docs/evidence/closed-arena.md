@@ -13,7 +13,7 @@ Captured on 2026-10-27 from the closed-arena branch with AMD Radeon RX 9060 XT (
 | Ceiling half extent | 20.5 m | above 20 m |
 | Ceiling capture mean green | 8.60 | above 1 |
 
-The ceiling capture fills the frame with a box surface. It has no clear-colour pixels. The arena wall height is 5.5 m and the ceiling adds 0.5 m, so the underside sits exactly at the wall top. The taller walls leave room for a standing jump from the 2.5 m dive platform.
+The ceiling capture fills the frame with a box surface. It has no clear-colour pixels. The arena wall height is 5.5 m and the ceiling adds 0.5 m, so the underside sits exactly at the wall top. The taller walls leave room for a standing jump from the 2.5 m high platform.
 
 `tests/simulation/ceiling.odin` places the player 0.2 m below the ceiling and launches the player upward. The peak feet position stays at the 3.70 m clearance bound, within the 0.02 m physics tolerance.
 
