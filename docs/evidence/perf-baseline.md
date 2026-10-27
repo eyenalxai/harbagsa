@@ -1,5 +1,7 @@
 # Performance baseline
 
+> Historical note: this baseline predates the TLAS pass and point-light shadows. The current shadow budget is in [point-light shadows](point-light-shadows.md).
+
 The current baseline is the direct-light renderer measured on 2026-10-26 with AMD Radeon RX 9060 XT (RADV GFX1200). Use `scenarios/perf.json` for no lamps and `scenarios/perf-lamps.json` for eight synthetic lamps. Keep the extent and command sequence the same when comparing builds.
 
 ## Method

@@ -1,5 +1,7 @@
 # Debug object palette and point lights
 
+> Shadow visibility is added by [ADR 0040](0040-hard-point-light-shadows.md). The no-shadow statements in this decision describe the state at the time.
+
 Debug mode turns the player into a free-fly camera and edits placed objects through one catalog. The catalog holds crates, construction boxes, a ramp, and three lamp prefabs. Every object is the same unit cube with a transform. A lamp adds an emissive strength and a point light.
 
 ## Decisions

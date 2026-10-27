@@ -136,6 +136,7 @@ Renderer_Debug_Field :: enum {
 	Depth_Trust,
 	Synthetic_Lights,
 	Clip_Height,
+	Light_Shadows,
 }
 
 Renderer_Debug_Resets :: bit_set[Renderer_Debug_Field]

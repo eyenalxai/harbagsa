@@ -49,9 +49,17 @@ The formula is:
 albedo * (ambient_floor + direct_point_lights) + albedo * emissive
 ```
 
-A point light uses the surface normal and a squared range falloff. It has no
-visibility term, so it can cross a wall. That is deliberate. Do not add a shadow
-map, a ray, a probe, or a screen-space visibility pass to repair it.
+A point light uses the surface normal and a squared range falloff. A hard shadow
+ray also tests visibility for each lamp that can reach the fragment. A blocked
+lamp contributes zero. The lamp has no radius, so the shadow edge is hard. The
+lit pass traces against the same cube TLAS as the rest of the scene. The ray
+starts just above the surface, stops just short of the lamp, and excludes lamp
+boxes. This keeps a wall-mounted lamp from shading the wall it sits on.
+
+There is no shadow map, soft-shadow sampling, probe, or screen-space visibility
+pass. The `light_shadows` renderer override exists only for paired captures and
+performance runs. It is not a per-lamp editor control. A future lamp radius or
+soft shadow is a new decision, not a hidden shader option.
 
 Every lamp prefab uses a dynamic body. Its light position comes from that body
 on every frame. A static or baked lamp is not an alternate mode. The starting
@@ -63,7 +71,9 @@ static placed light. It keeps unlit albedo readable without hiding which areas
 the lamps reach. `scenarios/lighting.json` checks that floor.
 `scenarios/initial-lamps.json` checks the three starting lamps and a moved light.
 `scenarios/light-move.json` checks that a transform change updates the image and
-render digest.
+render digest. `scenarios/shadows.json` checks a blocked surface and the paired
+toggle. `scenarios/lamp-wall-plane.json` checks the wall-plane regression.
+`scenarios/shadow-move.json` checks that a moved lamp moves its shadow.
 
 ## No texture
 

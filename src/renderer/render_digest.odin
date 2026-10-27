@@ -25,6 +25,7 @@ RENDER_DIGEST_FIELDS := [?]Render_Digest_Field {
 	{"jitter", true, write_jitter, ""},
 	{"atlas_weight", true, write_atlas_weight, ""},
 	{"clip_height", true, write_clip_height, ""},
+	{"light_shadows", true, write_light_shadows, ""},
 	{"view_flags", true, write_view_flags, ""},
 	{"debug_lines", false, nil, "draws after the resolve"},
 	{"hud", false, nil, "draws after the resolve"},
@@ -119,6 +120,11 @@ write_atlas_weight :: proc(hash: ^digest.FNV, input: Render_Input) {
 @(private)
 write_clip_height :: proc(hash: ^digest.FNV, input: Render_Input) {
 	digest.write_f32(hash, input.clip_height)
+}
+
+@(private)
+write_light_shadows :: proc(hash: ^digest.FNV, input: Render_Input) {
+	digest.write_bool(hash, input.light_shadows)
 }
 
 @(private)
