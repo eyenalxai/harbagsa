@@ -24,6 +24,8 @@ Prefab_Id :: enum {
 }
 
 INITIAL_CRATE_COUNT :: 3
+INITIAL_LAMP_COUNT :: 3
+INITIAL_OBJECT_COUNT :: INITIAL_CRATE_COUNT + INITIAL_LAMP_COUNT
 OBJECT_DENSITY :: 20.0
 RAMP_BASE_PITCH :: 20.0 * b3.DEG_TO_RAD
 
@@ -48,6 +50,18 @@ INITIAL_CRATE_COLORS :: [INITIAL_CRATE_COUNT][4]f32 {
 	CRATE_GREEN_COLOR,
 	CRATE_AMBER_COLOR,
 	CRATE_BLUE_COLOR,
+}
+
+Initial_Lamp :: struct {
+	name:     string,
+	prefab:   Prefab_Id,
+	position: [3]f32,
+}
+
+INITIAL_LAMPS :: [INITIAL_LAMP_COUNT]Initial_Lamp {
+	{"initial-lamp", .Lamp, {-6.0, 1.2, 6.0}},
+	{"initial-panel", .Light_Panel, {6.0, 1.5, 6.0}},
+	{"initial-beacon", .Beacon, {0.0, 1.0, 2.0}},
 }
 
 Prefab :: struct {
@@ -131,7 +145,7 @@ PREFABS := [Prefab_Id]Prefab {
 		name = "Lamp",
 		short_name = "Lamp",
 		half_extents = {0.25, 0.25, 0.25},
-		body_mode = .Static,
+		body_mode = .Dynamic,
 		density = OBJECT_DENSITY,
 		light = {
 			active = true,
@@ -144,7 +158,7 @@ PREFABS := [Prefab_Id]Prefab {
 		name = "Light panel",
 		short_name = "Panel",
 		half_extents = {1.0, 0.05, 0.25},
-		body_mode = .Static,
+		body_mode = .Dynamic,
 		density = OBJECT_DENSITY,
 		light = {
 			active = true,
@@ -157,7 +171,7 @@ PREFABS := [Prefab_Id]Prefab {
 		name = "Beacon",
 		short_name = "Beacon",
 		half_extents = {0.15, 0.15, 0.15},
-		body_mode = .Static,
+		body_mode = .Dynamic,
 		density = OBJECT_DENSITY,
 		light = {
 			active = true,
@@ -194,6 +208,19 @@ prefab_light :: proc(id: Prefab_Id) -> Light_Settings {
 
 prefab_has_light :: proc(id: Prefab_Id) -> bool {
 	return prefab(id).light.active
+}
+
+// A light follows a moving body. Every lamp is therefore dynamic on every
+// creation and conversion path.
+prefab_body_mode :: proc(id: Prefab_Id, requested: Body_Mode) -> Body_Mode {
+	if prefab_has_light(id) {
+		return .Dynamic
+	}
+	return requested
+}
+
+prefab_accepts_body :: proc(id: Prefab_Id, mode: Body_Mode) -> bool {
+	return mode == .Dynamic || !prefab_has_light(id)
 }
 
 prefab_name :: proc(id: Prefab_Id) -> string {
