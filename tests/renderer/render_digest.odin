@@ -106,6 +106,24 @@ render_digest_changes_with_each_render_input :: proc(t: ^testing.T) {
 	shadows.light_shadows = true
 	testing.expect(t, renderer.render_digest(shadows).value != baseline.value, "shadows did not change the digest")
 
+	probe := base
+	probe.probe_volumes = []renderer.Probe_Volume {
+		{min = {-1, 0, -1}, spacing = 1, counts = {2, 2, 2}},
+	}
+	probe_digest := renderer.render_digest(probe).value
+	testing.expect(t, probe_digest != baseline.value, "probe volumes did not change the digest")
+
+	probe.probe_volumes[0].spacing = 2
+	testing.expect(
+		t,
+		renderer.render_digest(probe).value != probe_digest,
+		"probe spacing did not change the digest",
+	)
+
+	gi := base
+	gi.gi = true
+	testing.expect(t, renderer.render_digest(gi).value != baseline.value, "gi did not change the digest")
+
 	view := base
 	view.view_flags = {.HUD}
 	testing.expect(t, renderer.render_digest(view).value != baseline.value, "view flags did not change the digest")

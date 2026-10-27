@@ -137,6 +137,7 @@ Renderer_Debug_Field :: enum {
 	Synthetic_Lights,
 	Clip_Height,
 	Light_Shadows,
+	GI,
 }
 
 Renderer_Debug_Resets :: bit_set[Renderer_Debug_Field]

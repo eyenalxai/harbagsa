@@ -2,7 +2,7 @@
   "requires": {"renderer_debug": true},
   "size": "1920x1080",
   "view": {"hud": false, "debug": false, "hint": false, "perf": false},
-  "renderer_debug": {"synthetic_lights": 96},
+  "renderer_debug": {"synthetic_lights": 96, "gi": false},
   "commands": [
     {"cmd": "camera", "position": [0, 2.2, 12], "yaw_deg": 0, "pitch_deg": -8.5944},
     {"cmd": "settle", "frames": 1},

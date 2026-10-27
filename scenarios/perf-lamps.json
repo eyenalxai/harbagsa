@@ -1,7 +1,7 @@
 {
   "requires": {"renderer_debug": true},
   "view": {"hud": false, "debug": false, "hint": false},
-  "renderer_debug": {"synthetic_lights": 8, "light_shadows": false},
+  "renderer_debug": {"synthetic_lights": 8, "light_shadows": false, "gi": false},
   "commands": [
     {"cmd": "camera", "position": [0, 2.2, 12], "yaw_deg": 0, "pitch_deg": -8.5944},
     {"cmd": "settle", "frames": 1},

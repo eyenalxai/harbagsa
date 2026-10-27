@@ -27,6 +27,7 @@ Phase :: enum u8 {
 Pass :: enum u8 {
 	Tlas,
 	Cluster,
+	Probe,
 	Depth,
 	Scene,
 	Taa,
@@ -43,6 +44,7 @@ PASS_COUNT :: int(Pass.Overlay) + 1
 PASS_ORDER := [?]Pass {
 	.Tlas,
 	.Cluster,
+	.Probe,
 	.Depth,
 	.Scene,
 	.Taa,

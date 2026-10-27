@@ -1,7 +1,7 @@
 # Point-light shadows evidence
 
 Captured on 2026-10-27 with AMD Radeon RX 9060 XT (RADV GFX1200), Mesa 26.2.5.
-The decision is [ADR 0040](../adr/0040-hard-point-light-shadows.md).
+The decision is [ADR 0040](../adr/0040-hard-point-light-shadows.md). The shadow scenarios set `gi: false` so the probe field does not enter these numbers.
 
 ## Blocked surface
 
@@ -51,14 +51,16 @@ run. The table is the median of three runs.
 
 | Pass or pair | Shadows on | Shadows off | Paired difference |
 | --- | ---: | ---: | ---: |
-| TLAS | 0.265 ms | 0.000 ms | +0.265 ms |
-| Scene | 5.439 ms | 1.088 ms | +4.351 ms |
-| GPU total | 6.235 ms | 1.653 ms | +4.582 ms |
+| TLAS | 0.295 ms | 0.000 ms | +0.295 ms |
+| Scene | 5.092 ms | 1.138 ms | +3.954 ms |
+| GPU total | 5.935 ms | 1.649 ms | +4.286 ms |
 
-The paired difference includes the TLAS pass and the shadow rays. The scene pass
-includes the depth prepass. The 96-light grid is a dense worst case for overlap,
-not a typical room. The current renderer measures 4.35 ms of shadow work at this
-scale. It still fits a 60 Hz frame on this GPU, but it is the budget to watch.
+The scenario sets `gi: false` so the probe field does not enter the shadow
+budget. The paired difference includes the TLAS pass and the shadow rays. The
+scene pass includes the depth prepass. The 96-light grid is a dense worst case
+for overlap, not a typical room. The current renderer measures 4.29 ms of shadow
+work at this scale. It still fits a 60 Hz frame on this GPU, but it is the budget
+to watch.
 
 Run it with:
 

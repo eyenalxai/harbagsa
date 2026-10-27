@@ -116,8 +116,10 @@ gpu_fields_appear_in_the_overlay_text :: proc(t: ^testing.T) {
 	testing.expect(t, strings.contains(pass_line, "depth"), "pass line has no depth entry")
 	testing.expect(t, strings.contains(pass_line, "scene"), "pass line has no scene entry")
 	testing.expect(t, strings.contains(pass_line, "cluster"), "pass line has no cluster entry")
+	testing.expect(t, strings.contains(pass_line, "probe"), "pass line has no probe entry")
 	testing.expect(t, len(pass_line) < len(buffer), "pass line did not fit")
 	testing.expect_value(t, perf.pass_name(.Cluster), "cluster")
+	testing.expect_value(t, perf.pass_name(.Probe), "probe")
 	testing.expect_value(t, perf.format_passes(buffer[:], perf.Stats{}), "gpu --")
 }
 
