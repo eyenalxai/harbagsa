@@ -13,6 +13,8 @@
     "initial-lamps",
     "perf-crates",
     "lamp-wall-plane",
-    "lighting"
+    "lighting",
+    "gi",
+    "gi-sealed"
   ]
 }

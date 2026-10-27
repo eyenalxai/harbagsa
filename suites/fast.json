@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "fast",
-  "description": "The short loop: advisory checks, smoke, black unlit coverage, and a lamp wall plane.",
+  "description": "The short loop: advisory checks, smoke, black unlit coverage, a lamp wall plane, and GI.",
   "entries": [
     {
       "scenario": "advisory",
@@ -12,6 +12,8 @@
     "initial-lamps",
     "lighting",
     "shadows",
-    "lamp-wall-plane"
+    "lamp-wall-plane",
+    "gi",
+    "gi-dark"
   ]
 }

@@ -5,9 +5,10 @@ jumps, dives, slides, and mantles in a fixed arena with stairs, ramps, tunnels,
 mantle walls, a dive platform, a closed ceiling, pushable crates, and three
 dynamic coloured lamps.
 SDL3 provides the window and input, Vulkan 1.3 draws the scene, and Box3D runs
-physics. Direct point lights, hard ray-query shadows, and emissive boxes shade
-every frame. An unlit surface is black. There is no ambient floor, directional
-light, background pass, shadow map, or cached global illumination.
+physics. Direct point lights, hard ray-query shadows, one-bounce probe GI, and
+emissive boxes shade every frame. An unlit surface is black. There is no
+ambient floor, directional light, background pass, shadow map, or baked global
+illumination.
 
 ## Requirements
 
@@ -99,9 +100,9 @@ pools on the closed shell.
 
 The summary shows FPS, frame interval, CPU frame time, p95 interval, spike
 count, and GPU total with the costliest pass. The pass row shows TLAS, cluster
-assignment, depth prepass, lit scene, TAA resolve, and overlay times. GPU numbers
-belong to the last completed frame. A device without timestamp support shows CPU
-numbers only.
+assignment, probe field, depth prepass, lit scene, TAA resolve, and overlay
+times. GPU numbers belong to the last completed frame. A device without
+timestamp support shows CPU numbers only.
 
 ## Agent harness
 
@@ -222,8 +223,9 @@ and `ui`. Run one with `harbagsa-agent suite <name>`. Use `--list`, `--only`,
 
 `scenarios/perf.json` measures the default view. `scenarios/perf-lamps.json`
 measures direct point lights. `scenarios/perf-shadows.json` measures the paired
-shadow cost at 96 lights and 1080p. `scenarios/perf-crates.json` measures many
-placed objects. `tools/ab.sh` and `harbagsa-agent ab` compare two builds.
+shadow cost at 96 lights and 1080p. `scenarios/perf-gi.json` measures the paired
+GI cost at the same scale. `scenarios/perf-crates.json` measures many placed
+objects. `tools/ab.sh` and `harbagsa-agent ab` compare two builds.
 
 ### Lighting and visual evidence
 
@@ -236,7 +238,10 @@ field and render digest. `scenarios/shadows.json` checks a blocked surface and
 the paired shadow toggle. `scenarios/shadow-move.json` checks that a moved lamp
 moves its shadow. `scenarios/lamp-wall-plane.json` checks
 placement and a smooth wall gradient. `scenarios/banding.json` checks output
-dither on that gradient.
+dither on that gradient. `scenarios/gi.json` pairs indirect light on and off;
+`scenarios/gi-dark.json` keeps a lamp-free view black; `scenarios/gi-move.json`
+checks a moved lamp's bounce; `scenarios/gi-sealed.json` checks that a sealed
+wall stops the bounce.
 
 For a visible change, capture before and after with the same scenario and
 command. Put numeric assertions in the scenario. Point at the run directory as

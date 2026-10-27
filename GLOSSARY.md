@@ -132,7 +132,7 @@ A light with a position, colour, intensity, and range. The renderer holds every 
 _Avoid_: Lamp (the prefab), bulb
 
 **Darkness**:
-The zero-light state. A surface that no active point light reaches, and that has no emissive strength, renders black. It is the intended default, not a missing light or a background.
+The zero-light state. A surface with no direct point light, no probe bounce, and no emissive strength renders black. It is the intended default, not a missing light or a background.
 _Avoid_: Ambient floor, fill light, black level
 
 **Point-light shadow**:
@@ -150,6 +150,26 @@ _Avoid_: Tile, bin
 **Clustered forward+**:
 The forward lighting path that builds a light index list per cluster in a compute pass, then reads that list in the lit pass. It keeps the per-pixel light loop proportional to the lights that can reach the surface.
 _Avoid_: Tiled forward, light grid
+
+**Indirect light (GI)**:
+Light that reaches a surface after one diffuse bounce from a current lamp. It is not a default fill: with no active lamp, it is zero. The current renderer carries one bounce in a probe field, not a path tracer.
+_Avoid_: Ambient, global illumination cache
+
+**Probe**:
+One sample point in the indirect-light field. It traces 64 rays and stores an 8 x 8 octahedral irradiance and depth atlas.
+_Avoid_: Light sample, photon
+
+**Probe volume**:
+The axis-aligned grid of probes. One volume covers the arena at 2 m spacing: 20 x 3 x 20 probes. A probe inside a box is invalid.
+_Avoid_: GI grid, light grid
+
+**Probe atlas**:
+The irradiance and depth maps for one probe. Irradiance uses an 8 x 8 octahedral map with gamma encoding; depth stores the first and second moments. The lit pass blends the eight surrounding probes.
+_Avoid_: Irradiance map, probe texture
+
+**Probe pass**:
+The compute pass that traces probe rays and blends their atlas. It records after the TLAS and cluster passes and before the depth prepass.
+_Avoid_: GI pass, bake pass
 
 **Coverage fraction**:
 The share of the sampled capture region that is exactly zero, at or below a black threshold, or at or above a lit threshold. A `coverage` block on a stats capture reports it as `capture.stats.coverage.zero_fraction`, `.black_fraction`, and `.lit_fraction`. A threshold is in the target's own values.
@@ -651,13 +671,13 @@ builds only that part; `digest` is the only check that needs every section.
 _Avoid_: State slice, partial document
 
 **Renderer state**:
-The harness state block that describes the last rendered frame: frame count, TAA state, jitter index, history validity, convergence frames, history read index and weight, reset count and reason, active point-light count, and the debug vertex counts by source. A capture carries the same block for the frame that wrote it.
+The harness state block that describes the last rendered frame: frame count, TAA state, jitter index, history validity, convergence frames, history read index and weight, reset count and reason, active point-light count, probe volume and probe counts, and the debug vertex counts by source. A capture carries the same block for the frame that wrote it.
 _Avoid_: Render stats, GPU state
 
 **Render digest**:
 The FNV-1a hash of the effective render inputs: extent, camera, boxes, box
-emissive strengths, point lights, jitter, atlas weight, clip height, and view
-flags. It is separate from the simulation digest.
+emissive strengths, point lights, jitter, atlas weight, clip height, probe
+volume, GI flag, and view flags. It is separate from the simulation digest.
 _Avoid_: Frame hash, image hash
 
 **History reset reason**:
@@ -666,9 +686,9 @@ _Avoid_: Reset flag
 
 **Renderer debug override**:
 A gated change to a renderer input for diagnosis: TAA, jitter, history weight,
-clamp, depth trust, synthetic lights, or the plan-view clip height. Every change
-resets history. A field set to `null` restores that field's default without
-clearing the others.
+clamp, depth trust, synthetic lights, the plan-view clip height, light shadows,
+or GI. Every change resets history. A field set to `null` restores that field's
+default without clearing the others.
 _Avoid_: Debug flag
 
 **Renderer debug patch**:

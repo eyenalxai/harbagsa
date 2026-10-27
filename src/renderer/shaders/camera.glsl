@@ -5,4 +5,5 @@ layout(set = 0, binding = 0) uniform Camera {
     vec4 screen;
     vec4 lights;
     vec4 jitter;
+    vec4 probe;
 } camera;

@@ -15,7 +15,9 @@ CLUSTER_LOCAL_SIZE :: 64
 CLUSTER_COUNTS_SIZE :: (CLUSTER_COUNT + 1) * size_of(u32)
 
 // screen holds gamma, width, height, and plan-view clip height. lights.x holds
-// the point-light count. The other lanes are reserved by std140 alignment.
+// the point-light count, lights.y the shadow flag, and lights.z the probe ray
+// length. probe.x is the volume count, probe.y the total probe count, and
+// probe.z the indirect-light flag.
 Camera_Uniform :: struct {
 	view:                 Mat4,
 	projection:           Mat4,
@@ -23,6 +25,7 @@ Camera_Uniform :: struct {
 	screen:               [4]f32,
 	lights:               [4]f32,
 	jitter:               [4]f32,
+	probe:                [4]f32,
 }
 
 Object_Data :: struct {
@@ -44,7 +47,7 @@ TAA_Params :: struct {
 	force_trust:    f32,
 }
 
-#assert(size_of(Camera_Uniform) == 240)
+#assert(size_of(Camera_Uniform) == 256)
 #assert(size_of(Object_Data) == 144)
 #assert(size_of(Object_Index) == 4)
 #assert(size_of(TAA_Params) == 24)
@@ -55,9 +58,14 @@ ACCELERATION_BINDING :: 2
 LIGHT_BINDING :: 3
 CLUSTER_COUNTS_BINDING :: 4
 CLUSTER_INDICES_BINDING :: 5
+PROBE_VOLUMES_BINDING :: 6
+PROBE_IRRADIANCE_BINDING :: 7
+PROBE_DEPTH_BINDING :: 8
+PROBE_POSITIONS_BINDING :: 9
+PROBE_RAYS_BINDING :: 10
 
 create_scene_resources :: proc(r: ^Renderer) -> bool {
-	bindings := [6]vk.DescriptorSetLayoutBinding {
+	bindings := [11]vk.DescriptorSetLayoutBinding {
 		{
 			binding = CAMERA_BINDING,
 			descriptorType = .UNIFORM_BUFFER,
@@ -68,13 +76,13 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 			binding = OBJECT_BINDING,
 			descriptorType = .STORAGE_BUFFER,
 			descriptorCount = 1,
-			stageFlags = {.VERTEX, .FRAGMENT},
+			stageFlags = {.VERTEX, .FRAGMENT, .COMPUTE},
 		},
 		{
 			binding = ACCELERATION_BINDING,
 			descriptorType = .ACCELERATION_STRUCTURE_KHR,
 			descriptorCount = 1,
-			stageFlags = {.FRAGMENT},
+			stageFlags = {.FRAGMENT, .COMPUTE},
 		},
 		{
 			binding = LIGHT_BINDING,
@@ -94,6 +102,36 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 			descriptorCount = 1,
 			stageFlags = {.FRAGMENT, .COMPUTE},
 		},
+		{
+			binding = PROBE_VOLUMES_BINDING,
+			descriptorType = .STORAGE_BUFFER,
+			descriptorCount = 1,
+			stageFlags = {.FRAGMENT, .COMPUTE},
+		},
+		{
+			binding = PROBE_IRRADIANCE_BINDING,
+			descriptorType = .STORAGE_BUFFER,
+			descriptorCount = 1,
+			stageFlags = {.FRAGMENT, .COMPUTE},
+		},
+		{
+			binding = PROBE_DEPTH_BINDING,
+			descriptorType = .STORAGE_BUFFER,
+			descriptorCount = 1,
+			stageFlags = {.FRAGMENT, .COMPUTE},
+		},
+		{
+			binding = PROBE_POSITIONS_BINDING,
+			descriptorType = .STORAGE_BUFFER,
+			descriptorCount = 1,
+			stageFlags = {.FRAGMENT, .COMPUTE},
+		},
+		{
+			binding = PROBE_RAYS_BINDING,
+			descriptorType = .STORAGE_BUFFER,
+			descriptorCount = 1,
+			stageFlags = {.COMPUTE},
+		},
 	}
 	layout_info := vk.DescriptorSetLayoutCreateInfo {
 		sType = .DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -109,7 +147,7 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 
 	pool_sizes := [3]vk.DescriptorPoolSize {
 		{type = .UNIFORM_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT},
-		{type = .STORAGE_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT * 4},
+		{type = .STORAGE_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT * 9},
 		{type = .ACCELERATION_STRUCTURE_KHR, descriptorCount = MAX_FRAMES_IN_FLIGHT},
 	}
 	pool_info := vk.DescriptorPoolCreateInfo {

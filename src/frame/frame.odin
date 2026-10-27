@@ -10,6 +10,18 @@ import "src:renderer"
 
 PLAYER_FOV_X :: f32(90.0 * math.PI / 180.0)
 
+PROBE_SPACING :: f32(2.0)
+PROBE_MIN_Y :: f32(-0.5)
+PROBE_COUNT_XZ :: u32(game.ARENA_SIZE / PROBE_SPACING)
+PROBE_COUNT_Y :: u32((game.ARENA_WALL_HEIGHT - PROBE_MIN_Y) / PROBE_SPACING)
+PROBE_VOLUMES := [1]renderer.Probe_Volume {
+	{
+		min = {-game.ARENA_HALF_SIZE, PROBE_MIN_Y, -game.ARENA_HALF_SIZE},
+		spacing = PROBE_SPACING,
+		counts = {PROBE_COUNT_XZ, PROBE_COUNT_Y, PROBE_COUNT_XZ},
+	},
+}
+
 Options :: struct {
 	alpha:         f32,
 	delta_seconds: f32,
@@ -59,6 +71,8 @@ build :: proc(
 	scene: renderer.Render_Input
 	scene.hud.weight = sim.settings.type_weight
 	scene.light_shadows = true
+	scene.probe_volumes = PROBE_VOLUMES[:]
+	scene.gi = true
 
 	snapshot := game.simulation_snapshot(sim)
 	scene.camera = snapshot_camera(snapshot, options.alpha)
