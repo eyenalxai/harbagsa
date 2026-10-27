@@ -21,15 +21,10 @@ digest_input :: proc() -> renderer.Render_Input {
 		width = 320,
 		height = 180,
 		camera = DIGEST_CAMERA,
-		light_direction = {0.3, -0.9, 0.2},
-		sun_angular_diameter = 0.53 * 3.14159265 / 180.0,
 		boxes = {},
 		lights = {},
 		jitter = {0.001, -0.002},
-		shadow_phase = 7,
 		atlas_weight = 400,
-		sky = true,
-		ao = true,
 		view_flags = {.HUD, .Debug_Draw},
 	}
 }
@@ -50,18 +45,6 @@ render_digest_changes_with_each_render_input :: proc(t: ^testing.T) {
 	camera := base
 	camera.camera.position.x += 0.5
 	testing.expect(t, renderer.render_digest(camera).value != baseline.value, "camera did not change the digest")
-
-	sun := base
-	sun.light_direction.y += 0.1
-	testing.expect(t, renderer.render_digest(sun).value != baseline.value, "sun did not change the digest")
-
-	diameter := base
-	diameter.sun_angular_diameter *= 2
-	testing.expect(
-		t,
-		renderer.render_digest(diameter).value != baseline.value,
-		"sun angular diameter did not change the digest",
-	)
 
 	boxes := base
 	boxes.boxes = []geometry.Box {
@@ -111,21 +94,13 @@ render_digest_changes_with_each_render_input :: proc(t: ^testing.T) {
 	jitter.jitter.x += 0.01
 	testing.expect(t, renderer.render_digest(jitter).value != baseline.value, "jitter did not change the digest")
 
-	phase := base
-	phase.shadow_phase += 1
-	testing.expect(t, renderer.render_digest(phase).value != baseline.value, "shadow phase did not change the digest")
-
 	weight := base
 	weight.atlas_weight = 900
 	testing.expect(t, renderer.render_digest(weight).value != baseline.value, "atlas weight did not change the digest")
 
-	sky := base
-	sky.sky = false
-	testing.expect(t, renderer.render_digest(sky).value != baseline.value, "sky flag did not change the digest")
-
-	ao := base
-	ao.ao = false
-	testing.expect(t, renderer.render_digest(ao).value != baseline.value, "ao flag did not change the digest")
+	clip := base
+	clip.clip_height = 4
+	testing.expect(t, renderer.render_digest(clip).value != baseline.value, "clip height did not change the digest")
 
 	view := base
 	view.view_flags = {.HUD}

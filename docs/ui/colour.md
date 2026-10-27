@@ -1,10 +1,9 @@
 # Colour
 
 Two hues and a neutral ramp. Cool ink for surfaces, one amber accent that means
-"selected". The accent is sRGB `#E6AF3A`. The debug object outline and the sun
-gizmo are a linear `[1.0, 0.8, 0.2]`, a
-different value from the sRGB `#E6AF3A`; they live in different spaces, so
-the accent is not reused from the debug draw.
+"selected". The accent is sRGB `#E6AF3A`. The debug object outline is a linear
+`[1.0, 0.8, 0.2]`, a different value from the sRGB `#E6AF3A`; they live in
+different spaces, so the accent is not reused from the debug draw.
 
 Every colour lives in `src/renderer/ui_theme.odin` as an sRGB hex constant. It is
 converted to linear when `ui_theme_init` builds the theme, because the renderer
@@ -91,10 +90,10 @@ panel ring, `line_separator` for a divider, `slider_track` for the slider track,
 ## Alpha
 
 `surface_hud` is translucent so the scene reads through it, but only just. In
-linear space a bright sky is fifty times brighter than ink, so 6% of it is
-visible. The menu surfaces are opaque.
+linear space a bright lamp field is fifty times brighter than ink, so 6% of it
+is visible. The menu surfaces are opaque.
 
-- `surface_hud` is 0.94. Below 0.9 the panel picks up the sky's hue and stops
+- `surface_hud` is 0.94. Below 0.9 the panel picks up the scene's hue and stops
   looking like a designed surface.
 - `surface_menu` is 1.0. A modal over a dimmed scene has no reason to show the
   scene twice.
@@ -108,6 +107,6 @@ the token.
 - No third hue. If a new state needs one, it is not a state, it is a redesign.
 - No colour-only signal. Selection adds the accent bar and the raised surface;
   a divider is a line, not a tint.
-- No pure grey. The neutral ramp is cool because the sky is.
+- No pure grey. The neutral ramp is cool to match the clear colour and cool lamps.
 - No `dark:` equivalent. There is one theme. The scene is the backdrop, not the
   mode.

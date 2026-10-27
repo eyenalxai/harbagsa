@@ -15,7 +15,6 @@ so the caps are the first thing that breaks.
 - The renderer object and light buffers start at a capacity hint and double when
   the scene outgrows them. Growth reallocates the mapped buffers and rewrites the
   descriptor writes.
-- The TLAS instance buffer and acceleration structure grow the same way.
 - `TAA.prev_models` grows with the box count.
 - Every active lamp is collected. The nearest-eight sort is gone.
 - Synthetic debug lights are generated for any count.
@@ -50,7 +49,6 @@ protocol limits.
   logarithmic number of times.
 - `Scene.object_capacity` and `Scene.light_capacity` are the live sizes. The
   upload paths check them and name the count on failure.
-- `Acceleration.capacity` is the TLAS instance capacity.
 - Tests cover past the old caps: 300 objects, 96 lights, and a 300-box frame.
 - `scenarios/capacity.json` renders 32 and 64 synthetic lights and checks the
   reported count.

@@ -15,7 +15,7 @@ MAX_FRAMES_IN_FLIGHT :: 2
 
 VALIDATION_LAYER_NAME :: "VK_LAYER_KHRONOS_validation"
 
-DEFAULT_CLEAR_COLOR :: [4]f32{0.10, 0.45, 0.75, 1.0}
+DEFAULT_CLEAR_COLOR :: [4]f32{0.012, 0.016, 0.024, 1.0}
 
 Error :: enum {
 	None,
@@ -31,7 +31,6 @@ Error :: enum {
 	Create_Swapchain,
 	Create_Frames,
 	Create_Scene,
-	Create_Acceleration,
 	Create_TAA,
 	Create_Overlay,
 	Create_Pipeline,
@@ -98,8 +97,6 @@ Renderer :: struct {
 	target:        Target,
 	frame_targets: Frame_Targets,
 	scene:         Scene,
-	probe:         Probe,
-	acceleration:  Acceleration,
 	taa:           TAA,
 	debug:         Renderer_Debug,
 	overlay:       Overlay,
@@ -187,7 +184,6 @@ deinit :: proc(r: ^Renderer) {
 	destroy_overlay(r)
 	destroy_taa(r)
 	destroy_frame_targets(r)
-	destroy_probe(r)
 	destroy_scene(r)
 	destroy_target(r)
 	destroy_timing(r)

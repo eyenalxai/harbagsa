@@ -192,9 +192,6 @@ backend_render :: proc(
 		hud           = session.view.hud,
 		perf          = session.view.perf,
 	}
-	if session.has_probe_volumes {
-		options.probe_volumes = session.probe_volumes
-	}
 	session.hud.perf.visible = session.view.perf
 	if session.hud.perf.visible {
 		session.hud.perf.stats = perf.stats(&session.perf.state)

@@ -1,5 +1,5 @@
 ODIN ?= odin
-ODIN_FLAGS ?= -vet -vet-style -vet-semicolon -vet-tabs -vet-using-param -vet-unused-procedures -vet-packages:main,platform,renderer,font,game,geometry,frame,perf,harness,display,ui,input,reference -strict-style -warnings-as-errors -disallow-do
+ODIN_FLAGS ?= -vet -vet-style -vet-semicolon -vet-tabs -vet-using-param -vet-unused-procedures -vet-packages:main,platform,renderer,font,game,geometry,frame,perf,harness,display,ui,input -strict-style -warnings-as-errors -disallow-do
 ODIN_COLLECTIONS := -collection:libs=vendor -collection:src=src
 # Library checks and the renderer test cannot know which procedures another
 # package calls, so they omit -vet-unused-procedures. The main check still runs
@@ -12,14 +12,12 @@ HARNESS_REVISION := $(shell git rev-parse --short HEAD 2>/dev/null || printf unk
 # `git status --porcelain` covers staged and untracked files; `git diff --quiet`
 # sees neither.
 HARNESS_DIRTY := $(shell if git rev-parse --git-dir >/dev/null 2>&1 && [ -z "$$(git status --porcelain 2>/dev/null)" ]; then printf false; else printf true; fi)
-AO_SAMPLES ?= 8
-RENDERER_DEFINES := -define:AO_SAMPLES=$(AO_SAMPLES)
-TEST_PACKAGES := display platform input physics simulation frame perf harness renderer reference docs
+TEST_PACKAGES := display platform input physics simulation frame perf harness renderer docs
 TEST_TARGETS := $(addprefix test-,$(TEST_PACKAGES))
 # These packages can see the whole program, so they keep the unused-procedure check.
 TEST_FULL_FLAGS := display physics simulation
 TEST_DEPS = $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
-AGENT_DEFINES := -define:HARNESS_REVISION='"$(HARNESS_REVISION)"' -define:HARNESS_DIRTY=$(HARNESS_DIRTY) $(RENDERER_DEFINES)
+AGENT_DEFINES := -define:HARNESS_REVISION='"$(HARNESS_REVISION)"' -define:HARNESS_DIRTY=$(HARNESS_DIRTY)
 AGENT_BUILD := $(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) $(AGENT_DEFINES) -out:$(AGENT_BIN)
 VALIDATE_AGENT_BIN := bin/harbagsa-agent-validate
 VALIDATE_SCENARIO ?= scenarios/smoke.json
@@ -39,15 +37,12 @@ SPIRV_VAL ?= spirv-val
 VULKANINFO ?= vulkaninfo
 SHADER_SRC := src/renderer/shaders
 SHADER_OUT := build/shaders
-SHADER_INCLUDES := $(SHADER_SRC)/gamma.glsl $(SHADER_SRC)/camera.glsl $(SHADER_SRC)/cluster.glsl $(SHADER_SRC)/probe.glsl $(SHADER_SRC)/probe_gather.glsl $(SHADER_SRC)/sky.glsl
-AO_STAMP := $(SHADER_OUT)/ao_samples
+SHADER_INCLUDES := $(SHADER_SRC)/gamma.glsl $(SHADER_SRC)/camera.glsl $(SHADER_SRC)/cluster.glsl
 SHADERS := $(SHADER_OUT)/box.vert.spv $(SHADER_OUT)/box.frag.spv \
 	$(SHADER_OUT)/cluster.comp.spv \
-	$(SHADER_OUT)/probe_ray.comp.spv $(SHADER_OUT)/probe_blend.comp.spv \
 	$(SHADER_OUT)/debug.vert.spv $(SHADER_OUT)/debug.frag.spv \
 	$(SHADER_OUT)/hud.vert.spv $(SHADER_OUT)/hud.frag.spv \
-	$(SHADER_OUT)/taa.vert.spv $(SHADER_OUT)/taa.frag.spv \
-	$(SHADER_OUT)/sky.vert.spv $(SHADER_OUT)/sky.frag.spv
+	$(SHADER_OUT)/taa.vert.spv $(SHADER_OUT)/taa.frag.spv
 
 CC ?= cc
 CXX ?= c++
@@ -92,7 +87,7 @@ VULKAN_LAYER_DIRS ?= \
 	/usr/share/vulkan/explicit_layer.d
 VALIDATION_LAYER := VK_LAYER_KHRONOS_validation
 
-.PHONY: all FORCE build agent check check-spirv check-lines test $(TEST_TARGETS) run shaders validate validate-offscreen validate-demo check-validation-layer check-references shot smoke quick ui lighting reference suite clean
+.PHONY: all FORCE build agent check check-spirv check-lines test $(TEST_TARGETS) run shaders validate validate-offscreen validate-demo check-validation-layer check-references shot smoke quick ui lighting suite clean
 
 FORCE:
 
@@ -142,13 +137,9 @@ $(SHADER_OUT)/%.vert.spv: $(SHADER_SRC)/%.vert $(SHADER_INCLUDES)
 	@mkdir -p $(@D)
 	$(GLSLC) --target-env=vulkan1.3 -fshader-stage=vert $< -o $@
 
-$(AO_STAMP): FORCE
+$(SHADER_OUT)/%.frag.spv: $(SHADER_SRC)/%.frag $(SHADER_INCLUDES)
 	@mkdir -p $(@D)
-	@printf '%s\n' '$(AO_SAMPLES)' | cmp -s - $@ || printf '%s\n' '$(AO_SAMPLES)' > $@
-
-$(SHADER_OUT)/%.frag.spv: $(SHADER_SRC)/%.frag $(SHADER_INCLUDES) $(AO_STAMP)
-	@mkdir -p $(@D)
-	$(GLSLC) --target-env=vulkan1.3 -fshader-stage=frag -DAO_SAMPLE_COUNT=$(AO_SAMPLES) $< -o $@
+	$(GLSLC) --target-env=vulkan1.3 -fshader-stage=frag $< -o $@
 
 $(SHADER_OUT)/%.comp.spv: $(SHADER_SRC)/%.comp $(SHADER_INCLUDES)
 	@mkdir -p $(@D)
@@ -173,7 +164,7 @@ agent: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 
 build: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	mkdir -p bin
-	$(ODIN) build . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) $(RENDERER_DEFINES) -out:$(BIN)
+	$(ODIN) build . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -out:$(BIN)
 	$(AGENT_BUILD)
 
 check: check-lines check-spirv $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
@@ -190,7 +181,6 @@ check: check-lines check-spirv $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shad
 	$(ODIN) check src/harness $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/ui $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/input $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
-	$(ODIN) check src/reference $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 
 check-references:
 	@python3 tools/check-references.py
@@ -304,10 +294,6 @@ shot: agent
 		exit 1; \
 	fi; \
 	printf '%s\n' "$$paths"
-
-reference: agent
-	$(AGENT_BIN) run scenarios/ddgi-reference.json --out runs/ddgi-reference $(AGENT_FLAGS)
-	$(AGENT_BIN) run scenarios/ddgi-platform.json --out runs/ddgi-platform $(AGENT_FLAGS)
 
 quick: agent
 	$(AGENT_BIN) suite fast --out runs/fast $(AGENT_FLAGS)

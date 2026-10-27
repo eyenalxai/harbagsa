@@ -136,7 +136,7 @@ suite_list_reads_the_scenario_gate :: proc(t: ^testing.T) {
 	defer os.remove_all(SUITE_DIR)
 
 	scenario_path := SUITE_DIR + "/gated.json"
-	scenario_body := `{"requires":{"renderer_debug":true},"commands":[{"cmd":"renderer_debug","ao":false}]}`
+	scenario_body := `{"requires":{"renderer_debug":true},"commands":[{"cmd":"renderer_debug","taa":false}]}`
 	testing.expectf(t, os.write_entire_file(scenario_path, scenario_body) == nil, "cannot write the scenario")
 	entry := harness.Suite_Entry{scenario = scenario_path}
 	rows, error := harness.suite_list([]harness.Suite_Entry{entry}, context.allocator)

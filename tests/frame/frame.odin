@@ -141,10 +141,10 @@ perf_pass_line_joins_the_hud :: proc(t: ^testing.T) {
 		cpu      = {mean = 0.42},
 	}
 	stats.gpu.available = true
-	stats.gpu.passes[.Tlas] = perf.Distribution{mean = 0.08}
+	stats.gpu.passes[.Cluster] = perf.Distribution{mean = 0.08}
 	stats.gpu.passes[.Depth] = perf.Distribution{mean = 0.42}
 	stats.gpu.passes[.Scene] = perf.Distribution{mean = 2.70}
-	stats.gpu.passes[.Sky] = perf.Distribution{mean = 0.30}
+	stats.gpu.passes[.Cluster] = perf.Distribution{mean = 0.30}
 	stats.gpu.passes[.Taa] = perf.Distribution{mean = 0.22}
 	stats.gpu.passes[.Overlay] = perf.Distribution{mean = 0.10}
 	stats.gpu.total = perf.Distribution{mean = 3.82}
@@ -165,7 +165,7 @@ perf_pass_line_joins_the_hud :: proc(t: ^testing.T) {
 	testing.expect_value(t, pass_row.label, "Passes")
 	testing.expect(t, strings.contains(perf_row.value, "gpu"), "summary has no GPU total")
 	testing.expect(t, strings.contains(pass_row.value, "scene"), "pass line is missing")
-	testing.expect(t, strings.contains(pass_row.value, "sky"), "pass line has no sky entry")
+	testing.expect(t, strings.contains(pass_row.value, "cluster"), "pass line has no cluster entry")
 }
 
 @(test)

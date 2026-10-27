@@ -9,7 +9,7 @@ import b3 "libs:box3d"
 import game "src:game"
 
 PLACEMENT_FLOOR_PITCH :: -0.9
-PLACEMENT_SKY_PITCH :: 0.6
+PLACEMENT_HIGH_PITCH :: 0.6
 
 @(private)
 placement_setup :: proc(t: ^testing.T) -> (game.Simulation, game.Debug_Mode) {
@@ -88,7 +88,7 @@ placement_ray_miss_uses_the_fallback_distance :: proc(t: ^testing.T) {
 	sim, dm := placement_setup(t)
 	defer game.debug_mode_destroy(&dm)
 	defer game.simulation_destroy(&sim)
-	dm.camera.pitch = PLACEMENT_SKY_PITCH
+	dm.camera.pitch = PLACEMENT_HIGH_PITCH
 	placement_arm(t, &dm, &sim, .Crate)
 
 	expected := dm.camera.position +

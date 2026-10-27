@@ -17,11 +17,6 @@ Options :: struct {
 	captured:      bool,
 	hud:           bool,
 	perf:          bool,
-	// A scenario replaces the production probe layout for its own run. The
-	// rendered list is already composed; the scene list holds the extras for a
-	// repro to write.
-	probe_volumes:       Maybe([]renderer.Probe_Volume),
-	scene_probe_volumes: Maybe([]Scene_Probe_Volume),
 }
 
 Scratch :: struct {
@@ -63,8 +58,6 @@ build :: proc(
 ) -> renderer.Render_Input {
 	scene: renderer.Render_Input
 	scene.hud.weight = sim.settings.type_weight
-	scene.light_direction = game.debug_mode_sun_direction(debug)
-	scene.sun_angular_diameter = debug.sun_angular_diameter
 
 	snapshot := game.simulation_snapshot(sim)
 	scene.camera = snapshot_camera(snapshot, options.alpha)
@@ -101,11 +94,6 @@ build :: proc(
 		})
 	}
 	scene.lights = scratch.lights[:]
-	scene.probe_volumes = PROBE_VOLUMES[:]
-	if volumes, has_volumes := options.probe_volumes.?; has_volumes {
-		scene.probe_volumes = volumes
-	}
-
 	scratch.debug_lines.count = 0
 	if options.debug_view {
 		game.collect_world_lines(sim, &scratch.debug_lines)

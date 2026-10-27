@@ -115,7 +115,7 @@ schema_covers_every_command_and_the_new_fields :: proc(t: ^testing.T) {
 	scene, scene_found := harness.schema_find_command(document, "scene")
 	testing.expect(t, scene_found, "scene is missing from the schema")
 	if scene_found {
-		for name in ([?]string{"camera", "sun", "objects", "settings", "view", "renderer_debug"}) {
+		for name in ([?]string{"camera", "objects", "settings", "view", "renderer_debug"}) {
 			_, found := harness.schema_field_named(scene, name)
 			testing.expectf(t, found, "scene field %q is missing", name)
 		}
@@ -134,7 +134,7 @@ schema_covers_every_command_and_the_new_fields :: proc(t: ^testing.T) {
 			strings.contains(debug.description, "null"),
 			"the renderer_debug schema does not name the null reset",
 		)
-		for name in ([?]string{"taa", "depth_trust", "gi", "ao_radius"}) {
+		for name in ([?]string{"taa", "depth_trust", "synthetic_lights", "clip_height"}) {
 			field, found := harness.schema_field_named(debug, name)
 			testing.expectf(t, found, "renderer_debug field %q is missing from the schema", name)
 			if found {
@@ -203,7 +203,6 @@ state_build_does_not_touch_the_menu_or_the_hud :: proc(t: ^testing.T) {
 	defer harness.state_destroy(&state, context.allocator)
 	testing.expect_value(t, hud.menu.status, "unchanged")
 	testing.expect_value(t, hud.menu.status_remaining, f32(0.75))
-	testing.expect_value(t, state.debug.sun, state.sun)
 }
 
 @(test)

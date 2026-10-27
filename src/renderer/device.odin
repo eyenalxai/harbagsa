@@ -85,20 +85,8 @@ score_physical_device :: proc(
 		return
 	}
 
-	features_rq := vk.PhysicalDeviceRayQueryFeaturesKHR {
-		sType = .PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
-	}
-	features_as := vk.PhysicalDeviceAccelerationStructureFeaturesKHR {
-		sType = .PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
-		pNext = &features_rq,
-	}
-	features12 := vk.PhysicalDeviceVulkan12Features {
-		sType = .PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-		pNext = &features_as,
-	}
 	features13 := vk.PhysicalDeviceVulkan13Features {
 		sType = .PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-		pNext = &features12,
 	}
 	features2 := vk.PhysicalDeviceFeatures2 {
 		sType = .PHYSICAL_DEVICE_FEATURES_2,
@@ -107,18 +95,6 @@ score_physical_device :: proc(
 	vk.GetPhysicalDeviceFeatures2(device, &features2)
 	if !features13.dynamicRendering {
 		log.infof("renderer: skipping %q: dynamic rendering is not supported", name)
-		return
-	}
-	if !features12.bufferDeviceAddress {
-		log.infof("renderer: skipping %q: buffer device address is not supported", name)
-		return
-	}
-	if !features_as.accelerationStructure {
-		log.infof("renderer: skipping %q: acceleration structures are not supported", name)
-		return
-	}
-	if !features_rq.rayQuery {
-		log.infof("renderer: skipping %q: ray queries are not supported", name)
 		return
 	}
 	// The fragment discard in the plan-view clip compiles to a demote. Vulkan
@@ -133,14 +109,6 @@ score_physical_device :: proc(
 			log.infof("renderer: skipping %q: VK_KHR_swapchain is not supported", name)
 			return
 		}
-	}
-	if !device_supports_extension(device, vk.KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME, r.allocator) {
-		log.infof("renderer: skipping %q: VK_KHR_acceleration_structure is not supported", name)
-		return
-	}
-	if !device_supports_extension(device, vk.KHR_RAY_QUERY_EXTENSION_NAME, r.allocator) {
-		log.infof("renderer: skipping %q: VK_KHR_ray_query is not supported", name)
-		return
 	}
 
 	queue_families, families_ok := find_queue_families(
@@ -204,38 +172,15 @@ create_logical_device :: proc(r: ^Renderer) -> Error {
 		queue_count = 2
 	}
 
-	device_extensions: [5]cstring
+	device_extensions: [1]cstring
 	device_extension_count: u32
 	if r.target.kind == .Swapchain {
-		device_extensions[device_extension_count] = vk.KHR_SWAPCHAIN_EXTENSION_NAME
-		device_extension_count += 1
+		device_extensions[0] = vk.KHR_SWAPCHAIN_EXTENSION_NAME
+		device_extension_count = 1
 	}
-	device_extensions[device_extension_count] = vk.KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME
-	device_extension_count += 1
-	device_extensions[device_extension_count] = vk.KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME
-	device_extension_count += 1
-	device_extensions[device_extension_count] = vk.KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME
-	device_extension_count += 1
-	device_extensions[device_extension_count] = vk.KHR_RAY_QUERY_EXTENSION_NAME
-	device_extension_count += 1
 
-	features_rq := vk.PhysicalDeviceRayQueryFeaturesKHR {
-		sType = .PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
-		rayQuery = true,
-	}
-	features_as := vk.PhysicalDeviceAccelerationStructureFeaturesKHR {
-		sType = .PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
-		pNext = &features_rq,
-		accelerationStructure = true,
-	}
-	features12 := vk.PhysicalDeviceVulkan12Features {
-		sType = .PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-		pNext = &features_as,
-		bufferDeviceAddress = true,
-	}
 	features13 := vk.PhysicalDeviceVulkan13Features {
 		sType                          = .PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-		pNext                          = &features12,
 		dynamicRendering               = true,
 		shaderDemoteToHelperInvocation = true,
 	}

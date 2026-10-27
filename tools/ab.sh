@@ -187,10 +187,9 @@ import sys
 METRICS = (
 	("interval_p50", "frame interval p50", "ms", "interval"),
 	("gpu_total", "GPU total", "ms", "GPU total"),
-	("gpu_tlas", "GPU TLAS", "ms", "TLAS"),
+	("gpu_cluster", "GPU cluster", "ms", "Cluster"),
 	("gpu_depth", "GPU depth", "ms", "Depth"),
 	("gpu_scene", "GPU scene", "ms", "Scene"),
-	("gpu_sky", "GPU sky", "ms", "Sky"),
 	("gpu_taa", "GPU TAA", "ms", "TAA"),
 	("gpu_overlay", "GPU overlay", "ms", "Overlay"),
 )
@@ -287,10 +286,9 @@ def metrics_of(report, path):
 	metrics = {
 		"interval_p50": p50(perf.get("interval")),
 		"gpu_total": p50(gpu.get("total")),
-		"gpu_tlas": p50(gpu.get("tlas")),
+		"gpu_cluster": p50(gpu.get("cluster")),
 		"gpu_depth": p50(gpu.get("depth")),
 		"gpu_scene": p50(gpu.get("scene")),
-		"gpu_sky": p50(gpu.get("sky")),
 		"gpu_taa": p50(gpu.get("taa")),
 		"gpu_overlay": p50(gpu.get("overlay")),
 	}

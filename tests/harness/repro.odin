@@ -71,7 +71,7 @@ repro_keeps_a_renderer_debug_override :: proc(t: ^testing.T) {
 		return
 	}
 	text := string(data)
-	testing.expectf(t, strings.contains(text, `"gi": false`), "the snapshot lost gi: %s", text)
+	testing.expectf(t, strings.contains(text, `"clip_height": 3`), "the snapshot lost clip height: %s", text)
 	testing.expectf(
 		t,
 		strings.contains(text, `"renderer_debug": true`),

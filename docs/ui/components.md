@@ -98,7 +98,7 @@ top-right margin, where no other surface lives.
 ## Crosshair
 
 Always present while the menu is closed. Four arms, one hairline thick, with a
-dark outline so it reads against sky and floor alike. Arm and gap scale with
+dark outline so it reads against bright and dark surfaces alike. Arm and gap scale with
 density.
 
 Use instead when the game is paused: the settings panel, which replaces the
