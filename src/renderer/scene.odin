@@ -66,6 +66,9 @@ init_scene :: proc(r: ^Renderer) -> Error {
 	if !create_mesh(r) {
 		return .Create_Scene
 	}
+	if !create_acceleration_resources(r) {
+		return .Create_Acceleration
+	}
 	if !create_pipeline(r) {
 		return .Create_Pipeline
 	}
@@ -80,6 +83,7 @@ destroy_scene :: proc(r: ^Renderer) {
 		return
 	}
 
+	destroy_acceleration(r)
 	destroy_pipeline_pair(r, &r.scene.depth_pipeline, &r.scene.depth_layout)
 	destroy_pipeline_pair(r, &r.scene.pipeline, &r.scene.pipeline_layout)
 	destroy_pipeline_pair(r, &r.scene.cluster_pipeline, &r.scene.cluster_layout)
@@ -145,7 +149,7 @@ update_camera :: proc(r: ^Renderer, input: Render_Input) -> bool {
 		projection = projection,
 		prev_view_projection = previous,
 		screen = {srgb_gamma(r), f32(extent.width), height, input.clip_height},
-		lights = {f32(len(input.lights)), 0, 0, 0},
+		lights = {f32(len(input.lights)), input.light_shadows ? 1 : 0, 0, 0},
 		jitter = {input.jitter.x, input.jitter.y, 0, 0},
 	}
 	return true

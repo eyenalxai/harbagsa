@@ -1,4 +1,5 @@
 #version 460
+#extension GL_EXT_ray_query : require
 
 layout(early_fragment_tests) in;
 
@@ -27,6 +28,8 @@ layout(set = 0, binding = 1) readonly buffer Objects {
 #include "camera.glsl"
 #include "cluster.glsl"
 
+layout(set = 0, binding = 2) uniform accelerationStructureEXT scene_tlas;
+
 struct Light {
     vec4 position;
     vec4 color;
@@ -45,6 +48,27 @@ layout(set = 0, binding = 5) readonly buffer ClusterIndices {
 } cluster_indices;
 
 const vec3 AMBIENT_FLOOR = vec3(0.055, 0.060, 0.070);
+const uint POINT_RAY_MASK = 0x02u;
+// A lamp that sits on a wall ends its shadow ray on that wall. Stop short of
+// the light so the surface cannot paint a fan of false shadows.
+const float POINT_SHADOW_END_BIAS = 0.001;
+
+bool occluded(vec3 origin, vec3 direction, uint mask, float max_distance) {
+    rayQueryEXT query;
+    rayQueryInitializeEXT(
+        query,
+        scene_tlas,
+        gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT,
+        mask,
+        origin,
+        0.001,
+        direction,
+        max_distance
+    );
+    while (rayQueryProceedEXT(query)) {}
+    return rayQueryGetIntersectionTypeEXT(query, true) !=
+           gl_RayQueryCommittedIntersectionNoneEXT;
+}
 
 vec3 point_light_radiance(vec3 world_position, vec3 normal) {
     float view_z = -(camera.view * vec4(world_position, 1.0)).z;
@@ -78,7 +102,19 @@ vec3 point_light_radiance(vec3 world_position, vec3 normal) {
         float reach = distance / light.color.w;
         float falloff = 1.0 - reach * reach;
         falloff *= falloff;
-        sum += light.color.rgb * (light.position.w * diffuse * falloff);
+        float visibility = 1.0;
+        if (camera.lights.y > 0.5) {
+            float shadow_distance = max(distance - POINT_SHADOW_END_BIAS, 0.0);
+            if (occluded(
+                world_position + normal * 0.002,
+                direction,
+                POINT_RAY_MASK,
+                shadow_distance
+            )) {
+                visibility = 0.0;
+            }
+        }
+        sum += light.color.rgb * (light.position.w * diffuse * falloff * visibility);
     }
     return sum;
 }

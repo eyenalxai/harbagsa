@@ -11,6 +11,7 @@
     "closed-arena",
     "initial-lamps",
     "lighting",
+    "shadows",
     "lamp-wall-plane"
   ]
 }
