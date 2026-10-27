@@ -4,7 +4,7 @@ Captured on 2026-10-26 with AMD Radeon RX 9060 XT (RADV GFX1200). All runs are o
 
 ## Ambient and lamp response
 
-`scenarios/room-lighting.json` captures the inner room with no lamp, adds one warm Lamp, then removes it. Values below are 8-bit channel means at 1280x720.
+`scenarios/lighting.json` captures the stairs area with no lamp, adds one warm Lamp, then removes it. Values below are 8-bit channel means at 1280x720.
 
 | Capture | Red | Green | Blue |
 | --- | ---: | ---: | ---: |
@@ -30,7 +30,7 @@ The near capture is brighter, the far capture remains readable, and the two rend
 ```sh
 tools/make.sh build
 ./bin/harbagsa-agent suite lighting --out runs/lighting
-./bin/harbagsa-agent checks runs/lighting/room-lighting
+./bin/harbagsa-agent checks runs/lighting/lighting
 ./bin/harbagsa-agent checks runs/lighting/light-move
 ```
 
