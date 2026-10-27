@@ -53,9 +53,15 @@ A point light uses the surface normal and a squared range falloff. It has no
 visibility term, so it can cross a wall. That is deliberate. Do not add a shadow
 map, a ray, a probe, or a screen-space visibility pass to repair it.
 
+Every lamp prefab uses a dynamic body. Its light position comes from that body
+on every frame. A static or baked lamp is not an alternate mode. The starting
+arena places one warm Lamp, one cool Light panel, and one red Beacon in front of
+the spawn.
+
 The ambient floor is constant and small. It is not global illumination and not a
 static placed light. It keeps unlit albedo readable without hiding which areas
 the lamps reach. `scenarios/lighting.json` checks that floor.
+`scenarios/initial-lamps.json` checks the three starting lamps and a moved light.
 `scenarios/light-move.json` checks that a transform change updates the image and
 render digest.
 
