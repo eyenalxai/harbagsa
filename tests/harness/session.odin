@@ -91,7 +91,7 @@ session_steps_and_reports_state :: proc(t: ^testing.T) {
 	testing.expect(t, state_reply.state != nil, "state reply has no state")
 	if state_reply.state != nil {
 		testing.expect_value(t, state_reply.state.frame, 60)
-		testing.expect_value(t, len(state_reply.state.objects), game.INITIAL_CRATE_COUNT)
+		testing.expect_value(t, len(state_reply.state.objects), game.INITIAL_OBJECT_COUNT)
 		object := state_reply.state.objects[0]
 		testing.expect_value(t, object.id, 1)
 		testing.expect_value(t, object.prefab, "Crate")

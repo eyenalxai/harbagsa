@@ -160,8 +160,8 @@ editor_place_creates_the_exact_transform :: proc(t: ^testing.T) {
 
 	state := harness.session_state(&session)
 	defer harness.state_destroy(&state, context.allocator)
-	testing.expect_value(t, len(state.objects), game.INITIAL_CRATE_COUNT + 1)
-	object := state.objects[game.INITIAL_CRATE_COUNT]
+	testing.expect_value(t, len(state.objects), game.INITIAL_OBJECT_COUNT + 1)
+	object := state.objects[game.INITIAL_OBJECT_COUNT]
 	testing.expect_value(t, object.prefab, "Block")
 	testing.expect_value(t, object.body, "static")
 	testing.expect_value(t, object.position.x, 0.0)
@@ -169,7 +169,7 @@ editor_place_creates_the_exact_transform :: proc(t: ^testing.T) {
 	testing.expect_value(t, object.position.z, 5.0)
 	testing.expect(t, object.rotation.w < 1.0, "place yaw did not rotate the object")
 	testing.expect_value(t, state.debug.selection, "object")
-	testing.expect_value(t, state.debug.selected_id, u32(game.INITIAL_CRATE_COUNT + 1))
+	testing.expect_value(t, state.debug.selected_id, u32(game.INITIAL_OBJECT_COUNT + 1))
 }
 
 @(test)
@@ -184,7 +184,7 @@ editor_cancel_clears_the_armed_tool :: proc(t: ^testing.T) {
 	state := harness.session_state(&session)
 	defer harness.state_destroy(&state, context.allocator)
 	testing.expect(t, !state.debug.placement.armed, "cancel kept the tool armed")
-	testing.expect_value(t, len(state.objects), game.INITIAL_CRATE_COUNT)
+	testing.expect_value(t, len(state.objects), game.INITIAL_OBJECT_COUNT)
 }
 
 @(test)

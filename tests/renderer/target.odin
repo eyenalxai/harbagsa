@@ -142,9 +142,9 @@ offscreen_target_renders_and_reads_rgba :: proc(t: ^testing.T) {
 	testing.expect(t, different, "offscreen capture is a single flat color")
 
 	background_camera := renderer.Camera {
-		position = {0, 1.7, 0},
-		yaw      = 0,
-		pitch    = 1.2,
+		position = {0, 50, 100},
+		yaw      = 3.1415927,
+		pitch    = 0,
 		fov_x    = 1.5,
 	}
 	background_scene := frame.build(

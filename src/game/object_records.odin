@@ -147,9 +147,10 @@ spawn_object :: proc(
 		box_color = light_color4(light.color)
 	}
 	info := prefab(spawn.prefab)
+	body_mode := prefab_body_mode(spawn.prefab, spawn.body_mode)
 	body := create_box_body(
 		sim.world_id,
-		body_type(spawn.body_mode),
+		body_type(body_mode),
 		spawn.center,
 		rotation,
 		info.half_extents,
@@ -163,7 +164,7 @@ spawn_object :: proc(
 		id          = id,
 		name_length = u8(len(spawn.name)),
 		prefab      = spawn.prefab,
-		body_mode   = spawn.body_mode,
+		body_mode   = body_mode,
 		body        = body,
 		color       = box_color,
 		light       = light,

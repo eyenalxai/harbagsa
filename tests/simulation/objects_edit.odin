@@ -20,7 +20,7 @@ remove_object_destroys_body_and_shifts_list :: proc(t: ^testing.T) {
 
 	testing.expect(t, game.simulation_remove_object(&sim, id), "remove failed")
 	testing.expect(t, !b3.Body_IsValid(body), "removed object body is still valid")
-	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT - 1)
+	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_OBJECT_COUNT - 1)
 	testing.expect_value(t, game.simulation_objects(&sim)[0].id, next_id)
 	testing.expect_value(t, game.simulation_object_box(&sim, next_id).center, next_center)
 	testing.expect(t, !game.simulation_remove_object(&sim, id), "second remove succeeded")
@@ -108,7 +108,7 @@ reset_scene_restores_starting_objects_and_player :: proc(t: ^testing.T) {
 
 	objects := game.simulation_objects(&sim)
 	colors := game.INITIAL_CRATE_COLORS
-	testing.expect_value(t, len(objects), game.INITIAL_CRATE_COUNT)
+	testing.expect_value(t, len(objects), game.INITIAL_OBJECT_COUNT)
 	for position, index in game.INITIAL_CRATE_POSITIONS {
 		object := objects[index]
 		testing.expect_value(t, object.id, game.Object_Id(index + 1))

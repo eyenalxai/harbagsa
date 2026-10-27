@@ -118,7 +118,7 @@ debug_edit_delete_removes_selected_object :: proc(t: ^testing.T) {
 	testing.expect_value(
 		t,
 		game.simulation_object_count(&sim),
-		game.INITIAL_CRATE_COUNT - 1,
+		game.INITIAL_OBJECT_COUNT - 1,
 	)
 	testing.expect_value(t, dm.selection, game.Debug_Selection.None)
 	testing.expect_value(t, dm.selected_object_id, game.INVALID_OBJECT_ID)
@@ -143,7 +143,7 @@ debug_edit_empty_click_clears_selection :: proc(t: ^testing.T) {
 	testing.expect_value(
 		t,
 		game.simulation_object_count(&sim),
-		game.INITIAL_CRATE_COUNT,
+		game.INITIAL_OBJECT_COUNT,
 	)
 }
 

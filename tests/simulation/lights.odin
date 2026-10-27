@@ -20,7 +20,20 @@ place_lamp :: proc(
 		center = center,
 		yaw_rad = 0,
 	}, "lamp did not place")
+	object, found := game.simulation_object_find(sim, dm.selected_object_id)
+	testing.expect(t, found, "the placed lamp is not findable")
+	testing.expect_value(t, object.body_mode, game.Body_Mode.Dynamic)
 	return dm.selected_object_id
+}
+
+@(private)
+active_light_for :: proc(sim: ^game.Simulation, id: game.Object_Id) -> (game.Active_Light, bool) {
+	for light in game.simulation_collect_lights(sim) {
+		if light.object_id == id {
+			return light, true
+		}
+	}
+	return {}, false
 }
 
 @(test)
@@ -178,6 +191,82 @@ light_values_survive_a_history_restore_with_the_same_id :: proc(t: ^testing.T) {
 }
 
 @(test)
+lamp_body_conversion_to_static_is_refused :: proc(t: ^testing.T) {
+	sim, dm := object_editor_setup(t)
+	defer game.debug_mode_destroy(&dm)
+	defer game.simulation_destroy(&sim)
+
+	id := place_lamp(t, &sim, &dm, {2, 0.25, 9})
+	apply_expect(t, &dm, &sim, game.Palette_Close{}, "close failed")
+	result := apply(&dm, &sim, game.Set_Body{mode = .Static})
+	testing.expect(t, !result.applied, "a lamp accepted a static body")
+	testing.expect_value(t, result.reason, game.Edit_Reason.Lamp_Must_Be_Dynamic)
+	object, _ := game.simulation_object_find(&sim, id)
+	testing.expect_value(t, object.body_mode, game.Body_Mode.Dynamic)
+	testing.expect_value(t, game.debug_history_depth(&dm), 1)
+
+	apply_expect(t, &dm, &sim, game.Set_Body{mode = .Dynamic}, "dynamic body failed")
+	testing.expect_value(t, game.debug_history_depth(&dm), 1)
+}
+
+@(test)
+lamp_palette_body_flip_is_refused :: proc(t: ^testing.T) {
+	sim, dm := object_editor_setup(t)
+	defer game.debug_mode_destroy(&dm)
+	defer game.simulation_destroy(&sim)
+
+	apply_expect(t, &dm, &sim, game.Palette_Open{}, "open failed")
+	apply_expect(t, &dm, &sim, game.Palette_Select{index = int(game.Prefab_Id.Lamp)}, "lamp select failed")
+	result := apply(&dm, &sim, game.Palette_Flip_Body{})
+	testing.expect(t, !result.applied, "the palette accepted a static lamp")
+	testing.expect_value(t, result.reason, game.Edit_Reason.Lamp_Must_Be_Dynamic)
+	testing.expect_value(t, dm.palette.body_mode, game.Body_Mode.Dynamic)
+}
+
+@(test)
+initial_lamps_are_restored_dynamic_on_scene_reset :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+
+	first := game.simulation_objects(&sim)[game.INITIAL_CRATE_COUNT].id
+	testing.expect(t, game.simulation_remove_object(&sim, first), "the initial lamp did not remove")
+	game.simulation_reset_scene(&sim)
+
+	objects := game.simulation_objects(&sim)
+	testing.expect_value(t, len(objects), game.INITIAL_OBJECT_COUNT)
+	testing.expect_value(t, game.simulation_lamp_count(&sim), game.INITIAL_LAMP_COUNT)
+	for lamp in game.INITIAL_LAMPS {
+		object, found := game.simulation_object_find_by_name(&sim, lamp.name)
+		testing.expectf(t, found, "the reset did not restore %s", lamp.name)
+		if found {
+			testing.expect_value(t, object.body_mode, game.Body_Mode.Dynamic)
+			testing.expect(t, object.light.active, "a restored lamp has no light")
+		}
+	}
+}
+
+@(test)
+initial_lamp_moves_its_collected_light :: proc(t: ^testing.T) {
+	sim := create(t)
+	defer game.simulation_destroy(&sim)
+
+	objects := game.simulation_objects(&sim)
+	id := objects[game.INITIAL_CRATE_COUNT].id
+	before, found := active_light_for(&sim, id)
+	testing.expect(t, found, "the initial lamp has no active light")
+
+	target := b3.Vec3{8.0, 0.25, 7.0}
+	testing.expect(t, game.simulation_move_object(&sim, id, target), "the initial lamp did not move")
+	game.simulation_step_world(&sim, game.SIMULATION_STEP)
+	after, still_found := active_light_for(&sim, id)
+	testing.expect(t, still_found, "the moved lamp lost its light")
+	testing.expect(t, before.position != after.position, "the collected light did not follow the lamp")
+	testing.expect_value(t, after.position, game.simulation_object_box(&sim, id).center)
+	expect_near(t, after.position.x, target.x, 0.001, "light x")
+	expect_near(t, after.position.z, target.z, 0.001, "light z")
+}
+
+@(test)
 every_lamp_is_collected_in_placement_order :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
@@ -190,17 +279,27 @@ every_lamp_is_collected_in_placement_order :: proc(t: ^testing.T) {
 			{prefab = .Lamp, body_mode = .Static, center = {x, 1.0, 0.0}, yaw_rad = 0},
 		)
 	}
-	testing.expect_value(t, game.simulation_lamp_count(&sim), 10)
-	testing.expect_value(t, game.simulation_active_light_count(&sim), 10)
+	expected_count := game.INITIAL_LAMP_COUNT + len(ids)
+	testing.expect_value(t, game.simulation_lamp_count(&sim), expected_count)
+	testing.expect_value(t, game.simulation_active_light_count(&sim), expected_count)
 
+	objects := game.simulation_objects(&sim)
 	active := game.simulation_collect_lights(&sim)
-	testing.expect_value(t, len(active), 10)
+	testing.expect_value(t, len(active), expected_count)
 	for light, index in active {
-		testing.expect_value(t, light.object_id, ids[index])
+		if index < game.INITIAL_LAMP_COUNT {
+			testing.expect_value(
+				t,
+				light.object_id,
+				objects[game.INITIAL_CRATE_COUNT + index].id,
+			)
+		} else {
+			testing.expect_value(t, light.object_id, ids[index - game.INITIAL_LAMP_COUNT])
+		}
 	}
 
 	again := game.simulation_collect_lights(&sim)
-	testing.expect_value(t, len(again), 10)
+	testing.expect_value(t, len(again), expected_count)
 	for light, index in again {
 		testing.expect_value(t, light.object_id, active[index].object_id)
 	}

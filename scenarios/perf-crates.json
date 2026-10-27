@@ -65,6 +65,6 @@
     {"cmd": "perf", "frames": 120, "warmup": 60, "prime": 1.0, "name": "crates"}
   ],
   "checks": [
-    {"field": "objects.count", "op": "eq", "value": 63}
+    {"field": "objects.count", "op": "eq", "value": 66}
   ]
 }

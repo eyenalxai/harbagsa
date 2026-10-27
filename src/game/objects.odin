@@ -241,6 +241,9 @@ simulation_convert_object :: proc(sim: ^Simulation, id: Object_Id, mode: Body_Mo
 		return false
 	}
 	object := &sim.objects[index]
+	if !prefab_accepts_body(object.prefab, mode) {
+		return false
+	}
 	if object.body_mode == mode {
 		return true
 	}
@@ -297,6 +300,20 @@ simulation_reset_objects :: proc(sim: ^Simulation) {
 			},
 			colors[index],
 			{},
+			true,
+		)
+	}
+	for lamp in INITIAL_LAMPS {
+		_ = create_object(
+			sim,
+			{
+				name = lamp.name,
+				prefab = lamp.prefab,
+				body_mode = .Dynamic,
+				center = lamp.position,
+			},
+			prefab_color(lamp.prefab),
+			prefab_light(lamp.prefab),
 			true,
 		)
 	}

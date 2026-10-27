@@ -124,7 +124,7 @@ reset_scene_restores_objects_and_player :: proc(t: ^testing.T) {
 
 	game.debug_mode_reset_scene(&dm, &sim)
 
-	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT)
+	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_OBJECT_COUNT)
 	testing.expect_value(t, dm.selection, game.Debug_Selection.None)
 	testing.expect_value(t, dm.selected_object_id, game.INVALID_OBJECT_ID)
 	testing.expect_value(t, dm.dragging, game.Debug_Drag.None)

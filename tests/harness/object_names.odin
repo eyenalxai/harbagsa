@@ -46,7 +46,7 @@ place_remove_and_check_by_name :: proc(t: ^testing.T) {
 	reply = execute(t, &session, `{"cmd": "remove", "name": "alpha"}`)
 	testing.expectf(t, reply.ok, "named remove failed: %s", reply.error)
 	harness.reply_destroy(&reply, context.allocator)
-	reply = execute(t, &session, `{"cmd": "check", "field": "objects.count", "op": "eq", "value": 3}`)
+	reply = execute(t, &session, `{"cmd": "check", "field": "objects.count", "op": "eq", "value": 6}`)
 	testing.expectf(t, reply.ok, "count check failed: %s", reply.error)
 	harness.reply_destroy(&reply, context.allocator)
 }

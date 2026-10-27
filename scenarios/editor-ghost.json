@@ -17,11 +17,11 @@
     {"cmd": "check", "field": "debug.placement.position.y", "op": "eq", "value": 1.25},
     {"cmd": "capture", "name": "editor-ghost-raised"},
     {"cmd": "editor", "place": {"prefab": "Block", "position": [0, 0.5, 10], "body": "static", "yaw_deg": 0}},
-    {"cmd": "check", "field": "objects.count", "op": "eq", "value": 4},
-    {"cmd": "check", "field": "objects.4.prefab", "op": "eq", "value": "Block"},
-    {"cmd": "check", "field": "objects.4.body", "op": "eq", "value": "static"},
+    {"cmd": "check", "field": "objects.count", "op": "eq", "value": 7},
+    {"cmd": "check", "field": "objects.7.prefab", "op": "eq", "value": "Block"},
+    {"cmd": "check", "field": "objects.7.body", "op": "eq", "value": "static"},
     {"cmd": "check", "field": "debug.selection", "op": "eq", "value": "object"},
-    {"cmd": "check", "field": "debug.selected_id", "op": "eq", "value": 4},
+    {"cmd": "check", "field": "debug.selected_id", "op": "eq", "value": 7},
     {"cmd": "editor", "cancel": true},
     {"cmd": "check", "field": "debug.placement.armed", "op": "eq", "value": false}
   ]

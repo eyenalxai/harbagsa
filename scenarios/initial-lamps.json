@@ -1,0 +1,29 @@
+{
+  "size": "1280x720",
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "analysis": false,
+  "commands": [
+    {"cmd": "check", "field": "objects.count", "op": "eq", "value": 6},
+    {"cmd": "check", "field": "debug.lights.active", "op": "eq", "value": 3},
+    {"cmd": "check", "field": "objects.initial-lamp.body", "op": "eq", "value": "dynamic"},
+    {"cmd": "check", "field": "objects.initial-panel.body", "op": "eq", "value": "dynamic"},
+    {"cmd": "check", "field": "objects.initial-beacon.body", "op": "eq", "value": "dynamic"},
+    {"cmd": "settle", "frames": 120},
+    {"cmd": "capture", "name": "home"},
+    {"cmd": "debug_mode", "active": true},
+    {"cmd": "editor", "select_object": "initial-lamp", "move": [-2, 0.25, 4]},
+    {"cmd": "check", "field": "objects.initial-lamp.position.x", "op": "eq", "value": -2},
+    {"cmd": "check", "field": "objects.initial-lamp.body", "op": "eq", "value": "dynamic"},
+    {"cmd": "settle", "frames": 40},
+    {"cmd": "capture", "name": "moved", "format": "stats", "png": true},
+    {"cmd": "place", "prefab": "Beacon", "position": [-2, 0.2, 8], "body": "static", "name": "static-request"},
+    {"cmd": "check", "field": "objects.static-request.body", "op": "eq", "value": "dynamic"},
+    {"cmd": "check", "field": "objects.count", "op": "eq", "value": 7}
+  ],
+  "checks": [
+    {"field": "capture.named.moved.delta_mean", "op": "gt", "value": 0.1},
+    {"field": "capture.named.moved.render_digest", "op": "ne", "other": "capture.named.home.render_digest"},
+    {"field": "capture.named.moved.stats.mean.y", "op": "gt", "value": 1},
+    {"field": "debug.lights.active", "op": "eq", "value": 4}
+  ]
+}
