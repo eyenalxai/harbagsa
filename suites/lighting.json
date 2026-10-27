@@ -1,7 +1,7 @@
 {
   "version": 1,
   "name": "lighting",
-  "description": "Ambient coverage, direct point lights, light placement, and light gradients.",
+  "description": "Black default, direct point lights, light placement, and light gradients.",
   "entries": [
     "closed-arena",
     "initial-lamps",

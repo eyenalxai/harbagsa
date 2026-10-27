@@ -1,6 +1,6 @@
 # Closed arena evidence
 
-Captured on 2026-10-27 from the closed-arena branch with AMD Radeon RX 9060 XT (RADV GFX1200). The rendering context is in [ADR 0037](../adr/0037-direct-dynamic-point-lights.md); the shell decision is in [ADR 0038](../adr/0038-closed-arena-shell.md).
+Captured on 2026-10-27 from the closed-arena branch with AMD Radeon RX 9060 XT (RADV GFX1200). The rendering context is in [ADR 0041](../adr/0041-absolute-darkness.md); the shell decision is in [ADR 0038](../adr/0038-closed-arena-shell.md).
 
 ## Shell
 
@@ -11,7 +11,7 @@ Captured on 2026-10-27 from the closed-arena branch with AMD Radeon RX 9060 XT (
 | Static arena boxes | 52 | exactly 52 |
 | Ceiling centre height | 5.75 m | exactly 5.75 m |
 | Ceiling half extent | 20.5 m | above 20 m |
-| Ceiling capture mean green | 31.23 | above 10 |
+| Ceiling capture mean green | 8.60 | above 1 |
 
 The ceiling capture fills the frame with a box surface. It has no clear-colour pixels. The arena wall height is 5.5 m and the ceiling adds 0.5 m, so the underside sits exactly at the wall top. The taller walls leave room for a standing jump from the 2.5 m dive platform.
 

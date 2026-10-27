@@ -22,16 +22,16 @@ Two constraints produce that look, and both are deliberate:
 
 The one choice a competitor cannot paste in: a hard-edged box interior lit by
 movable coloured lamps, with soft range falloff on flat faces and overlay text
-that is exact on the pixel grid. A small ambient floor keeps unlit colour
-readable. Hard point-light shadows ground the props and walls. No cached lighting
-competes with the lamps.
+that is exact on the pixel grid. Unlit boxes are black; only placed lamps and
+emissive boxes add light. Hard point-light shadows ground the props and walls.
+No cached lighting competes with the lamps.
 
 Defend it. A texture, a gloss, a bloom, a baked light, or a rounded corner
 removes it.
 
 ## Files
 
-- [world.md](world.md): the scene palette, direct lights, ambient floor,
+- [world.md](world.md): the scene palette, direct lights, darkness rule,
   geometry rule, and what a new prop must do.
 - [motion.md](motion.md): what may move, the smoothing formula, the settle
   times, and the motions that must never exist.
