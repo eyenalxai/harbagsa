@@ -17,7 +17,7 @@ get_returns_the_scalar_type :: proc(t: ^testing.T) {
 	testing.expectf(t, number.ok, "count get failed: %s", number.error)
 	if number.ok {
 		testing.expect_value(t, number.get.value.kind, harness.Value_Kind.Number)
-		testing.expect_value(t, number.get.value.number, f64(3))
+		testing.expect_value(t, number.get.value.number, f64(6))
 	}
 
 	flag := execute(t, &session, `{"cmd":"get","field":"debug.active"}`)

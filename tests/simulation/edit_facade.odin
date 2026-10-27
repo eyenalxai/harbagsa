@@ -55,7 +55,7 @@ menu_open_blocks_every_edit :: proc(t: ^testing.T) {
 
 	result = game.edit_apply(&dm, &sim, game.Delete_Selected{}, {menu_open = true})
 	testing.expect_value(t, result.reason, game.Edit_Reason.Menu_Open)
-	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT)
+	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_OBJECT_COUNT)
 }
 
 @(test)

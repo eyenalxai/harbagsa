@@ -32,7 +32,7 @@
     {"cmd": "check", "field": "renderer.debug.synthetic_lights", "op": "eq", "value": 0},
     {"cmd": "check", "field": "renderer.last_reset", "op": "eq", "value": "debug_override"},
     {"cmd": "settle", "frames": 1},
-    {"cmd": "check", "field": "renderer.light_count", "op": "eq", "value": 0},
+    {"cmd": "check", "field": "renderer.light_count", "op": "eq", "value": 3},
     {"cmd": "check", "field": "renderer.convergence_frames", "op": "eq", "value": 1}
   ]
 }

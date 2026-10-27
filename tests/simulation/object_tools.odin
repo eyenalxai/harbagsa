@@ -111,7 +111,7 @@ duplicate_offsets_selects_pops_and_restores_without_a_pop :: proc(t: ^testing.T)
 	apply_expect(t, &dm, &sim, game.Duplicate_Selected{}, "duplicate failed")
 	copy := dm.selected_object_id
 	testing.expect(t, copy != game.INVALID_OBJECT_ID, "duplicate selected nothing")
-	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT + 2)
+	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_OBJECT_COUNT + 2)
 	testing.expect_value(t, dm.selected_object_id, copy)
 	testing.expect_value(t, game.debug_history_depth(&dm), 2)
 	expect_near(
@@ -124,13 +124,13 @@ duplicate_offsets_selects_pops_and_restores_without_a_pop :: proc(t: ^testing.T)
 	testing.expect_value(t, game.simulation_object_scale(&sim, copy), game.SPAWN_POP_MIN_SCALE)
 
 	apply_expect(t, &dm, &sim, game.Undo{}, "undo failed")
-	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT + 1)
+	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_OBJECT_COUNT + 1)
 	testing.expect_value(t, game.simulation_object_box(&sim, source).center, source_center)
 	testing.expect_value(t, game.debug_history_depth(&dm), 1)
 
 	step_world(&sim, 30)
 	apply_expect(t, &dm, &sim, game.Redo{}, "redo failed")
-	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT + 2)
+	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_OBJECT_COUNT + 2)
 	testing.expect_value(t, dm.selected_object_id, game.INVALID_OBJECT_ID)
 	testing.expect_value(t, game.simulation_object_scale(&sim, copy), 1.0)
 	testing.expect_value(t, game.simulation_object_spawn_age(&sim, copy), 0.0)
@@ -148,18 +148,18 @@ delete_and_undo_restore_the_same_id :: proc(t: ^testing.T) {
 	placement := game.simulation_object_box(&sim, id)
 	apply_expect(t, &dm, &sim, game.Select_Object{id = id}, "select failed")
 	apply_expect(t, &dm, &sim, game.Delete_Selected{}, "delete failed")
-	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT - 1)
+	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_OBJECT_COUNT - 1)
 	testing.expect_value(t, dm.selection, game.Debug_Selection.None)
 	testing.expect_value(t, game.debug_history_depth(&dm), 1)
 
 	apply_expect(t, &dm, &sim, game.Undo{}, "undo failed")
-	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT)
+	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_OBJECT_COUNT)
 	testing.expect_value(t, game.simulation_object_box(&sim, id).center, placement.center)
 	testing.expect_value(t, game.simulation_object_scale(&sim, id), 1.0)
 	testing.expect_value(t, dm.selection, game.Debug_Selection.None)
 
 	apply_expect(t, &dm, &sim, game.Redo{}, "redo failed")
-	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT - 1)
+	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_OBJECT_COUNT - 1)
 	testing.expect_value(t, game.debug_history_depth(&dm), 1)
 }
 
@@ -230,17 +230,17 @@ keyboard_duplicate_undo_redo_and_body_follow_the_palette_rule :: proc(t: ^testin
 	before := game.simulation_object_box(&sim, id)
 
 	edit_step(&dm, &sim, {game.Duplicate_Selected{}})
-	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT + 1)
+	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_OBJECT_COUNT + 1)
 	testing.expect_value(t, game.debug_history_depth(&dm), 1)
 	testing.expect(t, dm.selected_object_id != id, "duplicate did not select the copy")
 
 	edit_step(&dm, &sim, {game.Undo{}})
-	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT)
+	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_OBJECT_COUNT)
 	testing.expect_value(t, game.debug_history_depth(&dm), 0)
 	testing.expect_value(t, game.debug_history_redo_depth(&dm), 1)
 
 	edit_step(&dm, &sim, {game.Redo{}})
-	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT + 1)
+	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_OBJECT_COUNT + 1)
 	testing.expect_value(t, game.debug_history_depth(&dm), 1)
 
 	apply_expect(t, &dm, &sim, game.Select_Object{id = id}, "select failed")

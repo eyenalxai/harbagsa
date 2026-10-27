@@ -46,26 +46,27 @@ editor_light_fields_tune_the_next_placement_and_reach_the_state :: proc(t: ^test
 
 	state = harness.session_state(&session)
 	defer harness.state_destroy(&state, context.allocator)
-	testing.expect_value(t, len(state.objects), game.INITIAL_CRATE_COUNT + 1)
-	lamp := state.objects[game.INITIAL_CRATE_COUNT]
+	testing.expect_value(t, len(state.objects), game.INITIAL_OBJECT_COUNT + 1)
+	lamp := state.objects[game.INITIAL_OBJECT_COUNT]
 	testing.expect_value(t, lamp.prefab, "Lamp")
 	testing.expect(t, lamp.light.active, "the placed lamp has no light")
 	testing.expect_value(t, lamp.light.color, "cool")
 	testing.expect_value(t, lamp.light.intensity, 2.4)
 	testing.expect_value(t, lamp.light.range, 12.0)
-	testing.expect_value(t, state.debug.lights.active, 1)
-	testing.expect_value(t, state.debug.lights.lamps, 1)
+	testing.expect_value(t, state.debug.lights.active, game.INITIAL_LAMP_COUNT + 1)
+	testing.expect_value(t, state.debug.lights.lamps, game.INITIAL_LAMP_COUNT + 1)
+	testing.expect_value(t, lamp.body, "dynamic")
 
 	checks := []struct {
 		path:  string,
 		value: string,
 	} {
-		{"objects.4.light.color", `"cool"`},
-		{"objects.4.light.intensity", `2.4`},
-		{"objects.4.light.range", `12`},
+		{"objects.7.light.color", `"cool"`},
+		{"objects.7.light.intensity", `2.4`},
+		{"objects.7.light.range", `12`},
 		{"debug.placement.light.color", `"cool"`},
-		{"debug.lights.active", `1`},
-		{"debug.lights.lamps", `1`},
+		{"debug.lights.active", `4`},
+		{"debug.lights.lamps", `4`},
 	}
 	for check in checks {
 		line := strings.concatenate(
@@ -94,7 +95,7 @@ editor_light_fields_edit_the_selected_lamp_and_undo :: proc(t: ^testing.T) {
 	reply = execute(
 		t,
 		&session,
-		`{"cmd": "editor", "select_object": 4, "light_color": "green", "light_intensity": 3.4}`,
+		`{"cmd": "editor", "select_object": 7, "light_color": "green", "light_intensity": 3.4}`,
 	)
 	testing.expectf(t, reply.ok, "lamp edit failed: %s", reply.error)
 	harness.reply_destroy(&reply, context.allocator)
@@ -102,7 +103,7 @@ editor_light_fields_edit_the_selected_lamp_and_undo :: proc(t: ^testing.T) {
 	state := harness.session_state(&session)
 	testing.expect_value(t, state.debug.inspector.light.color, "green")
 	testing.expect_value(t, state.debug.inspector.light.intensity, 3.4)
-	testing.expect_value(t, state.debug.lights.active, 1)
+	testing.expect_value(t, state.debug.lights.active, game.INITIAL_LAMP_COUNT + 1)
 	testing.expect_value(t, state.debug.history.depth, 3)
 	harness.state_destroy(&state, context.allocator)
 

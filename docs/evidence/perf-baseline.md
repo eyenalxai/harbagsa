@@ -8,7 +8,7 @@ Each scenario runs one priming phase, 60 warmup frames, and 120 measured frames.
 
 The report separates five GPU passes: cluster, depth, scene, TAA, and overlay. It also reports CPU phases and frame intervals. GPU values belong to the last completed frame. A device without timestamp support reports CPU data only.
 
-At 1280x720 on the baseline machine, the no-lamp GPU mean was 0.2628 ms. The eight-lamp GPU mean was 0.3911 ms. The detailed table and reproduction commands are in [point light performance](perf-lamps.md).
+At 1280x720 on the baseline machine, the starting scene's GPU mean was 0.2672 ms. The eight-lamp GPU mean was 0.3911 ms. The detailed table and reproduction commands are in [point light performance](perf-lamps.md).
 
 ## Rules for a new baseline
 

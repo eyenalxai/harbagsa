@@ -19,11 +19,11 @@ editor_place_reports_the_spawn_pop :: proc(t: ^testing.T) {
 	harness.reply_destroy(&reply, context.allocator)
 
 	state := harness.session_state(&session)
-	object := state.objects[game.INITIAL_CRATE_COUNT]
+	object := state.objects[game.INITIAL_OBJECT_COUNT]
 	testing.expect_value(t, object.scale, 0.01)
 	testing.expect_value(t, object.spawn_age, 0.0)
 	testing.expect_value(t, object.position.y, 0.5)
-	for initial in state.objects[:game.INITIAL_CRATE_COUNT] {
+	for initial in state.objects[:game.INITIAL_OBJECT_COUNT] {
 		testing.expect_value(t, initial.scale, 1.0)
 		testing.expect_value(t, initial.spawn_age, 0.0)
 	}
@@ -32,13 +32,13 @@ editor_place_reports_the_spawn_pop :: proc(t: ^testing.T) {
 	reply = execute(t, &session, `{"cmd": "step", "frames": 10}`)
 	harness.reply_destroy(&reply, context.allocator)
 	state = harness.session_state(&session)
-	testing.expect(t, state.objects[game.INITIAL_CRATE_COUNT].scale > 1.05, "no overshoot")
+	testing.expect(t, state.objects[game.INITIAL_OBJECT_COUNT].scale > 1.05, "no overshoot")
 	harness.state_destroy(&state, context.allocator)
 
 	reply = execute(t, &session, `{"cmd": "step", "frames": 7}`)
 	harness.reply_destroy(&reply, context.allocator)
 	state = harness.session_state(&session)
-	object = state.objects[game.INITIAL_CRATE_COUNT]
+	object = state.objects[game.INITIAL_OBJECT_COUNT]
 	testing.expect_value(t, object.scale, 1.0)
 	testing.expect(t, object.spawn_age >= game.SPAWN_POP_DURATION, "the pop did not finish")
 	harness.state_destroy(&state, context.allocator)
@@ -68,7 +68,7 @@ spawn_pop_phase_stays_out_of_the_digest :: proc(t: ^testing.T) {
 	second_state := harness.session_state(&second)
 	defer harness.state_destroy(&second_state, context.allocator)
 
-	testing.expect_value(t, first_state.objects[game.INITIAL_CRATE_COUNT].scale, 0.01)
-	testing.expect_value(t, second_state.objects[game.INITIAL_CRATE_COUNT].scale, 1.0)
+	testing.expect_value(t, first_state.objects[game.INITIAL_OBJECT_COUNT].scale, 0.01)
+	testing.expect_value(t, second_state.objects[game.INITIAL_OBJECT_COUNT].scale, 1.0)
 	testing.expect_value(t, first_state.digest, second_state.digest)
 }

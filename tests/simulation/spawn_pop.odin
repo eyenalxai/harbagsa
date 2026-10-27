@@ -106,7 +106,7 @@ new_objects_pop_while_initial_crates_stay_settled :: proc(t: ^testing.T) {
 	testing.expect_value(t, game.simulation_object_scale(&sim, id), 1.0)
 	expect_near(t, game.simulation_object_spawn_age(&sim, id), 17.0 * DT, 0.0001, "settled age")
 
-	for object in game.simulation_objects(&sim)[:game.INITIAL_CRATE_COUNT] {
+	for object in game.simulation_objects(&sim)[:game.INITIAL_OBJECT_COUNT] {
 		testing.expect_value(t, game.simulation_object_scale(&sim, object.id), 1.0)
 		testing.expect_value(t, game.simulation_object_spawn_age(&sim, object.id), 0.0)
 	}

@@ -38,7 +38,7 @@ object_names_are_unique_and_survive_a_snapshot :: proc(t: ^testing.T) {
 		},
 	)
 	testing.expect_value(t, duplicate, game.INVALID_OBJECT_ID)
-	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT + 1)
+	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_OBJECT_COUNT + 1)
 
 	snapshot := game.object_snapshot_capture(&sim, context.allocator)
 	defer game.object_snapshot_destroy(&snapshot, context.allocator)

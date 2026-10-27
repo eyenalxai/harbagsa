@@ -23,7 +23,7 @@ history_caps_at_64_and_a_new_edit_clears_redo :: proc(t: ^testing.T) {
 			yaw_rad = 0,
 		}, "place failed")
 	}
-	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT + 70)
+	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_OBJECT_COUNT + 70)
 	testing.expect_value(t, game.debug_history_depth(&dm), game.HISTORY_LIMIT)
 
 	apply_expect(t, &dm, &sim, game.Undo{}, "undo failed")
@@ -81,9 +81,9 @@ undo_restores_colors_modes_and_transforms :: proc(t: ^testing.T) {
 	dm.active = true
 	defer game.debug_mode_destroy(&dm)
 
-	ids: [game.INITIAL_CRATE_COUNT]game.Object_Id
-	centers: [game.INITIAL_CRATE_COUNT]b3.Vec3
-	colors: [game.INITIAL_CRATE_COUNT][4]f32
+	ids: [game.INITIAL_OBJECT_COUNT]game.Object_Id
+	centers: [game.INITIAL_OBJECT_COUNT]b3.Vec3
+	colors: [game.INITIAL_OBJECT_COUNT][4]f32
 	for object, index in game.simulation_objects(&sim) {
 		ids[index] = object.id
 		box := game.simulation_object_box(&sim, object.id)
@@ -119,5 +119,5 @@ reset_scene_clears_history :: proc(t: ^testing.T) {
 	game.debug_mode_reset_scene(&dm, &sim)
 	testing.expect_value(t, game.debug_history_depth(&dm), 0)
 	testing.expect_value(t, game.debug_history_redo_depth(&dm), 0)
-	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_CRATE_COUNT)
+	testing.expect_value(t, game.simulation_object_count(&sim), game.INITIAL_OBJECT_COUNT)
 }

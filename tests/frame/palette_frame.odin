@@ -36,7 +36,7 @@ frame_fills_the_palette_from_the_prefab_catalog :: proc(t: ^testing.T) {
 	testing.expect_value(t, palette.items[4].body, "static")
 	testing.expect_value(t, palette.items[4].key, "5")
 	testing.expect_value(t, palette.body, "static")
-	testing.expect_value(t, string(palette.count[:palette.count_length]), "3")
+	testing.expect_value(t, string(palette.count[:palette.count_length]), "6")
 	testing.expect(
 		t,
 		strings.contains(string(palette.size[:palette.size_length]), "4.0 × 0.5 × 4.0 m"),

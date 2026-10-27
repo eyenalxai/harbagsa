@@ -55,6 +55,7 @@ run path. `--out DIR` chooses the whole run directory.
 | read check gates and margins | `harbagsa-agent checks RUN` |
 | compare two runs | `compare`, `diff`, or `ab --visual` |
 | test the closed shell | `scenarios/closed-arena.json` |
+| test the starting lamps | `scenarios/initial-lamps.json` |
 | test direct lighting | `scenarios/lighting.json`, `scenarios/light-move.json` |
 | measure stability or banding | **Analysis** |
 | measure performance | **Performance** |
@@ -165,11 +166,12 @@ and one capture. It is not a live-session command.
 
 `place` creates one object without entering debug mode. It draws no editor
 lines and adds no undo entry. `prefab` and `position` are required. `body`
-defaults to the prefab. A name is unique, at most 31 letters, digits, `-`, or
-`_`, and is neither all digits nor `count`.
+defaults to the prefab. A lamp prefab ignores a static request and keeps its
+dynamic body. A name is unique, at most 31 letters, digits, `-`, or `_`, and is
+neither all digits nor `count`.
 
 ```json
-{"cmd":"place","prefab":"Lamp","position":[13.5,2.75,10.5],"body":"static",
+{"cmd":"place","prefab":"Lamp","position":[13.5,2.75,10.5],"body":"dynamic",
  "name":"key-lamp","light":{"color":"warm","intensity":1.5,"range":8}}
 ```
 
@@ -185,7 +187,8 @@ actions. Fields cover:
 - `pick`, `height`, `yaw_deg`, `snap`, and `cancel` for the armed placement.
 - `place` for an exact transform without a placement ray.
 - `select_object`, `move`, `rotate_deg`, `body`, `flip_body`, `delete`, and
-  `duplicate` for an object.
+  `duplicate` for an object. A body request that would make a lamp static fails
+  with `a lamp must stay dynamic`.
 - `turn`, `wheel`, `large`, `primary`, `secondary`, `drag_move`, and
   `drag_release` for pointer-relative input.
 - `light_color`, `light_intensity`, and `light_range` for the next or selected lamp.

@@ -80,7 +80,7 @@ scene_grows_past_the_old_box_cap :: proc(t: ^testing.T) {
 	testing.expect_value(
 		t,
 		len(scene.boxes),
-		len(game.arena_static_boxes()) + game.INITIAL_CRATE_COUNT + 300,
+		len(game.arena_static_boxes()) + game.INITIAL_OBJECT_COUNT + 300,
 	)
 }
 
@@ -125,7 +125,7 @@ debug_hud_names_the_selected_prefab :: proc(t: ^testing.T) {
 	)
 	testing.expect_value(t, scene.hud.view.rows[1].label, "Selection")
 	testing.expect(t, strings.has_prefix(scene.hud.view.rows[1].value, "Platform"), "prefab missing")
-	testing.expect(t, strings.contains(scene.hud.view.rows[1].value, "# 004"), "id missing")
+	testing.expect(t, strings.contains(scene.hud.view.rows[1].value, "# 007"), "id missing")
 	testing.expect_value(t, scene.hud.view.rows[2].label, "Objects")
 }
 

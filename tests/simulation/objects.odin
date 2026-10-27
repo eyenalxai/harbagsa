@@ -31,9 +31,9 @@ prefab_catalog_has_the_eleven_boxes :: proc(t: ^testing.T) {
 	testing.expect_value(t, game.prefab(.Ramp).body_mode, game.Body_Mode.Static)
 	testing.expect_value(t, game.prefab(.Pillar).body_mode, game.Body_Mode.Static)
 	testing.expect_value(t, game.prefab(.Wall).body_mode, game.Body_Mode.Static)
-	testing.expect_value(t, game.prefab(.Lamp).body_mode, game.Body_Mode.Static)
-	testing.expect_value(t, game.prefab(.Light_Panel).body_mode, game.Body_Mode.Static)
-	testing.expect_value(t, game.prefab(.Beacon).body_mode, game.Body_Mode.Static)
+	testing.expect_value(t, game.prefab(.Lamp).body_mode, game.Body_Mode.Dynamic)
+	testing.expect_value(t, game.prefab(.Light_Panel).body_mode, game.Body_Mode.Dynamic)
+	testing.expect_value(t, game.prefab(.Beacon).body_mode, game.Body_Mode.Dynamic)
 
 	testing.expect_value(t, game.prefab(.Crate).color, game.CRATE_GREEN_COLOR)
 	testing.expect_value(t, game.prefab(.Small_Crate).color, game.CRATE_AMBER_COLOR)
@@ -68,13 +68,13 @@ prefab_catalog_has_the_eleven_boxes :: proc(t: ^testing.T) {
 }
 
 @(test)
-starting_scene_has_three_crate_objects :: proc(t: ^testing.T) {
+starting_scene_has_crates_and_dynamic_lamps :: proc(t: ^testing.T) {
 	sim := create(t)
 	defer game.simulation_destroy(&sim)
 
 	objects := game.simulation_objects(&sim)
 	colors := game.INITIAL_CRATE_COLORS
-	testing.expect_value(t, len(objects), game.INITIAL_CRATE_COUNT)
+	testing.expect_value(t, len(objects), game.INITIAL_OBJECT_COUNT)
 	for position, index in game.INITIAL_CRATE_POSITIONS {
 		object := objects[index]
 		testing.expect_value(t, object.id, game.Object_Id(index + 1))
@@ -85,6 +85,13 @@ starting_scene_has_three_crate_objects :: proc(t: ^testing.T) {
 		testing.expect_value(t, box.center, position)
 		testing.expect_value(t, box.half_extents, game.prefab(.Crate).half_extents)
 		testing.expect_value(t, box.color, colors[index])
+	}
+	for lamp, index in game.INITIAL_LAMPS {
+		object := objects[game.INITIAL_CRATE_COUNT + index]
+		testing.expect_value(t, game.simulation_object_name(&sim, object.id), lamp.name)
+		testing.expect_value(t, object.prefab, lamp.prefab)
+		testing.expect_value(t, object.body_mode, game.Body_Mode.Dynamic)
+		testing.expect(t, object.light.active, "an initial lamp has no light")
 	}
 }
 
@@ -124,12 +131,13 @@ every_prefab_creates_the_requested_body :: proc(t: ^testing.T) {
 			object, found := game.simulation_object_find(&sim, id)
 			testing.expect(t, found, "created object is not findable")
 			testing.expect_value(t, object.prefab, prefab)
-			testing.expect_value(t, object.body_mode, mode)
-			testing.expect_value(
-				t,
-				b3.Body_GetType(object.body),
-				mode == game.Body_Mode.Static ? b3.BodyType.staticBody : b3.BodyType.dynamicBody,
-			)
+			expected_mode := game.prefab_body_mode(prefab, mode)
+			testing.expect_value(t, object.body_mode, expected_mode)
+			expected_type := b3.BodyType.dynamicBody
+			if expected_mode == game.Body_Mode.Static {
+				expected_type = .staticBody
+			}
+			testing.expect_value(t, b3.Body_GetType(object.body), expected_type)
 
 			box := game.simulation_object_box(&sim, id)
 			testing.expect_value(t, box.half_extents, game.prefab(prefab).half_extents)
@@ -143,7 +151,7 @@ every_prefab_creates_the_requested_body :: proc(t: ^testing.T) {
 	testing.expect_value(
 		t,
 		game.simulation_object_count(&sim),
-		game.INITIAL_CRATE_COUNT + created,
+		game.INITIAL_OBJECT_COUNT + created,
 	)
 }
 
@@ -166,7 +174,7 @@ create_object_grows_the_scene_past_the_old_cap :: proc(t: ^testing.T) {
 	testing.expect_value(
 		t,
 		game.simulation_object_count(&sim),
-		game.INITIAL_CRATE_COUNT + 300,
+		game.INITIAL_OBJECT_COUNT + 300,
 	)
 
 	id := game.simulation_create_object(
@@ -177,6 +185,6 @@ create_object_grows_the_scene_past_the_old_cap :: proc(t: ^testing.T) {
 	testing.expect_value(
 		t,
 		game.simulation_object_count(&sim),
-		game.INITIAL_CRATE_COUNT + 301,
+		game.INITIAL_OBJECT_COUNT + 301,
 	)
 }

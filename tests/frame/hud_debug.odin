@@ -101,12 +101,12 @@ debug_inspector_shows_the_lamp_light_and_budget :: proc(t: ^testing.T) {
 	)
 	testing.expect(
 		t,
-		strings.contains(rows[game.HUD_INSPECTOR_ROW_COUNT - 1].value, "1 active"),
+		strings.contains(rows[game.HUD_INSPECTOR_ROW_COUNT - 1].value, "4 active"),
 		"the active light count is missing",
 	)
 	testing.expect(
 		t,
-		strings.contains(rows[game.HUD_INSPECTOR_ROW_COUNT - 1].value, "1 lamps"),
+		strings.contains(rows[game.HUD_INSPECTOR_ROW_COUNT - 1].value, "4 lamps"),
 		"the lamp count is missing",
 	)
 
