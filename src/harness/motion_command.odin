@@ -38,7 +38,7 @@ parse_face :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, 
 
 @(private)
 parse_input :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "forward", "right", "jump"}); unknown {
+	if key, unknown := json_unknown_key(object, {"cmd", "forward", "right", "jump", "sprint"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 	input, input_error := parse_input_fields(object)
@@ -68,6 +68,9 @@ parse_input_fields :: proc(object: json.Object) -> (input: Input_Command, error:
 	if field_error := json_optional_bool(object, "jump", &input.jump, &input.has_jump); field_error != "" {
 		return {}, field_error
 	}
+	if field_error := json_optional_bool(object, "sprint", &input.sprint, &input.has_sprint); field_error != "" {
+		return {}, field_error
+	}
 	return input, ""
 }
 
@@ -82,6 +85,9 @@ input_command_json :: proc(input: Input_Command, allocator: mem.Allocator) -> st
 	}
 	if input.has_jump {
 		fmt.sbprintf(&builder, `, "jump": %v`, input.jump)
+	}
+	if input.has_sprint {
+		fmt.sbprintf(&builder, `, "sprint": %v`, input.sprint)
 	}
 	fmt.sbprint(&builder, `}`)
 	return strings.to_string(builder)

@@ -1,5 +1,8 @@
 # Ground speed, step-up, and step smoothing
 
+> Superseded by ADR 0043: the stance speed is replaced by the gait speed, and step
+> smoothing now offsets the third-person camera pivot only.
+
 > 0004 until 2026-10-24. The temporal anti-aliasing ADR claimed 0004 first, so
 > this one moved.
 

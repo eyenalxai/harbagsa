@@ -9,8 +9,6 @@ Settings :: struct {
 	window:      display.Window_Settings,
 	display:     display.List,
 	sprint_mode: Input_Mode,
-	crouch_mode: Input_Mode,
-	prone_mode:  Input_Mode,
 	type_weight: f32,
 }
 
@@ -23,8 +21,6 @@ DEFAULT_WINDOW_SETTINGS :: display.Window_Settings {
 DEFAULT_SETTINGS :: Settings {
 	window      = DEFAULT_WINDOW_SETTINGS,
 	sprint_mode = DEFAULT_SPRINT_INPUT_MODE,
-	crouch_mode = DEFAULT_CROUCH_INPUT_MODE,
-	prone_mode  = DEFAULT_PRONE_INPUT_MODE,
 	type_weight = ui.TYPE_WEIGHT_DEFAULT,
 }
 

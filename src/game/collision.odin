@@ -42,7 +42,7 @@ collide_mover :: proc(sim: ^Simulation, point: b3.Vec3, capsule: b3.Capsule) -> 
 // slope by its radius, so callers compare the gap to the slope clearance.
 @(private)
 probe_ground_at :: proc(sim: ^Simulation, feet: b3.Vec3, length: f32) -> Ground_Probe {
-	capsule := player_capsule(sim.player.stance)
+	capsule := player_capsule()
 	origin := feet + b3.Vec3{0.0, GROUND_PROBE_LIFT, 0.0}
 	fraction := b3.World_CastMover(
 		sim.world_id,
@@ -102,11 +102,13 @@ is_grounded :: proc(sim: ^Simulation, probe: Ground_Probe) -> bool {
 	return probe.distance <= slope_clearance(probe.normal) + GROUND_CONTACT_TOLERANCE
 }
 
+// The spider body capsule. The legs are visual, so the collision shape stays
+// compact enough for the low tunnel.
 @(private)
-player_capsule :: proc(stance: Stance, radius: f32 = PLAYER_RADIUS) -> b3.Capsule {
+player_capsule :: proc(radius: f32 = PLAYER_RADIUS) -> b3.Capsule {
 	return {
 		center1 = {0.0, radius, 0.0},
-		center2 = {0.0, max(stance_height(stance) - radius, radius), 0.0},
+		center2 = {0.0, max(PLAYER_HEIGHT - radius, radius), 0.0},
 		radius = radius,
 	}
 }
@@ -120,7 +122,7 @@ move_player :: proc(sim: ^Simulation, time_step: f32) {
 	contacts: Solver_Context
 
 	for _ in 0 ..< MOVE_ITERATIONS {
-		capsule := player_capsule(sim.player.stance)
+		capsule := player_capsule()
 		origin := sim.player.position
 		contacts = collide_mover(sim, origin, capsule)
 

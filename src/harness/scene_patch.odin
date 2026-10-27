@@ -13,8 +13,6 @@ Scene_Settings_Patch :: struct {
 	display:      Maybe(int),
 	resolution:   Maybe([2]i32),
 	sprint_mode:  Maybe(string),
-	crouch_mode:  Maybe(string),
-	prone_mode:   Maybe(string),
 	type_weight:  Maybe(f32),
 }
 
@@ -33,7 +31,7 @@ parse_scene_settings :: proc(value: json.Value, allocator: mem.Allocator) -> (Sc
 	}
 	if key, unknown := json_unknown_key(
 		object,
-		{"window_mode", "display", "resolution", "sprint_mode", "crouch_mode", "prone_mode", "type_weight"},
+		{"window_mode", "display", "resolution", "sprint_mode", "type_weight"},
 	); unknown {
 		return {}, format_error("unknown settings key %q", key)
 	}
@@ -65,20 +63,6 @@ parse_scene_settings :: proc(value: json.Value, allocator: mem.Allocator) -> (Sc
 			return {}, format_error("%s", "settings 'sprint_mode' is not a known mode")
 		}
 		patch.sprint_mode = strings.clone(name, allocator)
-		present = true
-	}
-	if name, has := string_field(object, "crouch_mode"); has {
-		if _, parsed := game.input_mode_parse(name); !parsed {
-			return {}, format_error("%s", "settings 'crouch_mode' is not a known mode")
-		}
-		patch.crouch_mode = strings.clone(name, allocator)
-		present = true
-	}
-	if name, has := string_field(object, "prone_mode"); has {
-		if _, parsed := game.input_mode_parse(name); !parsed {
-			return {}, format_error("%s", "settings 'prone_mode' is not a known mode")
-		}
-		patch.prone_mode = strings.clone(name, allocator)
 		present = true
 	}
 	if weight, has := number_field(object, "type_weight"); has {
