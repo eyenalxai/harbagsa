@@ -128,10 +128,20 @@ init_bake :: proc(r: ^Renderer, path: string) -> bool {
 	r.bake.loaded = true
 	r.bake.status = .Stale
 	if !create_bake_resources(r) {
-		destroy_bake(r)
+		if r.bake.status != .Failed {
+			log_bake_error(r, "cannot create the bake resources")
+		}
 		return false
 	}
 	return true
+}
+
+bake_key :: proc(r: ^Renderer, static: bake.Static) -> u64 {
+	quality := bake.DEFAULT_QUALITY
+	if r.bake.loaded {
+		quality = r.bake.data.quality
+	}
+	return bake.key(static, quality)
 }
 
 update_bake :: proc(r: ^Renderer, key: u64) {
@@ -238,17 +248,7 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 	}
 	r.bake.probe_moments = moments
 
-	sampler_info := vk.SamplerCreateInfo {
-		sType        = .SAMPLER_CREATE_INFO,
-		magFilter    = .LINEAR,
-		minFilter    = .LINEAR,
-		mipmapMode   = .NEAREST,
-		addressModeU = .CLAMP_TO_EDGE,
-		addressModeV = .CLAMP_TO_EDGE,
-		addressModeW = .CLAMP_TO_EDGE,
-		maxLod       = 0,
-	}
-	if !check(vk.CreateSampler(r.device, &sampler_info, nil, &r.bake.sampler), "vkCreateSampler") {
+	if !create_clamp_sampler(r, &r.bake.sampler) {
 		return false
 	}
 

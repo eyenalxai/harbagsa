@@ -79,8 +79,9 @@ Light_Entry :: struct {
 	emissive:  f32,
 }
 
-Input :: struct {
-	boxes:   []Box_Entry,
-	lights:  []Light_Entry,
-	quality: Quality,
+// The static input is canonical: arena boxes in array order, then placed static
+// boxes by object id. `id` is the arena index or the placed object id.
+Static :: struct {
+	boxes:  []Box_Entry,
+	lights: []Light_Entry,
 }

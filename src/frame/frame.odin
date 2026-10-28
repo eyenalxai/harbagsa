@@ -118,7 +118,7 @@ build :: proc(
 		})
 	}
 	scene.lights = scratch.lights[:]
-	scene.bake_key = bake.key(build_bake_input(sim, scratch))
+	scene.bake_static = build_bake_input(sim, scratch)
 	scratch.debug_lines.count = 0
 	if options.debug_view {
 		game.collect_world_lines(sim, &scratch.debug_lines)
