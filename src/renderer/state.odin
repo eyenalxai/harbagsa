@@ -64,6 +64,7 @@ Renderer_Report :: struct {
 	text_font_drops:     int    `json:"text_font_drops"`,
 	debug_vertex_count:  int    `json:"debug_vertex_count"`,
 	debug_vertices:      Debug_Lines_Report `json:"debug_vertices"`,
+	bake:                Bake_Report `json:"bake"`,
 	debug:               Debug_Report `json:"debug"`,
 }
 
@@ -115,6 +116,7 @@ renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
 			selection = r.overlay.debug_kind_vertices[int(geometry.Line_Kind.Selection)],
 			placement = r.overlay.debug_kind_vertices[int(geometry.Line_Kind.Placement)],
 		},
+		bake = bake_report(r),
 		debug = {
 			active = r.debug.active,
 			taa = r.taa.enabled,

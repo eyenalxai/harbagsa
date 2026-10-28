@@ -27,4 +27,6 @@ Render_Input :: struct {
 	atlas_weight: f32,
 	clip_height:  f32,
 	light_shadows: bool,
+	bake_key:     u64,
+	bake_status:  Bake_Status,
 }

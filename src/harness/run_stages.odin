@@ -174,6 +174,7 @@ run_prepare :: proc(state: ^Run_State) -> Stage_Result {
 		width      = state.options.width,
 		height     = state.options.height,
 		present    = state.options.present,
+		bake_path  = state.options.bake_path,
 		frames_dir = state.frames_dir,
 		backend    = &state.backend,
 		session    = &state.session,

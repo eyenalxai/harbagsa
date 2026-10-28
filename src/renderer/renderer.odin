@@ -52,11 +52,12 @@ Frame :: struct {
 }
 
 Config :: struct {
-	platform: Platform,
-	target:   Target_Kind,
-	width:    u32,
-	height:   u32,
-	recorder: ^perf.Recorder,
+	platform:  Platform,
+	target:    Target_Kind,
+	width:     u32,
+	height:    u32,
+	bake_path: string,
+	recorder:  ^perf.Recorder,
 }
 
 Renderer :: struct {
@@ -100,6 +101,7 @@ Renderer :: struct {
 	scene:         Scene,
 	acceleration:  Acceleration,
 	taa:           TAA,
+	bake:          Bake_Resources,
 	debug:         Renderer_Debug,
 	overlay:       Overlay,
 }
@@ -153,7 +155,7 @@ init :: proc(config: Config, allocator: mem.Allocator) -> (r: Renderer, err: Err
 		return
 	}
 	init_timing(&r)
-	if err = init_scene(&r); err != .None {
+	if err = init_scene(&r, config.bake_path); err != .None {
 		deinit(&r)
 		return
 	}
