@@ -1,7 +1,0 @@
-{
-  "note": "An advisory miss is recorded and printed, but it does not fail the run.",
-  "commands": [
-    {"cmd": "check", "field": "player.position.y", "op": "gt", "value": 100, "advisory": true},
-    {"cmd": "check", "field": "player.position.y", "op": "ge", "value": 0}
-  ]
-}

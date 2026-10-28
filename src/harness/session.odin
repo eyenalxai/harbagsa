@@ -30,12 +30,10 @@ Session :: struct {
 	capture:  Capture_Run,
 	recorder: Recorder,
 	perf:     Perf_Run,
-	analysis: Analysis_Run,
 	settle:   Settle,
 	render:   Render_State,
 
-	checks:     [dynamic]Check_Result,
-	failures:   [dynamic]string,
+	failures: [dynamic]string,
 
 	quit: bool,
 
@@ -53,7 +51,6 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 		alpha = 1.0,
 		debug = game.debug_mode_create(allocator),
 		render = render_state_create(),
-		analysis = analysis_run_create(),
 	}
 	// The scratch holds the frame's debug lines, so it is too large for a local
 	// Session on the stack.
@@ -69,17 +66,12 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 	session.capture = capture_run_create(allocator)
 	session.recorder = recorder_create(allocator)
 	session.perf = perf_run_create(allocator)
-	session.checks = make([dynamic]Check_Result, 0, 8, allocator)
 	session.failures = make([dynamic]string, 0, 8, allocator)
 	return session, ""
 }
 
 @(private)
 session_results_destroy :: proc(session: ^Session) {
-	for &check in session.checks {
-		check_result_destroy(&check, session.allocator)
-	}
-	delete(session.checks)
 	for failure in session.failures {
 		delete(failure, session.allocator)
 	}
@@ -95,7 +87,6 @@ session_destroy :: proc(session: ^Session) {
 	capture_run_destroy(&session.capture, session.allocator)
 	recorder_destroy(&session.recorder, session.allocator)
 	perf_run_destroy(&session.perf, session.allocator)
-	analysis_run_destroy(&session.analysis)
 	render_state_destroy(&session.render, session.allocator)
 	frame.scratch_destroy(session.scratch)
 	free(session.scratch, session.allocator)

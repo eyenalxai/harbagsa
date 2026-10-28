@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the atlas and the tests use every key helper
+#+vet !unused-procedures // the atlas uses every key helper
 package renderer
 
 import "core:log"

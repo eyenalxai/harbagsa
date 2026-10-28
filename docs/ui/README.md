@@ -68,8 +68,8 @@ The debug object palette is a bottom dock, not a menu: the scene and the status
 panel stay visible. `ui.palette_layout` owns the geometry: a
 6x2 grid of `PALETTE_CARD_SIZE` cards in a `PALETTE_PANEL_WIDTH` x
 `PALETTE_PANEL_HEIGHT` panel, centred with `spacing.xl` below it, plus a preview
-pane and a footer of key hints. The draw, the hit test, and the tests read that
-one layout; no file repeats the numbers. On a shorter target the top clamps to
+pane and a footer of key hints. The draw and the hit test read that one layout; no file
+repeats the numbers. On a shorter target the top clamps to
 `spacing.md`; the palette never clips at a supported size.
 
 Twelve cells are laid out. The catalog fills the first cells; the rest draw only
@@ -101,8 +101,8 @@ formatted into the same fields, so a cold selection does not resize the panel.
 Every changing number uses `Row.numeric` and a fixed field, exactly as the
 player rows do. The panel width must not move when the selection changes, so
 the selection name is padded to a fixed column and the position uses the debug
-camera's two extra columns. `tests/frame/hud_debug.odin` measures the panel
-across every prefab and the empty selection.
+camera's two extra columns. The panel keeps its width across every prefab and the empty
+selection.
 
 ## Adding a surface
 

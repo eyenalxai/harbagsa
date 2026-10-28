@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the window loop and tests read this; the game binary does not
+#+vet !unused-procedures // the window loop reads this; the game binary does not
 package game
 
 // Focus is the game half of one frame's input state. The input module owns the

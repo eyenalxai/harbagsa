@@ -18,5 +18,5 @@ The exact sRGB transfer is used in both directions. The pattern depends on the p
 
 - The noise stays within one to two output levels and does not touch the HUD.
 - The pattern is deterministic, so repeated scenario captures match.
-- `analysis.bands` gates the defect. `scenarios/banding.json` measures a direct-lamp gradient at 1280x720.
+- The defect shows on a direct-lamp gradient at 1280x720.
 - The output dither handles quantization only. It is not a lighting or visibility effect.

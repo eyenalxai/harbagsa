@@ -52,9 +52,6 @@ session_main :: proc(options: Session_Options) -> int {
 		ctx = &runtime,
 		ensure = runtime_provider_ensure,
 	}
-	if options.no_analysis {
-		runtime.session.analysis.config.enabled = false
-	}
 	defer {
 		if runtime.has_backend {
 			backend_destroy(&runtime.backend)

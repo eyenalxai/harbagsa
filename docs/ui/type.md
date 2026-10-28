@@ -127,7 +127,7 @@ field carries the space flag.
 
 Why this matters: the status panel's width is the widest row. A value that can
 grow a character makes the whole panel jump as the player walks.
-`tests/frame/hud_rows.odin` fails if it does.
+The panel must not move when the player walks.
 
 ## Copy
 

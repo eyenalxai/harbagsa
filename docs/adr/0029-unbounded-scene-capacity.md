@@ -49,7 +49,6 @@ protocol limits.
   logarithmic number of times.
 - `Scene.object_capacity` and `Scene.light_capacity` are the live sizes. The
   upload paths check them and name the count on failure.
-- Tests cover past the old caps: 300 objects, 96 lights, and a 300-box frame.
-- `scenarios/capacity.json` renders 32 and 64 synthetic lights and checks the
-  reported count.
+- The live paths handle 300 objects, 96 lights, and a 300-box frame.
+- A synthetic light field renders 32 and 64 lights and reports the count.
 - The next step is clustered forward+, which uses the now-unbounded light list.

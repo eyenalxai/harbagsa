@@ -198,7 +198,7 @@ stats_channels :: proc(values: [4]f32) -> Capture_Channels {
 	return {x = values[0], y = values[1], z = values[2], w = values[3]}
 }
 
-// The check resolver names a channel, so one helper maps the JSON name to the
+// The field resolver names a channel, so one helper maps the JSON name to the
 // struct field.
 capture_channel_value :: proc(channels: Capture_Channels, axis: string) -> (f32, bool) {
 	switch axis {

@@ -51,10 +51,10 @@ floor.
 | `accent` | 8.70:1 | 6.64:1 | 9.30:1 |
 
 The floor is 4.5:1 for text and 3:1 for a non-text element such as the accent bar.
-`tests/renderer/text.odin` checks `text_primary` and `text_secondary` on the
-composited HUD and menu, `text_tertiary` on the composited menu, `text_primary`
-and `text_secondary` on the raised surface, and `accent` and the slider track
-against the raised surface. It does not check the slider fill, the ticks, or
+The floors apply to `text_primary` and `text_secondary` on the composited HUD
+and menu, `text_tertiary` on the composited menu, `text_primary` and
+`text_secondary` on the raised surface, and `accent` and the slider track
+against the raised surface. They do not apply to the slider fill, the ticks, or
 the knob.
 
 `text_tertiary` passes on the menu but not the text floor on the raised surface.

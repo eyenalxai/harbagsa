@@ -7,13 +7,13 @@ and one file can produce a sweep instead of a directory of near-copies.
 
 ## Why
 
-- The lamp-wall regression needed `--debug-renderer`, so it could not join
-  `VALIDATE_OFFSCREEN_SCENARIOS`. The scenario already declared the override
-  block; the runner required a second declaration from the command line.
+- The lamp-wall capture needed `--debug-renderer`. The scenario already declared
+  the override block; the runner required a second declaration from the command
+  line.
 - Finding the lamp threshold took ten scenario files that differed in one
   number. `--param lamp_x=20,19.999,19.99` is the same experiment in one file.
-- A name in a check is stable when a capture is inserted; an index is not. The
-  same change adds `capture.named.<name>.*`.
+- A name is stable when a capture is inserted; an index is not. The same change
+  adds `capture.named.<name>.*`.
 
 ## Decisions
 
@@ -36,11 +36,10 @@ and one file can produce a sweep instead of a directory of near-copies.
 
 ## Consequences
 
-- `lamp-wall-plane.json` runs in the default offscreen validation, and
-  `lamp-threshold.json` is the worked sweep.
+- `lamp-threshold.json` is the worked sweep.
 - `capture.named.<name>.*` reuses the `capture.N` resolver; a missing name is a
-  check error.
-- A sweep that hits a check failure still runs every combination. The process
+  field error.
+- A sweep that hits a command failure still runs every combination. The process
   exit code is the highest of the runs.
 - The report and `sweep.json` are the evidence; no extra capture or log format
   was added.

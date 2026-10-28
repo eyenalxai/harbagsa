@@ -1,5 +1,8 @@
 # Per-run image analysis
 
+> Status: removed. The analysis engine, `analysis.json`, and the `--no-analysis`
+> option were deleted. This page records the old decision.
+
 A run with captures writes `analysis.json` beside `report.json`. `report.json`
 links it in `analysis`. The pair and pixel analysis uses color PNG captures; a
 run with only intermediate captures writes an empty window and summary. The

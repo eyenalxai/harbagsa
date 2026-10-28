@@ -6,7 +6,7 @@ import "core:strconv"
 import "core:strings"
 
 @(private)
-capture_field :: proc(capture: Capture_Summary, path: string) -> (Check_Value, string) {
+capture_field :: proc(capture: Capture_Summary, path: string) -> (Field_Value, string) {
 	switch path {
 	case "count":
 		return {kind = .Number, number = f64(capture.count)}, ""
@@ -88,7 +88,7 @@ capture_field :: proc(capture: Capture_Summary, path: string) -> (Check_Value, s
 }
 
 @(private)
-capture_region_field :: proc(region: Capture_Region, path: string) -> (Check_Value, string) {
+capture_region_field :: proc(region: Capture_Region, path: string) -> (Field_Value, string) {
 	switch path {
 	case "x":
 		return {kind = .Number, number = f64(region.x)}, ""
@@ -106,7 +106,7 @@ capture_region_field :: proc(region: Capture_Region, path: string) -> (Check_Val
 capture_profile_field :: proc(
 	profile: Capture_Profile_Result,
 	path: string,
-) -> (Check_Value, string) {
+) -> (Field_Value, string) {
 	switch path {
 	case "width":
 		return {kind = .Number, number = f64(profile.width)}, ""
@@ -137,7 +137,7 @@ capture_profile_field :: proc(
 capture_histogram_field :: proc(
 	histogram: Capture_Histogram_Result,
 	path: string,
-) -> (Check_Value, string) {
+) -> (Field_Value, string) {
 	if path == "bins" {
 		return {kind = .Number, number = f64(histogram.bins)}, ""
 	}
@@ -166,7 +166,7 @@ capture_histogram_field :: proc(
 }
 
 @(private)
-capture_stats_field :: proc(stats: Capture_Stats, path: string) -> (Check_Value, string) {
+capture_stats_field :: proc(stats: Capture_Stats, path: string) -> (Field_Value, string) {
 	if strings.has_prefix(path, "color_key.") {
 		key, has_key := stats.color_key.?
 		if !has_key {
@@ -294,12 +294,65 @@ capture_stats_field :: proc(stats: Capture_Stats, path: string) -> (Check_Value,
 	return {kind = .Number, number = f64(value)}, ""
 }
 
-check_capture_window :: proc(captures: []Capture_Result, command: Check_Command) -> []Capture_Result {
-	if !command.window.has {
-		start := clamp(command.warmup, 0, len(captures))
-		return captures[start:]
+@(private)
+capture_path_field :: proc(captures: []Capture_Result, path: string) -> (Field_Value, string) {
+	head, tail, has_tail := split_field(path)
+	if has_tail {
+		switch head {
+		case "first":
+			return capture_one_field(captures[0], tail)
+		case "last":
+			return capture_one_field(captures[len(captures) - 1], tail)
+		case "named":
+			name, rest, has_rest := split_field(tail)
+			if !has_rest {
+				return {}, format_error("%s", "capture.named needs <name>.<field>")
+			}
+			for capture in captures {
+				if capture.name == name {
+					return capture_one_field(capture, rest)
+				}
+			}
+			return {}, fmt.aprintf("no capture named %q", name, allocator = context.allocator)
+		}
+		if index, parse_ok := strconv.parse_int(head); parse_ok {
+			if index < 0 || index >= len(captures) {
+				return {}, fmt.aprintf(
+					"capture index %d is out of range",
+					index,
+					allocator = context.allocator,
+				)
+			}
+			return capture_one_field(captures[index], tail)
+		}
 	}
-	start := clamp(command.window.start, 0, len(captures))
-	count := clamp(command.window.count, 0, len(captures) - start)
-	return captures[start:start + count]
+	return capture_field(capture_summary(captures), path)
+}
+
+@(private)
+capture_one_field :: proc(capture: Capture_Result, path: string) -> (Field_Value, string) {
+	if strings.has_prefix(path, "renderer.") {
+		return state_field(State{renderer = capture.renderer}, path)
+	}
+	switch path {
+	case "note":
+		return {kind = .String, text = capture.note}, ""
+	case "delta_mean":
+		return {kind = .Number, number = f64(capture.delta_mean)}, ""
+	case "delta_max":
+		return {kind = .Number, number = f64(capture.delta_max)}, ""
+	case "delta_over_16":
+		return {kind = .Number, number = f64(capture.delta_over_16)}, ""
+	case "frame":
+		return {kind = .Number, number = f64(capture.frame)}, ""
+	case "written_width":
+		return {kind = .Number, number = f64(capture.written_width)}, ""
+	case "written_height":
+		return {kind = .Number, number = f64(capture.written_height)}, ""
+	case "render_digest":
+		return {kind = .String, text = capture.render_digest}, ""
+	case "png":
+		return {kind = .Bool, boolean = capture.png}, ""
+	}
+	return capture_field(capture_summary([]Capture_Result{capture}), path)
 }

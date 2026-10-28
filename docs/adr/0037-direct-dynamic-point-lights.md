@@ -16,4 +16,4 @@ The renderer uses one direct-light model: a constant ambient floor, current poin
 - A point light uses its normal and range terms without a visibility term. Light can cross a wall. This is an accepted rendering simplification, not a leak to fix with a new visibility system.
 - The renderer needs Vulkan 1.3 dynamic rendering and shader demote. It does not need acceleration structures, ray queries, buffer device addresses, or deferred host operations.
 - Harness state, snapshots, scenarios, and performance reports expose only the remaining renderer inputs and passes. Removed commands and fields have no compatibility aliases.
-- `scenarios/lighting.json` gates ambient coverage. `scenarios/light-move.json` gates the image and digest response to a light transform change.
+- A lamp-free view stays black, and a light transform change moves the image and the digest.

@@ -1,5 +1,4 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the tests read the table
 package renderer
 
 import "src:digest"
@@ -34,8 +33,7 @@ RENDER_DIGEST_FIELDS := [?]Render_Digest_Field {
 }
 
 // The digest names the effective render inputs, not the game state. Two frames
-// with the same digest draw the same scene, so a measurement can assert the
-// inputs before it compares pixels.
+// with the same digest draw the same scene.
 render_digest :: proc(input: Render_Input) -> digest.FNV {
 	hash := digest.fnv()
 	for field in RENDER_DIGEST_FIELDS {

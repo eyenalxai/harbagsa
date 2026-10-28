@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the frame tests build the view through frame
+#+vet !unused-procedures // the frame package builds the view
 package game
 
 import "core:fmt"

@@ -15,5 +15,5 @@ The resolve keeps a ping-pong history and a per-pixel sample count. Each new sam
 ## Consequences
 
 - Two history images cost more memory and resolve bandwidth than 16-bit images.
-- `scenarios/taa-static.json` and `scenarios/taa-motion.json` gate the final stability rather than the old lighting sampling behaviour.
+- The final image keeps its stability rather than the old lighting sampling behaviour.
 - Output dither remains a separate final quantization step described by ADR 0020.

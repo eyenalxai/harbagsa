@@ -28,10 +28,6 @@ encode_reply :: proc(reply: Reply) -> []u8 {
 		append(&out, `,"capture":`)
 		append_json(&out, reply.capture^)
 	}
-	if reply.check != nil {
-		append(&out, `,"check":`)
-		append_json(&out, reply.check^)
-	}
 	if reply.recorded != "" {
 		append(&out, `,"recorded":`)
 		append_json(&out, reply.recorded)

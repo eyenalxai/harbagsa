@@ -60,9 +60,6 @@ diff_captures_frames :: proc(
 			continue
 		}
 		name := strings.trim_suffix(info.name, ".png")
-		if name == "analysis-diff" || name == "analysis-variance" {
-			continue
-		}
 		append(&items, {
 			name = strings.clone(name, allocator),
 			path = strings.clone(info.fullpath, allocator),
