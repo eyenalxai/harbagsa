@@ -73,8 +73,9 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 			prefab, prefab_ok := game.prefab_parse(object.prefab)
 			body, body_ok := game.body_mode_parse(object.body)
 			color, color_ok := game.light_color_parse(object.light.color)
-			if !prefab_ok || !body_ok || !color_ok {
-				return format_error("%s", "scene object holds an unknown prefab, body, or light colour")
+			kind, kind_ok := game.lamp_kind_parse(object.light.kind)
+			if !prefab_ok || !body_ok || !color_ok || !kind_ok {
+				return format_error("%s", "scene object holds an unknown prefab, body, light kind, or light colour")
 			}
 			record := game.Object_Record {
 				id = game.Object_Id(object.id),
@@ -90,6 +91,7 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 				color = object.color,
 				light = {
 					active = object.light.active,
+					kind = kind,
 					color = color,
 					intensity = object.light.intensity,
 					range = object.light.range,

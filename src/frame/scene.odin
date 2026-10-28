@@ -32,6 +32,7 @@ Scene_Camera :: struct {
 
 Scene_Light :: struct {
 	active:    bool   `json:"active"`,
+	kind:      string `json:"kind,omitempty"`,
 	color:     string `json:"color"`,
 	intensity: f32    `json:"intensity"`,
 	range:     f32    `json:"range"`,
@@ -148,6 +149,7 @@ scene_capture :: proc(
 			color = object.color,
 			light = {
 				active = object.light.active,
+				kind = strings.clone(game.lamp_kind_name(object.light.kind), allocator),
 				color = strings.clone(game.light_color_name(object.light.color), allocator),
 				intensity = object.light.intensity,
 				range = object.light.range,
@@ -185,6 +187,7 @@ scene_destroy :: proc(scene: ^Scene, allocator: mem.Allocator) {
 		}
 		delete(object.prefab, allocator)
 		delete(object.body, allocator)
+		delete(object.light.kind, allocator)
 		delete(object.light.color, allocator)
 	}
 	delete(scene.objects, allocator)
