@@ -61,6 +61,4 @@ in `hud.frag` with a `fwidth`-based threshold.
   width, so the word read with a gap in it.
 - `pyftsubset` is a development tool, not a build dependency. The subset files
   and their provenance are committed.
-- No future 2D layer may reintroduce a bitmap debug font. `docs/ui/type.md` is
-  the rule; `make check` and the contrast test in `tests/renderer/text.odin` are
-  the enforcement.
+- No future 2D layer may reintroduce a bitmap debug font. `docs/ui/type.md` is the rule.

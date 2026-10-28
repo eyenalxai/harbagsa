@@ -10,6 +10,6 @@
     {"cmd": "editor", "select": 8, "light_color": "warm", "light_intensity": 4.0, "light_range": 10},
     {"cmd": "editor", "place": {"prefab": "Lamp", "position": ["${lamp_x}", 2.0, -19.5], "body": "static"}},
     {"cmd": "settle", "frames": 20},
-    {"cmd": "capture", "name": "wall", "format": "stats", "region": {"x": 0, "y": 0, "w": 580, "h": 680}}
+    {"cmd": "capture", "name": "wall", "format": "stats", "png": true, "region": {"x": 0, "y": 0, "w": 580, "h": 680}}
   ]
 }

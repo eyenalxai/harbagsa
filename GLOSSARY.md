@@ -161,7 +161,7 @@ The 0.12 s before landing during which a jump press is remembered.
 _Avoid_: Input buffer
 
 **Arena**:
-The fixed test level: a floor, walls, ceiling, stairs, ramps, tunnels, the tall
+The fixed demo level: a floor, walls, ceiling, stairs, ramps, tunnels, the tall
 west walls, the high platform, a marked strip, and a few crates.
 _Avoid_: Map, level
 
@@ -232,7 +232,7 @@ A box whose colour adds to its shaded colour after the direct point lights. It c
 _Avoid_: Glow shader, unlit material
 
 **Synthetic light**:
-A generated test light that the renderer debug override injects, so a perf run can
+A generated light that the renderer debug override injects, so a perf run can
 fill the frame with an arbitrary light count without placing lamps.
 _Avoid_: Fake light
 
@@ -385,13 +385,13 @@ The interpolatable view of the player after a simulation step.
 _Avoid_: Frame state, view state
 
 **Harness**:
-The `harbagsa-agent` program that drives the simulation, runs checks, and writes
-screenshots without the game loop.
+The `harbagsa-agent` program that drives the simulation and writes screenshots
+without the game loop.
 _Avoid_: Bot, driver
 
 **Scenario**:
 A JSON document that compiles to one command list for the harness.
-_Avoid_: Script, test case
+_Avoid_: Script
 
 **Capture**:
 One rendered frame written as a PNG, a float or raw image, a statistics summary, or a profile by the harness.
@@ -422,12 +422,8 @@ The FNV hash of the SPIR-V embedded in the binary, reported at `setup.renderer.s
 _Avoid_: Build hash, shader version
 
 **Harness schema**:
-The JSON document from `harbagsa-agent schema` that names the command fields, units, scenario and suite keys, capture targets and formats, check fields, and state field tree.
+The JSON document from `harbagsa-agent schema` that names the command fields, units, scenario keys, capture targets and formats, and state field tree.
 _Avoid_: Command list
-
-**Analysis report**:
-The `analysis.json` file from a run with color captures. It holds the capture window, the per-pair deltas, the summary, the dominant period, the worst unstable pixels' series, and the optional map paths.
-_Avoid_: Diff report
 
 **Static box**:
 An immutable box in the arena: the floor, a wall, the ceiling, or a prop. It is not a placed object and it does not enter the simulation digest. `static_boxes` reports every static box; `harbagsa-agent boxes` prints the same list without a renderer.
@@ -441,22 +437,6 @@ _Avoid_: Preset, view
 **Visual A/B**:
 The `ab --visual` flow that builds a base ref and the current tree, runs one scenario on both, and writes a labeled compare panel with the delta column.
 _Avoid_: Montage, image diff
-
-**Check margin**:
-The distance from a check's actual value to its gate in the pass direction. A positive margin passed; `harbagsa-agent checks` prints it.
-_Avoid_: Slack, tolerance
-
-**Capture check window**:
-The slice of captures a check aggregates, `{"start": S, "count": N}`. Warmup is the shorthand for skipping the first N captures.
-_Avoid_: Range
-
-**Dominant period**:
-The smallest lag within 10% of the strongest autocorrelation of the per-pair mean delta. A static TAA scene reports its jitter period.
-_Avoid_: Frequency
-
-**Worst unstable pixels**:
-The eight pixels with the highest variance over the analysis window, with their per-frame mean channel value.
-_Avoid_: Hot pixels
 
 **Session**:
 The live harness process that reads one JSON command per line and writes one
@@ -708,13 +688,13 @@ The frames after a history reset while the sample count grows from 1 to 512. The
 _Avoid_: Warmup
 
 **State schema**:
-The `State` struct and its JSON tags. The JSON writer, the check resolver, and
+The `State` struct and its JSON tags. The JSON writer, the field resolver, and
 the simulation digest read the same fields.
 _Avoid_: Field table, resolver table
 
 **State section**:
-The part of `State` that one check namespace needs. `state_build_sections`
-builds only that part; `digest` is the only check that needs every section.
+The part of `State` that one field namespace needs. `state_build_sections`
+builds only that part; `digest` is the only field that needs every section.
 _Avoid_: State slice, partial document
 
 **Renderer state**:
@@ -822,9 +802,9 @@ CPU frame time, and the GPU pass times.
 _Avoid_: FPS counter, stats overlay
 
 **Perf run**:
-A harness run that measures frames instead of checking simulation state. It reads
-the wall clock, so its numbers are not deterministic.
-_Avoid_: Benchmark, stress test
+A harness run that measures frames instead of simulation state. It reads the
+wall clock, so its numbers are not deterministic.
+_Avoid_: Benchmark
 
 **Perf report**:
 The `perf` object in a harness reply and in `report.json` that holds the
@@ -901,15 +881,6 @@ debug gate. The runner enables it for that run. **Avoid**: precondition, flag.
 A named value a scenario declares in `parameters` and uses as `${name}`. The
 declared value sets the type. **Avoid**: variable, argument.
 
-### Suite
-A JSON manifest of scenario entries that runs in manifest order. Each entry
-keeps its scenario's `requires`, and the suite exit code is the highest entry
-code. **Avoid**: batch, group, list.
-
-### Suite entry
-One scenario in a suite, with an optional label, size, parameter values, and
-render mode. The label names the run directory. **Avoid**: job, item.
-
 ### Parameter sweep
 One scenario run per value of one or more scenario parameters, with each run in
 its own directory. **Avoid**: matrix run, batch.
@@ -924,7 +895,7 @@ label, suffix.
 
 ### Compare panel
 A labeled PNG that puts the same capture from two runs side by side, with each
-run's scenario, revision, and dirty flag. It is evidence, not a numeric check.
+run's scenario, revision, and dirty flag. It is visual evidence.
 **Avoid**: montage, contact sheet.
 
 ### Scene snapshot
@@ -941,15 +912,10 @@ absolute. **Avoid**: replay file, state dump.
 
 ### Object name
 An optional unique handle on a placed object. `place` and a scene object set it;
-`remove`, a check path (`objects.<name>.<field>`), and `editor.select_object`
+`remove`, a `get` path (`objects.<name>.<field>`), and `editor.select_object`
 accept it. It uses at most 31 letters, digits, `-`, or `_`, is not all digits,
 and is not `count`. It survives undo and a scene snapshot and stays out of the
 simulation digest. **Avoid**: label, tag, alias.
-
-### Advisory check
-A check with `"advisory": true`. A miss is recorded with the result and printed
-as `ADVISE`, but it does not enter `failures` or change the run's exit code.
-**Avoid**: soft gate, warning check.
 
 ### Place command
 The harness `place` command creates one object from a prefab at an exact

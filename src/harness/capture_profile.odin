@@ -136,7 +136,7 @@ capture_profile_channel :: proc(
 }
 
 // The 10%-90% crossing width over the span's own minimum and maximum. A flat
-// span reports a zero width and sets `flat`, so a check can tell "no edge"
+// span reports a zero width and sets `flat`, so a caller can tell "no edge"
 // from "a one-pixel edge".
 capture_profile_summary :: proc(values: []f32, spec: Capture_Profile) -> Capture_Profile_Result {
 	result := Capture_Profile_Result{values = values}

@@ -1,5 +1,4 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the frame tests read the face order and the fit
 package renderer
 
 import "core:math"

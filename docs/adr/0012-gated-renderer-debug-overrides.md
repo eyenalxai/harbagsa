@@ -16,10 +16,10 @@ Renderer investigation needs one input changed at a time without a source edit a
 - `clear` restores the product defaults.
 - `synthetic_lights` replaces the frame's light list with a generated field of any requested count.
 - `clip_height` discards fragments above a world height for plan views. It needs the Vulkan 1.3 shader demote feature.
-- The resolve takes its overrides as push constants. The renderer report exposes every override for checks.
+- The resolve takes its overrides as push constants. The renderer report exposes every override.
 
 ## Consequences
 
 - The default agent rejects the command unless the scenario declares the gate or the user passes `--debug-renderer`.
-- `scenarios/perf-lamps.json` measures direct point-light cost with synthetic lights.
+- Synthetic lights measure direct point-light cost.
 - Removed lighting systems have no override fields and no compatibility aliases.
