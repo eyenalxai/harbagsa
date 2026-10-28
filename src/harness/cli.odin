@@ -25,7 +25,6 @@ Common_Options :: struct {
 	has_size:             bool,
 	present:              bool,
 	no_render:            bool,
-	no_analysis:          bool,
 	debug_renderer:       bool,
 	summary:              bool,
 	verbose:              bool,
@@ -56,8 +55,6 @@ cli_main :: proc() -> int {
 		return cli_session(args[1:])
 	case "diff":
 		return cli_diff(args[1:])
-	case "suite":
-		return cli_suite(args[1:])
 	case "compare":
 		return cli_compare(args[1:])
 	case "ab":
@@ -66,8 +63,6 @@ cli_main :: proc() -> int {
 		return cli_schema(args[1:])
 	case "boxes":
 		return cli_boxes(args[1:])
-	case "checks":
-		return cli_checks(args[1:])
 	case "help", "--help", "-h":
 		return cli_help(args[1:])
 	}
@@ -233,9 +228,6 @@ parse_common_option :: proc(
 		return index + 1, true, ""
 	case "--no-render":
 		options.no_render = true
-		return index + 1, true, ""
-	case "--no-analysis":
-		options.no_analysis = true
 		return index + 1, true, ""
 	case "--debug-renderer":
 		options.debug_renderer = true

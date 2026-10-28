@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the agent harness and tests build the fallback list
+#+vet !unused-procedures // the agent harness builds the fallback list
 package display
 
 MAX_DISPLAYS :: 8

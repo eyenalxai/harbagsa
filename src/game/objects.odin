@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the agent harness and tests call this API; the game binary does not
+#+vet !unused-procedures // the agent harness calls this API; the game binary does not
 package game
 
 import "core:math"
@@ -12,7 +12,7 @@ Object_Id :: u32
 INVALID_OBJECT_ID :: Object_Id(0)
 
 // A name is a fixed inline buffer: an object record is copied into history,
-// scene snapshots, and the check state, so an owned string would need a free on
+// scene snapshots, and the query state, so an owned string would need a free on
 // every path. The cap is one short scenario handle, not a label.
 OBJECT_NAME_BYTES :: 32
 OBJECT_NAME_MAX :: OBJECT_NAME_BYTES - 1
@@ -60,7 +60,7 @@ object_name :: proc(object: ^Placed_Object) -> string {
 	return string(object.name[:object.name_length])
 }
 
-// An empty name is unnamed. A name may not be all digits, because a check path
+// An empty name is unnamed. A name may not be all digits, because a field path
 // reads `objects.<id>` when the handle parses as a number, and it may not be
 // `count`, which is the list length.
 object_name_valid :: proc(name: string) -> bool {

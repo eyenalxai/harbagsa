@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the statistics are called through the game loop and tests
+#+vet !unused-procedures // the statistics are called through the game loop
 package perf
 
 import "core:math"

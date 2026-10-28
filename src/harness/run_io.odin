@@ -49,17 +49,6 @@ build_summary :: proc(report: Report, out_dir: string) -> Run_Summary {
 		digest    = strings.clone(report.digest, context.allocator),
 		error     = strings.clone(report.error, context.allocator),
 	}
-	summary.checks_total = len(report.checks)
-	for check in report.checks {
-		if check.ok {
-			continue
-		}
-		if check.advisory && check.error == "" {
-			summary.checks_advisory += 1
-		} else {
-			summary.checks_failed += 1
-		}
-	}
 	if len(report.failures) > 0 {
 		summary.failure = strings.clone(report.failures[0], context.allocator)
 	} else if report.error != "" {

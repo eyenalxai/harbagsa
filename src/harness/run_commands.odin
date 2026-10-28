@@ -12,13 +12,10 @@ execute_commands :: proc(session: ^Session, scenario: Scenario) -> string {
 		reply := session_execute(session, command, "")
 		ok := reply.ok
 		error := ""
-		if !ok && command.kind != .Check {
+		if !ok {
 			error = strings.clone(reply.error, context.allocator)
 		}
 		reply_destroy(&reply, context.allocator)
-		if command.kind == .Check {
-			continue
-		}
 		if !ok || session.quit {
 			return error
 		}

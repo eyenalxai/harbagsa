@@ -21,6 +21,6 @@ Debug mode turns the player into a free-fly camera and edits placed objects thro
 
 ## Consequences
 
-- `scenarios/initial-lamps.json` covers the three starting lamps and a moved light. `scenarios/editor-lamps.json` covers all lamp previews, placement, light values, selection, editing, and undo.
-- `scenarios/light-move.json` proves that the current transform drives the light field.
+- The starting arena holds the three lamp prefabs. The editor covers lamp previews, placement, light values, selection, editing, and undo.
+- The current transform drives the light field.
 - Direct lights have no shadow visibility term. The editor does not expose lighting systems that the renderer does not have.

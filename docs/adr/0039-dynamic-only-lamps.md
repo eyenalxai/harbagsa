@@ -17,5 +17,5 @@ A static lamp is a light that cannot follow the simulation. The lighting model p
 
 - A scene file or place command may request `static` for a lamp, but the resulting object is dynamic.
 - Old scene files with static lamps still load. They become dynamic before the first frame.
-- `tests/simulation/lights.odin` covers creation, conversion, palette rejection, and initial light movement. `tests/harness/lamp_body.odin` covers the place, scene, and editor paths.
-- `scenarios/initial-lamps.json` proves the starting lights and captured response.
+- Creation, conversion, palette rejection, and initial light movement follow the same rule. The place, scene, and editor paths agree.
+- The starting lamps respond to their bodies.

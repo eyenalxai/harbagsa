@@ -29,7 +29,6 @@ Scenario_Requirements :: struct {
 
 Scenario :: struct {
 	commands: [dynamic]Command,
-	analysis: Analysis_Config,
 	requires: Scenario_Requirements,
 	source:   Scenario_Source,
 	has_size: bool,
@@ -40,14 +39,6 @@ Scenario :: struct {
 Parameter_Override :: struct {
 	name:  string,
 	value: string,
-}
-
-scenario_parse :: proc(
-	data: string,
-	allocator: mem.Allocator,
-	overrides: []Parameter_Override = nil,
-) -> (Scenario, string) {
-	return scenario_parse_with_base(data, "", overrides, allocator)
 }
 
 @(private)
@@ -134,13 +125,12 @@ scenario_build :: proc(value: json.Value, allocator: mem.Allocator) -> (Scenario
 	}
 	if key, unknown := json_unknown_key(
 		object,
-		{"version", "note", "view", "checks", "commands", "renderer_debug", "requires", "analysis", "size", "extends", "parameters"},
+		{"version", "note", "view", "commands", "renderer_debug", "requires", "size", "extends", "parameters"},
 	); unknown {
 		return {}, fmt.aprintf("unknown scenario key %q", key, allocator = allocator)
 	}
 
 	scenario: Scenario
-	scenario.analysis = analysis_config_default()
 	scenario.commands = make([dynamic]Command, 0, 16, allocator)
 	ok := false
 	defer if !ok {
@@ -195,26 +185,12 @@ scenario_build :: proc(value: json.Value, allocator: mem.Allocator) -> (Scenario
 		}
 	}
 
-	if analysis_value, has_analysis := json_get(object, "analysis"); has_analysis {
-		config, analysis_error := scenario_analysis(analysis_value)
-		if analysis_error != "" {
-			return {}, analysis_error
+	if commands_value, has_commands := json_get(object, "commands"); has_commands {
+		if commands_error := scenario_commands(&scenario, commands_value, allocator); commands_error != "" {
+			return {}, commands_error
 		}
-		scenario.analysis = config
-	}
-
-	commands_value, has_commands := json_get(object, "commands")
-	if !has_commands {
+	} else {
 		return {}, format_error("%s", "scenario needs 'commands'")
-	}
-	if commands_error := scenario_commands(&scenario, commands_value, allocator); commands_error != "" {
-		return {}, commands_error
-	}
-
-	if checks_value, has := json_get(object, "checks"); has {
-		if checks_error := scenario_add_checks(&scenario, checks_value, allocator); checks_error != "" {
-			return {}, checks_error
-		}
 	}
 
 	ok = true

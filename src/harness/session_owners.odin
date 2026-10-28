@@ -129,21 +129,6 @@ perf_run_destroy :: proc(run: ^Perf_Run, allocator: mem.Allocator) {
 	run^ = {}
 }
 
-Analysis_Run :: struct {
-	config:      Analysis_Config,
-	summary:     Analysis_Summary,
-	has_summary: bool,
-}
-
-analysis_run_create :: proc() -> Analysis_Run {
-	return {config = analysis_config_default()}
-}
-
-// Analysis_Summary holds no allocation of its own.
-analysis_run_destroy :: proc(run: ^Analysis_Run) {
-	run^ = {}
-}
-
 Settle :: struct {
 	frames:    int,
 	converged: bool,

@@ -1,6 +1,6 @@
 # harbagsa
 
-An Odin project. Build, check, and test commands live in `README.md`.
+An Odin project. Build and check commands live in `README.md`.
 
 ## Code changes
 
@@ -30,13 +30,16 @@ Write a comment only when it answers a hard "Why this way?" question. Do not nar
 - Do not add a helper that only forwards its arguments. Inline it.
 - Search for an existing helper before you add one.
 - Do not name a thing `V2`, `New`, or `Enhanced`. Replace the old one and take its name.
-- Never weaken or delete a test to make a run pass.
+
+## Tests
+
+Never add tests. Do not create test files, test targets, test suites, or
+assertion scenarios. Do not add a test gate. There is no test command.
 
 ## CI
 
-CI checks and CI tests are not needed. Do not add a CI workflow for them, and do
-not wait for CI to merge a pull request. The local `make check` and `make test`
-are the gate.
+CI checks and CI tests are not needed. Do not add a CI workflow, and do not
+wait for CI to merge a pull request. There is no test gate.
 
 ## Agent skills
 
@@ -70,11 +73,12 @@ spacing, or components.
 
 ### Automation
 
-Use `bin/harbagsa-agent` to drive the simulation, run checks, and take
-screenshots. It is separate from the game and needs no window or compositor.
-See `docs/agents/harness.md` for the scenario format, commands, run layout, and
+Use `bin/harbagsa-agent` to drive the simulation and take screenshots. It is
+separate from the game and needs no window or compositor. See
+`docs/agents/harness.md` for the scenario format, commands, run layout, and
 determinism rules. For performance work, read its **Performance** section and
 `docs/adr/0008-performance-instrumentation.md`.
 
-When you add or change a feature, update the harness and its docs in the same
-change. The harness is part of the feature, not an afterthought.
+When a feature changes how the harness drives the simulation or captures a
+frame, update the harness and its docs in the same change. The harness is part
+of the feature, not an afterthought.

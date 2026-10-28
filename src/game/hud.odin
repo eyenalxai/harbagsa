@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // main calls this API; test builds compile game as a dependency
+#+vet !unused-procedures // main calls this API; library checks compile game as a dependency
 package game
 
 import "src:perf"

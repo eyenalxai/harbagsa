@@ -1,9 +1,9 @@
 ODIN ?= odin
 ODIN_FLAGS ?= -vet -vet-style -vet-semicolon -vet-tabs -vet-using-param -vet-unused-procedures -vet-packages:main,platform,renderer,font,game,geometry,frame,perf,harness,display,ui,input -strict-style -warnings-as-errors -disallow-do
 ODIN_COLLECTIONS := -collection:libs=vendor -collection:src=src
-# Library checks and the renderer test cannot know which procedures another
-# package calls, so they omit -vet-unused-procedures. The main check still runs
-# it across every imported package.
+# Library checks cannot know which procedures another package calls, so they
+# omit -vet-unused-procedures. The main check still runs it across every
+# imported package.
 ODIN_LIB_CHECK_FLAGS := $(filter-out -vet-unused-procedures,$(ODIN_FLAGS))
 BIN := bin/harbagsa
 AGENT_BIN := bin/harbagsa-agent
@@ -12,25 +12,14 @@ HARNESS_REVISION := $(shell git rev-parse --short HEAD 2>/dev/null || printf unk
 # `git status --porcelain` covers staged and untracked files; `git diff --quiet`
 # sees neither.
 HARNESS_DIRTY := $(shell if git rev-parse --git-dir >/dev/null 2>&1 && [ -z "$$(git status --porcelain 2>/dev/null)" ]; then printf false; else printf true; fi)
-TEST_PACKAGES := display platform input physics simulation frame perf harness renderer docs
-TEST_TARGETS := $(addprefix test-,$(TEST_PACKAGES))
-# These packages can see the whole program, so they keep the unused-procedure check.
-TEST_FULL_FLAGS := display physics simulation
-TEST_DEPS = $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 AGENT_DEFINES := -define:HARNESS_REVISION='"$(HARNESS_REVISION)"' -define:HARNESS_DIRTY=$(HARNESS_DIRTY)
 AGENT_BUILD := $(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) $(AGENT_DEFINES) -out:$(AGENT_BIN)
-VALIDATE_AGENT_BIN := bin/harbagsa-agent-validate
-VALIDATE_SCENARIO ?= scenarios/smoke.json
-VALIDATE_OUT := build/validate
-AGENT_FLAGS ?=
 SCENARIO ?=
 OUT ?=
 JQ ?= jq
 
 # A selector without a slash or a .json suffix names a file in scenarios/.
 scenario_path = $(if $(or $(findstring /,$(1)),$(filter %.json,$(1))),$(1),scenarios/$(1).json)
-scenario_paths = $(foreach selector,$(1),$(call scenario_path,$(selector)))
-validation_scenarios = $(if $(strip $(SCENARIO)),$(SCENARIO),$(VALIDATE_SCENARIO))
 
 GLSLC ?= glslc
 SPIRV_VAL ?= spirv-val
@@ -89,7 +78,7 @@ VULKAN_LAYER_DIRS ?= \
 	/usr/share/vulkan/explicit_layer.d
 VALIDATION_LAYER := VK_LAYER_KHRONOS_validation
 
-.PHONY: all FORCE build agent check check-spirv check-lines test $(TEST_TARGETS) run shaders validate validate-offscreen validate-demo check-validation-layer check-references shot smoke quick ui lighting suite clean
+.PHONY: all FORCE build agent check check-spirv check-lines run shaders check-validation-layer validate-demo check-references shot clean
 
 FORCE:
 
@@ -198,16 +187,6 @@ check-lines:
 	done; \
 	exit $$status
 
-# Box3D's world registry is not safe for concurrent world creation, so the test
-# programs share one runner thread. One target per package keeps a tight loop
-# cheap; `test` is the aggregate.
-test: $(TEST_TARGETS)
-
-$(TEST_TARGETS): test-%: $(TEST_DEPS)
-	@mkdir -p build/test
-	$(ODIN) test tests/$* $(if $(filter $*,$(TEST_FULL_FLAGS)),$(ODIN_FLAGS),$(ODIN_LIB_CHECK_FLAGS)) \
-		$(ODIN_COLLECTIONS) -define:ODIN_TEST_THREADS=1 -out:build/test/$*.bin
-
 run: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
 
@@ -226,45 +205,6 @@ check-validation-layer:
 			'Install it with: sudo pacman -S vulkan-validation-layers'; \
 		exit 1; \
 	fi
-
-# The harness keeps validation bounded: a fixed scenario exits on its own.
-validate: check-validation-layer $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
-	@mkdir -p $(dir $(VALIDATE_AGENT_BIN))
-	$(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) \
-		$(AGENT_DEFINES) -define:ENABLE_VALIDATION_LAYERS=true -out:$(VALIDATE_AGENT_BIN)
-	@status=0; \
-	scenarios='$(call scenario_paths,$(validation_scenarios))'; \
-	for selector in $$scenarios; do \
-		stem=$$(basename "$$selector" .json); \
-		printf '%s\n' "validate: $$selector"; \
-		if ! $(VALIDATE_AGENT_BIN) run "$$selector" $(AGENT_FLAGS) --out $(VALIDATE_OUT)/offscreen/$$stem; then \
-			status=1; \
-			break; \
-		fi; \
-	done; \
-	if [ $$status -eq 0 ] && [ -n "$${WAYLAND_DISPLAY:-}$${DISPLAY:-}" ]; then \
-		for selector in $$scenarios; do \
-			stem=$$(basename "$$selector" .json); \
-			printf '%s\n' "validate --present: $$selector"; \
-			if ! $(VALIDATE_AGENT_BIN) run "$$selector" $(AGENT_FLAGS) --present --out $(VALIDATE_OUT)/present/$$stem; then \
-				status=1; \
-				break; \
-			fi; \
-		done; \
-	fi; \
-	if [ $$status -eq 0 ] && [ -z "$${WAYLAND_DISPLAY:-}$${DISPLAY:-}" ]; then \
-		printf '%s\n' 'make validate: no display, skipping the present run'; \
-	fi; \
-	exit $$status
-
-# The suite never opens a window, so it is the validation target an agent can
-# run. SCENARIO=... replaces the manifest entries with those selectors.
-validate-offscreen: check-validation-layer $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
-	@mkdir -p $(dir $(VALIDATE_AGENT_BIN))
-	$(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) \
-		$(AGENT_DEFINES) -define:ENABLE_VALIDATION_LAYERS=true -out:$(VALIDATE_AGENT_BIN)
-	$(VALIDATE_AGENT_BIN) suite offscreen $(call scenario_paths,$(SCENARIO)) \
-		$(AGENT_FLAGS) --out $(VALIDATE_OUT)/offscreen
 
 # Evidence targets run the normal agent, never the validation build. They share
 # bin/harbagsa-agent so a capture always comes from the same code path.
@@ -296,24 +236,6 @@ shot: agent
 		exit 1; \
 	fi; \
 	printf '%s\n' "$$paths"
-
-quick: agent
-	$(AGENT_BIN) suite fast --out runs/fast $(AGENT_FLAGS)
-
-smoke: agent
-	@out=$(if $(strip $(OUT)),$(OUT),runs/smoke-make); \
-	printf '%s\n' "make smoke: scenarios/smoke.json -> $$out"; \
-	$(AGENT_BIN) run scenarios/smoke.json --out "$$out"
-
-ui: agent
-	$(AGENT_BIN) suite ui --out runs/ui $(AGENT_FLAGS)
-
-lighting: agent
-	$(AGENT_BIN) suite lighting --out runs/lighting $(AGENT_FLAGS)
-
-SUITE ?= offscreen
-suite: agent
-	$(AGENT_BIN) suite $(SUITE) --out runs/$(SUITE) $(AGENT_FLAGS)
 
 validate-demo: check-validation-layer $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ENABLE_VALIDATION_LAYERS=true

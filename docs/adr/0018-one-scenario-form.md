@@ -33,8 +33,7 @@ command captures. The `steps` form and the top-level `capture` key are gone.
 
 ## Consequences
 
-- Every scenario uses `commands`; `scenarios/smoke.json` and the TAA scenarios
-  list their captures explicitly.
+- Every scenario uses `commands` and lists its captures explicitly.
 - `record` and `replay` produce and consume the same form by construction.
 - A scenario with no `capture` and no perf run does not create a renderer unless
   `--present` asks for the window.

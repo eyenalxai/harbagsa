@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the window loop and tests call this API; the game binary does not
+#+vet !unused-procedures // the window loop calls this API; the game binary does not
 package input
 
 import "core:log"

@@ -3,8 +3,8 @@ package game
 
 import "src:ui"
 
-// The drag state machine belongs to the game, not to the window loop, so a
-// test can drive the pointer without a renderer.
+// The drag state machine belongs to the game, not to the window loop, so the
+// caller can drive the pointer without a renderer.
 menu_weight_input :: proc(
 	menu: ^Menu_State,
 	settings: ^Settings,

@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the renderer and frame tests call this API; the game binary does not
+#+vet !unused-procedures // the renderer and frame call this API; the game binary does not
 package ui
 
 PALETTE_COLUMNS :: 6

@@ -23,7 +23,6 @@ Reply :: struct {
 
 	// Borrowed from the session; valid until the next command.
 	capture:   ^Capture_Result   `json:"capture,omitempty"`,
-	check:     ^Check_Result     `json:"check,omitempty"`,
 	perf:      ^Perf_Report      `json:"perf,omitempty"`,
 	trace:     string            `json:"trace,omitempty"`,
 }

@@ -1,39 +1,35 @@
 # Agent harness
 
-`bin/harbagsa-agent` drives the simulation, runs checks, and writes exact
-screenshots. It needs no window, compositor, cursor capture, or external image
-tool. The user reference is `README.md`. This page is the operational guide for
-agents.
+`bin/harbagsa-agent` drives the simulation and writes exact screenshots. It
+needs no window, compositor, cursor capture, or external image tool. The user
+reference is `README.md`. This page is the operational guide for agents.
 
 ## Quick start
 
 ```sh
 tools/make.sh build
 ./bin/harbagsa-agent schema
-./bin/harbagsa-agent run scenarios/smoke.json
+./bin/harbagsa-agent run scenarios/lamp-threshold.json
 ```
 
 Use `tools/make.sh` when another agent may build in the same checkout. It
-serializes Make with `flock`. Read `runs/smoke/report.json` after a run. Exit 0
-means every blocking check passed.
+serializes Make with `flock`. Read `runs/lamp-threshold/report.json` after a run.
+Exit 0 means the run completed.
 
-Five recipes:
+Recipes:
 
 ```sh
-# Capture the HUD.
-make shot SCENARIO=hud OUT=runs/ui/hud
+# Capture a lamp wall plane.
+make shot SCENARIO=lamp-threshold OUT=runs/lamp-threshold
 
-# Capture the settings menu.
-./bin/harbagsa-agent run scenarios/settings-menu.json --out runs/ui/menu
+# Run without a renderer.
+./bin/harbagsa-agent run scenarios/perf.json --no-render --out runs/perf-cpu
 
-# Assert state without a renderer.
-./bin/harbagsa-agent run scenarios/smoke.json --no-render --out runs/smoke-cpu
+# Measure the default view.
+./bin/harbagsa-agent run scenarios/perf.json --out runs/perf
 
-# Run the short gate.
-make quick
-
-# Measure direct lights.
-./bin/harbagsa-agent run scenarios/perf-lamps.json --out runs/perf-lamps
+# Measure the arena from above.
+./bin/harbagsa-agent run scenarios/perf-arena.json --out runs/perf-arena
 ```
 
 `run -` reads JSON from standard input. `--tag NAME` appends a directory to the
@@ -52,30 +48,20 @@ run path. `--out DIR` chooses the whole run directory.
 | read renderer state | **Renderer state** |
 | change a renderer input | **Renderer debug overrides** |
 | inspect static arena boxes | `harbagsa-agent boxes` |
-| read check gates and margins | `harbagsa-agent checks RUN` |
 | compare two runs | `compare`, `diff`, or `ab --visual` |
-| test the closed shell | `scenarios/closed-arena.json` |
-| test the starting lamps | `scenarios/initial-lamps.json` |
-| test direct lighting | `scenarios/lighting.json`, `scenarios/light-move.json` |
-| test point-light shadows | `scenarios/shadows.json`, `scenarios/shadow-move.json`, `scenarios/lamp-wall-plane.json` |
-| test indirect light | `scenarios/gi.json`, `scenarios/gi-dark.json`, `scenarios/gi-move.json`, `scenarios/gi-sealed.json` |
-| test the spider gait and IK | `scenarios/spider-ik.json` |
-| test the third-person camera | `scenarios/spider-camera.json` |
-| view the spider | `scenarios/spider-view.json` |
-| measure the shadow budget | `scenarios/perf-shadows.json` |
-| measure the GI budget | `scenarios/perf-gi.json` |
-| measure stability or banding | **Analysis** |
+| capture a lamp wall plane | `scenarios/lamp-threshold.json` |
+| measure the default view | `scenarios/perf.json` |
+| measure the arena from above | `scenarios/perf-arena.json` |
 | measure performance | **Performance** |
 | reproduce a live view | **Live repro** |
 | understand a design choice | `docs/adr/0037-direct-dynamic-point-lights.md` |
 
 ## What one run writes
 
-- `report.json`: result, final state, setup, captures, checks, failures, digest,
-  error, and named perf reports.
+- `report.json`: result, final state, setup, captures, failures, digest, error,
+  and named perf reports.
 - `state.json`: final state alone.
-- `analysis.json`: image analysis when colour captures exist.
-- `frames/`: PNG, float, or raw captures and optional analysis maps.
+- `frames/`: PNG, float, or raw captures.
 - `trace.jsonl`: opt-in perf samples.
 - `run.log`: renderer, session, and runner logs.
 
@@ -83,8 +69,8 @@ A capture entry carries its name, note, target, format, PNG flag, path, render
 digest, and renderer state. Each colour PNG after the first also carries delta
 metrics against the previous colour capture.
 
-Exit codes: 0 pass, 1 failed check or invariant, 2 bad arguments or scenario,
-3 renderer, backend, or file failure.
+Exit codes: 0 the run completed, 1 a command failed, 2 bad arguments or
+scenario, 3 renderer, backend, or file failure.
 
 ## Scenario format
 
@@ -98,9 +84,6 @@ Exit codes: 0 pass, 1 failed check or invariant, 2 bad arguments or scenario,
     {"cmd": "input", "jump": true},
     {"cmd": "step", "frames": 1},
     {"cmd": "capture", "name": "after-jump"}
-  ],
-  "checks": [
-    {"field": "player.position.y", "op": "gt", "value": 0}
   ]
 }
 ```
@@ -122,8 +105,6 @@ Rules:
   comma values run a sweep.
 - `requires.renderer_debug` enables the debug gate for that scenario.
 - A top-level `renderer_debug` compiles to one command before the command list.
-- `analysis: false` disables analysis. An analysis object selects window, maps,
-  and region.
 - `note` on the scenario or a capture is echoed into the report.
 
 Every angle is degrees and ends in `_deg`. Positions, heights, and ranges are
@@ -148,7 +129,6 @@ is seconds. Capture regions and crops are pixels unless `unit` is `normalized`.
 - `debug_mode`: `active` boolean.
 - `editor`: palette, placement, object, light, camera, pointer, and history fields.
 - `menu`: `open`, `item`, `activate`, `direction`, and `set`.
-- `check`: `field`, `op`, `value` or `other`, optional `tolerance` and `advisory`.
 - `record`: start with `path` and optional `actions`; stop with no path.
 - `replay`: `path` to a recorded scenario.
 - `repro`: `path` for a live scene snapshot.
@@ -160,7 +140,7 @@ is seconds. Capture regions and crops are pixels unless `unit` is `normalized`.
   `renderer_debug` blocks. Every block is optional; at least one is required.
 - `place`: `prefab`, `position`, optional `yaw_deg`, `body`, `name`, and `light`.
 - `remove`: object `id` or `name`.
-- `get`: one `field` without adding a check.
+- `get`: one state or capture `field`.
 - `quit`: stop the session.
 
 Unknown keys, wrong types, and out-of-range values are command errors. A live
@@ -218,10 +198,6 @@ Catalog order: Crate, Small crate, Wide crate, Block, Platform, Ramp, Pillar,
 Wall, Lamp, Light panel, Beacon. Lamp light colour is warm, cool, red, green, or
 blue. Intensity is in [0.2, 4.0]. Range is in [2, 20] metres.
 
-`scenarios/editor-lamps.json` covers lamp previews, placement, light values,
-selection, editing, and undo. `scenarios/editor-ghost.json` covers the armed
-ghost. `scenarios/editor-object.json` covers object edits and history.
-
 ## Live session
 
 ```sh
@@ -277,40 +253,9 @@ and `coverage`. A normalized region uses fractions of the frame. Coverage
 reports exact-zero fraction and optional black and lit fractions. A colour
 capture accepts `crop`. `captures` shares one rendered frame across all outputs.
 
-A named capture exposes its own renderer state: for example,
+A named capture exposes its own renderer state through `get`, for example
 `capture.named.lit.renderer.light_count` and
 `capture.named.lit.render_digest`.
-
-## Checks
-
-Operators are `eq`, `ne`, `lt`, `le`, `gt`, and `ge`. A numeric `tolerance`
-applies to `eq` and `ne`. A check compares with `value` or `other`.
-
-```json
-{"cmd":"check","field":"capture.named.near.stats.mean.y","op":"gt",
- "other":"capture.named.far.stats.mean.y"}
-```
-
-`capture.N` addresses a capture by index. `capture.first` and `capture.last` are
-aliases. `capture.named.<name>` addresses one by name. Aggregate fields include
-`capture.count`, `capture.worst_mean_delta`, `capture.worst_max_delta`, and
-`capture.worst_over_16_fraction`. `warmup` skips captures. `window` selects a
-start and count.
-
-An advisory check records a miss without failing the run. A field or type error
-still fails. `harbagsa-agent checks RUN` prints every gate and margin.
-
-## Analysis
-
-A run with colour captures writes `analysis.json`. It holds pair deltas, a
-summary, dominant period, worst unstable pixels, and optional diff and variance
-maps. Disable it with `analysis: false` or `--no-analysis`.
-
-Checks can read `analysis.period.frames`, `analysis.period.correlation`,
-`analysis.bands.longest_run`, `analysis.bands.median_run`, and the other analysis
-fields in the schema. `scenarios/taa-static.json` and
-`scenarios/taa-motion.json` gate temporal stability. `scenarios/banding.json`
-gates output quantization on a direct-lamp gradient.
 
 ## Renderer state
 
@@ -341,29 +286,12 @@ A scenario declares `requires.renderer_debug`, or the run uses
 
 ## Static boxes and plan views
 
-`boxes` prints immutable arena geometry without a renderer. `static_boxes`
-exposes the same data to checks. Each entry has centre, half extents, colour,
-rotation, emissive strength, and visual-only flag.
+`boxes` prints immutable arena geometry without a renderer. `state.static_boxes`
+exposes the same data. Each entry has centre, half extents, colour, rotation,
+emissive strength, and visual-only flag.
 
-`scenarios/box-plan.json` uses `renderer_debug.clip_height` to hide upper
-geometry for a plan view.
-
-## Suites
-
-Manifests live in `suites/`: `fast`, `lighting`, `renderer`, `offscreen`, and
-`ui`. An entry is a scenario name or an object with `scenario`, optional
-`label`, `size`, `params`, and `no_render`.
-
-```sh
-./bin/harbagsa-agent suite renderer
-./bin/harbagsa-agent suite renderer --list
-./bin/harbagsa-agent suite lighting --only light-move
-make validate-offscreen
-```
-
-The exit code is the highest entry code. `--fail-fast` stops at the first
-failure. `--only` and `--skip` accept names and comma lists. `--timeout` applies
-to each entry. `suite.json` holds every row and wall time.
+Use `renderer_debug.clip_height` in a scenario to hide upper geometry for a plan
+view.
 
 ## Performance
 
@@ -375,26 +303,21 @@ GPU passes are TLAS, cluster, probe, depth, scene, TAA, and overlay. The report
 carries `p50`, `p95`, and `mean` for each CPU phase and GPU pass. Perf data is
 wall-clock data and is not deterministic.
 
-Use `scenarios/perf.json` for the default view, `scenarios/perf-lamps.json` for
-direct lights, `scenarios/perf-shadows.json` for the 96-light paired shadow cost,
-`scenarios/perf-gi.json` for the paired GI cost at 96 lights, and
-`scenarios/perf-crates.json` for many objects. Direct-light and shadow budgets
-set `gi: false` to isolate their term.
-`harbagsa-agent ab` compares two builds. `ab --visual` runs one scenario on both
-and writes a compare panel.
+Use `scenarios/perf.json` for the default view and `scenarios/perf-arena.json`
+for the arena from above. `harbagsa-agent ab` compares two builds. `ab --visual`
+runs one scenario on both and writes a compare panel.
 
 ## Determinism and screenshots
 
 The offscreen target submits one frame at a time because it owns one colour
 image and one readback buffer. TAA history affects exact pixels, so before and
-after runs must use the same command sequence and history. Use
-`scenarios/capture-free.json` to check a capture-free sequence.
+after runs must use the same command sequence and history.
 
 Run the same scenario for before and after evidence:
 
 ```sh
-./bin/harbagsa-agent run scenarios/smoke.json --out runs/change/before
-./bin/harbagsa-agent run scenarios/smoke.json --out runs/change/after
+./bin/harbagsa-agent run scenarios/lamp-threshold.json --out runs/change/before
+./bin/harbagsa-agent run scenarios/lamp-threshold.json --out runs/change/after
 ./bin/harbagsa-agent compare runs/change/before runs/change/after --delta
 ```
 

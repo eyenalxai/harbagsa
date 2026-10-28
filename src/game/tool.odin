@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the agent harness and tests call this API; the game binary does not
+#+vet !unused-procedures // the agent harness calls this API; the game binary does not
 package game
 
 // The one tool that owns the input for this frame. The object palette and the

@@ -17,13 +17,11 @@ Report :: struct {
 	state:       State            `json:"state"`,
 	setup:       Setup_State      `json:"setup"`,
 	captures: []Capture_Result `json:"captures"`,
-	checks:      []Check_Result   `json:"checks"`,
 	failures:    []string         `json:"failures"`,
 	digest:      string           `json:"digest"`,
 	error:       string           `json:"error,omitempty"`,
 	perf:        []Perf_Report    `json:"perf,omitempty"`,
 	trace:       string           `json:"trace,omitempty"`,
-	analysis:    string           `json:"analysis,omitempty"`,
 }
 
 Run_Summary :: struct {
@@ -34,9 +32,6 @@ Run_Summary :: struct {
 	state:         string   `json:"state"`,
 	captures:   []string `json:"captures"`,
 	digest:        string   `json:"digest"`,
-	checks_total:    int      `json:"checks_total"`,
-	checks_failed:   int      `json:"checks_failed"`,
-	checks_advisory: int      `json:"checks_advisory,omitempty"`,
 	error:         string   `json:"error,omitempty"`,
 	failure:       string   `json:"failure,omitempty"`,
 }

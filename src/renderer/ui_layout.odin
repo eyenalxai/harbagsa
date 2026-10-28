@@ -1,5 +1,4 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the frame tests read the layout aliases
 package renderer
 
 import "src:ui"
