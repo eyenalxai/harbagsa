@@ -54,6 +54,9 @@ record_scene :: proc(
 	if r.debug.active {
 		input.light_shadows = debug.light_shadows
 	}
+	update_bake(r, bake_key(r, input.bake_static))
+	input.bake_key = r.bake.current_key
+	input.bake_status = r.bake.status
 	r.render_digest = render_digest(input)
 	r.has_render_digest = true
 	if !update_camera(r, input) {
