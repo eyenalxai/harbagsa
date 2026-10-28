@@ -48,12 +48,9 @@ The renderer adds one diffuse bounce from the current point lights. A single pro
 - The 2 m spacing and 64 rays are the current quality budget. A denser grid or more rays is a new decision with a new measurement.
 - This changes the "no GI or probe" sentence in ADR 0041. The no-ambient-floor decision stays in force.
 
-## Evidence
+## Measurement
 
-`scenarios/gi.json` pairs GI on and off on a lamp around a corner. The green-channel mean moves from 98.66 to 123.80, and the zero-pixel fraction from 0.239 to 0.000. `scenarios/gi-dark.json` proves the lamp-free view stays at 0.165. `scenarios/gi-move.json` moves the lamp and changes the image. `scenarios/gi-sealed.json` encloses the camera and checks that GI adds no light through the wall. `scenarios/perf-gi.json` measures the paired 96-light cost.
-
-## Test plan
-
-- Renderer tests: the digest covers the volume and the `gi` flag; the pass list includes `Probe`; the debug table includes `gi`.
-- Lighting suite: `gi`, `gi-dark`, `gi-move`, and `gi-sealed`.
-- Performance: three paired runs of `perf-gi.json` at 1080p with 96 lights.
+A paired GI capture on a lamp around a corner moves the green-channel mean from
+98.66 to 123.80, and the zero-pixel fraction from 0.239 to 0.000. A lamp-free
+view stays at 0.165. Moving the lamp changes the image. A sealed wall adds no
+light through the wall. The paired 96-light cost is measured separately.

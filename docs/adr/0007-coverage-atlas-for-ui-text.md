@@ -48,8 +48,7 @@ size, and sample it one texel per pixel.
 
 - One atlas holds a layer per `(face, pixel size)` pair the theme can draw — six
   at density 1: title 21 Medium, body 15 Regular, label 15 Medium, detail 14
-  Regular, section header 14 Medium, and mono 15. The theme derives the set;
-  `tests/renderer/text_atlas.odin` holds the invariants.
+  Regular, section header 14 Medium, and mono 15. The theme derives the set.
 - Four horizontal sub-pixel phases per glyph. Text positions are fractional, so
   each glyph stores a bitmap for each quarter-pixel offset. Four phases bound the
   placement error at 1/8 px.
@@ -102,8 +101,7 @@ size, and sample it one texel per pixel.
 - `pyftsubset` stays a development tool. The subset files and their provenance
   are unchanged.
 - No future 2D layer may reintroduce a distance field for text under 21 px em.
-  `docs/ui/type.md` is the rule; the thin-stem test in
-  `tests/renderer/text_atlas.odin` is the enforcement.
+  `docs/ui/type.md` is the rule.
 
 ## References
 

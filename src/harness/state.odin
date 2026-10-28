@@ -156,7 +156,7 @@ state_build :: proc(
 	)
 }
 
-// A check names one namespace, so the build runs only that namespace's row.
+// A field names one namespace, so the build runs only that namespace's row.
 // The base fields (frame, camera, settle, renderer) are always set. The digest
 // is the one document that asks for every row.
 state_build_sections :: proc(

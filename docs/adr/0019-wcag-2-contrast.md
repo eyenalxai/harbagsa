@@ -17,15 +17,14 @@ secondary level, and the three-level ramp would collapse to two.
 
 The tertiary level is deliberate. It carries `Detail` and `Header` rows and the
 legend actions, and it never carries a selectable row. The quiet step is the
-point. A standard that removes it changes the design, not just the test.
+point. A standard that removes it changes the design.
 
 APCA is stricter for small, light text on a dark surface, which is this
 overlay. The project accepts the WCAG 2 floor and the APCA gap on purpose.
 
 ## Consequences
 
-- `tests/renderer/text.odin` checks `text_tertiary` on the composited menu at
-  4.5:1.
+- `text_tertiary` on the composited menu holds 4.5:1.
 - `text_tertiary` on `surface_raised` is 3.86:1 and stays below the text floor.
   It must never carry selectable text. `docs/ui/colour.md` records the rule.
 - A future change that lightens `text_tertiary` to APCA 60 is a design change.

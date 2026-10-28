@@ -20,12 +20,8 @@ schema_build :: proc(allocator: mem.Allocator) -> Schema_Document {
 		version             = 1,
 		commands            = commands,
 		scenario_keys       = schema_clone_strings(SCENARIO_KEYS, allocator),
-		suite_keys          = schema_clone_strings(SUITE_KEYS, allocator),
-		suite_entry_keys    = schema_clone_strings(SUITE_ENTRY_KEYS, allocator),
 		capture_targets     = schema_clone_strings(CAPTURE_TARGETS, allocator),
 		capture_formats     = schema_clone_strings(CAPTURE_FORMATS, allocator),
-		check_operators     = schema_clone_strings(CHECK_OPERATORS, allocator),
-		check_fields        = schema_check_fields(allocator),
 		state_fields        = schema_state_paths(allocator),
 		units               = make([]Schema_Unit, len(SCHEMA_UNITS), allocator),
 	}
@@ -53,12 +49,8 @@ schema_destroy :: proc(document: ^Schema_Document, allocator: mem.Allocator) {
 	}
 	delete(document.commands, allocator)
 	schema_destroy_strings(document.scenario_keys, allocator)
-	schema_destroy_strings(document.suite_keys, allocator)
-	schema_destroy_strings(document.suite_entry_keys, allocator)
 	schema_destroy_strings(document.capture_targets, allocator)
 	schema_destroy_strings(document.capture_formats, allocator)
-	schema_destroy_strings(document.check_operators, allocator)
-	schema_destroy_strings(document.check_fields, allocator)
 	schema_destroy_strings(document.state_fields, allocator)
 	delete(document.units, allocator)
 	document^ = {}
@@ -159,9 +151,7 @@ schema_print_text :: proc(document: Schema_Document) {
 	for command in document.commands {
 		fmt.printf("%-18s %-9s %d\n", command.name, command.backend, len(command.fields))
 	}
-	fmt.printf("\ncheck fields: %d\n", len(document.check_fields))
-	fmt.printf("state fields: %d\n", len(document.state_fields))
+	fmt.printf("\nstate fields: %d\n", len(document.state_fields))
 	fmt.printf("capture targets: %s\n", strings.join(document.capture_targets, ", ", context.temp_allocator))
 	fmt.printf("capture formats: %s\n", strings.join(document.capture_formats, ", ", context.temp_allocator))
-	fmt.printf("check operators: %s\n", strings.join(document.check_operators, ", ", context.temp_allocator))
 }

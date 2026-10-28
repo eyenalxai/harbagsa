@@ -11,7 +11,7 @@ Get_Command :: struct {
 
 Get_Result :: struct {
 	field: string,
-	value: Check_Value,
+	value: Field_Value,
 }
 
 @(private)
@@ -50,8 +50,7 @@ session_get :: proc(session: ^Session, command: Get_Command, reply: ^Reply) -> s
 		session.allocator,
 	)
 	defer state_destroy(&state, session.allocator)
-	analysis := session.analysis.has_summary ? &session.analysis.summary : nil
-	value, field_error := check_field(state, session.capture.captures[:], analysis, command.field)
+	value, field_error := field_value(state, session.capture.captures[:], command.field)
 	if field_error != "" {
 		return field_error
 	}

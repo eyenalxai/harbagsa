@@ -48,8 +48,6 @@ Run_State :: struct {
 	state: State,
 	setup: Setup_State,
 
-	analysis_path:   string,
-	analysis_failed: bool,
 	trace_failed:    bool,
 	trace_path:      string,
 	report:          Report,
@@ -169,10 +167,6 @@ run_prepare :: proc(state: ^Run_State) -> Stage_Result {
 	state.session.debug_renderer =
 		state.options.debug_renderer || state.scenario.requires.renderer_debug
 	session_set_timeout(&state.session, state.options.timeout_seconds)
-	state.session.analysis.config = state.scenario.analysis
-	if state.options.no_analysis {
-		state.session.analysis.config.enabled = false
-	}
 
 	render_enabled := !state.options.no_render
 	state.session.render.enabled = render_enabled
@@ -223,23 +217,6 @@ run_collect :: proc(state: ^Run_State) -> Stage_Result {
 			fail_stage(state, &result, trace_error)
 		}
 	}
-	final_frames_dir := join_path({state.run_dir, "frames"}, context.allocator)
-	defer delete(final_frames_dir, context.allocator)
-	analysis_path, analysis_error := write_analysis(
-		state.staging,
-		state.frames_dir,
-		state.run_dir,
-		final_frames_dir,
-		state.session.capture.captures[:],
-		state.session.analysis.config,
-		context.allocator,
-	)
-	state.analysis_path = analysis_path
-	if analysis_error != "" {
-		state.analysis_failed = true
-		result.exit_code = EXIT_RENDER
-		fail_stage(state, &result, analysis_error)
-	}
 	state.state = session_state(&state.session)
 	state_path := join_path({state.staging, "state.json"}, context.allocator)
 	defer delete(state_path, context.allocator)
@@ -269,8 +246,7 @@ run_publish :: proc(state: ^Run_State, results: []Stage_Result) -> Stage_Result 
 		frame       = state.state.frame,
 		state       = state.state,
 		setup       = state.setup,
-		captures = state.session.capture.captures[:],
-		checks      = state.session.checks[:],
+		captures    = state.session.capture.captures[:],
 		failures    = state.session.failures[:],
 		digest      = state.state.digest,
 		error       = state.backend_error,
@@ -285,9 +261,6 @@ run_publish :: proc(state: ^Run_State, results: []Stage_Result) -> Stage_Result 
 			context.allocator,
 		)
 		report.trace = state.trace_path
-	}
-	if state.analysis_path != "" && !state.analysis_failed {
-		report.analysis = state.analysis_path
 	}
 	exit_code := run_exit_code(results)
 	report.ok = exit_code == EXIT_OK
@@ -346,9 +319,6 @@ run_state_destroy :: proc(state: ^Run_State) {
 	}
 	if state.trace_path != "" {
 		delete(state.trace_path, context.allocator)
-	}
-	if state.analysis_path != "" {
-		delete(state.analysis_path, context.allocator)
 	}
 	if state.log_path != "" {
 		delete(state.log_path, context.allocator)

@@ -55,4 +55,4 @@ never changes the player position.
   next tread. The camera offset hides the drop, but the capsule is not glued to
   the stair. A dedicated step-down snap is future work.
 - The step probe uses capsule casts and a downward ray. A Box3D upgrade can
-  change the mover behavior; the simulation tests gate it.
+  change the mover behavior.

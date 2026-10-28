@@ -59,7 +59,6 @@ session_draw_group :: proc(session: ^Session, requests: []Capture_Request) -> st
 			result.renderer = session.render.report
 			append(&session.capture.captures, result)
 		}
-		session_refresh_analysis(session)
 	}
 	delete(results, context.allocator)
 	session_refresh_renderer(session)

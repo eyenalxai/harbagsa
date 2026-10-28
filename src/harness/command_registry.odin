@@ -21,8 +21,7 @@ Command_Record :: enum {
 }
 
 // One row per command. The parser, dispatcher, recorder, destroy path, backend
-// policy, and schema all read this table; a new command is one row plus its
-// test.
+// policy, and schema all read this table; a new command is one row.
 Command_Row :: struct {
 	kind:        Command_Kind,
 	name:        string,
@@ -50,7 +49,6 @@ COMMANDS := [?]Command_Row {
 	{.Debug_Mode, "debug_mode", "Enter or leave the debug mode and drive its palette.", parse_debug_mode, execute_debug_mode, .Raw, nil, .None, Debug_Mode_Command},
 	{.Editor, "editor", "Drive the object palette, placement, edits, and history.", parse_editor, execute_editor, .Raw, nil, .None, Editor_Command},
 	{.Menu, "menu", "Open, close, select, and change the settings menu.", parse_menu, execute_menu, .Raw, nil, .None, Menu_Command},
-	{.Check, "check", "Evaluate a predicate against the state or a capture; advisory misses do not fail.", parse_check, execute_check, .Raw, destroy_check, .None, Check_Command},
 	{.Record, "record", "Start or stop recording a live session into a scenario.", parse_record, execute_record, .Skip, destroy_record, .None, Record_Command},
 	{.Replay, "replay", "Replay a recorded scenario inside the live session.", parse_replay, execute_replay, .Skip, destroy_replay, .Optional, Replay_Command},
 	{.Repro, "repro", "Write the live view as a scene scenario and show the notice.", parse_repro, execute_repro, .Skip, destroy_repro, .None, Repro_Command},
@@ -109,16 +107,6 @@ destroy_captures :: proc(command: ^Command, allocator: mem.Allocator) {
 		}
 	}
 	delete(command.captures.outputs, allocator)
-	command^ = {}
-}
-
-@(private)
-destroy_check :: proc(command: ^Command, allocator: mem.Allocator) {
-	delete(command.check.field, allocator)
-	if command.check.has_other {
-		delete(command.check.other, allocator)
-	}
-	check_value_destroy(&command.check.value, allocator)
 	command^ = {}
 }
 

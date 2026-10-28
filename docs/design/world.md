@@ -100,17 +100,8 @@ on every frame. A static or baked lamp is not an alternate mode. The starting
 arena places one warm Lamp, one cool Light panel, and one red Beacon in front of
 the spawn.
 
-`scenarios/lighting.json` checks that a lamp-free view is black and that one
-lamp restores readable light. `scenarios/initial-lamps.json` checks the three
-starting lamps and a moved light. `scenarios/light-move.json` checks that a
-transform change updates the image and render digest.
-`scenarios/shadows.json` checks a blocked surface and the paired toggle.
-`scenarios/lamp-wall-plane.json` checks the wall-plane regression.
-`scenarios/shadow-move.json` checks that a moved lamp moves its shadow.
-`scenarios/gi.json` pairs GI on and off around a corner. `scenarios/gi-dark.json`
-keeps the lamp-free view black. `scenarios/gi-move.json` moves the lamp and
-changes the bounce. `scenarios/gi-sealed.json` proves a sealed wall stops the
-bounce.
+A lamp-free view is black. One lamp restores readable light. Moving a lamp
+moves its shadow and its bounce. A sealed wall stops the bounce.
 
 ## No texture
 
@@ -132,7 +123,7 @@ normal play. Plan-view and inspection captures can still expose it.
 - The arena is 40 m square with 5.5 m walls and a solid ceiling. The floor is 1 m
   thick, the walls and ceiling 0.5 m, and a crate 1 m. The ceiling spans the
   outer wall faces, so the shell has no gap.
-- The arena is one closed box. There is no interior test room and no path to a
+- The arena is one closed box. There is no interior room and no path to a
   background.
 - The player has no body.
 - No fog and no depth cue beyond perspective and lamp range. The near plane is

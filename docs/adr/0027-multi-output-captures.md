@@ -24,7 +24,6 @@ across frames in flight.
 
 ## Consequence
 
-`capture.count` counts outputs, not frames. The analysis window and the PNG
-delta series still see one frame per color PNG output. A recorded session does
+`capture.count` counts outputs, not frames. The PNG delta series still sees one frame per color PNG output. A recorded session does
 not record a capture group; use explicit `capture` commands when the recording
 must contain the readouts.
