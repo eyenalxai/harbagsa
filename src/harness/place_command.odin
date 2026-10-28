@@ -8,9 +8,11 @@ import "core:mem"
 import "src:game"
 
 PLACE_KEYS := [?]string{"cmd", "prefab", "position", "yaw_deg", "body", "light", "name"}
-PLACE_LIGHT_KEYS := [?]string{"color", "intensity", "range"}
+PLACE_LIGHT_KEYS := [?]string{"kind", "color", "intensity", "range"}
 
 Place_Light :: struct {
+	kind:          game.Lamp_Kind,
+	has_kind:      bool,
 	color:         game.Light_Color,
 	has_color:     bool,
 	intensity:     f32,
@@ -106,6 +108,15 @@ parse_place_light :: proc(value: json.Value, prefab: game.Prefab_Id) -> (Place_L
 		return {}, format_error("unknown place light key %q", key)
 	}
 	light: Place_Light
+	if kind_value, has := json_get(object, "kind"); has {
+		name, ok := json_string(kind_value)
+		kind, parsed := game.lamp_kind_parse(name)
+		if !ok || !parsed {
+			return {}, format_error("%s", "place light 'kind' must be 'dynamic' or 'static'")
+		}
+		light.kind = kind
+		light.has_kind = true
+	}
 	if color_value, has := json_get(object, "color"); has {
 		name, ok := json_string(color_value)
 		if !ok {
@@ -188,6 +199,9 @@ session_place :: proc(session: ^Session, command: Place_Command, reply: ^Reply) 
 		return format_error("object name %q is taken", name)
 	}
 	light := game.prefab_light(command.prefab)
+	if command.light.has_kind {
+		light.kind = command.light.kind
+	}
 	if command.light.has_color {
 		light.color = command.light.color
 	}
