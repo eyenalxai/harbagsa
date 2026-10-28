@@ -74,7 +74,7 @@ init_taa :: proc(r: ^Renderer) -> Error {
 	if !create_taa_history(r, .Create) {
 		return .Create_TAA
 	}
-	if !create_taa_sampler(r) {
+	if !create_clamp_sampler(r, &r.taa.sampler) {
 		return .Create_TAA
 	}
 	if !create_taa_descriptors(r) {
@@ -204,16 +204,3 @@ destroy_taa_history :: proc(r: ^Renderer) {
 	r.taa.count_layouts = {.UNDEFINED, .UNDEFINED}
 }
 
-create_taa_sampler :: proc(r: ^Renderer) -> bool {
-	info := vk.SamplerCreateInfo {
-		sType        = .SAMPLER_CREATE_INFO,
-		magFilter    = .LINEAR,
-		minFilter    = .LINEAR,
-		mipmapMode   = .NEAREST,
-		addressModeU = .CLAMP_TO_EDGE,
-		addressModeV = .CLAMP_TO_EDGE,
-		addressModeW = .CLAMP_TO_EDGE,
-		maxLod       = 0,
-	}
-	return check(vk.CreateSampler(r.device, &info, nil, &r.taa.sampler), "vkCreateSampler")
-}

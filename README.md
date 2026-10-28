@@ -152,6 +152,9 @@ Common options:
 - `--debug-renderer`: accept gated renderer overrides.
 - `--summary` and `--verbose`: print run detail.
 - `--timeout SECONDS`: bound wall time.
+- `--bake PATH`: load another `.hbake` artifact. The default is
+  `build/bake/arena.hbake`; a missing file shows `missing` in
+  `state.renderer.bake`.
 - `--param NAME=VALUE`: override a scenario parameter. Comma values run a sweep.
 - `run -`: read a scenario from standard input.
 
