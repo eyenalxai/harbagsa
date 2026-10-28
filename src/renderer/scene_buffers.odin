@@ -117,7 +117,7 @@ destroy_scene_frame_buffers :: proc(r: ^Renderer) {
 @(private)
 write_scene_bindings :: proc(r: ^Renderer) {
 	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		buffer_infos := [10]vk.DescriptorBufferInfo {
+		buffer_infos := [5]vk.DescriptorBufferInfo {
 			{buffer = r.scene.camera_buffers[i], range = vk.DeviceSize(size_of(Camera_Uniform))},
 			{
 				buffer = r.scene.object_buffers[i],
@@ -132,13 +132,8 @@ write_scene_bindings :: proc(r: ^Renderer) {
 				buffer = r.scene.cluster_indices_buffers[i],
 				range = vk.DeviceSize(CLUSTER_COUNT * CLUSTER_LIGHT_STRIDE * size_of(u32)),
 			},
-			{buffer = r.probe.volume.buffer, range = r.probe.volume.bytes},
-			{buffer = r.probe.irradiance[i].buffer, range = r.probe.irradiance[i].bytes},
-			{buffer = r.probe.depth[i].buffer, range = r.probe.depth[i].bytes},
-			{buffer = r.probe.positions[i].buffer, range = r.probe.positions[i].bytes},
-			{buffer = r.probe.rays[i].buffer, range = r.probe.rays[i].bytes},
 		}
-		writes := [10]vk.WriteDescriptorSet {
+		writes := [5]vk.WriteDescriptorSet {
 			{
 				sType = .WRITE_DESCRIPTOR_SET,
 				dstSet = r.scene.descriptor_sets[i],
@@ -178,46 +173,6 @@ write_scene_bindings :: proc(r: ^Renderer) {
 				descriptorCount = 1,
 				descriptorType = .STORAGE_BUFFER,
 				pBufferInfo = &buffer_infos[4],
-			},
-			{
-				sType = .WRITE_DESCRIPTOR_SET,
-				dstSet = r.scene.descriptor_sets[i],
-				dstBinding = PROBE_VOLUMES_BINDING,
-				descriptorCount = 1,
-				descriptorType = .STORAGE_BUFFER,
-				pBufferInfo = &buffer_infos[5],
-			},
-			{
-				sType = .WRITE_DESCRIPTOR_SET,
-				dstSet = r.scene.descriptor_sets[i],
-				dstBinding = PROBE_IRRADIANCE_BINDING,
-				descriptorCount = 1,
-				descriptorType = .STORAGE_BUFFER,
-				pBufferInfo = &buffer_infos[6],
-			},
-			{
-				sType = .WRITE_DESCRIPTOR_SET,
-				dstSet = r.scene.descriptor_sets[i],
-				dstBinding = PROBE_DEPTH_BINDING,
-				descriptorCount = 1,
-				descriptorType = .STORAGE_BUFFER,
-				pBufferInfo = &buffer_infos[7],
-			},
-			{
-				sType = .WRITE_DESCRIPTOR_SET,
-				dstSet = r.scene.descriptor_sets[i],
-				dstBinding = PROBE_POSITIONS_BINDING,
-				descriptorCount = 1,
-				descriptorType = .STORAGE_BUFFER,
-				pBufferInfo = &buffer_infos[8],
-			},
-			{
-				sType = .WRITE_DESCRIPTOR_SET,
-				dstSet = r.scene.descriptor_sets[i],
-				dstBinding = PROBE_RAYS_BINDING,
-				descriptorCount = 1,
-				descriptorType = .STORAGE_BUFFER,
-				pBufferInfo = &buffer_infos[9],
 			},
 		}
 		vk.UpdateDescriptorSets(r.device, u32(len(writes)), &writes[0], 0, nil)
