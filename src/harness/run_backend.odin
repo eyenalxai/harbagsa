@@ -7,6 +7,7 @@ Run_Backend :: struct {
 	width:     u32,
 	height:    u32,
 	present:   bool,
+	bake_path: string,
 	frames_dir: string,
 	backend:   ^Backend,
 	session:   ^Session,
@@ -22,6 +23,7 @@ run_backend_ensure :: proc(ctx: rawptr) -> string {
 		run.height,
 		run.present,
 		run.frames_dir,
+		run.bake_path,
 		context.allocator,
 	)
 	if create_error != "" {
