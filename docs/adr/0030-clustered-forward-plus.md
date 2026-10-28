@@ -28,4 +28,4 @@ Every active point light is uploaded. An all-light fragment loop would scale wit
 - The index buffers are fixed because the grid is fixed. Object and light upload buffers still grow on demand.
 - A cluster over 256 lights keeps the first 256 and reports the overflow.
 - The pass order is `Cluster -> Depth -> Scene -> Taa -> Overlay`.
-- `scenarios/capacity.json` covers 32 and 64 synthetic lights. `scenarios/perf-lamps.json` measures direct-light cost.
+- A synthetic light field covers 32 and 64 lights and measures direct-light cost.

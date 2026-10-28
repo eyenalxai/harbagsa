@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the renderer and frame tests call this API; the game binary does not
+#+vet !unused-procedures // the renderer and frame call this API; the game binary does not
 package ui
 
 import "core:math"
@@ -35,7 +35,7 @@ Text_Role :: enum {
 }
 
 // Layout asks for a role and a string. The renderer maps the role to a font,
-// weight, and colour; tests use a fake measure and need no atlas.
+// weight, and colour, and supplies the measure.
 Text_Metrics :: struct {
 	ctx:         rawptr,
 	measure:     proc(ctx: rawptr, role: Text_Role, text: string) -> f32,

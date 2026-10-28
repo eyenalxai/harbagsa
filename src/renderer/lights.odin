@@ -1,5 +1,4 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the renderer tests read the uploaded light buffer
 package renderer
 
 import "core:log"
@@ -78,13 +77,4 @@ write_light_data :: proc(r: ^Renderer, lights: []Light) -> bool {
 	}
 	r.light_count = len(lights)
 	return true
-}
-
-// The renderer tests read the buffer back to prove the upload matches the frame.
-lights_uploaded :: proc(r: ^Renderer) -> []Light {
-	data := cast([^]Light)r.scene.light_mapped[r.frame_index]
-	if data == nil {
-		return nil
-	}
-	return data[:r.light_count]
 }

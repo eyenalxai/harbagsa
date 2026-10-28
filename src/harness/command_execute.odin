@@ -143,11 +143,6 @@ execute_menu :: proc(session: ^Session, command: Command, reply: ^Reply) -> stri
 }
 
 @(private)
-execute_check :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
-	return session_check_command(session, command.check, reply)
-}
-
-@(private)
 execute_record :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	if command.record.has_path {
 		return session_record_start(session, command.record.path, !command.record.actions)

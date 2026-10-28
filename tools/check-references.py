@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
-"""Fail when a Markdown page or suite names a scenario that is not there."""
+"""Fail when a Markdown page names a scenario that is not there."""
 
 from __future__ import annotations
 
-import json
 import re
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SKIP_DIRS = {".git", ".make", "build", "runs", "vendor", "node_modules"}
-SCENARIO_REF = re.compile(r"(?<![\w/])((?:scenarios|suites)/[A-Za-z0-9._/-]+\.json)")
+SCENARIO_REF = re.compile(r"(?<![\w/])(scenarios/[A-Za-z0-9._/-]+\.json)")
 
 
 def markdown_files() -> list[Path]:
@@ -22,12 +21,6 @@ def markdown_files() -> list[Path]:
     return files
 
 
-def resolve_scenario(name: str) -> Path:
-    if "/" in name or name.endswith(".json"):
-        return ROOT / name
-    return ROOT / "scenarios" / f"{name}.json"
-
-
 def main() -> int:
     missing: list[str] = []
     for path in markdown_files():
@@ -36,22 +29,6 @@ def main() -> int:
                 reference = match.group(1)
                 if not (ROOT / reference).is_file():
                     missing.append(f"{path.relative_to(ROOT)}:{number}: {reference}")
-
-    for suite_path in sorted((ROOT / "suites").glob("*.json")):
-        try:
-            suite = json.loads(suite_path.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as error:
-            missing.append(f"{suite_path.relative_to(ROOT)}: cannot read the suite: {error}")
-            continue
-        for index, entry in enumerate(suite.get("entries", [])):
-            scenario = entry if isinstance(entry, str) else entry.get("scenario")
-            if not isinstance(scenario, str) or not scenario:
-                missing.append(f"{suite_path.relative_to(ROOT)}: entry {index} has no scenario")
-                continue
-            if not resolve_scenario(scenario).is_file():
-                missing.append(
-                    f"{suite_path.relative_to(ROOT)}: entry {index}: {scenario}"
-                )
 
     if missing:
         for line in missing:

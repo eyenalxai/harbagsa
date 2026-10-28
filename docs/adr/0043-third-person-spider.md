@@ -21,7 +21,7 @@ are gone.
 
 - Replace the humanoid controller. Walk, sprint, and jump stay. Crouch, prone,
   crawl, dive, slide, mantle, stances, movement states, and headroom are removed
-  from the model, the input map, the menu, and the tests.
+  from the model, the input map, and the menu.
 - Collision is one capsule: 0.84 m high, 0.42 m in radius. The legs are visual.
   The height fits the 0.90 m tunnel.
 - Store a leg's world foot, its previous foot, a swing sample, and a planted
