@@ -59,8 +59,6 @@ Renderer_Report :: struct {
 	last_reset:          string `json:"last_reset"`,
 	light_count:         int    `json:"light_count"`,
 	cluster_overflow:    u32    `json:"cluster_overflow"`,
-	probe_volume_count:  u32    `json:"probe_volume_count"`,
-	probe_count:         u32    `json:"probe_count"`,
 	atlas_weight:        f32    `json:"atlas_weight"`,
 	text_truncated_runs: int    `json:"text_truncated_runs"`,
 	text_font_drops:     int    `json:"text_font_drops"`,
@@ -79,7 +77,6 @@ Debug_Report :: struct {
 	synthetic_lights: int  `json:"synthetic_lights"`,
 	clip_height:      f32  `json:"clip_height"`,
 	light_shadows:    bool `json:"light_shadows"`,
-	gi:               bool `json:"gi"`,
 }
 
 Setup_Report :: struct {
@@ -109,8 +106,6 @@ renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
 		last_reset = reset_reason_name(r.taa.last_reset),
 		light_count = r.light_count,
 		cluster_overflow = r.cluster_overflow,
-		probe_volume_count = r.probe.volume_count,
-		probe_count = r.probe.probe_count,
 		atlas_weight = text_atlas_applied_weight(r),
 		text_truncated_runs = r.overlay.atlas.caps.truncated_runs,
 		text_font_drops = r.overlay.atlas.caps.dropped_fonts,
@@ -130,7 +125,6 @@ renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
 			synthetic_lights = r.debug.active ? r.debug.synthetic_lights : 0,
 			clip_height = debug_effective.clip_height,
 			light_shadows = debug_effective.light_shadows,
-			gi = debug_effective.gi,
 		},
 	}
 	if r.debug.active && r.debug.history_weight >= 0 {

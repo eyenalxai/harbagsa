@@ -1,4 +1,5 @@
 #+vet explicit-allocators
+#+vet !unused-procedures // the tests read the table
 package renderer
 
 import "src:digest"
@@ -25,15 +26,14 @@ RENDER_DIGEST_FIELDS := [?]Render_Digest_Field {
 	{"atlas_weight", true, write_atlas_weight, ""},
 	{"clip_height", true, write_clip_height, ""},
 	{"light_shadows", true, write_light_shadows, ""},
-	{"probe_volumes", true, write_probe_volumes, ""},
-	{"gi", true, write_gi, ""},
 	{"view_flags", true, write_view_flags, ""},
 	{"debug_lines", false, nil, "draws after the resolve"},
 	{"hud", false, nil, "draws after the resolve"},
 }
 
 // The digest names the effective render inputs, not the game state. Two frames
-// with the same digest draw the same scene.
+// with the same digest draw the same scene, so a measurement can assert the
+// inputs before it compares pixels.
 render_digest :: proc(input: Render_Input) -> digest.FNV {
 	hash := digest.fnv()
 	for field in RENDER_DIGEST_FIELDS {
@@ -125,25 +125,6 @@ write_clip_height :: proc(hash: ^digest.FNV, input: Render_Input) {
 @(private)
 write_light_shadows :: proc(hash: ^digest.FNV, input: Render_Input) {
 	digest.write_bool(hash, input.light_shadows)
-}
-
-@(private)
-write_probe_volumes :: proc(hash: ^digest.FNV, input: Render_Input) {
-	digest.write_u64(hash, u64(len(input.probe_volumes)))
-	for volume in input.probe_volumes {
-		digest.write_f32(hash, volume.min.x)
-		digest.write_f32(hash, volume.min.y)
-		digest.write_f32(hash, volume.min.z)
-		digest.write_f32(hash, volume.spacing)
-		digest.write_u32(hash, volume.counts.x)
-		digest.write_u32(hash, volume.counts.y)
-		digest.write_u32(hash, volume.counts.z)
-	}
-}
-
-@(private)
-write_gi :: proc(hash: ^digest.FNV, input: Render_Input) {
-	digest.write_bool(hash, input.gi)
 }
 
 @(private)

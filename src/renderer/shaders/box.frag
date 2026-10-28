@@ -27,7 +27,6 @@ layout(set = 0, binding = 1) readonly buffer Objects {
 
 #include "camera.glsl"
 #include "cluster.glsl"
-#include "probe.glsl"
 
 layout(set = 0, binding = 2) uniform accelerationStructureEXT scene_tlas;
 
@@ -47,29 +46,6 @@ layout(set = 0, binding = 4) readonly buffer ClusterCounts {
 layout(set = 0, binding = 5) readonly buffer ClusterIndices {
     uint indices[];
 } cluster_indices;
-
-struct ProbeVolume {
-    vec4 min_spacing;
-    uvec4 counts_offset;
-};
-
-layout(set = 0, binding = 6) readonly buffer ProbeVolumes {
-    ProbeVolume volumes[];
-} probe_volumes;
-
-layout(set = 0, binding = 7) readonly buffer ProbeIrradiance {
-    vec4 irradiance[];
-} probe_irradiance_set;
-
-layout(set = 0, binding = 8) readonly buffer ProbeDepth {
-    vec2 depth[];
-} probe_depth_set;
-
-layout(set = 0, binding = 9) readonly buffer ProbePositions {
-    vec4 positions[];
-} probe_positions;
-
-#include "probe_gather.glsl"
 
 const uint POINT_RAY_MASK = 0x02u;
 // A lamp that sits on a wall ends its shadow ray on that wall. Stop short of
@@ -149,8 +125,7 @@ void main() {
 
     ObjectData object = scene.objects[draw.object_index];
     vec3 normal = normalize(v_normal);
-    vec3 lit = point_light_radiance(v_world_position, normal) +
-        probe_indirect(v_world_position, normal);
+    vec3 lit = point_light_radiance(v_world_position, normal);
     vec3 color = v_color * lit + v_color * object.color.a;
 
     vec4 world_position = vec4(v_world_position, 1.0);
