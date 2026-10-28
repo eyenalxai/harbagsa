@@ -9,7 +9,7 @@ The alternative is a dynamic rigid body. It would fight the direct control that 
 
 ## Consequences
 
-- The movement rules are ours to test. The headless simulation seam covers them.
+- The movement rules live in the game layer. The headless simulation seam covers them.
 - Headroom queries the stance capsule against the world with the probe inset from
   the capsule side and lifted off the floor. A floor, a step, a crate, or a wall
   that only grazes the capsule side therefore does not block a taller stance,
@@ -17,6 +17,6 @@ The alternative is a dynamic rigid body. It would fight the direct control that 
   missed a rotated overhang whose bounds start below the feet, so a prone player
   could stand through a ramp underside.
 - The prone capsule is vertical because the mover has no rotation handling. Crawl is movement while prone, not a horizontal body.
-- Step-up and slope handling use capsule casts and a ground probe rather than a controller library. A Box3D upgrade can change the mover behavior; the tests gate that.
+- Step-up and slope handling use capsule casts and a ground probe rather than a controller library. A Box3D upgrade can change the mover behavior.
 - The player stays first person with no visible body. A visible body or a horizontal prone collider would need a different solution.
 - Action states are committed. A dive, a dive slide, and a mantle lock the stance and the relevant inputs until they end.

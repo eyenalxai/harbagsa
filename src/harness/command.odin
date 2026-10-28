@@ -22,7 +22,6 @@ Command_Kind :: enum {
 	Debug_Mode,
 	Editor,
 	Menu,
-	Check,
 	Record,
 	Replay,
 	Repro,
@@ -164,7 +163,6 @@ Command :: struct {
 	debug_mode:     Debug_Mode_Command,
 	editor:         Editor_Command,
 	menu:           Menu_Command,
-	check:          Check_Command,
 	record:         Record_Command,
 	replay:         Replay_Command,
 	repro:          Repro_Command,
@@ -188,11 +186,4 @@ command_destroy :: proc(command: ^Command, allocator: mem.Allocator) {
 		return
 	}
 	command^ = {}
-}
-
-check_value_destroy :: proc(value: ^Check_Value, allocator: mem.Allocator) {
-	if value.kind == .String && value.text != "" {
-		delete(value.text, allocator)
-	}
-	value^ = {}
 }

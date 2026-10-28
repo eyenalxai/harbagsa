@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the frame package calls box_between; test builds do not
+#+vet !unused-procedures // the frame package calls box_between
 package geometry
 
 import "core:math"

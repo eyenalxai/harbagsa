@@ -19,9 +19,9 @@ The renderer has no ambient fill. A surface receives light only from the current
 - Keep every explicit starting lamp. A lamp-free scene is the black baseline.
 - Keep the direct clustered lights, hard ray-query shadows, TAA, and emissive term.
 - Do not add a screen-space fill or an ambient occlusion term to replace the floor. A one-bounce probe field was added later by ADR 0042; it carries light from the lamps and does not create a default fill.
-- Update `scenarios/lighting.json` to gate the lamp-free black frame and the lamp response.
-- Update `scenarios/closed-arena.json` so the ceiling is proved from a lit ceiling, not from ambient fill.
-- Update the world guide, README, glossary, ADR 0037, ADR 0040, and lighting evidence.
+- The lamp-free frame is black, and a lamp restores light.
+- The ceiling is proved from a lit ceiling, not from ambient fill.
+- Update the world guide, README, glossary, ADR 0037, and ADR 0040.
 
 ## Considered Options
 
@@ -33,9 +33,9 @@ The renderer has no ambient fill. A surface receives light only from the current
 
 ## Consequences
 
-- Lamp-free views are black. The lighting scenario proves it.
+- Lamp-free views are black.
 - Corners outside every lamp range lose all detail. This is deliberate.
 - The starting scene is lit only by the three starting lamps and their emissive boxes.
-- The ceiling is dim but not black where the starting lights reach it. The closed-arena check proves the ceiling surface from that light.
-- The lighting evidence changes from non-black ambient coverage to black unlit coverage.
+- The ceiling is dim but not black where the starting lights reach it.
+- The evidence changes from non-black ambient coverage to black unlit coverage.
 - This supersedes the ambient-floor decisions in ADR 0037. The direct-light and shadow decisions otherwise stay in force.

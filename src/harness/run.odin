@@ -53,7 +53,7 @@ run_result_destroy :: proc(result: ^Run_Result) {
 	result^ = {}
 }
 
-// A render failure outranks a check, and a run that never started ranks above
+// A render failure outranks a command failure, and a run that never started ranks above
 // both.
 run_exit_code :: proc(results: []Stage_Result) -> int {
 	code := EXIT_OK

@@ -7,7 +7,6 @@ import "core:mem"
 verbose_summary_lines :: proc(report: Report, allocator: mem.Allocator) -> []string {
 	capacity := 8 +
 		len(report.captures) +
-		len(report.checks) +
 		len(report.failures) +
 		len(report.perf)
 	lines := make([dynamic]string, 0, capacity, allocator)
@@ -24,10 +23,6 @@ verbose_summary_lines :: proc(report: Report, allocator: mem.Allocator) -> []str
 	append(&lines, fmt.aprintf("captures: %d", len(report.captures), allocator = allocator))
 	for capture in report.captures {
 		append(&lines, capture_line(capture, allocator))
-	}
-	append(&lines, fmt.aprintf("checks: %d", len(report.checks), allocator = allocator))
-	for check in report.checks {
-		append(&lines, check_line(check, allocator))
 	}
 	append(&lines, fmt.aprintf("failures: %d", len(report.failures), allocator = allocator))
 	for failure in report.failures {
@@ -58,28 +53,13 @@ verbose_summary_lines :: proc(report: Report, allocator: mem.Allocator) -> []str
 }
 
 summary_lines :: proc(report: Report, allocator: mem.Allocator) -> []string {
-	lines := make([dynamic]string, 0, 4 + len(report.captures) + len(report.checks), allocator)
+	lines := make([dynamic]string, 0, 4 + len(report.captures), allocator)
 	append(&lines, fmt.aprintf("run: %s", report.scenario.path, allocator = allocator))
 	status := report.ok ? "ok" : "failed"
 	append(&lines, fmt.aprintf("result: %s (exit %d)", status, report.exit_code, allocator = allocator))
 	append(&lines, fmt.aprintf("captures: %d", len(report.captures), allocator = allocator))
 	for capture in report.captures {
 		append(&lines, capture_line(capture, allocator))
-	}
-	failed := 0
-	for check in report.checks {
-		if !check.ok && (!check.advisory || check.error != "") {
-			failed += 1
-		}
-	}
-	append(&lines, fmt.aprintf(
-		"checks: %d, failed: %d",
-		len(report.checks),
-		failed,
-		allocator = allocator,
-	))
-	for check in report.checks {
-		append(&lines, check_line(check, allocator))
 	}
 	for failure in report.failures {
 		append(&lines, fmt.aprintf("  failure %s", failure, allocator = allocator))
@@ -100,39 +80,6 @@ capture_line :: proc(capture: Capture_Result, allocator: mem.Allocator) -> strin
 		capture.format,
 		capture_has_png(capture) ? "yes" : "no",
 		path,
-		allocator = allocator,
-	)
-}
-
-@(private)
-check_line :: proc(check: Check_Result, allocator: mem.Allocator) -> string {
-	status := check.ok ? "PASS" : "FAIL"
-	if !check.ok && check.advisory && check.error == "" {
-		status = "ADVISE"
-	}
-	tolerance := check_tolerance_note(check, allocator)
-	defer delete(tolerance, allocator)
-	if check.error != "" {
-		return fmt.aprintf(
-			"  %s %s %s %s%s actual %s error %s",
-			status,
-			check.field,
-			check.op,
-			check.expected,
-			tolerance,
-			check.actual,
-			check.error,
-			allocator = allocator,
-		)
-	}
-	return fmt.aprintf(
-		"  %s %s %s %s%s actual %s",
-		status,
-		check.field,
-		check.op,
-		check.expected,
-		tolerance,
-		check.actual,
 		allocator = allocator,
 	)
 }

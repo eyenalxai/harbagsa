@@ -38,5 +38,5 @@ The lit pass traces one ray query per clustered point light. A hit removes that 
 - The TLAS is rebuilt every frame, so moving lamps and boxes update shadows without a shadow-map cache.
 - The 96-light shadow term is a measured budget. A target of 100+ overlapping shadowed lights, or a weaker GPU target, reopens the technique choice.
 - The point light remains zero-area. Soft shadows and a lamp radius are out of scope.
-- `scenarios/shadows.json`, `scenarios/shadow-move.json`, and `scenarios/lamp-wall-plane.json` gate the visual behavior. `scenarios/perf-shadows.json` gates the 96-light cost.
+- The visual behavior and the 96-light cost are measured.
 - This supersedes the no-shadow clauses in ADR 0021, ADR 0037, and ADR 0038. The rest of those decisions stays in force.

@@ -9,7 +9,7 @@ import "core:strings"
 import "src:display"
 import "src:game"
 
-// The one list of conditional state sections. The build, the check resolver,
+// The one list of conditional state sections. The build, the field resolver,
 // and the all-sections set read it.
 State_Section_Row :: struct {
 	section: State_Section,
@@ -45,8 +45,8 @@ state_all_sections :: proc() -> State_Sections {
 	return sections
 }
 
-// A check names one namespace. The table is the same list the build reads, so
-// a check cannot ask for a document it will not address. The base fields
+// A field names one namespace. The table is the same list the build reads, so
+// a field cannot ask for a document it will not address. The base fields
 // (frame, camera, settle, renderer) need no section.
 state_section_for_field :: proc(field: string) -> State_Sections {
 	head, _, _ := split_field(field)

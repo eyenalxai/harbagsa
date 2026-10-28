@@ -30,12 +30,8 @@ Schema_Document :: struct {
 	version:        int              `json:"version"`,
 	commands:       []Schema_Command `json:"commands"`,
 	scenario_keys:  []string         `json:"scenario_keys"`,
-	suite_keys:     []string         `json:"suite_keys"`,
-	suite_entry_keys: []string       `json:"suite_entry_keys"`,
 	capture_targets: []string        `json:"capture_targets"`,
 	capture_formats: []string        `json:"capture_formats"`,
-	check_operators: []string        `json:"check_operators"`,
-	check_fields:    []string        `json:"check_fields"`,
 	state_fields:    []string        `json:"state_fields"`,
 	units:           []Schema_Unit   `json:"units"`,
 }
@@ -44,19 +40,14 @@ SCENARIO_KEYS := []string {
 	"version",
 	"note",
 	"view",
-	"checks",
 	"commands",
 	"renderer_debug",
 	"requires",
-	"analysis",
 	"size",
 	"extends",
 	"parameters",
 }
 
-SUITE_KEYS := []string{"version", "name", "description", "entries"}
-SUITE_ENTRY_KEYS := []string{"scenario", "label", "size", "params", "no_render"}
-CHECK_OPERATORS := []string{"eq", "ne", "lt", "le", "gt", "ge"}
 CAPTURE_TARGETS := []string{"color", "velocity", "history", "depth", "scene_color"}
 CAPTURE_FORMATS := []string{"png", "float", "raw", "stats", "profile"}
 
@@ -84,15 +75,6 @@ schema_backend_name :: proc(backend: Command_Backend) -> string {
 		return "required"
 	}
 	return "none"
-}
-
-schema_field_named :: proc(command: ^Schema_Command, name: string) -> (^Schema_Field, bool) {
-	for &field in command.fields {
-		if field.name == name {
-			return &field, true
-		}
-	}
-	return nil, false
 }
 
 schema_command_fields :: proc(row: ^Command_Row, allocator: runtime.Allocator) -> []Schema_Field {

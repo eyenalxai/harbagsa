@@ -8,8 +8,8 @@ import "core:strings"
 import "base:runtime"
 
 // The State struct and its json tags are the schema. A path walks the same
-// fields the JSON writer emits, so a check cannot drift from the document.
-state_field :: proc(state: State, path: string) -> (Check_Value, string) {
+// fields the JSON writer emits, so a query cannot drift from the document.
+state_field :: proc(state: State, path: string) -> (Field_Value, string) {
 	head, rest, has_tail := split_field(path)
 	if head == "static_boxes" {
 		if rest == "count" {
@@ -53,7 +53,7 @@ state_field :: proc(state: State, path: string) -> (Check_Value, string) {
 }
 
 @(private)
-resolve_state_path :: proc(value: any, path, full_path: string) -> (Check_Value, string) {
+resolve_state_path :: proc(value: any, path, full_path: string) -> (Field_Value, string) {
 	if path == "" {
 		return state_scalar(value, full_path)
 	}
@@ -98,7 +98,7 @@ resolve_state_path :: proc(value: any, path, full_path: string) -> (Check_Value,
 }
 
 @(private)
-state_scalar :: proc(value: any, full_path: string) -> (Check_Value, string) {
+state_scalar :: proc(value: any, full_path: string) -> (Field_Value, string) {
 	ti := runtime.type_info_base(type_info_of(value.id))
 	#partial switch info in ti.variant {
 	case runtime.Type_Info_Boolean:

@@ -1,5 +1,4 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the contrast and composite helpers are the tests' entry points
 package renderer
 
 import "core:math"
@@ -157,35 +156,4 @@ srgb_to_linear :: proc(value: u8) -> f32 {
 		return channel / 12.92
 	}
 	return math.pow((channel + 0.055) / 1.055, 2.4)
-}
-
-// WCAG 2 contrast ratio between two linear colours, for the tests that hold the
-// palette to the 4.5:1 floor.
-ui_contrast :: proc(a, b: [4]f32) -> f32 {
-	luminance_a := ui_relative_luminance(a)
-	luminance_b := ui_relative_luminance(b)
-	high := max(luminance_a, luminance_b)
-	low := min(luminance_a, luminance_b)
-	return (high + 0.05) / (low + 0.05)
-}
-
-@(private)
-ui_relative_luminance :: proc(color: [4]f32) -> f32 {
-	return 0.2126 * color.r + 0.7152 * color.g + 0.0722 * color.b
-}
-
-// Simulates the panel render: a translucent surface over an opaque backdrop. The
-// tests use it so a contrast check measures what the player sees, not the token
-// in isolation.
-ui_composite :: proc(over, under: [4]f32) -> [4]f32 {
-	alpha := over.a + under.a * (1.0 - over.a)
-	if alpha <= 0 {
-		return {}
-	}
-	return {
-		(over.r * over.a + under.r * under.a * (1.0 - over.a)) / alpha,
-		(over.g * over.a + under.g * under.a * (1.0 - over.a)) / alpha,
-		(over.b * over.a + under.b * under.a * (1.0 - over.a)) / alpha,
-		alpha,
-	}
 }

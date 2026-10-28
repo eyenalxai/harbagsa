@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the window loop and tests call this API; the game binary does not
+#+vet !unused-procedures // the window loop calls this API; the game binary does not
 package input
 
 import "src:game"
@@ -42,7 +42,7 @@ View_Intents :: struct {
 }
 
 // Frame_Input is the resolved intent of one frame. It holds no pointer into
-// session state, so it is safe to copy and easy to assert in a test.
+// session state, so it is safe to copy.
 Frame_Input :: struct {
 	snapshot:         game.Input_Snapshot,
 	look_delta:       [2]f32,
