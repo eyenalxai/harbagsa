@@ -30,6 +30,28 @@ Light_Color :: enum {
 	Blue,
 }
 
+Lamp_Kind :: enum u8 {
+	Dynamic_Lamp,
+	Static_Fixture,
+}
+
+LAMP_KIND_COUNT :: int(Lamp_Kind.Static_Fixture) + 1
+
+LAMP_KIND_NAMES := [LAMP_KIND_COUNT]string{"dynamic", "static"}
+
+lamp_kind_name :: proc(kind: Lamp_Kind) -> string {
+	return LAMP_KIND_NAMES[kind]
+}
+
+lamp_kind_parse :: proc(name: string) -> (Lamp_Kind, bool) {
+	for kind in Lamp_Kind {
+		if LAMP_KIND_NAMES[kind] == name {
+			return kind, true
+		}
+	}
+	return .Dynamic_Lamp, false
+}
+
 LIGHT_COLOR_COUNT :: int(Light_Color.Blue) + 1
 
 LIGHT_COLOR_NAMES := [LIGHT_COLOR_COUNT]string{"warm", "cool", "red", "green", "blue"}
@@ -47,6 +69,7 @@ LIGHT_COLOR_RGB := [LIGHT_COLOR_COUNT][3]f32 {
 // the prefab defaults.
 Light_Settings :: struct {
 	active:    bool,
+	kind:      Lamp_Kind,
 	color:     Light_Color,
 	intensity: f32,
 	range:     f32,
@@ -164,8 +187,10 @@ simulation_set_object_light :: proc(sim: ^Simulation, id: Object_Id, settings: L
 	if !object.light.active {
 		return false
 	}
-	object.light = settings
-	object.color = light_color4(settings.color)
+	updated := settings
+	updated.kind = object.light.kind
+	object.light = updated
+	object.color = light_color4(updated.color)
 	return true
 }
 

@@ -60,9 +60,6 @@ Scene :: struct {
 }
 
 init_scene :: proc(r: ^Renderer) -> Error {
-	if !create_probe_resources(r) {
-		return .Create_Scene
-	}
 	if !create_scene_resources(r) {
 		return .Create_Scene
 	}
@@ -78,9 +75,6 @@ init_scene :: proc(r: ^Renderer) -> Error {
 	if !create_cluster_pipeline(r) {
 		return .Create_Pipeline
 	}
-	if !create_probe_pipelines(r) {
-		return .Create_Pipeline
-	}
 	return .None
 }
 
@@ -93,7 +87,6 @@ destroy_scene :: proc(r: ^Renderer) {
 	destroy_pipeline_pair(r, &r.scene.depth_pipeline, &r.scene.depth_layout)
 	destroy_pipeline_pair(r, &r.scene.pipeline, &r.scene.pipeline_layout)
 	destroy_pipeline_pair(r, &r.scene.cluster_pipeline, &r.scene.cluster_layout)
-	destroy_probe(r)
 	if r.scene.descriptor_pool != 0 {
 		vk.DestroyDescriptorPool(r.device, r.scene.descriptor_pool, nil)
 		r.scene.descriptor_pool = 0
@@ -156,14 +149,8 @@ update_camera :: proc(r: ^Renderer, input: Render_Input) -> bool {
 		projection = projection,
 		prev_view_projection = previous,
 		screen = {srgb_gamma(r), f32(extent.width), height, input.clip_height},
-		lights = {f32(len(input.lights)), input.light_shadows ? 1 : 0, CAMERA_FAR, 0},
+		lights = {f32(len(input.lights)), input.light_shadows ? 1 : 0, 0, 0},
 		jitter = {input.jitter.x, input.jitter.y, 0, 0},
-		probe = {
-			f32(len(input.probe_volumes)),
-			f32(r.probe.probe_count),
-			input.gi ? 1 : 0,
-			0,
-		},
 	}
 	return true
 }

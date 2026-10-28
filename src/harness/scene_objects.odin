@@ -24,6 +24,7 @@ parse_scene_objects :: proc(value: json.Value, allocator: mem.Allocator) -> ([]f
 			}
 			delete(object.prefab, allocator)
 			delete(object.body, allocator)
+			delete(object.light.kind, allocator)
 			delete(object.light.color, allocator)
 		}
 		delete(objects, allocator)
@@ -90,6 +91,7 @@ parse_scene_objects :: proc(value: json.Value, allocator: mem.Allocator) -> ([]f
 			color = color,
 			light = {
 				active = light.active,
+				kind = strings.clone(game.lamp_kind_name(light.kind), allocator),
 				color = strings.clone(game.light_color_name(light.color), allocator),
 				intensity = light.intensity,
 				range = light.range,
@@ -107,11 +109,20 @@ parse_scene_light :: proc(value: json.Value, allocator: mem.Allocator) -> (game.
 	if !object_ok {
 		return {}, format_error("%s", "scene light must be an object")
 	}
-	if key, unknown := json_unknown_key(object, {"active", "color", "intensity", "range", "emissive"}); unknown {
+	if key, unknown := json_unknown_key(object, {"active", "kind", "color", "intensity", "range", "emissive"}); unknown {
 		return {}, format_error("unknown scene light key %q", key)
 	}
 	active_value, active_ok := json_get(object, "active")
 	active, active_parsed := json_boolean(active_value)
+	kind := game.Lamp_Kind.Dynamic_Lamp
+	if kind_value, has := json_get(object, "kind"); has {
+		kind_name, kind_ok := json_string(kind_value)
+		parsed, kind_parsed := game.lamp_kind_parse(kind_name)
+		if !kind_ok || !kind_parsed {
+			return {}, format_error("%s", "scene light kind must be 'dynamic' or 'static'")
+		}
+		kind = parsed
+	}
 	color_name, color_ok := string_field(object, "color")
 	color, color_parsed := game.light_color_parse(color_name)
 	intensity, intensity_ok := number_field(object, "intensity")
@@ -133,6 +144,7 @@ parse_scene_light :: proc(value: json.Value, allocator: mem.Allocator) -> (game.
 	_ = allocator
 	return {
 		active = active,
+		kind = kind,
 		color = color,
 		intensity = f32(intensity),
 		range = f32(range),
