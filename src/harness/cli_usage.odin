@@ -15,6 +15,7 @@ print_run_usage :: proc() {
 	fmt.eprintln("  --debug-renderer  accept renderer_debug commands")
 	fmt.eprintln("  --renderer-debug KEY=VALUE  apply a gated override before the commands")
 	fmt.eprintln("  --timeout SECONDS  stop the run when it exceeds this wall-clock budget")
+	fmt.eprintln("  --bake PATH       load this .hbake artifact instead of build/bake/arena.hbake")
 	fmt.eprintln("  --summary         write the capture paths to stderr")
 	fmt.eprintln("  --verbose         write captures, setup, and perf to stderr")
 	fmt.eprintln("")
@@ -32,6 +33,7 @@ print_session_usage :: proc() {
 	fmt.eprintln("  --debug-renderer  accept renderer_debug commands")
 	fmt.eprintln("  --renderer-debug KEY=VALUE  apply a gated override")
 	fmt.eprintln("  --timeout SECONDS  stop the session when it exceeds this budget")
+	fmt.eprintln("  --bake PATH       load this .hbake artifact instead of build/bake/arena.hbake")
 }
 
 print_schema_usage :: proc() {
