@@ -50,6 +50,7 @@ backend_create :: proc(
 	width, height: u32,
 	present: bool,
 	frames_dir: string,
+	bake_path: string,
 	allocator: mem.Allocator,
 ) -> (
 	Backend,
@@ -93,6 +94,7 @@ backend_create :: proc(
 		}
 	}
 
+	renderer_config.bake_path = bake_path
 	state, renderer_error := renderer.init(renderer_config, allocator)
 	if renderer_error != .None {
 		if present {

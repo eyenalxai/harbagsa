@@ -29,6 +29,7 @@ Common_Options :: struct {
 	summary:              bool,
 	verbose:              bool,
 	timeout_seconds:      f64,
+	bake_path:            string,
 	debug_overrides:      [MAX_DEBUG_OVERRIDES]Debug_Override,
 	debug_override_count: int,
 }
@@ -247,6 +248,12 @@ parse_common_option :: proc(
 			return index, true, "--timeout must be a positive number of seconds"
 		}
 		options.timeout_seconds = seconds
+		return index + 2, true, ""
+	case "--bake":
+		if index + 1 >= len(args) {
+			return index, true, "--bake needs a .hbake path"
+		}
+		options.bake_path = args[index + 1]
 		return index + 2, true, ""
 	}
 	return index, false, ""

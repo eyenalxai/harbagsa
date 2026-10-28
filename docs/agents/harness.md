@@ -261,12 +261,33 @@ A named capture exposes its own renderer state through `get`, for example
 
 `state.renderer` reports frame count, TAA state, jitter index, history validity,
 convergence frames, history read index and weight, reset count and reason,
-active light count, cluster overflow, probe volume and probe counts, atlas
-weight, text counters, and debug line counts. `state.render_digest` covers
-target extent, camera, boxes, emissive strengths, point lights, jitter, atlas
-weight, clip height, shadow visibility, probe volumes, the GI flag, and view
-flags. `setup.renderer.shader_digest` covers the embedded
-SPIR-V.
+active light count, cluster overflow, atlas weight, text counters, and debug
+line counts. `state.renderer.bake` reports the
+bake status (`missing`, `stale`, `current`, or `failed`), the current key, the
+artifact key, format and tool versions, atlas and probe counts, probe spacing,
+artifact and GPU bytes, bake time, and the load error. `state.render_digest`
+covers target extent, camera, boxes, emissive strengths, point lights, jitter,
+atlas weight, clip height, shadow visibility, bake key, bake status, and view
+flags. `setup.renderer.shader_digest` covers the embedded SPIR-V.
+
+## Bake artifact
+
+The renderer loads `build/bake/arena.hbake` by default. The bake tool that
+writes it belongs to a later change; until then the run reports
+`state.renderer.bake.status = "missing"` and renders the direct path only.
+
+Use `--bake PATH` on `run` or `session` to load another artifact:
+
+```sh
+./bin/harbagsa-agent run scenarios/lamp-threshold.json \
+  --bake build/bake/arena.hbake --out runs/bake/current
+```
+
+A version or layout mismatch sets `status` to `failed` and records the loader
+error. A static geometry or static fixture edit changes the key and sets
+`status` to `stale`; the old artifact stays bound until a later publish. The
+artifact format is documented in
+`docs/adr/0044-bake-data-contract.md`.
 
 ## Renderer debug overrides
 

@@ -95,6 +95,7 @@ runtime_ensure_backend :: proc(runtime: ^Session_Runtime, present: bool) -> stri
 		runtime.options.height,
 		present,
 		runtime.frames_dir,
+		runtime.options.bake_path,
 		context.allocator,
 	)
 	if backend_error != "" {

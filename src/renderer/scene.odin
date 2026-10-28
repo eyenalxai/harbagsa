@@ -59,8 +59,11 @@ Scene :: struct {
 	light_capacity:  int,
 }
 
-init_scene :: proc(r: ^Renderer) -> Error {
+init_scene :: proc(r: ^Renderer, bake_path: string) -> Error {
 	if !create_scene_resources(r) {
+		return .Create_Scene
+	}
+	if !init_bake(r, bake_path) {
 		return .Create_Scene
 	}
 	if !create_mesh(r) {
@@ -79,6 +82,7 @@ init_scene :: proc(r: ^Renderer) -> Error {
 }
 
 destroy_scene :: proc(r: ^Renderer) {
+	destroy_bake(r)
 	if r.device == nil {
 		return
 	}

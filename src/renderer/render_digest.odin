@@ -26,6 +26,7 @@ RENDER_DIGEST_FIELDS := [?]Render_Digest_Field {
 	{"atlas_weight", true, write_atlas_weight, ""},
 	{"clip_height", true, write_clip_height, ""},
 	{"light_shadows", true, write_light_shadows, ""},
+	{"bake", true, write_bake, ""},
 	{"view_flags", true, write_view_flags, ""},
 	{"debug_lines", false, nil, "draws after the resolve"},
 	{"hud", false, nil, "draws after the resolve"},
@@ -125,6 +126,14 @@ write_clip_height :: proc(hash: ^digest.FNV, input: Render_Input) {
 @(private)
 write_light_shadows :: proc(hash: ^digest.FNV, input: Render_Input) {
 	digest.write_bool(hash, input.light_shadows)
+}
+
+@(private)
+write_bake :: proc(hash: ^digest.FNV, input: Render_Input) {
+	// A rebake changes the indirect image without moving the camera or the
+	// lights, so the applied bake state belongs to the render digest.
+	digest.write_u64(hash, input.bake_key)
+	digest.write_u64(hash, u64(input.bake_status))
 }
 
 @(private)
