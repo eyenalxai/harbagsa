@@ -261,15 +261,14 @@ A named capture exposes its own renderer state through `get`, for example
 
 `state.renderer` reports frame count, TAA state, jitter index, history validity,
 convergence frames, history read index and weight, reset count and reason,
-active light count, cluster overflow, probe volume and probe counts, atlas
-weight, text counters, and debug line counts. `state.renderer.bake` reports the
+active light count, cluster overflow, atlas weight, text counters, and debug
+line counts. `state.renderer.bake` reports the
 bake status (`missing`, `stale`, `current`, or `failed`), the current key, the
 artifact key, format and tool versions, atlas and probe counts, probe spacing,
 artifact and GPU bytes, bake time, and the load error. `state.render_digest`
 covers target extent, camera, boxes, emissive strengths, point lights, jitter,
-atlas weight, clip height, shadow visibility, bake key, bake status, probe
-volumes, the GI flag, and view flags. `setup.renderer.shader_digest` covers the
-embedded SPIR-V.
+atlas weight, clip height, shadow visibility, bake key, bake status, and view
+flags. `setup.renderer.shader_digest` covers the embedded SPIR-V.
 
 ## Bake artifact
 

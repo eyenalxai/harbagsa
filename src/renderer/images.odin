@@ -211,3 +211,17 @@ image_barrier :: proc(
 	}
 	vk.CmdPipelineBarrier(command_buffer, src_stage, dst_stage, {}, 0, nil, 0, nil, 1, &barrier)
 }
+
+create_clamp_sampler :: proc(r: ^Renderer, sampler: ^vk.Sampler) -> bool {
+	info := vk.SamplerCreateInfo {
+		sType        = .SAMPLER_CREATE_INFO,
+		magFilter    = .LINEAR,
+		minFilter    = .LINEAR,
+		mipmapMode   = .NEAREST,
+		addressModeU = .CLAMP_TO_EDGE,
+		addressModeV = .CLAMP_TO_EDGE,
+		addressModeW = .CLAMP_TO_EDGE,
+		maxLod       = 0,
+	}
+	return check(vk.CreateSampler(r.device, &info, nil, sampler), "vkCreateSampler")
+}

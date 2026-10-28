@@ -42,7 +42,8 @@ never a fill value.
 - **Key.** The key hashes the canonical static boxes (arena in array order, then
   placed static objects by object id), the active static fixtures, the quality,
   and the tool version. Dynamic lamps and dynamic bodies are excluded. The
-  runtime compares the artifact key with the frame's key every frame and reports
+  renderer recomputes the key with the artifact's own quality block, so a 1 m
+  or 2 m artifact validates against the same static inputs. The runtime reports
   `current` or `stale`.
 - **Runtime resources.** The lightmap image and sampler, the probe irradiance
   and moment images, the shared linear clamp sampler, the face and slot buffers,
@@ -84,3 +85,7 @@ never a fill value.
   renderer. It does not import either package, so the bake tool can share it.
 - No descriptor binding or shader sample reads the new resources yet; the
   lightmap and probe samplers are introduced by their sampling tickets.
+- The design guide, `README.md`, `GLOSSARY.md`, and ADR 0042 still describe the
+  removed dynamic DDGI field and ban baked light or textures. This ADR starts
+  the replacement but does not edit those pages; #386 owns that cleanup. Do not
+  read the current guide as agreeing with this contract.

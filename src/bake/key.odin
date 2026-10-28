@@ -12,21 +12,21 @@ canonical_f32 :: proc(value: f32) -> f32 {
 	return value
 }
 
-key :: proc(input: Input) -> u64 {
+key :: proc(static: Static, quality: Quality) -> u64 {
 	hash := digest.fnv()
 	digest.write_u32(&hash, KEY_VERSION)
 	digest.write_u32(&hash, TOOL_VERSION)
-	write_quality(&hash, input.quality)
+	write_quality(&hash, quality)
 
-	digest.write_u64(&hash, u64(len(input.boxes)))
-	for entry in input.boxes {
+	digest.write_u64(&hash, u64(len(static.boxes)))
+	for entry in static.boxes {
 		digest.write_u64(&hash, u64(entry.source))
 		digest.write_u32(&hash, entry.id)
 		write_box(&hash, entry.box)
 	}
 
-	digest.write_u64(&hash, u64(len(input.lights)))
-	for light in input.lights {
+	digest.write_u64(&hash, u64(len(static.lights)))
+	for light in static.lights {
 		digest.write_u32(&hash, light.id)
 		write_vec3(&hash, light.position)
 		write_vec3(&hash, light.color)

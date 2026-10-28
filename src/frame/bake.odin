@@ -4,9 +4,9 @@ package frame
 import "src:bake"
 import "src:game"
 
-// The bake key covers exactly the static inputs: arena boxes, placed static
-// bodies, and static fixtures. Dynamic lamps and dynamic bodies never enter it.
-build_bake_input :: proc(sim: ^game.Simulation, scratch: ^Scratch) -> bake.Input {
+// The static bake input is exactly the arena boxes, placed static bodies, and
+// static fixtures. Dynamic lamps and dynamic bodies never enter it.
+build_bake_input :: proc(sim: ^game.Simulation, scratch: ^Scratch) -> bake.Static {
 	clear(&scratch.bake_boxes)
 	clear(&scratch.bake_lights)
 
@@ -42,7 +42,6 @@ build_bake_input :: proc(sim: ^game.Simulation, scratch: ^Scratch) -> bake.Input
 	return {
 		boxes = scratch.bake_boxes[:],
 		lights = scratch.bake_lights[:],
-		quality = bake.DEFAULT_QUALITY,
 	}
 }
 

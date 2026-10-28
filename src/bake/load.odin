@@ -71,7 +71,8 @@ load :: proc(bytes: []u8) -> (data: Data, err: Error) {
 	if !quality_valid(quality) ||
 	   quality.atlas_size != header.atlas_width ||
 	   header.atlas_width != header.atlas_height ||
-	   quality.probe_texels != header.probe_texels {
+	   quality.probe_texels != header.probe_texels ||
+	   quality.probe_spacing != header.probe_spacing {
 		return {}, .Quality
 	}
 	if header.atlas_width > MAX_ATLAS_DIM {
@@ -110,6 +111,10 @@ load :: proc(bytes: []u8) -> (data: Data, err: Error) {
 		return {}, .Layout
 	}
 	columns := u64(header.probe_atlas_columns)
+	// The shelf must end on a full row; the payload has no padded tail.
+	if probe_count % columns != 0 {
+		return {}, .Layout
+	}
 	probe_atlas_width := columns * PROBE_TEXELS
 	probe_atlas_height := (probe_count + columns - 1) / columns * PROBE_TEXELS
 	if probe_atlas_width > MAX_PROBE_ATLAS_DIM || probe_atlas_height > MAX_PROBE_ATLAS_DIM {
@@ -226,13 +231,19 @@ quality_valid :: proc(quality: Quality) -> bool {
 	if quality.texels_per_meter == 0 || quality.texels_per_meter > 64 {
 		return false
 	}
-	if quality.gutter_texels > 32 || quality.min_chart == 0 || quality.min_chart > 1024 {
+	if quality.gutter_texels != GUTTER_TEXELS ||
+	   quality.min_chart != MIN_CHART_TEXELS ||
+	   quality.bounces != BOUNCES {
 		return false
 	}
-	if quality.lightmap_rays == 0 || quality.probe_rays == 0 || quality.bounces == 0 {
+	if quality.lightmap_rays == 0 || quality.probe_rays == 0 {
 		return false
 	}
 	if quality.probe_texels != PROBE_TEXELS || !finite_f32(quality.probe_spacing) {
+		return false
+	}
+	if quality.probe_spacing != PROBE_SPACING &&
+	   quality.probe_spacing != PROBE_SPACING_FALLBACK {
 		return false
 	}
 	return quality.probe_spacing > 0
@@ -240,6 +251,10 @@ quality_valid :: proc(quality: Quality) -> bool {
 
 @(private)
 layout_valid :: proc(data: Data) -> bool {
+	atlas_width := f32(data.header.atlas_width)
+	atlas_height := f32(data.header.atlas_height)
+	pad_u := f32(GUTTER_TEXELS) / atlas_width
+	pad_v := f32(GUTTER_TEXELS) / atlas_height
 	for slot, slot_index in data.slots {
 		if slot.face_count != 6 ||
 		   u64(slot.first_face) + 6 > u64(len(data.faces)) {
@@ -259,7 +274,14 @@ layout_valid :: proc(data: Data) -> bool {
 			   rect[0] > rect[2] || rect[1] > rect[3] {
 				return false
 			}
+			if (rect[2] - rect[0]) * atlas_width < f32(MIN_CHART_TEXELS - 1) ||
+			   (rect[3] - rect[1]) * atlas_height < f32(MIN_CHART_TEXELS - 1) {
+				return false
+			}
 		}
+	}
+	if !charts_separated(data.faces, pad_u, pad_v) {
+		return false
 	}
 	for state in data.probe_states {
 		if state.valid > 1 {
@@ -267,6 +289,22 @@ layout_valid :: proc(data: Data) -> bool {
 		}
 		for offset in state.offset {
 			if !finite_f16(offset) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// Every chart owns a gutter, so two expanded rects may touch but not overlap.
+@(private)
+charts_separated :: proc(faces: []Face, pad_u, pad_v: f32) -> bool {
+	for index in 0 ..< len(faces) {
+		a := faces[index].uv_rect
+		for other in index + 1 ..< len(faces) {
+			b := faces[other].uv_rect
+			if a[0] - pad_u < b[2] + pad_u && b[0] - pad_u < a[2] + pad_u &&
+			   a[1] - pad_v < b[3] + pad_v && b[1] - pad_v < a[3] + pad_v {
 				return false
 			}
 		}

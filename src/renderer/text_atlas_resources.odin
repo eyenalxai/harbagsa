@@ -18,17 +18,7 @@ init_text_atlas_resources :: proc(r: ^Renderer) -> bool {
 	}
 	o.atlas_applied_weight = BASE_WEIGHT
 
-	sampler_info := vk.SamplerCreateInfo {
-		sType        = .SAMPLER_CREATE_INFO,
-		magFilter    = .LINEAR,
-		minFilter    = .LINEAR,
-		mipmapMode   = .NEAREST,
-		addressModeU = .CLAMP_TO_EDGE,
-		addressModeV = .CLAMP_TO_EDGE,
-		addressModeW = .CLAMP_TO_EDGE,
-		maxLod       = 0,
-	}
-	if !check(vk.CreateSampler(r.device, &sampler_info, nil, &o.atlas_sampler), "vkCreateSampler") {
+	if !create_clamp_sampler(r, &o.atlas_sampler) {
 		return false
 	}
 
