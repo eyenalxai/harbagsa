@@ -112,6 +112,7 @@ State :: struct {
 	notice:        Notice_State   `json:"notice" digest:"-"`,
 	rows:          Rows_State     `json:"rows" digest:"-"`,
 	settle:        Settle_State   `json:"settle" digest:"-"`,
+	bake:          renderer.Bake_Report `json:"bake" digest:"-"`,
 	renderer:      renderer.Renderer_Report `json:"renderer" digest:"-"`,
 	render_digest: string         `json:"render_digest" digest:"-"`,
 	digest:        string         `json:"digest" digest:"-"`,
@@ -157,8 +158,8 @@ state_build :: proc(
 }
 
 // A field names one namespace, so the build runs only that namespace's row.
-// The base fields (frame, camera, settle, renderer) are always set. The digest
-// is the one document that asks for every row.
+// The base fields (frame, camera, settle, bake, renderer) are always set. The
+// digest is the one document that asks for every row.
 state_build_sections :: proc(
 	sim: ^game.Simulation,
 	frame: int,
@@ -175,6 +176,7 @@ state_build_sections :: proc(
 		frame = frame,
 		camera = camera,
 		settle = settle,
+		bake = renderer_state.bake,
 		renderer = renderer_state,
 	}
 	ctx := State_Context {

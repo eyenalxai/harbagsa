@@ -12,7 +12,7 @@ import "src:bake"
 create_bake_placeholder :: proc(r: ^Renderer) -> bool {
 	zero := [4]u8{}
 	faces := [1]bake.Face{}
-	if !create_bake_lightmap(r, 1, 1, .R8G8B8A8_UNORM, zero[:], faces[:]) {
+	if !create_bake_lightmap(r, &r.bake, 1, 1, .R8G8B8A8_UNORM, zero[:], faces[:]) {
 		return false
 	}
 	states := [1]bake.Probe_State{}
@@ -27,6 +27,7 @@ create_bake_placeholder :: proc(r: ^Renderer) -> bool {
 	}
 	return create_bake_probes(
 		r,
+		&r.bake,
 		1,
 		1,
 		.R8G8B8A8_UNORM,

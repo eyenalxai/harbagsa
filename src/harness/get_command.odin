@@ -33,6 +33,7 @@ destroy_get :: proc(command: ^Command, allocator: mem.Allocator) {
 }
 
 session_get :: proc(session: ^Session, command: Get_Command, reply: ^Reply) -> string {
+	session_refresh_renderer(session)
 	sections := state_section_for_field(command.field)
 	if .Menu in sections || .Notice in sections || .Rows in sections {
 		session_refresh_hud(session)
