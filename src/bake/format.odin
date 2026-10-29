@@ -69,13 +69,24 @@ Slot :: struct #packed {
 	face_count: u32,
 }
 
+// The high half is the source and the low half is the arena index or the placed
+// object id, so the two independent id spaces cannot collide.
+slot_key :: proc(source: Box_Source, id: u32) -> u64 {
+	return u64(source) << 32 | u64(id)
+}
+
 Probe_State :: struct #packed {
+	// One means the probe has a usable capture point. `offset` moves that point
+	// out of static geometry; the runtime samples at grid position + offset.
 	valid:   u8,
 	_pad:    u8,
 	offset:  [3]f16,
 }
 
 Stats :: struct #packed {
+	// Wall time is telemetry, not bake identity: the writer stores zero so the
+	// same static input and quality produce byte-identical artifacts. The tool
+	// prints its measured time.
 	bake_ms:       u32,
 	_pad:          u32,
 	lightmap_rays: u64,

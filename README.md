@@ -29,10 +29,13 @@ illumination.
 ```sh
 make build
 make check
+make bake
 ```
 
 `make check` compiles every package, enforces the 400-line file limit, and
-validates the shaders. It is a build check, not a test gate.
+validates the shaders. It is a build check, not a test gate. `make bake` writes
+`build/bake/arena.hbake` for the runtime; the artifact is generated, never
+committed. The renderer reports a missing artifact in `state.renderer.bake`.
 
 ## Run
 
