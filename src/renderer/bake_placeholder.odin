@@ -2,7 +2,6 @@
 package renderer
 
 import "src:bake"
-import vk "vendor:vulkan"
 
 // A descriptor set must name every image and buffer even when no bake is
 // loaded. Nothing samples the placeholders: every object's lightmap and probe
@@ -16,44 +15,22 @@ create_bake_placeholder :: proc(r: ^Renderer) -> bool {
 	if !create_bake_lightmap(r, 1, 1, .R8G8B8A8_UNORM, zero[:], faces[:]) {
 		return false
 	}
-	irradiance, irradiance_ok := upload_texture(r, 1, 1, .R8G8B8A8_UNORM, zero[:])
-	if !irradiance_ok {
-		return false
-	}
-	r.bake.probe_irradiance = irradiance
-	moments, moments_ok := upload_texture(r, 1, 1, .R8G8B8A8_UNORM, zero[:])
-	if !moments_ok {
-		return false
-	}
-	r.bake.probe_moments = moments
-
-	state := [1]bake.Probe_State{}
-	if !create_device_buffer(
+	states := [1]bake.Probe_State{}
+	return create_bake_probes(
 		r,
-		raw_data(state[:]),
-		vk.DeviceSize(size_of(bake.Probe_State)),
-		{.STORAGE_BUFFER},
-		&r.bake.states_buffer,
-		&r.bake.states_memory,
-	) {
-		return false
-	}
-	r.bake.states_bytes = size_of(bake.Probe_State)
-	volume := Bake_Volume_Uniform {
-		spacing       = 1,
-		counts        = {1, 1, 1},
-		probe_texels  = bake.PROBE_TEXELS,
-		atlas_columns = 1,
-		probe_count   = 1,
-		atlas_width   = 1,
-		atlas_height  = 1,
-	}
-	return create_device_buffer(
-		r,
-		&volume,
-		vk.DeviceSize(size_of(Bake_Volume_Uniform)),
-		{.UNIFORM_BUFFER},
-		&r.bake.volume_buffer,
-		&r.bake.volume_memory,
+		1,
+		1,
+		zero[:],
+		zero[:],
+		states[:],
+		{
+			spacing       = 1,
+			counts        = {1, 1, 1},
+			probe_texels  = bake.PROBE_TEXELS,
+			atlas_columns = 1,
+			probe_count   = 1,
+			atlas_width   = 1,
+			atlas_height  = 1,
+		},
 	)
 }

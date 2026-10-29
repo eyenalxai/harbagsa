@@ -265,11 +265,12 @@ active light count, cluster overflow, atlas weight, text counters, and debug
 line counts. `state.renderer.bake` reports the
 bake status (`missing`, `stale`, `current`, or `failed`), the current key, the
 artifact key, format and tool versions, atlas and probe counts, probe spacing,
-artifact and GPU bytes, and the load error. `state.render_digest`
-covers target extent, camera, boxes, box slots, emissive strengths, point
-lights, jitter, atlas weight, clip height, shadow visibility, lightmap, bake
-key, bake status, and view flags. `setup.renderer.shader_digest` covers the
-embedded SPIR-V.
+the invalid-probe count before dilation, the dynamic boxes whose centre is
+outside the probe volume (`probe_missing`), artifact and GPU bytes, and the load
+error. `state.render_digest` covers target extent, camera, boxes, box slots,
+emissive strengths, point lights, jitter, atlas weight, clip height, shadow
+visibility, lightmap, probe, bake key, bake status, and view flags.
+`setup.renderer.shader_digest` covers the embedded SPIR-V.
 
 ## Bake artifact
 
@@ -292,8 +293,10 @@ irradiance is `(radiance/2)^(1/5)`; the shader decodes it with
 `pow(encoded, 2.5)`, averages, squares, and applies the 2x factor, which puts
 probes and the lightmap on one scale. Invalid probes are skipped, never
 black-filled. The bake dilates a probe that the virtual offset could not repair
-from nearby valid probes; `state.renderer.bake.invalid_probes` is the count
-before that dilation. Without the artifact, a run reports
+by copying the nearest valid probe and pointing the offset at that probe's
+sample position, so the copied moments keep their origin.
+`state.renderer.bake.invalid_probes` is the count before that dilation. Without
+the artifact, a run reports
 `state.renderer.bake.status = "missing"` and both indirect terms are zero. A
 stale artifact stays bound and visible while the status reports the key
 mismatch. A static box with no tile in the loaded artifact draws with no
@@ -321,8 +324,9 @@ Supported fields:
 - `clip_height`: discard fragments above a world height for a plan view.
 - `light_shadows`: trace point-light shadow rays. It defaults true. Use false for
   paired captures and performance runs.
-- `lightmap`: add the baked static indirect term. It defaults true. Use false for
-  paired captures and direct-light performance runs.
+- `lightmap`: add the baked static lightmap term. It defaults true.
+- `probe`: add the baked probe term. It defaults true. Set both `lightmap` and
+  `probe` to false for a direct-light capture or performance run.
 - `clear`: restore every default. Set one field to `null` to reset only that field.
 
 A scenario declares `requires.renderer_debug`, or the run uses
