@@ -13,10 +13,10 @@ data contract is [ADR 0044](../adr/0044-bake-data-contract.md); the work is
 - Measured 2026-10-29.
 
 Every command runs offscreen with no window, compositor, or display pacing.
-Capture extents are named per table. The perf windows run 120 measured frames
-after 30 warmup frames and a 1 s prime, except the ramp window. GPU values
-belong to the last completed frame, and the GPU total is the sum of the TLAS,
-cluster, depth, scene, TAA, and overlay passes.
+Capture extents are named per table. The perf command runs 120 measured frames
+per window after 30 warmup frames and one 2 s prime, and discards its first
+round. GPU values belong to the last completed frame, and the GPU total is the
+sum of the TLAS, cluster, depth, scene, TAA, and overlay passes.
 
 ## Quality captures
 
@@ -132,9 +132,10 @@ bake reads the atlas index and re-rolls the moved chart.
 ## Performance
 
 `scenarios/perf-mixed.json` runs at 1920x1080 with 96 synthetic point lights and
-shadows on. Direct and mixed windows alternate, and each single-term window sits
-between two direct windows, so a clock drift cannot pose as an indirect term.
-The ramp window and `direct-0` absorb the clock ramp and are not quoted.
+shadows on. One `perf` command measures four variants over three rounds:
+`direct` is the baseline, and `lightmap`, `probe`, and `mixed` each sit between
+two direct windows. The first round is discarded, so the two kept rounds bracket
+every variant with a direct window on both sides.
 
 ```sh
 ./bin/harbagsa-agent run scenarios/perf-mixed.json --out runs/perf-mixed-1
@@ -142,21 +143,29 @@ The ramp window and `direct-0` absorb the clock ramp and are not quoted.
 ./bin/harbagsa-agent run scenarios/perf-mixed.json --out runs/perf-mixed-3
 ```
 
-| Window | Run 1 | Run 2 | Run 3 | Delta, median (max) | Budget | Result |
-| -- | --: | --: | --: | --: | --: | -- |
-| `direct-1` | 1.4769 | 1.5189 | 1.5102 | — | — | ramp tail, not quoted |
-| `direct-2` to `direct-5` | 1.470–1.480 | 1.472–1.486 | 1.477–1.499 | — | — | baseline |
-| `lightmap-1` | 1.5033 | 1.5088 | 1.5105 | +0.024 (0.031) | 0.25 | pass |
-| `probe-1` | 1.4990 | 1.4696 | 1.4793 | −0.001 (0.023) | 0.60 | pass |
-| `mixed-1` | 1.5201 | 1.5087 | 1.5108 | +0.037 (0.050) | 1.00 | pass |
-| `mixed-2` | 1.5024 | 1.5514 | 1.5111 | +0.023 (0.076) | 1.00 | pass |
+| Variant | Run 1 | Run 2 | Run 3 | Interval delta, run 1 / 2 / 3 | GPU delta, run 1 / 2 / 3 | Budget |
+| -- | --: | --: | --: | --: | --: | --: |
+| `direct` | 1.8290 | 1.8309 | 1.8548 | — | — | — |
+| `lightmap` | 1.8703 | 1.8824 | 1.9455 | +0.036 (0.003) / +0.026 (0.021) / +0.025 (0.009) | +0.029 (0.003) / +0.025 (0.004) / +0.035 (0.010) | 0.25 |
+| `probe` | 1.8097 | 1.8177 | 1.8413 | −0.014 (0.013) / +0.001 (0.003) / +0.005 (0.004) | −0.003 (0.007) / −0.006 (0.000) / +0.000 (0.003) | 0.60 |
+| `mixed` | 1.8562 | 1.8550 | 1.9071 | +0.021 (0.024) / +0.033 (0.002) / +0.039 (0.012) | +0.028 (0.003) / +0.029 (0.003) / +0.033 (0.010) | 1.00 |
 
-Each delta is the window against the direct window that follows it, so a slow
-drift cancels. `mixed-1` follows the ramp and is the noisiest window; `mixed-2`,
-taken last, matches the single-term sum. The four quoted direct windows in one
-run span 0.010–0.022 ms, which is the resolution of this method. The full frame
-at 96 lights and 1080p is 1.50–1.55 ms `p50` with `p95` 1.57–1.68 ms against the
-8.0 ms budget, over five times under. The frame interval `p50` is 1.83–1.89 ms.
+The numbers are milliseconds. The variant column is the interval `p50`; each
+paired delta is the mean of the per-round difference between the variant window
+and the mean of the direct windows on either side, with the spread of those
+rounds in brackets. The report also carries the minimum and maximum of each
+delta. The GPU-total delta is the steadier instrument: `lightmap` costs
+0.025–0.035 ms, `mixed` 0.028–0.033 ms, and `probe` stays within ±0.006 ms. The
+interval delta is noisier because the CPU submits through one queue: `probe`
+reads −0.014 to +0.005 ms there while its GPU delta is flat. Every per-round
+spread is 0.024 ms or less. The full frame at 96 lights and 1080p is 1.50–1.52 ms
+GPU total `p50` with `p95` 1.59–1.77 ms, and 1.83–1.85 ms frame interval `p50`
+with `p95` 1.98–2.12 ms, against the 8.0 ms budget.
+
+The report records `timestamp_period` 10 ns and the 1/5/15 minute load average
+at the start and end of the command. This machine's `nvidia-smi` exits 9 with no
+driver loaded and `rocm-smi` is absent, so the GPU clock is `known: false` and
+the run warns. An unknown clock is stated, never filled with a guess.
 `state.bake.gpu_bytes` is 14,608,096 bytes (13.9 MiB) against the 32 MiB budget,
 and the artifact is 14,608,480 bytes against 32 MiB.
 

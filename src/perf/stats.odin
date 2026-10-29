@@ -33,45 +33,62 @@ Stats :: struct {
 	spikes:   int,
 }
 
+SCRATCH_FLOATS_PER_SAMPLE :: 3 + PASS_COUNT + 1
+
 stats_from_ring :: proc(ring: ^Ring) -> Stats {
 	return stats_from_samples(ring.samples[:ring.count])
 }
 
 stats_from_samples :: proc(samples: []Sample) -> Stats {
 	result: Stats
-	count := min(len(samples), RING_CAPACITY)
+	count := len(samples)
 	if count == 0 {
 		return result
 	}
 	result.count = count
 
-	intervals: [RING_CAPACITY]f64
-	cpus: [RING_CAPACITY]f64
-	values: [RING_CAPACITY]f64
-	for sample, index in samples[:count] {
+	// The live ring fits the stack buffer. A harness window can pool past the
+	// ring, so a longer input borrows the heap instead of being clipped.
+	stack: [RING_CAPACITY * SCRATCH_FLOATS_PER_SAMPLE]f64
+	scratch: []f64
+	heap_scratch: []f64
+	defer if heap_scratch != nil {
+		delete(heap_scratch, context.allocator)
+	}
+	if count <= RING_CAPACITY {
+		scratch = stack[:count * SCRATCH_FLOATS_PER_SAMPLE]
+	} else {
+		scratch = make([]f64, count * SCRATCH_FLOATS_PER_SAMPLE, context.allocator)
+		heap_scratch = scratch
+	}
+	intervals := scratch[0:count]
+	cpus := scratch[count:2 * count]
+	values := scratch[2 * count:3 * count]
+	gpu_values := scratch[3 * count:3 * count + PASS_COUNT * count]
+	gpu_totals := scratch[3 * count + PASS_COUNT * count:]
+
+	for sample, index in samples {
 		intervals[index] = milliseconds(sample.interval)
 		cpus[index] = milliseconds(cpu_total(sample))
 	}
-	result.interval = distribution(intervals[:count])
-	result.cpu = distribution(cpus[:count])
+	result.interval = distribution(intervals)
+	result.cpu = distribution(cpus)
 
 	for i in 0 ..< PHASE_COUNT {
 		phase := Phase(i)
-		for sample, index in samples[:count] {
+		for sample, index in samples {
 			values[index] = milliseconds(sample.phases[phase])
 		}
-		result.phases[phase] = distribution(values[:count])
+		result.phases[phase] = distribution(values)
 	}
 
-	gpu_values: [PASS_COUNT][RING_CAPACITY]f64
-	gpu_totals: [RING_CAPACITY]f64
 	gpu_count := 0
-	for sample in samples[:count] {
+	for sample in samples {
 		if !sample.gpu.available {
 			continue
 		}
 		for i in 0 ..< PASS_COUNT {
-			gpu_values[i][gpu_count] = milliseconds(sample.gpu.passes[Pass(i)])
+			gpu_values[i * count + gpu_count] = milliseconds(sample.gpu.passes[Pass(i)])
 		}
 		gpu_totals[gpu_count] = milliseconds(sample.gpu.total)
 		gpu_count += 1
@@ -79,7 +96,7 @@ stats_from_samples :: proc(samples: []Sample) -> Stats {
 	if gpu_count > 0 {
 		result.gpu.available = true
 		for i in 0 ..< PASS_COUNT {
-			result.gpu.passes[Pass(i)] = distribution(gpu_values[i][:gpu_count])
+			result.gpu.passes[Pass(i)] = distribution(gpu_values[i * count:i * count + gpu_count])
 		}
 		result.gpu.total = distribution(gpu_totals[:gpu_count])
 

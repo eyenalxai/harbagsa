@@ -246,8 +246,9 @@ capture shapes, and state paths.
 
 `scenarios/perf.json` measures the default view. `scenarios/perf-arena.json`
 measures the arena from above. `scenarios/perf-mixed.json` measures 96 synthetic
-lights at 1080p with the indirect terms switched in and out. `tools/ab.sh` and
-`harbagsa-agent ab` compare two builds.
+lights at 1080p, where one `perf` command brackets the direct, lightmap, probe,
+and mixed variants over three rounds. `tools/ab.sh` and `harbagsa-agent ab`
+compare two builds.
 
 ### Visual evidence
 

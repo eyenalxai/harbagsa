@@ -121,9 +121,7 @@ perf_run_destroy :: proc(run: ^Perf_Run, allocator: mem.Allocator) {
 	}
 	delete(run.traces)
 	for &report in run.reports {
-		if report.name != "" {
-			delete(report.name, allocator)
-		}
+		perf_report_destroy(&report, allocator)
 	}
 	delete(run.reports)
 	run^ = {}
