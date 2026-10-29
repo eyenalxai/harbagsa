@@ -4,6 +4,7 @@ package frame
 import "core:math"
 import "core:mem"
 
+import "src:bake"
 import "src:game"
 import "src:geometry"
 import "src:renderer"
@@ -22,6 +23,7 @@ Options :: struct {
 Scratch :: struct {
 	allocator:   mem.Allocator,
 	boxes:       [dynamic]geometry.Box,
+	box_keys:    [dynamic]u64,
 	lights:      [dynamic]renderer.Light,
 	bake:        game.Bake_Input,
 	debug_lines: game.Debug_Lines,
@@ -30,6 +32,9 @@ Scratch :: struct {
 scratch_destroy :: proc(scratch: ^Scratch) {
 	if scratch.boxes != nil {
 		delete(scratch.boxes)
+	}
+	if scratch.box_keys != nil {
+		delete(scratch.box_keys)
 	}
 	if scratch.lights != nil {
 		delete(scratch.lights)
@@ -44,6 +49,9 @@ scratch_prepare :: proc(scratch: ^Scratch) {
 	}
 	if scratch.boxes == nil {
 		scratch.boxes = make([dynamic]geometry.Box, 0, 0, scratch.allocator)
+	}
+	if scratch.box_keys == nil {
+		scratch.box_keys = make([dynamic]u64, 0, 0, scratch.allocator)
 	}
 	if scratch.lights == nil {
 		scratch.lights = make([dynamic]renderer.Light, 0, 0, scratch.allocator)
@@ -84,15 +92,28 @@ build :: proc(
 
 	scratch_prepare(scratch)
 	clear(&scratch.boxes)
-	for box in game.arena_static_boxes() {
+	clear(&scratch.box_keys)
+	for box, index in game.arena_static_boxes() {
 		append(&scratch.boxes, box)
+		append(&scratch.box_keys, bake.slot_key(.Arena, u32(index)))
 	}
 	for object in game.simulation_objects(sim) {
 		box := game.simulation_object_visual_box(sim, object.id)
 		append(&scratch.boxes, box)
+		key := bake.NO_BOX_KEY
+		if object.body_mode == .Static {
+			key = bake.slot_key(.Placed, u32(object.id))
+		}
+		append(&scratch.box_keys, key)
 	}
+	spider_start := len(scratch.box_keys)
 	spider_boxes(&scratch.boxes, snapshot, options.alpha)
+	resize(&scratch.box_keys, len(scratch.boxes))
+	for index in spider_start ..< len(scratch.box_keys) {
+		scratch.box_keys[index] = bake.NO_BOX_KEY
+	}
 	scene.boxes = scratch.boxes[:]
+	scene.box_keys = scratch.box_keys[:]
 
 	active := game.simulation_collect_lights(sim)
 	clear(&scratch.lights)

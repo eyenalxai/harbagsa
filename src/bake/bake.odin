@@ -85,6 +85,10 @@ Box_Source :: enum u8 {
 	Placed,
 }
 
+// Arena index 0 has the real slot key 0, so the renderer needs a key outside
+// the source/id space to mean "this box has no static bake identity".
+NO_BOX_KEY :: u64(0xFFFFFFFFFFFFFFFF)
+
 // The bake input is canonical: arena boxes in array order, then placed static
 // boxes by object id. `id` is the arena index or the placed object id.
 Box_Entry :: struct {

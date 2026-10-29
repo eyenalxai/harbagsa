@@ -29,6 +29,9 @@ Object_Data :: struct {
 	model:      Mat4,
 	prev_model: Mat4,
 	color:      [4]f32,
+	// std430 uvec4 mirror. Only .x is read: the lightmap slot, or
+	// INVALID_LIGHTMAP_SLOT. The remaining lanes keep the 16-byte alignment.
+	lightmap:   [4]u32,
 }
 
 Object_Index :: struct {
@@ -45,7 +48,7 @@ TAA_Params :: struct {
 }
 
 #assert(size_of(Camera_Uniform) == 240)
-#assert(size_of(Object_Data) == 144)
+#assert(size_of(Object_Data) == 160)
 #assert(size_of(Object_Index) == 4)
 #assert(size_of(TAA_Params) == 24)
 
@@ -55,9 +58,11 @@ ACCELERATION_BINDING :: 2
 LIGHT_BINDING :: 3
 CLUSTER_COUNTS_BINDING :: 4
 CLUSTER_INDICES_BINDING :: 5
+LIGHTMAP_BINDING :: 6
+LIGHTMAP_FACES_BINDING :: 7
 
 create_scene_resources :: proc(r: ^Renderer) -> bool {
-	bindings := [6]vk.DescriptorSetLayoutBinding {
+	bindings := [8]vk.DescriptorSetLayoutBinding {
 		{
 			binding = CAMERA_BINDING,
 			descriptorType = .UNIFORM_BUFFER,
@@ -94,6 +99,18 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 			descriptorCount = 1,
 			stageFlags = {.FRAGMENT, .COMPUTE},
 		},
+		{
+			binding = LIGHTMAP_BINDING,
+			descriptorType = .COMBINED_IMAGE_SAMPLER,
+			descriptorCount = 1,
+			stageFlags = {.FRAGMENT},
+		},
+		{
+			binding = LIGHTMAP_FACES_BINDING,
+			descriptorType = .STORAGE_BUFFER,
+			descriptorCount = 1,
+			stageFlags = {.FRAGMENT},
+		},
 	}
 	layout_info := vk.DescriptorSetLayoutCreateInfo {
 		sType = .DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
@@ -107,9 +124,10 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 		return false
 	}
 
-	pool_sizes := [3]vk.DescriptorPoolSize {
+	pool_sizes := [4]vk.DescriptorPoolSize {
 		{type = .UNIFORM_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT},
-		{type = .STORAGE_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT * 4},
+		{type = .STORAGE_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT * 5},
+		{type = .COMBINED_IMAGE_SAMPLER, descriptorCount = MAX_FRAMES_IN_FLIGHT},
 		{type = .ACCELERATION_STRUCTURE_KHR, descriptorCount = MAX_FRAMES_IN_FLIGHT},
 	}
 	pool_info := vk.DescriptorPoolCreateInfo {
