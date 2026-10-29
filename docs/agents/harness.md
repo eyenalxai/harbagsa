@@ -395,9 +395,10 @@ A `perf` command measures frames and can write one trace. `frames` defaults to
 120, `warmup` to 60, and `prime` to 2 seconds. `prime: 0` disables the time loop.
 Offscreen measures throughput. `--present` measures pacing.
 
-GPU passes are TLAS, cluster, probe, depth, scene, TAA, and overlay. The report
+GPU passes are TLAS, cluster, depth, scene, TAA, and overlay. The report
 carries `p50`, `p95`, and `mean` for each CPU phase and GPU pass. Perf data is
-wall-clock data and is not deterministic.
+wall-clock data and is not deterministic. The baked indirect is not a pass; its
+cost is inside the scene pass.
 
 Use `scenarios/perf.json` for the default view and `scenarios/perf-arena.json`
 for the arena from above. `harbagsa-agent ab` compares two builds. `ab --visual`

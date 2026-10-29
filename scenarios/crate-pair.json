@@ -1,0 +1,14 @@
+{
+  "requires": {"renderer_debug": true},
+  "size": "640x360",
+  "parameters": {"crate_x": -3.0},
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "renderer_debug", "taa": false},
+    {"cmd": "debug_mode", "active": true},
+    {"cmd": "camera", "position": [0, 1.5, 10.5], "yaw_deg": 0, "pitch_deg": -14},
+    {"cmd": "editor", "select_object": 1, "move": ["${crate_x}", 0.5, 8.0]},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "crate", "format": "stats", "png": true}
+  ]
+}

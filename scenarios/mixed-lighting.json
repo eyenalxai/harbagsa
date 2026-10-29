@@ -1,0 +1,50 @@
+{
+  "requires": {"renderer_debug": true},
+  "size": "640x360",
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "renderer_debug", "taa": false},
+    {"cmd": "camera", "position": [0, 3.0, 10.0], "yaw_deg": 0, "pitch_deg": -18},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "bounce-on", "format": "stats", "png": true},
+    {"cmd": "renderer_debug", "lightmap": false},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "bounce-off", "format": "stats", "png": true},
+    {"cmd": "renderer_debug", "lightmap": true},
+
+    {"cmd": "camera", "position": [0, 1.5, 10.5], "yaw_deg": 0, "pitch_deg": -14},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "crate-on", "format": "stats", "png": true},
+    {"cmd": "renderer_debug", "probes": false},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "crate-off", "format": "stats", "png": true},
+    {"cmd": "renderer_debug", "probes": true},
+
+    {"cmd": "debug_mode", "active": true},
+    {"cmd": "editor", "select_object": 1, "move": [-3.0, 0.5, 8.0]},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "crate-left", "format": "stats", "png": true},
+    {"cmd": "editor", "select_object": 1, "move": [3.0, 0.5, 8.0]},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "crate-right", "format": "stats", "png": true},
+    {"cmd": "debug_mode", "active": false},
+
+    {"cmd": "place", "name": "wall-crate", "prefab": "Crate", "position": [19.0, 0.5, 0.0], "body": "dynamic"},
+    {"cmd": "camera", "position": [16.5, 1.4, 0.0], "yaw_deg": -90, "pitch_deg": -8},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "wall-on", "format": "stats", "png": true},
+    {"cmd": "renderer_debug", "probes": false},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "wall-off", "format": "stats", "png": true},
+    {"cmd": "renderer_debug", "probes": true},
+
+    {"cmd": "place", "name": "wall-lamp", "prefab": "Lamp", "position": [18.0, 2.0, 0.0], "body": "static", "light": {"kind": "static", "color": "warm", "intensity": 3.0, "range": 12}},
+    {"cmd": "bake", "action": "publish", "threads": 16},
+    {"cmd": "camera", "position": [15.5, 1.2, 0.0], "yaw_deg": -90, "pitch_deg": -5},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "seam-on", "format": "stats", "png": true},
+    {"cmd": "renderer_debug", "lightmap": false},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "seam-off", "format": "stats", "png": true}
+  ]
+}
