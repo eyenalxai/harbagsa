@@ -125,6 +125,15 @@ execute_bake :: proc(session: ^Session, command: Command, reply: ^Reply) -> stri
 }
 
 @(private)
+execute_pick :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
+	pick_error := session_pick(session, command.pick)
+	if pick_error == "" && len(session.picks) > 0 {
+		reply.pick = &session.picks[len(session.picks) - 1]
+	}
+	return pick_error
+}
+
+@(private)
 execute_get :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	return session_get(session, command.get, reply)
 }

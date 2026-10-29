@@ -252,6 +252,9 @@ run_publish :: proc(state: ^Run_State, results: []Stage_Result) -> Stage_Result 
 		digest      = state.state.digest,
 		error       = state.backend_error,
 	}
+	if len(state.session.picks) > 0 {
+		report.picks = state.session.picks[:]
+	}
 	if len(state.session.perf.reports) > 0 {
 		report.perf = state.session.perf.reports[:]
 	}

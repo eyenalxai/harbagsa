@@ -458,6 +458,10 @@ _Avoid_: Light pass, debug pass
 The renderer-owned color image a term view resolves into before the readback copy. It is allocated on the first term-view capture and reused until the target extent changes; the game binary that never captures owns none.
 _Avoid_: View buffer, view target
 
+**Pick**:
+One pixel resolved to the surface under it: the object identity, distance, world position and normal, face, lightmap rect and texel, probe cell, and the five terms. The renderer traces the pixel's camera ray against the frame TLAS in a one-pixel compute pass that reads the shared term include; the harness maps the instance custom index to the scene object. `pick` is a command error while the menu is open and when `at` is outside the capture extent.
+_Avoid_: Pixel probe, raycast (that word belongs to the bake)
+
 **Capture format**:
 The output a capture writes: PNG for color, `float` for RGBA f32 values, `raw` for the stored texel bytes, `stats` for the numeric summary, or `profile` for a line or mean span.
 _Avoid_: Export mode

@@ -28,6 +28,7 @@ Session :: struct {
 	output_dir: string,
 
 	capture:  Capture_Run,
+	picks:    [dynamic]Pick_Result,
 	recorder: Recorder,
 	perf:     Perf_Run,
 	settle:   Settle,
@@ -64,6 +65,7 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 	}
 	session.sim.settings.display = display.fallback_list()
 	session.capture = capture_run_create(allocator)
+	session.picks = make([dynamic]Pick_Result, 0, 8, allocator)
 	session.recorder = recorder_create(allocator)
 	session.perf = perf_run_create(allocator)
 	session.failures = make([dynamic]string, 0, 8, allocator)
@@ -85,6 +87,10 @@ session_destroy :: proc(session: ^Session) {
 	}
 	session_results_destroy(session)
 	capture_run_destroy(&session.capture, session.allocator)
+	for &pick in session.picks {
+		pick_result_destroy(&pick, session.allocator)
+	}
+	delete(session.picks)
 	recorder_destroy(&session.recorder, session.allocator)
 	perf_run_destroy(&session.perf, session.allocator)
 	render_state_destroy(&session.render, session.allocator)

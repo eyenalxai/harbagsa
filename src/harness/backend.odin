@@ -26,6 +26,11 @@ Backend :: struct {
 		session: ^Session,
 		requests: []Capture_Request,
 	) -> ([]Capture_Result, string),
+	pick:     proc(
+		ctx: rawptr,
+		session: ^Session,
+		at: [2]i32,
+	) -> (renderer.Pick_Hit, renderer.Pick_Failure, string),
 	gpu_times: proc(ctx: rawptr) -> perf.Gpu_Times,
 	snapshot:  proc(ctx: rawptr) -> Backend_Snapshot,
 	setup:     proc(ctx: rawptr) -> renderer.Setup_Report,
@@ -114,6 +119,7 @@ backend_create :: proc(
 		ready = true,
 		ctx = data,
 		render = backend_render,
+		pick = backend_pick,
 		gpu_times = backend_gpu_times,
 		snapshot = backend_snapshot,
 		setup = backend_setup,
@@ -182,31 +188,9 @@ backend_gpu_times :: proc(ctx: rawptr) -> perf.Gpu_Times {
 	return renderer.gpu_times(&data.renderer)
 }
 
+// The frame input a capture, a settle, and a pick all draw.
 @(private)
-backend_render :: proc(
-	ctx: rawptr,
-	session: ^Session,
-	requests: []Capture_Request,
-) -> (
-	[]Capture_Result,
-	string,
-) {
-	data := cast(^Backend_Data)ctx
-	if data.present {
-		events := platform.poll_events(&data.window)
-		if events.quit {
-			session.quit = true
-			return nil, ""
-		}
-		if events.resized {
-			renderer.notify_resize(&data.renderer)
-		}
-	}
-
-	alpha := session.alpha
-	if len(requests) > 0 {
-		alpha = requests[0].alpha
-	}
+backend_scene :: proc(data: ^Backend_Data, session: ^Session, alpha: f32) -> renderer.Render_Input {
 	static := game.simulation_bake_input(&session.sim, &session.scratch.bake, session.allocator)
 	renderer.refresh_bake(&data.renderer, static)
 	options := frame.Options {
@@ -236,6 +220,66 @@ backend_render :: proc(
 		static,
 	)
 	perf.mark(&session.perf.state, .Build)
+	data.renderer.recorder = &session.perf.state.recorder
+	return scene
+}
+
+// The live window's events still belong to whichever frame runs next, so a
+// pick drains them before it draws. Offscreen sessions own no window.
+@(private)
+backend_poll :: proc(data: ^Backend_Data, session: ^Session) -> bool {
+	if !data.present {
+		return true
+	}
+	events := platform.poll_events(&data.window)
+	if events.quit {
+		session.quit = true
+		return false
+	}
+	if events.resized {
+		renderer.notify_resize(&data.renderer)
+	}
+	return true
+}
+
+@(private)
+backend_pick :: proc(
+	ctx: rawptr,
+	session: ^Session,
+	at: [2]i32,
+) -> (
+	renderer.Pick_Hit,
+	renderer.Pick_Failure,
+	string,
+) {
+	data := cast(^Backend_Data)ctx
+	if !backend_poll(data, session) {
+		return {}, .Command, format_error("%s", "session is closed")
+	}
+	scene := backend_scene(data, session, session.alpha)
+	scene.pick_at = at
+	return renderer.pick(&data.renderer, scene)
+}
+
+@(private)
+backend_render :: proc(
+	ctx: rawptr,
+	session: ^Session,
+	requests: []Capture_Request,
+) -> (
+	[]Capture_Result,
+	string,
+) {
+	data := cast(^Backend_Data)ctx
+	if !backend_poll(data, session) {
+		return nil, ""
+	}
+
+	alpha := session.alpha
+	if len(requests) > 0 {
+		alpha = requests[0].alpha
+	}
+	scene := backend_scene(data, session, alpha)
 	if len(requests) > 0 {
 		if !renderer.text_atlas_sync(&data.renderer, session.sim.settings.type_weight) {
 			return nil, format_error("text atlas sync failed")
@@ -244,7 +288,6 @@ backend_render :: proc(
 			return nil, format_error("text atlas did not settle")
 		}
 	}
-	data.renderer.recorder = &session.perf.state.recorder
 	targets: renderer.Capture_Targets
 	views: renderer.Capture_Views
 	for request in requests {

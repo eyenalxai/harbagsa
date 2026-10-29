@@ -47,7 +47,14 @@ record_scene :: proc(
 	taa_note_camera(r, input.camera)
 	input.width = extent.width
 	input.height = extent.height
-	input.jitter = taa_frame_jitter(r, extent)
+	// A pick resolves a pixel, so it uses the unjittered camera and leaves the
+	// jitter sequence for the settle frame that follows it.
+	is_pick := input.pick_at != nil
+	if is_pick {
+		r.taa.applied_jitter_index = 0
+	} else {
+		input.jitter = taa_frame_jitter(r, extent)
+	}
 	input.atlas_weight = text_atlas_applied_weight(r)
 	debug := renderer_debug(r)
 	input.clip_height = debug.clip_height
@@ -59,8 +66,12 @@ record_scene :: proc(
 	update_bake(r, bake_key(r, input.bake_static))
 	input.bake_key = r.bake.current_key
 	input.bake_status = r.bake.status
-	r.render_digest = render_digest(input)
-	r.has_render_digest = true
+	// A pick is a sample of the last frame, not a new frame input, so it does
+	// not replace the digest a capture reports.
+	if !is_pick {
+		r.render_digest = render_digest(input)
+		r.has_render_digest = true
+	}
 	if !update_camera(r, input) {
 		return false
 	}
@@ -81,6 +92,7 @@ record_scene :: proc(
 	for kind in perf.PASS_ORDER {
 		pass: Pass
 		build_pass(r, &pass, kind, image_index, input.boxes)
+		pass.force_tlas = is_pick
 		record_pass(r, command_buffer, &pass)
 		write_timing(r, command_buffer, kind)
 	}
@@ -95,6 +107,11 @@ record_scene :: proc(
 	// that asks for scene_color and a view keeps the beauty scene color.
 	for view in capture.views {
 		if !record_scene_view(r, command_buffer, capture, view, image_index, input.boxes) {
+			return false
+		}
+	}
+	if at, has_pick := input.pick_at.?; has_pick {
+		if !record_pick(r, command_buffer, at) {
 			return false
 		}
 	}

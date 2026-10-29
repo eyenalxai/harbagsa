@@ -34,4 +34,8 @@ Render_Input :: struct {
 	bake_static:  bake.Static,
 	bake_key:     u64,
 	bake_status:  Bake_Status,
+	// A pick frame draws the unjittered camera, forces the TLAS build, and
+	// records one compute dispatch into the result buffer. It carries no
+	// capture and replaces no render digest.
+	pick_at: Maybe([2]i32),
 }

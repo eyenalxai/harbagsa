@@ -60,6 +60,7 @@ COMMANDS := [?]Command_Row {
 	{.Place, "place", "Create one named object from a prefab without entering debug mode.", parse_place, execute_place, .Raw, nil, .None, Place_Command},
 	{.Remove, "remove", "Delete one object by id or name without entering debug mode.", parse_remove, execute_remove, .Raw, nil, .None, Remove_Command},
 	{.Bake, "bake", "Build and publish a bake from the current static input.", parse_bake, execute_bake, .Raw, destroy_bake_command, .Required, Bake_Command},
+	{.Pick, "pick", "Resolve one pixel to its object, surface, indirect data, and terms.", parse_pick, execute_pick, .Raw, nil, .Required, Pick_Command},
 	{.Get, "get", "Resolve one state or capture field and return its JSON scalar.", parse_get, execute_get, .Raw, destroy_get, .None, Get_Command},
 	{.Quit, "quit", "Close the session.", parse_no_fields, execute_quit, .Skip, nil, .None, No_Fields_Command},
 }

@@ -41,7 +41,9 @@ build_tlas_pass :: proc(r: ^Renderer, pass: ^Pass) {
 
 @(private)
 draw_tlas :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
-	if !renderer_debug(r).light_shadows {
+	// A pick traces the primary ray against this TLAS, so its frame builds it
+	// even when the shadow rays are off.
+	if !renderer_debug(r).light_shadows && !pass.force_tlas {
 		return
 	}
 	record_acceleration(r, command_buffer, pass.boxes)

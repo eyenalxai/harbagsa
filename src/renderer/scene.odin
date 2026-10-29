@@ -30,6 +30,8 @@ Scene :: struct {
 	view_pipeline:         vk.Pipeline,
 	depth_layout:          vk.PipelineLayout,
 	depth_pipeline:        vk.Pipeline,
+	pick_layout:           vk.PipelineLayout,
+	pick_pipeline:         vk.Pipeline,
 	descriptor_set_layout: vk.DescriptorSetLayout,
 	descriptor_pool:       vk.DescriptorPool,
 	descriptor_sets:       [MAX_FRAMES_IN_FLIGHT]vk.DescriptorSet,
@@ -45,6 +47,10 @@ Scene :: struct {
 	light_buffers: [MAX_FRAMES_IN_FLIGHT]vk.Buffer,
 	light_memory:  [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
 	light_mapped:  [MAX_FRAMES_IN_FLIGHT]rawptr,
+
+	pick_buffers: [MAX_FRAMES_IN_FLIGHT]vk.Buffer,
+	pick_memory:  [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
+	pick_mapped:  [MAX_FRAMES_IN_FLIGHT]rawptr,
 
 	cluster_counts_buffers: [MAX_FRAMES_IN_FLIGHT]vk.Buffer,
 	cluster_counts_memory:  [MAX_FRAMES_IN_FLIGHT]vk.DeviceMemory,
@@ -80,6 +86,9 @@ init_scene :: proc(r: ^Renderer, bake_path: string) -> Error {
 	if !create_cluster_pipeline(r) {
 		return .Create_Pipeline
 	}
+	if !create_pick_pipeline(r) {
+		return .Create_Pipeline
+	}
 	return .None
 }
 
@@ -90,6 +99,7 @@ destroy_scene :: proc(r: ^Renderer) {
 	}
 
 	destroy_acceleration(r)
+	destroy_pipeline_pair(r, &r.scene.pick_pipeline, &r.scene.pick_layout)
 	destroy_pipeline_pair(r, &r.scene.depth_pipeline, &r.scene.depth_layout)
 	destroy_pipeline_pair(r, &r.scene.view_pipeline, &r.scene.view_layout)
 	destroy_pipeline_pair(r, &r.scene.pipeline, &r.scene.pipeline_layout)

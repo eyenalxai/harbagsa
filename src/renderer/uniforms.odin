@@ -68,9 +68,10 @@ PROBE_IRRADIANCE_BINDING :: 8
 PROBE_MOMENTS_BINDING :: 9
 PROBE_STATES_BINDING :: 10
 PROBE_VOLUME_BINDING :: 11
+PICK_RESULT_BINDING :: 12
 
 create_scene_resources :: proc(r: ^Renderer) -> bool {
-	bindings := [12]vk.DescriptorSetLayoutBinding {
+	bindings := [13]vk.DescriptorSetLayoutBinding {
 		{
 			binding = CAMERA_BINDING,
 			descriptorType = .UNIFORM_BUFFER,
@@ -81,13 +82,13 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 			binding = OBJECT_BINDING,
 			descriptorType = .STORAGE_BUFFER,
 			descriptorCount = 1,
-			stageFlags = {.VERTEX, .FRAGMENT},
+			stageFlags = {.VERTEX, .FRAGMENT, .COMPUTE},
 		},
 		{
 			binding = ACCELERATION_BINDING,
 			descriptorType = .ACCELERATION_STRUCTURE_KHR,
 			descriptorCount = 1,
-			stageFlags = {.FRAGMENT},
+			stageFlags = {.FRAGMENT, .COMPUTE},
 		},
 		{
 			binding = LIGHT_BINDING,
@@ -111,37 +112,43 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 			binding = LIGHTMAP_BINDING,
 			descriptorType = .COMBINED_IMAGE_SAMPLER,
 			descriptorCount = 1,
-			stageFlags = {.FRAGMENT},
+			stageFlags = {.FRAGMENT, .COMPUTE},
 		},
 		{
 			binding = LIGHTMAP_FACES_BINDING,
 			descriptorType = .STORAGE_BUFFER,
 			descriptorCount = 1,
-			stageFlags = {.FRAGMENT},
+			stageFlags = {.FRAGMENT, .COMPUTE},
 		},
 		{
 			binding = PROBE_IRRADIANCE_BINDING,
 			descriptorType = .COMBINED_IMAGE_SAMPLER,
 			descriptorCount = 1,
-			stageFlags = {.FRAGMENT},
+			stageFlags = {.FRAGMENT, .COMPUTE},
 		},
 		{
 			binding = PROBE_MOMENTS_BINDING,
 			descriptorType = .COMBINED_IMAGE_SAMPLER,
 			descriptorCount = 1,
-			stageFlags = {.FRAGMENT},
+			stageFlags = {.FRAGMENT, .COMPUTE},
 		},
 		{
 			binding = PROBE_STATES_BINDING,
 			descriptorType = .STORAGE_BUFFER,
 			descriptorCount = 1,
-			stageFlags = {.FRAGMENT},
+			stageFlags = {.FRAGMENT, .COMPUTE},
 		},
 		{
 			binding = PROBE_VOLUME_BINDING,
 			descriptorType = .UNIFORM_BUFFER,
 			descriptorCount = 1,
-			stageFlags = {.FRAGMENT},
+			stageFlags = {.FRAGMENT, .COMPUTE},
+		},
+		{
+			binding = PICK_RESULT_BINDING,
+			descriptorType = .STORAGE_BUFFER,
+			descriptorCount = 1,
+			stageFlags = {.COMPUTE},
 		},
 	}
 	layout_info := vk.DescriptorSetLayoutCreateInfo {
@@ -158,7 +165,7 @@ create_scene_resources :: proc(r: ^Renderer) -> bool {
 
 	pool_sizes := [4]vk.DescriptorPoolSize {
 		{type = .UNIFORM_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT * 2},
-		{type = .STORAGE_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT * 6},
+		{type = .STORAGE_BUFFER, descriptorCount = MAX_FRAMES_IN_FLIGHT * 7},
 		{type = .COMBINED_IMAGE_SAMPLER, descriptorCount = MAX_FRAMES_IN_FLIGHT * 3},
 		{type = .ACCELERATION_STRUCTURE_KHR, descriptorCount = MAX_FRAMES_IN_FLIGHT},
 	}
