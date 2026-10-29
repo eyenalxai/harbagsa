@@ -86,8 +86,9 @@ never a fill value.
   build step can embed the same bytes.
 - **KTX2 container.** Rejected. The artifact also carries probes, rects, and
   stats, and the first version uses no mips, layers, or compression.
-- **Parse the file every publish.** Rejected. The artifact is loaded once at
-  renderer creation; republishing is a later lifecycle ticket.
+- **Parse the file every publish.** Rejected for the first slice. The artifact
+  is loaded once at renderer creation; the lifecycle ticket later added an
+  explicit publish that loads a freshly built artifact once per publish.
 - **Silent fallback to black, to probes, or to an older bake.** Rejected. The
   mixed-lighting spec requires a visible missing or stale state, and a silent
   substitution makes a capture lie.
@@ -98,7 +99,7 @@ never a fill value.
 - The runtime still renders direct light, hard shadows, and the emissive term
   while an artifact is missing. Indirect is absent until a bake is published.
 - A static geometry or static fixture edit changes the key and reports `stale`
-  immediately. The old indirect data stays bound until a later publish path
+  immediately. The old indirect data stays bound until an explicit publish
   replaces it.
 - `src:bake` is compiled by `make check` and imported by the frame and the
   renderer. It does not import either package, so the bake tool can share it.
@@ -109,7 +110,7 @@ never a fill value.
   buffer, and a one-probe volume so the descriptor set stays valid. Every
   object's lightmap and probe weights are zero in that state, so nothing samples
   a placeholder.
-- The design guide, `README.md`, `GLOSSARY.md`, and ADR 0042 still describe the
-  removed dynamic DDGI field and ban baked light or textures. This ADR starts
-  the replacement but does not edit those pages; #386 owns that cleanup. Do not
-  read the current guide as agreeing with this contract.
+- The design guide, `README.md`, `GLOSSARY.md`, and ADR 0042 described the
+  removed dynamic DDGI field and banned baked light when this ADR was written.
+  ADR 0045 and HARB-304 updated those pages. Do not read the old text as
+  agreeing with this contract.
