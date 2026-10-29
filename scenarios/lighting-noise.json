@@ -1,0 +1,32 @@
+{
+  "note": "Texel-scale noise on an unlit static wall: the baked indirect after the denoise pass, with the indirect term off as the control. The same scenario against a tool version 1 bake records the before state.",
+  "size": "1280x720",
+  "requires": {"renderer_debug": true},
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "renderer_debug", "taa": false, "jitter": false},
+    {"cmd": "bake"},
+    {"cmd": "camera", "position": [14.0, 1.2, 6.0], "look_at": [20.0, 1.2, 6.0]},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "wall", "format": "stats", "png": true,
+     "region": {"x": 120, "y": 120, "w": 1000, "h": 400},
+     "note": "The whole unlit wall band, including the wall falloff and the geometry in frame."},
+    {"cmd": "capture", "name": "wall-window", "format": "stats",
+     "region": {"x": 850, "y": 140, "w": 250, "h": 160},
+     "note": "Clean wall window away from contacts and edges; the noise measure."},
+    {"cmd": "capture", "name": "wall-linear", "target": "scene_color", "format": "stats",
+     "region": {"x": 120, "y": 120, "w": 1000, "h": 400},
+     "note": "The same band in linear scene colour, before the resolve, so the mean is not sRGB-encoded."},
+    {"cmd": "capture", "name": "wall-window-linear", "target": "scene_color", "format": "stats",
+     "region": {"x": 850, "y": 140, "w": 250, "h": 160},
+     "note": "The same window in linear scene colour."},
+    {"cmd": "renderer_debug", "lightmap": false},
+    {"cmd": "settle", "frames": 4},
+    {"cmd": "capture", "name": "wall-direct", "format": "stats",
+     "region": {"x": 120, "y": 120, "w": 1000, "h": 400},
+     "note": "Same band with the indirect term off."},
+    {"cmd": "capture", "name": "wall-window-direct", "format": "stats",
+     "region": {"x": 850, "y": 140, "w": 250, "h": 160},
+     "note": "Same window with the indirect term off."}
+  ]
+}

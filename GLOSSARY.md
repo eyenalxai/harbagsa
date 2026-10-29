@@ -240,6 +240,10 @@ _Avoid_: Bake file, lightmap file
 The one linear `1024²` `RGBA16F` atlas that holds one tile per static box face. It carries static indirect only; direct light and hard shadows stay real-time. It is lighting data, not a surface or material texture.
 _Avoid_: Baked texture, GI map
 
+**Lightmap denoise**:
+The separable 3x3 binomial pass that the bake runs over one chart after the buried fill and before the gutter, with clamp-to-edge weights that sum to one. One chart is one planar face, so the pass cannot bleed across a surface and the gutter still isolates neighbouring charts. The texel seed follows the surface, not the atlas position.
+_Avoid_: Blur, smoothing, post-process
+
 **Probe**:
 One sample point in the baked static probe field. The bake traces 1024 rays and stores an 8 x 8 octahedral irradiance and depth atlas.
 _Avoid_: Light sample, photon
