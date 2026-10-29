@@ -115,7 +115,8 @@ Rules:
 
 Every angle is degrees and ends in `_deg`. Positions, heights, and ranges are
 metres. `look` deltas are pixels. Step and perf counts are frames. `perf.prime`
-is seconds. Capture regions and crops are pixels unless `unit` is `normalized`.
+is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
+`normalized`.
 
 ## Commands
 
@@ -138,7 +139,8 @@ is seconds. Capture regions and crops are pixels unless `unit` is `normalized`.
 - `record`: start with `path` and optional `actions`; stop with no path.
 - `replay`: `path` to a recorded scenario.
 - `repro`: `path` for a live scene snapshot.
-- `perf`: `frames`, `warmup`, `prime`, `name`, and optional `trace`.
+- `perf`: `frames`, `warmup`, `prime`, `name`, `variants`, `rounds`,
+  `baseline`, `discard`, and optional `trace`.
 - `renderer_debug`: gated fields or `clear`. A field set to `null` resets it.
 - `displays`: `set` a scripted list or `clear` it.
 - `rows`: HUD and menu rows.
@@ -348,8 +350,8 @@ objects, then the spider.
 
 `state.renderer` reports frame count, TAA state, jitter index, history validity,
 convergence frames, history read index and weight, reset count and reason,
-active light count, cluster overflow, atlas weight, text counters, and debug
-line counts. `state.bake` is the lifecycle view and `state.renderer.bake` is the
+active light count, cluster overflow, atlas weight, text counters, timestamp
+period, and debug line counts. `state.bake` is the lifecycle view and `state.renderer.bake` is the
 same report inside the renderer block. Both report the status (`missing`,
 `stale`, `current`, or `failed`), the current key, the artifact key, format and
 tool versions, the measured bake time, atlas and probe counts, probe spacing,
@@ -464,13 +466,39 @@ view.
 ## Performance
 
 A `perf` command measures frames and can write one trace. `frames` defaults to
-120, `warmup` to 60, and `prime` to 2 seconds. `prime: 0` disables the time loop.
-Offscreen measures throughput. `--present` measures pacing.
+120, `warmup` to 60, and `prime` to 2 seconds. `prime` is a number of seconds or
+`"once"`. A number primes before every measured window; `"once"` primes before
+the first one only. `prime: 0` disables the time loop. Offscreen measures
+throughput. `--present` measures pacing.
+
+`variants` names a renderer-debug patch per variant, including
+`synthetic_lights`. A perf command with variants needs the renderer-debug gate,
+just like a `renderer_debug` command. `rounds` repeats the schedule, `baseline`
+names the reference variant, and `discard` asks to drop that many opening
+rounds. Both default to one; the baseline defaults to the first variant in name
+order, and at most `rounds - 1` rounds are dropped so one round is always kept.
+The report carries the requested `discard` and the effective `discarded`. Each
+round runs the baseline, then every other variant with a baseline window after
+it, so every variant is bracketed by two baseline windows. The report carries
+the interval, CPU, and GPU stats per variant, the per-round delta against the
+mean of the two bracketing baseline windows for the frame interval p50 and the
+GPU total p50, and the mean, minimum, maximum, and spread of each delta. The
+baseline variant is the reference, so it reports no delta. A perf command
+without `variants` measures one window per round and reports the same stats as
+before; `discard` applies there the same way.
+
+The report also carries `timestamp_period`, the GPU clock at start and end, and
+the 1, 5, and 15 minute load average at start and end. `nvidia-smi` or
+`rocm-smi` supplies the clock, whichever matches the rendering device first.
+When neither answers, the clock is `known: false` and the report warns; the load
+average warns the same way when `/proc/loadavg` cannot be read.
 
 A perf frame draws the scene without a capture request, so it does no readback
-and adds no capture entry. A scenario may still capture after its perf windows.
-The interval is therefore comparable with the GPU total plus submit cost. Do not
-compare an interval measured before that change with one measured after it.
+and adds no capture entry. A capture after the perf windows still runs. A
+pending capture when the perf command starts is an error: a queued readback
+would otherwise be measured as frame time. The interval is comparable with the
+GPU total plus submit cost. Do not compare an interval measured before that
+change with one measured after it.
 
 GPU passes are TLAS, cluster, depth, scene, TAA, and overlay. A capture with
 diagnostic views adds one untimed lit pass and one resolve per view after the
@@ -480,8 +508,9 @@ wall-clock data and is not deterministic.
 
 Use `scenarios/perf.json` for the default view, `scenarios/perf-arena.json` for
 the arena from above, and `scenarios/perf-mixed.json` for 96 synthetic lights at
-1080p with the indirect terms switched in and out. `harbagsa-agent ab` compares
-two builds. `ab --visual` runs one scenario on both and writes a compare panel.
+1080p, where one perf command brackets direct, lightmap, probe, and mixed
+variants over three rounds. `harbagsa-agent ab` compares two builds. `ab
+--visual` runs one scenario on both and writes a compare panel.
 
 ## Determinism and screenshots
 

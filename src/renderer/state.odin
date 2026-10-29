@@ -64,6 +64,7 @@ Renderer_Report :: struct {
 	text_font_drops:     int    `json:"text_font_drops"`,
 	debug_vertex_count:  int    `json:"debug_vertex_count"`,
 	debug_vertices:      Debug_Lines_Report `json:"debug_vertices"`,
+	timestamp_period:    f32    `json:"timestamp_period"`,
 	bake:                Bake_Report `json:"bake"`,
 	debug:               Debug_Report `json:"debug"`,
 }
@@ -113,6 +114,7 @@ renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
 		text_truncated_runs = r.overlay.atlas.caps.truncated_runs,
 		text_font_drops = r.overlay.atlas.caps.dropped_fonts,
 		debug_vertex_count = r.overlay.debug_count,
+		timestamp_period = r.timestamp_period,
 		debug_vertices = {
 			world = r.overlay.debug_kind_vertices[int(geometry.Line_Kind.World)],
 			selection = r.overlay.debug_kind_vertices[int(geometry.Line_Kind.Selection)],
