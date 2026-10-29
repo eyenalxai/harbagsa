@@ -29,6 +29,8 @@ Object_Data :: struct {
 	model:      Mat4,
 	prev_model: Mat4,
 	color:      [4]f32,
+	// std430 uvec4 mirror. Only .x is read: the lightmap slot, or
+	// INVALID_LIGHTMAP_SLOT. The remaining lanes keep the 16-byte alignment.
 	lightmap:   [4]u32,
 }
 

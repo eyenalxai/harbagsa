@@ -44,16 +44,13 @@ write_object_data :: proc(
 			previous = taa.prev_models[index]
 		}
 		slot := INVALID_LIGHTMAP_SLOT
-		if keys[index] != bake.NO_BOX_KEY {
+		if lightmap_enabled && keys[index] != bake.NO_BOX_KEY {
 			if found, ok := bake_slot_for(r, keys[index]); ok {
 				slot = found
 				r.bake.mapped_boxes += 1
 			} else {
 				r.bake.unmapped_boxes += 1
 			}
-		}
-		if !lightmap_enabled {
-			slot = INVALID_LIGHTMAP_SLOT
 		}
 		data[index] = Object_Data {
 			model = model,

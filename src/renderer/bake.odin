@@ -5,6 +5,7 @@ package renderer
 import "core:fmt"
 import "core:log"
 import "core:os"
+import "core:slice"
 import "core:strings"
 
 import "src:bake"
@@ -358,17 +359,29 @@ create_bake_placeholder :: proc(r: ^Renderer) -> bool {
 }
 
 // A slot is the index of the baked face list for one static box. Dynamic boxes
-// and boxes absent from the artifact have no slot.
+// and boxes absent from the artifact have no slot. Slots are written in
+// canonical key order, so a search does not grow with the frame's box count.
 bake_slot_for :: proc(r: ^Renderer, key: u64) -> (slot: u32, ok: bool) {
 	if !r.bake.loaded || key == bake.NO_BOX_KEY {
 		return INVALID_LIGHTMAP_SLOT, false
 	}
-	for entry, index in r.bake.data.slots {
-		if entry.key == key {
-			return u32(index), true
-		}
+	index, found := slice.binary_search_by(
+		r.bake.data.slots,
+		key,
+		proc(entry: bake.Slot, key: u64) -> slice.Ordering {
+			if entry.key < key {
+				return .Less
+			}
+			if entry.key > key {
+				return .Greater
+			}
+			return .Equal
+		},
+	)
+	if !found {
+		return INVALID_LIGHTMAP_SLOT, false
 	}
-	return INVALID_LIGHTMAP_SLOT, false
+	return u32(index), true
 }
 
 @(private)
