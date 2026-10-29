@@ -32,7 +32,7 @@ Object_Data :: struct {
 	// std430 uvec4 mirror. .x is the lightmap slot, or INVALID_LIGHTMAP_SLOT.
 	// .y selects the probe path for dynamic boxes that have no lightmap.
 	// The remaining lanes keep the 16-byte alignment.
-	lightmap:   [4]u32,
+	indirect:   [4]u32,
 }
 
 Object_Index :: struct {

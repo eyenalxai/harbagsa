@@ -53,6 +53,8 @@ Bake_Report :: struct {
 	mapped_boxes:   int    `json:"mapped_boxes"`,
 	unmapped_boxes: int    `json:"unmapped_boxes"`,
 	invalid_probes: int    `json:"invalid_probes"`,
+	dilated_probes: int    `json:"dilated_probes"`,
+	skipped_probes: int    `json:"skipped_probes"`,
 	bake_ms:        u32    `json:"bake_ms"`,
 	error:          string `json:"error,omitempty"`,
 }
@@ -61,11 +63,10 @@ Bake_Volume_Uniform :: struct {
 	min:           [3]f32,
 	spacing:       f32,
 	counts:        [3]u32,
-	probe_texels:  u32,
+	probe_grid:    u32,
 	atlas_columns: u32,
 	probe_count:   u32,
-	atlas_width:   u32,
-	atlas_height:  u32,
+	_pad:          [2]u32,
 }
 
 #assert(size_of(Bake_Volume_Uniform) == 48)
@@ -80,6 +81,8 @@ Bake_Resources :: struct {
 	gpu_bytes:      int,
 	mapped_boxes:   int,
 	unmapped_boxes: int,
+	dilated_probes: int,
+	skipped_probes: int,
 
 	lightmap:          Image,
 	probe_irradiance:  Image,
@@ -186,6 +189,8 @@ bake_report :: proc(r: ^Renderer) -> Bake_Report {
 	report.gpu_bytes = r.bake.gpu_bytes
 	report.mapped_boxes = r.bake.mapped_boxes
 	report.unmapped_boxes = r.bake.unmapped_boxes
+	report.dilated_probes = r.bake.dilated_probes
+	report.skipped_probes = r.bake.skipped_probes
 	return report
 }
 
@@ -223,6 +228,8 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 		log_bake_error(r, "the device cannot filter R16G16_SFLOAT")
 		return false
 	}
+
+	r.bake.dilated_probes, r.bake.skipped_probes = dilate_probes(r)
 
 	lightmap, lightmap_ok := upload_texture(
 		r,
@@ -301,11 +308,9 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 		min           = data.header.probe_min,
 		spacing       = data.header.probe_spacing,
 		counts        = data.header.probe_counts,
-		probe_texels  = data.header.probe_texels,
+		probe_grid    = data.header.probe_texels,
 		atlas_columns = data.header.probe_atlas_columns,
 		probe_count   = data.header.probe_count,
-		atlas_width   = data.probe_atlas_width,
-		atlas_height  = data.probe_atlas_height,
 	}
 	if !create_device_buffer(
 		r,

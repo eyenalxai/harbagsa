@@ -1,10 +1,8 @@
 #ifndef PROBE_GLSL
 #define PROBE_GLSL
 
-// The probe shelf atlas stores one 8 x 8 block per probe. This mirrors
-// bake.PROBE_TEXELS; the quality block rejects any other size.
-#define PROBE_GRID_SIZE 8
-
+// The probe shelf atlas stores one square block per probe; the block size,
+// columns, and probe count come from the artifact header.
 layout(set = 0, binding = 8) uniform sampler2D probe_irradiance_texture;
 layout(set = 0, binding = 9) uniform sampler2D probe_moments_texture;
 
@@ -15,7 +13,9 @@ layout(set = 0, binding = 10) readonly buffer ProbeStates {
 
 layout(set = 0, binding = 11) uniform BakeVolume {
     vec4 min_spacing;
+    // xyz counts, w grid size.
     uvec4 counts_texels;
+    // x columns, y probe count.
     uvec4 atlas_info;
 } bake_volume;
 
@@ -34,57 +34,41 @@ vec2 oct_encode(vec3 direction) {
     return direction.xz * 0.5 + 0.5;
 }
 
-ivec2 probe_origin(uint probe) {
+ivec2 probe_origin(uint probe, int grid) {
     uint columns = bake_volume.atlas_info.x;
-    return ivec2(probe % columns, probe / columns) * PROBE_GRID_SIZE;
+    return ivec2(probe % columns, probe / columns) * grid;
 }
 
-vec4 probe_irradiance_texel(uint probe, ivec2 texel) {
-    texel = clamp(texel, ivec2(0), ivec2(PROBE_GRID_SIZE - 1));
-    return texelFetch(probe_irradiance_texture, probe_origin(probe) + texel, 0);
-}
-
-vec2 probe_moment_texel(uint probe, ivec2 texel) {
-    texel = clamp(texel, ivec2(0), ivec2(PROBE_GRID_SIZE - 1));
-    return texelFetch(probe_moments_texture, probe_origin(probe) + texel, 0).rg;
-}
-
-vec3 probe_sample_irradiance(uint probe, vec3 direction) {
-    vec2 uv = oct_encode(direction) * float(PROBE_GRID_SIZE) - 0.5;
+vec4 probe_bilinear(sampler2D texture, uint probe, vec3 direction) {
+    int grid = int(bake_volume.counts_texels.w);
+    ivec2 origin = probe_origin(probe, grid);
+    vec2 uv = oct_encode(direction) * float(grid) - 0.5;
     ivec2 base = ivec2(floor(uv));
     vec2 fraction = uv - vec2(base);
+    ivec2 low = ivec2(0);
+    ivec2 high = ivec2(grid - 1);
     vec4 bottom = mix(
-        probe_irradiance_texel(probe, base),
-        probe_irradiance_texel(probe, base + ivec2(1, 0)),
+        texelFetch(texture, origin + clamp(base, low, high), 0),
+        texelFetch(texture, origin + clamp(base + ivec2(1, 0), low, high), 0),
         fraction.x
     );
     vec4 top = mix(
-        probe_irradiance_texel(probe, base + ivec2(0, 1)),
-        probe_irradiance_texel(probe, base + ivec2(1, 1)),
-        fraction.x
-    );
-    return mix(bottom, top, fraction.y).rgb;
-}
-
-vec2 probe_sample_moments(uint probe, vec3 direction) {
-    vec2 uv = oct_encode(direction) * float(PROBE_GRID_SIZE) - 0.5;
-    ivec2 base = ivec2(floor(uv));
-    vec2 fraction = uv - vec2(base);
-    vec2 bottom = mix(
-        probe_moment_texel(probe, base),
-        probe_moment_texel(probe, base + ivec2(1, 0)),
-        fraction.x
-    );
-    vec2 top = mix(
-        probe_moment_texel(probe, base + ivec2(0, 1)),
-        probe_moment_texel(probe, base + ivec2(1, 1)),
+        texelFetch(texture, origin + clamp(base + ivec2(0, 1), low, high), 0),
+        texelFetch(texture, origin + clamp(base + ivec2(1, 1), low, high), 0),
         fraction.x
     );
     return mix(bottom, top, fraction.y);
 }
 
-// Static probes are baked once, so the fragment only selects a tetrahedron,
-// applies the visibility tests, and decodes the stored octahedral radiance.
+vec3 probe_sample_irradiance(uint probe, vec3 direction) {
+    return probe_bilinear(probe_irradiance_texture, probe, direction).rgb;
+}
+
+vec2 probe_sample_moments(uint probe, vec3 direction) {
+    return probe_bilinear(probe_moments_texture, probe, direction).rg;
+}
+
+// Static probes are baked once, so a fragment never writes or blends one.
 vec3 probe_indirect(vec3 world_position, vec3 normal) {
     uvec3 counts = bake_volume.counts_texels.xyz;
     if (bake_volume.atlas_info.y == 0u ||
@@ -179,9 +163,8 @@ vec3 probe_indirect(vec3 world_position, vec3 normal) {
         );
         uint word = probe_states.words[probe * 2u];
         if ((word & 0xFFu) == 0u) {
-            // The bake marks probes inside static geometry invalid. Skip them
-            // and renormalize; filling would borrow another probe's moments
-            // and leak through the wall.
+            // The renderer dilates invalid probes from valid neighbours where
+            // it can; these are the holes with no valid neighbour in range.
             continue;
         }
         vec3 offset = vec3(
