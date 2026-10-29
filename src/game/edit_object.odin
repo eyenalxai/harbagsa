@@ -96,22 +96,22 @@ edit_turn :: proc(dm: ^Debug_Mode, sim: ^Simulation, steps: int, large: bool) ->
 @(private)
 edit_set_body :: proc(dm: ^Debug_Mode, sim: ^Simulation, mode: Body_Mode) -> Edit_Result {
 	if editor_uses_next_placement(dm) {
-		if !prefab_accepts_body(palette_selected(dm.palette), mode) {
-			return edit_fail(.Lamp_Must_Be_Dynamic)
+		if prefab_has_light(palette_selected(dm.palette)) {
+			return edit_fail(.Lamp_Body_Follows_Kind)
 		}
 		palette_set_body(&dm.palette, mode)
 		return edit_ok()
 	}
 	object, ok := selected_object(dm, sim)
 	if !ok {
-		if !prefab_accepts_body(palette_selected(dm.palette), mode) {
-			return edit_fail(.Lamp_Must_Be_Dynamic)
+		if prefab_has_light(palette_selected(dm.palette)) {
+			return edit_fail(.Lamp_Body_Follows_Kind)
 		}
 		palette_set_body(&dm.palette, mode)
 		return edit_ok()
 	}
-	if !prefab_accepts_body(object.prefab, mode) {
-		return edit_fail(.Lamp_Must_Be_Dynamic)
+	if object.light.active {
+		return edit_fail(.Lamp_Body_Follows_Kind)
 	}
 	if object.body_mode == mode {
 		return edit_ok()
@@ -127,7 +127,7 @@ edit_set_body :: proc(dm: ^Debug_Mode, sim: ^Simulation, mode: Body_Mode) -> Edi
 edit_flip_body :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Result {
 	if editor_uses_next_placement(dm) {
 		if prefab_has_light(palette_selected(dm.palette)) {
-			return edit_fail(.Lamp_Must_Be_Dynamic)
+			return edit_fail(.Lamp_Body_Follows_Kind)
 		}
 		palette_flip_body(&dm.palette)
 		return edit_ok()
@@ -135,13 +135,13 @@ edit_flip_body :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Result {
 	object, ok := selected_object(dm, sim)
 	if !ok {
 		if prefab_has_light(palette_selected(dm.palette)) {
-			return edit_fail(.Lamp_Must_Be_Dynamic)
+			return edit_fail(.Lamp_Body_Follows_Kind)
 		}
 		palette_flip_body(&dm.palette)
 		return edit_ok()
 	}
-	if prefab_has_light(object.prefab) {
-		return edit_fail(.Lamp_Must_Be_Dynamic)
+	if object.light.active {
+		return edit_fail(.Lamp_Body_Follows_Kind)
 	}
 	mode: Body_Mode = object.body_mode == .Static ? .Dynamic : .Static
 	object_history_record(debug_history(dm), sim)

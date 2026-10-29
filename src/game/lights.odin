@@ -52,6 +52,10 @@ lamp_kind_parse :: proc(name: string) -> (Lamp_Kind, bool) {
 	return .Dynamic_Lamp, false
 }
 
+lamp_kind_body :: proc(kind: Lamp_Kind) -> Body_Mode {
+	return kind == .Static_Fixture ? .Static : .Dynamic
+}
+
 LIGHT_COLOR_COUNT :: int(Light_Color.Blue) + 1
 
 LIGHT_COLOR_NAMES := [LIGHT_COLOR_COUNT]string{"warm", "cool", "red", "green", "blue"}
@@ -113,6 +117,12 @@ light_color_parse :: proc(name: string) -> (Light_Color, bool) {
 light_with_color :: proc(settings: Light_Settings, color: Light_Color) -> Light_Settings {
 	result := settings
 	result.color = color
+	return result
+}
+
+light_with_kind :: proc(settings: Light_Settings, kind: Lamp_Kind) -> Light_Settings {
+	result := settings
+	result.kind = kind
 	return result
 }
 

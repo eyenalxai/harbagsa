@@ -106,6 +106,14 @@ session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 			return failure
 		}
 	}
+	if command.light.has_kind {
+		if failure := apply_editor_action(
+			session,
+			game.Light_Set_Kind{kind = command.light.kind},
+		); failure != "" {
+			return failure
+		}
+	}
 	if command.light.has_color {
 		if failure := apply_editor_action(
 			session,

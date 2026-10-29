@@ -39,6 +39,7 @@ rows_state_destroy :: proc(state: ^Rows_State, allocator: mem.Allocator) {
 // A state read passes zero time: the HUD rows update, but the menu status timer
 // does not move, so a state reply has no effect on the next reply.
 session_refresh_hud :: proc(session: ^Session, delta_seconds: f32 = 0) {
+	bake := session.render.report.bake
 	game.hud_state_update(
 		&session.hud,
 		&session.sim,
@@ -46,6 +47,7 @@ session_refresh_hud :: proc(session: ^Session, delta_seconds: f32 = 0) {
 		game.simulation_snapshot(&session.sim),
 		false,
 		delta_seconds,
+		{status = bake.status, key = bake.key},
 	)
 }
 
