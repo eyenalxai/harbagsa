@@ -150,10 +150,7 @@ probe_worker :: proc(job: rawptr, worker: int) #no_bounds_check {
 	shadows: u64
 	for probe := worker; probe < work.count; probe += work.workers {
 		x, y, z := probe_cell(probe, work.counts)
-		base := dv_add(
-			work.min,
-			dv_mul({f64(x) + 0.5, f64(y) + 0.5, f64(z) + 0.5}, work.spacing),
-		)
+		base := probe_center(work.min, work.spacing, x, y, z)
 		sample, offset, valid := probe_sample(work.static, work.bvh, base, work.spacing * PROBE_OFFSET_MAX_FRACTION)
 		if !valid {
 			work.invalid_counts[worker] += 1
@@ -279,6 +276,10 @@ probe_cell :: proc(probe: int, counts: [3]int) -> (x, y, z: int) {
 	y = (probe / counts.x) % counts.y
 	z = probe / (counts.x * counts.y)
 	return
+}
+
+probe_center :: proc(min: DVec3, spacing: f64, x, y, z: int) -> DVec3 {
+	return dv_add(min, dv_mul({f64(x) + 0.5, f64(y) + 0.5, f64(z) + 0.5}, spacing))
 }
 
 probe_atlas_pixel :: proc(probe, x, y, columns, grid: int) -> int {

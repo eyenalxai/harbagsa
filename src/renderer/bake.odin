@@ -288,23 +288,26 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 	) {
 		return false
 	}
+	volume := Bake_Volume_Uniform {
+		min           = data.header.probe_min,
+		spacing       = data.header.probe_spacing,
+		counts        = data.header.probe_counts,
+		probe_texels  = data.header.probe_texels,
+		atlas_columns = data.header.probe_atlas_columns,
+		probe_count   = data.header.probe_count,
+		atlas_width   = data.probe_atlas_width,
+		atlas_height  = data.probe_atlas_height,
+	}
 	if !create_bake_probes(
 		r,
 		data.probe_atlas_width,
 		data.probe_atlas_height,
+		.R16G16B16A16_SFLOAT,
+		.R16G16_SFLOAT,
 		data.probe_irradiance,
 		data.probe_moments,
 		data.probe_states,
-		{
-			min           = data.header.probe_min,
-			spacing       = data.header.probe_spacing,
-			counts        = data.header.probe_counts,
-			probe_texels  = data.header.probe_texels,
-			atlas_columns = data.header.probe_atlas_columns,
-			probe_count   = data.header.probe_count,
-			atlas_width   = data.probe_atlas_width,
-			atlas_height  = data.probe_atlas_height,
-		},
+		&volume,
 	) {
 		return false
 	}

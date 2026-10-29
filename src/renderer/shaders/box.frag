@@ -32,6 +32,7 @@ layout(set = 0, binding = 1) readonly buffer Objects {
 
 #include "camera.glsl"
 #include "cluster.glsl"
+#include "probe.glsl"
 
 layout(set = 0, binding = 2) uniform accelerationStructureEXT scene_tlas;
 
@@ -63,8 +64,6 @@ layout(set = 0, binding = 6) uniform sampler2D lightmap_atlas;
 layout(set = 0, binding = 7) readonly buffer LightmapFaces {
     LightmapFace faces[];
 } lightmap;
-
-#include "probe.glsl"
 
 // FACE_BASES in src/bake/geometry.odin: the face order is +X, -X, +Y, -Y, +Z,
 // -Z and s = dot(local, u) + 0.5, t = dot(local, v) + 0.5.
@@ -189,12 +188,11 @@ void main() {
     vec3 normal = normalize(v_normal);
     vec3 lit = point_light_radiance(v_world_position, normal);
     vec3 indirect = vec3(0.0);
-    float indirect_weight = object.lightmap_weight;
-    if (indirect_weight > 0.0) {
+    float indirect_weight = max(object.lightmap_weight, object.probe_weight);
+    if (object.lightmap_weight > 0.0) {
         indirect = lightmap_indirect(object, v_local_normal, v_local_position);
     } else if (object.probe_weight > 0.0) {
         indirect = probe_indirect(v_world_position, normal);
-        indirect_weight = object.probe_weight;
     }
     vec3 color = v_color * (lit + indirect * indirect_weight) +
                  v_color * object.color.a;

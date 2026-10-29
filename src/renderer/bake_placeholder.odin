@@ -16,21 +16,24 @@ create_bake_placeholder :: proc(r: ^Renderer) -> bool {
 		return false
 	}
 	states := [1]bake.Probe_State{}
+	volume := Bake_Volume_Uniform {
+		spacing       = 1,
+		counts        = {1, 1, 1},
+		probe_texels  = bake.PROBE_TEXELS,
+		atlas_columns = 1,
+		probe_count   = 1,
+		atlas_width   = 1,
+		atlas_height  = 1,
+	}
 	return create_bake_probes(
 		r,
 		1,
 		1,
+		.R8G8B8A8_UNORM,
+		.R8G8B8A8_UNORM,
 		zero[:],
 		zero[:],
 		states[:],
-		{
-			spacing       = 1,
-			counts        = {1, 1, 1},
-			probe_texels  = bake.PROBE_TEXELS,
-			atlas_columns = 1,
-			probe_count   = 1,
-			atlas_width   = 1,
-			atlas_height  = 1,
-		},
+		&volume,
 	)
 }
