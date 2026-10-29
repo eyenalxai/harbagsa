@@ -49,6 +49,8 @@ Frame :: struct {
 	image_index:    u32,
 	command_buffer: vk.CommandBuffer,
 	capture:        bool,
+	// A pick reads a mapped result after submit, so its frame waits too.
+	wait:           bool,
 }
 
 Config :: struct {

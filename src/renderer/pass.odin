@@ -24,6 +24,7 @@ Pass :: struct {
 	image_index:  u32,
 	view:         Capture_View,
 	boxes:        []geometry.Box,
+	force_tlas:   bool,
 }
 
 record_pass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {

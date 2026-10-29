@@ -7,6 +7,7 @@ BOX_VERTEX_SPIRV :: #load("../../build/shaders/box.vert.spv")
 BOX_FRAGMENT_SPIRV :: #load("../../build/shaders/box.frag.spv")
 BOX_VIEW_FRAGMENT_SPIRV :: #load("../../build/shaders/box_view.frag.spv")
 CLUSTER_COMPUTE_SPIRV :: #load("../../build/shaders/cluster.comp.spv")
+PICK_COMPUTE_SPIRV :: #load("../../build/shaders/pick.comp.spv")
 
 create_pipeline :: proc(r: ^Renderer) -> bool {
 	set_layouts := [1]vk.DescriptorSetLayout{r.scene.descriptor_set_layout}
@@ -129,5 +130,27 @@ create_cluster_pipeline :: proc(r: ^Renderer) -> bool {
 		},
 		&r.scene.cluster_pipeline,
 		&r.scene.cluster_layout,
+	)
+}
+
+// The pick pass reads the same set 0 the lit pass binds. It takes only the
+// pixel; the rest of the frame input is already in the descriptor set.
+@(private)
+create_pick_pipeline :: proc(r: ^Renderer) -> bool {
+	set_layouts := [1]vk.DescriptorSetLayout{r.scene.descriptor_set_layout}
+	return create_compute_pipeline(
+		r,
+		{
+			spirv = PICK_COMPUTE_SPIRV,
+			name = "pick",
+			set_layouts = set_layouts[:],
+			push_constant = vk.PushConstantRange {
+				stageFlags = {.COMPUTE},
+				offset = 0,
+				size = u32(size_of(Pick_Push)),
+			},
+		},
+		&r.scene.pick_pipeline,
+		&r.scene.pick_layout,
 	)
 }

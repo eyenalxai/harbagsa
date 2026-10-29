@@ -1,0 +1,196 @@
+#version 460
+#extension GL_EXT_ray_query : require
+
+// One pixel resolved against the frame TLAS with the lit pass's own terms. The
+// harness sends the top-left pixel; the shader converts it to the bottom-left
+// gl_FragCoord the lit pass uses, so the cluster lookup matches the image.
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+#include "terms.glsl"
+
+// src/renderer/scene.odin CAMERA_FAR.
+const float PICK_RAY_FAR = 200.0;
+const uint PICK_RAY_MASK = 0xFFu;
+
+layout(push_constant) uniform PushConstants {
+    uint x;
+    uint y;
+} pick;
+
+// src/renderer/pick.odin Pick_Raw. Every member is a vec4 so the std430
+// alignment is one 16-byte block per row.
+layout(std430, set = 0, binding = 12) writeonly buffer PickOutput {
+    vec4 hit_info;    // hit, instance, face, probe inside
+    vec4 sample_info; // distance, probe invalid, lightmap st x, lightmap st y
+    vec4 position;
+    vec4 normal;
+    vec4 local_normal;
+    vec4 local_position;
+    vec4 lightmap_rect;
+    ivec4 lightmap_texel; // x, y, 0, 0
+    ivec4 probe_base;     // x, y, z, 0
+    vec4 direct;
+    vec4 shadow;
+    vec4 lightmap;
+    vec4 probe;
+    vec4 emissive;
+} result;
+
+void main() {
+    float height = camera.screen.z;
+    vec2 pixel = vec2(float(pick.x) + 0.5, height - float(pick.y) - 0.5);
+    vec2 ndc = (pixel / camera.screen.yz) * 2.0 - 1.0;
+
+    mat4 inverse_view = inverse(camera.view);
+    mat4 inverse_projection = inverse(camera.projection);
+    vec3 origin = (inverse_view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+    vec4 view_far = inverse_projection * vec4(ndc, 1.0, 1.0);
+    vec3 direction = normalize(
+        (inverse_view * vec4(view_far.xyz / view_far.w, 0.0)).xyz
+    );
+
+    rayQueryEXT query;
+    rayQueryInitializeEXT(
+        query,
+        scene_tlas,
+        gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT,
+        PICK_RAY_MASK,
+        origin,
+        0.0,
+        direction,
+        PICK_RAY_FAR
+    );
+    while (rayQueryProceedEXT(query)) {}
+
+    if (
+        rayQueryGetIntersectionTypeEXT(query, true) ==
+        gl_RayQueryCommittedIntersectionNoneEXT
+    ) {
+        result.hit_info = vec4(0.0);
+        return;
+    }
+
+    uint instance = rayQueryGetIntersectionInstanceCustomIndexEXT(query, true);
+    float distance = rayQueryGetIntersectionTEXT(query, true);
+    vec3 world_position = origin + direction * distance;
+    ObjectData object = scene.objects[instance];
+
+    // The cube is one unit box, so the face is the local axis nearest half an
+    // extent. The model matrix carries the box's rotation and scale.
+    mat4 inverse_model = inverse(object.model);
+    vec3 local_position = (inverse_model * vec4(world_position, 1.0)).xyz;
+    vec3 extent = abs(local_position);
+    vec3 local_normal;
+    if (extent.x >= extent.y && extent.x >= extent.z) {
+        local_normal = vec3(local_position.x > 0.0 ? 1.0 : -1.0, 0.0, 0.0);
+    } else if (extent.y >= extent.z) {
+        local_normal = vec3(0.0, local_position.y > 0.0 ? 1.0 : -1.0, 0.0);
+    } else {
+        local_normal = vec3(0.0, 0.0, local_position.z > 0.0 ? 1.0 : -1.0);
+    }
+    vec3 normal = normalize(
+        mat3(transpose(inverse_model)) * local_normal
+    );
+    int face = face_index(local_normal);
+
+    result.hit_info = vec4(1.0, float(instance), float(face), 0.0);
+    result.sample_info = vec4(distance, 0.0, 0.0, 0.0);
+    result.position = vec4(world_position, 0.0);
+    result.normal = vec4(normal, 0.0);
+    result.local_normal = vec4(local_normal, 0.0);
+    result.local_position = vec4(local_position, 0.0);
+
+    // A box without a tile has no face rect; the placeholder atlas holds one
+    // face, so the shader must not index it.
+    if (object.lightmap_weight > 0.0) {
+        Lightmap_Sample tap = lightmap_sample(
+            object,
+            local_normal,
+            local_position
+        );
+        result.lightmap_rect = lightmap.faces[
+            object.lightmap_slot * 6u + uint(face)
+        ].uv_rect;
+        result.sample_info.z = tap.st.x;
+        result.sample_info.w = tap.st.y;
+        result.lightmap_texel = ivec4(
+            ivec2(floor(tap.uv * LIGHTMAP_ATLAS_SIZE)),
+            0,
+            0
+        );
+    } else {
+        result.lightmap_rect = vec4(0.0);
+        result.lightmap_texel = ivec4(-1, -1, 0, 0);
+    }
+
+    Probe_Cell cell = probe_cell(world_position, normal);
+    result.probe_base = ivec4(cell.base, 0);
+    result.sample_info.y = float(cell.invalid);
+    result.hit_info.w = cell.inside ? 1.0 : 0.0;
+
+    result.direct = vec4(
+        view_term(
+            object,
+            object.color.xyz,
+            world_position,
+            normal,
+            local_normal,
+            local_position,
+            pixel,
+            VIEW_DIRECT
+        ),
+        0.0
+    );
+    result.shadow = vec4(
+        view_term(
+            object,
+            object.color.xyz,
+            world_position,
+            normal,
+            local_normal,
+            local_position,
+            pixel,
+            VIEW_SHADOW
+        ),
+        0.0
+    );
+    result.lightmap = vec4(
+        view_term(
+            object,
+            object.color.xyz,
+            world_position,
+            normal,
+            local_normal,
+            local_position,
+            pixel,
+            VIEW_LIGHTMAP
+        ),
+        0.0
+    );
+    result.probe = vec4(
+        view_term(
+            object,
+            object.color.xyz,
+            world_position,
+            normal,
+            local_normal,
+            local_position,
+            pixel,
+            VIEW_PROBE
+        ),
+        0.0
+    );
+    result.emissive = vec4(
+        view_term(
+            object,
+            object.color.xyz,
+            world_position,
+            normal,
+            local_normal,
+            local_position,
+            pixel,
+            VIEW_EMISSIVE
+        ),
+        0.0
+    );
+}

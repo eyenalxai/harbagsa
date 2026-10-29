@@ -43,6 +43,16 @@ create_scene_frame_buffers :: proc(
 		}
 		if !create_mapped_buffer(
 			r,
+			vk.DeviceSize(size_of(Pick_Raw)),
+			{.STORAGE_BUFFER},
+			&r.scene.pick_buffers[i],
+			&r.scene.pick_memory[i],
+			&r.scene.pick_mapped[i],
+		) {
+			return false
+		}
+		if !create_mapped_buffer(
+			r,
 			vk.DeviceSize(CLUSTER_COUNTS_SIZE),
 			{.STORAGE_BUFFER, .TRANSFER_DST},
 			&r.scene.cluster_counts_buffers[i],
@@ -90,6 +100,12 @@ destroy_scene_frame_buffers :: proc(r: ^Renderer) {
 		}
 		destroy_buffer(r, &r.scene.light_buffers[i], &r.scene.light_memory[i])
 
+		if r.scene.pick_mapped[i] != nil {
+			vk.UnmapMemory(r.device, r.scene.pick_memory[i])
+			r.scene.pick_mapped[i] = nil
+		}
+		destroy_buffer(r, &r.scene.pick_buffers[i], &r.scene.pick_memory[i])
+
 		if r.scene.cluster_counts_mapped[i] != nil {
 			vk.UnmapMemory(r.device, r.scene.cluster_counts_memory[i])
 			r.scene.cluster_counts_mapped[i] = nil
@@ -117,7 +133,7 @@ destroy_scene_frame_buffers :: proc(r: ^Renderer) {
 @(private)
 write_scene_bindings :: proc(r: ^Renderer) {
 	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		buffer_infos := [8]vk.DescriptorBufferInfo {
+		buffer_infos := [9]vk.DescriptorBufferInfo {
 			{buffer = r.scene.camera_buffers[i], range = vk.DeviceSize(size_of(Camera_Uniform))},
 			{
 				buffer = r.scene.object_buffers[i],
@@ -144,6 +160,10 @@ write_scene_bindings :: proc(r: ^Renderer) {
 				buffer = r.bake.volume_buffer,
 				range = vk.DeviceSize(size_of(Bake_Volume_Uniform)),
 			},
+			{
+				buffer = r.scene.pick_buffers[i],
+				range = vk.DeviceSize(size_of(Pick_Raw)),
+			},
 		}
 		lightmap_info := vk.DescriptorImageInfo {
 			sampler = r.bake.sampler,
@@ -160,7 +180,7 @@ write_scene_bindings :: proc(r: ^Renderer) {
 			imageView = r.bake.probe_moments.view,
 			imageLayout = .SHADER_READ_ONLY_OPTIMAL,
 		}
-		writes := [11]vk.WriteDescriptorSet {
+		writes := [12]vk.WriteDescriptorSet {
 			{
 				sType = .WRITE_DESCRIPTOR_SET,
 				dstSet = r.scene.descriptor_sets[i],
@@ -248,6 +268,14 @@ write_scene_bindings :: proc(r: ^Renderer) {
 				descriptorCount = 1,
 				descriptorType = .UNIFORM_BUFFER,
 				pBufferInfo = &buffer_infos[7],
+			},
+			{
+				sType = .WRITE_DESCRIPTOR_SET,
+				dstSet = r.scene.descriptor_sets[i],
+				dstBinding = PICK_RESULT_BINDING,
+				descriptorCount = 1,
+				descriptorType = .STORAGE_BUFFER,
+				pBufferInfo = &buffer_infos[8],
 			},
 		}
 		vk.UpdateDescriptorSets(r.device, u32(len(writes)), &writes[0], 0, nil)
