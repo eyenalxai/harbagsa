@@ -182,10 +182,11 @@ lightmap_trace :: proc(work: ^Lightmap_Work, texel: Texel_Job) -> u64 #no_bounds
 }
 
 // The noise field follows the surface, not the atlas position, so an unrelated
-// static edit does not re-roll every texel of an unchanged wall.
+// static edit does not re-roll every texel of an unchanged wall. `face` shifts
+// clear of both halves of `slot_key`, so no two faces share a seed.
 @(private)
 lightmap_seed :: proc(entry: Box_Entry, face, x, y: int) -> u64 {
-	surface := hash64(slot_key(entry.source, entry.id) ~ u64(face))
+	surface := hash64(slot_key(entry.source, entry.id) ~ (u64(face) << 48))
 	return seed_for(LIGHTMAP_KIND, surface ~ (u64(x) | u64(y) << 32))
 }
 
