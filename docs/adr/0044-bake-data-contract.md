@@ -39,7 +39,11 @@ never a fill value.
   an 8 x 8 first/second moment block. Probes are packed into a 2D shelf atlas;
   the header stores the column count so a reader can derive both image extents.
   The probe state buffer carries the valid flag and virtual offset, so the
-  runtime never re-derives validity from live geometry.
+  runtime never re-derives validity from live geometry. The bake repairs a
+  probe that the virtual offset cannot move out of geometry by dilating it from
+  nearby valid probes; a probe with no valid source stays invalid. The runtime
+  samples the four probes of the containing tetrahedron, applies normal bias,
+  the facing weight, and the depth-moment test, and skips an invalid probe.
 - **Key.** The key hashes the canonical static boxes (arena in array order, then
   placed static objects by object id), the active static fixtures, the quality,
   and the tool version. Dynamic lamps and dynamic bodies are excluded. The
@@ -86,12 +90,13 @@ never a fill value.
   replaces it.
 - `src:bake` is compiled by `make check` and imported by the frame and the
   renderer. It does not import either package, so the bake tool can share it.
-- The lightmap sampler and the face buffer are bound in the scene descriptor
-  set and sampled by static boxes in the lit pass. The probe images, probe state
-  buffer, and probe volume are created but not bound or sampled yet; probe
-  sampling lands separately. A missing or failed artifact binds a placeholder
-  image and a one-face buffer so the descriptor set stays valid. Every object's
-  lightmap weight is zero in that state, so nothing samples the placeholder.
+- The lightmap sampler, the face buffer, the probe images, the probe state
+  buffer, and the probe volume are bound in the scene descriptor set. Static
+  boxes sample the lightmap; dynamic boxes sample the probe field. A missing or
+  failed artifact binds placeholder images, a one-face buffer, a one-probe state
+  buffer, and a one-probe volume so the descriptor set stays valid. Every
+  object's lightmap and probe weights are zero in that state, so nothing samples
+  a placeholder.
 - The design guide, `README.md`, `GLOSSARY.md`, and ADR 0042 still describe the
   removed dynamic DDGI field and ban baked light or textures. This ADR starts
   the replacement but does not edit those pages; #386 owns that cleanup. Do not

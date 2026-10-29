@@ -46,6 +46,7 @@ Bake_Report :: struct {
 	slots:          int    `json:"slots"`,
 	probes:         int    `json:"probes"`,
 	probe_spacing:  f32    `json:"probe_spacing"`,
+	invalid_probes: u32    `json:"invalid_probes"`,
 	artifact_bytes: int    `json:"artifact_bytes"`,
 	gpu_bytes:      int    `json:"gpu_bytes"`,
 	bake_ms:        u32    `json:"bake_ms"`,
@@ -82,6 +83,7 @@ Bake_Resources :: struct {
 	faces_buffer:      vk.Buffer,
 	faces_memory:      vk.DeviceMemory,
 	faces_bytes:       int,
+	states_bytes:      int,
 	slots_buffer:      vk.Buffer,
 	slots_memory:      vk.DeviceMemory,
 	states_buffer:     vk.Buffer,
@@ -182,6 +184,7 @@ bake_report :: proc(r: ^Renderer) -> Bake_Report {
 		report.slots = int(header.slot_count)
 		report.probes = int(header.probe_count)
 		report.probe_spacing = header.probe_spacing
+		report.invalid_probes = r.bake.data.stats.invalid_probes
 		report.artifact_bytes = len(r.bake.data.bytes)
 		report.bake_ms = r.bake.data.stats.bake_ms
 	}
@@ -247,17 +250,6 @@ create_bake_lightmap :: proc(
 	}
 	r.bake.faces_bytes = len(faces) * size_of(bake.Face)
 	return create_clamp_sampler(r, &r.bake.sampler)
-}
-
-@(private)
-create_bake_placeholder :: proc(r: ^Renderer) -> bool {
-	// A descriptor set must name an image and a storage buffer even when no bake
-	// is loaded. Nothing samples them: every object's weight is zero while the
-	// status reports missing or failed. The placeholder format is mandatory and
-	// does not need the float lightmap support.
-	zero := [4]u8{}
-	faces := [1]bake.Face{}
-	return create_bake_lightmap(r, 1, 1, .R8G8B8A8_UNORM, zero[:], faces[:])
 }
 
 @(private)
@@ -327,6 +319,7 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 	) {
 		return false
 	}
+	r.bake.states_bytes = len(data.probe_states) * size_of(bake.Probe_State)
 
 	volume := Bake_Volume_Uniform {
 		min           = data.header.probe_min,

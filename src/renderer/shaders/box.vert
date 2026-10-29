@@ -15,8 +15,8 @@ struct ObjectData {
     vec4 color;
     uint lightmap_slot;
     float lightmap_weight;
+    float probe_weight;
     uint pad0;
-    uint pad1;
 };
 
 layout(push_constant) uniform PushConstants {
