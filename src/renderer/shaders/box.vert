@@ -13,7 +13,7 @@ struct ObjectData {
     mat4 model;
     mat4 prev_model;
     vec4 color;
-    uvec4 lightmap;
+    uvec4 indirect;
 };
 
 layout(push_constant) uniform PushConstants {

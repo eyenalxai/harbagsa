@@ -265,8 +265,8 @@ active light count, cluster overflow, atlas weight, text counters, and debug
 line counts. `state.renderer.bake` reports the
 bake status (`missing`, `stale`, `current`, or `failed`), the current key, the
 artifact key, format and tool versions, atlas and probe counts, probe spacing,
-artifact and GPU bytes, the mapped and unmapped static box counts, the invalid
-probe count, and the load error. `state.render_digest`
+artifact and GPU bytes, the mapped and unmapped static box counts, the invalid,
+dilated, and skipped probe counts, and the load error. `state.render_digest`
 covers target extent, camera, boxes, emissive strengths, point lights, jitter,
 atlas weight, clip height, shadow visibility, lightmap and probe visibility,
 bake key, bake status, and view flags. `setup.renderer.shader_digest` covers the embedded SPIR-V.
@@ -308,8 +308,6 @@ Supported fields:
   true. Use false for paired captures that isolate the baked indirect term.
 - `probes`: sample the baked static probe volume for dynamic boxes. It defaults
   true. Use false for paired captures that isolate the probe term.
-- `gi`: add the one-bounce probe field. It defaults true. Use false for paired
-  captures and direct-light performance runs.
 - `clear`: restore every default. Set one field to `null` to reset only that field.
 
 A scenario declares `requires.renderer_debug`, or the run uses

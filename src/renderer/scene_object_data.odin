@@ -60,7 +60,7 @@ write_object_data :: proc(
 			model = model,
 			prev_model = previous,
 			color = {box.color.x, box.color.y, box.color.z, box.emissive},
-			lightmap = {slot, use_probes, 0, 0},
+			indirect = {slot, use_probes, 0, 0},
 		}
 		taa.prev_models[index] = model
 	}

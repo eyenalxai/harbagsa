@@ -16,7 +16,7 @@ struct ObjectData {
     mat4 model;
     mat4 prev_model;
     vec4 color;
-    uvec4 lightmap;
+    uvec4 indirect;
 };
 
 layout(push_constant) uniform PushConstants {
@@ -133,13 +133,13 @@ void main() {
     vec3 normal = normalize(v_normal);
     vec3 lit = point_light_radiance(v_world_position, normal);
     vec3 indirect = vec3(0.0);
-    if (object.lightmap.x != INVALID_LIGHTMAP_SLOT) {
+    if (object.indirect.x != INVALID_LIGHTMAP_SLOT) {
         indirect = lightmap_indirect(
-            object.lightmap.x,
+            object.indirect.x,
             v_local_position,
             v_local_normal
         );
-    } else if (object.lightmap.y != 0u) {
+    } else if (object.indirect.y != 0u) {
         indirect = probe_indirect(v_world_position, normal);
     }
     vec3 color = v_color * (lit + indirect) + v_color * object.color.a;
