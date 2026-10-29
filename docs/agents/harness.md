@@ -45,6 +45,7 @@ run path. `--out DIR` chooses the whole run directory.
 | build and publish a bake | **Bake lifecycle** |
 | capture the final image | **Capture targets** |
 | capture one lighting term | **Capture targets** and **Diagnostic views** |
+| resolve one pixel | **Pick** |
 | read velocity, history, depth, or scene colour | **Capture targets** |
 | read numeric image statistics | **Capture targets** |
 | read renderer state | **Renderer state** |
@@ -63,8 +64,8 @@ run path. `--out DIR` chooses the whole run directory.
 
 ## What one run writes
 
-- `report.json`: result, final state, setup, captures, failures, digest, error,
-  and named perf reports.
+- `report.json`: result, final state, setup, captures, picks, failures, digest,
+  error, and named perf reports.
 - `state.json`: final state alone.
 - `frames/`: PNG, float, or raw captures.
 - `trace.jsonl`: opt-in perf samples.
@@ -147,6 +148,7 @@ is seconds. Capture regions and crops are pixels unless `unit` is `normalized`.
 - `remove`: object `id` or `name`.
 - `bake`: rebuild and publish the static indirect; optional `probe_spacing`,
   `threads`, and `out`.
+- `pick`: resolve one pixel with `at`; see **Pick**.
 - `get`: one state or capture `field`.
 - `quit`: stop the session.
 
@@ -300,6 +302,47 @@ plain color capture to prove the history survived.
 A named capture exposes its own renderer state through `get`, for example
 `capture.named.lit.renderer.light_count` and
 `capture.named.lit.render_digest`.
+
+## Pick
+
+`pick` resolves one pixel to the surface under it. `at` is `[x, y]` in the
+capture extent with the origin at the top left. The renderer draws one frame
+with no capture, forces that frame's TLAS build, and traces the pixel's camera
+ray in a one-pixel compute pass. The pass evaluates the shared term include, so
+a pick names the same direct, shadow, lightmap, probe, and emissive values the
+lit pass wrote. The frame uses the unjittered camera, consumes no jitter sample,
+and advances TAA history like a settle frame; a pick writes no capture and no
+render digest of its own.
+
+A hit carries:
+
+- `object`: the scene identity. Static arena boxes carry `kind: "static_box"`
+  and `index`. Placed objects carry `kind: "object"`, `id`, `prefab`, and
+  `name` when the object has one. Spider boxes carry `kind: "spider"` and
+  `index`.
+- `prefab`: the placed object's prefab, when there is one.
+- `distance`, `position`, and `normal`: the ray distance, world hit point, and
+  world normal.
+- `face`: the box face index in `+X, -X, +Y, -Y, +Z, -Z` order.
+- `lightmap`: `rect` in atlas UV and the `texel` the face sample read. A surface
+  with no tile reports a zero rect and `texel: [-1, -1]`.
+- `probe_cell`: the `base` cell, the `invalid` probe count, and whether the hit
+  is `inside` the probe volume.
+- `terms`: linear `direct`, `shadow`, `lightmap`, `probe`, and `emissive`.
+
+A miss reports `hit: false` and no other key. A run appends every pick to
+`report.picks`; a session reply carries the same object under `pick`. `pick`
+needs a renderer, so it is a command error under `--no-render`. It is also a
+command error while the menu is open and when `at` is outside the capture
+extent.
+
+```json
+{"cmd": "pick", "at": [640, 360]}
+```
+
+`scenarios/pick.json` picks a lit static crate and then empty space. The
+instance custom index is the scene box order: static arena boxes, placed
+objects, then the spider.
 
 ## Renderer state
 

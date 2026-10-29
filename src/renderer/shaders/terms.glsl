@@ -2,11 +2,13 @@
 #define TERMS_GLSL
 
 // The one place the lit terms are evaluated. The lit and term-view fragment
-// shaders compose from these functions, and the pick shader reads them next, so
-// a pick names the value the lit pass wrote.
+// shaders compose from these functions, and the pick compute shader reads them,
+// so a pick names the value the lit pass wrote.
 //
-// Fragment only: the scene descriptor layout gives bindings 2 through 11 the
-// fragment stage alone, so a vertex shader cannot include this header.
+// The direct term takes the pixel explicitly: the fragment shaders pass
+// gl_FragCoord.xy and the pick pass passes the ray's pixel, so the cluster
+// lookup is the one the lit pass would use. Every other binding this header
+// reads carries the compute stage as well.
 
 #include "scene.glsl"
 
@@ -80,15 +82,20 @@ bool occluded(vec3 origin, vec3 direction, uint mask, float max_distance) {
 
 // The direct term. The shadow view walks the same clusters with `trace_shadows`
 // false; the beauty call passes true, so the expression stays the original one.
-vec3 point_light_radiance(vec3 world_position, vec3 normal, bool trace_shadows) {
+vec3 point_light_radiance(
+    vec3 world_position,
+    vec3 normal,
+    vec2 pixel,
+    bool trace_shadows
+) {
     float view_z = -(camera.view * vec4(world_position, 1.0)).z;
     int cluster_x = clamp(
-        int(gl_FragCoord.x / camera.screen.y * float(CLUSTER_X)),
+        int(pixel.x / camera.screen.y * float(CLUSTER_X)),
         0,
         CLUSTER_X - 1
     );
     int cluster_y = clamp(
-        int(gl_FragCoord.y / camera.screen.z * float(CLUSTER_Y)),
+        int(pixel.y / camera.screen.z * float(CLUSTER_Y)),
         0,
         CLUSTER_Y - 1
     );
@@ -131,9 +138,9 @@ vec3 point_light_radiance(vec3 world_position, vec3 normal, bool trace_shadows) 
 
 // Shadowed direct over unshadowed direct as one grey value. A surface no light
 // reaches cannot be shadowed, so it reports full visibility.
-vec3 shadow_ratio(vec3 world_position, vec3 normal) {
-    vec3 shadowed = point_light_radiance(world_position, normal, true);
-    vec3 open = point_light_radiance(world_position, normal, false);
+vec3 shadow_ratio(vec3 world_position, vec3 normal, vec2 pixel) {
+    vec3 shadowed = point_light_radiance(world_position, normal, pixel, true);
+    vec3 open = point_light_radiance(world_position, normal, pixel, false);
     const vec3 LUMA = vec3(0.2126, 0.7152, 0.0722);
     float total = dot(open, LUMA);
     if (total <= 0.0) {
@@ -274,6 +281,7 @@ vec3 view_term(
     vec3 normal,
     vec3 local_normal,
     vec3 local_position,
+    vec2 pixel,
     uint view
 ) {
     if (view == VIEW_LIGHTMAP_GRID) {
@@ -283,10 +291,10 @@ vec3 view_term(
         return probe_cell_color(probe_cell(world_position, normal));
     }
     if (view == VIEW_SHADOW) {
-        return shadow_ratio(world_position, normal);
+        return shadow_ratio(world_position, normal, pixel);
     }
     if (view == VIEW_DIRECT) {
-        return albedo * point_light_radiance(world_position, normal, true);
+        return albedo * point_light_radiance(world_position, normal, pixel, true);
     }
     if (view == VIEW_LIGHTMAP) {
         return albedo * lightmap_indirect(object, local_normal, local_position) *

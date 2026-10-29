@@ -209,6 +209,7 @@ degrees and ends in `_deg`. Positions and ranges are metres. One `step` or
 - `place`: create one object without entering debug mode.
 - `remove`: delete one object by id or name.
 - `bake`: rebuild the static indirect from the current scene and publish it.
+- `pick`: resolve one pixel to its object, surface, and lighting terms.
 - `get`: resolve one state or capture field.
 - `quit`: close a live session.
 

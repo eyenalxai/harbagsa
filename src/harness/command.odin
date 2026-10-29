@@ -33,6 +33,7 @@ Command_Kind :: enum {
 	Place,
 	Remove,
 	Bake,
+	Pick,
 	Get,
 	Quit,
 }
@@ -70,6 +71,11 @@ Capture_Command :: struct {
 	has_alpha: bool,
 	// The entries are named `<name>-<view>`, which the field name does not say.
 	views:     []renderer.Capture_View,
+}
+
+// `at` is a pixel in the capture extent with the origin at the top left.
+Pick_Command :: struct {
+	at: [2]i32,
 }
 
 Captures_Command :: struct {
@@ -177,6 +183,7 @@ Command :: struct {
 	place:          Place_Command,
 	remove:         Remove_Command,
 	bake:           Bake_Command,
+	pick:           Pick_Command,
 	get:            Get_Command,
 }
 

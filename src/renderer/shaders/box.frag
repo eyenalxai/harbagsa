@@ -28,7 +28,7 @@ void main() {
 
     ObjectData object = scene.objects[draw.object_index];
     vec3 normal = normalize(v_normal);
-    vec3 lit = point_light_radiance(v_world_position, normal, true);
+    vec3 lit = point_light_radiance(v_world_position, normal, gl_FragCoord.xy, true);
     vec3 indirect = vec3(0.0);
     float indirect_weight = max(object.lightmap_weight, object.probe_weight);
     if (object.lightmap_weight > 0.0) {
