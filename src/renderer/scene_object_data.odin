@@ -50,12 +50,20 @@ write_object_data :: proc(
 		if has_lightmap && lightmap_enabled {
 			weight = 1.0
 		}
+		// A box without a bake identity is dynamic geometry. It reads the probe
+		// field, never a lightmap tile. A static box with no tile in the loaded
+		// artifact keeps zero on both terms.
+		probe_weight := f32(0.0)
+		if r.bake.loaded && !slots[index].has_slot {
+			probe_weight = 1.0
+		}
 		data[index] = Object_Data {
 			model           = model,
 			prev_model      = previous,
 			color           = {box.color.x, box.color.y, box.color.z, box.emissive},
 			lightmap_slot   = slot,
 			lightmap_weight = weight,
+			probe_weight    = probe_weight,
 		}
 		taa.prev_models[index] = model
 	}
