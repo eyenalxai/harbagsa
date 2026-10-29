@@ -83,8 +83,12 @@ never a fill value.
   replaces it.
 - `src:bake` is compiled by `make check` and imported by the frame and the
   renderer. It does not import either package, so the bake tool can share it.
-- No descriptor binding or shader sample reads the new resources yet; the
-  lightmap and probe samplers are introduced by their sampling tickets.
+- The lightmap sampler and the face buffer are bound in the scene descriptor
+  set and sampled by static boxes in the lit pass. The probe images, probe state
+  buffer, and probe volume stay bound but are not sampled yet; probe sampling
+  lands separately. A missing or failed artifact binds a placeholder image and a
+  one-face buffer so the descriptor set stays valid. Every object's lightmap
+  weight is zero in that state, so nothing samples the placeholder.
 - The design guide, `README.md`, `GLOSSARY.md`, and ADR 0042 still describe the
   removed dynamic DDGI field and ban baked light or textures. This ADR starts
   the replacement but does not edit those pages; #386 owns that cleanup. Do not

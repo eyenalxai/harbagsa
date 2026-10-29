@@ -3,9 +3,14 @@ package renderer
 
 import "core:log"
 
+import "src:bake"
 import "src:geometry"
 
-write_object_data :: proc(r: ^Renderer, boxes: []geometry.Box) -> bool {
+write_object_data :: proc(
+	r: ^Renderer,
+	boxes: []geometry.Box,
+	refs: []bake.Lightmap_Ref,
+) -> bool {
 	taa := &r.taa
 	data := cast([^]Object_Data)r.scene.object_mapped[r.frame_index]
 	if data == nil {
@@ -20,6 +25,14 @@ write_object_data :: proc(r: ^Renderer, boxes: []geometry.Box) -> bool {
 		)
 		return false
 	}
+	if len(refs) != len(boxes) {
+		log.errorf(
+			"renderer: %d lightmap refs do not match %d boxes",
+			len(refs),
+			len(boxes),
+		)
+		return false
+	}
 
 	if len(taa.prev_models) < len(boxes) {
 		resize(&taa.prev_models, len(boxes))
@@ -31,10 +44,17 @@ write_object_data :: proc(r: ^Renderer, boxes: []geometry.Box) -> bool {
 		if index < taa.prev_model_count {
 			previous = taa.prev_models[index]
 		}
+		slot, has_lightmap := bake_lightmap_slot(r, refs[index])
+		weight := f32(0.0)
+		if has_lightmap {
+			weight = 1.0
+		}
 		data[index] = Object_Data {
-			model = model,
-			prev_model = previous,
-			color = {box.color.x, box.color.y, box.color.z, box.emissive},
+			model           = model,
+			prev_model      = previous,
+			color           = {box.color.x, box.color.y, box.color.z, box.emissive},
+			lightmap_slot   = slot,
+			lightmap_weight = weight,
 		}
 		taa.prev_models[index] = model
 	}

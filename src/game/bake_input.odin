@@ -21,6 +21,12 @@ bake_input_destroy :: proc(input: ^Bake_Input) {
 	input^ = {}
 }
 
+// Static bodies are baked; dynamic bodies are not. The frame and the bake input
+// share this rule, so it lives here.
+object_has_bake_slot :: proc(object: Placed_Object) -> bool {
+	return object.body_mode == .Static
+}
+
 // The static bake input is exactly the arena boxes, placed static bodies, and
 // static fixtures. Dynamic lamps and dynamic bodies never enter it.
 simulation_bake_input :: proc(
@@ -48,7 +54,7 @@ simulation_bake_input :: proc(
 	}
 	for object in simulation_objects(sim) {
 		box := simulation_object_box(sim, object.id)
-		if object.body_mode == .Static {
+		if object_has_bake_slot(object) {
 			insert_box(&input.boxes, arena_count, bake.Box_Entry {
 				source = .Placed,
 				id = u32(object.id),

@@ -93,6 +93,13 @@ Box_Entry :: struct {
 	box:    geometry.Box,
 }
 
+// A frame box's lightmap identity. Dynamic geometry sets `has_slot` false: it
+// never owns a tile.
+Lightmap_Ref :: struct {
+	key:      u64,
+	has_slot: bool,
+}
+
 Light_Entry :: struct {
 	id:        u32,
 	position:  [3]f32,

@@ -7,6 +7,7 @@ layout(location = 0) in vec3 v_normal;
 layout(location = 1) in vec3 v_color;
 layout(location = 2) in vec3 v_world_position;
 layout(location = 3) in vec3 v_local_position;
+layout(location = 4) flat in vec3 v_local_normal;
 
 layout(location = 0) out vec4 out_color;
 layout(location = 1) out vec4 out_velocity;
@@ -15,6 +16,10 @@ struct ObjectData {
     mat4 model;
     mat4 prev_model;
     vec4 color;
+    uint lightmap_slot;
+    float lightmap_weight;
+    uint pad0;
+    uint pad1;
 };
 
 layout(push_constant) uniform PushConstants {
@@ -46,6 +51,48 @@ layout(set = 0, binding = 4) readonly buffer ClusterCounts {
 layout(set = 0, binding = 5) readonly buffer ClusterIndices {
     uint indices[];
 } cluster_indices;
+
+// The Odin mirror is in src/bake/format.odin and src/bake/geometry.odin.
+struct LightmapFace {
+    uvec2 key;
+    uvec2 slot_face;
+    vec4 uv_rect;
+};
+
+layout(set = 0, binding = 11) uniform sampler2D lightmap_atlas;
+layout(set = 0, binding = 12) readonly buffer LightmapFaces {
+    LightmapFace faces[];
+} lightmap;
+
+// FACE_BASES in src/bake/geometry.odin: the face order is +X, -X, +Y, -Y, +Z,
+// -Z and s = dot(local, u) + 0.5, t = dot(local, v) + 0.5.
+const vec3 FACE_U[6] = vec3[6](
+    vec3( 0.0,  0.0,  1.0),
+    vec3( 0.0,  0.0, -1.0),
+    vec3( 1.0,  0.0,  0.0),
+    vec3( 1.0,  0.0,  0.0),
+    vec3( 1.0,  0.0,  0.0),
+    vec3(-1.0,  0.0,  0.0)
+);
+const vec3 FACE_V[6] = vec3[6](
+    vec3( 0.0, -1.0,  0.0),
+    vec3( 0.0, -1.0,  0.0),
+    vec3( 0.0,  0.0, -1.0),
+    vec3( 0.0,  0.0,  1.0),
+    vec3( 0.0,  1.0,  0.0),
+    vec3( 0.0,  1.0,  0.0)
+);
+
+int face_index(vec3 local_normal) {
+    vec3 axis = abs(local_normal);
+    if (axis.x >= axis.y && axis.x >= axis.z) {
+        return local_normal.x > 0.0 ? 0 : 1;
+    }
+    if (axis.y >= axis.z) {
+        return local_normal.y > 0.0 ? 2 : 3;
+    }
+    return local_normal.z > 0.0 ? 4 : 5;
+}
 
 const uint POINT_RAY_MASK = 0x02u;
 // A lamp that sits on a wall ends its shadow ray on that wall. Stop short of
@@ -118,6 +165,19 @@ vec3 point_light_radiance(vec3 world_position, vec3 normal) {
     return sum;
 }
 
+vec3 lightmap_indirect(ObjectData object, vec3 local_normal, vec3 local_position) {
+    int face = face_index(local_normal);
+    vec4 rect = lightmap.faces[object.lightmap_slot * 6u + uint(face)].uv_rect;
+    vec2 st = vec2(
+        dot(local_position, FACE_U[face]),
+        dot(local_position, FACE_V[face])
+    ) + 0.5;
+    // The rect is center-to-center, so the clamp lands on the first and last
+    // texel centers instead of the geometric edge.
+    vec2 uv = mix(rect.xy, rect.zw, clamp(st, 0.0, 1.0));
+    return textureLod(lightmap_atlas, uv, 0.0).rgb;
+}
+
 void main() {
     if (v_world_position.y > camera.screen.w) {
         discard;
@@ -126,7 +186,12 @@ void main() {
     ObjectData object = scene.objects[draw.object_index];
     vec3 normal = normalize(v_normal);
     vec3 lit = point_light_radiance(v_world_position, normal);
-    vec3 color = v_color * lit + v_color * object.color.a;
+    vec3 indirect = vec3(0.0);
+    if (object.lightmap_weight > 0.0) {
+        indirect = lightmap_indirect(object, v_local_normal, v_local_position);
+    }
+    vec3 color = v_color * (lit + indirect * object.lightmap_weight) +
+                 v_color * object.color.a;
 
     vec4 world_position = vec4(v_world_position, 1.0);
     vec4 previous_world = object.prev_model * vec4(v_local_position, 1.0);
