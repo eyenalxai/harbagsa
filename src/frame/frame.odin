@@ -4,7 +4,6 @@ package frame
 import "core:math"
 import "core:mem"
 
-import "src:bake"
 import "src:game"
 import "src:geometry"
 import "src:renderer"
@@ -24,8 +23,7 @@ Scratch :: struct {
 	allocator:   mem.Allocator,
 	boxes:       [dynamic]geometry.Box,
 	lights:      [dynamic]renderer.Light,
-	bake_boxes:  [dynamic]bake.Box_Entry,
-	bake_lights: [dynamic]bake.Light_Entry,
+	bake:        game.Bake_Input,
 	debug_lines: game.Debug_Lines,
 }
 
@@ -36,12 +34,7 @@ scratch_destroy :: proc(scratch: ^Scratch) {
 	if scratch.lights != nil {
 		delete(scratch.lights)
 	}
-	if scratch.bake_boxes != nil {
-		delete(scratch.bake_boxes)
-	}
-	if scratch.bake_lights != nil {
-		delete(scratch.bake_lights)
-	}
+	game.bake_input_destroy(&scratch.bake)
 	scratch^ = {}
 }
 
@@ -54,12 +47,6 @@ scratch_prepare :: proc(scratch: ^Scratch) {
 	}
 	if scratch.lights == nil {
 		scratch.lights = make([dynamic]renderer.Light, 0, 0, scratch.allocator)
-	}
-	if scratch.bake_boxes == nil {
-		scratch.bake_boxes = make([dynamic]bake.Box_Entry, 0, 0, scratch.allocator)
-	}
-	if scratch.bake_lights == nil {
-		scratch.bake_lights = make([dynamic]bake.Light_Entry, 0, 0, scratch.allocator)
 	}
 }
 
@@ -118,7 +105,7 @@ build :: proc(
 		})
 	}
 	scene.lights = scratch.lights[:]
-	scene.bake_static = build_bake_input(sim, scratch)
+	scene.bake_static = game.simulation_bake_input(sim, &scratch.bake, scratch.allocator)
 	scratch.debug_lines.count = 0
 	if options.debug_view {
 		game.collect_world_lines(sim, &scratch.debug_lines)

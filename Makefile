@@ -8,6 +8,10 @@ ODIN_LIB_CHECK_FLAGS := $(filter-out -vet-unused-procedures,$(ODIN_FLAGS))
 BIN := bin/harbagsa
 AGENT_BIN := bin/harbagsa-agent
 AGENT := cmd/harbagsa-agent
+BAKE_BIN := bin/harbagsa-bake
+BAKE_TOOL := cmd/harbagsa-bake
+BAKE_OUT := build/bake/arena.hbake
+BAKE_SOURCES := $(shell find src cmd -name '*.odin')
 HARNESS_REVISION := $(shell git rev-parse --short HEAD 2>/dev/null || printf unknown)
 # `git status --porcelain` covers staged and untracked files; `git diff --quiet`
 # sees neither.
@@ -76,7 +80,7 @@ VULKAN_LAYER_DIRS ?= \
 	/usr/share/vulkan/explicit_layer.d
 VALIDATION_LAYER := VK_LAYER_KHRONOS_validation
 
-.PHONY: all FORCE build agent check check-spirv check-lines run shaders check-validation-layer validate-demo check-references shot clean
+.PHONY: all FORCE build agent bake check check-spirv check-lines run shaders check-validation-layer validate-demo check-references shot clean
 
 FORCE:
 
@@ -156,9 +160,20 @@ build: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) build . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -out:$(BIN)
 	$(AGENT_BUILD)
 
+$(BAKE_BIN): $(BAKE_SOURCES) $(BOX3D_LIB)
+	@mkdir -p $(dir $(BAKE_BIN))
+	$(ODIN) build $(BAKE_TOOL) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -out:$(BAKE_BIN)
+
+$(BAKE_OUT): $(BAKE_BIN) $(BAKE_SOURCES)
+	@mkdir -p $(@D)
+	$(BAKE_BIN) --out $(@)
+
+bake: $(BAKE_OUT)
+
 check: check-lines check-spirv $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) check . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
 	$(ODIN) check $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS)
+	$(ODIN) check $(BAKE_TOOL) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS)
 	$(ODIN) check src/platform $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/renderer $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/renderer/font $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
