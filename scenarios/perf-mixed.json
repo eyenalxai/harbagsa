@@ -1,5 +1,5 @@
 {
-  "note": "96 synthetic point lights at 1080p. Direct and mixed windows alternate so a clock drift cannot masquerade as an indirect term; each term alone is bracketed by a direct window.",
+  "note": "96 synthetic point lights at 1080p. Direct windows bracket every indirect variant so a clock drift cannot masquerade as a term cost; the first direct window absorbs the ramp.",
   "size": "1920x1080",
   "requires": {"renderer_debug": true},
   "view": {"hud": false, "debug": false, "hint": false, "perf": false},
@@ -8,6 +8,7 @@
     {"cmd": "renderer_debug", "synthetic_lights": 96, "lightmap": true, "probe": true},
     {"cmd": "perf", "name": "ramp", "frames": 60, "warmup": 60},
     {"cmd": "renderer_debug", "lightmap": false, "probe": false},
+    {"cmd": "perf", "name": "direct-0", "frames": 120, "warmup": 30, "prime": 1},
     {"cmd": "perf", "name": "direct-1", "frames": 120, "warmup": 30, "prime": 1},
     {"cmd": "renderer_debug", "lightmap": true, "probe": true},
     {"cmd": "perf", "name": "mixed-1", "frames": 120, "warmup": 30, "prime": 1},
@@ -23,7 +24,10 @@
     {"cmd": "perf", "name": "direct-4", "frames": 120, "warmup": 30, "prime": 1},
     {"cmd": "renderer_debug", "lightmap": true, "probe": true},
     {"cmd": "perf", "name": "mixed-2", "frames": 120, "warmup": 30, "prime": 1},
+    {"cmd": "renderer_debug", "lightmap": false, "probe": false},
+    {"cmd": "perf", "name": "direct-5", "frames": 120, "warmup": 30, "prime": 1},
+    {"cmd": "renderer_debug", "lightmap": true, "probe": true},
     {"cmd": "capture", "name": "lights-96", "format": "stats", "png": true,
-     "note": "The 96-light field the last perf window measured."}
+     "note": "The 96-light field with both indirect terms."}
   ]
 }
