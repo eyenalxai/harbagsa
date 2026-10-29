@@ -1,38 +1,65 @@
 #+vet explicit-allocators
-package frame
+#+vet !unused-procedures // the frame and the bake tool share this input
+package game
+
+import "core:mem"
 
 import "src:bake"
-import "src:game"
+
+Bake_Input :: struct {
+	boxes:  [dynamic]bake.Box_Entry,
+	lights: [dynamic]bake.Light_Entry,
+}
+
+bake_input_destroy :: proc(input: ^Bake_Input) {
+	if input.boxes != nil {
+		delete(input.boxes)
+	}
+	if input.lights != nil {
+		delete(input.lights)
+	}
+	input^ = {}
+}
 
 // The static bake input is exactly the arena boxes, placed static bodies, and
 // static fixtures. Dynamic lamps and dynamic bodies never enter it.
-build_bake_input :: proc(sim: ^game.Simulation, scratch: ^Scratch) -> bake.Static {
-	clear(&scratch.bake_boxes)
-	clear(&scratch.bake_lights)
+simulation_bake_input :: proc(
+	sim: ^Simulation,
+	input: ^Bake_Input,
+	allocator: mem.Allocator,
+) -> bake.Static {
+	if input.boxes == nil {
+		input.boxes = make([dynamic]bake.Box_Entry, 0, 0, allocator)
+	}
+	if input.lights == nil {
+		input.lights = make([dynamic]bake.Light_Entry, 0, 0, allocator)
+	}
+	clear(&input.boxes)
+	clear(&input.lights)
 
 	arena_count := 0
-	for box, index in game.arena_static_boxes() {
-		append(&scratch.bake_boxes, bake.Box_Entry {
+	for box, index in arena_static_boxes() {
+		append(&input.boxes, bake.Box_Entry {
 			source = .Arena,
 			id = u32(index),
 			box = box,
 		})
 		arena_count += 1
 	}
-	for object in game.simulation_objects(sim) {
-		box := game.simulation_object_box(sim, object.id)
+	for object in simulation_objects(sim) {
+		box := simulation_object_box(sim, object.id)
 		if object.body_mode == .Static {
-			insert_box(&scratch.bake_boxes, arena_count, bake.Box_Entry {
+			insert_box(&input.boxes, arena_count, bake.Box_Entry {
 				source = .Placed,
 				id = u32(object.id),
 				box = box,
 			})
 		}
 		if object.light.active && object.light.kind == .Static_Fixture {
-			insert_light(&scratch.bake_lights, bake.Light_Entry {
+			insert_light(&input.lights, bake.Light_Entry {
 				id = u32(object.id),
 				position = box.center,
-				color = game.light_color_rgb(object.light.color),
+				color = light_color_rgb(object.light.color),
 				intensity = object.light.intensity,
 				range = object.light.range,
 				emissive = object.light.emissive,
@@ -40,8 +67,8 @@ build_bake_input :: proc(sim: ^game.Simulation, scratch: ^Scratch) -> bake.Stati
 		}
 	}
 	return {
-		boxes = scratch.bake_boxes[:],
-		lights = scratch.bake_lights[:],
+		boxes = input.boxes[:],
+		lights = input.lights[:],
 	}
 }
 
