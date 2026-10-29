@@ -161,7 +161,7 @@ depth_barriers :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pa
 }
 
 @(private)
-build_scene_pass :: proc(r: ^Renderer, pass: ^Pass) {
+build_scene_pass :: proc(r: ^Renderer, pass: ^Pass, view := Capture_View.Beauty) {
 	extent := target_extent_vk(r)
 	frame := r.frame_index
 	color := r.frame_targets.scene_color[frame]
@@ -203,6 +203,7 @@ build_scene_pass :: proc(r: ^Renderer, pass: ^Pass) {
 	pass.stages = {.VERTEX, .FRAGMENT}
 	pass.bind_camera = true
 	pass.has_rendering = true
+	pass.view = view
 	pass.draw = draw_box_pass
 }
 
@@ -314,5 +315,6 @@ draw_box_pass :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pas
 		pass.layout,
 		pass.stages,
 		len(pass.boxes),
+		pass.view,
 	)
 }

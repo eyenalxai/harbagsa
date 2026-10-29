@@ -194,7 +194,7 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	}
 
 	if r.taa.pipeline_format != r.target.config.format {
-		destroy_pipeline_pair(r, &r.taa.pipeline, &r.taa.pipeline_layout)
+		destroy_taa_pipelines(r)
 		if !create_taa_pipeline(r) {
 			return .Fatal
 		}

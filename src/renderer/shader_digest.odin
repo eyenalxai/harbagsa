@@ -15,6 +15,7 @@ shader_digest :: proc() -> string {
 		for bytes in ([?][]byte{
 			BOX_VERTEX_SPIRV,
 			BOX_FRAGMENT_SPIRV,
+			BOX_VIEW_FRAGMENT_SPIRV,
 			TAA_VERTEX_SPIRV,
 			TAA_FRAGMENT_SPIRV,
 			DEBUG_VERTEX_SPIRV,

@@ -71,6 +71,7 @@ backend_capture_write_png :: proc(
 			x = crop.x, y = crop.y, w = crop.w, h = crop.h, scale = crop.scale,
 			width = out_width, height = out_height,
 		}
+		written.view = result.view
 		written.target = result.target
 		written.format = result.format
 		written.target_format = result.target_format
@@ -97,6 +98,7 @@ backend_capture_write_png :: proc(
 		return {}, write_error
 	}
 	delete(result.name, data.allocator)
+	written.view = result.view
 	written.target = result.target
 	written.format = result.format
 	written.target_format = result.target_format

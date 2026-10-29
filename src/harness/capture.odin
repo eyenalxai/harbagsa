@@ -6,6 +6,7 @@ import "core:mem"
 import "src:renderer"
 
 Capture_Target :: renderer.Capture_Target
+Capture_View :: renderer.Capture_View
 
 Capture_Format :: enum {
 	Png,
@@ -64,11 +65,17 @@ Capture_Spec :: struct {
 	steps:     Maybe(Capture_Steps_Options),
 	color_key: Maybe(Capture_Color_Key),
 	coverage:  Maybe(Capture_Coverage),
+	// The view this request writes. A command with a `views` array expands into
+	// one request per view; a plain capture leaves it at beauty.
+	view:      Capture_View,
 }
 
 Capture_Request :: struct {
 	using spec: Capture_Spec,
 	alpha:      f32,
+	// True when the request came from a `views` list, so beauty also carries a
+	// `view` field in the report.
+	has_view:   bool,
 }
 
 Capture_Result :: struct {
@@ -79,6 +86,7 @@ Capture_Result :: struct {
 	width:         u32            `json:"width"`,
 	height:        u32            `json:"height"`,
 	target:        string         `json:"target"`,
+	view:          string         `json:"view,omitempty"`,
 	format:        string         `json:"format"`,
 	target_format: string         `json:"target_format"`,
 	png:           bool           `json:"png,omitempty"`,
@@ -196,6 +204,9 @@ capture_result_destroy :: proc(result: ^Capture_Result, allocator: mem.Allocator
 	}
 	if result.path != "" {
 		delete(result.path, allocator)
+	}
+	if result.view != "" {
+		delete(result.view, allocator)
 	}
 	if result.hash != "" {
 		delete(result.hash, allocator)

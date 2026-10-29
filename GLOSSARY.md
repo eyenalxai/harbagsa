@@ -446,6 +446,18 @@ _Avoid_: Batch, multi-shot
 The image a capture reads: the final color, the velocity target, the history, the depth buffer, or the scene color.
 _Avoid_: Render layer
 
+**Diagnostic view**:
+One named image a capture can request from one simulation frame: `beauty`, `direct`, `lightmap`, `probe`, `emissive`, `shadow`, `lightmap_grid`, or `probe_cell`. A `views` list writes one capture entry per view, named `<name>-<view>`, each with a `view` field. A view is not a capture target, and `target` and `views` are mutually exclusive.
+_Avoid_: Debug view, render layer
+
+**Term view**:
+A diagnostic view of one radiance term or of the data that term reads. It is one extra lit pass at the same camera and jitter, resolved through the gamma path with history read and write disabled, so it neither resets nor advances TAA.
+_Avoid_: Light pass, debug pass
+
+**View image**:
+The renderer-owned color image a term view resolves into before the readback copy. It is allocated on the first term-view capture and reused until the target extent changes; the game binary that never captures owns none.
+_Avoid_: View buffer, view target
+
 **Capture format**:
 The output a capture writes: PNG for color, `float` for RGBA f32 values, `raw` for the stored texel bytes, `stats` for the numeric summary, or `profile` for a line or mean span.
 _Avoid_: Export mode
