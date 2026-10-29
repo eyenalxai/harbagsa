@@ -3,6 +3,7 @@ package harness
 
 import "core:encoding/json"
 import "core:mem"
+import "core:sys/info"
 
 import "src:bake"
 import "src:game"
@@ -31,7 +32,7 @@ parse_bake :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, 
 		bake = {
 			action        = .Status,
 			probe_spacing = f32(bake.PROBE_SPACING),
-			threads       = bake.default_threads(),
+			threads       = harness_default_threads(),
 		},
 	}
 	if value, has := json_get(object, "action"); has {
@@ -58,6 +59,15 @@ parse_bake :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, 
 		command.bake.threads = threads
 	}
 	return command, ""
+}
+
+@(private)
+harness_default_threads :: proc() -> int {
+	_, logical, ok := info.cpu_core_count()
+	if !ok || logical < 1 {
+		return 1
+	}
+	return clamp(logical, 1, bake.MAX_THREADS)
 }
 
 @(private)
@@ -102,7 +112,12 @@ execute_bake :: proc(session: ^Session, command: Command, _reply: ^Reply) -> str
 		if build_error != .None {
 			return format_error("bake: %s", bake.build_error_name(build_error))
 		}
-		if !backend.publish_bake(backend.ctx, artifact, build_report.bake_ms) {
+		if !backend.publish_bake(
+			backend.ctx,
+			artifact,
+			build_report.bake_ms,
+			command.bake.threads,
+		) {
 			return format_error("%s", "bake publish failed; see state.bake.error")
 		}
 	}

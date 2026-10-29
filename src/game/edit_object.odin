@@ -116,21 +116,11 @@ edit_set_body :: proc(dm: ^Debug_Mode, sim: ^Simulation, mode: Body_Mode) -> Edi
 
 @(private)
 edit_flip_body :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Result {
-	if editor_uses_next_placement(dm) {
-		palette_flip_body(&dm.palette)
-		return edit_ok()
+	mode: Body_Mode = dm.palette.body_mode == .Static ? .Dynamic : .Static
+	if object, found := selected_object(dm, sim); found {
+		mode = object.body_mode == .Static ? .Dynamic : .Static
 	}
-	object, ok := selected_object(dm, sim)
-	if !ok {
-		palette_flip_body(&dm.palette)
-		return edit_ok()
-	}
-	mode: Body_Mode = object.body_mode == .Static ? .Dynamic : .Static
-	object_history_record(debug_history(dm), sim)
-	if !simulation_convert_object(sim, object.id, mode) {
-		return edit_fail(.Failed)
-	}
-	return edit_ok()
+	return edit_set_body(dm, sim, mode)
 }
 
 @(private)

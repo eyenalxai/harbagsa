@@ -52,6 +52,10 @@ edit_place_object :: proc(dm: ^Debug_Mode, sim: ^Simulation, place: Place_Object
 
 @(private)
 place_object :: proc(dm: ^Debug_Mode, sim: ^Simulation, spawn: Object_Spawn) -> Edit_Result {
+	spawn := spawn
+	if spawn.light.active {
+		spawn.light.kind = lamp_kind_for_body(spawn.body_mode)
+	}
 	history := debug_history(dm)
 	snapshot := object_snapshot_capture(sim, history.allocator)
 	id := simulation_create_object(sim, spawn)

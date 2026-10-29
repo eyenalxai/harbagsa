@@ -1,6 +1,6 @@
 # Direct dynamic point lights
 
-> Shadow visibility is added by [ADR 0040](0040-hard-point-light-shadows.md). The ambient floor is removed by [ADR 0041](0041-absolute-darkness.md). One-bounce indirect light is added by [ADR 0042](0042-single-volume-ddgi.md). The no-shadow, no-indirect, and ambient-floor statements in this decision describe the state at the time.
+> Shadow visibility is added by [ADR 0040](0040-hard-point-light-shadows.md). The ambient floor is removed by [ADR 0041](0041-absolute-darkness.md). Mixed baked indirect is added by [ADR 0045](0045-mixed-lighting.md). The no-shadow, no-indirect, and ambient-floor statements in this decision describe the state at the time.
 
 The renderer uses one direct-light model: a constant ambient floor, current point lights, and emissive boxes. It has no directional light, background pass, shadow visibility term, indirect light cache, or ray-traced reference. This supersedes every earlier lighting decision that required those systems.
 

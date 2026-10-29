@@ -41,8 +41,7 @@ rows_state_destroy :: proc(state: ^Rows_State, allocator: mem.Allocator) {
 session_refresh_hud :: proc(session: ^Session, delta_seconds: f32 = 0) {
 	bake_status := ""
 	if session.render.backend != nil && session.render.backend.ready {
-		snapshot := session.render.backend.snapshot(session.render.backend.ctx)
-		bake_status = snapshot.report.bake.status
+		bake_status = session.render.backend.bake_report(session.render.backend.ctx).status
 	}
 	game.hud_state_update(
 		&session.hud,

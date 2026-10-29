@@ -213,6 +213,9 @@ session_place :: proc(session: ^Session, command: Place_Command, reply: ^Reply) 
 		}
 		body = kind_body
 	}
+	if light.active {
+		light.kind = game.lamp_kind_for_body(body)
+	}
 	if command.light.has_color {
 		light.color = command.light.color
 	}

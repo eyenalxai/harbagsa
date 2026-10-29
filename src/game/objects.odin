@@ -165,8 +165,8 @@ object_box :: proc(object: Placed_Object) -> geometry.Box {
 
 simulation_create_object :: proc(sim: ^Simulation, spawn: Object_Spawn) -> Object_Id {
 	light := spawn_light(spawn)
-	if light.active {
-		light.kind = lamp_kind_for_body(spawn.body_mode)
+	if light.active && light.kind != lamp_kind_for_body(spawn.body_mode) {
+		return INVALID_OBJECT_ID
 	}
 	color := prefab_color(spawn.prefab)
 	if light.active {

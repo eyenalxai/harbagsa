@@ -140,8 +140,8 @@ is seconds. Capture regions and crops are pixels unless `unit` is `normalized`.
   `renderer_debug` blocks. Every block is optional; at least one is required.
 - `place`: `prefab`, `position`, optional `yaw_deg`, `body`, `name`, and `light`.
 - `remove`: object `id` or `name`.
-- `bake`: `action` is `status`, `reload`, or `publish`; optional `probe_spacing`
-  (`1` or `2`) and `threads`.
+- `bake`: `action` is `status` (a no-op that keeps the renderer ready),
+  `reload`, or `publish`; optional `probe_spacing` (`1` or `2`) and `threads`.
 - `get`: one state or capture `field`.
 - `quit`: stop the session.
 
@@ -336,6 +336,31 @@ error. A static geometry or static fixture edit changes the key and sets
 artifact format is documented in
 `docs/adr/0044-bake-data-contract.md`; the mixed-lighting decision is
 `docs/adr/0045-mixed-lighting.md`.
+
+## Bake quality
+
+Judge the baked pass with paired captures and the state report, not by eye
+alone:
+
+- Keep `state.bake.status = "current"` and `state.bake.key ==
+  state.bake.artifact_key` for an accepted capture. A `stale`, `missing`, or
+  `failed` capture is allowed only as evidence of that state.
+- Pair `lightmap` on/off for static surfaces and `probes` on/off for dynamic
+  objects. A single toggle must not change the other path.
+- Move a crate and then a dynamic lamp. The crate keeps static indirect and the
+  dynamic lamp changes only direct light and its shadow.
+- Remove every static fixture and publish; a wall view is black. The spider's
+  emissive eyes are the only allowed lit pixels.
+- Check seams at chart borders, wall leaks through thin geometry, and dark
+  gaps near invalid probes. Dilation fills the holes it can; `skipped_probes`
+  counts the rest.
+- The parent quality targets are lightmap fetch <= 0.25 ms, probe gather
+  <= 0.60 ms, mixed lighting added <= 1.0 ms, a 96-light 1080p frame <= 8.0 ms,
+  GPU lighting data <= 32 MiB, and artifact <= 32 MiB. The default 1 m bake is
+  about 5 s at 16 threads, not the 2 s target; record the measured time.
+  `scenarios/perf.json` and `perf-arena.json` are the baseline scenarios.
+
+No images are committed. Point at the run directory and the text report.
 
 ## Renderer debug overrides
 

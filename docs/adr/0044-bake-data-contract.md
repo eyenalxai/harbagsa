@@ -94,9 +94,7 @@ never a fill value.
   renderer. It does not import either package, so the bake tool can share it.
 - Static boxes sample the lightmap atlas and dynamic boxes sample the static
   probe volume. Both are read by the lit pass; the probe volume uses
-  tetrahedral interpolation over four probes and skips probes the bake marked
-  invalid.
-- The design guide, `README.md`, `GLOSSARY.md`, and ADR 0042 still describe the
-  removed dynamic DDGI field and ban baked light or textures. This ADR starts
-  the replacement but does not edit those pages; #386 owns that cleanup. Do not
-  read the current guide as agreeing with this contract.
+  tetrahedral interpolation over four probes, dilates invalid probes from
+  valid neighbours at load, and skips only the holes with no valid neighbour.
+- The design guide, `README.md`, and `GLOSSARY.md` now describe this mixed
+  system; ADR 0045 records the decision. ADR 0042 is historical.
