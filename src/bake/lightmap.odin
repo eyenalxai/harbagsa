@@ -106,16 +106,17 @@ lightmap_bake :: proc(
 	// the repair, so the two counts overlap by design.
 	queue := make([dynamic]int, 0, 0, allocator)
 	defer delete(queue)
+	scratch := make([]f32, denoise_scratch_len(&layout), allocator)
+	defer delete(scratch, allocator)
 	for chart in layout.charts {
-		filled, dilated := atlas_dilate_chart(
+		result.dilated_texels += atlas_fill_chart(atlas, valid, chart, atlas_size, &queue)
+		lightmap_denoise_chart(atlas, chart, atlas_size, scratch)
+		result.dilated_texels += atlas_gutter_chart(
 			atlas,
-			valid,
 			chart,
 			atlas_size,
 			int(quality.gutter_texels),
-			&queue,
 		)
-		result.dilated_texels += filled + dilated
 	}
 	result.valid_texels = len(jobs)
 	result.rays = u64(len(jobs)) * u64(quality.lightmap_rays)
@@ -157,7 +158,7 @@ lightmap_trace :: proc(work: ^Lightmap_Work, texel: Texel_Job) -> u64 #no_bounds
 		chart.height,
 	)
 	origin := dv_add(position, dv_mul(normal, SURFACE_PUSHOFF))
-	seed := seed_for(LIGHTMAP_KIND, u64(texel.index))
+	seed := lightmap_seed(work.static.boxes[chart.box], chart.face, texel.x, texel.y)
 	rotation := [2]f64{unit_from_hash(seed), unit_from_hash(hash64(seed))}
 	sum := DVec3{}
 	shadows: u64
@@ -178,6 +179,14 @@ lightmap_trace :: proc(work: ^Lightmap_Work, texel: Texel_Job) -> u64 #no_bounds
 	work.atlas[texel.index * 4 + 2] = f32(sum.z * scale)
 	work.atlas[texel.index * 4 + 3] = 1.0
 	return shadows
+}
+
+// The noise field follows the surface, not the atlas position, so an unrelated
+// static edit does not re-roll every texel of an unchanged wall.
+@(private)
+lightmap_seed :: proc(entry: Box_Entry, face, x, y: int) -> u64 {
+	surface := hash64(slot_key(entry.source, entry.id) ~ u64(face))
+	return seed_for(LIGHTMAP_KIND, surface ~ (u64(x) | u64(y) << 32))
 }
 
 @(private)
