@@ -35,8 +35,9 @@ layout(std430, set = 0, binding = 12) writeonly buffer PickOutput {
 } result;
 
 void main() {
-    float height = camera.screen.z;
-    vec2 pixel = vec2(float(pick.x) + 0.5, height - float(pick.y) - 0.5);
+    // Vulkan's framebuffer origin is the top left, so `at` already matches
+    // gl_FragCoord; only the half-pixel centre is missing.
+    vec2 pixel = vec2(float(pick.x) + 0.5, float(pick.y) + 0.5);
     vec2 ndc = (pixel / camera.screen.yz) * 2.0 - 1.0;
 
     mat4 inverse_view = inverse(camera.view);
@@ -51,7 +52,7 @@ void main() {
     rayQueryInitializeEXT(
         query,
         scene_tlas,
-        gl_RayFlagsOpaqueEXT | gl_RayFlagsTerminateOnFirstHitEXT,
+        gl_RayFlagsOpaqueEXT,
         PICK_RAY_MASK,
         origin,
         0.0,

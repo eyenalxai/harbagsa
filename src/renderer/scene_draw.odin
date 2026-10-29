@@ -49,7 +49,8 @@ record_scene :: proc(
 	input.height = extent.height
 	// A pick resolves a pixel, so it uses the unjittered camera and leaves the
 	// jitter sequence for the settle frame that follows it.
-	if input.unjittered {
+	is_pick := input.pick_at != nil
+	if is_pick {
 		r.taa.applied_jitter_index = 0
 	} else {
 		input.jitter = taa_frame_jitter(r, extent)
@@ -67,7 +68,7 @@ record_scene :: proc(
 	input.bake_status = r.bake.status
 	// A pick is a sample of the last frame, not a new frame input, so it does
 	// not replace the digest a capture reports.
-	if input.pick_at == nil {
+	if !is_pick {
 		r.render_digest = render_digest(input)
 		r.has_render_digest = true
 	}
@@ -91,7 +92,7 @@ record_scene :: proc(
 	for kind in perf.PASS_ORDER {
 		pass: Pass
 		build_pass(r, &pass, kind, image_index, input.boxes)
-		pass.force_tlas = input.force_tlas
+		pass.force_tlas = is_pick
 		record_pass(r, command_buffer, &pass)
 		write_timing(r, command_buffer, kind)
 	}
