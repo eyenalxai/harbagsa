@@ -1,0 +1,17 @@
+{
+  "note": "Remove every static fixture, publish an empty bake, and capture a lamp-free floor.",
+  "size": "1280x720",
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "bake"},
+    {"cmd": "remove", "name": "initial-lamp"},
+    {"cmd": "remove", "name": "initial-panel"},
+    {"cmd": "remove", "name": "initial-beacon"},
+    {"cmd": "bake"},
+    {"cmd": "camera", "position": [0, 3, 0], "look_at": [0, 0, 0]},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "empty", "format": "stats", "png": true,
+      "coverage": {"black": 0.01, "lit": 0.1}},
+    {"cmd": "capture", "name": "empty-scene", "target": "scene_color", "format": "stats"}
+  ]
+}
