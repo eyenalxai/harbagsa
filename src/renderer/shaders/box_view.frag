@@ -53,6 +53,7 @@ void main() {
             normal,
             v_local_normal,
             v_local_position,
+            gl_FragCoord.xy,
             draw.view
         ),
         1.0

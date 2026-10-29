@@ -36,6 +36,7 @@ SHADER_INCLUDES := $(SHADER_SRC)/gamma.glsl $(SHADER_SRC)/camera.glsl \
 SHADERS := $(SHADER_OUT)/box.vert.spv $(SHADER_OUT)/box.frag.spv \
 	$(SHADER_OUT)/box_view.frag.spv \
 	$(SHADER_OUT)/cluster.comp.spv \
+	$(SHADER_OUT)/pick.comp.spv \
 	$(SHADER_OUT)/debug.vert.spv $(SHADER_OUT)/debug.frag.spv \
 	$(SHADER_OUT)/hud.vert.spv $(SHADER_OUT)/hud.frag.spv \
 	$(SHADER_OUT)/taa.vert.spv $(SHADER_OUT)/taa.frag.spv \

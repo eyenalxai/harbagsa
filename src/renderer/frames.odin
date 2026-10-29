@@ -137,6 +137,7 @@ begin_frame :: proc(
 		image_index = image_index,
 		command_buffer = command_buffer,
 		capture = capture_slot_count(capture) > 0,
+		wait = input.pick_at != nil,
 	}, .Ok
 }
 
@@ -175,7 +176,7 @@ end_frame :: proc(r: ^Renderer, frame: Frame) -> Frame_Status {
 		return .Fatal
 	}
 
-	if frame.capture &&
+	if (frame.capture || frame.wait) &&
 	   !check(
 		   vk.WaitForFences(r.device, 1, &r.in_flight[r.frame_index], true, max(u64)),
 		   "vkWaitForFences",

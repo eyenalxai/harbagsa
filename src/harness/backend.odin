@@ -26,6 +26,7 @@ Backend :: struct {
 		session: ^Session,
 		requests: []Capture_Request,
 	) -> ([]Capture_Result, string),
+	pick:     proc(ctx: rawptr, session: ^Session, at: [2]i32) -> (renderer.Pick_Hit, string),
 	gpu_times: proc(ctx: rawptr) -> perf.Gpu_Times,
 	snapshot:  proc(ctx: rawptr) -> Backend_Snapshot,
 	setup:     proc(ctx: rawptr) -> renderer.Setup_Report,
@@ -114,6 +115,7 @@ backend_create :: proc(
 		ready = true,
 		ctx = data,
 		render = backend_render,
+		pick = backend_pick,
 		gpu_times = backend_gpu_times,
 		snapshot = backend_snapshot,
 		setup = backend_setup,
@@ -182,31 +184,9 @@ backend_gpu_times :: proc(ctx: rawptr) -> perf.Gpu_Times {
 	return renderer.gpu_times(&data.renderer)
 }
 
+// The frame input a capture, a settle, and a pick all draw.
 @(private)
-backend_render :: proc(
-	ctx: rawptr,
-	session: ^Session,
-	requests: []Capture_Request,
-) -> (
-	[]Capture_Result,
-	string,
-) {
-	data := cast(^Backend_Data)ctx
-	if data.present {
-		events := platform.poll_events(&data.window)
-		if events.quit {
-			session.quit = true
-			return nil, ""
-		}
-		if events.resized {
-			renderer.notify_resize(&data.renderer)
-		}
-	}
-
-	alpha := session.alpha
-	if len(requests) > 0 {
-		alpha = requests[0].alpha
-	}
+backend_scene :: proc(data: ^Backend_Data, session: ^Session, alpha: f32) -> renderer.Render_Input {
 	static := game.simulation_bake_input(&session.sim, &session.scratch.bake, session.allocator)
 	renderer.refresh_bake(&data.renderer, static)
 	options := frame.Options {
@@ -236,6 +216,57 @@ backend_render :: proc(
 		static,
 	)
 	perf.mark(&session.perf.state, .Build)
+	return scene
+}
+
+@(private)
+backend_pick :: proc(
+	ctx: rawptr,
+	session: ^Session,
+	at: [2]i32,
+) -> (
+	renderer.Pick_Hit,
+	string,
+) {
+	data := cast(^Backend_Data)ctx
+	scene := backend_scene(data, session, session.alpha)
+	scene.pick_at = at
+	scene.force_tlas = true
+	scene.unjittered = true
+	data.renderer.recorder = &session.perf.state.recorder
+	hit, pick_error := renderer.pick(&data.renderer, scene)
+	if pick_error != "" {
+		return {}, pick_error
+	}
+	return hit, ""
+}
+
+@(private)
+backend_render :: proc(
+	ctx: rawptr,
+	session: ^Session,
+	requests: []Capture_Request,
+) -> (
+	[]Capture_Result,
+	string,
+) {
+	data := cast(^Backend_Data)ctx
+	if data.present {
+		events := platform.poll_events(&data.window)
+		if events.quit {
+			session.quit = true
+			return nil, ""
+		}
+		if events.resized {
+			renderer.notify_resize(&data.renderer)
+		}
+	}
+
+	alpha := session.alpha
+	if len(requests) > 0 {
+		alpha = requests[0].alpha
+	}
+	scene := backend_scene(data, session, alpha)
 	if len(requests) > 0 {
 		if !renderer.text_atlas_sync(&data.renderer, session.sim.settings.type_weight) {
 			return nil, format_error("text atlas sync failed")
