@@ -17,9 +17,9 @@ intervals measure throughput. A `--present` run measures display pacing instead.
 At that time the report separated five GPU passes: cluster, depth, scene, TAA,
 and overlay. The current pass list is TLAS, cluster, depth, scene, TAA, and
 overlay; baked indirect is inside the scene pass. The mixed-lighting numbers are
-in [mixed-lighting.md](mixed-lighting.md). It also reports CPU phases and frame
-intervals. GPU values belong to the last completed frame. A device without
-timestamp support reports CPU data only.
+in [mixed-lighting.md](mixed-lighting.md). The perf report also carries CPU
+phases and frame intervals. GPU values belong to the last completed frame. A
+device without timestamp support reports CPU data only.
 
 At 1280x720 on the baseline machine, the starting scene's GPU mean was
 0.2672 ms.
