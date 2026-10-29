@@ -94,6 +94,7 @@ run :: proc(args: []string) -> int {
 	return 0
 }
 
+
 @(private)
 default_threads :: proc() -> int {
 	_, logical, ok := info.cpu_core_count()

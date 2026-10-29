@@ -77,6 +77,12 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 			if !prefab_ok || !body_ok || !color_ok || !kind_ok {
 				return format_error("%s", "scene object holds an unknown prefab, body, light kind, or light colour")
 			}
+			if object.light.active && kind != game.lamp_kind_for_body(body) {
+				return format_error(
+					"scene object %q: a static fixture needs a static body and a dynamic lamp needs a dynamic body",
+					object.name,
+				)
+			}
 			record := game.Object_Record {
 				id = game.Object_Id(object.id),
 				prefab = prefab,

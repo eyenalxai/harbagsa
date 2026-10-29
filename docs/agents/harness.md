@@ -140,6 +140,8 @@ is seconds. Capture regions and crops are pixels unless `unit` is `normalized`.
   `renderer_debug` blocks. Every block is optional; at least one is required.
 - `place`: `prefab`, `position`, optional `yaw_deg`, `body`, `name`, and `light`.
 - `remove`: object `id` or `name`.
+- `bake`: `action` is `status` (a no-op that keeps the renderer ready),
+  `reload`, or `publish`; optional `probe_spacing` (`1` or `2`) and `threads`.
 - `get`: one state or capture `field`.
 - `quit`: stop the session.
 
@@ -165,9 +167,10 @@ stance, eye-height, and step-smoothing keys are command errors.
 
 `place` creates one object without entering debug mode. It draws no editor
 lines and adds no undo entry. `prefab` and `position` are required. `body`
-defaults to the prefab. A lamp prefab ignores a static request and keeps its
-dynamic body. A name is unique, at most 31 letters, digits, `-`, or `_`, and is
-neither all digits nor `count`.
+defaults to the prefab. For a lamp, the body selects the kind: a static body is
+a static fixture and a dynamic body is a dynamic lamp. A `light.kind` that
+conflicts with an explicit `body` is a command error. A name is unique, at most
+31 letters, digits, `-`, or `_`, and is neither all digits nor `count`.
 
 ```json
 {"cmd":"place","prefab":"Lamp","position":[13.5,2.75,10.5],"body":"dynamic",
@@ -186,8 +189,8 @@ actions. Fields cover:
 - `pick`, `height`, `yaw_deg`, `snap`, and `cancel` for the armed placement.
 - `place` for an exact transform without a placement ray.
 - `select_object`, `move`, `rotate_deg`, `body`, `flip_body`, `delete`, and
-  `duplicate` for an object. A body request that would make a lamp static fails
-  with `a lamp must stay dynamic`.
+  `duplicate` for an object. On a lamp, `body` and `flip_body` switch between a
+  static fixture and a dynamic lamp and move the physics body with the kind.
 - `turn`, `wheel`, `large`, `primary`, `secondary`, `drag_move`, and
   `drag_release` for pointer-relative input.
 - `light_color`, `light_intensity`, and `light_range` for the next or selected lamp.
@@ -266,7 +269,8 @@ line counts. `state.renderer.bake` reports the
 bake status (`missing`, `stale`, `current`, or `failed`), the current key, the
 artifact key, format and tool versions, atlas and probe counts, probe spacing,
 artifact and GPU bytes, the mapped and unmapped static box counts, the invalid,
-dilated, and skipped probe counts, and the load error. `state.render_digest`
+dilated, and skipped probe counts, the artifact bake time, and the measured
+build and publish times, and the load error. `state.render_digest`
 covers target extent, camera, boxes, emissive strengths, point lights, jitter,
 atlas weight, clip height, shadow visibility, lightmap and probe visibility,
 bake key, bake status, and view flags. `setup.renderer.shader_digest` covers the embedded SPIR-V.
@@ -282,6 +286,13 @@ artifact stores zero bake time so identical inputs produce identical bytes.
 Without the artifact, a run reports
 `state.renderer.bake.status = "missing"` and renders the direct path only.
 
+`state.bake` and `state.renderer.bake` carry the same report: status, current
+and artifact key, format and tool versions, atlas and probe counts, spacing,
+artifact and GPU bytes, static box and probe counts, the artifact bake time,
+the measured build and publish times, and the loader error. `current` means the
+key matches; `stale` means the old indirect is still bound; `missing` and
+`failed` add no indirect.
+
 Use `--bake PATH` on `run` or `session` to load another artifact:
 
 ```sh
@@ -289,11 +300,67 @@ Use `--bake PATH` on `run` or `session` to load another artifact:
   --bake build/bake/arena.hbake --out runs/bake/current
 ```
 
+`bake reload` re-reads the configured path. `bake publish` builds a new artifact
+from the current static input on the harness thread and publishes it:
+
+```json
+{"cmd":"bake","action":"status"}
+{"cmd":"bake","action":"reload"}
+{"cmd":"bake","action":"publish","threads":16}
+{"cmd":"bake","action":"publish","probe_spacing":2}
+```
+
+`publish` defaults to the 1 m grid and the CPU count. The default 1 m bake takes
+about 5 s at 16 threads. Both commands reset TAA history; `publish` also reports
+`build_ms` and `publish_ms`. A static edit reports `stale` on the next frame and
+leaves the old indirect bound until one of these commands succeeds. A publish
+failure keeps the old artifact and records the error.
+
+To prove the empty-light case, remove every lamp object and publish:
+
+```json
+{"cmd":"remove","name":"initial-lamp"}
+{"cmd":"remove","name":"initial-panel"}
+{"cmd":"remove","name":"initial-beacon"}
+{"cmd":"bake","action":"publish","threads":16}
+```
+
+The arena stays in the bake (the baker needs at least one static box), but with
+no static fixture and no static emissive box every lightmap and probe value is
+zero. Direct light is also zero, so the room renders black. The spider's
+emissive eyes are the only lit pixels in a normal camera.
+
 A version or layout mismatch sets `status` to `failed` and records the loader
 error. A static geometry or static fixture edit changes the key and sets
 `status` to `stale`; the old artifact stays bound until a later publish. The
 artifact format is documented in
-`docs/adr/0044-bake-data-contract.md`.
+`docs/adr/0044-bake-data-contract.md`; the mixed-lighting decision is
+`docs/adr/0045-mixed-lighting.md`.
+
+## Bake quality
+
+Judge the baked pass with paired captures and the state report, not by eye
+alone:
+
+- Keep `state.bake.status = "current"` and `state.bake.key ==
+  state.bake.artifact_key` for an accepted capture. A `stale`, `missing`, or
+  `failed` capture is allowed only as evidence of that state.
+- Pair `lightmap` on/off for static surfaces and `probes` on/off for dynamic
+  objects. A single toggle must not change the other path.
+- Move a crate and then a dynamic lamp. The crate keeps static indirect and the
+  dynamic lamp changes only direct light and its shadow.
+- Remove every static fixture and publish; a wall view is black. The spider's
+  emissive eyes are the only allowed lit pixels.
+- Check seams at chart borders, wall leaks through thin geometry, and dark
+  gaps near invalid probes. Dilation fills the holes it can; `skipped_probes`
+  counts the rest.
+- The parent quality targets are lightmap fetch <= 0.25 ms, probe gather
+  <= 0.60 ms, mixed lighting added <= 1.0 ms, a 96-light 1080p frame <= 8.0 ms,
+  GPU lighting data <= 32 MiB, and artifact <= 32 MiB. The default 1 m bake is
+  about 5 s at 16 threads, not the 2 s target; record the measured time.
+  `scenarios/perf.json` and `perf-arena.json` are the baseline scenarios.
+
+No images are committed. Point at the run directory and the text report.
 
 ## Renderer debug overrides
 
@@ -328,9 +395,10 @@ A `perf` command measures frames and can write one trace. `frames` defaults to
 120, `warmup` to 60, and `prime` to 2 seconds. `prime: 0` disables the time loop.
 Offscreen measures throughput. `--present` measures pacing.
 
-GPU passes are TLAS, cluster, probe, depth, scene, TAA, and overlay. The report
+GPU passes are TLAS, cluster, depth, scene, TAA, and overlay. The report
 carries `p50`, `p95`, and `mean` for each CPU phase and GPU pass. Perf data is
-wall-clock data and is not deterministic.
+wall-clock data and is not deterministic. The baked indirect is not a pass; its
+cost is inside the scene pass.
 
 Use `scenarios/perf.json` for the default view and `scenarios/perf-arena.json`
 for the arena from above. `harbagsa-agent ab` compares two builds. `ab --visual`

@@ -9,8 +9,7 @@ DILATE_RADIUS :: 2
 // box. Borrow the nearest valid probes so a tetrahedron near that box keeps
 // four samples; a probe with no valid neighbour stays invalid and is skipped.
 // The valid snapshot keeps the fill independent of the loop order.
-dilate_probes :: proc(r: ^Renderer) -> (dilated, skipped: int) {
-	data := &r.bake.data
+dilate_probes :: proc(r: ^Renderer, data: ^bake.Data) -> (dilated, skipped: int) {
 	count := int(data.header.probe_count)
 	counts := data.header.probe_counts
 	if count <= 0 || int(counts.x) * int(counts.y) * int(counts.z) != count {

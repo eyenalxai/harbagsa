@@ -56,6 +56,9 @@ Bake_Report :: struct {
 	dilated_probes: int    `json:"dilated_probes"`,
 	skipped_probes: int    `json:"skipped_probes"`,
 	bake_ms:        u32    `json:"bake_ms"`,
+	build_ms:       u32    `json:"build_ms"`,
+	build_threads:  int    `json:"build_threads"`,
+	publish_ms:     u32    `json:"publish_ms"`,
 	error:          string `json:"error,omitempty"`,
 }
 
@@ -83,6 +86,10 @@ Bake_Resources :: struct {
 	unmapped_boxes: int,
 	dilated_probes: int,
 	skipped_probes: int,
+	build_ms:       u32,
+	build_threads:  int,
+	publish_ms:     u32,
+	failed:         bool,
 
 	lightmap:          Image,
 	probe_irradiance:  Image,
@@ -101,11 +108,18 @@ Bake_Resources :: struct {
 }
 
 init_bake :: proc(r: ^Renderer, path: string) -> bool {
-	r.bake.path = strings.clone(DEFAULT_BAKE_PATH, r.allocator)
-	if path != "" {
+	if r.bake.path == "" {
+		r.bake.path = strings.clone(DEFAULT_BAKE_PATH, r.allocator)
+	}
+	if path != "" && path != r.bake.path {
 		delete(r.bake.path, r.allocator)
 		r.bake.path = strings.clone(path, r.allocator)
 	}
+	if r.bake.error != "" {
+		delete(r.bake.error, r.allocator)
+		r.bake.error = ""
+	}
+	r.bake.failed = false
 	r.bake.status = .Missing
 
 	bytes, read_error := os.read_entire_file(r.bake.path, r.allocator)
@@ -113,35 +127,24 @@ init_bake :: proc(r: ^Renderer, path: string) -> bool {
 		if general, ok := read_error.(os.General_Error); ok && general == .Not_Exist {
 			return create_bake_placeholder(r)
 		}
-		r.bake.status = .Failed
-		r.bake.error = fmt.aprintf(
-			"cannot read %s: %v",
-			r.bake.path,
-			read_error,
-			allocator = r.allocator,
-		)
+		r.bake.failed = true
+		set_bake_error(r, fmt.tprintf("cannot read the artifact: %v", read_error))
 		return create_bake_placeholder(r)
 	}
 
 	data, load_error := bake.load(bytes)
 	if load_error != .None {
 		delete(bytes, r.allocator)
-		r.bake.status = .Failed
-		r.bake.error = fmt.aprintf(
-			"%s: %s",
-			r.bake.path,
-			bake.error_name(load_error),
-			allocator = r.allocator,
-		)
-		log.errorf("renderer: %s", r.bake.error)
+		r.bake.failed = true
+		set_bake_error(r, bake.error_name(load_error))
 		return create_bake_placeholder(r)
 	}
 	r.bake.data = data
 	r.bake.loaded = true
 	r.bake.status = .Stale
-	if !create_bake_resources(r) {
-		if r.bake.status != .Failed {
-			log_bake_error(r, "cannot create the bake resources")
+	if !create_bake_resources(r, &r.bake.data, &r.bake) {
+		if !r.bake.failed {
+			set_bake_error(r, "cannot create the bake resources")
 		}
 		return false
 	}
@@ -156,9 +159,13 @@ bake_key :: proc(r: ^Renderer, static: bake.Static) -> u64 {
 	return bake.key(static, quality)
 }
 
+refresh_bake :: proc(r: ^Renderer, static: bake.Static) {
+	update_bake(r, bake_key(r, static))
+}
+
 update_bake :: proc(r: ^Renderer, key: u64) {
 	r.bake.current_key = key
-	if !r.bake.loaded {
+	if !r.bake.loaded || r.bake.failed {
 		return
 	}
 	r.bake.status = r.bake.data.header.bake_key == key ? .Current : .Stale
@@ -191,45 +198,39 @@ bake_report :: proc(r: ^Renderer) -> Bake_Report {
 	report.unmapped_boxes = r.bake.unmapped_boxes
 	report.dilated_probes = r.bake.dilated_probes
 	report.skipped_probes = r.bake.skipped_probes
+	report.build_ms = r.bake.build_ms
+	report.build_threads = r.bake.build_threads
+	report.publish_ms = r.bake.publish_ms
 	return report
 }
 
 destroy_bake :: proc(r: ^Renderer) {
-	b := &r.bake
-	destroy_image(r, &b.lightmap)
-	destroy_image(r, &b.probe_irradiance)
-	destroy_image(r, &b.probe_moments)
-	if r.device != nil && b.sampler != 0 {
-		vk.DestroySampler(r.device, b.sampler, nil)
+	destroy_bake_resources(r, &r.bake)
+	if r.bake.path != "" {
+		delete(r.bake.path, r.allocator)
 	}
-	b.sampler = 0
-	destroy_buffer(r, &b.faces_buffer, &b.faces_memory)
-	destroy_buffer(r, &b.slots_buffer, &b.slots_memory)
-	destroy_buffer(r, &b.states_buffer, &b.states_memory)
-	destroy_buffer(r, &b.volume_buffer, &b.volume_memory)
-	bake.destroy(&b.data, r.allocator)
-	if b.path != "" {
-		delete(b.path, r.allocator)
+	if r.bake.error != "" {
+		delete(r.bake.error, r.allocator)
 	}
-	if b.error != "" {
-		delete(b.error, r.allocator)
-	}
-	b^ = {}
+	r.bake = {}
 }
 
 @(private)
-create_bake_resources :: proc(r: ^Renderer) -> bool {
-	data := &r.bake.data
+create_bake_resources :: proc(
+	r: ^Renderer,
+	data: ^bake.Data,
+	out: ^Bake_Resources,
+) -> bool {
 	if !format_supports(r, .R16G16B16A16_SFLOAT, {.SAMPLED_IMAGE_FILTER_LINEAR}) {
-		log_bake_error(r, "the device cannot filter R16G16B16A16_SFLOAT")
+		set_bake_error(r, "the device cannot filter R16G16B16A16_SFLOAT")
 		return false
 	}
 	if !format_supports(r, .R16G16_SFLOAT, {.SAMPLED_IMAGE_FILTER_LINEAR}) {
-		log_bake_error(r, "the device cannot filter R16G16_SFLOAT")
+		set_bake_error(r, "the device cannot filter R16G16_SFLOAT")
 		return false
 	}
 
-	r.bake.dilated_probes, r.bake.skipped_probes = dilate_probes(r)
+	out.dilated_probes, out.skipped_probes = dilate_probes(r, data)
 
 	lightmap, lightmap_ok := upload_texture(
 		r,
@@ -241,7 +242,7 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 	if !lightmap_ok {
 		return false
 	}
-	r.bake.lightmap = lightmap
+	out.lightmap = lightmap
 
 	irradiance, irradiance_ok := upload_texture(
 		r,
@@ -253,7 +254,7 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 	if !irradiance_ok {
 		return false
 	}
-	r.bake.probe_irradiance = irradiance
+	out.probe_irradiance = irradiance
 
 	moments, moments_ok := upload_texture(
 		r,
@@ -265,9 +266,9 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 	if !moments_ok {
 		return false
 	}
-	r.bake.probe_moments = moments
+	out.probe_moments = moments
 
-	if !create_clamp_sampler(r, &r.bake.sampler) {
+	if !create_clamp_sampler(r, &out.sampler) {
 		return false
 	}
 
@@ -276,19 +277,19 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 		raw_data(data.faces),
 		vk.DeviceSize(len(data.faces) * size_of(bake.Face)),
 		{.STORAGE_BUFFER},
-		&r.bake.faces_buffer,
-		&r.bake.faces_memory,
+		&out.faces_buffer,
+		&out.faces_memory,
 	) {
 		return false
 	}
-	r.bake.faces_bytes = len(data.faces) * size_of(bake.Face)
+	out.faces_bytes = len(data.faces) * size_of(bake.Face)
 	if !create_device_buffer(
 		r,
 		raw_data(data.slots),
 		vk.DeviceSize(len(data.slots) * size_of(bake.Slot)),
 		{.STORAGE_BUFFER},
-		&r.bake.slots_buffer,
-		&r.bake.slots_memory,
+		&out.slots_buffer,
+		&out.slots_memory,
 	) {
 		return false
 	}
@@ -297,12 +298,12 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 		raw_data(data.probe_states),
 		vk.DeviceSize(len(data.probe_states) * size_of(bake.Probe_State)),
 		{.STORAGE_BUFFER},
-		&r.bake.states_buffer,
-		&r.bake.states_memory,
+		&out.states_buffer,
+		&out.states_memory,
 	) {
 		return false
 	}
-	r.bake.states_bytes = len(data.probe_states) * size_of(bake.Probe_State)
+	out.states_bytes = len(data.probe_states) * size_of(bake.Probe_State)
 
 	volume := Bake_Volume_Uniform {
 		min           = data.header.probe_min,
@@ -317,17 +318,17 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 		&volume,
 		vk.DeviceSize(size_of(Bake_Volume_Uniform)),
 		{.UNIFORM_BUFFER},
-		&r.bake.volume_buffer,
-		&r.bake.volume_memory,
+		&out.volume_buffer,
+		&out.volume_memory,
 	) {
 		return false
 	}
 
-	r.bake.gpu_bytes = len(data.atlas) + len(data.probe_irradiance) + len(data.probe_moments)
-	r.bake.gpu_bytes += len(data.faces) * size_of(bake.Face)
-	r.bake.gpu_bytes += len(data.slots) * size_of(bake.Slot)
-	r.bake.gpu_bytes += len(data.probe_states) * size_of(bake.Probe_State)
-	r.bake.gpu_bytes += size_of(Bake_Volume_Uniform)
+	out.gpu_bytes = len(data.atlas) + len(data.probe_irradiance) + len(data.probe_moments)
+	out.gpu_bytes += len(data.faces) * size_of(bake.Face)
+	out.gpu_bytes += len(data.slots) * size_of(bake.Slot)
+	out.gpu_bytes += len(data.probe_states) * size_of(bake.Probe_State)
+	out.gpu_bytes += size_of(Bake_Volume_Uniform)
 	return true
 }
 
@@ -358,8 +359,9 @@ bake_slot_for :: proc(r: ^Renderer, key: u64) -> (slot: u32, ok: bool) {
 }
 
 @(private)
-log_bake_error :: proc(r: ^Renderer, message: string) {
+set_bake_error :: proc(r: ^Renderer, message: string) {
 	r.bake.status = .Failed
+	r.bake.failed = true
 	if r.bake.error != "" {
 		delete(r.bake.error, r.allocator)
 	}

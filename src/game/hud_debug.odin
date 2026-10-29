@@ -3,17 +3,23 @@ package game
 
 import "core:math"
 
-HUD_INSPECTOR_ROW_COUNT :: 11
+HUD_INSPECTOR_ROW_COUNT :: 12
 HUD_PLACEMENT_ROW_COUNT :: 8
 
 HUD_SNAP_OFF :: "off"
 HUD_SNAP_GRID :: "0.25 m"
 
-// The selection, the count, the body, the size, the position, the yaw, and the
-// snap state. Every changing value uses a fixed field and the mono face through
-// `numeric`, so the panel width does not move when the selection changes.
+// The selection, the count, the body, the size, the position, the yaw, the
+// snap state, and the bake state. Every changing value uses a fixed field and
+// the mono face through `numeric`, so the panel width does not move when the
+// selection changes.
 @(private)
-hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_Mode) {
+hud_debug_state_update :: proc(
+	hud: ^HUD_State,
+	sim: ^Simulation,
+	debug: ^Debug_Mode,
+	bake_status: string,
+) {
 	if debug.placement.armed {
 		hud_placement_state_update(hud, sim, debug)
 		return
@@ -131,6 +137,16 @@ hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_
 		value   = hud_light_budget(hud, 10, sim),
 		numeric = true,
 	}
+	status := bake_status
+	if status == "" {
+		status = "missing"
+	}
+	hud.rows[11] = {
+		kind    = .Detail,
+		label   = "Bake",
+		value   = line_format(&hud.storage, 11, "%-7s", status),
+		numeric = true,
+	}
 	hud.view.rows = hud.rows[:HUD_INSPECTOR_ROW_COUNT]
 }
 
@@ -188,13 +204,16 @@ hud_placement_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^De
 @(private)
 hud_light_line :: proc(hud: ^HUD_State, slot: int, light: Light_Settings) -> string {
 	name := "none"
+	kind := "-"
 	if light.active {
 		name = light_color_name(light.color)
+		kind = light.kind == .Static_Fixture ? "S" : "D"
 	}
 	return line_format(
 		&hud.storage,
 		slot,
-		"%-5s % 4.1f % 2.0f m",
+		"%s %-5s % 4.1f % 2.0f m",
+		kind,
 		name,
 		light.intensity,
 		light.range,

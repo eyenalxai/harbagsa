@@ -4,6 +4,7 @@ package harness
 import "core:mem"
 import "core:strings"
 
+import "src:bake"
 import "src:digest"
 import "src:frame"
 import "src:game"
@@ -31,6 +32,10 @@ Backend :: struct {
 	set_debug: proc(ctx: rawptr, debug: renderer.Renderer_Debug) -> bool,
 	get_debug: proc(ctx: rawptr) -> renderer.Renderer_Debug,
 	clear_debug: proc(ctx: rawptr),
+	publish_bake: proc(ctx: rawptr, bytes: []u8, build_ms: u32, build_threads: int) -> bool,
+	reload_bake: proc(ctx: rawptr) -> bool,
+	refresh_bake: proc(ctx: rawptr, static: bake.Static),
+	bake_report: proc(ctx: rawptr) -> renderer.Bake_Report,
 	shutdown:  proc(ctx: rawptr),
 }
 
@@ -117,6 +122,10 @@ backend_create :: proc(
 		set_debug = backend_set_debug,
 		get_debug = backend_get_debug,
 		clear_debug = backend_clear_debug,
+		publish_bake = backend_publish_bake,
+		reload_bake = backend_reload_bake,
+		refresh_bake = backend_refresh_bake,
+		bake_report = backend_bake_report,
 		shutdown = backend_shutdown,
 	}, ""
 }
@@ -137,6 +146,35 @@ backend_get_debug :: proc(ctx: rawptr) -> renderer.Renderer_Debug {
 backend_clear_debug :: proc(ctx: rawptr) {
 	data := cast(^Backend_Data)ctx
 	renderer.clear_renderer_debug(&data.renderer)
+}
+
+@(private)
+backend_publish_bake :: proc(
+	ctx: rawptr,
+	bytes: []u8,
+	build_ms: u32,
+	build_threads: int,
+) -> bool {
+	data := cast(^Backend_Data)ctx
+	return renderer.publish_bake(&data.renderer, bytes, build_ms, build_threads)
+}
+
+@(private)
+backend_reload_bake :: proc(ctx: rawptr) -> bool {
+	data := cast(^Backend_Data)ctx
+	return renderer.reload_bake(&data.renderer)
+}
+
+@(private)
+backend_refresh_bake :: proc(ctx: rawptr, static: bake.Static) {
+	data := cast(^Backend_Data)ctx
+	renderer.refresh_bake(&data.renderer, static)
+}
+
+@(private)
+backend_bake_report :: proc(ctx: rawptr) -> renderer.Bake_Report {
+	data := cast(^Backend_Data)ctx
+	return renderer.bake_report(&data.renderer)
 }
 
 @(private)
@@ -186,6 +224,7 @@ backend_render :: proc(
 	if len(requests) > 0 {
 		alpha = requests[0].alpha
 	}
+	bake := renderer.bake_report(&data.renderer)
 	options := frame.Options {
 		alpha         = alpha,
 		delta_seconds = game.SIMULATION_STEP,
@@ -193,6 +232,7 @@ backend_render :: proc(
 		captured      = !session.view.hint,
 		hud           = session.view.hud,
 		perf          = session.view.perf,
+		bake_status   = bake.status,
 	}
 	session.hud.perf.visible = session.view.perf
 	if session.hud.perf.visible {

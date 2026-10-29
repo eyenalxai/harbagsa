@@ -40,15 +40,6 @@ edit_palette_step :: proc(dm: ^Debug_Mode, delta: int) -> Edit_Result {
 }
 
 @(private)
-edit_palette_flip_body :: proc(dm: ^Debug_Mode) -> Edit_Result {
-	if prefab_has_light(palette_selected(dm.palette)) {
-		return edit_fail(.Lamp_Must_Be_Dynamic)
-	}
-	palette_flip_body(&dm.palette)
-	return edit_ok()
-}
-
-@(private)
 edit_palette_pick :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Result {
 	if !edit_placement_arm(dm, sim, palette_selected(dm.palette)).applied {
 		return edit_fail(.Failed)

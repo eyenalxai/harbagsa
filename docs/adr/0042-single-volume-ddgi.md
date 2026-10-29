@@ -1,5 +1,10 @@
 # Single-volume DDGI indirect light
 
+> Superseded by [ADR 0045](0045-mixed-lighting.md). The per-frame probe field,
+> the probe pass, and the `gi` override are removed. Static fixtures bake their
+> one-bounce indirect into a lightmap and a static probe volume. This page
+> records the old rule.
+
 The renderer adds one diffuse bounce from the current point lights. A single probe volume covers the arena. Each probe traces 64 rays, stores an 8 x 8 octahedral irradiance and depth atlas, and surfaces blend the eight surrounding probes. The direct term and the probe term both use the same lamps. There is still no ambient floor.
 
 ## Why

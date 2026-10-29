@@ -148,11 +148,6 @@ spawn_object :: proc(
 	}
 	info := prefab(spawn.prefab)
 	body_mode := spawn.body_mode
-	if light.active {
-		body_mode = light.kind == .Static_Fixture ? .Static : .Dynamic
-	} else {
-		body_mode = prefab_body_mode(spawn.prefab, spawn.body_mode)
-	}
 	body := create_box_body(
 		sim.world_id,
 		body_type(body_mode),

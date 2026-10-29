@@ -59,6 +59,7 @@ COMMANDS := [?]Command_Row {
 	{.Scene, "scene", "Apply an exact scene: camera, objects, settings, view, and displays.", parse_scene, execute_scene, .Raw, destroy_scene, .None, Scene_Command},
 	{.Place, "place", "Create one named object from a prefab without entering debug mode.", parse_place, execute_place, .Raw, nil, .None, Place_Command},
 	{.Remove, "remove", "Delete one object by id or name without entering debug mode.", parse_remove, execute_remove, .Raw, nil, .None, Remove_Command},
+	{.Bake, "bake", "Reload or publish the static bake; state.bake reports the result.", parse_bake, execute_bake, .Raw, nil, .Optional, Bake_Command},
 	{.Get, "get", "Resolve one state or capture field and return its JSON scalar.", parse_get, execute_get, .Raw, destroy_get, .None, Get_Command},
 	{.Quit, "quit", "Close the session.", parse_no_fields, execute_quit, .Skip, nil, .None, No_Fields_Command},
 }
