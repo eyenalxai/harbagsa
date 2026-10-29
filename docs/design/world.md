@@ -82,9 +82,9 @@ soft shadow is a new decision, not a hidden shader option.
 
 Static fixtures bake one diffuse bounce. The bake writes one `1024²` lightmap
 atlas for static boxes and a static probe field for dynamic boxes. Static boxes
-read their face tile from the lightmap. The bake filters each chart once with a
-3x3 binomial before the gutter, and a texel's ray rotation follows its surface
-rather than its atlas position. Dynamic boxes sample the four probes of
+read their face tile from the lightmap. A lightmap denoise pass filters each
+chart before the gutter, and a texel's ray rotation follows its surface rather
+than its atlas position. Dynamic boxes sample the four probes of
 the containing tetrahedron, with normal bias, a facing weight, and the baked
 depth test. There is no per-frame probe pass and no probe update. A ray that
 misses returns zero; there is no sky or sun term.
