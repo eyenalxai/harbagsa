@@ -17,11 +17,23 @@ backend_capture :: proc(
 	Capture_Result,
 	string,
 ) {
-	pixels, width, height, format, readback_error := renderer.read_capture_target(
-		&data.renderer,
-		request.target,
-		slot,
-	)
+	pixels: []u8
+	width, height: u32
+	format: vk.Format
+	readback_error: string
+	if view, has_view := request.view.?; has_view && renderer.capture_view_is_term(view) {
+		pixels, width, height, format, readback_error = renderer.read_capture_view(
+			&data.renderer,
+			view,
+			slot,
+		)
+	} else {
+		pixels, width, height, format, readback_error = renderer.read_capture_target(
+			&data.renderer,
+			request.target,
+			slot,
+		)
+	}
 	if readback_error != "" {
 		return {}, readback_error
 	}
@@ -43,6 +55,9 @@ backend_capture :: proc(
 		format        = capture_format_name(request.format),
 		target_format = renderer.format_name(format),
 		region        = region,
+	}
+	if view, has_view := request.view.?; has_view {
+		result.view = strings.clone(renderer.capture_view_name(view), data.allocator)
 	}
 	switch request.format {
 	case .Png:

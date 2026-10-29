@@ -91,6 +91,13 @@ record_scene :: proc(
 		}
 		slot += 1
 	}
+	// Term views redraw the scene, so the target copies happen first: a group
+	// that asks for scene_color and a view keeps the beauty scene color.
+	for view in capture.views {
+		if !record_scene_view(r, command_buffer, capture, view, image_index, input.boxes) {
+			return false
+		}
+	}
 	if r.target.kind == .Swapchain {
 		record_present_pass(r, command_buffer, image_index)
 	}

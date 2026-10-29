@@ -22,6 +22,7 @@ CAPTURE_OUTPUT_KEYS := []string {
 	"steps",
 	"color_key",
 	"coverage",
+	"views",
 }
 
 @(private)

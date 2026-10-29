@@ -114,8 +114,11 @@ begin_frame :: proc(
 	if !check(vk.ResetCommandBuffer(command_buffer, {}), "vkResetCommandBuffer") {
 		return {}, .Fatal
 	}
-	slots := capture_target_count(capture)
+	slots := capture_slot_count(capture)
 	if slots > 0 && !ensure_readback_slots(r, u32(slots)) {
+		return {}, .Fatal
+	}
+	if capture_has_term_views(capture) && !ensure_view_images(r) {
 		return {}, .Fatal
 	}
 	if !record_scene(r, command_buffer, image_index, input, capture) {
@@ -133,7 +136,7 @@ begin_frame :: proc(
 	return Frame {
 		image_index = image_index,
 		command_buffer = command_buffer,
-		capture = capture_target_count(capture) > 0,
+		capture = capture_slot_count(capture) > 0,
 	}, .Ok
 }
 

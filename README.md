@@ -191,7 +191,7 @@ degrees and ends in `_deg`. Positions and ranges are metres. One `step` or
 - `step`: advance fixed frames.
 - `settle`: render fixed frames without a capture, or wait for convergence.
 - `state`: report current state.
-- `capture`: render and write one output.
+- `capture`: render and write one output, or one output per named diagnostic view.
 - `captures`: write several outputs from one frame.
 - `camera`: set or clear an inspection camera.
 - `view`: set HUD, debug draw, capture hint, and perf flags.
@@ -222,6 +222,18 @@ Formats are `png`, `float`, `raw`, `stats`, and `profile`. Color defaults to PNG
 intermediate targets default to stats. A stats capture accepts `region`,
 `histogram`, `steps`, `color_key`, and `coverage`. A color capture also accepts
 `crop` and `profile`.
+
+A capture can name diagnostic views instead of a target: `beauty`, `direct`,
+`lightmap`, `probe`, `emissive`, `shadow`, `lightmap_grid`, and `probe_cell`. One
+frame writes one entry per view, named `<name>-<view>`, so a term image compares
+and diff like any other capture. Term views share the frame's TAA history, so
+capturing them does not change the next beauty frame.
+
+```json
+{"cmd": "capture", "name": "terms", "views": ["beauty", "direct", "shadow"]}
+```
+
+`scenarios/capture-views.json` writes all eight.
 
 `harbagsa-agent compare A B --delta` writes a before/after/delta panel. Keep PNGs
 under `runs/`; never commit them.
