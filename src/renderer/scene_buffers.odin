@@ -117,7 +117,7 @@ destroy_scene_frame_buffers :: proc(r: ^Renderer) {
 @(private)
 write_scene_bindings :: proc(r: ^Renderer) {
 	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		buffer_infos := [6]vk.DescriptorBufferInfo {
+		buffer_infos := [8]vk.DescriptorBufferInfo {
 			{buffer = r.scene.camera_buffers[i], range = vk.DeviceSize(size_of(Camera_Uniform))},
 			{
 				buffer = r.scene.object_buffers[i],
@@ -136,13 +136,31 @@ write_scene_bindings :: proc(r: ^Renderer) {
 				buffer = r.bake.faces_buffer,
 				range = vk.DeviceSize(r.bake.faces_bytes),
 			},
+			{
+				buffer = r.bake.states_buffer,
+				range = vk.DeviceSize(r.bake.states_bytes),
+			},
+			{
+				buffer = r.bake.volume_buffer,
+				range = vk.DeviceSize(size_of(Bake_Volume_Uniform)),
+			},
 		}
 		lightmap_info := vk.DescriptorImageInfo {
 			sampler = r.bake.sampler,
 			imageView = r.bake.lightmap.view,
 			imageLayout = .SHADER_READ_ONLY_OPTIMAL,
 		}
-		writes := [7]vk.WriteDescriptorSet {
+		probe_irradiance_info := vk.DescriptorImageInfo {
+			sampler = r.bake.sampler,
+			imageView = r.bake.probe_irradiance.view,
+			imageLayout = .SHADER_READ_ONLY_OPTIMAL,
+		}
+		probe_moments_info := vk.DescriptorImageInfo {
+			sampler = r.bake.sampler,
+			imageView = r.bake.probe_moments.view,
+			imageLayout = .SHADER_READ_ONLY_OPTIMAL,
+		}
+		writes := [11]vk.WriteDescriptorSet {
 			{
 				sType = .WRITE_DESCRIPTOR_SET,
 				dstSet = r.scene.descriptor_sets[i],
@@ -198,6 +216,38 @@ write_scene_bindings :: proc(r: ^Renderer) {
 				descriptorCount = 1,
 				descriptorType = .STORAGE_BUFFER,
 				pBufferInfo = &buffer_infos[5],
+			},
+			{
+				sType = .WRITE_DESCRIPTOR_SET,
+				dstSet = r.scene.descriptor_sets[i],
+				dstBinding = PROBE_IRRADIANCE_BINDING,
+				descriptorCount = 1,
+				descriptorType = .COMBINED_IMAGE_SAMPLER,
+				pImageInfo = &probe_irradiance_info,
+			},
+			{
+				sType = .WRITE_DESCRIPTOR_SET,
+				dstSet = r.scene.descriptor_sets[i],
+				dstBinding = PROBE_MOMENTS_BINDING,
+				descriptorCount = 1,
+				descriptorType = .COMBINED_IMAGE_SAMPLER,
+				pImageInfo = &probe_moments_info,
+			},
+			{
+				sType = .WRITE_DESCRIPTOR_SET,
+				dstSet = r.scene.descriptor_sets[i],
+				dstBinding = PROBE_STATES_BINDING,
+				descriptorCount = 1,
+				descriptorType = .STORAGE_BUFFER,
+				pBufferInfo = &buffer_infos[6],
+			},
+			{
+				sType = .WRITE_DESCRIPTOR_SET,
+				dstSet = r.scene.descriptor_sets[i],
+				dstBinding = PROBE_VOLUME_BINDING,
+				descriptorCount = 1,
+				descriptorType = .UNIFORM_BUFFER,
+				pBufferInfo = &buffer_infos[7],
 			},
 		}
 		vk.UpdateDescriptorSets(r.device, u32(len(writes)), &writes[0], 0, nil)

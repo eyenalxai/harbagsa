@@ -77,7 +77,8 @@ slot_key :: proc(source: Box_Source, id: u32) -> u64 {
 
 Probe_State :: struct #packed {
 	// One means the probe has a usable capture point. `offset` moves that point
-	// out of static geometry; the runtime samples at grid position + offset.
+	// out of static geometry, or to the source of a dilated value; the runtime
+	// samples and tests depth at grid position + offset.
 	valid:   u8,
 	_pad:    u8,
 	offset:  [3]f16,

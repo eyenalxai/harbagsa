@@ -30,6 +30,7 @@ RENDERER_DEBUG_FIELD_ROWS := [?]Debug_Field_Row {
 	{.Clip_Height, "clip_height", .Number, 0, renderer.DEBUG_CLIP_HEIGHT_MAX},
 	{.Light_Shadows, "light_shadows", .Bool, 0, 0},
 	{.Lightmap, "lightmap", .Bool, 0, 0},
+	{.Probe, "probe", .Bool, 0, 0},
 }
 
 renderer_debug_keys :: proc(allocator: mem.Allocator, include_cmd: bool) -> []string {
@@ -70,6 +71,8 @@ renderer_debug_reset_patch :: proc(fields: Renderer_Debug_Resets) -> renderer.Re
 			patch.light_shadows = defaults.light_shadows
 		case .Lightmap:
 			patch.lightmap = defaults.lightmap
+		case .Probe:
+			patch.probe = defaults.probe
 		}
 	}
 	return patch
@@ -145,6 +148,8 @@ debug_patch_set_bool :: proc(patch: ^renderer.Renderer_Debug_Patch, field: Rende
 		patch.light_shadows = value
 	case .Lightmap:
 		patch.lightmap = value
+	case .Probe:
+		patch.probe = value
 	}
 }
 

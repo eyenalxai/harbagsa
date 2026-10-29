@@ -22,6 +22,8 @@ MIN_CHART_TEXELS :: 8
 
 PROBE_TEXELS :: 8
 PROBE_TEXEL_COUNT :: PROBE_TEXELS * PROBE_TEXELS
+PROBE_IRRADIANCE_CHANNELS :: 4
+PROBE_MOMENT_CHANNELS :: 2
 PROBE_BYTES_PER_IRRADIANCE_TEXEL :: 8
 PROBE_BYTES_PER_MOMENT_TEXEL :: 4
 PROBE_SPACING :: 1.0
@@ -198,6 +200,7 @@ Build_Report :: struct {
 	probe_rays:     u64,
 	shadow_rays:    u64,
 	invalid_probes: int,
+	dilated_probes: int,
 	atlas_bytes:    int,
 	probe_bytes:    int,
 	artifact_bytes: int,
