@@ -6,7 +6,7 @@ package bake
 import "src:geometry"
 
 FORMAT_VERSION :: 1
-TOOL_VERSION :: 1
+TOOL_VERSION :: 2
 
 // The bake key mixes this version too, so a changed input rule invalidates an
 // old artifact without a format bump.
