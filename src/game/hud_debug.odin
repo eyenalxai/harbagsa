@@ -228,14 +228,10 @@ hud_light_line :: proc(hud: ^HUD_State, slot: int, light: Light_Settings) -> str
 
 @(private)
 hud_bake_line :: proc(hud: ^HUD_State, slot: int, bake: Bake_View) -> string {
-	status := bake.status
-	if status == "" {
-		status = "missing"
+	if bake.status != "current" && bake.status != "stale" {
+		return line_format(&hud.storage, slot, "%-7s", bake.status)
 	}
-	if status != "current" && status != "stale" {
-		return line_format(&hud.storage, slot, "%-7s", status)
-	}
-	return line_format(&hud.storage, slot, "%-7s %08x", status, u32(bake.key))
+	return line_format(&hud.storage, slot, "%-7s %08x", bake.status, u32(bake.key))
 }
 
 @(private)

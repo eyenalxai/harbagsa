@@ -17,7 +17,10 @@ main :: proc() {
 run :: proc(args: []string) -> int {
 	output := DEFAULT_OUTPUT
 	spacing := f32(bake.PROBE_SPACING)
-	threads := default_threads()
+	threads, counted := bake.default_threads()
+	if !counted {
+		fmt.eprintln("harbagsa-bake: cannot read the CPU count; using one thread")
+	}
 
 	index := 0
 	for index < len(args) {
@@ -87,17 +90,11 @@ run :: proc(args: []string) -> int {
 		fmt.eprintf("harbagsa-bake: %s\n", write_error)
 		return 1
 	}
+	if time_error := bake.write_time(output, report.bake_ms); time_error != "" {
+		fmt.eprintf("harbagsa-bake: %s\n", time_error)
+	}
 	print_report(output, spacing, threads, report)
 	return 0
-}
-
-@(private)
-default_threads :: proc() -> int {
-	threads, ok := bake.default_threads()
-	if !ok {
-		fmt.eprintln("harbagsa-bake: cannot read the CPU count; using one thread")
-	}
-	return threads
 }
 
 @(private)

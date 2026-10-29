@@ -14,9 +14,6 @@ simulation_convert_object :: proc(sim: ^Simulation, id: Object_Id, mode: Body_Mo
 	if object.light.active {
 		return false
 	}
-	if !prefab_accepts_body(object.prefab, mode) {
-		return false
-	}
 	return convert_object_body(sim, object, mode)
 }
 

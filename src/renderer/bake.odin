@@ -134,6 +134,13 @@ init_bake :: proc(r: ^Renderer, path: string) -> bool {
 	r.bake.data = data
 	r.bake.loaded = true
 	r.bake.status = .Stale
+	switch bake_ms, time_status := bake.read_time(r.bake.path); time_status {
+	case .Ok:
+		r.bake.bake_ms = bake_ms
+	case .Missing:
+	case .Invalid:
+		log.warnf("renderer: ignoring the bake time sidecar for %s", r.bake.path)
+	}
 	if !create_bake_resources(r, &r.bake) {
 		if r.bake.status != .Failed {
 			log_bake_error(r, "cannot create the bake resources")

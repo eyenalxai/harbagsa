@@ -96,6 +96,9 @@ session_bake :: proc(session: ^Session, command: Bake_Command) -> string {
 			delete(artifact, session.allocator)
 			return write_error
 		}
+		if time_error := bake.write_time(command.out, report.bake_ms); time_error != "" {
+			log.warnf("harness: %s", time_error)
+		}
 	}
 
 	published, publish_error := session.render.backend.publish_bake(
