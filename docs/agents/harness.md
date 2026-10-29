@@ -53,6 +53,8 @@ run path. `--out DIR` chooses the whole run directory.
 | capture a lamp wall plane | `scenarios/lamp-threshold.json` |
 | measure the default view | `scenarios/perf.json` |
 | measure the arena from above | `scenarios/perf-arena.json` |
+| measure 96 lights at 1080p | `scenarios/perf-mixed.json` |
+| review the mixed-lighting evidence | `docs/evidence/mixed-lighting.md` |
 | measure performance | **Performance** |
 | reproduce a live view | **Live repro** |
 | understand a design choice | `docs/adr/0045-mixed-static-baked-indirect.md` |
@@ -344,6 +346,15 @@ exercises the current, stale, and dynamic-move states;
 lamp-free result; `scenarios/bake-hud.json` captures the lamp kind and bake
 status in the debug HUD.
 
+The measurement pass has its own scenarios. `scenarios/lighting-quality.json`
+pairs the baked bounce with the direct-only view, then moves a crate, moves a
+dynamic lamp, and removes a static fixture. `scenarios/lighting-wall.json` seals
+a fixture inside a four-wall cell and moves it out of range.
+`scenarios/lighting-seam.json` looks at lightmap chart borders with the term on
+and off. `scenarios/lighting-missing.json` is the missing-artifact view; run it
+with `--bake` pointing at a path that does not exist. The numbers and the
+accepted limits are in `docs/evidence/mixed-lighting.md`.
+
 ## Renderer debug overrides
 
 Supported fields:
@@ -351,11 +362,11 @@ Supported fields:
 - `taa`, `jitter`, `history_weight`, `clamp`, and `depth_trust`.
 - `synthetic_lights`: replace frame lights with a generated field of any count.
 - `clip_height`: discard fragments above a world height for a plan view.
-- `light_shadows`: trace point-light shadow rays. It defaults true. Use false for
-  paired captures and performance runs.
+- `light_shadows`: trace point-light shadow rays. It defaults true. Set false to
+  isolate the shadow term in a paired capture; a frame-budget run keeps it on.
 - `lightmap`: add the baked static lightmap term. It defaults true.
 - `probe`: add the baked probe term. It defaults true. Set both `lightmap` and
-  `probe` to false for a direct-light capture or performance run.
+  `probe` to false for a direct-light capture.
 - `clear`: restore every default. Set one field to `null` to reset only that field.
 
 A scenario declares `requires.renderer_debug`, or the run uses
@@ -376,13 +387,19 @@ A `perf` command measures frames and can write one trace. `frames` defaults to
 120, `warmup` to 60, and `prime` to 2 seconds. `prime: 0` disables the time loop.
 Offscreen measures throughput. `--present` measures pacing.
 
+A perf frame draws the scene without a capture request, so it does no readback
+and adds no capture entry. A scenario may still capture after its perf windows.
+The interval is therefore comparable with the GPU total plus submit cost. Do not
+compare an interval measured before that change with one measured after it.
+
 GPU passes are TLAS, cluster, depth, scene, TAA, and overlay. The report
 carries `p50`, `p95`, and `mean` for each CPU phase and GPU pass. Perf data is
 wall-clock data and is not deterministic.
 
-Use `scenarios/perf.json` for the default view and `scenarios/perf-arena.json`
-for the arena from above. `harbagsa-agent ab` compares two builds. `ab --visual`
-runs one scenario on both and writes a compare panel.
+Use `scenarios/perf.json` for the default view, `scenarios/perf-arena.json` for
+the arena from above, and `scenarios/perf-mixed.json` for 96 synthetic lights at
+1080p with the indirect terms switched in and out. `harbagsa-agent ab` compares
+two builds. `ab --visual` runs one scenario on both and writes a compare panel.
 
 ## Determinism and screenshots
 

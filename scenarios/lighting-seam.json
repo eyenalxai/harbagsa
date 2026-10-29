@@ -1,0 +1,26 @@
+{
+  "note": "Lightmap chart borders on the stair treads and the floor-wall junction. Run once with the baked indirect and once without it, then compare.",
+  "size": "1280x720",
+  "requires": {"renderer_debug": true},
+  "parameters": {"indirect": true},
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "renderer_debug", "taa": false, "jitter": false,
+     "lightmap": "${indirect}", "probe": "${indirect}"},
+    {"cmd": "bake"},
+    {"cmd": "camera", "position": [-7.5, 0.9, 3.6], "look_at": [-12.0, 0.3, 1.5]},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "seam-stairs", "format": "stats", "png": true,
+     "note": "Six stair treads and blocks; every face is its own lightmap chart."},
+    {"cmd": "capture", "name": "seam-stairs-band", "format": "stats",
+     "region": {"x": 400, "y": 250, "w": 640, "h": 210},
+     "note": "Band across the stair tread contacts."},
+    {"cmd": "camera", "position": [14.0, 0.9, 6.0], "look_at": [20.0, 0.2, 6.0]},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "seam-junction", "format": "stats", "png": true,
+     "note": "Floor and wall contact at the east wall."},
+    {"cmd": "capture", "name": "seam-junction-band", "format": "stats",
+     "region": {"x": 0, "y": 330, "w": 1280, "h": 90},
+     "note": "Band across the floor-wall contact."}
+  ]
+}
