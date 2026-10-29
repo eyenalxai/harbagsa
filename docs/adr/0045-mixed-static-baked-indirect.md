@@ -88,7 +88,7 @@ free number.
 - A static fixture edit changes direct light immediately and reports `stale`
   until the next publish. A dynamic lamp or crate move reports `current`.
 - A bake is deterministic for the same static input, quality, and tool version.
-  Wall time is reported in memory, not stored in the artifact bytes.
+  The measured wall time travels in a `.time` sidecar, not in the artifact bytes.
 - The default bake is about 5 s at 16 threads, not the 2 s target. The 2 m probe
   fallback reduces probe work. Quality and performance measurement stay in the
   follow-up ticket.
