@@ -80,6 +80,7 @@ Bake_Resources :: struct {
 	sampler:           vk.Sampler,
 	faces_buffer:      vk.Buffer,
 	faces_memory:      vk.DeviceMemory,
+	faces_bytes:       int,
 	slots_buffer:      vk.Buffer,
 	slots_memory:      vk.DeviceMemory,
 	states_buffer:     vk.Buffer,
@@ -99,7 +100,7 @@ init_bake :: proc(r: ^Renderer, path: string) -> bool {
 	bytes, read_error := os.read_entire_file(r.bake.path, r.allocator)
 	if read_error != nil {
 		if general, ok := read_error.(os.General_Error); ok && general == .Not_Exist {
-			return true
+			return create_bake_placeholder(r)
 		}
 		r.bake.status = .Failed
 		r.bake.error = fmt.aprintf(
@@ -108,7 +109,7 @@ init_bake :: proc(r: ^Renderer, path: string) -> bool {
 			read_error,
 			allocator = r.allocator,
 		)
-		return true
+		return create_bake_placeholder(r)
 	}
 
 	data, load_error := bake.load(bytes)
@@ -122,7 +123,7 @@ init_bake :: proc(r: ^Renderer, path: string) -> bool {
 			allocator = r.allocator,
 		)
 		log.errorf("renderer: %s", r.bake.error)
-		return true
+		return create_bake_placeholder(r)
 	}
 	r.bake.data = data
 	r.bake.loaded = true
@@ -150,6 +151,20 @@ update_bake :: proc(r: ^Renderer, key: u64) {
 		return
 	}
 	r.bake.status = r.bake.data.header.bake_key == key ? .Current : .Stale
+}
+
+// A static box owns a slot only when the loaded artifact baked its key. A
+// missing slot stays on the direct path; it never borrows another tile.
+bake_lightmap_slot :: proc(r: ^Renderer, ref: bake.Lightmap_Ref) -> (slot: u32, ok: bool) {
+	if !ref.has_slot || !r.bake.loaded {
+		return 0, false
+	}
+	for entry, index in r.bake.data.slots {
+		if entry.key == ref.key {
+			return u32(index), true
+		}
+	}
+	return 0, false
 }
 
 bake_report :: proc(r: ^Renderer) -> Bake_Report {
@@ -198,6 +213,37 @@ destroy_bake :: proc(r: ^Renderer) {
 		delete(b.error, r.allocator)
 	}
 	b^ = {}
+}
+
+@(private)
+create_bake_placeholder :: proc(r: ^Renderer) -> bool {
+	if !format_supports(r, .R16G16B16A16_SFLOAT, {.SAMPLED_IMAGE_FILTER_LINEAR}) {
+		log_bake_error(r, "the device cannot filter R16G16B16A16_SFLOAT")
+		return false
+	}
+	// A descriptor set must name an image and a storage buffer even when no bake
+	// is loaded. Nothing samples them: every object's weight is zero while the
+	// status reports missing or failed.
+	zero := [bake.ATLAS_BYTES_PER_TEXEL]u8{}
+	lightmap, lightmap_ok := upload_texture(r, 1, 1, .R16G16B16A16_SFLOAT, zero[:])
+	if !lightmap_ok {
+		return false
+	}
+	r.bake.lightmap = lightmap
+
+	face := bake.Face{}
+	if !create_device_buffer(
+		r,
+		&face,
+		vk.DeviceSize(size_of(bake.Face)),
+		{.STORAGE_BUFFER},
+		&r.bake.faces_buffer,
+		&r.bake.faces_memory,
+	) {
+		return false
+	}
+	r.bake.faces_bytes = size_of(bake.Face)
+	return create_clamp_sampler(r, &r.bake.sampler)
 }
 
 @(private)
@@ -262,6 +308,7 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 	) {
 		return false
 	}
+	r.bake.faces_bytes = len(data.faces) * size_of(bake.Face)
 	if !create_device_buffer(
 		r,
 		raw_data(data.slots),

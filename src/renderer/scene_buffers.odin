@@ -117,7 +117,7 @@ destroy_scene_frame_buffers :: proc(r: ^Renderer) {
 @(private)
 write_scene_bindings :: proc(r: ^Renderer) {
 	for i in 0 ..< MAX_FRAMES_IN_FLIGHT {
-		buffer_infos := [5]vk.DescriptorBufferInfo {
+		buffer_infos := [6]vk.DescriptorBufferInfo {
 			{buffer = r.scene.camera_buffers[i], range = vk.DeviceSize(size_of(Camera_Uniform))},
 			{
 				buffer = r.scene.object_buffers[i],
@@ -132,8 +132,17 @@ write_scene_bindings :: proc(r: ^Renderer) {
 				buffer = r.scene.cluster_indices_buffers[i],
 				range = vk.DeviceSize(CLUSTER_COUNT * CLUSTER_LIGHT_STRIDE * size_of(u32)),
 			},
+			{
+				buffer = r.bake.faces_buffer,
+				range = vk.DeviceSize(r.bake.faces_bytes),
+			},
 		}
-		writes := [5]vk.WriteDescriptorSet {
+		lightmap_info := vk.DescriptorImageInfo {
+			sampler = r.bake.sampler,
+			imageView = r.bake.lightmap.view,
+			imageLayout = .SHADER_READ_ONLY_OPTIMAL,
+		}
+		writes := [7]vk.WriteDescriptorSet {
 			{
 				sType = .WRITE_DESCRIPTOR_SET,
 				dstSet = r.scene.descriptor_sets[i],
@@ -173,6 +182,22 @@ write_scene_bindings :: proc(r: ^Renderer) {
 				descriptorCount = 1,
 				descriptorType = .STORAGE_BUFFER,
 				pBufferInfo = &buffer_infos[4],
+			},
+			{
+				sType = .WRITE_DESCRIPTOR_SET,
+				dstSet = r.scene.descriptor_sets[i],
+				dstBinding = LIGHTMAP_BINDING,
+				descriptorCount = 1,
+				descriptorType = .COMBINED_IMAGE_SAMPLER,
+				pImageInfo = &lightmap_info,
+			},
+			{
+				sType = .WRITE_DESCRIPTOR_SET,
+				dstSet = r.scene.descriptor_sets[i],
+				dstBinding = LIGHTMAP_FACES_BINDING,
+				descriptorCount = 1,
+				descriptorType = .STORAGE_BUFFER,
+				pBufferInfo = &buffer_infos[5],
 			},
 		}
 		vk.UpdateDescriptorSets(r.device, u32(len(writes)), &writes[0], 0, nil)

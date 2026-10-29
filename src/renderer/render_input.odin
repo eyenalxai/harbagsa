@@ -20,6 +20,7 @@ Render_Input :: struct {
 	height:       u32,
 	camera:       Camera,
 	boxes:        []geometry.Box,
+	box_refs:     []bake.Lightmap_Ref,
 	lights:       []Light,
 	debug_lines:  []geometry.Line,
 	hud:          HUD_Frame,
