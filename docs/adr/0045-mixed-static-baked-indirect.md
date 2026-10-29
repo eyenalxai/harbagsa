@@ -42,6 +42,12 @@ free number.
   face. Face UVs come from the local position and face normal, so there is no
   vertex UV channel. The lightmap contains static indirect only; direct light and
   hard shadows stay real-time.
+- **Denoise.** The bake filters each chart once, after the buried fill and before
+  the gutter: a separable 3x3 binomial over RGB, clamped at the chart edge. One
+  chart is one planar face, so the kernel cannot bleed across a surface. The
+  texel seed follows `(source, id, face, x, y)`, not the atlas position, so a
+  static edit that only moves charts leaves their noise field alone.
+  `TOOL_VERSION` is 2.
 - **Probes.** A static 1 m grid covers the playable volume; 2 m is the quality
   fallback. Each probe stores an 8 x 8 octahedral irradiance block and depth
   moments. Dynamic boxes sample the four probes of the containing tetrahedron
@@ -82,6 +88,14 @@ free number.
   textures"; the lightmap sampler is allowed.
 - **More than one bounce.** Deferred. One bounce covers the corner and wall
   cases in the flat box arena.
+- **Raise the lightmap ray count.** Rejected for now. 128 to 512 rays is four
+  times the lightmap stage, and the bake already misses its 2 s target.
+- **Denoise at runtime in screen space.** Rejected. It smears the real-time
+  direct light and the hard shadows, and a per-chart bake pass costs nothing per
+  frame.
+- **A 5x5 Gaussian.** Rejected. It buys eight points of clean-window stddev over
+  the binomial at two texels (50 cm) of softening at contact corners instead of
+  one, and it does not change the whole-wall number.
 
 ## Consequences
 
@@ -89,6 +103,9 @@ free number.
   until the next publish. A dynamic lamp or crate move reports `current`.
 - A bake is deterministic for the same static input, quality, and tool version.
   The measured wall time travels in a `.time` sidecar, not in the artifact bytes.
+- The lightmap is denoised per chart, so an artifact built by tool version 1 is
+  `stale` and must be rebuilt. A static edit that only moves charts leaves their
+  noise field byte-identical.
 - The default bake is about 5 s at 16 threads, not the 2 s target. The 2 m probe
   fallback reduces probe work. Quality and performance measurement stay in the
   follow-up ticket.

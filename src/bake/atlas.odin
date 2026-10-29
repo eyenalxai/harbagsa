@@ -114,21 +114,16 @@ center_to_center :: proc(chart: Chart, atlas_size: int) -> [4]f32 {
 	}
 }
 
-// A buried texel clones the nearest valid texel inside its own chart. The
-// gutter then clones the chart edge, so a bilinear tap never reads black or a
-// neighbouring chart. The fill is a multi-source breadth-first pass, so a fully
-// buried chart costs its area instead of a ring search per texel.
-atlas_dilate_chart :: proc(
+// A buried texel clones the nearest valid texel inside its own chart. The fill
+// is a multi-source breadth-first pass, so a fully buried chart costs its area
+// instead of a ring search per texel.
+atlas_fill_chart :: proc(
 	atlas: []f32,
 	valid: []bool,
 	chart: Chart,
 	atlas_size: int,
-	pad: int,
 	queue: ^[dynamic]int,
-) -> (
-	filled: int,
-	dilated: int,
-) {
+) -> (filled: int) {
 	clear(queue)
 	for y in chart.y ..< chart.y + chart.height {
 		for x in chart.x ..< chart.x + chart.width {
@@ -166,7 +161,17 @@ atlas_dilate_chart :: proc(
 			}
 		}
 	}
+	return
+}
 
+// The gutter clones the chart edge, so a bilinear tap never reads black or a
+// neighbouring chart.
+atlas_gutter_chart :: proc(
+	atlas: []f32,
+	chart: Chart,
+	atlas_size: int,
+	pad: int,
+) -> (dilated: int) {
 	for y in chart.y - pad ..< chart.y + chart.height + pad {
 		for x in chart.x - pad ..< chart.x + chart.width + pad {
 			if x >= chart.x && x < chart.x + chart.width &&
