@@ -17,6 +17,7 @@ Probe_Result :: struct {
 	rays:          u64,
 	shadow_rays:   u64,
 	invalid_probes: int,
+	dilated_probes: int,
 }
 
 Probe_Work :: struct {
@@ -65,9 +66,13 @@ probe_bake :: proc(
 	result.columns = u32(columns)
 	result.states = make([]Probe_State, count, allocator)
 	mem.set(raw_data(result.states), 0, count * size_of(Probe_State))
-	irradiance := make([]f16, count * PROBE_TEXEL_COUNT * 4, allocator)
+	irradiance := make(
+		[]f16,
+		count * PROBE_TEXEL_COUNT * PROBE_IRRADIANCE_CHANNELS,
+		allocator,
+	)
 	defer delete(irradiance, allocator)
-	moments := make([]f16, count * PROBE_TEXEL_COUNT * 2, allocator)
+	moments := make([]f16, count * PROBE_TEXEL_COUNT * PROBE_MOMENT_CHANNELS, allocator)
 	defer delete(moments, allocator)
 	mem.set(raw_data(irradiance), 0, len(irradiance) * size_of(f16))
 	mem.set(raw_data(moments), 0, len(moments) * size_of(f16))
@@ -108,6 +113,7 @@ probe_bake :: proc(
 		delete(result.states, allocator)
 		return {}, .Threads
 	}
+	result.dilated_probes = probe_dilate(&work, allocator)
 
 	for value in shadow_counts {
 		result.shadow_rays += value
@@ -143,13 +149,8 @@ probe_worker :: proc(job: rawptr, worker: int) #no_bounds_check {
 	distances := work.distances[first:first + work.rays]
 	shadows: u64
 	for probe := worker; probe < work.count; probe += work.workers {
-		x := probe % work.counts.x
-		y := (probe / work.counts.x) % work.counts.y
-		z := probe / (work.counts.x * work.counts.y)
-		base := dv_add(
-			work.min,
-			dv_mul({f64(x) + 0.5, f64(y) + 0.5, f64(z) + 0.5}, work.spacing),
-		)
+		x, y, z := probe_cell(probe, work.counts)
+		base := probe_center(work.min, work.spacing, x, y, z)
 		sample, offset, valid := probe_sample(work.static, work.bvh, base, work.spacing * PROBE_OFFSET_MAX_FRACTION)
 		if !valid {
 			work.invalid_counts[worker] += 1
@@ -182,10 +183,10 @@ probe_worker :: proc(job: rawptr, worker: int) #no_bounds_check {
 	work.shadow_counts[worker] = shadows
 }
 
-// The stored octahedral irradiance and depth moments use the same DDGI
-// encoding as the gather: irradiance is (radiance/2)^(1/5), and the moments
-// are halved. The gather's final 2x factor restores the lightmap scale, so a
-// sampler and a baker change must be made together.
+// The stored octahedral irradiance and depth moments use the legacy gamma-5
+// storage encoding: irradiance is (radiance/2)^(1/5), and the moments are
+// halved. The sampler decodes the irradiance with pow(encoded, 2.5) and applies
+// the final 2x factor, so the bake and the shader must change together.
 @(private)
 probe_blend :: proc(
 	work: ^Probe_Work,
@@ -238,12 +239,14 @@ probe_blend :: proc(
 			}
 			depth_denominator := 2.0 * max(distance_weight[texel], 1e-9)
 			pixel := probe_atlas_pixel(probe, tx, ty, work.columns, PROBE_TEXELS)
-			work.irradiance[pixel * 4 + 0] = f16(encoded.x)
-			work.irradiance[pixel * 4 + 1] = f16(encoded.y)
-			work.irradiance[pixel * 4 + 2] = f16(encoded.z)
-			work.irradiance[pixel * 4 + 3] = 1.0
-			work.moments[pixel * 2 + 0] = f16(distance_sum[texel] / depth_denominator)
-			work.moments[pixel * 2 + 1] = f16(distance2_sum[texel] / depth_denominator)
+			irradiance_base := pixel * PROBE_IRRADIANCE_CHANNELS
+			work.irradiance[irradiance_base + 0] = f16(encoded.x)
+			work.irradiance[irradiance_base + 1] = f16(encoded.y)
+			work.irradiance[irradiance_base + 2] = f16(encoded.z)
+			work.irradiance[irradiance_base + 3] = 1.0
+			moment_base := pixel * PROBE_MOMENT_CHANNELS
+			work.moments[moment_base + 0] = f16(distance_sum[texel] / depth_denominator)
+			work.moments[moment_base + 1] = f16(distance2_sum[texel] / depth_denominator)
 		}
 	}
 }
@@ -266,6 +269,17 @@ pow_ratio :: proc(value: f64, power: f64) -> f64 {
 		return 0
 	}
 	return math.pow(value, power)
+}
+
+probe_cell :: proc(probe: int, counts: [3]int) -> (x, y, z: int) {
+	x = probe % counts.x
+	y = (probe / counts.x) % counts.y
+	z = probe / (counts.x * counts.y)
+	return
+}
+
+probe_center :: proc(min: DVec3, spacing: f64, x, y, z: int) -> DVec3 {
+	return dv_add(min, dv_mul({f64(x) + 0.5, f64(y) + 0.5, f64(z) + 0.5}, spacing))
 }
 
 probe_atlas_pixel :: proc(probe, x, y, columns, grid: int) -> int {

@@ -265,30 +265,42 @@ active light count, cluster overflow, atlas weight, text counters, and debug
 line counts. `state.renderer.bake` reports the
 bake status (`missing`, `stale`, `current`, or `failed`), the current key, the
 artifact key, format and tool versions, atlas and probe counts, probe spacing,
-artifact and GPU bytes, and the load error. `state.render_digest`
-covers target extent, camera, boxes, box slots, emissive strengths, point
-lights, jitter, atlas weight, clip height, shadow visibility, lightmap, bake
-key, bake status, and view flags. `setup.renderer.shader_digest` covers the
-embedded SPIR-V.
+the invalid-probe count before dilation, the dynamic boxes whose centre is
+outside the probe volume (`probe_missing`), artifact and GPU bytes, and the load
+error. `state.render_digest` covers target extent, camera, boxes, box slots,
+emissive strengths, point lights, jitter, atlas weight, clip height, shadow
+visibility, lightmap, probe, bake key, bake status, and view flags.
+`setup.renderer.shader_digest` covers the embedded SPIR-V.
 
 ## Bake artifact
 
 The renderer loads `build/bake/arena.hbake` by default. `make bake` writes it
 from the static arena boxes, placed static bodies, and static fixtures; dynamic
 lamps and dynamic bodies never enter the bake. `bin/harbagsa-bake
---probe-spacing 2` writes the 2 m fallback. The tool reports its bake time, ray
-counts, static light count, byte sizes, and invalid and dilated texels. The
-artifact stores zero bake time so identical inputs produce identical bytes.
+--probe-spacing 2` writes the 2 m fallback, and the runtime validates either
+spacing against the artifact's own quality block. The tool reports its bake
+time, ray counts, static light count, byte sizes, invalid and dilated texels,
+and invalid and dilated probes. The artifact stores zero bake time so identical
+inputs produce identical bytes.
 
-A current artifact is sampled by static boxes. Each static face derives its
-atlas UV from the local position and local face normal, so no vertex UV channel
-is added. The lightmap carries indirect only; direct light and hard shadows stay
-real-time. Dynamic boxes keep the direct and emissive terms and do not sample
-the lightmap. Without the artifact, a run reports
-`state.renderer.bake.status = "missing"` and static boxes draw with no indirect
-term. A stale artifact stays bound and visible while the status reports the key
+A current artifact is sampled by both indirect paths. Each static face derives
+its atlas UV from the local position and local face normal, so no vertex UV
+channel is added. The lightmap carries static indirect only; direct light and
+hard shadows stay real-time. Dynamic boxes sample the probe field tetrahedrally
+over the four probes of the containing cell: normal bias, facing weight, and the
+baked depth-moment test select and weight the probes. The stored probe
+irradiance is `(radiance/2)^(1/5)`; the shader decodes it with
+`pow(encoded, 2.5)`, averages, squares, and applies the 2x factor, which puts
+probes and the lightmap on one scale. Invalid probes are skipped, never
+black-filled. The bake dilates a probe that the virtual offset could not repair
+by copying the nearest valid probe and pointing the offset at that probe's
+sample position, so the copied moments keep their origin.
+`state.renderer.bake.invalid_probes` is the count before that dilation. Without
+the artifact, a run reports
+`state.renderer.bake.status = "missing"` and both indirect terms are zero. A
+stale artifact stays bound and visible while the status reports the key
 mismatch. A static box with no tile in the loaded artifact draws with no
-indirect term; it never borrows another tile.
+indirect term; it never borrows a tile or the probes.
 
 Use `--bake PATH` on `run` or `session` to load another artifact:
 
@@ -312,8 +324,9 @@ Supported fields:
 - `clip_height`: discard fragments above a world height for a plan view.
 - `light_shadows`: trace point-light shadow rays. It defaults true. Use false for
   paired captures and performance runs.
-- `lightmap`: add the baked static indirect term. It defaults true. Use false for
-  paired captures and direct-light performance runs.
+- `lightmap`: add the baked static lightmap term. It defaults true.
+- `probe`: add the baked probe term. It defaults true. Set both `lightmap` and
+  `probe` to false for a direct-light capture or performance run.
 - `clear`: restore every default. Set one field to `null` to reset only that field.
 
 A scenario declares `requires.renderer_debug`, or the run uses
@@ -334,7 +347,7 @@ A `perf` command measures frames and can write one trace. `frames` defaults to
 120, `warmup` to 60, and `prime` to 2 seconds. `prime: 0` disables the time loop.
 Offscreen measures throughput. `--present` measures pacing.
 
-GPU passes are TLAS, cluster, probe, depth, scene, TAA, and overlay. The report
+GPU passes are TLAS, cluster, depth, scene, TAA, and overlay. The report
 carries `p50`, `p95`, and `mean` for each CPU phase and GPU pass. Perf data is
 wall-clock data and is not deterministic.
 

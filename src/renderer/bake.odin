@@ -46,6 +46,8 @@ Bake_Report :: struct {
 	slots:          int    `json:"slots"`,
 	probes:         int    `json:"probes"`,
 	probe_spacing:  f32    `json:"probe_spacing"`,
+	invalid_probes: u32    `json:"invalid_probes"`,
+	probe_missing:  int    `json:"probe_missing"`,
 	artifact_bytes: int    `json:"artifact_bytes"`,
 	gpu_bytes:      int    `json:"gpu_bytes"`,
 	bake_ms:        u32    `json:"bake_ms"`,
@@ -71,9 +73,10 @@ Bake_Resources :: struct {
 	error:       string,
 	data:        bake.Data,
 	loaded:      bool,
-	current_key: u64,
-	gpu_bytes:   int,
-	slot_lookup: map[u64]u32,
+	current_key:   u64,
+	gpu_bytes:     int,
+	probe_missing: int,
+	slot_lookup:   map[u64]u32,
 
 	lightmap:          Image,
 	probe_irradiance:  Image,
@@ -82,6 +85,7 @@ Bake_Resources :: struct {
 	faces_buffer:      vk.Buffer,
 	faces_memory:      vk.DeviceMemory,
 	faces_bytes:       int,
+	states_bytes:      int,
 	slots_buffer:      vk.Buffer,
 	slots_memory:      vk.DeviceMemory,
 	states_buffer:     vk.Buffer,
@@ -182,10 +186,12 @@ bake_report :: proc(r: ^Renderer) -> Bake_Report {
 		report.slots = int(header.slot_count)
 		report.probes = int(header.probe_count)
 		report.probe_spacing = header.probe_spacing
+		report.invalid_probes = r.bake.data.stats.invalid_probes
 		report.artifact_bytes = len(r.bake.data.bytes)
 		report.bake_ms = r.bake.data.stats.bake_ms
 	}
 	report.gpu_bytes = r.bake.gpu_bytes
+	report.probe_missing = r.bake.probe_missing
 	return report
 }
 
@@ -250,17 +256,6 @@ create_bake_lightmap :: proc(
 }
 
 @(private)
-create_bake_placeholder :: proc(r: ^Renderer) -> bool {
-	// A descriptor set must name an image and a storage buffer even when no bake
-	// is loaded. Nothing samples them: every object's weight is zero while the
-	// status reports missing or failed. The placeholder format is mandatory and
-	// does not need the float lightmap support.
-	zero := [4]u8{}
-	faces := [1]bake.Face{}
-	return create_bake_lightmap(r, 1, 1, .R8G8B8A8_UNORM, zero[:], faces[:])
-}
-
-@(private)
 create_bake_resources :: proc(r: ^Renderer) -> bool {
 	data := &r.bake.data
 	if !format_supports(r, .R16G16_SFLOAT, {.SAMPLED_IMAGE_FILTER_LINEAR}) {
@@ -283,30 +278,6 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 		r.bake.slot_lookup[slot.key] = u32(index)
 	}
 
-	irradiance, irradiance_ok := upload_texture(
-		r,
-		data.probe_atlas_width,
-		data.probe_atlas_height,
-		.R16G16B16A16_SFLOAT,
-		data.probe_irradiance,
-	)
-	if !irradiance_ok {
-		return false
-	}
-	r.bake.probe_irradiance = irradiance
-
-	moments, moments_ok := upload_texture(
-		r,
-		data.probe_atlas_width,
-		data.probe_atlas_height,
-		.R16G16_SFLOAT,
-		data.probe_moments,
-	)
-	if !moments_ok {
-		return false
-	}
-	r.bake.probe_moments = moments
-
 	if !create_device_buffer(
 		r,
 		raw_data(data.slots),
@@ -317,17 +288,6 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 	) {
 		return false
 	}
-	if !create_device_buffer(
-		r,
-		raw_data(data.probe_states),
-		vk.DeviceSize(len(data.probe_states) * size_of(bake.Probe_State)),
-		{.STORAGE_BUFFER},
-		&r.bake.states_buffer,
-		&r.bake.states_memory,
-	) {
-		return false
-	}
-
 	volume := Bake_Volume_Uniform {
 		min           = data.header.probe_min,
 		spacing       = data.header.probe_spacing,
@@ -338,13 +298,16 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 		atlas_width   = data.probe_atlas_width,
 		atlas_height  = data.probe_atlas_height,
 	}
-	if !create_device_buffer(
+	if !create_bake_probes(
 		r,
+		data.probe_atlas_width,
+		data.probe_atlas_height,
+		.R16G16B16A16_SFLOAT,
+		.R16G16_SFLOAT,
+		data.probe_irradiance,
+		data.probe_moments,
+		data.probe_states,
 		&volume,
-		vk.DeviceSize(size_of(Bake_Volume_Uniform)),
-		{.UNIFORM_BUFFER},
-		&r.bake.volume_buffer,
-		&r.bake.volume_memory,
 	) {
 		return false
 	}

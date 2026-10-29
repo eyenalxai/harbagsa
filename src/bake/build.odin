@@ -70,6 +70,7 @@ build :: proc(
 		probe_rays     = probes.rays,
 		shadow_rays    = lightmap.shadow_rays + probes.shadow_rays,
 		invalid_probes = probes.invalid_probes,
+		dilated_probes = probes.dilated_probes,
 		atlas_bytes    = len(lightmap.atlas),
 		probe_bytes    = len(probes.irradiance) + len(probes.moments) +
 			len(probes.states) * size_of(Probe_State),
