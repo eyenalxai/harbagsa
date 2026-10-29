@@ -233,6 +233,9 @@ layout_valid :: proc(data: Data) -> bool {
 		   u64(slot.first_face) + 6 > u64(len(data.faces)) {
 			return false
 		}
+		if slot.first_face != u32(slot_index * FACE_COUNT) {
+			return false
+		}
 		for face_offset in 0 ..< 6 {
 			face := data.faces[int(slot.first_face) + face_offset]
 			if face.slot != u32(slot_index) || face.face != u8(face_offset) {

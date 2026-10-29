@@ -21,6 +21,33 @@ bake_input_destroy :: proc(input: ^Bake_Input) {
 	input^ = {}
 }
 
+// The frame and the bake input share one identity per static box.
+arena_identity :: proc(index: int) -> (source: bake.Box_Source, id: u32) {
+	return .Arena, u32(index)
+}
+
+placed_identity :: proc(object: Placed_Object) -> (source: bake.Box_Source, id: u32) {
+	return .Placed, u32(object.id)
+}
+
+// The frame and the bake input share this rule, so it lives here.
+object_has_bake_slot :: proc(object: Placed_Object) -> bool {
+	return object.body_mode == .Static
+}
+
+bake_arena_slot :: proc(index: int) -> bake.Box_Slot {
+	source, id := arena_identity(index)
+	return {key = bake.slot_key(source, id), has_slot = true}
+}
+
+bake_placed_slot :: proc(object: Placed_Object) -> bake.Box_Slot {
+	if !object_has_bake_slot(object) {
+		return {}
+	}
+	source, id := placed_identity(object)
+	return {key = bake.slot_key(source, id), has_slot = true}
+}
+
 // The static bake input is exactly the arena boxes, placed static bodies, and
 // static fixtures. Dynamic lamps and dynamic bodies never enter it.
 simulation_bake_input :: proc(
@@ -39,19 +66,17 @@ simulation_bake_input :: proc(
 
 	arena_count := 0
 	for box, index in arena_static_boxes() {
-		append(&input.boxes, bake.Box_Entry {
-			source = .Arena,
-			id = u32(index),
-			box = box,
-		})
+		source, id := arena_identity(index)
+		append(&input.boxes, bake.Box_Entry{source = source, id = id, box = box})
 		arena_count += 1
 	}
 	for object in simulation_objects(sim) {
 		box := simulation_object_box(sim, object.id)
-		if object.body_mode == .Static {
+		if object_has_bake_slot(object) {
+			source, id := placed_identity(object)
 			insert_box(&input.boxes, arena_count, bake.Box_Entry {
-				source = .Placed,
-				id = u32(object.id),
+				source = source,
+				id = id,
 				box = box,
 			})
 		}

@@ -93,6 +93,13 @@ Box_Entry :: struct {
 	box:    geometry.Box,
 }
 
+// The frame and the bake must agree on a static box's identity; dynamic
+// geometry has no tile.
+Box_Slot :: struct {
+	key:      u64,
+	has_slot: bool,
+}
+
 Light_Entry :: struct {
 	id:        u32,
 	position:  [3]f32,
