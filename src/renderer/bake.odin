@@ -73,6 +73,7 @@ Bake_Resources :: struct {
 	loaded:      bool,
 	current_key: u64,
 	gpu_bytes:   int,
+	slot_lookup: map[u64]u32,
 
 	lightmap:          Image,
 	probe_irradiance:  Image,
@@ -155,16 +156,12 @@ update_bake :: proc(r: ^Renderer, key: u64) {
 
 // A static box owns a slot only when the loaded artifact baked its key. A
 // missing slot stays on the direct path; it never borrows another tile.
-bake_lightmap_slot :: proc(r: ^Renderer, ref: bake.Lightmap_Ref) -> (slot: u32, ok: bool) {
-	if !ref.has_slot || !r.bake.loaded {
+bake_box_slot :: proc(r: ^Renderer, slot: bake.Box_Slot) -> (index: u32, ok: bool) {
+	if !slot.has_slot || !r.bake.loaded {
 		return 0, false
 	}
-	for entry, index in r.bake.data.slots {
-		if entry.key == ref.key {
-			return u32(index), true
-		}
-	}
-	return 0, false
+	index, ok = r.bake.slot_lookup[slot.key]
+	return
 }
 
 bake_report :: proc(r: ^Renderer) -> Bake_Report {
@@ -205,6 +202,9 @@ destroy_bake :: proc(r: ^Renderer) {
 	destroy_buffer(r, &b.slots_buffer, &b.slots_memory)
 	destroy_buffer(r, &b.states_buffer, &b.states_memory)
 	destroy_buffer(r, &b.volume_buffer, &b.volume_memory)
+	if b.slot_lookup != nil {
+		delete(b.slot_lookup)
+	}
 	bake.destroy(&b.data, r.allocator)
 	if b.path != "" {
 		delete(b.path, r.allocator)
@@ -215,60 +215,73 @@ destroy_bake :: proc(r: ^Renderer) {
 	b^ = {}
 }
 
+// The lightmap image, the face rects, and the shared sampler are one unit. The
+// placeholder and the loaded artifact use the same path so a missing bake
+// cannot drift from a real one.
 @(private)
-create_bake_placeholder :: proc(r: ^Renderer) -> bool {
-	if !format_supports(r, .R16G16B16A16_SFLOAT, {.SAMPLED_IMAGE_FILTER_LINEAR}) {
-		log_bake_error(r, "the device cannot filter R16G16B16A16_SFLOAT")
+create_bake_lightmap :: proc(
+	r: ^Renderer,
+	width, height: u32,
+	format: vk.Format,
+	atlas: []u8,
+	faces: []bake.Face,
+) -> bool {
+	if !format_supports(r, format, {.SAMPLED_IMAGE_FILTER_LINEAR}) {
+		log_bake_error(r, "the device cannot filter the lightmap format")
 		return false
 	}
-	// A descriptor set must name an image and a storage buffer even when no bake
-	// is loaded. Nothing samples them: every object's weight is zero while the
-	// status reports missing or failed.
-	zero := [bake.ATLAS_BYTES_PER_TEXEL]u8{}
-	lightmap, lightmap_ok := upload_texture(r, 1, 1, .R16G16B16A16_SFLOAT, zero[:])
+	lightmap, lightmap_ok := upload_texture(r, width, height, format, atlas)
 	if !lightmap_ok {
 		return false
 	}
 	r.bake.lightmap = lightmap
-
-	face := bake.Face{}
 	if !create_device_buffer(
 		r,
-		&face,
-		vk.DeviceSize(size_of(bake.Face)),
+		raw_data(faces),
+		vk.DeviceSize(len(faces) * size_of(bake.Face)),
 		{.STORAGE_BUFFER},
 		&r.bake.faces_buffer,
 		&r.bake.faces_memory,
 	) {
 		return false
 	}
-	r.bake.faces_bytes = size_of(bake.Face)
+	r.bake.faces_bytes = len(faces) * size_of(bake.Face)
 	return create_clamp_sampler(r, &r.bake.sampler)
+}
+
+@(private)
+create_bake_placeholder :: proc(r: ^Renderer) -> bool {
+	// A descriptor set must name an image and a storage buffer even when no bake
+	// is loaded. Nothing samples them: every object's weight is zero while the
+	// status reports missing or failed. The placeholder format is mandatory and
+	// does not need the float lightmap support.
+	zero := [4]u8{}
+	faces := [1]bake.Face{}
+	return create_bake_lightmap(r, 1, 1, .R8G8B8A8_UNORM, zero[:], faces[:])
 }
 
 @(private)
 create_bake_resources :: proc(r: ^Renderer) -> bool {
 	data := &r.bake.data
-	if !format_supports(r, .R16G16B16A16_SFLOAT, {.SAMPLED_IMAGE_FILTER_LINEAR}) {
-		log_bake_error(r, "the device cannot filter R16G16B16A16_SFLOAT")
-		return false
-	}
 	if !format_supports(r, .R16G16_SFLOAT, {.SAMPLED_IMAGE_FILTER_LINEAR}) {
 		log_bake_error(r, "the device cannot filter R16G16_SFLOAT")
 		return false
 	}
-
-	lightmap, lightmap_ok := upload_texture(
+	if !create_bake_lightmap(
 		r,
 		data.header.atlas_width,
 		data.header.atlas_height,
 		.R16G16B16A16_SFLOAT,
 		data.atlas,
-	)
-	if !lightmap_ok {
+		data.faces,
+	) {
 		return false
 	}
-	r.bake.lightmap = lightmap
+
+	r.bake.slot_lookup = make(map[u64]u32, len(data.slots), r.allocator)
+	for slot, index in data.slots {
+		r.bake.slot_lookup[slot.key] = u32(index)
+	}
 
 	irradiance, irradiance_ok := upload_texture(
 		r,
@@ -294,21 +307,6 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 	}
 	r.bake.probe_moments = moments
 
-	if !create_clamp_sampler(r, &r.bake.sampler) {
-		return false
-	}
-
-	if !create_device_buffer(
-		r,
-		raw_data(data.faces),
-		vk.DeviceSize(len(data.faces) * size_of(bake.Face)),
-		{.STORAGE_BUFFER},
-		&r.bake.faces_buffer,
-		&r.bake.faces_memory,
-	) {
-		return false
-	}
-	r.bake.faces_bytes = len(data.faces) * size_of(bake.Face)
 	if !create_device_buffer(
 		r,
 		raw_data(data.slots),

@@ -266,10 +266,10 @@ line counts. `state.renderer.bake` reports the
 bake status (`missing`, `stale`, `current`, or `failed`), the current key, the
 artifact key, format and tool versions, atlas and probe counts, probe spacing,
 artifact and GPU bytes, and the load error. `state.render_digest`
-covers target extent, camera, boxes, lightmap refs, emissive strengths, point
-lights, jitter, atlas weight, clip height, shadow visibility, bake key, bake
-status, and view flags. `setup.renderer.shader_digest` covers the embedded
-SPIR-V.
+covers target extent, camera, boxes, box slots, emissive strengths, point
+lights, jitter, atlas weight, clip height, shadow visibility, lightmap, bake
+key, bake status, and view flags. `setup.renderer.shader_digest` covers the
+embedded SPIR-V.
 
 ## Bake artifact
 
@@ -312,8 +312,8 @@ Supported fields:
 - `clip_height`: discard fragments above a world height for a plan view.
 - `light_shadows`: trace point-light shadow rays. It defaults true. Use false for
   paired captures and performance runs.
-- `gi`: add the one-bounce probe field. It defaults true. Use false for paired
-  captures and direct-light performance runs.
+- `lightmap`: add the baked static indirect term. It defaults true. Use false for
+  paired captures and direct-light performance runs.
 - `clear`: restore every default. Set one field to `null` to reset only that field.
 
 A scenario declares `requires.renderer_debug`, or the run uses

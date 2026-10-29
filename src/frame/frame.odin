@@ -23,7 +23,7 @@ Options :: struct {
 Scratch :: struct {
 	allocator:   mem.Allocator,
 	boxes:       [dynamic]geometry.Box,
-	box_refs:    [dynamic]bake.Lightmap_Ref,
+	box_slots:   [dynamic]bake.Box_Slot,
 	lights:      [dynamic]renderer.Light,
 	bake:        game.Bake_Input,
 	debug_lines: game.Debug_Lines,
@@ -33,8 +33,8 @@ scratch_destroy :: proc(scratch: ^Scratch) {
 	if scratch.boxes != nil {
 		delete(scratch.boxes)
 	}
-	if scratch.box_refs != nil {
-		delete(scratch.box_refs)
+	if scratch.box_slots != nil {
+		delete(scratch.box_slots)
 	}
 	if scratch.lights != nil {
 		delete(scratch.lights)
@@ -50,8 +50,8 @@ scratch_prepare :: proc(scratch: ^Scratch) {
 	if scratch.boxes == nil {
 		scratch.boxes = make([dynamic]geometry.Box, 0, 0, scratch.allocator)
 	}
-	if scratch.box_refs == nil {
-		scratch.box_refs = make([dynamic]bake.Lightmap_Ref, 0, 0, scratch.allocator)
+	if scratch.box_slots == nil {
+		scratch.box_slots = make([dynamic]bake.Box_Slot, 0, 0, scratch.allocator)
 	}
 	if scratch.lights == nil {
 		scratch.lights = make([dynamic]renderer.Light, 0, 0, scratch.allocator)
@@ -92,30 +92,32 @@ build :: proc(
 
 	scratch_prepare(scratch)
 	clear(&scratch.boxes)
-	clear(&scratch.box_refs)
+	clear(&scratch.box_slots)
 	for box, index in game.arena_static_boxes() {
 		append(&scratch.boxes, box)
-		append(&scratch.box_refs, bake.Lightmap_Ref {
-			key = bake.slot_key(.Arena, u32(index)),
+		entry := game.bake_arena_box(index, box)
+		append(&scratch.box_slots, bake.Box_Slot {
+			key = bake.slot_key(entry.source, entry.id),
 			has_slot = true,
 		})
 	}
 	for object in game.simulation_objects(sim) {
 		box := game.simulation_object_visual_box(sim, object.id)
 		append(&scratch.boxes, box)
-		ref: bake.Lightmap_Ref
+		slot: bake.Box_Slot
 		if game.object_has_bake_slot(object) {
-			ref = {key = bake.slot_key(.Placed, u32(object.id)), has_slot = true}
+			entry := game.bake_placed_box(object, box)
+			slot = {key = bake.slot_key(entry.source, entry.id), has_slot = true}
 		}
-		append(&scratch.box_refs, ref)
+		append(&scratch.box_slots, slot)
 	}
 	spider_start := len(scratch.boxes)
 	spider_boxes(&scratch.boxes, snapshot, options.alpha)
 	for _ in spider_start ..< len(scratch.boxes) {
-		append(&scratch.box_refs, bake.Lightmap_Ref{})
+		append(&scratch.box_slots, bake.Box_Slot{})
 	}
 	scene.boxes = scratch.boxes[:]
-	scene.box_refs = scratch.box_refs[:]
+	scene.box_slots = scratch.box_slots[:]
 
 	active := game.simulation_collect_lights(sim)
 	clear(&scratch.lights)

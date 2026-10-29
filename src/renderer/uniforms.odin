@@ -58,8 +58,8 @@ ACCELERATION_BINDING :: 2
 LIGHT_BINDING :: 3
 CLUSTER_COUNTS_BINDING :: 4
 CLUSTER_INDICES_BINDING :: 5
-LIGHTMAP_BINDING :: 11
-LIGHTMAP_FACES_BINDING :: 12
+LIGHTMAP_BINDING :: 6
+LIGHTMAP_FACES_BINDING :: 7
 
 create_scene_resources :: proc(r: ^Renderer) -> bool {
 	bindings := [8]vk.DescriptorSetLayoutBinding {
