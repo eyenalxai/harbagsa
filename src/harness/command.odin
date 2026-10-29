@@ -139,6 +139,7 @@ Renderer_Debug_Field :: enum {
 	Clip_Height,
 	Light_Shadows,
 	Lightmap,
+	Probes,
 }
 
 Renderer_Debug_Resets :: bit_set[Renderer_Debug_Field]

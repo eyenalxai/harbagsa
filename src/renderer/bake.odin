@@ -52,6 +52,9 @@ Bake_Report :: struct {
 	gpu_bytes:      int    `json:"gpu_bytes"`,
 	mapped_boxes:   int    `json:"mapped_boxes"`,
 	unmapped_boxes: int    `json:"unmapped_boxes"`,
+	invalid_probes: int    `json:"invalid_probes"`,
+	dilated_probes: int    `json:"dilated_probes"`,
+	skipped_probes: int    `json:"skipped_probes"`,
 	bake_ms:        u32    `json:"bake_ms"`,
 	error:          string `json:"error,omitempty"`,
 }
@@ -60,11 +63,10 @@ Bake_Volume_Uniform :: struct {
 	min:           [3]f32,
 	spacing:       f32,
 	counts:        [3]u32,
-	probe_texels:  u32,
+	probe_grid:    u32,
 	atlas_columns: u32,
 	probe_count:   u32,
-	atlas_width:   u32,
-	atlas_height:  u32,
+	_pad:          [2]u32,
 }
 
 #assert(size_of(Bake_Volume_Uniform) == 48)
@@ -79,6 +81,8 @@ Bake_Resources :: struct {
 	gpu_bytes:      int,
 	mapped_boxes:   int,
 	unmapped_boxes: int,
+	dilated_probes: int,
+	skipped_probes: int,
 
 	lightmap:          Image,
 	probe_irradiance:  Image,
@@ -91,6 +95,7 @@ Bake_Resources :: struct {
 	slots_memory:      vk.DeviceMemory,
 	states_buffer:     vk.Buffer,
 	states_memory:     vk.DeviceMemory,
+	states_bytes:      int,
 	volume_buffer:     vk.Buffer,
 	volume_memory:     vk.DeviceMemory,
 }
@@ -178,11 +183,14 @@ bake_report :: proc(r: ^Renderer) -> Bake_Report {
 		report.probes = int(header.probe_count)
 		report.probe_spacing = header.probe_spacing
 		report.artifact_bytes = len(r.bake.data.bytes)
+		report.invalid_probes = int(r.bake.data.stats.invalid_probes)
 		report.bake_ms = r.bake.data.stats.bake_ms
 	}
 	report.gpu_bytes = r.bake.gpu_bytes
 	report.mapped_boxes = r.bake.mapped_boxes
 	report.unmapped_boxes = r.bake.unmapped_boxes
+	report.dilated_probes = r.bake.dilated_probes
+	report.skipped_probes = r.bake.skipped_probes
 	return report
 }
 
@@ -220,6 +228,8 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 		log_bake_error(r, "the device cannot filter R16G16_SFLOAT")
 		return false
 	}
+
+	r.bake.dilated_probes, r.bake.skipped_probes = dilate_probes(r)
 
 	lightmap, lightmap_ok := upload_texture(
 		r,
@@ -292,16 +302,15 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 	) {
 		return false
 	}
+	r.bake.states_bytes = len(data.probe_states) * size_of(bake.Probe_State)
 
 	volume := Bake_Volume_Uniform {
 		min           = data.header.probe_min,
 		spacing       = data.header.probe_spacing,
 		counts        = data.header.probe_counts,
-		probe_texels  = data.header.probe_texels,
+		probe_grid    = data.header.probe_texels,
 		atlas_columns = data.header.probe_atlas_columns,
 		probe_count   = data.header.probe_count,
-		atlas_width   = data.probe_atlas_width,
-		atlas_height  = data.probe_atlas_height,
 	}
 	if !create_device_buffer(
 		r,
@@ -319,42 +328,6 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 	r.bake.gpu_bytes += len(data.slots) * size_of(bake.Slot)
 	r.bake.gpu_bytes += len(data.probe_states) * size_of(bake.Probe_State)
 	r.bake.gpu_bytes += size_of(Bake_Volume_Uniform)
-	return true
-}
-
-@(private)
-// The descriptor set is written before a frame knows whether an artifact
-// exists. The shader never samples these stand-ins; a box without a slot skips
-// the fetch and the bake status reports the missing or failed load.
-create_bake_placeholder :: proc(r: ^Renderer) -> bool {
-	if !create_clamp_sampler(r, &r.bake.sampler) {
-		return false
-	}
-	pixel := [4]f16{}
-	pixel_bytes := ([^]u8)(&pixel)
-	image, image_ok := upload_texture(
-		r,
-		1,
-		1,
-		.R16G16B16A16_SFLOAT,
-		pixel_bytes[:size_of(pixel)],
-	)
-	if !image_ok {
-		return false
-	}
-	r.bake.lightmap = image
-	face := bake.Face{}
-	if !create_device_buffer(
-		r,
-		&face,
-		vk.DeviceSize(size_of(bake.Face)),
-		{.STORAGE_BUFFER},
-		&r.bake.faces_buffer,
-		&r.bake.faces_memory,
-	) {
-		return false
-	}
-	r.bake.faces_bytes = size_of(bake.Face)
 	return true
 }
 

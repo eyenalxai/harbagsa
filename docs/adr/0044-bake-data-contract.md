@@ -38,7 +38,10 @@ never a fill value.
   an 8 x 8 first/second moment block. Probes are packed into a 2D shelf atlas;
   the header stores the column count so a reader can derive both image extents.
   The probe state buffer carries the valid flag and virtual offset, so the
-  runtime never re-derives validity from live geometry.
+  runtime never re-derives validity from live geometry. The renderer dilates an
+  invalid probe from valid neighbours within two cells so a tetrahedron near a
+  static box keeps four samples; a probe with no valid neighbour stays invalid
+  and the shader skips it.
 - **Key.** The key hashes the canonical static boxes (arena in array order, then
   placed static objects by object id), the active static fixtures, the quality,
   and the tool version. Dynamic lamps and dynamic bodies are excluded. The
@@ -49,10 +52,11 @@ never a fill value.
   and moment images, the shared linear clamp sampler, the face and slot buffers,
   the probe state buffer, and the probe volume buffer are created with the
   renderer and destroyed with it. A rejected or missing artifact creates no bake
-  data and reports `missing` or `failed`. The renderer still creates a one-texel
-  image, one zero face, and the sampler so the scene descriptor set is complete;
-  no fragment samples those stand-ins because a box with no slot skips the
-  lightmap fetch.
+  data and reports `missing` or `failed`. The renderer still creates three
+  one-texel images, one zero face, one zero probe state, one empty probe volume,
+  and the sampler so the scene descriptor set is complete; no fragment samples
+  those stand-ins because the volume has no probes and a box with no slot skips
+  the lightmap fetch.
 - **Loader source.** The runtime reads `build/bake/arena.hbake` by default. The
   harness accepts `--bake PATH` so a loader fixture or a build from another
   checkout can be exercised. A missing file is `missing`; a parse failure is
@@ -88,9 +92,10 @@ never a fill value.
   replaces it.
 - `src:bake` is compiled by `make check` and imported by the frame and the
   renderer. It does not import either package, so the bake tool can share it.
-- Static boxes sample the lightmap atlas from the lit pass; dynamic boxes have
-  no lightmap slot and fall back to zero indirect until the probe gather lands.
-  No descriptor binding or shader sample reads the probe resources yet.
+- Static boxes sample the lightmap atlas and dynamic boxes sample the static
+  probe volume. Both are read by the lit pass; the probe volume uses
+  tetrahedral interpolation over four probes and skips probes the bake marked
+  invalid.
 - The design guide, `README.md`, `GLOSSARY.md`, and ADR 0042 still describe the
   removed dynamic DDGI field and ban baked light or textures. This ADR starts
   the replacement but does not edit those pages; #386 owns that cleanup. Do not
