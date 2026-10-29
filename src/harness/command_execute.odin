@@ -200,6 +200,7 @@ execute_displays :: proc(session: ^Session, command: Command, reply: ^Reply) -> 
 
 @(private)
 execute_rows :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
+	session_refresh_bake(session)
 	session_refresh_renderer(session)
 	session_refresh_hud(session)
 	reply.rows = new(Rows_State, session.allocator)

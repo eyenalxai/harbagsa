@@ -66,6 +66,7 @@ build :: proc(
 	camera_override: ^renderer.Camera,
 	hud: ^game.HUD_State,
 	scratch: ^Scratch,
+	bake_static: bake.Static,
 ) -> renderer.Render_Input {
 	scene: renderer.Render_Input
 	scene.hud.weight = sim.settings.type_weight
@@ -122,7 +123,7 @@ build :: proc(
 		})
 	}
 	scene.lights = scratch.lights[:]
-	scene.bake_static = game.simulation_bake_input(sim, &scratch.bake, scratch.allocator)
+	scene.bake_static = bake_static
 	scratch.debug_lines.count = 0
 	if options.debug_view {
 		game.collect_world_lines(sim, &scratch.debug_lines)
