@@ -108,7 +108,7 @@ session_perf_frame :: proc(session: ^Session) -> string {
 	session.frame += 1
 	perf.mark(&session.perf.state, .Simulation)
 	if session.render.backend != nil {
-		if draw_error := session_draw(session, {}); draw_error != "" {
+		if draw_error := session_draw_group(session, nil); draw_error != "" {
 			return draw_error
 		}
 		perf.set_gpu(&session.perf.state, session.render.backend.gpu_times(session.render.backend.ctx))
