@@ -15,7 +15,8 @@ in [mixed-lighting.md](mixed-lighting.md).
 
 The GPU passes are TLAS, cluster, depth, scene, TAA, and overlay. There is no
 probe pass. The report carries `p50`, `p95`, and `mean` for each CPU phase and
-GPU pass. A device without timestamp support reports CPU data only.
+GPU pass. GPU values belong to the last completed frame. A device without
+timestamp support reports CPU data only.
 
 Each scenario runs one priming phase, 60 warmup frames, and 120 measured frames
 offscreen. The GPU total is the sum of the six passes. Three runs for the 720p
@@ -46,11 +47,11 @@ the clock ramp and the per-term differences are at the 0.01–0.02 ms noise floo
 
 Before this change a perf frame passed a zeroed capture request to the draw
 path, so every measured frame read the colour target back and ran the per-pixel
-delta. At 1280x720 that cost about 172 ms of CPU per frame: the interval `p50`
-read 172.6 ms against a 0.68 ms GPU total, and the report collected 193 empty
-capture entries. A perf frame now draws without a capture request, and the
-interval matches the GPU total plus submit cost. Do not compare an interval
-measured before this fix with one measured after it.
+delta. `scenarios/perf.json` at 1280x720 reported an interval `p50` of 173.1 ms
+against a 0.68 ms GPU total and wrote 193 empty capture entries
+(`runs/perf-baseline`). After the fix the same scenario reports 0.695–0.750 ms
+and no capture entries (`runs/perf-720-1` to `runs/perf-720-3`). Do not compare
+an interval measured before this fix with one measured after it.
 
 ### Rules for a new baseline
 
