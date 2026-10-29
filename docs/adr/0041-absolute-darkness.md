@@ -1,6 +1,6 @@
 # Absolute darkness
 
-> A one-bounce probe field now supplies indirect light from the current lamps. See [ADR 0042](0042-single-volume-ddgi.md). The no-ambient-floor rule and every other decision here stay in force.
+> A baked one-bounce static indirect term now supplies light in corners. See [ADR 0045](0045-mixed-static-baked-indirect.md). The no-ambient-floor rule and every other decision here stay in force. The dynamic probe field in the text below is historical.
 
 The renderer has no ambient fill. A surface receives light only from the current direct point lights and its emissive term. A view with no active lamp is black.
 

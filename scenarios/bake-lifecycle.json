@@ -1,0 +1,22 @@
+{
+  "note": "Current bake, stale after a static fixture move, current after publish, and current after a dynamic crate move.",
+  "size": "1280x720",
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "debug_mode", "active": true},
+    {"cmd": "bake"},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "current", "format": "stats", "png": true},
+    {"cmd": "editor", "select_object": "initial-lamp"},
+    {"cmd": "editor", "move": [-5.0, 1.2, 6.0]},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "stale", "format": "stats", "png": true},
+    {"cmd": "bake"},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "republished", "format": "stats", "png": true},
+    {"cmd": "editor", "select_object": 1},
+    {"cmd": "editor", "move": [1.0, 0.5, 8.0]},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "dynamic-move", "format": "stats", "png": true}
+  ]
+}

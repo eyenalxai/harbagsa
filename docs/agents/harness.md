@@ -42,6 +42,7 @@ run path. `--out DIR` chooses the whole run directory.
 | drive the simulation | **Scenario format** and **Commands** |
 | place or remove an object | **Place and remove** |
 | drive the editor | **Editor** |
+| build and publish a bake | **Bake lifecycle** |
 | capture the final image | **Capture targets** |
 | read velocity, history, depth, or scene colour | **Capture targets** |
 | read numeric image statistics | **Capture targets** |
@@ -54,7 +55,7 @@ run path. `--out DIR` chooses the whole run directory.
 | measure the arena from above | `scenarios/perf-arena.json` |
 | measure performance | **Performance** |
 | reproduce a live view | **Live repro** |
-| understand a design choice | `docs/adr/0037-direct-dynamic-point-lights.md` |
+| understand a design choice | `docs/adr/0045-mixed-static-baked-indirect.md` |
 
 ## What one run writes
 
@@ -140,6 +141,8 @@ is seconds. Capture regions and crops are pixels unless `unit` is `normalized`.
   `renderer_debug` blocks. Every block is optional; at least one is required.
 - `place`: `prefab`, `position`, optional `yaw_deg`, `body`, `name`, and `light`.
 - `remove`: object `id` or `name`.
+- `bake`: rebuild and publish the static indirect; optional `probe_spacing`,
+  `threads`, and `out`.
 - `get`: one state or capture `field`.
 - `quit`: stop the session.
 
@@ -165,13 +168,13 @@ stance, eye-height, and step-smoothing keys are command errors.
 
 `place` creates one object without entering debug mode. It draws no editor
 lines and adds no undo entry. `prefab` and `position` are required. `body`
-defaults to the prefab. A lamp prefab ignores a static request and keeps its
-dynamic body. A name is unique, at most 31 letters, digits, `-`, or `_`, and is
-neither all digits nor `count`.
+defaults to the prefab. A lamp body follows its `light.kind`: `static` gives a
+static fixture, and `dynamic` gives a dynamic lamp. A name is unique, at most 31
+letters, digits, `-`, or `_`, and is neither all digits nor `count`.
 
 ```json
-{"cmd":"place","prefab":"Lamp","position":[13.5,2.75,10.5],"body":"dynamic",
- "name":"key-lamp","light":{"color":"warm","intensity":1.5,"range":8}}
+{"cmd":"place","prefab":"Lamp","position":[13.5,2.75,10.5],"body":"static",
+ "name":"key-lamp","light":{"kind":"static","color":"warm","intensity":1.5,"range":8}}
 ```
 
 A `light` block is valid only for a lamp prefab. Omitted fields keep prefab
@@ -186,17 +189,21 @@ actions. Fields cover:
 - `pick`, `height`, `yaw_deg`, `snap`, and `cancel` for the armed placement.
 - `place` for an exact transform without a placement ray.
 - `select_object`, `move`, `rotate_deg`, `body`, `flip_body`, `delete`, and
-  `duplicate` for an object. A body request that would make a lamp static fails
-  with `a lamp must stay dynamic`.
+  `duplicate` for an object. A body request on a lamp fails with `a lamp body
+  follows its kind`; change `light_kind` instead.
 - `turn`, `wheel`, `large`, `primary`, `secondary`, `drag_move`, and
   `drag_release` for pointer-relative input.
-- `light_color`, `light_intensity`, and `light_range` for the next or selected lamp.
+- `light_kind`, `light_color`, `light_intensity`, and `light_range` for the next
+  or selected lamp.
 - `undo` and `redo` for history.
 - `camera` for the free-fly camera.
 
 Catalog order: Crate, Small crate, Wide crate, Block, Platform, Ramp, Pillar,
-Wall, Lamp, Light panel, Beacon. Lamp light colour is warm, cool, red, green, or
-blue. Intensity is in [0.2, 4.0]. Range is in [2, 20] metres.
+Wall, Lamp, Light panel, Beacon. A lamp kind is `static` or `dynamic`; a static
+fixture uses a static body and bakes indirect, and a dynamic lamp uses a dynamic
+body and contributes direct light only. Newly placed lamps default to dynamic.
+Lamp light colour is warm, cool, red, green, or blue. Intensity is in [0.2, 4.0].
+Range is in [2, 20] metres.
 
 ## Live session
 
@@ -262,17 +269,18 @@ A named capture exposes its own renderer state through `get`, for example
 `state.renderer` reports frame count, TAA state, jitter index, history validity,
 convergence frames, history read index and weight, reset count and reason,
 active light count, cluster overflow, atlas weight, text counters, and debug
-line counts. `state.renderer.bake` reports the
-bake status (`missing`, `stale`, `current`, or `failed`), the current key, the
-artifact key, format and tool versions, atlas and probe counts, probe spacing,
+line counts. `state.bake` is the lifecycle view and `state.renderer.bake` is the
+same report inside the renderer block. Both report the status (`missing`,
+`stale`, `current`, or `failed`), the current key, the artifact key, format and
+tool versions, the measured bake time, atlas and probe counts, probe spacing,
 the invalid-probe count before dilation, the dynamic boxes whose centre is
 outside the probe volume (`probe_missing`), artifact and GPU bytes, and the load
-error. `state.render_digest` covers target extent, camera, boxes, box slots,
-emissive strengths, point lights, jitter, atlas weight, clip height, shadow
-visibility, lightmap, probe, bake key, bake status, and view flags.
+or publish error. `state.render_digest` covers target extent, camera, boxes, box
+slots, emissive strengths, point lights, jitter, atlas weight, clip height,
+shadow visibility, lightmap, probe, bake key, bake status, and view flags.
 `setup.renderer.shader_digest` covers the embedded SPIR-V.
 
-## Bake artifact
+## Bake lifecycle
 
 The renderer loads `build/bake/arena.hbake` by default. `make bake` writes it
 from the static arena boxes, placed static bodies, and static fixtures; dynamic
@@ -295,12 +303,28 @@ probes and the lightmap on one scale. Invalid probes are skipped, never
 black-filled. The bake dilates a probe that the virtual offset could not repair
 by copying the nearest valid probe and pointing the offset at that probe's
 sample position, so the copied moments keep their origin.
-`state.renderer.bake.invalid_probes` is the count before that dilation. Without
-the artifact, a run reports
-`state.renderer.bake.status = "missing"` and both indirect terms are zero. A
-stale artifact stays bound and visible while the status reports the key
-mismatch. A static box with no tile in the loaded artifact draws with no
-indirect term; it never borrows a tile or the probes.
+`state.bake.invalid_probes` is the count before that dilation.
+
+The `bake` command rebuilds from the current static input and publishes the new
+artifact without restarting the renderer. It accepts optional `probe_spacing`
+(1 or 2), `threads` (1 to 256), and `out` (write the artifact to this path).
+The command requires a renderer. The default build uses 1 m probes, 128 lightmap
+rays, 1024 probe rays, and one bounce; it takes about 5 s at 16 threads. Use
+`probe_spacing: 2` for the measured fallback when probe work or memory is the
+limit. `state.bake.bake_ms` is the measured wall time of the last publish; the
+artifact's stored time stays zero.
+
+```json
+{"cmd":"bake","out":"build/bake/arena.hbake"}
+```
+
+A static fixture or static geometry edit changes the key and sets the status to
+`stale` immediately, even before the next frame. Direct light updates at once;
+the old indirect stays bound and visible until the publish. A dynamic lamp or
+crate move leaves the key unchanged and the status `current`. A publish failure
+leaves the old artifact bound and reports `failed`; it never falls back to black
+or to another bake. Removing every static fixture and publishing a fresh bake
+yields zero indirect, and a lamp-free view stays black.
 
 Use `--bake PATH` on `run` or `session` to load another artifact:
 
@@ -310,10 +334,12 @@ Use `--bake PATH` on `run` or `session` to load another artifact:
 ```
 
 A version or layout mismatch sets `status` to `failed` and records the loader
-error. A static geometry or static fixture edit changes the key and sets
-`status` to `stale`; the old artifact stays bound until a later publish. The
-artifact format is documented in
-`docs/adr/0044-bake-data-contract.md`.
+error. The artifact format is documented in
+`docs/adr/0044-bake-data-contract.md`; the mixed-lighting decision is
+`docs/adr/0045-mixed-static-baked-indirect.md`. `scenarios/bake-lifecycle.json`
+exercises the current, stale, and dynamic-move states;
+`scenarios/bake-empty.json` removes every static fixture and captures the
+lamp-free result.
 
 ## Renderer debug overrides
 

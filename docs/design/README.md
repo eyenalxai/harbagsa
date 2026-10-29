@@ -5,10 +5,11 @@ layer. Read this file first, then the topic file for the job.
 
 ## The point of view
 
-A flat-shaded box world with direct coloured light and overlay text drawn at the
-exact size of its pixels. The player is an eight-legged box spider with planted
-feet; its eyes and two abdomen marks are the only self-lit surfaces that are not
-lamps. Nothing is textured, rounded, blurred, or glossy.
+A flat-shaded box world with direct coloured light, a baked static bounce, and
+overlay text drawn at the exact size of its pixels. The player is an eight-legged
+box spider with planted feet; its eyes and two abdomen marks are the only
+self-lit surfaces that are not lamps. Nothing is textured, rounded, blurred, or
+glossy.
 Every surface is a box and every panel is square. Colour says what a thing does;
 it never decorates. The type carries the personality, because nothing else does.
 
@@ -25,12 +26,14 @@ Two constraints produce that look, and both are deliberate:
 The one choice a competitor cannot paste in: a hard-edged box interior lit by
 movable coloured lamps, with soft range falloff on flat faces and overlay text
 that is exact on the pixel grid. Unlit boxes are black; only placed lamps and
-emissive boxes start light. One diffuse probe bounce carries that light into
-corners. Hard point-light shadows ground the props and walls. No cached or
-baked lighting competes with the lamps.
+emissive boxes start light. Static fixtures bake one diffuse bounce into a
+lightmap for static boxes and a probe field for dynamic boxes. Dynamic lamps
+contribute direct light and hard shadows only. Hard point-light shadows ground
+the props and walls.
 
-Defend it. A texture, a gloss, a bloom, a baked light, or a rounded corner
-removes it.
+Defend it. A surface texture, a gloss, a bloom, a rounded corner, or a per-frame
+GI field removes it. The baked static indirect term is part of the look; it is
+not a substitute for the lamps.
 
 ## Files
 
