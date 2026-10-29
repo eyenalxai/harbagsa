@@ -71,17 +71,8 @@ probe_dilate :: proc(work: ^Probe_Work, allocator: mem.Allocator) -> (dilated: i
 		)
 
 		source_x, source_y, source_z := probe_cell(best_probe, work.counts)
-		source_center := dv_add(
-			work.min,
-			dv_mul(
-				{f64(source_x) + 0.5, f64(source_y) + 0.5, f64(source_z) + 0.5},
-				work.spacing,
-			),
-		)
-		destination_center := dv_add(
-			work.min,
-			dv_mul({f64(x) + 0.5, f64(y) + 0.5, f64(z) + 0.5}, work.spacing),
-		)
+		source_center := probe_center(work.min, work.spacing, source_x, source_y, source_z)
+		destination_center := probe_center(work.min, work.spacing, x, y, z)
 		source_offset := work.states[best_probe].offset
 		offset := dv_add(
 			DVec3{f64(source_offset.x), f64(source_offset.y), f64(source_offset.z)},

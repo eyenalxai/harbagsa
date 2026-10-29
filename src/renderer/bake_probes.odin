@@ -10,15 +10,16 @@ import vk "vendor:vulkan"
 create_bake_probes :: proc(
 	r: ^Renderer,
 	width, height: u32,
+	irradiance_format, moment_format: vk.Format,
 	irradiance_bytes, moment_bytes: []u8,
 	states: []bake.Probe_State,
-	volume: Bake_Volume_Uniform,
+	volume: ^Bake_Volume_Uniform,
 ) -> bool {
 	irradiance, irradiance_ok := upload_texture(
 		r,
 		width,
 		height,
-		.R16G16B16A16_SFLOAT,
+		irradiance_format,
 		irradiance_bytes,
 	)
 	if !irradiance_ok {
@@ -30,7 +31,7 @@ create_bake_probes :: proc(
 		r,
 		width,
 		height,
-		.R16G16_SFLOAT,
+		moment_format,
 		moment_bytes,
 	)
 	if !moments_ok {
@@ -49,10 +50,9 @@ create_bake_probes :: proc(
 		return false
 	}
 	r.bake.states_bytes = len(states) * size_of(bake.Probe_State)
-	volume_copy := volume
 	return create_device_buffer(
 		r,
-		&volume_copy,
+		volume,
 		vk.DeviceSize(size_of(Bake_Volume_Uniform)),
 		{.UNIFORM_BUFFER},
 		&r.bake.volume_buffer,
