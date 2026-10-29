@@ -31,12 +31,6 @@ session_finish_frame :: proc(session: ^Session) -> string {
 	return render_error
 }
 
-@(private)
-session_draw :: proc(session: ^Session, request: Capture_Request) -> string {
-	requests := [1]Capture_Request{request}
-	return session_draw_group(session, requests[:])
-}
-
 session_draw_group :: proc(session: ^Session, requests: []Capture_Request) -> string {
 	if session.render.backend == nil {
 		if len(requests) > 0 {

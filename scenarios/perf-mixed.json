@@ -1,0 +1,23 @@
+{
+  "note": "96 synthetic point lights at 1080p. One device measures both indirect terms, each alone, and neither; the first window is the clock ramp and the last repeat exposes drift.",
+  "size": "1920x1080",
+  "requires": {"renderer_debug": true},
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "bake"},
+    {"cmd": "renderer_debug", "synthetic_lights": 96, "lightmap": true, "probe": true},
+    {"cmd": "perf", "name": "ramp", "frames": 60, "warmup": 60},
+    {"cmd": "perf", "name": "mixed-a", "frames": 120, "warmup": 60},
+    {"cmd": "perf", "name": "mixed-b", "frames": 120, "warmup": 60},
+    {"cmd": "renderer_debug", "lightmap": false, "probe": false},
+    {"cmd": "perf", "name": "direct", "frames": 120, "warmup": 60},
+    {"cmd": "renderer_debug", "lightmap": true, "probe": false},
+    {"cmd": "perf", "name": "lightmap-only", "frames": 120, "warmup": 60},
+    {"cmd": "renderer_debug", "lightmap": false, "probe": true},
+    {"cmd": "perf", "name": "probe-only", "frames": 120, "warmup": 60},
+    {"cmd": "renderer_debug", "lightmap": true, "probe": true},
+    {"cmd": "perf", "name": "mixed-c", "frames": 120, "warmup": 60},
+    {"cmd": "capture", "name": "lights-96", "format": "stats", "png": true,
+     "note": "The 96-light field the last perf window measured."}
+  ]
+}

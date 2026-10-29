@@ -1,0 +1,11 @@
+{
+  "note": "Load with no bake artifact: the renderer reports missing and draws direct light only.",
+  "size": "1280x720",
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "camera", "position": [-2.0, 2.4, 10.0], "look_at": [-3.0, 0.3, 6.0]},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "view", "format": "stats", "png": true,
+     "note": "Bake status missing; the indirect term is absent."}
+  ]
+}

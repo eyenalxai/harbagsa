@@ -1,0 +1,27 @@
+{
+  "note": "Lightmap chart borders on the stair treads and the floor-wall junction, each with the lightmap on and off.",
+  "size": "1280x720",
+  "requires": {"renderer_debug": true},
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "renderer_debug", "taa": false, "jitter": false},
+    {"cmd": "bake"},
+    {"cmd": "camera", "position": [-7.5, 0.9, 3.6], "look_at": [-12.0, 0.3, 1.5]},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "seam-stairs", "format": "stats", "png": true,
+     "note": "Six stair treads and blocks; every face is its own lightmap chart."},
+    {"cmd": "renderer_debug", "lightmap": false},
+    {"cmd": "settle", "frames": 4},
+    {"cmd": "capture", "name": "seam-stairs-direct", "format": "stats", "png": true,
+     "note": "Same view with the lightmap term off."},
+    {"cmd": "renderer_debug", "lightmap": true},
+    {"cmd": "camera", "position": [14.0, 0.9, 6.0], "look_at": [20.0, 0.2, 6.0]},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "seam-junction", "format": "stats", "png": true,
+     "note": "Floor and wall contact at the east wall."},
+    {"cmd": "renderer_debug", "lightmap": false},
+    {"cmd": "settle", "frames": 4},
+    {"cmd": "capture", "name": "seam-junction-direct", "format": "stats", "png": true,
+     "note": "Same view with the lightmap term off."}
+  ]
+}
