@@ -43,21 +43,72 @@ missing, and bake-state runs are also 1280x720.
 
 | Claim | Evidence | Result |
 | -- | -- | -- |
-| Hard real-time shadows | `bounce` then `no-shadow`, where every point-light shadow ray is off | The amber crate casts a hard shadow to its right. The floor region `760,350,240x150` inside that shadow is mean 54.55 with shadows on and 93.40 with them off; the whole frame goes 80.92 → 84.67. |
-| Static fixtures keep those shadows while crates move | `bounce` then `crate-moved`; crate 2 moved from `[-3, 0.5, 6]` to `[-2, 0.5, 6.5]` | The crate shadow moves with the crate. Frame mean 80.92 → 81.41, delta mean 5.06. `state.bake.status` stays `current` on key `6920149317377461357`, so the shadow is real-time and the bake did not run. |
-| The baked bounce is visible and separate from direct light | `bounce` against `direct`, where `lightmap` and `probe` are off | Frame mean 80.92 against 73.07, delta mean 11.23, max 64. The shadowed crate face and the wall corner are exactly black with the terms off: 23.1% of the frame is exactly zero against 1.7% with the terms on. Turning the terms back on returns the mean to 80.9193; the digest differs because the simulation advanced a few frames between the two captures and the crates settle. |
-| Dynamic lamps do not change baked indirect | `dynamic-near` then `dynamic-far`, with one dynamic lamp moved from `[-1, 1.5, 4]` to `[2, 1.5, 6]` | The bake key and `current` status do not change. The corner region `0,0,300x150`, outside both lamp ranges, is mean 5.80191088 in both captures. Direct light and shadow change across the frame (frame mean 94.01 → 89.67). |
-| A stale bake is visible | `lamp-removed` after removing the static `initial-lamp` | Status `stale` on the changed key `9975754936429652796`. The direct pool is gone but the old warm bounce is still on the floor (frame mean 38.72). |
-| A republish replaces the stale indirect | `lamp-removed-republished` after `bake` | Status `current`; frame mean 38.72 → 21.23. The stale bounce is gone and only the panel and beacon remain. |
-| A missing bake is visible | `lighting-missing.json` with `--bake build/bake/missing.hbake` against the same scenario with the default artifact | `state.bake.status` is `missing`, `artifact_key` 0, and the frame mean is 73.10 against 80.94. `compare` reports 902,029 differing pixels, mean 11.217, max 64. |
-| No wall leak | A sealed four-wall 4x4 m cell, a static fixture inside, a dim static `cell-fill` outside that lights the measured face, and a dynamic crate outside; the inside fixture then moves to `[19, 1.2, 18]` and the bake republishes | The cell's outer face region `200,200,400x250` is mean 16.52490997 in both bakes, and its min, max, stddev, and gradient match exactly too. The crate face moves by 0.031, 0.042, and 0.078 code values out of 255 on red, green, and blue. Both frames report `current`. |
-| No lightmap seam | Stair treads and the floor-wall contact, once with both indirect terms and once without either, then compared | The mixed and direct runs differ by mean 8.06 (stairs) and 12.64 (junction), max 29 and 31, with no outlier line. The stair band `400,250,640x210` has gradient 0.722 mixed against 0.650 direct, and the junction band `0,330,1280x90` 0.604 against 0.276: the term adds a smooth field, not a step. Both images show clean chart borders. |
-| All lights off with an empty current bake is black | `bake-empty.json`, which removes all three static fixtures and publishes | `empty-scene` on `scene_color` is mean 0 with `zero_fraction` 1.0: every scene pixel is exactly zero. The final colour frame is black too, with a maximum of 1 code value out of 255 and 83.5% of pixels exactly zero; the rest is the one-step rounding of the resolve, not scene light. |
+| Hard real-time shadows | `bounce` then `no-shadow`, where every point-light shadow ray is off | The amber crate casts a hard shadow to its right. The floor region `760,350,240x150` inside that shadow is mean 54.71 with shadows on and 93.46 with them off; the whole frame goes 80.90 → 84.65. |
+| Static fixtures keep those shadows while crates move | `bounce` then `crate-moved`; crate 2 moved from `[-3, 0.5, 6]` to `[-2, 0.5, 6.5]` | The crate shadow moves with the crate. Frame mean 80.90 → 81.39, delta mean 5.06. `state.bake.status` stays `current` on key `4759498390018400258`, so the shadow is real-time and the bake did not run. |
+| The baked bounce is visible and separate from direct light | `bounce` against `direct`, where `lightmap` and `probe` are off | Frame mean 80.90 against 73.07, delta mean 11.22, max 64. The shadowed crate face and the wall corner are exactly black with the terms off: 23.06% of the frame is exactly zero against 1.14% with the terms on. Turning the terms back on returns the mean to 80.9008; the digest differs because the simulation advanced a few frames between the two captures and the crates settle. |
+| Dynamic lamps do not change baked indirect | `dynamic-near` then `dynamic-far`, with one dynamic lamp moved from `[-1, 1.5, 4]` to `[2, 1.5, 6]` | The bake key and `current` status do not change. The corner region `0,0,300x150`, outside both lamp ranges, is mean 5.86639977 in both captures. Direct light and shadow change across the frame (frame mean 94.00 → 89.65). |
+| A stale bake is visible | `lamp-removed` after removing the static `initial-lamp` | Status `stale` on the changed key `16127202276725259587`. The direct pool is gone but the old warm bounce is still on the floor (frame mean 38.64). |
+| A republish replaces the stale indirect | `lamp-removed-republished` after `bake` | Status `current`; frame mean 38.64 → 21.21. The stale bounce is gone and only the panel and beacon remain. |
+| A missing bake is visible | `lighting-missing.json` with `--bake build/bake/missing.hbake` against the same scenario with the default artifact | `state.bake.status` is `missing`, `artifact_key` 0, and the frame mean is 73.10 against 80.93. `compare` reports 908,271 differing pixels, mean 11.211, max 64. |
+| No wall leak | A sealed four-wall 4x4 m cell, a static fixture inside, a dim static `cell-fill` outside that lights the measured face, and a dynamic crate outside; the inside fixture then moves to `[19, 1.2, 18]` and the bake republishes | The cell's outer face region `200,200,400x250` is mean 16.48118973 in both bakes, and its min, max, stddev, and gradient match exactly too. The crate face moves by 0.027, 0.043, and 0.071 code values out of 255 on red, green, and blue. Both frames report `current`. |
+| No lightmap seam | Stair treads and the floor-wall contact, once with both indirect terms and once without either, then compared | The mixed and direct runs differ by mean 8.06 (stairs) and 12.79 (junction), max 26 and 24, with no outlier line. The stair band `400,250,640x210` has gradient 0.712 mixed against 0.650 direct, and the junction band `0,330,1280x90` 0.579 against 0.276: the term adds a smooth field, not a step. Both images show clean chart borders. |
+| All lights off with an empty current bake is black | `bake-empty.json`, which removes all three static fixtures and publishes | `empty-scene` on `scene_color` is mean 0 with `zero_fraction` 1.0: every scene pixel is exactly zero. The final colour frame is black too, with a maximum of 1 code value out of 255 and 83.46% of pixels exactly zero; the rest is the one-step rounding of the resolve, not scene light. |
 
 The crate-move and dynamic-lamp pairs are compared with the in-run capture
 deltas, which compare each capture with the previous colour capture in the same
 run. The seam and missing-bake pairs are separate runs compared with the harness
 compare tool.
+
+## Denoise
+
+The lightmap gets one per-chart pass before the gutter. The chart repair is split
+into a buried fill and a gutter, and the filter runs between them: a separable
+3x3 binomial `[1 2 1]/16` over RGB, clamped at the chart edge, with weights that
+sum to one. One chart is one planar face with one normal, so the kernel cannot
+bleed across a surface, and the gutter still isolates neighbouring charts. The
+texel seed follows `(source, id, face, x, y)` instead of the atlas index, so a
+static edit that only moves charts does not re-roll their noise. `TOOL_VERSION`
+is 2; the format version and the key version stay 1.
+
+```sh
+./bin/harbagsa-agent run scenarios/lighting-noise.json --out runs/lighting-noise
+```
+
+The scenario looks at the unlit east wall (camera `[14, 1.2, 6]` at
+`[20, 1.2, 6]`, 1280x720, TAA and jitter off) and captures two regions: the whole
+wall band `120,120,1000x400`, and a clean `250x160` window at `850,140` away from
+contacts and edges. The before column is the same scenario against a tool version
+1 bake, which the loader binds as `stale` rather than rejecting.
+
+| Capture | before | after | Change |
+| --- | --: | --: | --- |
+| `wall` mean | 10.61 | 10.88 | +2.5% |
+| `wall` stddev | 3.568 | 3.404 | −4.6% |
+| `wall-window` mean | 12.34 | 12.70 | +2.9% |
+| `wall-window` stddev | 2.003 | 1.104 | **−45%** |
+| `wall-direct` stddev | 0.372 | 0.372 | control |
+
+The whole-band stddev is not a noise measure: it is dominated by the wall's own
+falloff across those 400 rows and by the bars and floor inside the region, which
+the bake must keep. The clean window is the noise measure, and the lightmap
+itself halves: decoded from the two artifacts, the mean absolute RGB difference
+between 4-neighbour texels falls from 0.00055 to 0.00023 over the atlas (2.4x)
+and from 0.00146 to 0.00066 on a 164x164 chart (2.2x). The f32 atlas mean is
+unchanged at 0.0053 / 0.0050 / 0.0053. The capture's sRGB mean rises about 2.5%
+because narrowing a distribution at a fixed linear mean raises the encoded
+value; it is not added light.
+
+A 5x5 Gaussian was measured as the escalation and rejected: it takes the clean
+window to 0.942 (−53%) and the whole band to 3.333, at two texels (50 cm) of
+softening at contact corners instead of one, and the whole-band number stays far
+from half either way.
+
+The seed change is measurable on its own. Place a static crate 500 m away, place
+another static crate near the arena, bake, remove the far crate, and bake again.
+The far crate is beyond `RAY_MAX` and changes no light, but it shifts the second
+crate's charts in the atlas. All 336 remaining faces are byte-identical across
+the two bakes, 6 of them with a moved rect, worst difference 0. A tool version 1
+bake reads the atlas index and re-rolls the moved chart.
 
 ## Performance
 
@@ -92,7 +143,10 @@ and the artifact is 14,608,480 bytes against 32 MiB.
 
 The term costs are whole-frame GPU-total deltas, not separate pass times: the
 shader has no separate lightmap or probe pass, so the only honest instrument is
-the same frame with the term switched.
+the same frame with the term switched. The denoise changes bake output only: the
+frame path, the shader, and the 13.9 MiB of GPU lighting data are unchanged, so
+the table stands. A re-run after the change measured the four direct windows at
+1.470–1.499 ms p50 and the mixed deltas at +0.02 to +0.08 ms.
 
 ## Bake
 
@@ -107,18 +161,20 @@ tools/make.sh bake    # writes build/bake/arena.hbake for the runtime
 
 | Measure | Run 1 | Run 2 | Run 3 | Budget | Result |
 | -- | --: | --: | --: | --: | -- |
-| Total | 5347 ms | 4977 ms | 5017 ms | default 2000 ms | **miss** |
-| Lightmap stage | 3458 ms | 3113 ms | 3130 ms | — | — |
-| Probe stage | 1888 ms | 1863 ms | 1887 ms | — | — |
-| Encode stage | 33 ms | 32 ms | 33 ms | — | — |
-| Peak RSS | 39.8 MB | 36.6 MB | 39.9 MB | — | — |
+| Total | 5014 ms | 5152 ms | 4955 ms | default 2000 ms | **miss** |
+| Lightmap stage | 3113 ms | 3224 ms | 3071 ms | — | — |
+| Probe stage | 1901 ms | 1928 ms | 1883 ms | — | — |
+| Encode stage | 33 ms | 31 ms | 30 ms | — | — |
+| Peak RSS | 37.8 MB | 37.8 MB | 37.8 MB | — | — |
 | Artifact | 14,608,480 B | 14,608,480 B | 14,608,480 B | 32 MiB | pass |
 
-The runs wrote `runs/bake-1m-1.hbake` to `runs/bake-1m-3.hbake`; the `.time`
-sidecars read 5347, 4977, and 5017 ms.
+The filter adds about 48 ms to the lightmap stage median. The same three runs
+before the change were 5325, 4880, and 5076 ms total with the lightmap at 3065,
+3033, and 3169 ms, so the medians are 5076 → 5014 ms total and 3065 → 3113 ms on
+the stage. Probe, encode, and thread count are unchanged.
 
-The three 1 m runs write identical bytes: key `60094f23bef20c6d`, payload
-`11ebf29058d3c291`, md5 `e99fb82b056a57fd696f9af5e8c868f2`. The `.time`
+The three 1 m runs write identical bytes: key `420d22919e172002`, payload
+`fd09bda711fceb64`, md5 `a189a313e1c9aff33a2455a0420efaa2`. The `.time`
 sidecar carries the measured wall time, so a loaded artifact reports it without
 changing the artifact bytes.
 
@@ -148,9 +204,11 @@ interval measured before the fix with one measured after it.
 
 ## Accepted limitations
 
-- The bake is deterministic but not noise-free. At 128 lightmap rays the
-  indirect is visibly mottled on large dim walls; the seam captures show it.
-  More rays reduce it linearly in time.
+- The bake is deterministic and now denoised. The per-chart 3x3 binomial filter
+  halves the texel noise, so the wall's relative stddev narrows from 34% to 31%
+  over the whole band and from 16% to 9% in a clean window. Some mottling is
+  still measurable below the 8-bit output, and the one-texel filter softens
+  contact corners by one texel. More rays reduce the rest linearly in time.
 - The 2 s default bake target is missed; see above.
 - The indirect is interpolation-only on the runtime side. A crevice narrower
   than the 1 m probe spacing can still carry a small probe error; the

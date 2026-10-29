@@ -351,7 +351,9 @@ pairs the baked bounce with the direct-only view, then moves a crate, moves a
 dynamic lamp, and removes a static fixture. `scenarios/lighting-wall.json` seals
 a fixture inside a four-wall cell and moves it out of range.
 `scenarios/lighting-seam.json` looks at lightmap chart borders with the term on
-and off. `scenarios/lighting-missing.json` is the missing-artifact view; run it
+and off. `scenarios/lighting-noise.json` measures the baked indirect's texel
+noise on an unlit wall, with a clean window and the term off as the control.
+`scenarios/lighting-missing.json` is the missing-artifact view; run it
 with `--bake` pointing at a path that does not exist. The numbers and the
 accepted limits are in `docs/evidence/mixed-lighting.md`.
 
