@@ -106,6 +106,7 @@ draw_boxes_indexed :: proc(
 	layout: vk.PipelineLayout,
 	stages: vk.ShaderStageFlags,
 	box_count: int,
+	view: Capture_View,
 ) {
 	vertex_buffer := r.scene.vertex_buffer
 	vertex_offset: vk.DeviceSize = 0
@@ -113,13 +114,13 @@ draw_boxes_indexed :: proc(
 	vk.CmdBindIndexBuffer(command_buffer, r.scene.index_buffer, 0, .UINT16)
 
 	for index in 0 ..< box_count {
-		push := Object_Index{index = u32(index)}
+		push := Scene_Draw{index = u32(index), view = u32(view)}
 		vk.CmdPushConstants(
 			command_buffer,
 			layout,
 			stages,
 			0,
-			u32(size_of(Object_Index)),
+			u32(size_of(Scene_Draw)),
 			&push,
 		)
 		vk.CmdDrawIndexed(command_buffer, r.scene.index_count, 1, 0, 0, 0)

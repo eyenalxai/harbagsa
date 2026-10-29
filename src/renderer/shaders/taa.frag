@@ -1,8 +1,12 @@
 #version 460
 
 layout(location = 0) out vec4 out_color;
+// A term view binds one attachment: it has no history to write, so the
+// VIEW_RESOLVE build drops the two dead outputs instead of writing them.
+#ifndef VIEW_RESOLVE
 layout(location = 1) out vec4 out_history;
 layout(location = 2) out float out_count;
+#endif
 
 layout(push_constant) uniform PushConstants {
     float gamma;
@@ -147,6 +151,8 @@ void main() {
     }
 
     out_color = vec4(dither_output(resolved, resolve.gamma), 1.0);
+#ifndef VIEW_RESOLVE
     out_history = vec4(resolved, curr_depth);
     out_count = resolved_count;
+#endif
 }

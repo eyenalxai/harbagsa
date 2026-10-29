@@ -96,6 +96,9 @@ destroy_capture :: proc(command: ^Command, allocator: mem.Allocator) {
 	if command.capture.note != "" {
 		delete(command.capture.note, allocator)
 	}
+	if command.capture.views != nil {
+		delete(command.capture.views, allocator)
+	}
 	command^ = {}
 }
 
@@ -105,6 +108,9 @@ destroy_captures :: proc(command: ^Command, allocator: mem.Allocator) {
 		delete(output.name, allocator)
 		if output.note != "" {
 			delete(output.note, allocator)
+		}
+		if output.views != nil {
+			delete(output.views, allocator)
 		}
 	}
 	delete(command.captures.outputs, allocator)

@@ -22,6 +22,7 @@ Pass :: struct {
 	has_rendering: bool,
 	draw:         proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass),
 	image_index:  u32,
+	view:         Capture_View,
 	boxes:        []geometry.Box,
 }
 

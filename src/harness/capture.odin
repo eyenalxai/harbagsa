@@ -6,6 +6,7 @@ import "core:mem"
 import "src:renderer"
 
 Capture_Target :: renderer.Capture_Target
+Capture_View :: renderer.Capture_View
 
 Capture_Format :: enum {
 	Png,
@@ -69,6 +70,9 @@ Capture_Spec :: struct {
 Capture_Request :: struct {
 	using spec: Capture_Spec,
 	alpha:      f32,
+	// Absent for a plain capture, which is the beauty path. Present for every
+	// request a `views` list expands into, including its beauty view.
+	view:       Maybe(Capture_View),
 }
 
 Capture_Result :: struct {
@@ -79,6 +83,7 @@ Capture_Result :: struct {
 	width:         u32            `json:"width"`,
 	height:        u32            `json:"height"`,
 	target:        string         `json:"target"`,
+	view:          string         `json:"view,omitempty"`,
 	format:        string         `json:"format"`,
 	target_format: string         `json:"target_format"`,
 	png:           bool           `json:"png,omitempty"`,
@@ -196,6 +201,9 @@ capture_result_destroy :: proc(result: ^Capture_Result, allocator: mem.Allocator
 	}
 	if result.path != "" {
 		delete(result.path, allocator)
+	}
+	if result.view != "" {
+		delete(result.view, allocator)
 	}
 	if result.hash != "" {
 		delete(result.hash, allocator)

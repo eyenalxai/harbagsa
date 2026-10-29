@@ -26,6 +26,8 @@ Scene :: struct {
 
 	pipeline_layout:       vk.PipelineLayout,
 	pipeline:              vk.Pipeline,
+	view_layout:           vk.PipelineLayout,
+	view_pipeline:         vk.Pipeline,
 	depth_layout:          vk.PipelineLayout,
 	depth_pipeline:        vk.Pipeline,
 	descriptor_set_layout: vk.DescriptorSetLayout,
@@ -89,6 +91,7 @@ destroy_scene :: proc(r: ^Renderer) {
 
 	destroy_acceleration(r)
 	destroy_pipeline_pair(r, &r.scene.depth_pipeline, &r.scene.depth_layout)
+	destroy_pipeline_pair(r, &r.scene.view_pipeline, &r.scene.view_layout)
 	destroy_pipeline_pair(r, &r.scene.pipeline, &r.scene.pipeline_layout)
 	destroy_pipeline_pair(r, &r.scene.cluster_pipeline, &r.scene.cluster_layout)
 	if r.scene.descriptor_pool != 0 {

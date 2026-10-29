@@ -20,18 +20,6 @@ Capture_Target :: enum {
 
 Capture_Targets :: bit_set[Capture_Target]
 
-Frame_Capture :: struct {
-	targets: Capture_Targets,
-}
-
-capture_target_count :: proc(capture: Frame_Capture) -> int {
-	count := 0
-	for _ in capture.targets {
-		count += 1
-	}
-	return count
-}
-
 @(private)
 capture_slot_stride :: proc(r: ^Renderer) -> vk.DeviceSize {
 	return vk.DeviceSize(r.target.config.width) *
@@ -59,17 +47,19 @@ target_image :: proc(r: ^Renderer, image_index: u32, target: Capture_Target) -> 
 	return 0, .UNDEFINED, false
 }
 
-// The color image rests in the attachment layout until the next frame discards
-// it. The TAA images are sampled by the resolve. The history image returns to
-// the sampler layout because the next resolve reads it.
-record_capture_copy :: proc(
+// One image copy into a readback slot. The caller owns the layout it starts
+// from and any transition after the copy.
+record_capture_image_copy :: proc(
 	r: ^Renderer,
 	command_buffer: vk.CommandBuffer,
-	image_index: u32,
-	target: Capture_Target,
+	image: vk.Image,
+	name: string,
+	old_layout: vk.ImageLayout,
+	src_stage: vk.PipelineStageFlags,
+	src_access: vk.AccessFlags,
+	subresource: vk.ImageSubresourceRange,
 	slot: int,
 ) -> bool {
-	name := capture_target_name(target)
 	if r.target.readback.buffer == 0 || r.target.readback.size == 0 {
 		log.errorf("renderer: capture readback is not allocated for %s slot %d", name, slot)
 		return false
@@ -84,6 +74,52 @@ record_capture_copy :: proc(
 		)
 		return false
 	}
+	image_barrier(
+		command_buffer,
+		image,
+		subresource,
+		old_layout,
+		.TRANSFER_SRC_OPTIMAL,
+		src_stage,
+		{.TRANSFER},
+		src_access,
+		{.TRANSFER_READ},
+	)
+	region := vk.BufferImageCopy {
+		bufferOffset = vk.DeviceSize(slot) * stride,
+		bufferRowLength = 0,
+		bufferImageHeight = 0,
+		imageSubresource = {
+			aspectMask = subresource.aspectMask,
+			mipLevel = 0,
+			baseArrayLayer = 0,
+			layerCount = 1,
+		},
+		imageOffset = {0, 0, 0},
+		imageExtent = {r.target.config.width, r.target.config.height, 1},
+	}
+	vk.CmdCopyImageToBuffer(
+		command_buffer,
+		image,
+		.TRANSFER_SRC_OPTIMAL,
+		r.target.readback.buffer,
+		1,
+		&region,
+	)
+	return true
+}
+
+// The color image rests in the attachment layout until the next frame discards
+// it. The TAA images are sampled by the resolve. The history image returns to
+// the sampler layout because the next resolve reads it.
+record_capture_copy :: proc(
+	r: ^Renderer,
+	command_buffer: vk.CommandBuffer,
+	image_index: u32,
+	target: Capture_Target,
+	slot: int,
+) -> bool {
+	name := capture_target_name(target)
 	image, format, ok := target_image(r, image_index, target)
 	if !ok || texel_bytes(format) == 0 {
 		log.errorf("renderer: capture target %s slot %d has no readable image", name, slot)
@@ -106,40 +142,19 @@ record_capture_copy :: proc(
 		src_access = {.DEPTH_STENCIL_ATTACHMENT_WRITE}
 	case .Velocity, .History, .Scene_Color:
 	}
-
-	image_barrier(
+	if !record_capture_image_copy(
+		r,
 		command_buffer,
 		image,
-		subresource,
+		name,
 		old_layout,
-		.TRANSFER_SRC_OPTIMAL,
 		src_stage,
-		{.TRANSFER},
 		src_access,
-		{.TRANSFER_READ},
-	)
-
-	region := vk.BufferImageCopy {
-		bufferOffset = vk.DeviceSize(slot) * stride,
-		bufferRowLength = 0,
-		bufferImageHeight = 0,
-		imageSubresource = {
-			aspectMask = subresource.aspectMask,
-			mipLevel = 0,
-			baseArrayLayer = 0,
-			layerCount = 1,
-		},
-		imageOffset = {0, 0, 0},
-		imageExtent = {r.target.config.width, r.target.config.height, 1},
+		subresource,
+		slot,
+	) {
+		return false
 	}
-	vk.CmdCopyImageToBuffer(
-		command_buffer,
-		image,
-		.TRANSFER_SRC_OPTIMAL,
-		r.target.readback.buffer,
-		1,
-		&region,
-	)
 
 	if target == .History {
 		image_barrier(
@@ -183,9 +198,6 @@ read_capture_target :: proc(
 	error: string,
 ) {
 	name := capture_target_name(target)
-	if r.target.readback.mapped == nil || r.target.readback.size == 0 {
-		return nil, 0, 0, .UNDEFINED, "capture readback is not allocated; request a capture first"
-	}
 	_, image_format, image_ok := target_image(r, 0, target)
 	if !image_ok {
 		return nil, 0, 0, .UNDEFINED, fmt.aprintf(
@@ -193,6 +205,39 @@ read_capture_target :: proc(
 			name,
 			allocator = context.allocator,
 		)
+	}
+	return read_capture_bytes(r, image_format, name, slot)
+}
+
+// A term view owns an image in the target color format, so the readback and the
+// channel swap are the ones the color target already uses.
+read_capture_view :: proc(
+	r: ^Renderer,
+	view: Capture_View,
+	slot := 0,
+) -> (
+	pixels: []u8,
+	width, height: u32,
+	format: vk.Format,
+	error: string,
+) {
+	return read_capture_bytes(r, r.target.config.format, capture_view_name(view), slot)
+}
+
+@(private)
+read_capture_bytes :: proc(
+	r: ^Renderer,
+	image_format: vk.Format,
+	name: string,
+	slot: int,
+) -> (
+	pixels: []u8,
+	width, height: u32,
+	format: vk.Format,
+	error: string,
+) {
+	if r.target.readback.mapped == nil || r.target.readback.size == 0 {
+		return nil, 0, 0, .UNDEFINED, "capture readback is not allocated; request a capture first"
 	}
 	format = image_format
 	bytes_per_texel := texel_bytes(format)
@@ -222,8 +267,7 @@ read_capture_target :: proc(
 	size := int(required)
 	source := rawptr(uintptr(r.target.readback.mapped) + uintptr(offset))
 	mem.copy(raw_data(r.target.readback.pixels), source, size)
-	if target == .Color &&
-	   (format == .B8G8R8A8_SRGB || format == .B8G8R8A8_UNORM) {
+	if format == .B8G8R8A8_SRGB || format == .B8G8R8A8_UNORM {
 		for i := 0; i + 3 < size; i += 4 {
 			r.target.readback.pixels[i], r.target.readback.pixels[i + 2] =
 				r.target.readback.pixels[i + 2], r.target.readback.pixels[i]

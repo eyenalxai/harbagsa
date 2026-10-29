@@ -27,13 +27,14 @@ Schema_Unit :: struct {
 }
 
 Schema_Document :: struct {
-	version:        int              `json:"version"`,
-	commands:       []Schema_Command `json:"commands"`,
-	scenario_keys:  []string         `json:"scenario_keys"`,
-	capture_targets: []string        `json:"capture_targets"`,
-	capture_formats: []string        `json:"capture_formats"`,
-	state_fields:    []string        `json:"state_fields"`,
-	units:           []Schema_Unit   `json:"units"`,
+	version:         int              `json:"version"`,
+	commands:        []Schema_Command `json:"commands"`,
+	scenario_keys:   []string         `json:"scenario_keys"`,
+	capture_targets: []string         `json:"capture_targets"`,
+	capture_views:   []string         `json:"capture_views"`,
+	capture_formats: []string         `json:"capture_formats"`,
+	state_fields:    []string         `json:"state_fields"`,
+	units:           []Schema_Unit    `json:"units"`,
 }
 
 SCENARIO_KEYS := []string {

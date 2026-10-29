@@ -246,10 +246,15 @@ backend_render :: proc(
 	}
 	data.renderer.recorder = &session.perf.state.recorder
 	targets: renderer.Capture_Targets
+	views: renderer.Capture_Views
 	for request in requests {
-		targets |= {request.target}
+		if view, has_view := request.view.?; has_view && renderer.capture_view_is_term(view) {
+			views |= {view}
+		} else {
+			targets |= {request.target}
+		}
 	}
-	capture_request := renderer.Frame_Capture{targets = targets}
+	capture_request := renderer.Frame_Capture{targets = targets, views = views}
 	status: renderer.Frame_Status
 	for _ in 0 ..< 2 {
 		status = frame.draw(&data.renderer, scene, capture_request)
@@ -270,20 +275,20 @@ backend_render :: proc(
 		return nil, ""
 	}
 
-	slot_of: [renderer.Capture_Target]int
-	for target in renderer.Capture_Target {
-		slot_of[target] = -1
-	}
-	slot := 0
-	for target in renderer.Capture_Target {
-		if target in targets {
-			slot_of[target] = slot
-			slot += 1
-		}
-	}
 	results := make([dynamic]Capture_Result, 0, len(requests), context.allocator)
 	for request in requests {
-		result, error := backend_capture(data, session, request, slot_of[request.target])
+		slot := renderer.capture_target_slot(capture_request, request.target)
+		if view, has_view := request.view.?; has_view && renderer.capture_view_is_term(view) {
+			slot = renderer.capture_view_slot(capture_request, view)
+		}
+		if slot < 0 {
+			for &written in results {
+				capture_result_destroy(&written, data.allocator)
+			}
+			delete(results)
+			return nil, format_error("capture has no readback slot")
+		}
+		result, error := backend_capture(data, session, request, slot)
 		if error != "" {
 			for &written in results {
 				capture_result_destroy(&written, data.allocator)

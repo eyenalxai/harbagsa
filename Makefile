@@ -31,12 +31,15 @@ VULKANINFO ?= vulkaninfo
 SHADER_SRC := src/renderer/shaders
 SHADER_OUT := build/shaders
 SHADER_INCLUDES := $(SHADER_SRC)/gamma.glsl $(SHADER_SRC)/camera.glsl \
-	$(SHADER_SRC)/cluster.glsl $(SHADER_SRC)/probe.glsl
+	$(SHADER_SRC)/cluster.glsl $(SHADER_SRC)/probe.glsl \
+	$(SHADER_SRC)/scene.glsl $(SHADER_SRC)/terms.glsl
 SHADERS := $(SHADER_OUT)/box.vert.spv $(SHADER_OUT)/box.frag.spv \
+	$(SHADER_OUT)/box_view.frag.spv \
 	$(SHADER_OUT)/cluster.comp.spv \
 	$(SHADER_OUT)/debug.vert.spv $(SHADER_OUT)/debug.frag.spv \
 	$(SHADER_OUT)/hud.vert.spv $(SHADER_OUT)/hud.frag.spv \
-	$(SHADER_OUT)/taa.vert.spv $(SHADER_OUT)/taa.frag.spv
+	$(SHADER_OUT)/taa.vert.spv $(SHADER_OUT)/taa.frag.spv \
+	$(SHADER_OUT)/taa_view.frag.spv
 
 CC ?= cc
 CXX ?= c++
@@ -134,6 +137,11 @@ $(SHADER_OUT)/%.vert.spv: $(SHADER_SRC)/%.vert $(SHADER_INCLUDES)
 $(SHADER_OUT)/%.frag.spv: $(SHADER_SRC)/%.frag $(SHADER_INCLUDES)
 	@mkdir -p $(@D)
 	$(GLSLC) --target-env=vulkan1.3 -fshader-stage=frag $< -o $@
+
+# The term view resolve is taa.frag with the history outputs compiled out.
+$(SHADER_OUT)/taa_view.frag.spv: $(SHADER_SRC)/taa.frag $(SHADER_INCLUDES)
+	@mkdir -p $(@D)
+	$(GLSLC) --target-env=vulkan1.3 -fshader-stage=frag -DVIEW_RESOLVE $< -o $@
 
 $(SHADER_OUT)/%.comp.spv: $(SHADER_SRC)/%.comp $(SHADER_INCLUDES)
 	@mkdir -p $(@D)

@@ -68,6 +68,8 @@ Capture_Command :: struct {
 	has_frame: bool,
 	alpha:     f32,
 	has_alpha: bool,
+	// The entries are named `<name>-<view>`, which the field name does not say.
+	views:     []renderer.Capture_View,
 }
 
 Captures_Command :: struct {
