@@ -362,8 +362,8 @@ Supported fields:
 - `taa`, `jitter`, `history_weight`, `clamp`, and `depth_trust`.
 - `synthetic_lights`: replace frame lights with a generated field of any count.
 - `clip_height`: discard fragments above a world height for a plan view.
-- `light_shadows`: trace point-light shadow rays. It defaults true. Use false for
-  paired captures and performance runs.
+- `light_shadows`: trace point-light shadow rays. It defaults true. Set false to
+  isolate the shadow term in a paired capture; a frame-budget run keeps it on.
 - `lightmap`: add the baked static lightmap term. It defaults true.
 - `probe`: add the baked probe term. It defaults true. Set both `lightmap` and
   `probe` to false for a direct-light capture or performance run.
@@ -388,10 +388,9 @@ A `perf` command measures frames and can write one trace. `frames` defaults to
 Offscreen measures throughput. `--present` measures pacing.
 
 A perf frame draws the scene without a capture request, so it does no readback
-and adds no capture entry to the report; the report holds only the named perf
-reports. The interval is therefore comparable with the GPU total plus submit
-cost. Do not compare an interval measured before that change with one measured
-after it.
+and adds no capture entry. A scenario may still capture after its perf windows.
+The interval is therefore comparable with the GPU total plus submit cost. Do not
+compare an interval measured before that change with one measured after it.
 
 GPU passes are TLAS, cluster, depth, scene, TAA, and overlay. The report
 carries `p50`, `p95`, and `mean` for each CPU phase and GPU pass. Perf data is
