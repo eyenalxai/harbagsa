@@ -31,8 +31,9 @@ never a fill value.
   Section sizes must match the header exactly.
 - **Atlas.** One linear `R16G16B16A16_SFLOAT` image, one mip, one layer, 1024
   square, 4 texels per metre, an 8-texel minimum chart, and a 4-texel gutter.
-  Every static box owns one slot and six face rects. The rects are
-  center-to-center and stay inside `[0, 1]`.
+  Every static box owns one slot and six face rects. Slots are slot-major: slot
+  `i` owns faces `i * 6` through `i * 6 + 5` in the face order +X, -X, +Y, -Y,
+  +Z, -Z. The rects are center-to-center and stay inside `[0, 1]`.
 - **Probes.** A regular grid at 1 m spacing is the default; 2 m remains the
   quality fallback. Each probe stores an 8 x 8 octahedral irradiance block and
   an 8 x 8 first/second moment block. Probes are packed into a 2D shelf atlas;
@@ -48,7 +49,9 @@ never a fill value.
 - **Runtime resources.** The lightmap image and sampler, the probe irradiance
   and moment images, the shared linear clamp sampler, the face and slot buffers,
   the probe state buffer, and the probe volume buffer are created with the
-  renderer and destroyed with it. A rejected or missing artifact creates none.
+  renderer and destroyed with it. A rejected or missing artifact creates none of
+  the artifact-backed resources; a placeholder lightmap image and one-face
+  buffer keep the descriptor set valid until a bake is published.
 - **Loader source.** The runtime reads `build/bake/arena.hbake` by default. The
   harness accepts `--bake PATH` so a loader fixture or a build from another
   checkout can be exercised. A missing file is `missing`; a parse failure is
@@ -83,8 +86,12 @@ never a fill value.
   replaces it.
 - `src:bake` is compiled by `make check` and imported by the frame and the
   renderer. It does not import either package, so the bake tool can share it.
-- No descriptor binding or shader sample reads the new resources yet; the
-  lightmap and probe samplers are introduced by their sampling tickets.
+- The lightmap sampler and the face buffer are bound in the scene descriptor
+  set and sampled by static boxes in the lit pass. The probe images, probe state
+  buffer, and probe volume are created but not bound or sampled yet; probe
+  sampling lands separately. A missing or failed artifact binds a placeholder
+  image and a one-face buffer so the descriptor set stays valid. Every object's
+  lightmap weight is zero in that state, so nothing samples the placeholder.
 - The design guide, `README.md`, `GLOSSARY.md`, and ADR 0042 still describe the
   removed dynamic DDGI field and ban baked light or textures. This ADR starts
   the replacement but does not edit those pages; #386 owns that cleanup. Do not

@@ -21,11 +21,13 @@ RENDER_DIGEST_FIELDS := [?]Render_Digest_Field {
 	{"height", true, write_height, ""},
 	{"camera", true, write_camera, ""},
 	{"boxes", true, write_boxes, ""},
+	{"box_slots", true, write_box_slots, ""},
 	{"lights", true, write_lights, ""},
 	{"jitter", true, write_jitter, ""},
 	{"atlas_weight", true, write_atlas_weight, ""},
 	{"clip_height", true, write_clip_height, ""},
 	{"light_shadows", true, write_light_shadows, ""},
+	{"lightmap", true, write_lightmap, ""},
 	{"bake", true, write_bake, ""},
 	{"view_flags", true, write_view_flags, ""},
 	{"debug_lines", false, nil, "draws after the resolve"},
@@ -88,6 +90,22 @@ write_boxes :: proc(hash: ^digest.FNV, input: Render_Input) {
 		digest.write_f32(hash, box.emissive)
 		digest.write_bool(hash, box.visual_only)
 	}
+}
+
+@(private)
+write_box_slots :: proc(hash: ^digest.FNV, input: Render_Input) {
+	// The static/dynamic split picks the lightmap term, so it belongs to the
+	// effective render input even when the boxes and lights match.
+	digest.write_u64(hash, u64(len(input.box_slots)))
+	for slot in input.box_slots {
+		digest.write_bool(hash, slot.has_slot)
+		digest.write_u64(hash, slot.key)
+	}
+}
+
+@(private)
+write_lightmap :: proc(hash: ^digest.FNV, input: Render_Input) {
+	digest.write_bool(hash, input.lightmap)
 }
 
 @(private)
