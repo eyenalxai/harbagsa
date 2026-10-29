@@ -230,7 +230,10 @@ another artifact.
 _Avoid_: Bake state (use the status name), load flag
 
 **Bake artifact**:
-The versioned `.hbake` file that carries the lightmap atlas, face rects, slots, probe atlases, probe states, quality, and stats. `make bake` writes `build/bake/arena.hbake`; the harness can publish one at runtime.
+The versioned `.hbake` file that carries the lightmap atlas, face rects, slots,
+probe atlases, probe states, quality, and stats. `make bake` writes
+`build/bake/arena.hbake`; the harness can publish one at runtime. The measured
+time lives in a `.time` sidecar so the artifact bytes stay deterministic.
 _Avoid_: Bake file, lightmap file
 
 **Lightmap**:

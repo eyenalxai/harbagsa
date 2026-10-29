@@ -311,8 +311,10 @@ artifact without restarting the renderer. It accepts optional `probe_spacing`
 The command requires a renderer. The default build uses 1 m probes, 128 lightmap
 rays, 1024 probe rays, and one bounce; it takes about 5 s at 16 threads. Use
 `probe_spacing: 2` for the measured fallback when probe work or memory is the
-limit. `state.bake.bake_ms` is the measured wall time of the last publish; the
-artifact's stored time stays zero.
+limit. `make bake` writes `<artifact>.time` beside the artifact; the renderer
+reads that sidecar so a loaded bake reports its measured time without changing
+the artifact bytes. `state.bake.bake_ms` is the measured wall time of the last
+publish or the loaded sidecar.
 
 ```json
 {"cmd":"bake","out":"build/bake/arena.hbake"}
@@ -339,7 +341,8 @@ error. The artifact format is documented in
 `docs/adr/0045-mixed-static-baked-indirect.md`. `scenarios/bake-lifecycle.json`
 exercises the current, stale, and dynamic-move states;
 `scenarios/bake-empty.json` removes every static fixture and captures the
-lamp-free result.
+lamp-free result; `scenarios/bake-hud.json` captures the lamp kind and bake
+status in the debug HUD.
 
 ## Renderer debug overrides
 

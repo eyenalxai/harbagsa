@@ -1,5 +1,11 @@
 # Bake data contract and runtime loader
 
+> The lifecycle ticket adds a runtime publish path. The format, loader, key, and
+> missing/stale/current/failed contract below are unchanged; the "republishing is
+> a later lifecycle ticket" note is now historical, and
+> [ADR 0045](0045-mixed-static-baked-indirect.md) updates the guide, README, and
+> glossary.
+
 The renderer loads a versioned `.hbake` artifact and creates the lightmap and
 probe resources from it. A missing, stale, or rejected bake is a visible state,
 never a fill value.
