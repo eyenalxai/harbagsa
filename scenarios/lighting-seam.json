@@ -1,11 +1,12 @@
 {
-  "note": "Lightmap chart borders on the stair treads and the floor-wall junction. Run once with the lightmap term and once without it, then compare.",
+  "note": "Lightmap chart borders on the stair treads and the floor-wall junction. Run once with the baked indirect and once without it, then compare.",
   "size": "1280x720",
   "requires": {"renderer_debug": true},
-  "parameters": {"lightmap": true},
+  "parameters": {"indirect": true},
   "view": {"hud": false, "debug": false, "hint": false, "perf": false},
   "commands": [
-    {"cmd": "renderer_debug", "taa": false, "jitter": false, "lightmap": "${lightmap}"},
+    {"cmd": "renderer_debug", "taa": false, "jitter": false,
+     "lightmap": "${indirect}", "probe": "${indirect}"},
     {"cmd": "bake"},
     {"cmd": "camera", "position": [-7.5, 0.9, 3.6], "look_at": [-12.0, 0.3, 1.5]},
     {"cmd": "settle", "frames": 10},
