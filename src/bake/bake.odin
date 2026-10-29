@@ -1,5 +1,6 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the frame and the renderer share this package
+#+vet !unused-procedures // the bake tool and renderer read the public API
+// The runtime, the frame input, and the bake tool share this package.
 package bake
 
 import "src:geometry"
@@ -57,6 +58,28 @@ DEFAULT_QUALITY :: Quality {
 	probe_texels     = PROBE_TEXELS,
 }
 
+// The loader and the writer share this rule so a fresh artifact cannot be
+// rejected by the reader that already accepted its own quality block.
+quality_supported :: proc(quality: Quality) -> bool {
+	if quality.atlas_size == 0 || quality.atlas_size > MAX_ATLAS_DIM {
+		return false
+	}
+	if quality.texels_per_meter == 0 || quality.texels_per_meter > 64 {
+		return false
+	}
+	if quality.gutter_texels != GUTTER_TEXELS || quality.min_chart != MIN_CHART_TEXELS {
+		return false
+	}
+	if quality.bounces != BOUNCES || quality.lightmap_rays == 0 || quality.probe_rays == 0 {
+		return false
+	}
+	if quality.probe_texels != PROBE_TEXELS {
+		return false
+	}
+	return quality.probe_spacing == PROBE_SPACING ||
+		quality.probe_spacing == PROBE_SPACING_FALLBACK
+}
+
 Box_Source :: enum u8 {
 	Arena,
 	Placed,
@@ -84,4 +107,98 @@ Light_Entry :: struct {
 Static :: struct {
 	boxes:  []Box_Entry,
 	lights: []Light_Entry,
+}
+
+// A fixed seed is part of the tool version. The artifact must not depend on a
+// clock, an environment variable, or a thread count.
+SEED :: u64(0x4842414b45534545)
+
+SURFACE_PUSHOFF :: f64(0.005)
+PROBE_OFFSET_MARGIN :: f64(0.02)
+PROBE_OFFSET_MAX_FRACTION :: f64(0.5)
+RAY_ORIGIN_BIAS :: f64(0.002)
+SHADOW_END_BIAS :: f64(0.001)
+RAY_TMIN :: f64(0.001)
+RAY_MAX :: f64(100.0)
+
+PROBE_IRRADIANCE_GAMMA :: f64(5.0)
+
+PROBE_MIN :: [3]f32{-20.0, 0.0, -20.0}
+PROBE_COUNTS :: [3]u32{40, 5, 40}
+PROBE_MIN_FALLBACK :: [3]f32{-20.0, -0.5, -20.0}
+PROBE_COUNTS_FALLBACK :: [3]u32{20, 3, 20}
+
+// Probes sit at cell centers, so the 1 m grid samples y = 0.5 ... 4.5 and the
+// 2 m fallback samples the same heights.
+probe_grid :: proc(spacing: f32) -> (min: [3]f32, counts: [3]u32) {
+	if spacing == PROBE_SPACING_FALLBACK {
+		return PROBE_MIN_FALLBACK, PROBE_COUNTS_FALLBACK
+	}
+	return PROBE_MIN, PROBE_COUNTS
+}
+
+Build_Options :: struct {
+	quality: Quality,
+	threads: int,
+}
+
+Build_Error :: enum {
+	None,
+	No_Static_Boxes,
+	Bad_Box,
+	Bad_Light,
+	Atlas_Full,
+	Probe_Count,
+	Threads,
+	Quality,
+	Artifact,
+}
+
+build_error_name :: proc(err: Build_Error) -> string {
+	switch err {
+	case .None:
+		return "none"
+	case .No_Static_Boxes:
+		return "no static boxes"
+	case .Bad_Box:
+		return "bad static box"
+	case .Bad_Light:
+		return "bad static light"
+	case .Atlas_Full:
+		return "the lightmap atlas is full"
+	case .Probe_Count:
+		return "the probe volume is invalid"
+	case .Threads:
+		return "invalid thread count"
+	case .Quality:
+		return "the bake quality is not supported by the format"
+	case .Artifact:
+		return "the artifact layout does not match the input"
+	}
+	return "unknown bake error"
+}
+
+Build_Report :: struct {
+	boxes:          int,
+	lights:         int,
+	charts:         int,
+	probes:         int,
+	atlas_size:     int,
+	valid_texels:   int,
+	invalid_texels: int,
+	dilated_texels: int,
+	lightmap_rays:  u64,
+	probe_rays:     u64,
+	shadow_rays:    u64,
+	invalid_probes: int,
+	atlas_bytes:    int,
+	probe_bytes:    int,
+	artifact_bytes: int,
+	bake_ms:        u32,
+	bvh_ms:         u32,
+	lightmap_ms:    u32,
+	probe_ms:       u32,
+	encode_ms:      u32,
+	key:            u64,
+	payload_hash:   u64,
 }

@@ -2,7 +2,6 @@
 #+vet !unused-procedures // the renderer loads the artifact and reports the error
 package bake
 
-import "core:math"
 import "core:mem"
 
 import "src:digest"
@@ -68,7 +67,7 @@ load :: proc(bytes: []u8) -> (data: Data, err: Error) {
 	if !read_value(bytes, quality_section.offset, &quality) {
 		return {}, .Section_Size
 	}
-	if !quality_valid(quality) ||
+	if !quality_supported(quality) ||
 	   quality.atlas_size != header.atlas_width ||
 	   header.atlas_width != header.atlas_height ||
 	   quality.probe_texels != header.probe_texels ||
@@ -224,32 +223,6 @@ slice_section :: proc(bytes: []u8, section: Section, $T: typeid, count: int) -> 
 }
 
 @(private)
-quality_valid :: proc(quality: Quality) -> bool {
-	if quality.atlas_size == 0 || quality.atlas_size > MAX_ATLAS_DIM {
-		return false
-	}
-	if quality.texels_per_meter == 0 || quality.texels_per_meter > 64 {
-		return false
-	}
-	if quality.gutter_texels != GUTTER_TEXELS ||
-	   quality.min_chart != MIN_CHART_TEXELS ||
-	   quality.bounces != BOUNCES {
-		return false
-	}
-	if quality.lightmap_rays == 0 || quality.probe_rays == 0 {
-		return false
-	}
-	if quality.probe_texels != PROBE_TEXELS || !finite_f32(quality.probe_spacing) {
-		return false
-	}
-	if quality.probe_spacing != PROBE_SPACING &&
-	   quality.probe_spacing != PROBE_SPACING_FALLBACK {
-		return false
-	}
-	return quality.probe_spacing > 0
-}
-
-@(private)
 layout_valid :: proc(data: Data) -> bool {
 	atlas_width := f32(data.header.atlas_width)
 	atlas_height := f32(data.header.atlas_height)
@@ -314,14 +287,12 @@ charts_separated :: proc(faces: []Face, pad_u, pad_v: f32) -> bool {
 
 @(private)
 finite_f32 :: proc(value: f32) -> bool {
-	class := math.classify(value)
-	return class != .NaN && class != .Inf && class != .Neg_Inf
+	return finite_f64(f64(value))
 }
 
 @(private)
 finite_f16 :: proc(value: f16) -> bool {
-	class := math.classify(value)
-	return class != .NaN && class != .Inf && class != .Neg_Inf
+	return finite_f64(f64(value))
 }
 
 @(private)
