@@ -11,6 +11,7 @@ import "src:bake"
 import vk "vendor:vulkan"
 
 DEFAULT_BAKE_PATH :: "build/bake/arena.hbake"
+INVALID_LIGHTMAP_SLOT :: u32(0xFFFFFFFF)
 
 Bake_Status :: enum u8 {
 	Missing,
@@ -48,6 +49,8 @@ Bake_Report :: struct {
 	probe_spacing:  f32    `json:"probe_spacing"`,
 	artifact_bytes: int    `json:"artifact_bytes"`,
 	gpu_bytes:      int    `json:"gpu_bytes"`,
+	mapped_boxes:   int    `json:"mapped_boxes"`,
+	unmapped_boxes: int    `json:"unmapped_boxes"`,
 	bake_ms:        u32    `json:"bake_ms"`,
 	error:          string `json:"error,omitempty"`,
 }
@@ -66,13 +69,15 @@ Bake_Volume_Uniform :: struct {
 #assert(size_of(Bake_Volume_Uniform) == 48)
 
 Bake_Resources :: struct {
-	status:      Bake_Status,
-	path:        string,
-	error:       string,
-	data:        bake.Data,
-	loaded:      bool,
-	current_key: u64,
-	gpu_bytes:   int,
+	status:         Bake_Status,
+	path:           string,
+	error:          string,
+	data:           bake.Data,
+	loaded:         bool,
+	current_key:    u64,
+	gpu_bytes:      int,
+	mapped_boxes:   int,
+	unmapped_boxes: int,
 
 	lightmap:          Image,
 	probe_irradiance:  Image,
@@ -80,6 +85,7 @@ Bake_Resources :: struct {
 	sampler:           vk.Sampler,
 	faces_buffer:      vk.Buffer,
 	faces_memory:      vk.DeviceMemory,
+	faces_bytes:       int,
 	slots_buffer:      vk.Buffer,
 	slots_memory:      vk.DeviceMemory,
 	states_buffer:     vk.Buffer,
@@ -99,7 +105,7 @@ init_bake :: proc(r: ^Renderer, path: string) -> bool {
 	bytes, read_error := os.read_entire_file(r.bake.path, r.allocator)
 	if read_error != nil {
 		if general, ok := read_error.(os.General_Error); ok && general == .Not_Exist {
-			return true
+			return create_bake_placeholder(r)
 		}
 		r.bake.status = .Failed
 		r.bake.error = fmt.aprintf(
@@ -108,7 +114,7 @@ init_bake :: proc(r: ^Renderer, path: string) -> bool {
 			read_error,
 			allocator = r.allocator,
 		)
-		return true
+		return create_bake_placeholder(r)
 	}
 
 	data, load_error := bake.load(bytes)
@@ -122,7 +128,7 @@ init_bake :: proc(r: ^Renderer, path: string) -> bool {
 			allocator = r.allocator,
 		)
 		log.errorf("renderer: %s", r.bake.error)
-		return true
+		return create_bake_placeholder(r)
 	}
 	r.bake.data = data
 	r.bake.loaded = true
@@ -174,6 +180,8 @@ bake_report :: proc(r: ^Renderer) -> Bake_Report {
 		report.bake_ms = r.bake.data.stats.bake_ms
 	}
 	report.gpu_bytes = r.bake.gpu_bytes
+	report.mapped_boxes = r.bake.mapped_boxes
+	report.unmapped_boxes = r.bake.unmapped_boxes
 	return report
 }
 
@@ -262,6 +270,7 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 	) {
 		return false
 	}
+	r.bake.faces_bytes = len(data.faces) * size_of(bake.Face)
 	if !create_device_buffer(
 		r,
 		raw_data(data.slots),
@@ -310,6 +319,56 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 	r.bake.gpu_bytes += len(data.probe_states) * size_of(bake.Probe_State)
 	r.bake.gpu_bytes += size_of(Bake_Volume_Uniform)
 	return true
+}
+
+@(private)
+// The descriptor set is written before a frame knows whether an artifact
+// exists. The shader never samples these stand-ins; a box without a slot skips
+// the fetch and the bake status reports the missing or failed load.
+create_bake_placeholder :: proc(r: ^Renderer) -> bool {
+	if !create_clamp_sampler(r, &r.bake.sampler) {
+		return false
+	}
+	pixel := [4]f16{}
+	pixel_bytes := ([^]u8)(&pixel)
+	image, image_ok := upload_texture(
+		r,
+		1,
+		1,
+		.R16G16B16A16_SFLOAT,
+		pixel_bytes[:size_of(pixel)],
+	)
+	if !image_ok {
+		return false
+	}
+	r.bake.lightmap = image
+	face := bake.Face{}
+	if !create_device_buffer(
+		r,
+		&face,
+		vk.DeviceSize(size_of(bake.Face)),
+		{.STORAGE_BUFFER},
+		&r.bake.faces_buffer,
+		&r.bake.faces_memory,
+	) {
+		return false
+	}
+	r.bake.faces_bytes = size_of(bake.Face)
+	return true
+}
+
+// A slot is the index of the baked face list for one static box. Dynamic boxes
+// and boxes absent from the artifact have no slot.
+bake_slot_for :: proc(r: ^Renderer, key: u64) -> (slot: u32, ok: bool) {
+	if !r.bake.loaded || key == bake.NO_BOX_KEY {
+		return INVALID_LIGHTMAP_SLOT, false
+	}
+	for entry, index in r.bake.data.slots {
+		if entry.key == key {
+			return u32(index), true
+		}
+	}
+	return INVALID_LIGHTMAP_SLOT, false
 }
 
 @(private)

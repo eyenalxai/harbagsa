@@ -26,6 +26,7 @@ RENDER_DIGEST_FIELDS := [?]Render_Digest_Field {
 	{"atlas_weight", true, write_atlas_weight, ""},
 	{"clip_height", true, write_clip_height, ""},
 	{"light_shadows", true, write_light_shadows, ""},
+	{"lightmap", true, write_lightmap, ""},
 	{"bake", true, write_bake, ""},
 	{"view_flags", true, write_view_flags, ""},
 	{"debug_lines", false, nil, "draws after the resolve"},
@@ -126,6 +127,11 @@ write_clip_height :: proc(hash: ^digest.FNV, input: Render_Input) {
 @(private)
 write_light_shadows :: proc(hash: ^digest.FNV, input: Render_Input) {
 	digest.write_bool(hash, input.light_shadows)
+}
+
+@(private)
+write_lightmap :: proc(hash: ^digest.FNV, input: Render_Input) {
+	digest.write_bool(hash, input.lightmap)
 }
 
 @(private)

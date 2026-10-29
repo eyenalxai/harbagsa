@@ -7,11 +7,13 @@ layout(location = 0) out vec3 v_normal;
 layout(location = 1) out vec3 v_color;
 layout(location = 2) out vec3 v_world_position;
 layout(location = 3) out vec3 v_local_position;
+layout(location = 4) out vec3 v_local_normal;
 
 struct ObjectData {
     mat4 model;
     mat4 prev_model;
     vec4 color;
+    uvec4 lightmap;
 };
 
 layout(push_constant) uniform PushConstants {
@@ -34,4 +36,5 @@ void main() {
     v_color = object.color.rgb;
     v_world_position = world_position.xyz;
     v_local_position = in_position;
+    v_local_normal = in_normal;
 }
