@@ -111,15 +111,7 @@ light_apply_kind :: proc(
 	settings: Light_Settings,
 	kind: Lamp_Kind,
 ) -> Edit_Result {
-	return light_apply_with_kind(
-		dm,
-		sim,
-		target,
-		id,
-		settings,
-		light_with_kind(settings, kind),
-		kind,
-	)
+	return light_apply(dm, sim, target, id, settings, light_with_kind(settings, kind))
 }
 
 @(private)
@@ -130,22 +122,10 @@ light_apply :: proc(
 	id: Object_Id,
 	settings, next: Light_Settings,
 ) -> Edit_Result {
-	return light_apply_with_kind(dm, sim, target, id, settings, next, nil)
-}
-
-@(private)
-light_apply_with_kind :: proc(
-	dm: ^Debug_Mode,
-	sim: ^Simulation,
-	target: Light_Edit_Target,
-	id: Object_Id,
-	settings, next: Light_Settings,
-	kind: Maybe(Lamp_Kind),
-) -> Edit_Result {
 	if next == settings {
 		return edit_ok()
 	}
-	if !light_store(dm, sim, target, id, next, kind) {
+	if !light_store(dm, sim, target, id, settings, next) {
 		return edit_fail(.Failed)
 	}
 	return edit_ok()
@@ -157,8 +137,7 @@ light_store :: proc(
 	sim: ^Simulation,
 	target: Light_Edit_Target,
 	id: Object_Id,
-	next: Light_Settings,
-	kind: Maybe(Lamp_Kind),
+	settings, next: Light_Settings,
 ) -> bool {
 	switch target {
 	case .None:
@@ -168,8 +147,8 @@ light_store :: proc(
 		return true
 	case .Object:
 		object_history_record(debug_history(dm), sim)
-		if value, has := kind.?; has {
-			return simulation_set_lamp_kind(sim, id, value)
+		if next.kind != settings.kind {
+			return simulation_set_lamp_kind(sim, id, next.kind)
 		}
 		return simulation_set_object_light(sim, id, next)
 	}

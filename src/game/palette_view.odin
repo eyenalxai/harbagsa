@@ -19,7 +19,7 @@ PALETTE_HINTS := [5]ui.Hint_Cell {
 	{keys = "Esc", action = "close"},
 }
 
-PALETTE_LIGHT_HINT :: ui.Hint_Cell{keys = "C [ ] , .", action = "light"}
+PALETTE_LIGHT_HINT :: ui.Hint_Cell{keys = "C [ ] , . K", action = "light / kind"}
 
 debug_palette_view :: proc(sim: ^Simulation, debug: ^Debug_Mode) -> ui.Palette {
 	palette: ui.Palette
@@ -113,7 +113,8 @@ palette_light_preview :: proc(palette: ^ui.Palette, debug: ^Debug_Mode, count: i
 write_light_line :: proc(buffer: []u8, light: Light_Settings) -> int {
 	text := fmt.bprintf(
 		buffer,
-		"%s · %.1f · %.0f m",
+		"%s %s · %.1f · %.0f m",
+		lamp_kind_name(light.kind),
 		light_color_name(light.color),
 		light.intensity,
 		light.range,

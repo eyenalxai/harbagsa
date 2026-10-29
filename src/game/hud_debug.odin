@@ -231,7 +231,7 @@ hud_bake_line :: proc(hud: ^HUD_State, slot: int, bake: Bake_View) -> string {
 	if bake.status != "current" && bake.status != "stale" {
 		return line_format(&hud.storage, slot, "%-7s", bake.status)
 	}
-	return line_format(&hud.storage, slot, "%-7s %08x", bake.status, u32(bake.key))
+	return line_format(&hud.storage, slot, "%-7s %016x", bake.status, bake.key)
 }
 
 @(private)

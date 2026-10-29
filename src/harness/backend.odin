@@ -207,6 +207,8 @@ backend_render :: proc(
 	if len(requests) > 0 {
 		alpha = requests[0].alpha
 	}
+	static := game.simulation_bake_input(&session.sim, &session.scratch.bake, session.allocator)
+	renderer.refresh_bake(&data.renderer, static)
 	options := frame.Options {
 		alpha         = alpha,
 		delta_seconds = game.SIMULATION_STEP,
@@ -224,8 +226,6 @@ backend_render :: proc(
 	if session.has_camera_override {
 		camera_override = &session.camera_override
 	}
-	static := game.simulation_bake_input(&session.sim, &session.scratch.bake, session.allocator)
-	renderer.refresh_bake(&data.renderer, static)
 	scene := frame.build(
 		&session.sim,
 		&session.debug,
@@ -233,6 +233,7 @@ backend_render :: proc(
 		camera_override,
 		&session.hud,
 		session.scratch,
+		static,
 	)
 	perf.mark(&session.perf.state, .Build)
 	if len(requests) > 0 {

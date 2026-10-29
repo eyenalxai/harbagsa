@@ -92,7 +92,7 @@ build :: proc(
 	stats := Stats {
 		// Wall time is telemetry, not bake data: a thread-count or machine
 		// difference must not change the artifact bytes. The tool prints the
-		// measured time, and the runtime reports the stored value.
+		// measured time and writes it to the `.time` sidecar.
 		bake_ms        = 0,
 		lightmap_rays  = lightmap.rays,
 		probe_rays     = probes.rays,

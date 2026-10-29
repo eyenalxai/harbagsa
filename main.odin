@@ -169,6 +169,7 @@ run :: proc() -> bool {
 			nil,
 			&loop.hud,
 			&loop.scratch,
+			static,
 		)
 		perf.mark(&perf_state, .Build)
 

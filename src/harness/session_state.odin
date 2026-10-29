@@ -8,17 +8,21 @@ import "src:frame"
 import "src:game"
 
 @(private)
+session_refresh_bake :: proc(session: ^Session) {
+	if session.render.backend == nil || session.render.backend.refresh_bake == nil {
+		return
+	}
+	static := game.simulation_bake_input(
+		&session.sim,
+		&session.scratch.bake,
+		session.allocator,
+	)
+	session.render.backend.refresh_bake(session.render.backend.ctx, static)
+}
+
 session_refresh_renderer :: proc(session: ^Session) {
 	if session.render.backend == nil || session.render.backend.snapshot == nil {
 		return
-	}
-	if session.render.backend.refresh_bake != nil {
-		static := game.simulation_bake_input(
-			&session.sim,
-			&session.scratch.bake,
-			session.allocator,
-		)
-		session.render.backend.refresh_bake(session.render.backend.ctx, static)
 	}
 	if session.render.backend.get_debug != nil {
 		session.render.debug = session.render.backend.get_debug(session.render.backend.ctx)
@@ -37,6 +41,7 @@ session_refresh_renderer :: proc(session: ^Session) {
 }
 
 session_state :: proc(session: ^Session) -> State {
+	session_refresh_bake(session)
 	session_refresh_renderer(session)
 	session_refresh_hud(session)
 	return state_build(

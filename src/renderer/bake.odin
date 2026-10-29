@@ -203,13 +203,8 @@ bake_report :: proc(r: ^Renderer) -> Bake_Report {
 		report.probe_spacing = header.probe_spacing
 		report.invalid_probes = r.bake.data.stats.invalid_probes
 		report.artifact_bytes = len(r.bake.data.bytes)
-		report.bake_ms = r.bake.data.stats.bake_ms
 	}
-	// The artifact stores zero so the bytes stay deterministic. An explicit
-	// publish carries the measured time in memory.
-	if r.bake.bake_ms != 0 {
-		report.bake_ms = r.bake.bake_ms
-	}
+	report.bake_ms = r.bake.bake_ms
 	report.gpu_bytes = r.bake.gpu_bytes
 	report.probe_missing = r.bake.probe_missing
 	return report
