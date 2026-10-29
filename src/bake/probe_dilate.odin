@@ -1,88 +1,96 @@
 #+vet explicit-allocators
 package bake
 
-// A probe that remains invalid after the virtual-offset pass is filled from
-// nearby valid probes, so a crate near a wall does not lose a whole
-// tetrahedron. The fill runs in index order and may use a probe filled earlier
-// in the same pass, which lets a thin band of invalid probes drain to a valid
-// neighbour. A probe with no valid source stays invalid and the sampler skips
-// it; there is no black fill.
+import "core:mem"
+
+// A probe that remains invalid after the virtual-offset pass copies the nearest
+// valid probe within the radius. The copy keeps that probe's sample origin in
+// the offset, so the stored depth moments stay measured from the point the
+// shader tests. A probe with no valid source stays invalid and the sampler
+// skips it; there is no black fill.
 PROBE_DILATE_RADIUS :: 2
 
-PROBE_IRRADIANCE_CHANNELS :: 4
-PROBE_MOMENT_CHANNELS :: 2
-
-probe_dilate :: proc(work: ^Probe_Work) -> (dilated: int) {
-	counts := work.counts
+probe_dilate :: proc(work: ^Probe_Work, allocator: mem.Allocator) -> (dilated: int) {
+	sources := make([]bool, work.count, allocator)
+	defer delete(sources, allocator)
 	for probe in 0 ..< work.count {
-		if work.states[probe].valid != 0 {
+		sources[probe] = work.states[probe].valid != 0
+	}
+
+	irradiance_span := PROBE_TEXEL_COUNT * PROBE_IRRADIANCE_CHANNELS
+	moment_span := PROBE_TEXEL_COUNT * PROBE_MOMENT_CHANNELS
+	for probe in 0 ..< work.count {
+		if sources[probe] {
 			continue
 		}
-		x := probe % counts.x
-		y := (probe / counts.x) % counts.y
-		z := probe / (counts.x * counts.y)
-
-		irradiance_sum: [PROBE_TEXEL_COUNT][PROBE_IRRADIANCE_CHANNELS]f64
-		moment_sum: [PROBE_TEXEL_COUNT][PROBE_MOMENT_CHANNELS]f64
-		weight_sum: f64
-
+		x, y, z := probe_cell(probe, work.counts)
+		best_probe := -1
+		best_distance := 0
 		for offset_z in -PROBE_DILATE_RADIUS ..= PROBE_DILATE_RADIUS {
 			neighbor_z := z + offset_z
-			if neighbor_z < 0 || neighbor_z >= counts.z {
+			if neighbor_z < 0 || neighbor_z >= work.counts.z {
 				continue
 			}
 			for offset_y in -PROBE_DILATE_RADIUS ..= PROBE_DILATE_RADIUS {
 				neighbor_y := y + offset_y
-				if neighbor_y < 0 || neighbor_y >= counts.y {
+				if neighbor_y < 0 || neighbor_y >= work.counts.y {
 					continue
 				}
 				for offset_x in -PROBE_DILATE_RADIUS ..= PROBE_DILATE_RADIUS {
 					neighbor_x := x + offset_x
-					if neighbor_x < 0 || neighbor_x >= counts.x {
+					if neighbor_x < 0 || neighbor_x >= work.counts.x {
 						continue
 					}
-					neighbor := (neighbor_z * counts.y + neighbor_y) * counts.x + neighbor_x
-					if work.states[neighbor].valid == 0 {
+					neighbor := (neighbor_z * work.counts.y + neighbor_y) * work.counts.x + neighbor_x
+					if !sources[neighbor] {
 						continue
 					}
-					distance_squared := f64(
-						offset_x * offset_x + offset_y * offset_y + offset_z * offset_z,
-					)
-					weight := 1.0 / (1.0 + distance_squared)
-					irradiance_base := neighbor * PROBE_TEXEL_COUNT * PROBE_IRRADIANCE_CHANNELS
-					moment_base := neighbor * PROBE_TEXEL_COUNT * PROBE_MOMENT_CHANNELS
-					for texel in 0 ..< PROBE_TEXEL_COUNT {
-						for channel in 0 ..< PROBE_IRRADIANCE_CHANNELS {
-							index := irradiance_base + texel * PROBE_IRRADIANCE_CHANNELS + channel
-							irradiance_sum[texel][channel] += f64(work.irradiance[index]) * weight
-						}
-						for channel in 0 ..< PROBE_MOMENT_CHANNELS {
-							index := moment_base + texel * PROBE_MOMENT_CHANNELS + channel
-							moment_sum[texel][channel] += f64(work.moments[index]) * weight
-						}
+					distance := offset_x * offset_x + offset_y * offset_y + offset_z * offset_z
+					if best_probe < 0 || distance < best_distance {
+						best_probe = neighbor
+						best_distance = distance
 					}
-					weight_sum += weight
 				}
 			}
 		}
-		if weight_sum <= 0 {
+		if best_probe < 0 {
 			continue
 		}
 
-		irradiance_base := probe * PROBE_TEXEL_COUNT * PROBE_IRRADIANCE_CHANNELS
-		moment_base := probe * PROBE_TEXEL_COUNT * PROBE_MOMENT_CHANNELS
-		scale := 1.0 / weight_sum
-		for texel in 0 ..< PROBE_TEXEL_COUNT {
-			for channel in 0 ..< PROBE_IRRADIANCE_CHANNELS {
-				index := irradiance_base + texel * PROBE_IRRADIANCE_CHANNELS + channel
-				work.irradiance[index] = f16(irradiance_sum[texel][channel] * scale)
-			}
-			for channel in 0 ..< PROBE_MOMENT_CHANNELS {
-				index := moment_base + texel * PROBE_MOMENT_CHANNELS + channel
-				work.moments[index] = f16(moment_sum[texel][channel] * scale)
-			}
+		source_base := best_probe * irradiance_span
+		destination_base := probe * irradiance_span
+		copy(
+			work.irradiance[destination_base:destination_base + irradiance_span],
+			work.irradiance[source_base:source_base + irradiance_span],
+		)
+		source_moment_base := best_probe * moment_span
+		destination_moment_base := probe * moment_span
+		copy(
+			work.moments[destination_moment_base:destination_moment_base + moment_span],
+			work.moments[source_moment_base:source_moment_base + moment_span],
+		)
+
+		source_x, source_y, source_z := probe_cell(best_probe, work.counts)
+		source_center := dv_add(
+			work.min,
+			dv_mul(
+				{f64(source_x) + 0.5, f64(source_y) + 0.5, f64(source_z) + 0.5},
+				work.spacing,
+			),
+		)
+		destination_center := dv_add(
+			work.min,
+			dv_mul({f64(x) + 0.5, f64(y) + 0.5, f64(z) + 0.5}, work.spacing),
+		)
+		source_offset := work.states[best_probe].offset
+		offset := dv_add(
+			DVec3{f64(source_offset.x), f64(source_offset.y), f64(source_offset.z)},
+			dv_sub(source_center, destination_center),
+		)
+		work.states[probe] = {
+			valid  = 1,
+			offset = {f16(offset.x), f16(offset.y), f16(offset.z)},
 		}
-		work.states[probe] = {valid = 1}
 		dilated += 1
 	}
 	return

@@ -47,6 +47,7 @@ Bake_Report :: struct {
 	probes:         int    `json:"probes"`,
 	probe_spacing:  f32    `json:"probe_spacing"`,
 	invalid_probes: u32    `json:"invalid_probes"`,
+	probe_missing:  int    `json:"probe_missing"`,
 	artifact_bytes: int    `json:"artifact_bytes"`,
 	gpu_bytes:      int    `json:"gpu_bytes"`,
 	bake_ms:        u32    `json:"bake_ms"`,
@@ -72,9 +73,10 @@ Bake_Resources :: struct {
 	error:       string,
 	data:        bake.Data,
 	loaded:      bool,
-	current_key: u64,
-	gpu_bytes:   int,
-	slot_lookup: map[u64]u32,
+	current_key:   u64,
+	gpu_bytes:     int,
+	probe_missing: int,
+	slot_lookup:   map[u64]u32,
 
 	lightmap:          Image,
 	probe_irradiance:  Image,
@@ -189,6 +191,7 @@ bake_report :: proc(r: ^Renderer) -> Bake_Report {
 		report.bake_ms = r.bake.data.stats.bake_ms
 	}
 	report.gpu_bytes = r.bake.gpu_bytes
+	report.probe_missing = r.bake.probe_missing
 	return report
 }
 
@@ -275,30 +278,6 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 		r.bake.slot_lookup[slot.key] = u32(index)
 	}
 
-	irradiance, irradiance_ok := upload_texture(
-		r,
-		data.probe_atlas_width,
-		data.probe_atlas_height,
-		.R16G16B16A16_SFLOAT,
-		data.probe_irradiance,
-	)
-	if !irradiance_ok {
-		return false
-	}
-	r.bake.probe_irradiance = irradiance
-
-	moments, moments_ok := upload_texture(
-		r,
-		data.probe_atlas_width,
-		data.probe_atlas_height,
-		.R16G16_SFLOAT,
-		data.probe_moments,
-	)
-	if !moments_ok {
-		return false
-	}
-	r.bake.probe_moments = moments
-
 	if !create_device_buffer(
 		r,
 		raw_data(data.slots),
@@ -309,35 +288,23 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 	) {
 		return false
 	}
-	if !create_device_buffer(
+	if !create_bake_probes(
 		r,
-		raw_data(data.probe_states),
-		vk.DeviceSize(len(data.probe_states) * size_of(bake.Probe_State)),
-		{.STORAGE_BUFFER},
-		&r.bake.states_buffer,
-		&r.bake.states_memory,
-	) {
-		return false
-	}
-	r.bake.states_bytes = len(data.probe_states) * size_of(bake.Probe_State)
-
-	volume := Bake_Volume_Uniform {
-		min           = data.header.probe_min,
-		spacing       = data.header.probe_spacing,
-		counts        = data.header.probe_counts,
-		probe_texels  = data.header.probe_texels,
-		atlas_columns = data.header.probe_atlas_columns,
-		probe_count   = data.header.probe_count,
-		atlas_width   = data.probe_atlas_width,
-		atlas_height  = data.probe_atlas_height,
-	}
-	if !create_device_buffer(
-		r,
-		&volume,
-		vk.DeviceSize(size_of(Bake_Volume_Uniform)),
-		{.UNIFORM_BUFFER},
-		&r.bake.volume_buffer,
-		&r.bake.volume_memory,
+		data.probe_atlas_width,
+		data.probe_atlas_height,
+		data.probe_irradiance,
+		data.probe_moments,
+		data.probe_states,
+		{
+			min           = data.header.probe_min,
+			spacing       = data.header.probe_spacing,
+			counts        = data.header.probe_counts,
+			probe_texels  = data.header.probe_texels,
+			atlas_columns = data.header.probe_atlas_columns,
+			probe_count   = data.header.probe_count,
+			atlas_width   = data.probe_atlas_width,
+			atlas_height  = data.probe_atlas_height,
+		},
 	) {
 		return false
 	}

@@ -40,10 +40,12 @@ never a fill value.
   the header stores the column count so a reader can derive both image extents.
   The probe state buffer carries the valid flag and virtual offset, so the
   runtime never re-derives validity from live geometry. The bake repairs a
-  probe that the virtual offset cannot move out of geometry by dilating it from
-  nearby valid probes; a probe with no valid source stays invalid. The runtime
-  samples the four probes of the containing tetrahedron, applies normal bias,
-  the facing weight, and the depth-moment test, and skips an invalid probe.
+  probe that the virtual offset cannot move out of geometry by dilating it:
+  copy the nearest valid probe and set the offset to that probe's sample
+  position, so the copied depth moments keep their origin. A probe with no valid
+  source stays invalid. The runtime samples the four probes of the containing
+  tetrahedron, applies normal bias, the facing weight, and the depth-moment
+  test, and skips an invalid probe.
 - **Key.** The key hashes the canonical static boxes (arena in array order, then
   placed static objects by object id), the active static fixtures, the quality,
   and the tool version. Dynamic lamps and dynamic bodies are excluded. The
@@ -53,18 +55,22 @@ never a fill value.
 - **Runtime resources.** The lightmap image and sampler, the probe irradiance
   and moment images, the shared linear clamp sampler, the face and slot buffers,
   the probe state buffer, and the probe volume buffer are created with the
-  renderer and destroyed with it. A rejected or missing artifact creates none of
-  the artifact-backed resources; a placeholder lightmap image and one-face
-  buffer keep the descriptor set valid until a bake is published.
+  renderer and destroyed with it. A rejected or missing artifact creates no
+  artifact data; 1 x 1 placeholder lightmap and probe images, a one-face buffer,
+  a one-probe state buffer, and a one-probe volume keep the descriptor set valid
+  until a bake is published. Every object's indirect weights are zero in that
+  state, so nothing samples a placeholder.
 - **Loader source.** The runtime reads `build/bake/arena.hbake` by default. The
   harness accepts `--bake PATH` so a loader fixture or a build from another
   checkout can be exercised. A missing file is `missing`; a parse failure is
   `failed` with the loader error. Neither falls back to black or to an old bake.
 - **Observability.** `state.renderer.bake` reports the status, the current key,
   the artifact key, format and tool versions, atlas and probe counts, spacing,
-  artifact and GPU bytes, bake time, and the load error. The render digest
-  includes the current key and the applied status, so two bakes cannot compare as
-  the same image.
+  the invalid-probe count before dilation, the dynamic boxes whose centre is
+  outside the probe volume, artifact and GPU bytes, bake time, and the load
+  error. The render digest includes the current key, the applied status, and the
+  lightmap and probe switches, so two bakes or two indirect configurations
+  cannot compare as the same image.
 
 ## Considered options
 

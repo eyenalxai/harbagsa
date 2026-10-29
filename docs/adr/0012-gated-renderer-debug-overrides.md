@@ -1,6 +1,6 @@
 # Gated renderer debug overrides
 
-The harness can change renderer inputs: TAA, jitter, history weight, clamp, depth trust, synthetic light count, and plan-view clip height. A build with `ENABLE_RENDERER_DEBUG=true`, or a run with `--debug-renderer`, accepts the command. Every other build rejects it.
+The harness can change renderer inputs: TAA, jitter, history weight, clamp, depth trust, synthetic light count, plan-view clip height, shadow rays, the static lightmap, and the probe field. A build with `ENABLE_RENDERER_DEBUG=true`, or a run with `--debug-renderer`, accepts the command. Every other build rejects it.
 
 ## Why
 
