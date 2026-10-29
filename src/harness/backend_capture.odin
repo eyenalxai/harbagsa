@@ -21,10 +21,10 @@ backend_capture :: proc(
 	width, height: u32
 	format: vk.Format
 	readback_error: string
-	if request.has_view && request.view != .Beauty {
+	if view, has_view := request.view.?; has_view && renderer.capture_view_is_term(view) {
 		pixels, width, height, format, readback_error = renderer.read_capture_view(
 			&data.renderer,
-			request.view,
+			view,
 			slot,
 		)
 	} else {
@@ -56,8 +56,8 @@ backend_capture :: proc(
 		target_format = renderer.format_name(format),
 		region        = region,
 	}
-	if request.has_view {
-		result.view = strings.clone(renderer.capture_view_name(request.view), data.allocator)
+	if view, has_view := request.view.?; has_view {
+		result.view = strings.clone(renderer.capture_view_name(view), data.allocator)
 	}
 	switch request.format {
 	case .Png:

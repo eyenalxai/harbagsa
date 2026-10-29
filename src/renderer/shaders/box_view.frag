@@ -3,7 +3,9 @@
 
 // One diagnostic view per draw. The beauty shader stays free of this dispatch:
 // a shader that also carries the term code recompiles the composed pixel, and
-// the composed pixel has to stay byte-identical.
+// the composed pixel has to stay byte-identical. For the same reason the frame
+// math below repeats box.frag instead of living in a shared function: a call
+// there moves the beauty instructions.
 layout(early_fragment_tests) in;
 
 layout(location = 0) in vec3 v_normal;

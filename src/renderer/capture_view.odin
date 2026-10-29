@@ -29,9 +29,6 @@ CAPTURE_VIEW_NAMES := [Capture_View]string {
 }
 
 capture_view_name :: proc(view: Capture_View) -> string {
-	if int(view) < 0 || int(view) >= len(CAPTURE_VIEW_NAMES) {
-		return "beauty"
-	}
 	return CAPTURE_VIEW_NAMES[view]
 }
 

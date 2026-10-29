@@ -24,25 +24,57 @@ record_scene_view :: proc(
 		boxes       = boxes,
 	}
 	build_scene_pass(r, &scene, view)
+	scene.barriers = view_scene_barriers
 	scene.pipeline = r.scene.view_pipeline
 	scene.layout = r.scene.view_layout
 	record_pass(r, command_buffer, &scene)
 
 	resolve := Pass {
-		name  = .Taa,
-		view  = view,
+		name = .Taa,
+		view = view,
 	}
 	build_view_resolve_pass(r, &resolve)
 	record_pass(r, command_buffer, &resolve)
 
-	slot := capture_slot(capture, .Color, view)
-	return record_view_copy(r, command_buffer, view, slot)
+	return record_view_copy(r, command_buffer, view, capture_view_slot(capture, view))
+}
+
+// The beauty resolve left the scene and velocity targets readable. The extra
+// lit pass writes them again, so it has to wait for those fragment reads.
+@(private)
+view_scene_barriers :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
+	frame := r.frame_index
+	color := r.frame_targets.scene_color[frame]
+	velocity := r.frame_targets.velocity[frame]
+	image_barrier(
+		command_buffer,
+		color.image,
+		COLOR_SUBRESOURCE,
+		.SHADER_READ_ONLY_OPTIMAL,
+		.COLOR_ATTACHMENT_OPTIMAL,
+		{.FRAGMENT_SHADER},
+		{.COLOR_ATTACHMENT_OUTPUT},
+		{.SHADER_READ},
+		{.COLOR_ATTACHMENT_WRITE},
+	)
+	image_barrier(
+		command_buffer,
+		velocity.image,
+		COLOR_SUBRESOURCE,
+		.SHADER_READ_ONLY_OPTIMAL,
+		.COLOR_ATTACHMENT_OPTIMAL,
+		{.FRAGMENT_SHADER},
+		{.COLOR_ATTACHMENT_OUTPUT},
+		{.SHADER_READ},
+		{.COLOR_ATTACHMENT_WRITE},
+	)
+	record_depth_read_barrier(command_buffer, r.frame_targets.depth[frame].image)
 }
 
 @(private)
 build_view_resolve_pass :: proc(r: ^Renderer, pass: ^Pass) {
 	extent := target_extent_vk(r)
-	image := r.view_targets.images[pass.view]
+	image := r.view_images.images[pass.view]
 	clear := vk.ClearValue{}
 	clear.color.float32 = r.clear_color
 	pass.attachments[0] = {
@@ -69,34 +101,10 @@ build_view_resolve_pass :: proc(r: ^Renderer, pass: ^Pass) {
 
 @(private)
 view_resolve_barriers :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
-	frame := r.frame_index
-	color := r.frame_targets.scene_color[frame]
-	velocity := r.frame_targets.velocity[frame]
+	record_scene_read_barriers(r, command_buffer)
 	image_barrier(
 		command_buffer,
-		color.image,
-		COLOR_SUBRESOURCE,
-		.COLOR_ATTACHMENT_OPTIMAL,
-		.SHADER_READ_ONLY_OPTIMAL,
-		{.COLOR_ATTACHMENT_OUTPUT},
-		{.FRAGMENT_SHADER},
-		{.COLOR_ATTACHMENT_WRITE},
-		{.SHADER_READ},
-	)
-	image_barrier(
-		command_buffer,
-		velocity.image,
-		COLOR_SUBRESOURCE,
-		.COLOR_ATTACHMENT_OPTIMAL,
-		.SHADER_READ_ONLY_OPTIMAL,
-		{.COLOR_ATTACHMENT_OUTPUT},
-		{.FRAGMENT_SHADER},
-		{.COLOR_ATTACHMENT_WRITE},
-		{.SHADER_READ},
-	)
-	image_barrier(
-		command_buffer,
-		r.view_targets.images[pass.view].image,
+		r.view_images.images[pass.view].image,
 		COLOR_SUBRESOURCE,
 		.UNDEFINED,
 		.COLOR_ATTACHMENT_OPTIMAL,
@@ -109,17 +117,7 @@ view_resolve_barriers :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pa
 
 @(private)
 view_resolve_draw :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
-	descriptor_set := r.taa.descriptor_sets[r.frame_index * TAA_HISTORY_IMAGES + r.taa.history_read]
-	vk.CmdBindDescriptorSets(
-		command_buffer,
-		.GRAPHICS,
-		pass.layout,
-		0,
-		1,
-		&descriptor_set,
-		0,
-		nil,
-	)
+	taa_bind_resolve(r, command_buffer, pass.layout)
 	params := TAA_Params {
 		gamma          = srgb_gamma(r),
 		history_valid  = 0,
@@ -128,14 +126,7 @@ view_resolve_draw :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: 
 		clamp_enabled  = 1,
 		force_trust    = 0,
 	}
-	vk.CmdPushConstants(
-		command_buffer,
-		pass.layout,
-		{.FRAGMENT},
-		0,
-		u32(size_of(TAA_Params)),
-		&params,
-	)
+	taa_push_params(command_buffer, pass.layout, params)
 	vk.CmdDraw(command_buffer, 3, 1, 0, 0)
 }
 
@@ -146,57 +137,19 @@ record_view_copy :: proc(
 	view: Capture_View,
 	slot: int,
 ) -> bool {
-	name := capture_view_name(view)
 	if slot < 0 {
-		log.errorf("renderer: view %s has no readback slot", name)
+		log.errorf("renderer: view %s has no readback slot", capture_view_name(view))
 		return false
 	}
-	if r.target.readback.buffer == 0 || r.target.readback.size == 0 {
-		log.errorf("renderer: capture readback is not allocated for view %s", name)
-		return false
-	}
-	stride := capture_slot_stride(r)
-	if vk.DeviceSize(slot) * stride >= r.target.readback.size {
-		log.errorf(
-			"renderer: capture slot %d for view %s is past the %d byte readback",
-			slot,
-			name,
-			r.target.readback.size,
-		)
-		return false
-	}
-	image := r.view_targets.images[view]
-	image_barrier(
+	return record_capture_image_copy(
+		r,
 		command_buffer,
-		image.image,
-		COLOR_SUBRESOURCE,
+		r.view_images.images[view].image,
+		capture_view_name(view),
 		.COLOR_ATTACHMENT_OPTIMAL,
-		.TRANSFER_SRC_OPTIMAL,
 		{.COLOR_ATTACHMENT_OUTPUT},
-		{.TRANSFER},
 		{.COLOR_ATTACHMENT_WRITE},
-		{.TRANSFER_READ},
+		COLOR_SUBRESOURCE,
+		slot,
 	)
-	region := vk.BufferImageCopy {
-		bufferOffset = vk.DeviceSize(slot) * stride,
-		bufferRowLength = 0,
-		bufferImageHeight = 0,
-		imageSubresource = {
-			aspectMask = COLOR_SUBRESOURCE.aspectMask,
-			mipLevel = 0,
-			baseArrayLayer = 0,
-			layerCount = 1,
-		},
-		imageOffset = {0, 0, 0},
-		imageExtent = {r.target.config.width, r.target.config.height, 1},
-	}
-	vk.CmdCopyImageToBuffer(
-		command_buffer,
-		image.image,
-		.TRANSFER_SRC_OPTIMAL,
-		r.target.readback.buffer,
-		1,
-		&region,
-	)
-	return true
 }

@@ -75,9 +75,8 @@ append_capture_requests :: proc(
 	}
 	for view in command.views {
 		request := Capture_Request {
-			spec     = command.spec,
-			alpha    = alpha,
-			has_view = true,
+			spec  = command.spec,
+			alpha = alpha,
 		}
 		request.view = view
 		request.name = capture_view_request_name(base_name, view, context.temp_allocator)

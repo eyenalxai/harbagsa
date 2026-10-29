@@ -262,7 +262,8 @@ Formats:
 A stats capture accepts `region` or `rect`, `histogram`, `steps`, `color_key`,
 and `coverage`. A normalized region uses fractions of the frame. Coverage
 reports exact-zero fraction and optional black and lit fractions. A colour
-capture accepts `crop`. `captures` shares one rendered frame across all outputs.
+capture accepts `crop`. `captures` shares one rendered frame across all outputs, and each output may
+name its own `views`.
 
 ### Diagnostic views
 

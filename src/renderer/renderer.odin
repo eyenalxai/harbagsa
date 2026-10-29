@@ -98,7 +98,7 @@ Renderer :: struct {
 
 	target:        Target,
 	frame_targets: Frame_Targets,
-	view_targets:  View_Targets,
+	view_images:   View_Images,
 	scene:         Scene,
 	acceleration:  Acceleration,
 	taa:           TAA,
@@ -188,7 +188,7 @@ deinit :: proc(r: ^Renderer) {
 
 	destroy_overlay(r)
 	destroy_taa(r)
-	destroy_view_targets(r)
+	destroy_view_images(r)
 	destroy_frame_targets(r)
 	destroy_scene(r)
 	destroy_target(r)
