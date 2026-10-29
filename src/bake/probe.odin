@@ -17,6 +17,7 @@ Probe_Result :: struct {
 	rays:          u64,
 	shadow_rays:   u64,
 	invalid_probes: int,
+	dilated_probes: int,
 }
 
 Probe_Work :: struct {
@@ -108,6 +109,7 @@ probe_bake :: proc(
 		delete(result.states, allocator)
 		return {}, .Threads
 	}
+	result.dilated_probes = probe_dilate(&work)
 
 	for value in shadow_counts {
 		result.shadow_rays += value
@@ -182,10 +184,10 @@ probe_worker :: proc(job: rawptr, worker: int) #no_bounds_check {
 	work.shadow_counts[worker] = shadows
 }
 
-// The stored octahedral irradiance and depth moments use the same DDGI
-// encoding as the gather: irradiance is (radiance/2)^(1/5), and the moments
-// are halved. The gather's final 2x factor restores the lightmap scale, so a
-// sampler and a baker change must be made together.
+// The stored octahedral irradiance and depth moments use the legacy gamma-5
+// storage encoding: irradiance is (radiance/2)^(1/5), and the moments are
+// halved. The sampler decodes the irradiance with pow(encoded, 2.5) and applies
+// the final 2x factor, so the bake and the shader must change together.
 @(private)
 probe_blend :: proc(
 	work: ^Probe_Work,

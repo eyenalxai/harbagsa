@@ -189,10 +189,11 @@ print_report :: proc(path: string, spacing: f32, threads: int, report: bake.Buil
 		report.shadow_rays,
 	)
 	fmt.printf(
-		"  probes %d at %.2f m  invalid %d  %d bytes\n",
+		"  probes %d at %.2f m  invalid %d  dilated %d  %d bytes\n",
 		report.probes,
 		spacing,
 		report.invalid_probes,
+		report.dilated_probes,
 		report.probe_bytes,
 	)
 	fmt.printf("  artifact %d bytes\n", report.artifact_bytes)
