@@ -15,9 +15,11 @@ publish_bake :: proc(r: ^Renderer, bytes: []u8, bake_ms: u32) -> (ok: bool, err:
 	data, load_error := bake.load(bytes)
 	if load_error != .None {
 		delete(bytes, r.allocator)
+		load_name := bake.error_name(load_error)
+		log_bake_error(r, load_name)
 		return false, fmt.aprintf(
 			"bake: %s",
-			bake.error_name(load_error),
+			load_name,
 			allocator = context.allocator,
 		)
 	}

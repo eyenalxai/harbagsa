@@ -224,6 +224,8 @@ backend_render :: proc(
 	if session.has_camera_override {
 		camera_override = &session.camera_override
 	}
+	static := game.simulation_bake_input(&session.sim, &session.scratch.bake, session.allocator)
+	renderer.refresh_bake(&data.renderer, static)
 	scene := frame.build(
 		&session.sim,
 		&session.debug,
