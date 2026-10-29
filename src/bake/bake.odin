@@ -198,6 +198,7 @@ Build_Report :: struct {
 	probe_rays:     u64,
 	shadow_rays:    u64,
 	invalid_probes: int,
+	dilated_probes: int,
 	atlas_bytes:    int,
 	probe_bytes:    int,
 	artifact_bytes: int,
