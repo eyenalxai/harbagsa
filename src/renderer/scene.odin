@@ -60,10 +60,10 @@ Scene :: struct {
 }
 
 init_scene :: proc(r: ^Renderer, bake_path: string) -> Error {
-	if !create_scene_resources(r) {
+	if !init_bake(r, bake_path) {
 		return .Create_Scene
 	}
-	if !init_bake(r, bake_path) {
+	if !create_scene_resources(r) {
 		return .Create_Scene
 	}
 	if !create_mesh(r) {
