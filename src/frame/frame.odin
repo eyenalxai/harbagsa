@@ -95,21 +95,12 @@ build :: proc(
 	clear(&scratch.box_slots)
 	for box, index in game.arena_static_boxes() {
 		append(&scratch.boxes, box)
-		entry := game.bake_arena_box(index, box)
-		append(&scratch.box_slots, bake.Box_Slot {
-			key = bake.slot_key(entry.source, entry.id),
-			has_slot = true,
-		})
+		append(&scratch.box_slots, game.bake_arena_slot(index))
 	}
 	for object in game.simulation_objects(sim) {
 		box := game.simulation_object_visual_box(sim, object.id)
 		append(&scratch.boxes, box)
-		slot: bake.Box_Slot
-		if game.object_has_bake_slot(object) {
-			entry := game.bake_placed_box(object, box)
-			slot = {key = bake.slot_key(entry.source, entry.id), has_slot = true}
-		}
-		append(&scratch.box_slots, slot)
+		append(&scratch.box_slots, game.bake_placed_slot(object))
 	}
 	spider_start := len(scratch.boxes)
 	spider_boxes(&scratch.boxes, snapshot, options.alpha)

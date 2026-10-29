@@ -5,7 +5,6 @@ package game
 import "core:mem"
 
 import "src:bake"
-import "src:geometry"
 
 Bake_Input :: struct {
 	boxes:  [dynamic]bake.Box_Entry,
@@ -23,17 +22,30 @@ bake_input_destroy :: proc(input: ^Bake_Input) {
 }
 
 // The frame and the bake input share one identity per static box.
-bake_arena_box :: proc(index: int, box: geometry.Box) -> bake.Box_Entry {
-	return {source = .Arena, id = u32(index), box = box}
+arena_identity :: proc(index: int) -> (source: bake.Box_Source, id: u32) {
+	return .Arena, u32(index)
 }
 
-bake_placed_box :: proc(object: Placed_Object, box: geometry.Box) -> bake.Box_Entry {
-	return {source = .Placed, id = u32(object.id), box = box}
+placed_identity :: proc(object: Placed_Object) -> (source: bake.Box_Source, id: u32) {
+	return .Placed, u32(object.id)
 }
 
 // The frame and the bake input share this rule, so it lives here.
 object_has_bake_slot :: proc(object: Placed_Object) -> bool {
 	return object.body_mode == .Static
+}
+
+bake_arena_slot :: proc(index: int) -> bake.Box_Slot {
+	source, id := arena_identity(index)
+	return {key = bake.slot_key(source, id), has_slot = true}
+}
+
+bake_placed_slot :: proc(object: Placed_Object) -> bake.Box_Slot {
+	if !object_has_bake_slot(object) {
+		return {}
+	}
+	source, id := placed_identity(object)
+	return {key = bake.slot_key(source, id), has_slot = true}
 }
 
 // The static bake input is exactly the arena boxes, placed static bodies, and
@@ -54,13 +66,19 @@ simulation_bake_input :: proc(
 
 	arena_count := 0
 	for box, index in arena_static_boxes() {
-		append(&input.boxes, bake_arena_box(index, box))
+		source, id := arena_identity(index)
+		append(&input.boxes, bake.Box_Entry{source = source, id = id, box = box})
 		arena_count += 1
 	}
 	for object in simulation_objects(sim) {
 		box := simulation_object_box(sim, object.id)
 		if object_has_bake_slot(object) {
-			insert_box(&input.boxes, arena_count, bake_placed_box(object, box))
+			source, id := placed_identity(object)
+			insert_box(&input.boxes, arena_count, bake.Box_Entry {
+				source = source,
+				id = id,
+				box = box,
+			})
 		}
 		if object.light.active && object.light.kind == .Static_Fixture {
 			insert_light(&input.lights, bake.Light_Entry {
