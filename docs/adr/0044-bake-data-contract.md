@@ -88,9 +88,10 @@ never a fill value.
   replaces it.
 - `src:bake` is compiled by `make check` and imported by the frame and the
   renderer. It does not import either package, so the bake tool can share it.
-- Static boxes sample the lightmap atlas from the lit pass; dynamic boxes have
-  no lightmap slot and fall back to zero indirect until the probe gather lands.
-  No descriptor binding or shader sample reads the probe resources yet.
+- Static boxes sample the lightmap atlas and dynamic boxes sample the static
+  probe volume. Both are read by the lit pass; the probe volume uses
+  tetrahedral interpolation over four probes and skips probes the bake marked
+  invalid.
 - The design guide, `README.md`, `GLOSSARY.md`, and ADR 0042 still describe the
   removed dynamic DDGI field and ban baked light or textures. This ADR starts
   the replacement but does not edit those pages; #386 owns that cleanup. Do not

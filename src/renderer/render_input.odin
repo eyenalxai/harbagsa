@@ -30,6 +30,7 @@ Render_Input :: struct {
 	clip_height:  f32,
 	light_shadows: bool,
 	lightmap:     bool,
+	probes:       bool,
 	bake_static:  bake.Static,
 	bake_key:     u64,
 	bake_status:  Bake_Status,
