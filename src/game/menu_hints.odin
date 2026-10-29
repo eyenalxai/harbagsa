@@ -52,5 +52,5 @@ MENU_DEBUG_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
 	{keys = "Ctrl+D", action = "duplicate"},
 	{keys = "Ctrl+Z", action = "undo"},
 	{keys = "Ctrl+Shift+Z", action = "redo"},
-	{keys = "C [ ] , .", action = "lamp light"},
+	{keys = "C [ ] , . K", action = "lamp light / kind"},
 }

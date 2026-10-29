@@ -13,6 +13,7 @@ Key :: enum {
 	G,
 	M,
 	L,
+	K,
 	C,
 	Left_Bracket,
 	Right_Bracket,
@@ -68,6 +69,8 @@ key_from_scancode :: proc(scancode: sdl3.Scancode) -> Key {
 		return .M
 	case .L:
 		return .L
+	case .K:
+		return .K
 	case .C:
 		return .C
 	case .LEFTBRACKET:

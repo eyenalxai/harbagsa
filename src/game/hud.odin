@@ -19,6 +19,12 @@ HUD_Perf :: struct {
 	stats:   perf.Stats,
 }
 
+// The renderer owns the bake state; the HUD only needs the status and key.
+Bake_View :: struct {
+	status: string,
+	key:    u64,
+}
+
 HUD_State :: struct {
 	view:         ui.Hud,
 	rows:         [HUD_MAX_ROWS]ui.Row,
@@ -37,13 +43,14 @@ hud_state_update :: proc(
 	snapshot: Render_Snapshot,
 	captured: bool,
 	delta_seconds: f32,
+	bake: Bake_View,
 ) {
 	hud.captured = captured
 	hud.capture_hint = HUD_CAPTURE_HINT
 	hud.view.notice = {text = hud_notice_text(hud)}
 	menu_view(&hud.menu, &sim.settings, debug.active, delta_seconds)
 	if debug.active {
-		hud_debug_state_update(hud, sim, debug)
+		hud_debug_state_update(hud, sim, debug, bake)
 	} else {
 		hud_player_state_update(hud, snapshot)
 	}

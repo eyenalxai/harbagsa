@@ -3,10 +3,7 @@ package main
 
 import "core:fmt"
 import "core:os"
-import "core:path/filepath"
 import "core:strconv"
-import "core:strings"
-import "core:sys/info"
 
 import "src:bake"
 import "src:game"
@@ -20,7 +17,10 @@ main :: proc() {
 run :: proc(args: []string) -> int {
 	output := DEFAULT_OUTPUT
 	spacing := f32(bake.PROBE_SPACING)
-	threads := default_threads()
+	threads, counted := bake.default_threads()
+	if !counted {
+		fmt.eprintln("harbagsa-bake: cannot read the CPU count; using one thread")
+	}
 
 	index := 0
 	for index < len(args) {
@@ -86,22 +86,15 @@ run :: proc(args: []string) -> int {
 	}
 	defer delete(artifact, context.allocator)
 
-	if write_error := write_atomic(output, artifact); write_error != "" {
+	if write_error := bake.write_file(output, artifact); write_error != "" {
 		fmt.eprintf("harbagsa-bake: %s\n", write_error)
 		return 1
 	}
+	if time_error := bake.write_time(output, report.bake_ms); time_error != "" {
+		fmt.eprintf("harbagsa-bake: %s\n", time_error)
+	}
 	print_report(output, spacing, threads, report)
 	return 0
-}
-
-@(private)
-default_threads :: proc() -> int {
-	_, logical, ok := info.cpu_core_count()
-	if !ok || logical < 1 {
-		fmt.eprintln("harbagsa-bake: cannot read the CPU count; using one thread")
-		return 1
-	}
-	return clamp(logical, 1, bake.MAX_THREADS)
 }
 
 @(private)
@@ -117,41 +110,6 @@ argument_error :: proc(message: string) -> int {
 	fmt.eprintf("harbagsa-bake: %s\n", message)
 	usage()
 	return 2
-}
-
-@(private)
-write_atomic :: proc(path: string, bytes: []u8) -> string {
-	directory := filepath.dir(path)
-	if directory != "" && directory != "." && !os.is_dir(directory) {
-		if mkdir_error := os.mkdir_all(directory); mkdir_error != nil {
-			return fmt.aprintf(
-				"cannot create %s: %v",
-				directory,
-				mkdir_error,
-				allocator = context.allocator,
-			)
-		}
-	}
-	temporary := strings.concatenate({path, ".tmp"}, context.allocator)
-	defer delete(temporary, context.allocator)
-	if write_error := os.write_entire_file(temporary, bytes); write_error != nil {
-		return fmt.aprintf(
-			"cannot write %s: %v",
-			temporary,
-			write_error,
-			allocator = context.allocator,
-		)
-	}
-	if rename_error := os.rename(temporary, path); rename_error != nil {
-		_ = os.remove(temporary)
-		return fmt.aprintf(
-			"cannot publish %s: %v",
-			path,
-			rename_error,
-			allocator = context.allocator,
-		)
-	}
-	return ""
 }
 
 @(private)

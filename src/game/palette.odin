@@ -36,14 +36,16 @@ palette_select :: proc(palette: ^Palette, index: int) -> bool {
 }
 
 palette_set_light :: proc(palette: ^Palette, settings: Light_Settings) {
+	if palette.light.active && palette.light.kind != settings.kind {
+		palette.body_mode = lamp_kind_body(settings.kind)
+	}
 	palette.light = settings
 }
 
 palette_set_body :: proc(palette: ^Palette, mode: Body_Mode) {
-	palette.body_mode = prefab_body_mode(palette_selected(palette^), mode)
+	palette.body_mode = mode
 }
 
 palette_flip_body :: proc(palette: ^Palette) {
-	mode := palette.body_mode == .Static ? Body_Mode.Dynamic : Body_Mode.Static
-	palette.body_mode = prefab_body_mode(palette_selected(palette^), mode)
+	palette.body_mode = palette.body_mode == .Static ? Body_Mode.Dynamic : Body_Mode.Static
 }

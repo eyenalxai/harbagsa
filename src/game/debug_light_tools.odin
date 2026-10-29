@@ -81,6 +81,40 @@ edit_light_set_range :: proc(dm: ^Debug_Mode, sim: ^Simulation, range: f32) -> E
 }
 
 @(private)
+edit_light_set_kind :: proc(dm: ^Debug_Mode, sim: ^Simulation, kind: Lamp_Kind) -> Edit_Result {
+	target, id, settings, ok := light_target(dm, sim)
+	if !ok {
+		return edit_fail(.No_Lamp)
+	}
+	return light_apply_kind(dm, sim, target, id, settings, kind)
+}
+
+@(private)
+edit_light_toggle_kind :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Result {
+	target, id, settings, ok := light_target(dm, sim)
+	if !ok {
+		return edit_fail(.No_Lamp)
+	}
+	kind: Lamp_Kind = .Dynamic_Lamp
+	if settings.kind == .Dynamic_Lamp {
+		kind = .Static_Fixture
+	}
+	return light_apply_kind(dm, sim, target, id, settings, kind)
+}
+
+@(private)
+light_apply_kind :: proc(
+	dm: ^Debug_Mode,
+	sim: ^Simulation,
+	target: Light_Edit_Target,
+	id: Object_Id,
+	settings: Light_Settings,
+	kind: Lamp_Kind,
+) -> Edit_Result {
+	return light_apply(dm, sim, target, id, settings, light_with_kind(settings, kind))
+}
+
+@(private)
 light_apply :: proc(
 	dm: ^Debug_Mode,
 	sim: ^Simulation,
@@ -91,7 +125,7 @@ light_apply :: proc(
 	if next == settings {
 		return edit_ok()
 	}
-	if !light_store(dm, sim, target, id, next) {
+	if !light_store(dm, sim, target, id, settings, next) {
 		return edit_fail(.Failed)
 	}
 	return edit_ok()
@@ -103,17 +137,20 @@ light_store :: proc(
 	sim: ^Simulation,
 	target: Light_Edit_Target,
 	id: Object_Id,
-	settings: Light_Settings,
+	settings, next: Light_Settings,
 ) -> bool {
 	switch target {
 	case .None:
 		return false
 	case .Palette:
-		palette_set_light(&dm.palette, settings)
+		palette_set_light(&dm.palette, next)
 		return true
 	case .Object:
 		object_history_record(debug_history(dm), sim)
-		return simulation_set_object_light(sim, id, settings)
+		if next.kind != settings.kind {
+			return simulation_set_lamp_kind(sim, id, next.kind)
+		}
+		return simulation_set_object_light(sim, id, next)
 	}
 	return false
 }

@@ -1,5 +1,7 @@
 # Single-volume DDGI indirect light
 
+> Superseded by [ADR 0045](0045-mixed-static-baked-indirect.md). The per-frame DDGI field and probe pass are removed. Static indirect is baked; direct light stays dynamic. The decisions below are the historical record of the DDGI slice.
+
 The renderer adds one diffuse bounce from the current point lights. A single probe volume covers the arena. Each probe traces 64 rays, stores an 8 x 8 octahedral irradiance and depth atlas, and surfaces blend the eight surrounding probes. The direct term and the probe term both use the same lamps. There is still no ambient floor.
 
 ## Why

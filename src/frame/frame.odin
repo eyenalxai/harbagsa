@@ -18,6 +18,7 @@ Options :: struct {
 	captured:      bool,
 	hud:           bool,
 	perf:          bool,
+	bake:          renderer.Bake_Report,
 }
 
 Scratch :: struct {
@@ -65,6 +66,7 @@ build :: proc(
 	camera_override: ^renderer.Camera,
 	hud: ^game.HUD_State,
 	scratch: ^Scratch,
+	bake_static: bake.Static,
 ) -> renderer.Render_Input {
 	scene: renderer.Render_Input
 	scene.hud.weight = sim.settings.type_weight
@@ -121,7 +123,7 @@ build :: proc(
 		})
 	}
 	scene.lights = scratch.lights[:]
-	scene.bake_static = game.simulation_bake_input(sim, &scratch.bake, scratch.allocator)
+	scene.bake_static = bake_static
 	scratch.debug_lines.count = 0
 	if options.debug_view {
 		game.collect_world_lines(sim, &scratch.debug_lines)
@@ -139,6 +141,7 @@ build :: proc(
 			snapshot,
 			options.captured,
 			options.delta_seconds,
+			{status = options.bake.status, key = options.bake.key},
 		)
 		palette := game.debug_palette_view(sim, debug)
 		if hud.menu.open {

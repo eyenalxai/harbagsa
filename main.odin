@@ -152,6 +152,8 @@ run :: proc() -> bool {
 		}
 
 		alpha := clamp(loop.accumulator / game.SIMULATION_STEP, 0, 1)
+		static := game.simulation_bake_input(&loop.sim, &loop.scratch.bake, context.allocator)
+		renderer.refresh_bake(&state, static)
 		scene := frame.build(
 			&loop.sim,
 			&loop.debug,
@@ -162,10 +164,12 @@ run :: proc() -> bool {
 				captured = events.captured,
 				hud = true,
 				perf = loop.hud.perf.visible,
+				bake = renderer.bake_report(&state),
 			},
 			nil,
 			&loop.hud,
 			&loop.scratch,
+			static,
 		)
 		perf.mark(&perf_state, .Build)
 

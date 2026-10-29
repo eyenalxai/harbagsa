@@ -74,6 +74,7 @@ Bake_Resources :: struct {
 	data:        bake.Data,
 	loaded:      bool,
 	current_key:   u64,
+	bake_ms:       u32,
 	gpu_bytes:     int,
 	probe_missing: int,
 	slot_lookup:   map[u64]u32,
@@ -133,7 +134,14 @@ init_bake :: proc(r: ^Renderer, path: string) -> bool {
 	r.bake.data = data
 	r.bake.loaded = true
 	r.bake.status = .Stale
-	if !create_bake_resources(r) {
+	switch bake_ms, time_status := bake.read_time(r.bake.path); time_status {
+	case .Ok:
+		r.bake.bake_ms = bake_ms
+	case .Missing:
+	case .Invalid:
+		log.warnf("renderer: ignoring the bake time sidecar for %s", r.bake.path)
+	}
+	if !create_bake_resources(r, &r.bake) {
 		if r.bake.status != .Failed {
 			log_bake_error(r, "cannot create the bake resources")
 		}
@@ -150,9 +158,16 @@ bake_key :: proc(r: ^Renderer, static: bake.Static) -> u64 {
 	return bake.key(static, quality)
 }
 
+// The harness reads state without drawing a frame, so it refreshes the key from
+// the current static input before it reports. The renderer stays the owner of
+// the applied status.
+refresh_bake :: proc(r: ^Renderer, static: bake.Static) {
+	update_bake(r, bake_key(r, static))
+}
+
 update_bake :: proc(r: ^Renderer, key: u64) {
 	r.bake.current_key = key
-	if !r.bake.loaded {
+	if !r.bake.loaded || r.bake.status == .Failed {
 		return
 	}
 	r.bake.status = r.bake.data.header.bake_key == key ? .Current : .Stale
@@ -188,8 +203,8 @@ bake_report :: proc(r: ^Renderer) -> Bake_Report {
 		report.probe_spacing = header.probe_spacing
 		report.invalid_probes = r.bake.data.stats.invalid_probes
 		report.artifact_bytes = len(r.bake.data.bytes)
-		report.bake_ms = r.bake.data.stats.bake_ms
 	}
+	report.bake_ms = r.bake.bake_ms
 	report.gpu_bytes = r.bake.gpu_bytes
 	report.probe_missing = r.bake.probe_missing
 	return report
@@ -197,20 +212,7 @@ bake_report :: proc(r: ^Renderer) -> Bake_Report {
 
 destroy_bake :: proc(r: ^Renderer) {
 	b := &r.bake
-	destroy_image(r, &b.lightmap)
-	destroy_image(r, &b.probe_irradiance)
-	destroy_image(r, &b.probe_moments)
-	if r.device != nil && b.sampler != 0 {
-		vk.DestroySampler(r.device, b.sampler, nil)
-	}
-	b.sampler = 0
-	destroy_buffer(r, &b.faces_buffer, &b.faces_memory)
-	destroy_buffer(r, &b.slots_buffer, &b.slots_memory)
-	destroy_buffer(r, &b.states_buffer, &b.states_memory)
-	destroy_buffer(r, &b.volume_buffer, &b.volume_memory)
-	if b.slot_lookup != nil {
-		delete(b.slot_lookup)
-	}
+	destroy_bake_resources(r, b)
 	bake.destroy(&b.data, r.allocator)
 	if b.path != "" {
 		delete(b.path, r.allocator)
@@ -219,113 +221,4 @@ destroy_bake :: proc(r: ^Renderer) {
 		delete(b.error, r.allocator)
 	}
 	b^ = {}
-}
-
-// The lightmap image, the face rects, and the shared sampler are one unit. The
-// placeholder and the loaded artifact use the same path so a missing bake
-// cannot drift from a real one.
-@(private)
-create_bake_lightmap :: proc(
-	r: ^Renderer,
-	width, height: u32,
-	format: vk.Format,
-	atlas: []u8,
-	faces: []bake.Face,
-) -> bool {
-	if !format_supports(r, format, {.SAMPLED_IMAGE_FILTER_LINEAR}) {
-		log_bake_error(r, "the device cannot filter the lightmap format")
-		return false
-	}
-	lightmap, lightmap_ok := upload_texture(r, width, height, format, atlas)
-	if !lightmap_ok {
-		return false
-	}
-	r.bake.lightmap = lightmap
-	if !create_device_buffer(
-		r,
-		raw_data(faces),
-		vk.DeviceSize(len(faces) * size_of(bake.Face)),
-		{.STORAGE_BUFFER},
-		&r.bake.faces_buffer,
-		&r.bake.faces_memory,
-	) {
-		return false
-	}
-	r.bake.faces_bytes = len(faces) * size_of(bake.Face)
-	return create_clamp_sampler(r, &r.bake.sampler)
-}
-
-@(private)
-create_bake_resources :: proc(r: ^Renderer) -> bool {
-	data := &r.bake.data
-	if !format_supports(r, .R16G16_SFLOAT, {.SAMPLED_IMAGE_FILTER_LINEAR}) {
-		log_bake_error(r, "the device cannot filter R16G16_SFLOAT")
-		return false
-	}
-	if !create_bake_lightmap(
-		r,
-		data.header.atlas_width,
-		data.header.atlas_height,
-		.R16G16B16A16_SFLOAT,
-		data.atlas,
-		data.faces,
-	) {
-		return false
-	}
-
-	r.bake.slot_lookup = make(map[u64]u32, len(data.slots), r.allocator)
-	for slot, index in data.slots {
-		r.bake.slot_lookup[slot.key] = u32(index)
-	}
-
-	if !create_device_buffer(
-		r,
-		raw_data(data.slots),
-		vk.DeviceSize(len(data.slots) * size_of(bake.Slot)),
-		{.STORAGE_BUFFER},
-		&r.bake.slots_buffer,
-		&r.bake.slots_memory,
-	) {
-		return false
-	}
-	volume := Bake_Volume_Uniform {
-		min           = data.header.probe_min,
-		spacing       = data.header.probe_spacing,
-		counts        = data.header.probe_counts,
-		probe_texels  = data.header.probe_texels,
-		atlas_columns = data.header.probe_atlas_columns,
-		probe_count   = data.header.probe_count,
-		atlas_width   = data.probe_atlas_width,
-		atlas_height  = data.probe_atlas_height,
-	}
-	if !create_bake_probes(
-		r,
-		data.probe_atlas_width,
-		data.probe_atlas_height,
-		.R16G16B16A16_SFLOAT,
-		.R16G16_SFLOAT,
-		data.probe_irradiance,
-		data.probe_moments,
-		data.probe_states,
-		&volume,
-	) {
-		return false
-	}
-
-	r.bake.gpu_bytes = len(data.atlas) + len(data.probe_irradiance) + len(data.probe_moments)
-	r.bake.gpu_bytes += len(data.faces) * size_of(bake.Face)
-	r.bake.gpu_bytes += len(data.slots) * size_of(bake.Slot)
-	r.bake.gpu_bytes += len(data.probe_states) * size_of(bake.Probe_State)
-	r.bake.gpu_bytes += size_of(Bake_Volume_Uniform)
-	return true
-}
-
-@(private)
-log_bake_error :: proc(r: ^Renderer, message: string) {
-	r.bake.status = .Failed
-	if r.bake.error != "" {
-		delete(r.bake.error, r.allocator)
-	}
-	r.bake.error = fmt.aprintf("%s: %s", r.bake.path, message, allocator = r.allocator)
-	log.errorf("renderer: %s", r.bake.error)
 }

@@ -235,44 +235,6 @@ simulation_set_object_yaw :: proc(sim: ^Simulation, id: Object_Id, yaw: f32) -> 
 	return true
 }
 
-simulation_convert_object :: proc(sim: ^Simulation, id: Object_Id, mode: Body_Mode) -> bool {
-	index, ok := object_index_for_id(sim, id)
-	if !ok {
-		return false
-	}
-	object := &sim.objects[index]
-	if object.light.active {
-		return false
-	}
-	if !prefab_accepts_body(object.prefab, mode) {
-		return false
-	}
-	if object.body_mode == mode {
-		return true
-	}
-	if !b3.Body_IsValid(object.body) {
-		return false
-	}
-
-	info := prefab(object.prefab)
-	body := create_box_body(
-		sim.world_id,
-		body_type(mode),
-		b3.ToVec3(b3.Body_GetPosition(object.body)),
-		b3.Body_GetRotation(object.body),
-		info.half_extents,
-		info.density,
-	)
-	if !b3.Body_IsValid(body) {
-		return false
-	}
-
-	b3.DestroyBody(object.body)
-	object.body = body
-	object.body_mode = mode
-	return true
-}
-
 simulation_object_id_for_body :: proc(sim: ^Simulation, body: b3.BodyId) -> Object_Id {
 	for object in simulation_objects(sim) {
 		if object.body == body {
@@ -341,7 +303,7 @@ spawn_light :: proc(spawn: Object_Spawn) -> Light_Settings {
 	return prefab_light(spawn.prefab)
 }
 
-@(private)
+@(private="package")
 object_index_for_id :: proc(sim: ^Simulation, id: Object_Id) -> (index: int, ok: bool) {
 	if id == INVALID_OBJECT_ID {
 		return -1, false
@@ -369,7 +331,7 @@ pitch_inverse :: proc(pitch: f32) -> b3.Quat {
 	return b3.NegateQuat(b3.MakeQuatFromAxisAngle({1.0, 0.0, 0.0}, pitch))
 }
 
-@(private)
+@(private="package")
 body_type :: proc(mode: Body_Mode) -> b3.BodyType {
 	return mode == .Static ? .staticBody : .dynamicBody
 }
