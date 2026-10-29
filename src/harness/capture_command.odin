@@ -12,7 +12,7 @@ import "src:renderer"
 parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(
 		object,
-		{"cmd", "name", "note", "frame", "alpha", "target", "format", "png", "region", "rect", "profile", "crop", "histogram", "steps", "color_key", "coverage"},
+		{"cmd", "name", "note", "frame", "alpha", "target", "views", "format", "png", "region", "rect", "profile", "crop", "histogram", "steps", "color_key", "coverage"},
 	); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
@@ -50,6 +50,17 @@ parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command
 		command.capture.alpha = f32(alpha)
 		command.capture.has_alpha = true
 	}
+	_, has_target := json_get(object, "target")
+	if value, has := json_get(object, "views"); has {
+		if has_target {
+			return {}, format_error("%s", "'target' and 'views' are mutually exclusive")
+		}
+		views, views_error := parse_capture_views(value, capture_name, has_capture_name, allocator)
+		if views_error != "" {
+			return {}, views_error
+		}
+		command.capture.views = views
+	}
 	if value, has := json_get(object, "target"); has {
 		name, ok := json_string(value)
 		target, target_ok := renderer.capture_target_parse(name)
@@ -73,6 +84,13 @@ parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command
 	}
 	if command.capture.format == .Png && command.capture.target != .Color {
 		return {}, format_error("%s", "a png capture needs the color target")
+	}
+	if len(command.capture.views) > 0 &&
+	   (command.capture.format == .Float || command.capture.format == .Raw) {
+		return {}, format_error(
+			"%s",
+			"a view writes a color image; use 'scene_color' for float or raw analysis",
+		)
 	}
 	if (command.capture.format == .Float || command.capture.format == .Raw) &&
 	   command.capture.target == .Color {
@@ -330,5 +348,16 @@ capture_json_fields :: proc(
 			fmt.sbprintf(builder, `"lit": %g`, value)
 		}
 		fmt.sbprint(builder, `}`)
+	}
+	if len(capture.views) > 0 {
+		json_write_separator(builder, has_previous)
+		fmt.sbprint(builder, `"views": [`)
+		for view, index in capture.views {
+			if index > 0 {
+				fmt.sbprint(builder, `, `)
+			}
+			json_write_string(builder, renderer.capture_view_name(view))
+		}
+		fmt.sbprint(builder, `]`)
 	}
 }

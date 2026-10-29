@@ -68,6 +68,9 @@ Capture_Command :: struct {
 	has_frame: bool,
 	alpha:     f32,
 	has_alpha: bool,
+	// A list of one to eight views; the command expands into one capture entry
+	// per view, named `<name>-<view>`.
+	views:     []renderer.Capture_View,
 }
 
 Captures_Command :: struct {

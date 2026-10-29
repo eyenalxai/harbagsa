@@ -20,18 +20,6 @@ Capture_Target :: enum {
 
 Capture_Targets :: bit_set[Capture_Target]
 
-Frame_Capture :: struct {
-	targets: Capture_Targets,
-}
-
-capture_target_count :: proc(capture: Frame_Capture) -> int {
-	count := 0
-	for _ in capture.targets {
-		count += 1
-	}
-	return count
-}
-
 @(private)
 capture_slot_stride :: proc(r: ^Renderer) -> vk.DeviceSize {
 	return vk.DeviceSize(r.target.config.width) *
@@ -183,9 +171,6 @@ read_capture_target :: proc(
 	error: string,
 ) {
 	name := capture_target_name(target)
-	if r.target.readback.mapped == nil || r.target.readback.size == 0 {
-		return nil, 0, 0, .UNDEFINED, "capture readback is not allocated; request a capture first"
-	}
 	_, image_format, image_ok := target_image(r, 0, target)
 	if !image_ok {
 		return nil, 0, 0, .UNDEFINED, fmt.aprintf(
@@ -193,6 +178,39 @@ read_capture_target :: proc(
 			name,
 			allocator = context.allocator,
 		)
+	}
+	return read_capture_bytes(r, image_format, name, slot)
+}
+
+// A term view owns an image in the target color format, so the readback and the
+// channel swap are the ones the color target already uses.
+read_capture_view :: proc(
+	r: ^Renderer,
+	view: Capture_View,
+	slot := 0,
+) -> (
+	pixels: []u8,
+	width, height: u32,
+	format: vk.Format,
+	error: string,
+) {
+	return read_capture_bytes(r, r.target.config.format, capture_view_name(view), slot)
+}
+
+@(private)
+read_capture_bytes :: proc(
+	r: ^Renderer,
+	image_format: vk.Format,
+	name: string,
+	slot: int,
+) -> (
+	pixels: []u8,
+	width, height: u32,
+	format: vk.Format,
+	error: string,
+) {
+	if r.target.readback.mapped == nil || r.target.readback.size == 0 {
+		return nil, 0, 0, .UNDEFINED, "capture readback is not allocated; request a capture first"
 	}
 	format = image_format
 	bytes_per_texel := texel_bytes(format)
@@ -222,8 +240,7 @@ read_capture_target :: proc(
 	size := int(required)
 	source := rawptr(uintptr(r.target.readback.mapped) + uintptr(offset))
 	mem.copy(raw_data(r.target.readback.pixels), source, size)
-	if target == .Color &&
-	   (format == .B8G8R8A8_SRGB || format == .B8G8R8A8_UNORM) {
+	if format == .B8G8R8A8_SRGB || format == .B8G8R8A8_UNORM {
 		for i := 0; i + 3 < size; i += 4 {
 			r.target.readback.pixels[i], r.target.readback.pixels[i + 2] =
 				r.target.readback.pixels[i + 2], r.target.readback.pixels[i]

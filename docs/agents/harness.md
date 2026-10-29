@@ -44,6 +44,7 @@ run path. `--out DIR` chooses the whole run directory.
 | drive the editor | **Editor** |
 | build and publish a bake | **Bake lifecycle** |
 | capture the final image | **Capture targets** |
+| capture one lighting term | **Capture targets** and **Diagnostic views** |
 | read velocity, history, depth, or scene colour | **Capture targets** |
 | read numeric image statistics | **Capture targets** |
 | read renderer state | **Renderer state** |
@@ -58,6 +59,7 @@ run path. `--out DIR` chooses the whole run directory.
 | measure performance | **Performance** |
 | reproduce a live view | **Live repro** |
 | understand a design choice | `docs/adr/0045-mixed-static-baked-indirect.md` |
+| understand diagnostic views | `docs/adr/0046-diagnostic-views.md` |
 
 ## What one run writes
 
@@ -124,7 +126,7 @@ is seconds. Capture regions and crops are pixels unless `unit` is `normalized`.
 - `settle`: `frames`, or `until: converged`.
 - `state`: full current state.
 - `capture`: one output with `name`, optional `frame`, `alpha`, `note`, target,
-  format, and capture options.
+  format, capture options, and an optional `views` list.
 - `captures`: up to eight outputs from one frame.
 - `camera`: `position` plus `look_at` or `yaw_deg`/`pitch_deg`, optional
   `fov_deg`; `clear: true` removes the override.
@@ -262,6 +264,38 @@ and `coverage`. A normalized region uses fractions of the frame. Coverage
 reports exact-zero fraction and optional black and lit fractions. A colour
 capture accepts `crop`. `captures` shares one rendered frame across all outputs.
 
+### Diagnostic views
+
+`views` on a `capture` output names one to eight views. One simulation frame
+writes one capture entry per view, named `<name>-<view>`, each with a `view`
+field and the same `frame`, camera, and renderer report. `target` and `views` are
+mutually exclusive, and per-view output options apply to every view.
+
+| View | Image |
+| --- | --- |
+| `beauty` | the composed frame, identical to a color capture of that frame |
+| `direct` | shadowed direct light times albedo |
+| `lightmap` | the weighted baked lightmap term times albedo |
+| `probe` | the weighted static probe term times albedo |
+| `emissive` | the emission term times albedo |
+| `shadow` | shadow visibility as a grey ramp: shadowed direct over open direct |
+| `lightmap_grid` | atlas texel checker plus a red chart-edge line; magenta with no tile |
+| `probe_cell` | hashed probe cell id hue; red when a cell probe is invalid; magenta outside the volume |
+
+Each term view is one extra lit pass at the same jitter and shares the TAA
+history: the resolve reads and writes no history, and the next beauty frame is
+unaffected. A term view is a single sample, so a noisy bake stays noisy in the
+term image. A `float` or `raw` view is a command error; use `scene_color` for
+linear analysis. A capture without `views` is the beauty path and is byte
+identical to the same capture before views existed.
+
+```json
+{"cmd":"capture","name":"terms","views":["beauty","direct","lightmap","probe"]}
+```
+
+`scenarios/capture-views.json` captures all eight views in one frame and then a
+plain color capture to prove the history survived.
+
 A named capture exposes its own renderer state through `get`, for example
 `capture.named.lit.renderer.light_count` and
 `capture.named.lit.render_digest`.
@@ -394,8 +428,10 @@ and adds no capture entry. A scenario may still capture after its perf windows.
 The interval is therefore comparable with the GPU total plus submit cost. Do not
 compare an interval measured before that change with one measured after it.
 
-GPU passes are TLAS, cluster, depth, scene, TAA, and overlay. The report
-carries `p50`, `p95`, and `mean` for each CPU phase and GPU pass. Perf data is
+GPU passes are TLAS, cluster, depth, scene, TAA, and overlay. A capture with
+diagnostic views adds one untimed lit pass and one resolve per view after the
+measured passes, so a perf window never includes them. The report carries
+`p50`, `p95`, and `mean` for each CPU phase and GPU pass. Perf data is
 wall-clock data and is not deterministic.
 
 Use `scenarios/perf.json` for the default view, `scenarios/perf-arena.json` for
@@ -407,7 +443,9 @@ two builds. `ab --visual` runs one scenario on both and writes a compare panel.
 
 The offscreen target submits one frame at a time because it owns one colour
 image and one readback buffer. TAA history affects exact pixels, so before and
-after runs must use the same command sequence and history.
+after runs must use the same command sequence and history. Term views do not
+advance or reset that history, so a capture with views and a capture without
+them agree on every later frame.
 
 Run the same scenario for before and after evidence:
 

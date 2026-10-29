@@ -5,6 +5,7 @@ import vk "vendor:vulkan"
 
 BOX_VERTEX_SPIRV :: #load("../../build/shaders/box.vert.spv")
 BOX_FRAGMENT_SPIRV :: #load("../../build/shaders/box.frag.spv")
+BOX_VIEW_FRAGMENT_SPIRV :: #load("../../build/shaders/box_view.frag.spv")
 CLUSTER_COMPUTE_SPIRV :: #load("../../build/shaders/cluster.comp.spv")
 
 create_pipeline :: proc(r: ^Renderer) -> bool {
@@ -35,7 +36,7 @@ create_pipeline :: proc(r: ^Renderer) -> bool {
 			push_constant = vk.PushConstantRange {
 				stageFlags = {.VERTEX, .FRAGMENT},
 				offset = 0,
-				size = u32(size_of(Object_Index)),
+				size = u32(size_of(Scene_Draw)),
 			},
 			vertex_binding = binding,
 			vertex_attributes = attributes[:],
@@ -55,6 +56,39 @@ create_pipeline :: proc(r: ^Renderer) -> bool {
 		return false
 	}
 
+	// The term view redraws the same boxes with one term selected. It shares the
+	// vertex shader, the layout shape, and the attachments, and differs only in
+	// the fragment shader; the beauty shader stays free of the dispatch.
+	if !create_graphics_pipeline(
+		r,
+		{
+			vertex_spirv = BOX_VERTEX_SPIRV,
+			fragment_spirv = BOX_VIEW_FRAGMENT_SPIRV,
+			name = "box view",
+			set_layouts = set_layouts[:],
+			push_constant = vk.PushConstantRange {
+				stageFlags = {.VERTEX, .FRAGMENT},
+				offset = 0,
+				size = u32(size_of(Scene_Draw)),
+			},
+			vertex_binding = binding,
+			vertex_attributes = attributes[:],
+			topology = .TRIANGLE_LIST,
+			color_formats = color_formats[:],
+			depth_format = DEPTH_FORMAT,
+			depth_test = true,
+			depth_write = false,
+			depth_compare = .LESS_OR_EQUAL,
+			cull_back = true,
+			dynamic_viewport = true,
+			dynamic_scissor = true,
+		},
+		&r.scene.view_pipeline,
+		&r.scene.view_layout,
+	) {
+		return false
+	}
+
 	// A depth-only prepass pays the vertex and raster cost once per pixel, so a
 	// dense overlap of boxes shades point lights only for the surface in front.
 	return create_graphics_pipeline(
@@ -66,7 +100,7 @@ create_pipeline :: proc(r: ^Renderer) -> bool {
 			push_constant = vk.PushConstantRange {
 				stageFlags = {.VERTEX},
 				offset = 0,
-				size = u32(size_of(Object_Index)),
+				size = u32(size_of(Scene_Draw)),
 			},
 			vertex_binding = binding,
 			vertex_attributes = attributes[:],

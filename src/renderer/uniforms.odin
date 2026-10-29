@@ -35,8 +35,11 @@ Object_Data :: struct {
 	pad:             u32,
 }
 
-Object_Index :: struct {
+// The draw's object and the view the lit pass writes. The depth pipeline shares
+// the struct so one push size covers both pipelines.
+Scene_Draw :: struct {
 	index: u32,
+	view:  u32,
 }
 
 TAA_Params :: struct {
@@ -50,7 +53,7 @@ TAA_Params :: struct {
 
 #assert(size_of(Camera_Uniform) == 240)
 #assert(size_of(Object_Data) == 160)
-#assert(size_of(Object_Index) == 4)
+#assert(size_of(Scene_Draw) == 8)
 #assert(size_of(TAA_Params) == 24)
 
 CAMERA_BINDING :: 0

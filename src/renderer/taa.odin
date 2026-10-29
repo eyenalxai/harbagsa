@@ -60,9 +60,11 @@ TAA :: struct {
 	descriptor_pool:       vk.DescriptorPool,
 	descriptor_sets:       [TAA_DESCRIPTOR_SETS]vk.DescriptorSet,
 
-	pipeline:        vk.Pipeline,
-	pipeline_layout: vk.PipelineLayout,
-	pipeline_format: vk.Format,
+	pipeline:             vk.Pipeline,
+	pipeline_layout:      vk.PipelineLayout,
+	view_pipeline:        vk.Pipeline,
+	view_pipeline_layout: vk.PipelineLayout,
+	pipeline_format:      vk.Format,
 }
 
 init_taa :: proc(r: ^Renderer) -> Error {
@@ -88,7 +90,7 @@ init_taa :: proc(r: ^Renderer) -> Error {
 
 destroy_taa :: proc(r: ^Renderer) {
 	if r.device != nil {
-		destroy_pipeline_pair(r, &r.taa.pipeline, &r.taa.pipeline_layout)
+		destroy_taa_pipelines(r)
 		if r.taa.descriptor_pool != 0 {
 			vk.DestroyDescriptorPool(r.device, r.taa.descriptor_pool, nil)
 			r.taa.descriptor_pool = 0
@@ -194,8 +196,13 @@ toggle_taa :: proc(r: ^Renderer) {
 	log.infof("renderer: TAA %s", r.taa.enabled ? "on" : "off")
 }
 
-destroy_taa_history :: proc(r: ^Renderer) {
-	for i in 0 ..< TAA_HISTORY_IMAGES {
+// Both pipelines share a descriptor layout shape and live and die together.
+destroy_taa_pipelines :: proc(r: ^Renderer) {
+	destroy_pipeline_pair(r, &r.taa.pipeline, &r.taa.pipeline_layout)
+	destroy_pipeline_pair(r, &r.taa.view_pipeline, &r.taa.view_pipeline_layout)
+}
+
+destroy_taa_history :: proc(r: ^Renderer) {	for i in 0 ..< TAA_HISTORY_IMAGES {
 		destroy_image(r, &r.taa.history[i])
 		destroy_image(r, &r.taa.counts[i])
 	}
