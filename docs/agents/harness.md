@@ -265,15 +265,20 @@ active light count, cluster overflow, atlas weight, text counters, and debug
 line counts. `state.renderer.bake` reports the
 bake status (`missing`, `stale`, `current`, or `failed`), the current key, the
 artifact key, format and tool versions, atlas and probe counts, probe spacing,
-artifact and GPU bytes, bake time, and the load error. `state.render_digest`
+artifact and GPU bytes, and the load error. `state.render_digest`
 covers target extent, camera, boxes, emissive strengths, point lights, jitter,
 atlas weight, clip height, shadow visibility, bake key, bake status, and view
 flags. `setup.renderer.shader_digest` covers the embedded SPIR-V.
 
 ## Bake artifact
 
-The renderer loads `build/bake/arena.hbake` by default. The bake tool that
-writes it belongs to a later change; until then the run reports
+The renderer loads `build/bake/arena.hbake` by default. `make bake` writes it
+from the static arena boxes, placed static bodies, and static fixtures; dynamic
+lamps and dynamic bodies never enter the bake. `bin/harbagsa-bake
+--probe-spacing 2` writes the 2 m fallback. The tool reports its bake time, ray
+counts, static light count, byte sizes, and invalid and dilated texels. The
+artifact stores zero bake time so identical inputs produce identical bytes.
+Without the artifact, a run reports
 `state.renderer.bake.status = "missing"` and renders the direct path only.
 
 Use `--bake PATH` on `run` or `session` to load another artifact:
