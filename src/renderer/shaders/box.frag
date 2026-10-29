@@ -59,8 +59,8 @@ struct LightmapFace {
     vec4 uv_rect;
 };
 
-layout(set = 0, binding = 11) uniform sampler2D lightmap_atlas;
-layout(set = 0, binding = 12) readonly buffer LightmapFaces {
+layout(set = 0, binding = 6) uniform sampler2D lightmap_atlas;
+layout(set = 0, binding = 7) readonly buffer LightmapFaces {
     LightmapFace faces[];
 } lightmap;
 
