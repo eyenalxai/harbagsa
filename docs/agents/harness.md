@@ -366,7 +366,7 @@ Supported fields:
   isolate the shadow term in a paired capture; a frame-budget run keeps it on.
 - `lightmap`: add the baked static lightmap term. It defaults true.
 - `probe`: add the baked probe term. It defaults true. Set both `lightmap` and
-  `probe` to false for a direct-light capture or performance run.
+  `probe` to false for a direct-light capture.
 - `clear`: restore every default. Set one field to `null` to reset only that field.
 
 A scenario declares `requires.renderer_debug`, or the run uses

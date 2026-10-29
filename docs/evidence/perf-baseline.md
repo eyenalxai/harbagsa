@@ -51,8 +51,8 @@ Before this change a perf frame passed a zeroed capture request to the draw
 path, so every measured frame read the colour target back and ran the per-pixel
 delta. `scenarios/perf.json` at 1280x720 reported an interval `p50` of 173.1 ms
 against a 0.68 ms GPU total and wrote 193 empty capture entries
-(`runs/perf-baseline`). After the fix the same scenario reports 0.695–0.750 ms
-and no capture entries (`runs/perf-720-1` to `runs/perf-720-3`). Do not compare
+(`runs/perf-baseline`). After the fix the same scenario reports 0.692–0.700 ms
+`p50` and no capture entries (`runs/perf-720-1` to `runs/perf-720-3`). Do not compare
 an interval measured before this fix with one measured after it.
 
 ### Rules for a new baseline
