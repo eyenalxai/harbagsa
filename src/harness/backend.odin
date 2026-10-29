@@ -26,7 +26,11 @@ Backend :: struct {
 		session: ^Session,
 		requests: []Capture_Request,
 	) -> ([]Capture_Result, string),
-	pick:     proc(ctx: rawptr, session: ^Session, at: [2]i32) -> (renderer.Pick_Hit, string),
+	pick:     proc(
+		ctx: rawptr,
+		session: ^Session,
+		at: [2]i32,
+	) -> (renderer.Pick_Hit, renderer.Pick_Failure, string),
 	gpu_times: proc(ctx: rawptr) -> perf.Gpu_Times,
 	snapshot:  proc(ctx: rawptr) -> Backend_Snapshot,
 	setup:     proc(ctx: rawptr) -> renderer.Setup_Report,
@@ -216,7 +220,26 @@ backend_scene :: proc(data: ^Backend_Data, session: ^Session, alpha: f32) -> ren
 		static,
 	)
 	perf.mark(&session.perf.state, .Build)
+	data.renderer.recorder = &session.perf.state.recorder
 	return scene
+}
+
+// The live window's events still belong to whichever frame runs next, so a
+// pick drains them before it draws. Offscreen sessions own no window.
+@(private)
+backend_poll :: proc(data: ^Backend_Data, session: ^Session) -> bool {
+	if !data.present {
+		return true
+	}
+	events := platform.poll_events(&data.window)
+	if events.quit {
+		session.quit = true
+		return false
+	}
+	if events.resized {
+		renderer.notify_resize(&data.renderer)
+	}
+	return true
 }
 
 @(private)
@@ -226,19 +249,18 @@ backend_pick :: proc(
 	at: [2]i32,
 ) -> (
 	renderer.Pick_Hit,
+	renderer.Pick_Failure,
 	string,
 ) {
 	data := cast(^Backend_Data)ctx
+	if !backend_poll(data, session) {
+		return {}, .Command, "session is closed"
+	}
 	scene := backend_scene(data, session, session.alpha)
 	scene.pick_at = at
 	scene.force_tlas = true
 	scene.unjittered = true
-	data.renderer.recorder = &session.perf.state.recorder
-	hit, pick_error := renderer.pick(&data.renderer, scene)
-	if pick_error != "" {
-		return {}, pick_error
-	}
-	return hit, ""
+	return renderer.pick(&data.renderer, scene)
 }
 
 @(private)
@@ -251,15 +273,8 @@ backend_render :: proc(
 	string,
 ) {
 	data := cast(^Backend_Data)ctx
-	if data.present {
-		events := platform.poll_events(&data.window)
-		if events.quit {
-			session.quit = true
-			return nil, ""
-		}
-		if events.resized {
-			renderer.notify_resize(&data.renderer)
-		}
+	if !backend_poll(data, session) {
+		return nil, ""
 	}
 
 	alpha := session.alpha
@@ -275,7 +290,6 @@ backend_render :: proc(
 			return nil, format_error("text atlas did not settle")
 		}
 	}
-	data.renderer.recorder = &session.perf.state.recorder
 	targets: renderer.Capture_Targets
 	views: renderer.Capture_Views
 	for request in requests {

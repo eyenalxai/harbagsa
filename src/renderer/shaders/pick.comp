@@ -21,11 +21,9 @@ layout(push_constant) uniform PushConstants {
 // alignment is one 16-byte block per row.
 layout(std430, set = 0, binding = 12) writeonly buffer PickOutput {
     vec4 hit_info;    // hit, instance, face, probe inside
-    vec4 sample_info; // distance, probe invalid, lightmap st x, lightmap st y
+    vec4 sample_info; // distance, probe invalid, reserved, reserved
     vec4 position;
     vec4 normal;
-    vec4 local_normal;
-    vec4 local_position;
     vec4 lightmap_rect;
     ivec4 lightmap_texel; // x, y, 0, 0
     ivec4 probe_base;     // x, y, z, 0
@@ -97,8 +95,6 @@ void main() {
     result.sample_info = vec4(distance, 0.0, 0.0, 0.0);
     result.position = vec4(world_position, 0.0);
     result.normal = vec4(normal, 0.0);
-    result.local_normal = vec4(local_normal, 0.0);
-    result.local_position = vec4(local_position, 0.0);
 
     // A box without a tile has no face rect; the placeholder atlas holds one
     // face, so the shader must not index it.
@@ -111,8 +107,6 @@ void main() {
         result.lightmap_rect = lightmap.faces[
             object.lightmap_slot * 6u + uint(face)
         ].uv_rect;
-        result.sample_info.z = tap.st.x;
-        result.sample_info.w = tap.st.y;
         result.lightmap_texel = ivec4(
             ivec2(floor(tap.uv * LIGHTMAP_ATLAS_SIZE)),
             0,

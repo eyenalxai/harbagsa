@@ -55,7 +55,6 @@ CAPTURE_FORMATS := []string{"png", "float", "raw", "stats", "profile"}
 SCHEMA_UNITS := [?]Schema_Unit {
 	{"_deg", "degrees"},
 	{"_px", "pixels"},
-	{"at", "pixels"},
 	{"_seconds", "seconds"},
 	{"_ms", "milliseconds"},
 	{"_m", "metres"},

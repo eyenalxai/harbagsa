@@ -310,14 +310,16 @@ capture extent with the origin at the top left. The renderer draws one frame
 with no capture, forces that frame's TLAS build, and traces the pixel's camera
 ray in a one-pixel compute pass. The pass evaluates the shared term include, so
 a pick names the same direct, shadow, lightmap, probe, and emissive values the
-lit pass wrote. The frame uses the unjittered camera and advances TAA history
-like a settle frame; a pick writes no capture and no render digest of its own.
+lit pass wrote. The frame uses the unjittered camera, consumes no jitter sample,
+and advances TAA history like a settle frame; a pick writes no capture and no
+render digest of its own.
 
 A hit carries:
 
 - `object`: the scene identity. Static arena boxes carry `kind: "static_box"`
-  and `index`. Placed objects carry `kind: "object"`, `id`, `name`, and
-  `prefab`. Spider boxes carry `kind: "spider"` and `index`.
+  and `index`. Placed objects carry `kind: "object"`, `id`, `prefab`, and
+  `name` when the object has one. Spider boxes carry `kind: "spider"` and
+  `index`.
 - `prefab`: the placed object's prefab, when there is one.
 - `distance`, `position`, and `normal`: the ray distance, world hit point, and
   world normal.
