@@ -52,6 +52,7 @@ Bake_Report :: struct {
 	gpu_bytes:      int    `json:"gpu_bytes"`,
 	mapped_boxes:   int    `json:"mapped_boxes"`,
 	unmapped_boxes: int    `json:"unmapped_boxes"`,
+	invalid_probes: int    `json:"invalid_probes"`,
 	bake_ms:        u32    `json:"bake_ms"`,
 	error:          string `json:"error,omitempty"`,
 }
@@ -91,6 +92,7 @@ Bake_Resources :: struct {
 	slots_memory:      vk.DeviceMemory,
 	states_buffer:     vk.Buffer,
 	states_memory:     vk.DeviceMemory,
+	states_bytes:      int,
 	volume_buffer:     vk.Buffer,
 	volume_memory:     vk.DeviceMemory,
 }
@@ -178,6 +180,7 @@ bake_report :: proc(r: ^Renderer) -> Bake_Report {
 		report.probes = int(header.probe_count)
 		report.probe_spacing = header.probe_spacing
 		report.artifact_bytes = len(r.bake.data.bytes)
+		report.invalid_probes = int(r.bake.data.stats.invalid_probes)
 		report.bake_ms = r.bake.data.stats.bake_ms
 	}
 	report.gpu_bytes = r.bake.gpu_bytes
@@ -292,6 +295,7 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 	) {
 		return false
 	}
+	r.bake.states_bytes = len(data.probe_states) * size_of(bake.Probe_State)
 
 	volume := Bake_Volume_Uniform {
 		min           = data.header.probe_min,
@@ -319,42 +323,6 @@ create_bake_resources :: proc(r: ^Renderer) -> bool {
 	r.bake.gpu_bytes += len(data.slots) * size_of(bake.Slot)
 	r.bake.gpu_bytes += len(data.probe_states) * size_of(bake.Probe_State)
 	r.bake.gpu_bytes += size_of(Bake_Volume_Uniform)
-	return true
-}
-
-@(private)
-// The descriptor set is written before a frame knows whether an artifact
-// exists. The shader never samples these stand-ins; a box without a slot skips
-// the fetch and the bake status reports the missing or failed load.
-create_bake_placeholder :: proc(r: ^Renderer) -> bool {
-	if !create_clamp_sampler(r, &r.bake.sampler) {
-		return false
-	}
-	pixel := [4]f16{}
-	pixel_bytes := ([^]u8)(&pixel)
-	image, image_ok := upload_texture(
-		r,
-		1,
-		1,
-		.R16G16B16A16_SFLOAT,
-		pixel_bytes[:size_of(pixel)],
-	)
-	if !image_ok {
-		return false
-	}
-	r.bake.lightmap = image
-	face := bake.Face{}
-	if !create_device_buffer(
-		r,
-		&face,
-		vk.DeviceSize(size_of(bake.Face)),
-		{.STORAGE_BUFFER},
-		&r.bake.faces_buffer,
-		&r.bake.faces_memory,
-	) {
-		return false
-	}
-	r.bake.faces_bytes = size_of(bake.Face)
 	return true
 }
 

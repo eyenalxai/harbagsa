@@ -52,6 +52,7 @@ record_scene :: proc(
 	debug := renderer_debug(r)
 	input.clip_height = debug.clip_height
 	input.lightmap = debug.lightmap
+	input.probes = debug.probes
 	if r.debug.active {
 		input.light_shadows = debug.light_shadows
 	}
@@ -63,7 +64,7 @@ record_scene :: proc(
 	if !update_camera(r, input) {
 		return false
 	}
-	if !write_object_data(r, input.boxes, input.box_keys, input.lightmap) {
+	if !write_object_data(r, input.boxes, input.box_keys, input.lightmap, input.probes) {
 		return false
 	}
 

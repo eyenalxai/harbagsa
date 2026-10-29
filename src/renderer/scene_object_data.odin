@@ -10,7 +10,7 @@ write_object_data :: proc(
 	r: ^Renderer,
 	boxes: []geometry.Box,
 	keys: []u64,
-	lightmap_enabled: bool,
+	lightmap_enabled, probes_enabled: bool,
 ) -> bool {
 	taa := &r.taa
 	data := cast([^]Object_Data)r.scene.object_mapped[r.frame_index]
@@ -44,6 +44,7 @@ write_object_data :: proc(
 			previous = taa.prev_models[index]
 		}
 		slot := INVALID_LIGHTMAP_SLOT
+		use_probes := u32(0)
 		if lightmap_enabled && keys[index] != bake.NO_BOX_KEY {
 			if found, ok := bake_slot_for(r, keys[index]); ok {
 				slot = found
@@ -52,11 +53,14 @@ write_object_data :: proc(
 				r.bake.unmapped_boxes += 1
 			}
 		}
+		if probes_enabled && keys[index] == bake.NO_BOX_KEY {
+			use_probes = 1
+		}
 		data[index] = Object_Data {
 			model = model,
 			prev_model = previous,
 			color = {box.color.x, box.color.y, box.color.z, box.emissive},
-			lightmap = {slot, 0, 0, 0},
+			lightmap = {slot, use_probes, 0, 0},
 		}
 		taa.prev_models[index] = model
 	}

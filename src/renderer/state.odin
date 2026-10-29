@@ -79,6 +79,7 @@ Debug_Report :: struct {
 	clip_height:      f32  `json:"clip_height"`,
 	light_shadows:    bool `json:"light_shadows"`,
 	lightmap:         bool `json:"lightmap"`,
+	probes:           bool `json:"probes"`,
 }
 
 Setup_Report :: struct {
@@ -129,6 +130,7 @@ renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
 			clip_height = debug_effective.clip_height,
 			light_shadows = debug_effective.light_shadows,
 			lightmap = debug_effective.lightmap,
+			probes = debug_effective.probes,
 		},
 	}
 	if r.debug.active && r.debug.history_weight >= 0 {
