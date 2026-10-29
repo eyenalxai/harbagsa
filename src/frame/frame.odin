@@ -106,9 +106,11 @@ build :: proc(
 		}
 		append(&scratch.box_keys, key)
 	}
+	spider_start := len(scratch.box_keys)
 	spider_boxes(&scratch.boxes, snapshot, options.alpha)
-	for len(scratch.box_keys) < len(scratch.boxes) {
-		append(&scratch.box_keys, bake.NO_BOX_KEY)
+	resize(&scratch.box_keys, len(scratch.boxes))
+	for index in spider_start ..< len(scratch.box_keys) {
+		scratch.box_keys[index] = bake.NO_BOX_KEY
 	}
 	scene.boxes = scratch.boxes[:]
 	scene.box_keys = scratch.box_keys[:]

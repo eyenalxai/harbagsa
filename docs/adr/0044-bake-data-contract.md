@@ -48,14 +48,19 @@ never a fill value.
 - **Runtime resources.** The lightmap image and sampler, the probe irradiance
   and moment images, the shared linear clamp sampler, the face and slot buffers,
   the probe state buffer, and the probe volume buffer are created with the
-  renderer and destroyed with it. A rejected or missing artifact creates none.
+  renderer and destroyed with it. A rejected or missing artifact creates no bake
+  data and reports `missing` or `failed`. The renderer still creates a one-texel
+  image, one zero face, and the sampler so the scene descriptor set is complete;
+  no fragment samples those stand-ins because a box with no slot skips the
+  lightmap fetch.
 - **Loader source.** The runtime reads `build/bake/arena.hbake` by default. The
   harness accepts `--bake PATH` so a loader fixture or a build from another
   checkout can be exercised. A missing file is `missing`; a parse failure is
   `failed` with the loader error. Neither falls back to black or to an old bake.
 - **Observability.** `state.renderer.bake` reports the status, the current key,
   the artifact key, format and tool versions, atlas and probe counts, spacing,
-  artifact and GPU bytes, bake time, and the load error. The render digest
+  artifact and GPU bytes, the mapped and unmapped static box counts, bake time,
+  and the load error. The render digest
   includes the current key and the applied status, so two bakes cannot compare as
   the same image.
 
@@ -83,8 +88,9 @@ never a fill value.
   replaces it.
 - `src:bake` is compiled by `make check` and imported by the frame and the
   renderer. It does not import either package, so the bake tool can share it.
-- No descriptor binding or shader sample reads the new resources yet; the
-  lightmap and probe samplers are introduced by their sampling tickets.
+- Static boxes sample the lightmap atlas from the lit pass; dynamic boxes have
+  no lightmap slot and fall back to zero indirect until the probe gather lands.
+  No descriptor binding or shader sample reads the probe resources yet.
 - The design guide, `README.md`, `GLOSSARY.md`, and ADR 0042 still describe the
   removed dynamic DDGI field and ban baked light or textures. This ADR starts
   the replacement but does not edit those pages; #386 owns that cleanup. Do not
