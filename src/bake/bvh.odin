@@ -35,6 +35,7 @@ bvh_build :: proc(static: Static, allocator: mem.Allocator) -> (Bvh, Build_Error
 		return {}, .No_Static_Boxes
 	}
 	bvh := Bvh {
+		nodes     = make([dynamic]Bvh_Node, 0, 0, allocator),
 		order     = make([]u32, count, allocator),
 		boxes     = static.boxes,
 		rotations = make([]DQuat, count, allocator),
@@ -215,7 +216,7 @@ bounds_union :: proc(a, b: Bounds) -> Bounds {
 @(private)
 bounds_finite :: proc(lower, upper: DVec3) -> bool {
 	for index in 0 ..< 3 {
-		if !is_finite(lower[index]) || !is_finite(upper[index]) {
+		if !finite_f64(lower[index]) || !finite_f64(upper[index]) {
 			return false
 		}
 		if lower[index] > upper[index] {
@@ -223,8 +224,4 @@ bounds_finite :: proc(lower, upper: DVec3) -> bool {
 		}
 	}
 	return true
-}
-
-is_finite :: proc(value: f64) -> bool {
-	return value == value && value < 1e300 && value > -1e300
 }

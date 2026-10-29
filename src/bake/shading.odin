@@ -1,5 +1,4 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the lightmap and probe bakes share this
 package bake
 
 import "core:math"
@@ -79,16 +78,8 @@ shade_hit :: proc(static: Static, bvh: ^Bvh, ray: Ray, hit: Hit) -> (radiance: [
 	return
 }
 
-// The GLSL and Odin encoders are one contract. The shader mirror is the oct
-// pair in docs/research/lightmap-boxes.md.
-oct_encode :: proc(direction: DVec3) -> [2]f64 {
-	value := dv_mul(direction, 1.0 / (math.abs(direction.x) + math.abs(direction.y) + math.abs(direction.z)))
-	if value.y < 0 {
-		value.x, value.z = oct_wrap(value.x, value.z)
-	}
-	return {value.x * 0.5 + 0.5, value.z * 0.5 + 0.5}
-}
-
+// The shader mirror must use the same octahedral pair. The bake only decodes
+// texel normals; the sampler side encodes the surface normal.
 oct_decode :: proc(uv: [2]f64) -> DVec3 {
 	x := uv.x * 2.0 - 1.0
 	y := uv.y * 2.0 - 1.0

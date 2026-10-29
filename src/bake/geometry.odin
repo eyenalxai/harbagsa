@@ -208,3 +208,7 @@ seed_for :: proc(kind, index: u64) -> u64 {
 unit_from_hash :: proc(value: u64) -> f64 {
 	return f64(value >> 11) * (1.0 / f64(u64(1) << 53))
 }
+
+finite_f64 :: proc(value: f64) -> bool {
+	return value == value && value < 1e300 && value > -1e300
+}

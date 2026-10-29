@@ -98,6 +98,7 @@ run :: proc(args: []string) -> int {
 default_threads :: proc() -> int {
 	_, logical, ok := info.cpu_core_count()
 	if !ok || logical < 1 {
+		fmt.eprintln("harbagsa-bake: cannot read the CPU count; using one thread")
 		return 1
 	}
 	return clamp(logical, 1, bake.MAX_THREADS)

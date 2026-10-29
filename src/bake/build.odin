@@ -122,27 +122,6 @@ build :: proc(
 }
 
 @(private)
-quality_supported :: proc(quality: Quality) -> bool {
-	if quality.atlas_size == 0 || quality.atlas_size > MAX_ATLAS_DIM {
-		return false
-	}
-	if quality.texels_per_meter == 0 || quality.texels_per_meter > 64 {
-		return false
-	}
-	if quality.gutter_texels != GUTTER_TEXELS || quality.min_chart != MIN_CHART_TEXELS {
-		return false
-	}
-	if quality.bounces != BOUNCES || quality.lightmap_rays == 0 || quality.probe_rays == 0 {
-		return false
-	}
-	if quality.probe_texels != PROBE_TEXELS {
-		return false
-	}
-	return quality.probe_spacing == PROBE_SPACING ||
-		quality.probe_spacing == PROBE_SPACING_FALLBACK
-}
-
-@(private)
 static_supported :: proc(static: Static) -> Build_Error {
 	if len(static.boxes) == 0 {
 		return .No_Static_Boxes
@@ -159,7 +138,7 @@ static_supported :: proc(static: Static) -> Build_Error {
 		   !vec3_finite({box.rotation.x, box.rotation.y, box.rotation.z}) {
 			return .Bad_Box
 		}
-		if !finite(f64(box.rotation.w)) || !finite(f64(box.emissive)) || box.emissive < 0 {
+		if !finite_f64(f64(box.rotation.w)) || !finite_f64(f64(box.emissive)) || box.emissive < 0 {
 			return .Bad_Box
 		}
 	}
@@ -167,9 +146,9 @@ static_supported :: proc(static: Static) -> Build_Error {
 		if !vec3_finite(light.position) || !vec3_finite(light.color) {
 			return .Bad_Light
 		}
-		if !finite(f64(light.intensity)) || light.intensity < 0 ||
-		   !finite(f64(light.range)) || light.range <= 0 ||
-		   !finite(f64(light.emissive)) || light.emissive < 0 {
+		if !finite_f64(f64(light.intensity)) || light.intensity < 0 ||
+		   !finite_f64(f64(light.range)) || light.range <= 0 ||
+		   !finite_f64(f64(light.emissive)) || light.emissive < 0 {
 			return .Bad_Light
 		}
 	}
@@ -178,10 +157,5 @@ static_supported :: proc(static: Static) -> Build_Error {
 
 @(private)
 vec3_finite :: proc(value: [3]f32) -> bool {
-	return finite(f64(value.x)) && finite(f64(value.y)) && finite(f64(value.z))
-}
-
-@(private)
-finite :: proc(value: f64) -> bool {
-	return value == value && value < 1e300 && value > -1e300
+	return finite_f64(f64(value.x)) && finite_f64(f64(value.y)) && finite_f64(f64(value.z))
 }
