@@ -48,17 +48,7 @@ ray_cast :: proc(bvh: ^Bvh, ray: Ray, tmin, tmax: f64) -> (Hit, bool) #no_bounds
 			}
 			continue
 		}
-		if depth + 2 <= BVH_MAX_DEPTH {
-			near_child := node.left
-			far_child := node.right
-			if ray.origin[int(node.axis)] > node.split {
-				near_child = node.right
-				far_child = node.left
-			}
-			stack[depth] = far_child
-			stack[depth + 1] = near_child
-			depth += 2
-		}
+		push_children(&stack, &depth, node, ray)
 	}
 	return best, found
 }
@@ -92,19 +82,32 @@ shadow_occluded :: proc(bvh: ^Bvh, ray: Ray, tmin, tmax: f64) -> bool #no_bounds
 			}
 			continue
 		}
-		if depth + 2 <= BVH_MAX_DEPTH {
-			near_child := node.left
-			far_child := node.right
-			if ray.origin[int(node.axis)] > node.split {
-				near_child = node.right
-				far_child = node.left
-			}
-			stack[depth] = far_child
-			stack[depth + 1] = near_child
-			depth += 2
-		}
+		push_children(&stack, &depth, node, ray)
 	}
 	return false
+}
+
+// The near child is pushed last so the stack pops it first. The split plane is
+// only a traversal heuristic; both children are still tested.
+@(private)
+push_children :: #force_inline proc(
+	stack: ^[BVH_MAX_DEPTH]u32,
+	depth: ^int,
+	node: Bvh_Node,
+	ray: Ray,
+) #no_bounds_check {
+	if depth^ + 2 > BVH_MAX_DEPTH {
+		return
+	}
+	near_child := node.left
+	far_child := node.right
+	if ray.origin[int(node.axis)] > node.split {
+		near_child = node.right
+		far_child = node.left
+	}
+	stack[depth^] = far_child
+	stack[depth^ + 1] = near_child
+	depth^ += 2
 }
 
 @(private)

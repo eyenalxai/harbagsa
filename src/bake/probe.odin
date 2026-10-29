@@ -5,7 +5,6 @@ import "core:math"
 import "core:mem"
 
 PROBE_KIND :: u64(2)
-PROBE_GRID :: 8
 
 Probe_Result :: struct {
 	irradiance:    []u8,
@@ -15,8 +14,6 @@ Probe_Result :: struct {
 	spacing:       f32,
 	counts:        [3]u32,
 	columns:       u32,
-	atlas_width:   u32,
-	atlas_height:  u32,
 	rays:          u64,
 	shadow_rays:   u64,
 	invalid_probes: int,
@@ -33,7 +30,6 @@ Probe_Work :: struct {
 	counts:        [3]int,
 	count:         int,
 	columns:       int,
-	atlas_width:   int,
 	rays:          int,
 	workers:       int,
 	directions:    []DVec3,
@@ -62,18 +58,11 @@ probe_bake :: proc(
 		return {}, .Probe_Count
 	}
 	columns := probe_columns(count)
-	atlas_width := columns * PROBE_GRID
-	atlas_height := (count / columns) * PROBE_GRID
-	if atlas_width <= 0 || atlas_height <= 0 {
-		return {}, .Probe_Count
-	}
 
 	result.min = min
 	result.spacing = quality.probe_spacing
 	result.counts = counts
 	result.columns = u32(columns)
-	result.atlas_width = u32(atlas_width)
-	result.atlas_height = u32(atlas_height)
 	result.states = make([]Probe_State, count, allocator)
 	mem.set(raw_data(result.states), 0, count * size_of(Probe_State))
 	irradiance := make([]f16, count * PROBE_TEXEL_COUNT * 4, allocator)
@@ -107,7 +96,6 @@ probe_bake :: proc(
 		counts         = {int(counts.x), int(counts.y), int(counts.z)},
 		count          = count,
 		columns        = columns,
-		atlas_width    = atlas_width,
 		rays           = rays,
 		workers        = threads,
 		directions     = directions,
@@ -128,8 +116,8 @@ probe_bake :: proc(
 		result.invalid_probes += value
 	}
 	result.rays = u64(count - result.invalid_probes) * u64(rays)
-	result.irradiance = f16_to_bytes(irradiance, allocator)
-	result.moments = f16_to_bytes(moments, allocator)
+	result.irradiance = f16_slice_to_bytes(irradiance, allocator)
+	result.moments = f16_slice_to_bytes(moments, allocator)
 	return result, .None
 }
 
@@ -194,6 +182,10 @@ probe_worker :: proc(job: rawptr, worker: int) #no_bounds_check {
 	work.shadow_counts[worker] = shadows
 }
 
+// The stored octahedral irradiance and depth moments use the same DDGI
+// encoding as the gather: irradiance is (radiance/2)^(1/5), and the moments
+// are halved. The gather's final 2x factor restores the lightmap scale, so a
+// sampler and a baker change must be made together.
 @(private)
 probe_blend :: proc(
 	work: ^Probe_Work,
@@ -206,9 +198,9 @@ probe_blend :: proc(
 	normals: [PROBE_TEXEL_COUNT]DVec3
 	sum_x, sum_y, sum_z: [PROBE_TEXEL_COUNT]f64
 	cosine_sum, distance_sum, distance2_sum, distance_weight: [PROBE_TEXEL_COUNT]f64
-	for ty in 0 ..< PROBE_GRID {
-		for tx in 0 ..< PROBE_GRID {
-			normals[ty * PROBE_GRID + tx] = oct_texel_normal(tx, ty, PROBE_GRID)
+	for ty in 0 ..< PROBE_TEXELS {
+		for tx in 0 ..< PROBE_TEXELS {
+			normals[ty * PROBE_TEXELS + tx] = oct_texel_normal(tx, ty, PROBE_TEXELS)
 		}
 	}
 
@@ -235,9 +227,9 @@ probe_blend :: proc(
 		}
 	}
 
-	for ty in 0 ..< PROBE_GRID {
-		for tx in 0 ..< PROBE_GRID {
-			texel := ty * PROBE_GRID + tx
+	for ty in 0 ..< PROBE_TEXELS {
+		for tx in 0 ..< PROBE_TEXELS {
+			texel := ty * PROBE_TEXELS + tx
 			denominator := 2.0 * max(cosine_sum[texel], 1e-9)
 			encoded := DVec3 {
 				pow_ratio(sum_x[texel] / denominator, 1.0 / PROBE_IRRADIANCE_GAMMA),
@@ -245,7 +237,7 @@ probe_blend :: proc(
 				pow_ratio(sum_z[texel] / denominator, 1.0 / PROBE_IRRADIANCE_GAMMA),
 			}
 			depth_denominator := 2.0 * max(distance_weight[texel], 1e-9)
-			pixel := probe_atlas_pixel(probe, tx, ty, work.columns, PROBE_GRID)
+			pixel := probe_atlas_pixel(probe, tx, ty, work.columns, PROBE_TEXELS)
 			work.irradiance[pixel * 4 + 0] = f16(encoded.x)
 			work.irradiance[pixel * 4 + 1] = f16(encoded.y)
 			work.irradiance[pixel * 4 + 2] = f16(encoded.z)
@@ -347,14 +339,4 @@ inside_any_box :: proc(static: Static, bvh: ^Bvh, point: DVec3) -> bool {
 		}
 	}
 	return false
-}
-
-@(private)
-f16_to_bytes :: proc(values: []f16, allocator: mem.Allocator) -> []u8 {
-	bytes := make([]u8, len(values) * 2, allocator)
-	output := cast([^]f16)raw_data(bytes)
-	for value, index in values {
-		output[index] = value
-	}
-	return bytes
 }

@@ -1,5 +1,6 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the frame and the renderer share this package
+#+vet !unused-procedures // the bake tool and renderer read the public API
+// The runtime, the frame input, and the bake tool share this package.
 package bake
 
 import "src:geometry"
@@ -55,6 +56,28 @@ DEFAULT_QUALITY :: Quality {
 	bounces          = BOUNCES,
 	probe_spacing    = PROBE_SPACING,
 	probe_texels     = PROBE_TEXELS,
+}
+
+// The loader and the writer share this rule so a fresh artifact cannot be
+// rejected by the reader that already accepted its own quality block.
+quality_supported :: proc(quality: Quality) -> bool {
+	if quality.atlas_size == 0 || quality.atlas_size > MAX_ATLAS_DIM {
+		return false
+	}
+	if quality.texels_per_meter == 0 || quality.texels_per_meter > 64 {
+		return false
+	}
+	if quality.gutter_texels != GUTTER_TEXELS || quality.min_chart != MIN_CHART_TEXELS {
+		return false
+	}
+	if quality.bounces != BOUNCES || quality.lightmap_rays == 0 || quality.probe_rays == 0 {
+		return false
+	}
+	if quality.probe_texels != PROBE_TEXELS {
+		return false
+	}
+	return quality.probe_spacing == PROBE_SPACING ||
+		quality.probe_spacing == PROBE_SPACING_FALLBACK
 }
 
 Box_Source :: enum u8 {

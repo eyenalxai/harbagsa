@@ -189,9 +189,22 @@ copy_texel :: proc(atlas: []f32, destination, source: int) {
 	}
 }
 
+f16_buffer :: proc(count: int, allocator: mem.Allocator) -> (bytes: []u8, values: [^]f16) {
+	bytes = make([]u8, count * 2, allocator)
+	values = cast([^]f16)raw_data(bytes)
+	return
+}
+
+f16_slice_to_bytes :: proc(values: []f16, allocator: mem.Allocator) -> []u8 {
+	bytes, output := f16_buffer(len(values), allocator)
+	for value, index in values {
+		output[index] = value
+	}
+	return bytes
+}
+
 atlas_to_bytes :: proc(atlas: []f32, allocator: mem.Allocator) -> []u8 {
-	bytes := make([]u8, len(atlas) * 2, allocator)
-	values := cast([^]f16)raw_data(bytes)
+	bytes, values := f16_buffer(len(atlas), allocator)
 	for value, index in atlas {
 		values[index] = f16(value)
 	}
