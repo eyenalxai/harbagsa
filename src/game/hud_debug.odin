@@ -139,12 +139,13 @@ hud_debug_state_update :: proc(
 	}
 	status := bake_status
 	if status == "" {
-		status = "none"
+		status = "missing"
 	}
 	hud.rows[11] = {
-		kind  = .Detail,
-		label = "Bake",
-		value = status,
+		kind    = .Detail,
+		label   = "Bake",
+		value   = line_format(&hud.storage, 11, "%-7s", status),
+		numeric = true,
 	}
 	hud.view.rows = hud.rows[:HUD_INSPECTOR_ROW_COUNT]
 }

@@ -3,18 +3,9 @@
 package bake
 
 import "core:mem"
-import "core:sys/info"
 import "core:time"
 
 MAX_THREADS :: 256
-
-default_threads :: proc() -> int {
-	_, logical, ok := info.cpu_core_count()
-	if !ok || logical < 1 {
-		return 1
-	}
-	return clamp(logical, 1, MAX_THREADS)
-}
 
 build :: proc(
 	static: Static,

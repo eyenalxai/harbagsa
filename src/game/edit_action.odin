@@ -25,7 +25,8 @@ edit_apply :: proc(
 	case Palette_Step:
 		return edit_palette_step(dm, value.delta)
 	case Palette_Flip_Body:
-		return edit_palette_flip_body(dm)
+		palette_flip_body(&dm.palette)
+		return edit_ok()
 	case Palette_Pick:
 		return edit_palette_pick(dm, sim)
 	case Select_Object:

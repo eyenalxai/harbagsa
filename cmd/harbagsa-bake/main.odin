@@ -6,6 +6,7 @@ import "core:os"
 import "core:path/filepath"
 import "core:strconv"
 import "core:strings"
+import "core:sys/info"
 
 import "src:bake"
 import "src:game"
@@ -19,7 +20,7 @@ main :: proc() {
 run :: proc(args: []string) -> int {
 	output := DEFAULT_OUTPUT
 	spacing := f32(bake.PROBE_SPACING)
-	threads := bake.default_threads()
+	threads := default_threads()
 
 	index := 0
 	for index < len(args) {
@@ -91,6 +92,17 @@ run :: proc(args: []string) -> int {
 	}
 	print_report(output, spacing, threads, report)
 	return 0
+}
+
+
+@(private)
+default_threads :: proc() -> int {
+	_, logical, ok := info.cpu_core_count()
+	if !ok || logical < 1 {
+		fmt.eprintln("harbagsa-bake: cannot read the CPU count; using one thread")
+		return 1
+	}
+	return clamp(logical, 1, bake.MAX_THREADS)
 }
 
 @(private)

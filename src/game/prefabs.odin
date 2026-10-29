@@ -210,8 +210,6 @@ prefab_has_light :: proc(id: Prefab_Id) -> bool {
 	return prefab(id).light.active
 }
 
-// A light follows its body. A static body is a static fixture; a dynamic body
-// is a dynamic lamp.
 prefab_name :: proc(id: Prefab_Id) -> string {
 	return PREFABS[id].name
 }
