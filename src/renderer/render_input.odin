@@ -37,7 +37,5 @@ Render_Input :: struct {
 	// A pick frame draws the unjittered camera, forces the TLAS build, and
 	// records one compute dispatch into the result buffer. It carries no
 	// capture and replaces no render digest.
-	pick_at:      Maybe([2]i32),
-	force_tlas:   bool,
-	unjittered:   bool,
+	pick_at: Maybe([2]i32),
 }

@@ -75,7 +75,7 @@ pick :: proc(
 ) {
 	at, has_at := input.pick_at.?
 	if !has_at {
-		return {}, .Command, "pick has no pixel"
+		return {}, .Command, fmt.aprintf("%s", "pick has no pixel", allocator = context.allocator)
 	}
 	if at.x < 0 || at.y < 0 ||
 	   at.x >= i32(r.target.config.width) || at.y >= i32(r.target.config.height) {
@@ -97,7 +97,7 @@ pick :: proc(
 			continue
 		}
 		if begin_status != .Ok {
-			return {}, .Frame, "pick frame failed"
+			return {}, .Frame, fmt.aprintf("%s", "pick frame failed", allocator = context.allocator)
 		}
 		picked_index = r.frame_index
 		end_status := end_frame(r, frame)
@@ -105,18 +105,18 @@ pick :: proc(
 			continue
 		}
 		if end_status != .Ok {
-			return {}, .Frame, "pick frame failed"
+			return {}, .Frame, fmt.aprintf("%s", "pick frame failed", allocator = context.allocator)
 		}
 		recorded = true
 		break
 	}
 	if !recorded {
-		return {}, .Frame, "pick frame skipped"
+		return {}, .Frame, fmt.aprintf("%s", "pick frame skipped", allocator = context.allocator)
 	}
 
 	mapped := r.scene.pick_mapped[picked_index]
 	if mapped == nil {
-		return {}, .Frame, "pick result buffer is not mapped"
+		return {}, .Frame, fmt.aprintf("%s", "pick result buffer is not mapped", allocator = context.allocator)
 	}
 	raw := cast(^Pick_Raw)mapped
 	hit.hit = raw.hit_info[0] != 0
@@ -153,9 +153,12 @@ record_pick :: proc(
 		log.error("renderer: the pick pipeline is not created")
 		return false
 	}
-	if mapped := r.scene.pick_mapped[r.frame_index]; mapped != nil {
-		mem.set(mapped, 0, size_of(Pick_Raw))
+	mapped := r.scene.pick_mapped[r.frame_index]
+	if mapped == nil {
+		log.error("renderer: pick result buffer is not mapped")
+		return false
 	}
+	mem.set(mapped, 0, size_of(Pick_Raw))
 	vk.CmdBindPipeline(command_buffer, .COMPUTE, r.scene.pick_pipeline)
 	descriptor_set := r.scene.descriptor_sets[r.frame_index]
 	vk.CmdBindDescriptorSets(

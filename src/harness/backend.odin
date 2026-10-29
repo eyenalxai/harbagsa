@@ -254,12 +254,10 @@ backend_pick :: proc(
 ) {
 	data := cast(^Backend_Data)ctx
 	if !backend_poll(data, session) {
-		return {}, .Command, "session is closed"
+		return {}, .Command, format_error("%s", "session is closed")
 	}
 	scene := backend_scene(data, session, session.alpha)
 	scene.pick_at = at
-	scene.force_tlas = true
-	scene.unjittered = true
 	return renderer.pick(&data.renderer, scene)
 }
 
