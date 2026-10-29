@@ -23,14 +23,16 @@ Two constraints produce that look, and both are deliberate:
 ## The signature
 
 The one choice a competitor cannot paste in: a hard-edged box interior lit by
-movable coloured lamps, with soft range falloff on flat faces and overlay text
-that is exact on the pixel grid. Unlit boxes are black; only placed lamps and
-emissive boxes start light. One diffuse probe bounce carries that light into
-corners. Hard point-light shadows ground the props and walls. No cached or
-baked lighting competes with the lamps.
+coloured lamps, with soft range falloff on flat faces and overlay text that is
+exact on the pixel grid. Unlit boxes are black; only placed lamps and emissive
+boxes start light. A baked one-bounce indirect pass carries the static fixtures'
+light into corners: a lightmap atlas for static boxes and a baked probe volume
+for dynamic objects. Hard point-light shadows ground the props and walls. The
+baked layer never adds a fill and never carries a dynamic lamp.
 
-Defend it. A texture, a gloss, a bloom, a baked light, or a rounded corner
-removes it.
+Defend it. A surface texture, a gloss, a bloom, an ambient fill, a baked direct
+light, or a rounded corner removes it. A lighting-only lightmap or probe sample
+is allowed; a material texture is not.
 
 ## Files
 

@@ -210,19 +210,8 @@ prefab_has_light :: proc(id: Prefab_Id) -> bool {
 	return prefab(id).light.active
 }
 
-// A light follows a moving body. Every lamp is therefore dynamic on every
-// creation and conversion path.
-prefab_body_mode :: proc(id: Prefab_Id, requested: Body_Mode) -> Body_Mode {
-	if prefab_has_light(id) {
-		return .Dynamic
-	}
-	return requested
-}
-
-prefab_accepts_body :: proc(id: Prefab_Id, mode: Body_Mode) -> bool {
-	return mode == .Dynamic || !prefab_has_light(id)
-}
-
+// A light follows its body. A static body is a static fixture; a dynamic body
+// is a dynamic lamp.
 prefab_name :: proc(id: Prefab_Id) -> string {
 	return PREFABS[id].name
 }

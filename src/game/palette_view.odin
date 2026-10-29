@@ -113,7 +113,8 @@ palette_light_preview :: proc(palette: ^ui.Palette, debug: ^Debug_Mode, count: i
 write_light_line :: proc(buffer: []u8, light: Light_Settings) -> int {
 	text := fmt.bprintf(
 		buffer,
-		"%s · %.1f · %.0f m",
+		"%s · %s · %.1f · %.0f m",
+		light.kind == .Static_Fixture ? "static" : "dynamic",
 		light_color_name(light.color),
 		light.intensity,
 		light.range,

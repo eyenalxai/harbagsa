@@ -14,6 +14,7 @@ History_Reset_Reason :: enum {
 	Debug_Override,
 	Player_Reset,
 	Scene_Reset,
+	Bake_Publish,
 }
 
 reset_reason_name :: proc(reason: History_Reset_Reason) -> string {
@@ -36,6 +37,8 @@ reset_reason_name :: proc(reason: History_Reset_Reason) -> string {
 		return "player_reset"
 	case .Scene_Reset:
 		return "scene_reset"
+	case .Bake_Publish:
+		return "bake_publish"
 	}
 	return "none"
 }

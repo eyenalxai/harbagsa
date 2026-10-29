@@ -165,6 +165,9 @@ object_box :: proc(object: Placed_Object) -> geometry.Box {
 
 simulation_create_object :: proc(sim: ^Simulation, spawn: Object_Spawn) -> Object_Id {
 	light := spawn_light(spawn)
+	if light.active {
+		light.kind = lamp_kind_for_body(spawn.body_mode)
+	}
 	color := prefab_color(spawn.prefab)
 	if light.active {
 		color = light_color4(light.color)
@@ -241,12 +244,6 @@ simulation_convert_object :: proc(sim: ^Simulation, id: Object_Id, mode: Body_Mo
 		return false
 	}
 	object := &sim.objects[index]
-	if object.light.active {
-		return false
-	}
-	if !prefab_accepts_body(object.prefab, mode) {
-		return false
-	}
 	if object.body_mode == mode {
 		return true
 	}
@@ -270,6 +267,9 @@ simulation_convert_object :: proc(sim: ^Simulation, id: Object_Id, mode: Body_Mo
 	b3.DestroyBody(object.body)
 	object.body = body
 	object.body_mode = mode
+	if object.light.active {
+		object.light.kind = lamp_kind_for_body(mode)
+	}
 	return true
 }
 

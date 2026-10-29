@@ -56,6 +56,8 @@ Bake_Report :: struct {
 	dilated_probes: int    `json:"dilated_probes"`,
 	skipped_probes: int    `json:"skipped_probes"`,
 	bake_ms:        u32    `json:"bake_ms"`,
+	build_ms:       u32    `json:"build_ms"`,
+	publish_ms:     u32    `json:"publish_ms"`,
 	error:          string `json:"error,omitempty"`,
 }
 
@@ -83,6 +85,8 @@ Bake_Resources :: struct {
 	unmapped_boxes: int,
 	dilated_probes: int,
 	skipped_probes: int,
+	build_ms:       u32,
+	publish_ms:     u32,
 
 	lightmap:          Image,
 	probe_irradiance:  Image,
@@ -191,30 +195,20 @@ bake_report :: proc(r: ^Renderer) -> Bake_Report {
 	report.unmapped_boxes = r.bake.unmapped_boxes
 	report.dilated_probes = r.bake.dilated_probes
 	report.skipped_probes = r.bake.skipped_probes
+	report.build_ms = r.bake.build_ms
+	report.publish_ms = r.bake.publish_ms
 	return report
 }
 
 destroy_bake :: proc(r: ^Renderer) {
-	b := &r.bake
-	destroy_image(r, &b.lightmap)
-	destroy_image(r, &b.probe_irradiance)
-	destroy_image(r, &b.probe_moments)
-	if r.device != nil && b.sampler != 0 {
-		vk.DestroySampler(r.device, b.sampler, nil)
+	destroy_bake_resources(r)
+	if r.bake.path != "" {
+		delete(r.bake.path, r.allocator)
 	}
-	b.sampler = 0
-	destroy_buffer(r, &b.faces_buffer, &b.faces_memory)
-	destroy_buffer(r, &b.slots_buffer, &b.slots_memory)
-	destroy_buffer(r, &b.states_buffer, &b.states_memory)
-	destroy_buffer(r, &b.volume_buffer, &b.volume_memory)
-	bake.destroy(&b.data, r.allocator)
-	if b.path != "" {
-		delete(b.path, r.allocator)
+	if r.bake.error != "" {
+		delete(r.bake.error, r.allocator)
 	}
-	if b.error != "" {
-		delete(b.error, r.allocator)
-	}
-	b^ = {}
+	r.bake = {}
 }
 
 @(private)
@@ -358,11 +352,16 @@ bake_slot_for :: proc(r: ^Renderer, key: u64) -> (slot: u32, ok: bool) {
 }
 
 @(private)
-log_bake_error :: proc(r: ^Renderer, message: string) {
+set_bake_error :: proc(r: ^Renderer, message: string) {
 	r.bake.status = .Failed
 	if r.bake.error != "" {
 		delete(r.bake.error, r.allocator)
 	}
 	r.bake.error = fmt.aprintf("%s: %s", r.bake.path, message, allocator = r.allocator)
 	log.errorf("renderer: %s", r.bake.error)
+}
+
+@(private)
+log_bake_error :: proc(r: ^Renderer, message: string) {
+	set_bake_error(r, message)
 }

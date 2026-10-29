@@ -1,5 +1,10 @@
 # Dynamic-only lamps
 
+> Superseded by [ADR 0045](0045-mixed-lighting.md). Lamps now have a kind: a
+> static fixture uses a static body and a dynamic lamp uses a dynamic body. The
+> body control and the kind always move together. This page records the old
+> rule.
+
 Every lamp prefab uses a dynamic body. The Lamp, Light panel, and Beacon cannot become static through placement, palette selection, body conversion, duplication, undo, redo, or scene loading. Non-lamp prefabs keep both body modes.
 
 ## Why

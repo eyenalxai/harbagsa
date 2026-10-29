@@ -40,10 +40,15 @@ palette_set_light :: proc(palette: ^Palette, settings: Light_Settings) {
 }
 
 palette_set_body :: proc(palette: ^Palette, mode: Body_Mode) {
-	palette.body_mode = prefab_body_mode(palette_selected(palette^), mode)
+	palette.body_mode = mode
+	if prefab_has_light(palette_selected(palette^)) {
+		light := palette.light
+		light.kind = lamp_kind_for_body(mode)
+		palette.light = light
+	}
 }
 
 palette_flip_body :: proc(palette: ^Palette) {
 	mode := palette.body_mode == .Static ? Body_Mode.Dynamic : Body_Mode.Static
-	palette.body_mode = prefab_body_mode(palette_selected(palette^), mode)
+	palette_set_body(palette, mode)
 }

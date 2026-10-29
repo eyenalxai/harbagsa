@@ -33,6 +33,7 @@ Command_Kind :: enum {
 	Place,
 	Remove,
 	Get,
+	Bake,
 	Quit,
 }
 
@@ -173,6 +174,7 @@ Command :: struct {
 	scene:          Scene_Command,
 	place:          Place_Command,
 	remove:         Remove_Command,
+	bake:           Bake_Command,
 	get:            Get_Command,
 }
 

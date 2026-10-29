@@ -176,7 +176,7 @@ A light with a position, colour, intensity, and range. The renderer holds every 
 _Avoid_: Lamp (the prefab), bulb
 
 **Darkness**:
-The zero-light state. A surface with no direct point light, no probe bounce, and no emissive strength renders black. It is the intended default, not a missing light or a background.
+The zero-light state. A surface with no direct point light, no baked indirect, and no emissive strength renders black. It is the intended default, not a missing light or a background.
 _Avoid_: Ambient floor, fill light, black level
 
 **Point-light shadow**:
@@ -196,31 +196,73 @@ The forward lighting path that builds a light index list per cluster in a comput
 _Avoid_: Tiled forward, light grid
 
 **Indirect light (GI)**:
-Light that reaches a surface after one diffuse bounce from a current lamp. It is not a default fill: with no active lamp, it is zero. The current renderer carries one bounce in a probe field, not a path tracer.
-_Avoid_: Ambient, global illumination cache
+Light that reaches a surface after one diffuse bounce from a static fixture or a
+static emissive box. It is not a default fill: with no static light, it is zero.
+The renderer bakes one bounce into a lightmap atlas and a static probe volume;
+it is not a path tracer and it never contains a dynamic lamp.
+_Avoid_: Ambient, global illumination cache, DDGI
+
+**Static fixture**:
+A lamp whose kind is `Static_Fixture`. It has a static body. Its direct light
+and hard shadow are real-time; its one-bounce indirect is baked. The starting
+Lamp, Light panel, and Beacon are static fixtures.
+_Avoid_: Baked lamp, static light
+
+**Dynamic lamp**:
+A lamp whose kind is `Dynamic_Lamp`. It has a dynamic body. Its direct light and
+hard shadow are real-time and it contributes no indirect. New lamps default to
+this kind.
+_Avoid_: Movable light, realtime lamp
 
 **Probe**:
-One sample point in the indirect-light field. It traces 64 rays and stores an 8 x 8 octahedral irradiance and depth atlas.
+One baked sample point in the static indirect field. It stores an 8 x 8
+octahedral irradiance block and an 8 x 8 depth-moment block. The runtime never
+traces a probe ray.
 _Avoid_: Light sample, photon
 
 **Probe volume**:
-The axis-aligned grid of probes. One volume covers the arena at 2 m spacing: 20 x 3 x 20 probes. A probe inside a box is invalid.
+The axis-aligned grid of baked probes. One volume covers the arena at 1 m
+spacing by default (40 x 5 x 40) and at 2 m through the artifact quality block
+(20 x 3 x 20). A probe inside a static box is invalid; invalid probes are
+dilated from valid neighbours at load.
 _Avoid_: GI grid, light grid
 
 **Probe atlas**:
-The irradiance and depth maps for one probe. Irradiance uses an 8 x 8 octahedral map with gamma encoding; depth stores the first and second moments. The lit pass blends the eight surrounding probes.
+The shelf atlas holding every probe's irradiance and depth-moment block. The lit
+pass picks the four probes of the containing tetrahedron, applies the validity,
+normal-bias, facing, and Chebyshev tests, and decodes the stored radiance.
 _Avoid_: Irradiance map, probe texture
 
-**Probe pass**:
-The compute pass that traces probe rays and blends their atlas. It records after the TLAS and cluster passes and before the depth prepass.
-_Avoid_: GI pass, bake pass
+**Lightmap atlas**:
+One `RGBA16F` image with one slot and six center-to-center face rects per static
+box. The lit pass derives the face and UV from the local position and local face
+normal; it is lighting data, not a material texture.
+_Avoid_: Surface texture, albedo map
+
+**Bake key**:
+The hash of the static boxes, static fixtures, quality block, and tool version.
+It identifies one bake request. Dynamic lamps, crates, the spider, the camera,
+TAA, and the UI never enter it.
+_Avoid_: Scene hash, artifact hash
+
+**Bake artifact**:
+The versioned `.hbake` file holding the lightmap atlas, face rects, probe
+atlases, probe states, quality block, stats, and bake key. `make bake` writes it
+to `build/bake/arena.hbake`; it is generated, never committed.
+_Avoid_: Cache file, lightmap file
+
+**Bake state**:
+`current`, `stale`, `missing`, or `failed`. A static edit changes the key and
+reports `stale` while the old indirect stays bound; a publish makes it current.
+A missing or failed artifact adds no indirect and is never hidden behind a fill.
+_Avoid_: Bake status (informal), dirty flag
 
 **Coverage fraction**:
 The share of the sampled capture region that is exactly zero, at or below a black threshold, or at or above a lit threshold. A `coverage` block on a stats capture reports it as `capture.stats.coverage.zero_fraction`, `.black_fraction`, and `.lit_fraction`. A threshold is in the target's own values.
 _Avoid_: Black ratio, lit ratio
 
 **Lamp prefab**:
-A prefab with an active point light and an emissive box. The catalog has the Lamp, the Light panel, and the Beacon. A lamp is placed like any other object and always uses a dynamic body, so its light follows its current transform.
+A prefab with an active point light and an emissive box. The catalog has the Lamp, the Light panel, and the Beacon. A lamp is placed like any other object. Its body follows its kind: a static fixture has a static body, a dynamic lamp has a dynamic body. New lamps default to dynamic.
 _Avoid_: Light object, bulb
 
 **Light budget**:
@@ -260,9 +302,9 @@ _Avoid_: Template, class, prototype
 
 **Body mode**:
 Static or dynamic. A static placed object collides and never moves. A dynamic
-placed object uses the prefab density and can be pushed. A lamp prefab always
-uses a dynamic body; a static request is normalized on creation and refused on
-conversion.
+placed object uses the prefab density and can be pushed. A lamp uses the body
+that matches its kind: a static fixture is static, a dynamic lamp is dynamic.
+The editor's body control switches both together.
 _Avoid_: Body type
 
 **Object id**:

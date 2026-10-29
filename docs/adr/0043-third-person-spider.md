@@ -63,7 +63,8 @@ are gone.
   the capsule controller, cost physics step time, and still need a foot target.
 - **A player light.** Rejected. It would light the floor and break the rule that
   a lamp-free view is black. The emissive eyes and markings keep the spider
-  readable and join the probe field only as tiny emitters.
+  readable and read the baked probe volume like any dynamic box; they add no
+  indirect and no player light.
 - **Camera smoothing.** Rejected. Look applies directly, as it did in first
   person. The arm is a hard clamp; only the body and feet interpolate.
 

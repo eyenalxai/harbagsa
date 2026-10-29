@@ -4,7 +4,7 @@ package harness
 import "core:mem"
 
 import "src:game"
-import "src:renderer"
+import rend "src:renderer"
 
 Vec_State :: struct {
 	x: f32 `json:"x"`,
@@ -112,7 +112,8 @@ State :: struct {
 	notice:        Notice_State   `json:"notice" digest:"-"`,
 	rows:          Rows_State     `json:"rows" digest:"-"`,
 	settle:        Settle_State   `json:"settle" digest:"-"`,
-	renderer:      renderer.Renderer_Report `json:"renderer" digest:"-"`,
+	renderer:      rend.Renderer_Report `json:"renderer" digest:"-"`,
+	bake:          rend.Bake_Report     `json:"bake" digest:"-"`,
 	render_digest: string         `json:"render_digest" digest:"-"`,
 	digest:        string         `json:"digest" digest:"-"`,
 }
@@ -137,7 +138,7 @@ state_build :: proc(
 	hud: ^game.HUD_State,
 	debug: ^game.Debug_Mode,
 	camera: Camera_State,
-	renderer_state: renderer.Renderer_Report,
+	renderer_state: rend.Renderer_Report,
 	render_digest: string,
 	settle: Settle_State,
 	allocator: mem.Allocator,
@@ -165,7 +166,7 @@ state_build_sections :: proc(
 	hud: ^game.HUD_State,
 	debug: ^game.Debug_Mode,
 	camera: Camera_State,
-	renderer_state: renderer.Renderer_Report,
+	renderer_state: rend.Renderer_Report,
 	render_digest: string,
 	settle: Settle_State,
 	sections: State_Sections,
@@ -176,6 +177,7 @@ state_build_sections :: proc(
 		camera = camera,
 		settle = settle,
 		renderer = renderer_state,
+		bake = renderer_state.bake,
 	}
 	ctx := State_Context {
 		sim = sim,

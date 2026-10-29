@@ -52,6 +52,12 @@ lamp_kind_parse :: proc(name: string) -> (Lamp_Kind, bool) {
 	return .Dynamic_Lamp, false
 }
 
+// A static fixture and a dynamic lamp differ by their body as well as their
+// light, so the two always move together.
+lamp_kind_for_body :: proc(mode: Body_Mode) -> Lamp_Kind {
+	return mode == .Static ? .Static_Fixture : .Dynamic_Lamp
+}
+
 LIGHT_COLOR_COUNT :: int(Light_Color.Blue) + 1
 
 LIGHT_COLOR_NAMES := [LIGHT_COLOR_COUNT]string{"warm", "cool", "red", "green", "blue"}

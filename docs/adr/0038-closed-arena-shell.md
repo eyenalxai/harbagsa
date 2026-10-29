@@ -6,7 +6,7 @@ The arena is one closed box. A solid ceiling spans the top of the four outer wal
 
 ## Why
 
-> A one-bounce probe field was added later by [ADR 0042](0042-single-volume-ddgi.md). The shell decision and the removed inner room stay in force.
+> A baked one-bounce indirect layer was added later by [ADR 0045](0045-mixed-lighting.md). The shell decision and the removed inner room stay in force.
 
 The direct-light renderer has no shadow visibility and no indirect-light cache. The inner room no longer tests a lighting system that exists. Keeping it adds twelve collision shapes, a special movement path, and palette entries for no player-facing value. The open outer shell also exposes a background where no box covers the view.
 
