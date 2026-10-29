@@ -24,12 +24,14 @@ scenarios, two for the 96-light run:
 
 | Scenario | Extent | GPU total p50 | GPU total p95 | Scene pass p50 | TLAS p50 | Interval p50 |
 | -- | -- | --: | --: | --: | --: | --: |
-| `scenarios/perf.json` | 1280x720 | 0.424 ms | 0.433 ms | 0.120 ms | 0.198 ms | 0.699 ms |
-| `scenarios/perf-arena.json` | 1280x720 | 0.385 ms | 0.389 ms | 0.089 ms | 0.199 ms | 0.658 ms |
-| `scenarios/perf-mixed.json` (96 lights) | 1920x1080 | 1.511 ms | 1.571 ms | 1.103 ms | 0.108 ms | 1.825 ms |
+| `scenarios/perf.json` | 1280x720 | 0.427 ms | 0.434 ms | 0.120 ms | 0.198 ms | 0.700 ms |
+| `scenarios/perf-arena.json` | 1280x720 | 0.383 ms | 0.389 ms | 0.089 ms | 0.198 ms | 0.657 ms |
+| `scenarios/perf-mixed.json` (96 lights) | 1920x1080 | 1.516 ms | 1.576 ms | 1.103 ms | 0.108 ms | 1.839 ms |
 
-The spread across the three runs of each scenario was under 0.007 ms for the GPU
-total, so the table lists one run. The interval is the GPU total plus the
+The spread across the three runs was under 0.005 ms at 720p and under 0.012 ms
+at 1080p, so the table lists the median run. The 96-light row quotes `mixed-2`,
+the last mixed window in the scenario; `scenarios/perf-mixed.json` brackets each
+term with direct windows so the term costs are measurable at all. The interval is the GPU total plus the
 submit and present cost; it is not display pacing.
 
 ```sh
