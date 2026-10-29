@@ -65,17 +65,14 @@ Capture_Spec :: struct {
 	steps:     Maybe(Capture_Steps_Options),
 	color_key: Maybe(Capture_Color_Key),
 	coverage:  Maybe(Capture_Coverage),
-	// The view this request writes. A command with a `views` array expands into
-	// one request per view; a plain capture leaves it at beauty.
-	view:      Capture_View,
 }
 
 Capture_Request :: struct {
 	using spec: Capture_Spec,
 	alpha:      f32,
-	// True when the request came from a `views` list, so beauty also carries a
-	// `view` field in the report.
-	has_view:   bool,
+	// Absent for a plain capture, which is the beauty path. Present for every
+	// request a `views` list expands into, including its beauty view.
+	view:       Maybe(Capture_View),
 }
 
 Capture_Result :: struct {

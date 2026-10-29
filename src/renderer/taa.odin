@@ -202,7 +202,8 @@ destroy_taa_pipelines :: proc(r: ^Renderer) {
 	destroy_pipeline_pair(r, &r.taa.view_pipeline, &r.taa.view_pipeline_layout)
 }
 
-destroy_taa_history :: proc(r: ^Renderer) {	for i in 0 ..< TAA_HISTORY_IMAGES {
+destroy_taa_history :: proc(r: ^Renderer) {
+	for i in 0 ..< TAA_HISTORY_IMAGES {
 		destroy_image(r, &r.taa.history[i])
 		destroy_image(r, &r.taa.counts[i])
 	}

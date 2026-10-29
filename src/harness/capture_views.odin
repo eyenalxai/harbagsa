@@ -4,10 +4,20 @@ package harness
 import "core:encoding/json"
 import "core:fmt"
 import "core:mem"
+import "core:strings"
 
 import "src:renderer"
 
 MAX_CAPTURE_VIEWS :: len(renderer.CAPTURE_VIEW_NAMES)
+
+@(private)
+capture_view_names :: proc() -> string {
+	names := make([dynamic]string, 0, len(renderer.CAPTURE_VIEW_NAMES), context.temp_allocator)
+	for view in renderer.Capture_View {
+		append(&names, renderer.capture_view_name(view))
+	}
+	return strings.join(names[:], ", ", context.temp_allocator)
+}
 
 @(private)
 parse_capture_views :: proc(
@@ -30,9 +40,7 @@ parse_capture_views :: proc(
 		view, view_ok := renderer.capture_view_parse(view_name)
 		if !name_ok || !view_ok {
 			delete(views, allocator)
-			return nil, format_error(
-				"'views' must name beauty, direct, lightmap, probe, emissive, shadow, lightmap_grid, or probe_cell",
-			)
+			return nil, format_error("'views' must name %s", capture_view_names())
 		}
 		if view in seen {
 			delete(views, allocator)

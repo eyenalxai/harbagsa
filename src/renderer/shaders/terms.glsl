@@ -1,12 +1,12 @@
 #ifndef TERMS_GLSL
 #define TERMS_GLSL
 
-// The one place the lit terms are evaluated. The lit fragment shader composes
-// the beauty pixel from these terms, and a future pick shader reads the same
-// functions, so a pick names the value the lit pass wrote.
+// The one place the lit terms are evaluated. The lit and term-view fragment
+// shaders compose from these functions, and the pick shader reads them next, so
+// a pick names the value the lit pass wrote.
 //
-// This header is fragment-only: bindings 2 through 11 are declared for the
-// fragment stage only.
+// Fragment only: the scene descriptor layout gives bindings 2 through 11 the
+// fragment stage alone, so a vertex shader cannot include this header.
 
 #include "scene.glsl"
 
@@ -169,6 +169,10 @@ vec3 lightmap_indirect(ObjectData object, vec3 local_normal, vec3 local_position
     return textureLod(lightmap_atlas, tap.uv, 0.0).rgb;
 }
 
+vec3 emissive_term(ObjectData object) {
+    return vec3(object.color.a);
+}
+
 // The four probes of the containing tetrahedral cell, with the same bias and
 // clamp probe_indirect uses, so a cell view names the cell the indirect read.
 struct Probe_Cell {
@@ -292,9 +296,11 @@ vec3 view_term(
         return albedo * probe_indirect(world_position, normal) * object.probe_weight;
     }
     if (view == VIEW_EMISSIVE) {
-        return albedo * object.color.a;
+        return albedo * emissive_term(object);
     }
-    return vec3(0.0);
+    // Beauty never draws through this shader, so an unknown mode is a loud
+    // colour rather than a black frame that reads as a real term.
+    return vec3(0.0, 1.0, 1.0);
 }
 
 #endif

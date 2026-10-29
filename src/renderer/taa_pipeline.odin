@@ -5,11 +5,13 @@ import vk "vendor:vulkan"
 
 TAA_VERTEX_SPIRV :: #load("../../build/shaders/taa.vert.spv")
 TAA_FRAGMENT_SPIRV :: #load("../../build/shaders/taa.frag.spv")
+TAA_VIEW_FRAGMENT_SPIRV :: #load("../../build/shaders/taa_view.frag.spv")
 
 @(private)
 create_taa_like_pipeline :: proc(
 	r: ^Renderer,
 	name: string,
+	fragment_spirv: []byte,
 	formats: []vk.Format,
 	pipeline: ^vk.Pipeline,
 	layout: ^vk.PipelineLayout,
@@ -19,7 +21,7 @@ create_taa_like_pipeline :: proc(
 		r,
 		{
 			vertex_spirv = TAA_VERTEX_SPIRV,
-			fragment_spirv = TAA_FRAGMENT_SPIRV,
+			fragment_spirv = fragment_spirv,
 			name = name,
 			set_layouts = set_layouts[:],
 			push_constant = vk.PushConstantRange {
@@ -40,7 +42,14 @@ create_taa_like_pipeline :: proc(
 
 create_taa_pipeline :: proc(r: ^Renderer) -> bool {
 	formats := [3]vk.Format{r.target.config.format, HISTORY_FORMAT, COUNT_FORMAT}
-	if !create_taa_like_pipeline(r, "taa resolve", formats[:], &r.taa.pipeline, &r.taa.pipeline_layout) {
+	if !create_taa_like_pipeline(
+		r,
+		"taa resolve",
+		TAA_FRAGMENT_SPIRV,
+		formats[:],
+		&r.taa.pipeline,
+		&r.taa.pipeline_layout,
+	) {
 		return false
 	}
 	// A term view resolves the same shader into one image. The history and count
@@ -49,6 +58,7 @@ create_taa_pipeline :: proc(r: ^Renderer) -> bool {
 	if !create_taa_like_pipeline(
 		r,
 		"term view resolve",
+		TAA_VIEW_FRAGMENT_SPIRV,
 		view_formats[:],
 		&r.taa.view_pipeline,
 		&r.taa.view_pipeline_layout,

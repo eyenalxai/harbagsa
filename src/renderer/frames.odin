@@ -118,7 +118,7 @@ begin_frame :: proc(
 	if slots > 0 && !ensure_readback_slots(r, u32(slots)) {
 		return {}, .Fatal
 	}
-	if capture_has_term_views(capture) && !ensure_view_targets(r) {
+	if capture_has_term_views(capture) && !ensure_view_images(r) {
 		return {}, .Fatal
 	}
 	if !record_scene(r, command_buffer, image_index, input, capture) {

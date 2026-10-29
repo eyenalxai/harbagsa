@@ -27,20 +27,29 @@ taa_barriers :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass
 	)
 }
 
+// The resolve pipeline and a term view pipeline share the descriptor set shape,
+// so the bind and the push are one helper each.
+taa_bind_resolve :: proc(
+	r: ^Renderer,
+	command_buffer: vk.CommandBuffer,
+	layout: vk.PipelineLayout,
+) {
+	descriptor_set := r.taa.descriptor_sets[r.frame_index * TAA_HISTORY_IMAGES + r.taa.history_read]
+	vk.CmdBindDescriptorSets(command_buffer, .GRAPHICS, layout, 0, 1, &descriptor_set, 0, nil)
+}
+
+taa_push_params :: proc(
+	command_buffer: vk.CommandBuffer,
+	layout: vk.PipelineLayout,
+	params: TAA_Params,
+) {
+	value := params
+	vk.CmdPushConstants(command_buffer, layout, {.FRAGMENT}, 0, u32(size_of(TAA_Params)), &value)
+}
+
 taa_draw :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
 	taa := &r.taa
-	read_index := taa.history_read
-	descriptor_set := taa.descriptor_sets[r.frame_index * TAA_HISTORY_IMAGES + read_index]
-	vk.CmdBindDescriptorSets(
-		command_buffer,
-		.GRAPHICS,
-		taa.pipeline_layout,
-		0,
-		1,
-		&descriptor_set,
-		0,
-		nil,
-	)
+	taa_bind_resolve(r, command_buffer, taa.pipeline_layout)
 
 	params := TAA_Params {
 		gamma          = srgb_gamma(r),
@@ -55,14 +64,7 @@ taa_draw :: proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass) {
 		params.clamp_enabled = r.debug.clamp ? 1 : 0
 		params.force_trust = r.debug.force_depth_trust ? 1 : 0
 	}
-	vk.CmdPushConstants(
-		command_buffer,
-		taa.pipeline_layout,
-		{.FRAGMENT},
-		0,
-		u32(size_of(TAA_Params)),
-		&params,
-	)
+	taa_push_params(command_buffer, taa.pipeline_layout, params)
 	vk.CmdDraw(command_buffer, 3, 1, 0, 0)
 }
 

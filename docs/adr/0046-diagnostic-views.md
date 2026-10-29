@@ -27,8 +27,9 @@ the beauty frame instead of resetting it.
   the renderer report names that one frame for every entry.
 - **One extra lit pass per view.** The depth prepass is shared. Each term view
   re-runs the lit pass with a `view` push constant and resolves into its own
-  image. The scene target, the velocity, and the history are untouched by the
-  term passes.
+  image. The term pass overwrites the scene target and velocity while it
+  redraws, so a group's target copies are recorded before the term passes; the
+  history is never read or written by a term pass.
 - **Every view is a colour image.** A term view resolves through the same gamma
   and dither path as beauty, with history read and write disabled. The resolve
   pipeline has one colour attachment, so it cannot write history. `float` and
@@ -45,6 +46,10 @@ the beauty frame instead of resetting it.
   composed pixel, which perturbs the last dither bit. `scene.glsl` holds the
   shared bindings so the two fragment shaders and the pick shader declare the
   same interface once.
+- **The term shader owns its own frame math.** `box_view.frag` repeats the
+  clip-to-UV and view-depth lines from `box.frag`. A shared function call
+  changes the beauty shader's instructions, and byte identity is an acceptance
+  rule, so the duplication is deliberate and documented here.
 - **The shadow view is a ratio.** It redraws with shadow rays off and divides the
   shadowed direct luma by the open direct luma. One `trace_shadows` flag on the
   direct term selects the walk; the beauty call passes true, and the compiler

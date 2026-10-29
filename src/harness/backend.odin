@@ -248,8 +248,8 @@ backend_render :: proc(
 	targets: renderer.Capture_Targets
 	views: renderer.Capture_Views
 	for request in requests {
-		if renderer.capture_view_is_term(request.view) {
-			views |= {request.view}
+		if view, has_view := request.view.?; has_view && renderer.capture_view_is_term(view) {
+			views |= {view}
 		} else {
 			targets |= {request.target}
 		}
@@ -277,7 +277,10 @@ backend_render :: proc(
 
 	results := make([dynamic]Capture_Result, 0, len(requests), context.allocator)
 	for request in requests {
-		slot := renderer.capture_slot(capture_request, request.target, request.view)
+		slot := renderer.capture_target_slot(capture_request, request.target)
+		if view, has_view := request.view.?; has_view && renderer.capture_view_is_term(view) {
+			slot = renderer.capture_view_slot(capture_request, view)
+		}
 		if slot < 0 {
 			for &written in results {
 				capture_result_destroy(&written, data.allocator)

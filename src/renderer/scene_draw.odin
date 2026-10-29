@@ -93,10 +93,7 @@ record_scene :: proc(
 	}
 	// Term views redraw the scene, so the target copies happen first: a group
 	// that asks for scene_color and a view keeps the beauty scene color.
-	for view in Capture_View {
-		if !capture_view_is_term(view) || view not_in capture.views {
-			continue
-		}
+	for view in capture.views {
 		if !record_scene_view(r, command_buffer, capture, view, image_index, input.boxes) {
 			return false
 		}

@@ -37,7 +37,7 @@ void main() {
         indirect = probe_indirect(v_world_position, normal);
     }
     vec3 color = v_color * (lit + indirect * indirect_weight) +
-                 v_color * object.color.a;
+                 v_color * emissive_term(object);
 
     vec4 world_position = vec4(v_world_position, 1.0);
     vec4 previous_world = object.prev_model * vec4(v_local_position, 1.0);
