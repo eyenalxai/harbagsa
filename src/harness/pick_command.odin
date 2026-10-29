@@ -2,7 +2,6 @@
 package harness
 
 import "core:encoding/json"
-import "core:fmt"
 import "core:mem"
 import "core:strings"
 
@@ -73,26 +72,16 @@ session_pick :: proc(session: ^Session, command: Pick_Command) -> string {
 	if session.render.backend == nil || session.render.backend.pick == nil {
 		return format_error("%s", "pick requires a renderer")
 	}
-	extent := session.render.backend.setup(session.render.backend.ctx)
-	if command.at.x < 0 || command.at.y < 0 ||
-	   u32(command.at.x) >= extent.width || u32(command.at.y) >= extent.height {
-		return fmt.aprintf(
-			"pick at (%d, %d) is outside the %dx%d capture extent",
-			command.at.x,
-			command.at.y,
-			extent.width,
-			extent.height,
-			allocator = context.allocator,
-		)
-	}
-	hit, pick_error := session.render.backend.pick(
+	hit, failure, pick_error := session.render.backend.pick(
 		session.render.backend.ctx,
 		session,
 		command.at,
 	)
 	if pick_error != "" {
-		session.render.failed = true
-		session_failure(session, pick_error)
+		if failure == .Frame {
+			session.render.failed = true
+			session_failure(session, pick_error)
+		}
 		return pick_error
 	}
 	append(&session.picks, pick_result_build(&session.sim, hit, session.allocator))
@@ -121,15 +110,17 @@ pick_result_build :: proc(
 		}
 	} else if hit.instance < u32(arena_count + len(objects)) {
 		object := objects[int(hit.instance) - arena_count]
-		name := strings.clone(game.simulation_object_name(sim, object.id), allocator)
 		prefab := strings.clone(game.prefab_name(object.prefab), allocator)
-		result.object = Pick_Object {
+		picked := Pick_Object {
 			kind   = "object",
 			id     = object.id,
-			name   = name,
 			prefab = prefab,
 		}
-		result.prefab = strings.clone(game.prefab_name(object.prefab), allocator)
+		if name := game.simulation_object_name(sim, object.id); name != "" {
+			picked.name = strings.clone(name, allocator)
+		}
+		result.object = picked
+		result.prefab = prefab
 	} else {
 		result.object = Pick_Object {
 			kind  = "spider",
@@ -160,15 +151,19 @@ pick_result_build :: proc(
 }
 
 pick_result_destroy :: proc(result: ^Pick_Result, allocator: mem.Allocator) {
+	object_prefab: rawptr
 	if object, has_object := result.object.?; has_object {
 		if name, has_name := object.name.?; has_name && name != "" {
 			delete(name, allocator)
 		}
 		if prefab, has_prefab := object.prefab.?; has_prefab && prefab != "" {
+			object_prefab = raw_data(prefab)
 			delete(prefab, allocator)
 		}
 	}
-	if prefab, has_prefab := result.prefab.?; has_prefab && prefab != "" {
+	// The object and the top-level prefab share one allocation.
+	if prefab, has_prefab := result.prefab.?;
+	   has_prefab && prefab != "" && raw_data(prefab) != object_prefab {
 		delete(prefab, allocator)
 	}
 	result^ = {}
