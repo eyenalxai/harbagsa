@@ -1,6 +1,8 @@
 # Absolute darkness
 
-> A one-bounce probe field now supplies indirect light from the current lamps. See [ADR 0042](0042-single-volume-ddgi.md). The no-ambient-floor rule and every other decision here stay in force.
+> A mixed-lighting bake now supplies indirect light from the static fixtures.
+> See [ADR 0045](0045-mixed-lighting.md). The no-ambient-floor rule and every
+> other decision here stay in force.
 
 The renderer has no ambient fill. A surface receives light only from the current direct point lights and its emissive term. A view with no active lamp is black.
 
@@ -18,7 +20,7 @@ The renderer has no ambient fill. A surface receives light only from the current
 - Shade with `albedo * direct_point_lights + albedo * emissive`.
 - Keep every explicit starting lamp. A lamp-free scene is the black baseline.
 - Keep the direct clustered lights, hard ray-query shadows, TAA, and emissive term.
-- Do not add a screen-space fill or an ambient occlusion term to replace the floor. A one-bounce probe field was added later by ADR 0042; it carries light from the lamps and does not create a default fill.
+- Do not add a screen-space fill or an ambient occlusion term to replace the floor. A baked mixed-lighting layer was added later by ADR 0045; it carries light from the static fixtures and does not create a default fill.
 - The lamp-free frame is black, and a lamp restores light.
 - The ceiling is proved from a lit ceiling, not from ambient fill.
 - Update the world guide, README, glossary, ADR 0037, and ADR 0040.

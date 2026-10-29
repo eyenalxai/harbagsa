@@ -145,7 +145,6 @@ Edit_Reason :: enum {
 	Unknown_Object,
 	No_Selection,
 	No_Lamp,
-	Lamp_Must_Be_Dynamic,
 	Bad_Index,
 	Not_Armed,
 	Nothing_To_Undo,
@@ -195,8 +194,6 @@ edit_reason_message :: proc(reason: Edit_Reason) -> string {
 		return "no object is selected"
 	case .No_Lamp:
 		return "the target is not a lamp"
-	case .Lamp_Must_Be_Dynamic:
-		return "a lamp must stay dynamic"
 	case .Bad_Index:
 		return "the palette index is out of range"
 	case .Not_Armed:

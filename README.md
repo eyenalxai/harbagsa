@@ -3,13 +3,14 @@
 A third-person movement demo. The player controls an eight-legged spider that
 walks, sprints, and jumps through a fixed arena with stairs, ramps, tunnels,
 tall west walls, a high platform, a closed ceiling, pushable crates, and three
-dynamic coloured lamps. Two-bone inverse kinematics plant the feet on the floor,
+coloured lamps. Two-bone inverse kinematics plant the feet on the floor,
 and a spring-arm camera orbits behind the body.
 SDL3 provides the window and input, Vulkan 1.3 draws the scene, and Box3D runs
-physics. Direct point lights, hard ray-query shadows, one-bounce probe GI, and
-emissive boxes shade every frame. An unlit surface is black. There is no
-ambient floor, directional light, background pass, shadow map, or baked global
-illumination.
+physics. Direct point lights, hard ray-query shadows, a baked one-bounce
+indirect pass, and emissive boxes shade every frame. Static boxes read a lightmap
+atlas; dynamic boxes read a baked probe volume. An unlit surface is black.
+There is no ambient floor, directional light, background pass, shadow map, or
+dynamic global illumination.
 
 ## Requirements
 
@@ -33,9 +34,12 @@ make bake
 ```
 
 `make check` compiles every package, enforces the 400-line file limit, and
-validates the shaders. It is a build check, not a test gate. `make bake` writes
+validates the shaders. It is a build check, not a test gate.
+`make check-references` checks the documentation links. `make bake` writes
 `build/bake/arena.hbake` for the runtime; the artifact is generated, never
 committed. The renderer reports a missing artifact in `state.renderer.bake`.
+The harness `bake reload` and `bake publish` commands replace the bound artifact
+without a restart.
 
 ## Run
 
@@ -95,8 +99,8 @@ the current run.
 - Wheel: raise or lower the ghost or selected object.
 - `Q` / `E`: rotate in 15 degree steps. Hold `Shift` for 45 degree steps.
 - `G`: toggle 0.25 m grid snap.
-- `M`: flip a non-lamp target between static and dynamic. A lamp always stays
-  dynamic.
+- `M`: flip the body between static and dynamic. On a lamp this also switches
+  between a static fixture and a dynamic lamp.
 - `Ctrl+D`: duplicate the selected object.
 - `Delete` or `X`: remove it.
 - `Ctrl+Z` / `Ctrl+Shift+Z`: undo / redo.
@@ -109,16 +113,17 @@ the current run.
 - `F2`: leave debug mode.
 
 The palette shows eleven box prefabs. Lamp, Light panel, and Beacon carry point
-lights and always use a dynamic body. The preview and inspector show colour,
-intensity, and range. Every active lamp enters the light budget. The starting
-arena holds one of each lamp prefab, so its first view shows warm, cool, and red
-pools on the closed shell.
+lights. A new lamp defaults to a dynamic lamp; switching its body to static
+makes it a static fixture and adds its bounce to the next bake. The preview and
+inspector show the kind, colour, intensity, and range. Every active lamp enters
+the light budget. The starting arena holds one of each lamp prefab as a static
+fixture, so its first view shows warm, cool, and red pools on the closed shell.
 
 ### Perf overlay
 
 The summary shows FPS, frame interval, CPU frame time, p95 interval, spike
 count, and GPU total with the costliest pass. The pass row shows TLAS, cluster
-assignment, probe field, depth prepass, lit scene, TAA resolve, and overlay
+assignment, depth prepass, lit scene, TAA resolve, and overlay
 times. GPU numbers belong to the last completed frame. A device without
 timestamp support shows CPU numbers only.
 
@@ -205,6 +210,8 @@ degrees and ends in `_deg`. Positions and ranges are metres. One `step` or
 - `scene`: apply exact camera, objects, settings, view, displays, and renderer debug blocks.
 - `place`: create one object without entering debug mode.
 - `remove`: delete one object by id or name.
+- `bake`: report, reload, or publish the static bake. `action` is `status`,
+  `reload`, or `publish`.
 - `get`: resolve one state or capture field.
 - `quit`: close a live session.
 

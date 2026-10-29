@@ -27,6 +27,7 @@ Place_Command :: struct {
 	position: [3]f32,
 	yaw_deg:  f32,
 	body:     game.Body_Mode,
+	has_body: bool,
 	light:    Place_Light,
 }
 
@@ -73,6 +74,7 @@ parse_place :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 			return {}, body_error
 		}
 		command.place.body = body
+		command.place.has_body = true
 	}
 	if value, has := json_get(object, "light"); has {
 		light, light_error := parse_place_light(value, prefab)
@@ -199,8 +201,17 @@ session_place :: proc(session: ^Session, command: Place_Command, reply: ^Reply) 
 		return format_error("object name %q is taken", name)
 	}
 	light := game.prefab_light(command.prefab)
+	body := command.body
 	if command.light.has_kind {
 		light.kind = command.light.kind
+		kind_body := command.light.kind == .Static_Fixture ? game.Body_Mode.Static : game.Body_Mode.Dynamic
+		if command.has_body && command.body != kind_body {
+			return format_error(
+				"%s",
+				"a static fixture needs a static body and a dynamic lamp needs a dynamic body",
+			)
+		}
+		body = kind_body
 	}
 	if command.light.has_color {
 		light.color = command.light.color
@@ -217,7 +228,7 @@ session_place :: proc(session: ^Session, command: Place_Command, reply: ^Reply) 
 		{
 			name = name,
 			prefab = command.prefab,
-			body_mode = command.body,
+			body_mode = body,
 			center = {command.position[0], command.position[1], command.position[2]},
 			yaw_rad = f32(math.to_radians(f64(command.yaw_deg))),
 			light = light,

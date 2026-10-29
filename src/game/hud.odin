@@ -37,13 +37,14 @@ hud_state_update :: proc(
 	snapshot: Render_Snapshot,
 	captured: bool,
 	delta_seconds: f32,
+	bake_status: string,
 ) {
 	hud.captured = captured
 	hud.capture_hint = HUD_CAPTURE_HINT
 	hud.view.notice = {text = hud_notice_text(hud)}
 	menu_view(&hud.menu, &sim.settings, debug.active, delta_seconds)
 	if debug.active {
-		hud_debug_state_update(hud, sim, debug)
+		hud_debug_state_update(hud, sim, debug, bake_status)
 	} else {
 		hud_player_state_update(hud, snapshot)
 	}
