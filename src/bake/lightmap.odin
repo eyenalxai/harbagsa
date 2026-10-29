@@ -101,6 +101,9 @@ lightmap_bake :: proc(
 		return {}, .Threads
 	}
 
+	// `dilated_texels` counts every copied texel: repaired buried interiors plus
+	// the four-texel gutter. `invalid_texels` counts the buried interiors before
+	// the repair, so the two counts overlap by design.
 	queue := make([dynamic]int, 0, 0, allocator)
 	defer delete(queue)
 	for chart in layout.charts {
