@@ -162,6 +162,7 @@ run :: proc() -> bool {
 				captured = events.captured,
 				hud = true,
 				perf = loop.hud.perf.visible,
+				bake = renderer.bake_report(&state),
 			},
 			nil,
 			&loop.hud,

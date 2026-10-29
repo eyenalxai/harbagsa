@@ -18,6 +18,7 @@ Options :: struct {
 	captured:      bool,
 	hud:           bool,
 	perf:          bool,
+	bake:          renderer.Bake_Report,
 }
 
 Scratch :: struct {
@@ -139,6 +140,7 @@ build :: proc(
 			snapshot,
 			options.captured,
 			options.delta_seconds,
+			{status = options.bake.status, key = options.bake.key},
 		)
 		palette := game.debug_palette_view(sim, debug)
 		if hud.menu.open {

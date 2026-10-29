@@ -137,6 +137,10 @@ apply_key :: proc(
 		if focus.game.debug_active {
 			add_action(out, game.Light_Adjust{change = .Color})
 		}
+	case .K:
+		if focus.game.debug_active {
+			add_action(out, game.Light_Toggle_Kind{})
+		}
 	case .Left_Bracket:
 		if focus.game.debug_active {
 			add_action(out, game.Light_Adjust{change = .Intensity_Down})

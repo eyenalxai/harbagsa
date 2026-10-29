@@ -36,6 +36,9 @@ palette_select :: proc(palette: ^Palette, index: int) -> bool {
 }
 
 palette_set_light :: proc(palette: ^Palette, settings: Light_Settings) {
+	if palette.light.active && palette.light.kind != settings.kind {
+		palette.body_mode = lamp_kind_body(settings.kind)
+	}
 	palette.light = settings
 }
 
