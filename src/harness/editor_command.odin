@@ -25,6 +25,7 @@ EDITOR_KEYS := [?]string {
 	"duplicate",
 	"undo",
 	"redo",
+	"light_kind",
 	"light_color",
 	"light_intensity",
 	"light_range",

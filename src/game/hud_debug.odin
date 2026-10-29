@@ -3,8 +3,8 @@ package game
 
 import "core:math"
 
-HUD_INSPECTOR_ROW_COUNT :: 11
-HUD_PLACEMENT_ROW_COUNT :: 8
+HUD_INSPECTOR_ROW_COUNT :: 12
+HUD_PLACEMENT_ROW_COUNT :: 9
 
 HUD_SNAP_OFF :: "off"
 HUD_SNAP_GRID :: "0.25 m"
@@ -13,9 +13,14 @@ HUD_SNAP_GRID :: "0.25 m"
 // snap state. Every changing value uses a fixed field and the mono face through
 // `numeric`, so the panel width does not move when the selection changes.
 @(private)
-hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_Mode) {
+hud_debug_state_update :: proc(
+	hud: ^HUD_State,
+	sim: ^Simulation,
+	debug: ^Debug_Mode,
+	bake: Bake_View,
+) {
 	if debug.placement.armed {
-		hud_placement_state_update(hud, sim, debug)
+		hud_placement_state_update(hud, sim, debug, bake)
 		return
 	}
 
@@ -131,11 +136,22 @@ hud_debug_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_
 		value   = hud_light_budget(hud, 10, sim),
 		numeric = true,
 	}
+	hud.rows[11] = {
+		kind    = .Detail,
+		label   = "Bake",
+		value   = hud_bake_line(hud, 11, bake),
+		numeric = true,
+	}
 	hud.view.rows = hud.rows[:HUD_INSPECTOR_ROW_COUNT]
 }
 
 @(private)
-hud_placement_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^Debug_Mode) {
+hud_placement_state_update :: proc(
+	hud: ^HUD_State,
+	sim: ^Simulation,
+	debug: ^Debug_Mode,
+	bake: Bake_View,
+) {
 	hud.rows[0] = {kind = .Header, label = "Debug mode"}
 	hud.rows[1] = {
 		kind  = .Metric,
@@ -182,23 +198,40 @@ hud_placement_state_update :: proc(hud: ^HUD_State, sim: ^Simulation, debug: ^De
 		value   = hud_light_line(hud, 7, light),
 		numeric = true,
 	}
+	hud.rows[8] = {
+		kind    = .Detail,
+		label   = "Bake",
+		value   = hud_bake_line(hud, 8, bake),
+		numeric = true,
+	}
 	hud.view.rows = hud.rows[:HUD_PLACEMENT_ROW_COUNT]
 }
 
 @(private)
 hud_light_line :: proc(hud: ^HUD_State, slot: int, light: Light_Settings) -> string {
+	kind := "none"
 	name := "none"
 	if light.active {
+		kind = lamp_kind_name(light.kind)
 		name = light_color_name(light.color)
 	}
 	return line_format(
 		&hud.storage,
 		slot,
-		"%-5s % 4.1f % 2.0f m",
+		"%-7s %-5s % 4.1f % 2.0f m",
+		kind,
 		name,
 		light.intensity,
 		light.range,
 	)
+}
+
+@(private)
+hud_bake_line :: proc(hud: ^HUD_State, slot: int, bake: Bake_View) -> string {
+	if bake.status != "current" && bake.status != "stale" {
+		return line_format(&hud.storage, slot, "%-7s", bake.status)
+	}
+	return line_format(&hud.storage, slot, "%-7s %016x", bake.status, bake.key)
 }
 
 @(private)

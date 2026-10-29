@@ -45,7 +45,7 @@ wait for CI to merge a pull request. There is no test gate.
 
 ### Issue tracker
 
-Issues and specs live as GitHub issues in `eyenalxai/harbagsa`, driven by the `gh` CLI. See `docs/agents/issue-tracker.md`.
+Issues and specs live as Linear issues in the `HARB` team, driven by the `rata` CLI. Pull requests still live on GitHub and use the `gh` CLI. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 

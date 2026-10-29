@@ -158,7 +158,10 @@ Render_State :: struct {
 render_state_create :: proc() -> Render_State {
 	return {
 		enabled = true,
-		report = {last_reset = "none"},
+		report = {
+			last_reset = "none",
+			bake = {status = "missing"},
+		},
 	}
 }
 

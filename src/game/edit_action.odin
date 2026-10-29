@@ -93,6 +93,10 @@ edit_apply :: proc(
 		return edit_light_set_intensity(dm, sim, value.intensity)
 	case Light_Set_Range:
 		return edit_light_set_range(dm, sim, value.range)
+	case Light_Set_Kind:
+		return edit_light_set_kind(dm, sim, value.kind)
+	case Light_Toggle_Kind:
+		return edit_light_toggle_kind(dm, sim)
 	case Cancel:
 		return edit_cancel(dm)
 	}

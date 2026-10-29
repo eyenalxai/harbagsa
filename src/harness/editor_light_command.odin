@@ -8,6 +8,8 @@ import "src:game"
 // The light group. A field applies to the next lamp placement while the palette
 // or the placement tool owns the editor, and to the selected lamp otherwise.
 Editor_Light :: struct {
+	kind:          game.Lamp_Kind,
+	has_kind:      bool,
 	color:         game.Light_Color,
 	has_color:     bool,
 	intensity:     f32,
@@ -19,6 +21,15 @@ Editor_Light :: struct {
 @(private)
 parse_editor_light :: proc(object: json.Object) -> (Editor_Light, string) {
 	editor: Editor_Light
+	if value, has := json_get(object, "light_kind"); has {
+		name, ok := json_string(value)
+		kind, parsed := game.lamp_kind_parse(name)
+		if !ok || !parsed {
+			return {}, format_error("%s", "'light_kind' must be 'static' or 'dynamic'")
+		}
+		editor.kind = kind
+		editor.has_kind = true
+	}
 	if value, has := json_get(object, "light_color"); has {
 		name, ok := json_string(value)
 		if !ok {

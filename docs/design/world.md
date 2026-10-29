@@ -2,7 +2,9 @@
 
 One shader over one mesh. `src/renderer/shaders/box.frag` shades a unit cube,
 and every object in the scene is that cube, scaled and rotated. There is no
-texture, normal map, fog, bloom, or tone map. Point lights supply direct light.
+surface or material texture, normal map, fog, bloom, or tone map. Point lights
+supply direct light; static fixtures also bake one diffuse bounce into a
+lightmap and a static probe field.
 
 ## The palette
 
@@ -42,9 +44,9 @@ Rules:
 - The spider owns the red family. No arena surface uses it, so the player never
   reads as a prop. Its four eyes and two abdomen markings are the only emissive
   surfaces that are not lamp prefabs: the eyes read at the front, and two bars on
-  the abdomen carry the silhouette from behind. They enter the probe field like
-  any emissive box, but they do not join the lamp budget. Do not add a player
-  light; it would break the darkness rule.
+  the abdomen carry the silhouette from behind. The spider is dynamic and does
+  not enter the static bake. Its markings do not join the lamp budget. Do not add
+  a player light; it would break the darkness rule.
 
 ## Direct light
 
@@ -55,13 +57,14 @@ then shades only the lights that can reach the fragment.
 The formula is:
 
 ```text
-albedo * (direct_point_lights + probe_indirect) + albedo * emissive
+static box:  albedo * (direct_point_lights + lightmap_indirect) + albedo * emissive
+dynamic box: albedo * (direct_point_lights + probe_indirect) + albedo * emissive
 ```
 
-A surface receives no light unless a current point light reaches it, a probe
-carries a bounce from a current light, or the surface is emissive. A lamp-free
-view is black. There is no ambient floor or fill light; the probe field is
-transport, not a default term.
+A surface receives no light unless a current point light reaches it, the baked
+static indirect carries a bounce from a static fixture, or the surface is
+emissive. A lamp-free view is black. There is no ambient floor or fill light; the
+baked indirect is transport, not a default term.
 
 A point light uses the surface normal and a squared range falloff. A hard shadow
 ray also tests visibility for each lamp that can reach the fragment. A blocked
@@ -77,37 +80,51 @@ soft shadow is a new decision, not a hidden shader option.
 
 ## Indirect light
 
-One probe volume covers the closed arena. Probes sit every 2 m on a 20 x 3 x 20
-grid. Each probe traces 64 rays into the same point lights and emissive boxes as
-the lit pass and stores an 8 x 8 octahedral irradiance and depth atlas. The lit
-pass blends the eight surrounding probes, rejects probes behind the surface, and
-adds the result as `probe_indirect`. There is one diffuse bounce. A ray that
+Static fixtures bake one diffuse bounce. The bake writes one `1024²` lightmap
+atlas for static boxes and a static probe field for dynamic boxes. Static boxes
+read their face tile from the lightmap. Dynamic boxes sample the four probes of
+the containing tetrahedron, with normal bias, a facing weight, and the baked
+depth test. There is no per-frame probe pass and no probe update. A ray that
 misses returns zero; there is no sky or sun term.
 
-A probe inside a box is invalid and is skipped. A probe behind the shaded
-surface is rejected by the facing weight; the depth test alone lets a probe on
-the far side of a thin wall carry light across it. The field follows a moving
-lamp on the next frame. Probe rays use the scene TLAS, so the renderer builds
-that structure when either shadows or GI is enabled.
+The default probe grid is 1 m over the closed arena; 2 m is the quality fallback.
+Each probe stores an 8 x 8 octahedral irradiance block and depth moments. A probe
+inside static geometry is invalid and is skipped. The bake dilates an invalid
+probe from the nearest valid probe when the virtual offset cannot repair it, so
+the copied depth moments keep their origin.
 
-The `gi` renderer override, default true, exists for paired captures and
-performance runs. It is not a per-lamp or per-room control. Multi-volume probe
-fields, a denser grid, more rays, and more than one bounce are new decisions, not
-hidden shader options.
+The bake key covers the static boxes, the active static fixtures, the quality,
+and the tool version. A static fixture or static geometry edit marks the bake
+stale: direct light and shadows update immediately, while the old indirect stays
+bound until an explicit bake publishes the new artifact. A dynamic lamp or crate
+move does not change the key. `state.bake` reports `missing`, `stale`, `current`,
+or `failed`; a missing or failed artifact never falls back to black or to another
+bake.
 
-Every lamp prefab uses a dynamic body. Its light position comes from that body
-on every frame. A static or baked lamp is not an alternate mode. The starting
-arena places one warm Lamp, one cool Light panel, and one red Beacon in front of
-the spawn.
+The `lightmap` and `probe` renderer overrides, both default true, exist for paired
+captures and performance runs. They are not per-lamp or per-room controls. A
+denser grid, more rays, and more than one bounce are new decisions, not hidden
+shader options.
 
-A lamp-free view is black. One lamp restores readable light. Moving a lamp
-moves its shadow and its bounce. A sealed wall stops the bounce.
+A lamp carries a kind. A static fixture uses a static body, and its light
+position comes from that body. A dynamic lamp uses a dynamic body and contributes
+direct light and hard shadows only. The starting arena places one warm Lamp, one
+cool Light panel, and one red Beacon as static fixtures in front of the spawn.
+Newly placed lamps default to dynamic; `K` toggles the kind and the body follows
+it.
+
+A lamp-free view is black. One lamp restores readable light. Moving a static
+fixture moves its direct light and shadow and leaves the bake stale. Moving a
+dynamic lamp moves only its direct light and shadow. A sealed wall stops the
+baked bounce.
 
 ## No texture
 
-There is no sampler in the scene shader. A face is one flat colour with one
-constant normal. No smooth shading exists anywhere in the 3D scene, and no
-material distinguishes one box from another except its colour and light.
+There is no surface or material texture. The scene shader has one lightmap
+sampler and one probe sampler; both carry baked lighting data, not a material
+image. A face is one flat colour with one constant normal. No smooth shading
+exists anywhere in the 3D scene, and no material distinguishes one box from
+another except its colour and light.
 
 ## Clear colour
 
@@ -133,7 +150,8 @@ normal play. Plan-view and inspection captures can still expose it.
 
 1. Be a box.
 2. Take a hue that is not in the palette.
-3. Receive the same direct point lights, shadows, and probe bounce as everything
-   else.
+3. Receive the same direct point lights and shadows as everything else, plus the
+   baked static bounce: a lightmap tile if it is static, the probe field if it is
+   dynamic.
 4. Add nothing to the shader.
 5. If it moves, add nothing to the camera. [motion.md](motion.md) explains why.

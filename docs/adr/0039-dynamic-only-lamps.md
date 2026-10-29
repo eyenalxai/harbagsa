@@ -1,5 +1,7 @@
 # Dynamic-only lamps
 
+> Superseded by [ADR 0045](0045-mixed-static-baked-indirect.md). Lamps now carry a kind: a static fixture uses a static body and bakes indirect; a dynamic lamp uses a dynamic body and contributes direct light only. The dynamic-only rule below is the historical record.
+
 Every lamp prefab uses a dynamic body. The Lamp, Light panel, and Beacon cannot become static through placement, palette selection, body conversion, duplication, undo, redo, or scene loading. Non-lamp prefabs keep both body modes.
 
 ## Why

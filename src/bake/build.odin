@@ -3,9 +3,18 @@
 package bake
 
 import "core:mem"
+import "core:sys/info"
 import "core:time"
 
 MAX_THREADS :: 256
+
+default_threads :: proc() -> (threads: int, ok: bool) {
+	_, logical, counted := info.cpu_core_count()
+	if !counted || logical < 1 {
+		return 1, false
+	}
+	return clamp(logical, 1, MAX_THREADS), true
+}
 
 build :: proc(
 	static: Static,
@@ -83,7 +92,7 @@ build :: proc(
 	stats := Stats {
 		// Wall time is telemetry, not bake data: a thread-count or machine
 		// difference must not change the artifact bytes. The tool prints the
-		// measured time, and the runtime reports the stored value.
+		// measured time and writes it to the `.time` sidecar.
 		bake_ms        = 0,
 		lightmap_rays  = lightmap.rays,
 		probe_rays     = probes.rays,

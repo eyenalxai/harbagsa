@@ -172,11 +172,23 @@ between the two tables.
 _Avoid_: Scene colours, 3D palette
 
 **Point light**:
-A light with a position, colour, intensity, and range. The renderer holds every active point light in a growable buffer. The lit pass reads the current position, colour, intensity, and range each frame. A lamp prefab owns one.
+A light with a position, colour, intensity, and range. The renderer holds every active point light in a growable buffer. The lit pass reads the current position, colour, intensity, and range each frame. A lamp prefab owns one; its lamp kind decides whether it contributes baked indirect.
 _Avoid_: Lamp (the prefab), bulb
 
+**Lamp kind**:
+Static fixture or dynamic lamp. A static fixture uses a static body and bakes one diffuse bounce; a dynamic lamp uses a dynamic body and contributes direct light and hard shadows only. The kind is separate from the prefab and from an ordinary box body mode. Newly placed lamps default to dynamic; `K` toggles the kind and the body follows it.
+_Avoid_: Light type, lamp mode
+
+**Static fixture**:
+A lamp whose kind is `Static_Fixture`. Its body is static, and the bake traces it as a static light. The three starting lamps are static fixtures.
+_Avoid_: Baked lamp, fixed light
+
+**Dynamic lamp**:
+A lamp whose kind is `Dynamic_Lamp`. Its body is dynamic, and it contributes no indirect light. A newly placed lamp defaults to this kind.
+_Avoid_: Moving fixture, dynamic fixture
+
 **Darkness**:
-The zero-light state. A surface with no direct point light, no probe bounce, and no emissive strength renders black. It is the intended default, not a missing light or a background.
+The zero-light state. A surface with no direct point light, no baked indirect, and no emissive strength renders black. It is the intended default, not a missing light or a background.
 _Avoid_: Ambient floor, fill light, black level
 
 **Point-light shadow**:
@@ -184,7 +196,10 @@ The visibility term for one point light. The lit pass traces one hard ray from t
 _Avoid_: Shadow map, soft shadow, baked shadow
 
 **TLAS**:
-The top-level acceleration structure. It holds one instance per current box and points at the one cube BLAS. The renderer rebuilds it each frame while point-light shadows are enabled.
+The top-level acceleration structure. It holds one instance per current box and
+points at the one cube BLAS. The renderer rebuilds it each frame while
+point-light shadows are enabled. The bake builds its own static BVH; it never
+reads the frame TLAS.
 _Avoid_: Scene BVH, instance list
 
 **Cluster**:
@@ -196,31 +211,53 @@ The forward lighting path that builds a light index list per cluster in a comput
 _Avoid_: Tiled forward, light grid
 
 **Indirect light (GI)**:
-Light that reaches a surface after one diffuse bounce from a current lamp. It is not a default fill: with no active lamp, it is zero. The current renderer carries one bounce in a probe field, not a path tracer.
+Light that reaches a surface after one diffuse bounce from a static fixture or a static emissive box. Static boxes read it from the lightmap; dynamic boxes read it from the probe field. It is baked, not updated per frame. It is not a default fill: with no static fixture, it is zero.
 _Avoid_: Ambient, global illumination cache
 
+**Bake**:
+The explicit CPU pass that traces the static indirect and writes the versioned artifact. Its inputs are the static boxes, active static fixtures, static emissive boxes, and quality. The frame never runs it.
+_Avoid_: GI pass, probe pass
+
+**Bake key**:
+The FNV hash of the canonical static boxes, active static fixtures, quality, and tool version. The renderer recomputes it from the current static input; a mismatch is `stale`.
+_Avoid_: Scene hash, light hash
+
+**Bake status**:
+The applied artifact state: `missing`, `stale`, `current`, or `failed`. A
+missing or failed load binds placeholders and reports the reason; a failed
+publish leaves the old artifact bound. It never falls back to black or to
+another artifact.
+_Avoid_: Bake state (use the status name), load flag
+
+**Bake artifact**:
+The versioned `.hbake` file that carries the lightmap atlas, face rects, slots,
+probe atlases, probe states, quality, and stats. `make bake` writes
+`build/bake/arena.hbake`; the harness can publish one at runtime. The measured
+time lives in a `.time` sidecar so the artifact bytes stay deterministic.
+_Avoid_: Bake file, lightmap file
+
+**Lightmap**:
+The one linear `1024²` `RGBA16F` atlas that holds one tile per static box face. It carries static indirect only; direct light and hard shadows stay real-time. It is lighting data, not a surface or material texture.
+_Avoid_: Baked texture, GI map
+
 **Probe**:
-One sample point in the indirect-light field. It traces 64 rays and stores an 8 x 8 octahedral irradiance and depth atlas.
+One sample point in the baked static probe field. The bake traces 1024 rays and stores an 8 x 8 octahedral irradiance and depth atlas.
 _Avoid_: Light sample, photon
 
 **Probe volume**:
-The axis-aligned grid of probes. One volume covers the arena at 2 m spacing: 20 x 3 x 20 probes. A probe inside a box is invalid.
+The axis-aligned grid of probes. The default covers the arena at 1 m spacing: 40 x 5 x 40 probes. The 2 m quality fallback uses 20 x 3 x 20. A probe inside static geometry is invalid.
 _Avoid_: GI grid, light grid
 
 **Probe atlas**:
-The irradiance and depth maps for one probe. Irradiance uses an 8 x 8 octahedral map with gamma encoding; depth stores the first and second moments. The lit pass blends the eight surrounding probes.
+The irradiance and depth maps for one probe. Irradiance uses an 8 x 8 octahedral map with gamma encoding; depth stores the first and second moments. The lit pass samples the four probes of the containing tetrahedron.
 _Avoid_: Irradiance map, probe texture
-
-**Probe pass**:
-The compute pass that traces probe rays and blends their atlas. It records after the TLAS and cluster passes and before the depth prepass.
-_Avoid_: GI pass, bake pass
 
 **Coverage fraction**:
 The share of the sampled capture region that is exactly zero, at or below a black threshold, or at or above a lit threshold. A `coverage` block on a stats capture reports it as `capture.stats.coverage.zero_fraction`, `.black_fraction`, and `.lit_fraction`. A threshold is in the target's own values.
 _Avoid_: Black ratio, lit ratio
 
 **Lamp prefab**:
-A prefab with an active point light and an emissive box. The catalog has the Lamp, the Light panel, and the Beacon. A lamp is placed like any other object and always uses a dynamic body, so its light follows its current transform.
+A prefab with an active point light and an emissive box. The catalog has the Lamp, the Light panel, and the Beacon. A lamp is placed like any other object and carries a lamp kind; a static fixture uses a static body, and a dynamic lamp uses a dynamic body.
 _Avoid_: Light object, bulb
 
 **Light budget**:
@@ -242,8 +279,8 @@ Every angle key ends in `_deg`. The engine converts to radians at the edge.
 _Avoid_: mixed angle units, implicit units
 
 **Crate**:
-The 1 m dynamic box prefab. Three crates and three lamps make up the six
-starting objects.
+The 1 m dynamic box prefab. Three crates and three static fixture lamps make up
+the six starting objects.
 _Avoid_: Prop, box
 
 **Placed object**:
@@ -260,9 +297,9 @@ _Avoid_: Template, class, prototype
 
 **Body mode**:
 Static or dynamic. A static placed object collides and never moves. A dynamic
-placed object uses the prefab density and can be pushed. A lamp prefab always
-uses a dynamic body; a static request is normalized on creation and refused on
-conversion.
+placed object uses the prefab density and can be pushed. A lamp body follows its
+kind: a static fixture is static, a dynamic lamp is dynamic. A body request that
+would contradict the kind is refused.
 _Avoid_: Body type
 
 **Object id**:
@@ -426,7 +463,10 @@ The JSON document from `harbagsa-agent schema` that names the command fields, un
 _Avoid_: Command list
 
 **Static box**:
-An immutable box in the arena: the floor, a wall, the ceiling, or a prop. It is not a placed object and it does not enter the simulation digest. `static_boxes` reports every static box; `harbagsa-agent boxes` prints the same list without a renderer.
+An immutable box in the arena: the floor, a wall, the ceiling, or a prop. It is
+not a placed object and it does not enter the simulation digest. It receives
+direct light, hard shadows, and a lightmap tile. `static_boxes` reports every
+static box; `harbagsa-agent boxes` prints the same list without a renderer.
 _Avoid_: Arena mesh, level mesh
 
 **Shot**:
@@ -492,7 +532,8 @@ _Avoid_: Z prepass
 
 **Lit pass**:
 The color scope of the scene pass. It loads the depth the prepass wrote and
-shades the boxes with the direct point lights and emissive term.
+shades the boxes with the direct point lights, the baked indirect term, and the
+emissive term.
 _Avoid_: Main pass, color pass
 
 **Backface culling**:
@@ -698,13 +739,18 @@ builds only that part; `digest` is the only field that needs every section.
 _Avoid_: State slice, partial document
 
 **Renderer state**:
-The harness state block that describes the last rendered frame: frame count, TAA state, jitter index, history validity, convergence frames, history read index and weight, reset count and reason, active point-light count, probe volume and probe counts, and the debug vertex counts by source. A capture carries the same block for the frame that wrote it.
+The harness state block that describes the last rendered frame: frame count, TAA
+state, jitter index, history validity, convergence frames, history read index and
+weight, reset count and reason, active point-light count, bake status and key,
+lightmap and probe switches, and the debug vertex counts by source. A capture
+carries the same block for the frame that wrote it.
 _Avoid_: Render stats, GPU state
 
 **Render digest**:
 The FNV-1a hash of the effective render inputs: extent, camera, boxes, box
-emissive strengths, point lights, jitter, atlas weight, clip height, probe
-volume, GI flag, and view flags. It is separate from the simulation digest.
+emissive strengths, point lights, jitter, atlas weight, clip height, shadow
+visibility, lightmap and probe switches, bake key, bake status, and view flags.
+It is separate from the simulation digest.
 _Avoid_: Frame hash, image hash
 
 **History reset reason**:
@@ -714,8 +760,8 @@ _Avoid_: Reset flag
 **Renderer debug override**:
 A gated change to a renderer input for diagnosis: TAA, jitter, history weight,
 clamp, depth trust, synthetic lights, the plan-view clip height, light shadows,
-or GI. Every change resets history. A field set to `null` restores that field's
-default without clearing the others.
+the lightmap term, or the probe term. Every change resets history. A field set to
+`null` restores that field's default without clearing the others.
 _Avoid_: Debug flag
 
 **Renderer debug patch**:
