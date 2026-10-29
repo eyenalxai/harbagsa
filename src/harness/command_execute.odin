@@ -120,6 +120,11 @@ execute_remove :: proc(session: ^Session, command: Command, reply: ^Reply) -> st
 }
 
 @(private)
+execute_bake :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
+	return session_bake(session, command.bake)
+}
+
+@(private)
 execute_get :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	return session_get(session, command.get, reply)
 }
@@ -195,6 +200,7 @@ execute_displays :: proc(session: ^Session, command: Command, reply: ^Reply) -> 
 
 @(private)
 execute_rows :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
+	session_refresh_renderer(session)
 	session_refresh_hud(session)
 	reply.rows = new(Rows_State, session.allocator)
 	reply.rows^ = rows_state_build(&session.hud, session.allocator)

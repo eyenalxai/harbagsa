@@ -3,10 +3,7 @@ package main
 
 import "core:fmt"
 import "core:os"
-import "core:path/filepath"
 import "core:strconv"
-import "core:strings"
-import "core:sys/info"
 
 import "src:bake"
 import "src:game"
@@ -86,7 +83,7 @@ run :: proc(args: []string) -> int {
 	}
 	defer delete(artifact, context.allocator)
 
-	if write_error := write_atomic(output, artifact); write_error != "" {
+	if write_error := bake.write_file(output, artifact); write_error != "" {
 		fmt.eprintf("harbagsa-bake: %s\n", write_error)
 		return 1
 	}
@@ -96,12 +93,11 @@ run :: proc(args: []string) -> int {
 
 @(private)
 default_threads :: proc() -> int {
-	_, logical, ok := info.cpu_core_count()
-	if !ok || logical < 1 {
+	threads, ok := bake.default_threads()
+	if !ok {
 		fmt.eprintln("harbagsa-bake: cannot read the CPU count; using one thread")
-		return 1
 	}
-	return clamp(logical, 1, bake.MAX_THREADS)
+	return threads
 }
 
 @(private)
@@ -117,41 +113,6 @@ argument_error :: proc(message: string) -> int {
 	fmt.eprintf("harbagsa-bake: %s\n", message)
 	usage()
 	return 2
-}
-
-@(private)
-write_atomic :: proc(path: string, bytes: []u8) -> string {
-	directory := filepath.dir(path)
-	if directory != "" && directory != "." && !os.is_dir(directory) {
-		if mkdir_error := os.mkdir_all(directory); mkdir_error != nil {
-			return fmt.aprintf(
-				"cannot create %s: %v",
-				directory,
-				mkdir_error,
-				allocator = context.allocator,
-			)
-		}
-	}
-	temporary := strings.concatenate({path, ".tmp"}, context.allocator)
-	defer delete(temporary, context.allocator)
-	if write_error := os.write_entire_file(temporary, bytes); write_error != nil {
-		return fmt.aprintf(
-			"cannot write %s: %v",
-			temporary,
-			write_error,
-			allocator = context.allocator,
-		)
-	}
-	if rename_error := os.rename(temporary, path); rename_error != nil {
-		_ = os.remove(temporary)
-		return fmt.aprintf(
-			"cannot publish %s: %v",
-			path,
-			rename_error,
-			allocator = context.allocator,
-		)
-	}
-	return ""
 }
 
 @(private)

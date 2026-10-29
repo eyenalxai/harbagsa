@@ -4,6 +4,7 @@ package harness
 import "core:mem"
 import "core:strings"
 
+import "src:bake"
 import "src:digest"
 import "src:frame"
 import "src:game"
@@ -31,6 +32,8 @@ Backend :: struct {
 	set_debug: proc(ctx: rawptr, debug: renderer.Renderer_Debug) -> bool,
 	get_debug: proc(ctx: rawptr) -> renderer.Renderer_Debug,
 	clear_debug: proc(ctx: rawptr),
+	publish_bake: proc(ctx: rawptr, artifact: []u8, bake_ms: u32) -> (bool, string),
+	refresh_bake: proc(ctx: rawptr, static: bake.Static),
 	shutdown:  proc(ctx: rawptr),
 }
 
@@ -117,6 +120,8 @@ backend_create :: proc(
 		set_debug = backend_set_debug,
 		get_debug = backend_get_debug,
 		clear_debug = backend_clear_debug,
+		publish_bake = backend_publish_bake,
+		refresh_bake = backend_refresh_bake,
 		shutdown = backend_shutdown,
 	}, ""
 }
@@ -137,6 +142,22 @@ backend_get_debug :: proc(ctx: rawptr) -> renderer.Renderer_Debug {
 backend_clear_debug :: proc(ctx: rawptr) {
 	data := cast(^Backend_Data)ctx
 	renderer.clear_renderer_debug(&data.renderer)
+}
+
+@(private)
+backend_publish_bake :: proc(
+	ctx: rawptr,
+	artifact: []u8,
+	bake_ms: u32,
+) -> (bool, string) {
+	data := cast(^Backend_Data)ctx
+	return renderer.publish_bake(&data.renderer, artifact, bake_ms)
+}
+
+@(private)
+backend_refresh_bake :: proc(ctx: rawptr, static: bake.Static) {
+	data := cast(^Backend_Data)ctx
+	renderer.refresh_bake(&data.renderer, static)
 }
 
 @(private)
@@ -193,6 +214,7 @@ backend_render :: proc(
 		captured      = !session.view.hint,
 		hud           = session.view.hud,
 		perf          = session.view.perf,
+		bake          = renderer.bake_report(&data.renderer),
 	}
 	session.hud.perf.visible = session.view.perf
 	if session.hud.perf.visible {
