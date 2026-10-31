@@ -93,6 +93,21 @@ schema_command_fields :: proc(row: ^Command_Row, allocator: runtime.Allocator) -
 		return fields[:]
 	}
 	schema_append_fields(row.value_type, nil, &fields, allocator)
+	// `variants` is an object keyed by variant name, but the field's Odin type
+	// is a slice, so the reflected type would say array. `prime` is a number or
+	// the string "once", which has no single reflected type either.
+	if row.kind == .Perf {
+		for &field in fields {
+			if field.name == "variants" {
+				delete(field.type, allocator)
+				field.type = strings.clone("object", allocator)
+			}
+			if field.name == "prime" {
+				delete(field.type, allocator)
+				field.type = strings.clone(`number or "once"`, allocator)
+			}
+		}
+	}
 	return fields[:]
 }
 

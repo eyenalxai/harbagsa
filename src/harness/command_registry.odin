@@ -144,6 +144,7 @@ destroy_perf :: proc(command: ^Command, allocator: mem.Allocator) {
 	if command.perf.has_name {
 		delete(command.perf.name, allocator)
 	}
+	perf_command_variants_clear(command, allocator)
 	command^ = {}
 }
 
