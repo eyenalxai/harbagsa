@@ -26,13 +26,14 @@ scenarios, two for the 96-light run:
 | -- | -- | --: | --: | --: | --: | --: |
 | `scenarios/perf.json` | 1280x720 | 0.427 ms | 0.434 ms | 0.120 ms | 0.198 ms | 0.700 ms |
 | `scenarios/perf-arena.json` | 1280x720 | 0.383 ms | 0.389 ms | 0.089 ms | 0.198 ms | 0.657 ms |
-| `scenarios/perf-mixed.json` (96 lights) | 1920x1080 | 1.516 ms | 1.576 ms | 1.103 ms | 0.108 ms | 1.839 ms |
+| `scenarios/perf-mixed.json` (96 lights) | 1920x1080 | 1.506 ms | 1.632 ms | 1.116 ms | 0.110 ms | 1.831 ms |
 
-The spread across the three runs was under 0.005 ms at 720p and under 0.012 ms
-at 1080p, so the table lists the median run. The 96-light row quotes `mixed-2`,
-the last mixed window in the scenario; `scenarios/perf-mixed.json` brackets each
-term with direct windows so the term costs are measurable at all. The interval is the GPU total plus the
-submit and present cost; it is not display pacing.
+The spread across the three runs was under 0.005 ms at 720p and under 0.021 ms
+at 1080p, so the table lists the median run. The 96-light row quotes the
+`direct` baseline variant; `scenarios/perf-mixed.json` follows it with
+`lightmap`, `probe`, and `mixed`, each bracketed by direct windows over three
+rounds. The interval is the GPU total plus the submit and present cost; it is
+not display pacing.
 
 ```sh
 tools/make.sh build
@@ -42,8 +43,9 @@ tools/make.sh build
 ```
 
 `scenarios/perf-mixed.json` measures both indirect terms, each alone, and
-neither in one device. Run it twice before quoting a delta: the first window is
-the clock ramp and the per-term differences are at the 0.01–0.02 ms noise floor.
+neither in one command. The report carries a paired delta and its per-round
+spread for every variant, so quote the spread as the noise floor instead of
+reasoning about a ramp window; the first round is discarded.
 
 ### Readback fix
 

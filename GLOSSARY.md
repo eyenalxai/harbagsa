@@ -761,8 +761,9 @@ _Avoid_: State slice, partial document
 **Renderer state**:
 The harness state block that describes the last rendered frame: frame count, TAA
 state, jitter index, history validity, convergence frames, history read index and
-weight, reset count and reason, active point-light count, bake status and key,
-lightmap and probe switches, and the debug vertex counts by source. A capture
+weight, reset count and reason, active point-light count, timestamp period,
+bake status and key, lightmap and probe switches, and the debug vertex counts by
+source. A capture
 carries the same block for the frame that wrote it.
 _Avoid_: Render stats, GPU state
 
@@ -874,8 +875,30 @@ _Avoid_: Benchmark
 
 **Perf report**:
 The `perf` object in a harness reply and in `report.json` that holds the
-percentiles and per-pass means of a perf run.
+percentiles, per-pass means, variants, paired deltas, clock, and load average of
+a perf run.
 _Avoid_: Benchmark result, profile
+
+**Perf variant**:
+A named renderer-debug patch that a perf round measures beside the baseline. It
+can carry any renderer-debug field, including `synthetic_lights`.
+_Avoid_: Profile, configuration, preset
+
+**Perf round**:
+One pass through the perf schedule: the baseline, then every other variant with
+a baseline window after it.
+_Avoid_: Iteration, repetition
+
+**Perf baseline**:
+The variant a round measures first and after every other variant, so each
+variant window is bracketed by two baseline windows.
+_Avoid_: Control, reference run
+
+**Perf discard**:
+The opening perf rounds left out of the per-variant statistics. At most
+`rounds - 1` rounds are dropped, so one round is always kept. The report carries
+the requested count and the effective `discarded` count.
+_Avoid_: Cooldown, warmup
 
 **Perf trace**:
 The opt-in per-frame file from a perf run. It holds one JSON object per perf
