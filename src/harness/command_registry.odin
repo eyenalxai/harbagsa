@@ -35,7 +35,7 @@ Command_Row :: struct {
 }
 
 COMMANDS := [?]Command_Row {
-	{.Reset, "reset", "Return the simulation, settings, menu, and debug state to their defaults.", parse_no_fields, execute_reset, .Raw, nil, .None, No_Fields_Command},
+	{.Reset, "reset", "Return the simulation, settings, menu, and editor state to their defaults.", parse_no_fields, execute_reset, .Raw, nil, .None, No_Fields_Command},
 	{.Look, "look", "Apply one pixel look delta through the game sensitivity.", parse_look, execute_look, .Raw, nil, .None, Look_Command},
 	{.Face, "face", "Set the player view directly. Angles are degrees.", parse_face, execute_face, .Raw, nil, .None, Face_Command},
 	{.Input, "input", "Set persistent movement input until the next input command.", parse_input, execute_input, .Raw, nil, .None, Input_Command},
