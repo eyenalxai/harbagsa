@@ -75,41 +75,22 @@ edit_drag_move :: proc(
 	if dm.dragging != .Object || !captured {
 		return edit_no_change()
 	}
-	id, ok := debug_selected_object_id(dm, sim)
+	object, ok := selected_object(dm, sim)
 	if !ok || (look_delta.x == 0.0 && look_delta.y == 0.0) {
 		return edit_no_change()
-	}
-	object, found := simulation_object_find(sim, id)
-	if !found {
-		return edit_no_change()
-	}
-	if !b3.Body_IsValid(object.body) {
-		return edit_fail(.Failed)
 	}
 
 	forward := debug_camera_forward_horizontal(dm.camera)
 	right := debug_camera_right(dm.camera)
 	target := dm.drag_position +
 		right * (look_delta.x * OBJECT_DRAG_SCALE) + forward * (-look_delta.y * OBJECT_DRAG_SCALE)
-	half := simulation_object_box(sim, id).half_extents
-	target.y = max(target.y, half.y)
-	if target == b3.Body_GetPosition(object.body) {
-		return edit_no_change()
+	result := commit_move(dm, sim, object, target, !dm.drag_recorded)
+	if !result.applied {
+		return result
 	}
 	if !dm.drag_recorded {
-		result := object_history_apply(
-			debug_history(dm),
-			sim,
-			History_Move{id = id, center = target},
-		)
-		if !result.applied {
-			return edit_fail(.Failed)
-		}
 		dm.drag_recorded = true
-	} else if !simulation_move_object(sim, id, target) {
-		return edit_fail(.Failed)
 	}
-	dm.drag_position = target
 	return edit_ok()
 }
 
@@ -138,39 +119,16 @@ edit_wheel :: proc(
 	if !captured {
 		return edit_no_change()
 	}
-	id, ok := debug_selected_object_id(dm, sim)
+	object, ok := selected_object(dm, sim)
 	if !ok {
 		return edit_no_change()
-	}
-	object, found := simulation_object_find(sim, id)
-	if !found {
-		return edit_no_change()
-	}
-	if !b3.Body_IsValid(object.body) {
-		return edit_fail(.Failed)
 	}
 	if dm.dragging != .Object {
 		dm.drag_position = b3.Body_GetPosition(object.body)
 	}
-	half := simulation_object_box(sim, id).half_extents
 	target := dm.drag_position
-	target.y = max(
-		dm.drag_position.y + f32(steps) * OBJECT_WHEEL_STEP,
-		half.y,
-	)
-	if target == b3.Body_GetPosition(object.body) {
-		return edit_no_change()
-	}
-	result := object_history_apply(
-		debug_history(dm),
-		sim,
-		History_Move{id = id, center = target},
-	)
-	if !result.applied {
-		return edit_fail(.Failed)
-	}
-	dm.drag_position = target
-	return edit_ok()
+	target.y += f32(steps) * OBJECT_WHEEL_STEP
+	return commit_move(dm, sim, object, target, true)
 }
 
 

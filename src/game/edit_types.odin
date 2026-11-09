@@ -158,6 +158,10 @@ Edit_Reason :: enum {
 	Nothing_To_Redo,
 	No_Change,
 	Failed,
+	Restore_Invalid_Scene,
+	Restore_Invalid_Name,
+	Restore_Duplicate_Name,
+	Restore_Body,
 }
 
 Edit_Result :: struct {
@@ -215,6 +219,14 @@ edit_reason_message :: proc(reason: Edit_Reason) -> string {
 		return ""
 	case .Failed:
 		return "the edit failed"
+	case .Restore_Invalid_Scene:
+		return "the snapshot simulation is not valid"
+	case .Restore_Invalid_Name:
+		return "the snapshot has an invalid object name"
+	case .Restore_Duplicate_Name:
+		return "the snapshot has a duplicate object name"
+	case .Restore_Body:
+		return "the snapshot could not create a body"
 	}
 	return ""
 }

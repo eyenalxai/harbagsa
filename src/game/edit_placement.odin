@@ -52,14 +52,14 @@ edit_place_object :: proc(dm: ^Debug_Mode, sim: ^Simulation, place: Place_Object
 
 @(private)
 place_object :: proc(dm: ^Debug_Mode, sim: ^Simulation, spawn: Object_Spawn) -> Edit_Result {
-	result := object_history_apply(debug_history(dm), sim, History_Place{spawn = spawn})
+	result, id := object_history_apply(debug_history(dm), sim, History_Place{spawn = spawn})
 	if !result.applied {
-		return edit_fail(.Failed)
+		return result
 	}
 	debug_mode_end_drag(dm)
 	dm.selection = .Object
-	dm.selected_object_id = result.id
-	dm.drag_position = simulation_object_box(sim, result.id).center
+	dm.selected_object_id = id
+	dm.drag_position = simulation_object_box(sim, id).center
 	return edit_ok()
 }
 

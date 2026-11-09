@@ -18,11 +18,6 @@ Object_History :: struct {
 	redo:      [dynamic]Object_Snapshot,
 }
 
-History_Result :: struct {
-	applied: bool,
-	id:      Object_Id,
-}
-
 History_Mutation :: union #no_nil {
 	History_Move,
 	History_Rotate,
@@ -57,9 +52,9 @@ History_Duplicate :: struct {
 }
 
 History_Light :: struct {
-	id:       Object_Id,
-	settings: Light_Settings,
-	next:     Light_Settings,
+	id:            Object_Id,
+	previous_kind: Lamp_Kind,
+	next:          Light_Settings,
 }
 
 History_Place :: struct {
@@ -99,18 +94,21 @@ object_history_redo_depth :: proc(history: ^Object_History) -> int {
 	return len(history.redo)
 }
 
-// The only path that adds an undo entry: capture, mutate, commit. A failed
-// mutation destroys the snapshot, so both stacks and the redo entries survive.
+// A failed mutation destroys the snapshot, so both stacks and the redo entries
+// survive.
 object_history_apply :: proc(
 	history: ^Object_History,
 	sim: ^Simulation,
 	mutation: History_Mutation,
-) -> History_Result {
+) -> (
+	Edit_Result,
+	Object_Id,
+) {
 	snapshot := object_snapshot_capture(sim, history.allocator)
 	applied, id := history_mutation_apply(sim, mutation)
 	if !applied {
 		object_snapshot_destroy(&snapshot, history.allocator)
-		return {}
+		return edit_fail(.Failed), INVALID_OBJECT_ID
 	}
 
 	if history.undo == nil {
@@ -122,7 +120,7 @@ object_history_apply :: proc(
 	}
 	append(&history.undo, snapshot)
 	object_history_clear_redo(history)
-	return {applied = true, id = id}
+	return edit_ok(), id
 }
 
 @(private)
@@ -154,17 +152,19 @@ history_mutation_apply :: proc(
 			center    = b3.Body_GetPosition(object.body) + {prefab(object.prefab).half_extents.x, 0.0, 0.0},
 			light     = object.light,
 		}
-		created := create_object_rotated(
+		created := create_object_build(
 			sim,
-			spawn,
-			b3.Body_GetRotation(object.body),
-			object.color,
-			object.light,
-			false,
+			{
+				spawn = spawn,
+				rotation = b3.Body_GetRotation(object.body),
+				color = object.color,
+				light = object.light,
+				settled = false,
+			},
 		)
 		return created != INVALID_OBJECT_ID, created
 	case History_Light:
-		if value.next.kind != value.settings.kind {
+		if value.next.kind != value.previous_kind {
 			return simulation_set_lamp_kind(sim, value.id, value.next.kind), value.id
 		}
 		return simulation_set_object_light(sim, value.id, value.next), value.id
@@ -176,43 +176,55 @@ history_mutation_apply :: proc(
 }
 
 object_history_undo :: proc(history: ^Object_History, sim: ^Simulation) -> Edit_Result {
-	if len(history.undo) == 0 {
-		return edit_fail(.Nothing_To_Undo)
-	}
-	if history.redo == nil {
-		history.redo = make([dynamic]Object_Snapshot, 0, HISTORY_LIMIT, history.allocator)
-	}
-	index := len(history.undo) - 1
-	restore := history.undo[index]
-	redo := object_snapshot_capture(sim, history.allocator)
-	if !simulation_apply_snapshot(sim, restore) {
-		object_snapshot_destroy(&redo, history.allocator)
-		return edit_fail(.Failed)
-	}
-	object_snapshot_destroy(&history.undo[index], history.allocator)
-	ordered_remove(&history.undo, index)
-	append(&history.redo, redo)
-	return edit_ok()
+	return object_history_step(history, sim, &history.undo, &history.redo, .Nothing_To_Undo)
 }
 
 object_history_redo :: proc(history: ^Object_History, sim: ^Simulation) -> Edit_Result {
-	if len(history.redo) == 0 {
-		return edit_fail(.Nothing_To_Redo)
+	return object_history_step(history, sim, &history.redo, &history.undo, .Nothing_To_Redo)
+}
+
+@(private)
+object_history_step :: proc(
+	history: ^Object_History,
+	sim: ^Simulation,
+	from: ^[dynamic]Object_Snapshot,
+	to: ^[dynamic]Object_Snapshot,
+	empty: Edit_Reason,
+) -> Edit_Result {
+	if len(from^) == 0 {
+		return edit_fail(empty)
 	}
-	if history.undo == nil {
-		history.undo = make([dynamic]Object_Snapshot, 0, HISTORY_LIMIT, history.allocator)
+	if to^ == nil {
+		to^ = make([dynamic]Object_Snapshot, 0, HISTORY_LIMIT, history.allocator)
 	}
-	index := len(history.redo) - 1
-	restore := history.redo[index]
-	undo := object_snapshot_capture(sim, history.allocator)
-	if !simulation_apply_snapshot(sim, restore) {
-		object_snapshot_destroy(&undo, history.allocator)
-		return edit_fail(.Failed)
+	index := len(from^) - 1
+	restore := from^[index]
+	opposite := object_snapshot_capture(sim, history.allocator)
+	if apply_error := simulation_apply_snapshot(sim, restore); apply_error != .None {
+		object_snapshot_destroy(&opposite, history.allocator)
+		return edit_fail(snapshot_restore_reason(apply_error))
 	}
-	object_snapshot_destroy(&history.redo[index], history.allocator)
-	ordered_remove(&history.redo, index)
-	append(&history.undo, undo)
+	object_snapshot_destroy(&from^[index], history.allocator)
+	ordered_remove(from, index)
+	append(to, opposite)
 	return edit_ok()
+}
+
+@(private)
+snapshot_restore_reason :: proc(error: Snapshot_Apply_Error) -> Edit_Reason {
+	switch error {
+	case .None:
+		return .None
+	case .Invalid_Simulation:
+		return .Restore_Invalid_Scene
+	case .Invalid_Name:
+		return .Restore_Invalid_Name
+	case .Duplicate_Name:
+		return .Restore_Duplicate_Name
+	case .Body:
+		return .Restore_Body
+	}
+	return .Failed
 }
 
 @(private)
