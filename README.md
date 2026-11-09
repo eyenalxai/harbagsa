@@ -92,7 +92,8 @@ the current run.
 
 - `WASD`: fly horizontally. Mouse: look.
 - `Space` / `Ctrl`: fly up / down.
-- `Tab`: open or close the object palette.
+- `Tab`: open or close the object palette. Tab is refused while placement is
+  armed; press `Esc` to cancel placement first.
 - Left click: select and drag an object, or place the armed prefab.
 - Wheel: raise or lower the ghost or selected object.
 - `Q` / `E`: rotate in 15 degree steps. Hold `Shift` for 45 degree steps.
@@ -116,7 +117,9 @@ lights and a lamp kind. The preview and inspector show the kind, colour,
 intensity, and range. Every active lamp enters the light budget. The starting
 arena holds one of each lamp prefab as a static fixture, so its first view shows
 warm, cool, and red pools on the closed shell and a baked bounce in the corners.
-Newly placed lamps default to dynamic.
+Newly placed lamps default to dynamic. Closing the palette discards its selected
+card and tuned body and light; arming placement copies them into the placement
+tool.
 
 ### Perf overlay
 

@@ -25,7 +25,7 @@ resolve :: proc(
 
 	// A pause or a free cursor drops every latch, so a press never queues
 	// through the menu or a released pointer.
-	if focus.game.menu_open || !focus.captured || focus.game.debug_active {
+	if focus.game.menu_open || !focus.captured || focus.game.editor.active {
 		clear_latches(r)
 	}
 
@@ -40,8 +40,8 @@ resolve :: proc(
 	// and Esc). The old flags changed immediately for Tab and only after the
 	// apply for Esc, so keep both facts: one for the pointer, one for the cursor.
 	state := Key_State {
-		pointer_tool = focus.game.tool,
-		cursor_tool  = focus.game.tool,
+		pointer_tool = focus.game.editor.tool,
+		cursor_tool  = focus.game.editor.tool,
 	}
 	for index in 0 ..< events.key_count {
 		apply_key(r, &out, &state, events.keys[index], focus)
@@ -55,7 +55,7 @@ resolve :: proc(
 		captured     = focus.captured,
 	}
 
-	if focus.game.debug_active {
+	if focus.game.editor.active {
 		apply_debug_pointer(&out, events, focus, &state, hit)
 		out.want_cursor_free = state.cursor_tool == .Palette
 		return out
@@ -74,8 +74,8 @@ resolve :: proc(
 
 @(private)
 Key_State :: struct {
-	pointer_tool: game.Active_Tool,
-	cursor_tool:  game.Active_Tool,
+	pointer_tool: game.Tool_Kind,
+	cursor_tool:  game.Tool_Kind,
 }
 
 @(private)
@@ -91,18 +91,18 @@ apply_key :: proc(
 	editing := state.pointer_tool != .Palette
 	#partial switch edge.key {
 	case .Escape:
-		if focus.game.debug_active && focus.game.tool != .None {
+		if focus.game.editor.active && focus.game.editor.tool != .None {
 			add_action(out, game.Cancel{})
 			state.cursor_tool = .None
 		} else {
 			out.view.menu_toggle = true
 		}
 	case .Tab:
-		if focus.game.debug_active {
+		if focus.game.editor.active {
 			if state.pointer_tool == .Palette {
 				add_action(out, game.Palette_Close{})
 				state.pointer_tool = .None
-			} else {
+			} else if state.pointer_tool != .Placement {
 				add_action(out, game.Palette_Open{})
 				state.pointer_tool = .Palette
 			}
@@ -113,60 +113,60 @@ apply_key :: proc(
 			apply_palette_navigation(out, state, edge)
 		}
 	case .Digit_1, .Digit_2, .Digit_3, .Digit_4, .Digit_5, .Digit_6, .Digit_7, .Digit_8, .Digit_9:
-		if focus.game.debug_active && state.pointer_tool == .Palette {
+		if focus.game.editor.active && state.pointer_tool == .Palette {
 			index := int(edge.key) - int(platform.Key.Digit_1)
 			add_action(out, game.Palette_Select{index = index})
 		}
 	case .M:
-		if focus.game.debug_active {
+		if focus.game.editor.active {
 			add_action(out, game.Flip_Body{})
 		}
 	case .G:
-		if focus.game.debug_active {
+		if focus.game.editor.active {
 			add_action(out, game.Placement_Toggle_Snap{})
 		}
 	case .Q:
-		if focus.game.debug_active && editing {
+		if focus.game.editor.active && editing {
 			add_action(out, game.Turn{steps = -1, large = .Shift in edge.mods})
 		}
 	case .E:
-		if focus.game.debug_active && editing {
+		if focus.game.editor.active && editing {
 			add_action(out, game.Turn{steps = 1, large = .Shift in edge.mods})
 		}
 	case .C:
-		if focus.game.debug_active {
+		if focus.game.editor.active {
 			add_action(out, game.Light_Adjust{change = .Color})
 		}
 	case .K:
-		if focus.game.debug_active {
+		if focus.game.editor.active {
 			add_action(out, game.Light_Toggle_Kind{})
 		}
 	case .Left_Bracket:
-		if focus.game.debug_active {
+		if focus.game.editor.active {
 			add_action(out, game.Light_Adjust{change = .Intensity_Down})
 		}
 	case .Right_Bracket:
-		if focus.game.debug_active {
+		if focus.game.editor.active {
 			add_action(out, game.Light_Adjust{change = .Intensity_Up})
 		}
 	case .Comma:
-		if focus.game.debug_active {
+		if focus.game.editor.active {
 			add_action(out, game.Light_Adjust{change = .Range_Down})
 		}
 	case .Period:
-		if focus.game.debug_active {
+		if focus.game.editor.active {
 			add_action(out, game.Light_Adjust{change = .Range_Up})
 		}
 	case .Delete, .X:
-		if focus.game.debug_active && editing {
+		if focus.game.editor.active && editing {
 			add_action(out, game.Delete_Selected{})
 		}
 	case .D:
-		if focus.game.debug_active && editing && .Ctrl in edge.mods {
+		if focus.game.editor.active && editing && .Ctrl in edge.mods {
 			add_action(out, game.Duplicate_Selected{})
 		}
 	case .Z:
-		if focus.game.debug_active {
+		if focus.game.editor.active {
 			if editing && .Ctrl in edge.mods {
 				if .Shift in edge.mods {
 					add_action(out, game.Redo{})
@@ -176,11 +176,11 @@ apply_key :: proc(
 			}
 		}
 	case .Space:
-		if !focus.game.debug_active && focus.captured {
+		if !focus.game.editor.active && focus.captured {
 			r.jump = true
 		}
 	case .LShift:
-		if !focus.game.debug_active && focus.captured {
+		if !focus.game.editor.active && focus.captured {
 			r.sprint = true
 		}
 	case .R:
@@ -304,7 +304,7 @@ apply_world_pointer :: proc(out: ^Frame_Input, events: platform.Events, focus: F
 			},
 		)
 	}
-	if focus.game.dragging {
+	if focus.game.editor.dragging {
 		add_action(out, game.Drag_Move{look_delta = events.look_delta})
 	}
 }

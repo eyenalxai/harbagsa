@@ -15,11 +15,11 @@ debug_mode_update :: proc(
 		return
 	}
 	if !motion.captured {
-		debug_mode_end_drag(dm)
+		editor_end_drag(&dm.editor)
 	}
 
 	primary_press := edit_actions_have_primary_press(actions)
-	if motion.captured && dm.dragging == .None && !primary_press {
+	if motion.captured && !dm.editor.dragging && !primary_press {
 		dm.camera.yaw = b3.UnwindAngle(dm.camera.yaw - motion.look_delta.x * YAW_SENSITIVITY)
 		dm.camera.pitch = clamp(
 			dm.camera.pitch - motion.look_delta.y * PITCH_SENSITIVITY,
@@ -29,20 +29,15 @@ debug_mode_update :: proc(
 	}
 
 	debug_fly(dm, motion, delta)
-	// The aim belongs to the camera, so refresh the tool before an action reads
-	// the ghost.
-	if dm.placement.armed {
-		debug_placement_refresh(dm, sim)
+	editor_repair_selection(&dm.editor, sim)
+	ctx := Edit_Context {
+		active    = dm.active,
+		menu_open = menu_open,
+		captured  = motion.captured,
+		camera    = dm.camera,
 	}
-	if _, ok := debug_selected_object_id(dm, sim); !ok && dm.selection == .Object {
-		debug_mode_clear_selection(dm)
-	}
-	ctx := Edit_Context{menu_open = menu_open, captured = motion.captured}
 	for action in actions {
-		_ = edit_apply(dm, sim, action, ctx)
-	}
-	if dm.placement.armed {
-		debug_placement_refresh(dm, sim)
+		_ = editor_apply(&dm.editor, sim, action, ctx)
 	}
 }
 
@@ -56,7 +51,6 @@ edit_actions_have_primary_press :: proc(actions: []Edit_Action) -> bool {
 	}
 	return false
 }
-
 
 @(private)
 debug_fly :: proc(dm: ^Debug_Mode, motion: Debug_Motion, delta: f32) {
