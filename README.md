@@ -196,7 +196,7 @@ degrees and ends in `_deg`. Positions and ranges are metres. One `step` or
 - `camera`: set or clear an inspection camera.
 - `view`: set HUD, debug draw, capture hint, and perf flags.
 - `debug_mode`: enter or leave debug mode.
-- `editor`: drive the palette, placement, object edits, light settings, and history.
+- `editor`: drive the palette, placement, object edits, light settings, and history. `state.editor` reports the active tool, the resolved selection, the placement, the history, and the light budget.
 - `menu`: drive the settings menu.
 - `record`: start or stop a recording.
 - `replay`: reset and run a recorded scenario.
