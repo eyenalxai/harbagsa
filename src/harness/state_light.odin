@@ -28,10 +28,3 @@ light_state :: proc(settings: game.Light_Settings) -> Light_State {
 		range = settings.range,
 	}
 }
-
-light_budget_state :: proc(sim: ^game.Simulation) -> Light_Budget_State {
-	return {
-		active = game.simulation_active_light_count(sim),
-		lamps = game.simulation_lamp_count(sim),
-	}
-}

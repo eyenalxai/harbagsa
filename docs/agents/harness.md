@@ -120,7 +120,7 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 
 ## Commands
 
-- `reset`: fresh simulation, settings, menu, and debug state.
+- `reset`: fresh simulation, settings, menu, and editor state.
 - `look`: `dx`, `dy` through game sensitivity.
 - `face`: direct camera `yaw_deg` and `pitch_deg`. The body keeps its heading.
 - `input`: persistent `forward`, `right`, and `sprint`; `jump` is a one-step edge.
@@ -205,6 +205,13 @@ actions. Fields cover:
   or selected lamp.
 - `undo` and `redo` for history.
 - `camera` for the free-fly camera.
+
+`state.editor` reports the same view the HUD draws: `active`, `tool` (`none`,
+`palette`, or `placement`), the `palette` and `placement` payloads, the resolved
+`selection`, `history.depth` and `history.redo`, and `lights.active` and
+`lights.lamps`. `selection.present` is false when no object is selected;
+otherwise it carries `id`, `prefab`, `body`, `size`, `position`, `yaw_deg`, and
+`light`. `placement.position` is the ghost centre.
 
 Catalog order: Crate, Small crate, Wide crate, Block, Platform, Ramp, Pillar,
 Wall, Lamp, Light panel, Beacon. A lamp kind is `static` or `dynamic`; a static

@@ -30,7 +30,7 @@ STATE_SECTION_ROWS := [?]State_Section_Row {
 	{.Static_Boxes, "static_boxes", build_state_static_boxes},
 	{.Objects, "objects", build_state_objects},
 	{.Settings, "settings", build_state_settings},
-	{.Debug, "debug", build_state_debug},
+	{.Editor, "editor", build_state_editor},
 	{.Menu, "menu", build_state_menu},
 	{.Notice, "notice", build_state_notice},
 	{.Rows, "rows", build_state_rows},
@@ -145,8 +145,8 @@ build_state_settings :: proc(state: ^State, ctx: ^State_Context) {
 }
 
 @(private)
-build_state_debug :: proc(state: ^State, ctx: ^State_Context) {
-	state.debug = debug_state_build(ctx.debug, ctx.sim)
+build_state_editor :: proc(state: ^State, ctx: ^State_Context) {
+	state.editor = editor_state_build(game.editor_view(ctx.debug, ctx.sim))
 }
 
 @(private)
