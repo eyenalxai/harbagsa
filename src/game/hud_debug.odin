@@ -1,8 +1,6 @@
 #+vet explicit-allocators
 package game
 
-import "core:math"
-
 HUD_INSPECTOR_ROW_COUNT :: 12
 HUD_PLACEMENT_ROW_COUNT :: 9
 
@@ -19,37 +17,44 @@ hud_debug_state_update :: proc(
 	debug: ^Debug_Mode,
 	bake: Bake_View,
 ) {
-	if debug.placement.armed {
-		hud_placement_state_update(hud, sim, debug, bake)
+	view := editor_view(debug, sim)
+	if view.tool == .Placement {
+		hud_placement_state_update(hud, sim, view, bake)
 		return
 	}
+	hud_inspector_state_update(hud, sim, view, debug.camera, bake)
+}
 
-	id, has_selection := debug_selected_object_id(debug, sim)
+@(private)
+hud_inspector_state_update :: proc(
+	hud: ^HUD_State,
+	sim: ^Simulation,
+	view: Editor_View,
+	camera: Debug_Camera,
+	bake: Bake_View,
+) {
 	name := "None"
 	body := "none"
 	half_extents: [3]f32
 	position: [3]f32
 	yaw: f32
 	light: Light_Settings
-	if has_selection {
-		if object, found := simulation_object_find(sim, id); found {
-			name = prefab_name(object.prefab)
-			body = body_mode_name(object.body_mode)
-			box := simulation_object_box(sim, id)
-			half_extents = box.half_extents
-			position = box.center
-			yaw = simulation_object_yaw(sim, id) * 180.0 / math.PI
-			light = object.light
-		}
+	selected_id := INVALID_OBJECT_ID
+	if selection, has_selection := view.selection.?; has_selection {
+		name = prefab_name(selection.prefab)
+		body = body_mode_name(selection.body_mode)
+		half_extents = selection.box.half_extents
+		position = selection.box.center
+		yaw = selection.yaw_degrees
+		light = selection.light
+		selected_id = selection.id
 	}
-
-	camera := debug.camera.position
 
 	hud.rows[0] = {kind = .Header, label = "Debug mode"}
 	hud.rows[1] = {
 		kind    = .Metric,
 		label   = "Selection",
-		value   = line_format(&hud.storage, 0, "%-11s  # %03d", name, u32(id)),
+		value   = line_format(&hud.storage, 0, "%-11s  # %03d", name, u32(selected_id)),
 		numeric = true,
 	}
 	hud.rows[2] = {
@@ -102,7 +107,7 @@ hud_debug_state_update :: proc(
 		numeric = true,
 	}
 	snap := HUD_SNAP_OFF
-	if debug.placement.snap {
+	if view.placement.snap {
 		snap = HUD_SNAP_GRID
 	}
 	hud.rows[7] = {
@@ -118,9 +123,9 @@ hud_debug_state_update :: proc(
 			&hud.storage,
 			7,
 			"X % 7.1f  Y % 7.1f  Z % 7.1f",
-			camera.x,
-			camera.y,
-			camera.z,
+			camera.position.x,
+			camera.position.y,
+			camera.position.z,
 		),
 		numeric = true,
 	}
@@ -133,7 +138,7 @@ hud_debug_state_update :: proc(
 	hud.rows[10] = {
 		kind    = .Detail,
 		label   = "Lights",
-		value   = hud_light_budget(hud, 10, sim),
+		value   = hud_light_budget(hud, 10, view.lights),
 		numeric = true,
 	}
 	hud.rows[11] = {
@@ -149,34 +154,35 @@ hud_debug_state_update :: proc(
 hud_placement_state_update :: proc(
 	hud: ^HUD_State,
 	sim: ^Simulation,
-	debug: ^Debug_Mode,
+	view: Editor_View,
 	bake: Bake_View,
 ) {
+	placement := view.placement
 	hud.rows[0] = {kind = .Header, label = "Debug mode"}
 	hud.rows[1] = {
 		kind  = .Metric,
 		label = "Prefab",
-		value = prefab_name(debug.placement.prefab),
+		value = prefab_name(placement.prefab),
 	}
 	hud.rows[2] = {
 		kind  = .Metric,
 		label = "Body",
-		value = body_mode_name(debug.palette.body_mode),
+		value = body_mode_name(view.palette.body_mode),
 	}
 	hud.rows[3] = {
 		kind    = .Metric,
 		label   = "Height",
-		value   = line_format(&hud.storage, 3, "% 6.2f m", debug.placement.height),
+		value   = line_format(&hud.storage, 3, "% 6.2f m", placement.height),
 		numeric = true,
 	}
 	hud.rows[4] = {
 		kind    = .Metric,
 		label   = "Yaw",
-		value   = line_format(&hud.storage, 4, "% 6.1f deg", debug.placement.yaw_degrees),
+		value   = line_format(&hud.storage, 4, "% 6.1f deg", placement.yaw_degrees),
 		numeric = true,
 	}
 	snap := HUD_SNAP_OFF
-	if debug.placement.snap {
+	if placement.snap {
 		snap = HUD_SNAP_GRID
 	}
 	hud.rows[5] = {kind = .Metric, label = "Snap", value = snap}
@@ -191,11 +197,10 @@ hud_placement_state_update :: proc(
 		),
 		numeric = true,
 	}
-	light := next_placement_light(debug)
 	hud.rows[7] = {
 		kind    = .Metric,
 		label   = "Light",
-		value   = hud_light_line(hud, 7, light),
+		value   = hud_light_line(hud, 7, placement.light),
 		numeric = true,
 	}
 	hud.rows[8] = {
@@ -235,12 +240,12 @@ hud_bake_line :: proc(hud: ^HUD_State, slot: int, bake: Bake_View) -> string {
 }
 
 @(private)
-hud_light_budget :: proc(hud: ^HUD_State, slot: int, sim: ^Simulation) -> string {
+hud_light_budget :: proc(hud: ^HUD_State, slot: int, budget: Editor_Light_Budget) -> string {
 	return line_format(
 		&hud.storage,
 		slot,
 		"% 2d active / % 2d lamps",
-		simulation_active_light_count(sim),
-		simulation_lamp_count(sim),
+		budget.active,
+		budget.lamps,
 	)
 }

@@ -21,6 +21,16 @@ active_tool :: proc(dm: ^Debug_Mode) -> Active_Tool {
 	return .None
 }
 
+ACTIVE_TOOL_NAMES := [Active_Tool]string {
+	.None = "none",
+	.Palette = "palette",
+	.Placement = "placement",
+}
+
+active_tool_name :: proc(tool: Active_Tool) -> string {
+	return ACTIVE_TOOL_NAMES[tool]
+}
+
 // take_tool cancels every other tool. The caller enters the named tool with its
 // own side effects: selecting a prefab or refreshing the ghost.
 take_tool :: proc(dm: ^Debug_Mode, tool: Active_Tool) {
