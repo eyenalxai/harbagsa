@@ -79,20 +79,37 @@ edit_drag_move :: proc(
 	if !ok || (look_delta.x == 0.0 && look_delta.y == 0.0) {
 		return edit_no_change()
 	}
-	if !dm.drag_recorded {
-		object_history_record(debug_history(dm), sim)
-		dm.drag_recorded = true
+	object, found := simulation_object_find(sim, id)
+	if !found {
+		return edit_no_change()
+	}
+	if !b3.Body_IsValid(object.body) {
+		return edit_fail(.Failed)
 	}
 
 	forward := debug_camera_forward_horizontal(dm.camera)
 	right := debug_camera_right(dm.camera)
-	dm.drag_position +=
+	target := dm.drag_position +
 		right * (look_delta.x * OBJECT_DRAG_SCALE) + forward * (-look_delta.y * OBJECT_DRAG_SCALE)
 	half := simulation_object_box(sim, id).half_extents
-	dm.drag_position.y = max(dm.drag_position.y, half.y)
-	if !simulation_move_object(sim, id, dm.drag_position) {
+	target.y = max(target.y, half.y)
+	if target == b3.Body_GetPosition(object.body) {
+		return edit_no_change()
+	}
+	if !dm.drag_recorded {
+		result := object_history_apply(
+			debug_history(dm),
+			sim,
+			History_Move{id = id, center = target},
+		)
+		if !result.applied {
+			return edit_fail(.Failed)
+		}
+		dm.drag_recorded = true
+	} else if !simulation_move_object(sim, id, target) {
 		return edit_fail(.Failed)
 	}
+	dm.drag_position = target
 	return edit_ok()
 }
 
@@ -104,6 +121,9 @@ edit_wheel :: proc(
 	large: bool,
 	captured: bool,
 ) -> Edit_Result {
+	if steps == 0 {
+		return edit_no_change()
+	}
 	switch active_tool(dm) {
 	case .Palette:
 		return edit_no_change()
@@ -122,18 +142,34 @@ edit_wheel :: proc(
 	if !ok {
 		return edit_no_change()
 	}
-	if dm.dragging != .Object {
-		dm.drag_position = simulation_object_box(sim, id).center
+	object, found := simulation_object_find(sim, id)
+	if !found {
+		return edit_no_change()
 	}
-	object_history_record(debug_history(dm), sim)
+	if !b3.Body_IsValid(object.body) {
+		return edit_fail(.Failed)
+	}
+	if dm.dragging != .Object {
+		dm.drag_position = b3.Body_GetPosition(object.body)
+	}
 	half := simulation_object_box(sim, id).half_extents
-	dm.drag_position.y = max(
+	target := dm.drag_position
+	target.y = max(
 		dm.drag_position.y + f32(steps) * OBJECT_WHEEL_STEP,
 		half.y,
 	)
-	if !simulation_move_object(sim, id, dm.drag_position) {
+	if target == b3.Body_GetPosition(object.body) {
+		return edit_no_change()
+	}
+	result := object_history_apply(
+		debug_history(dm),
+		sim,
+		History_Move{id = id, center = target},
+	)
+	if !result.applied {
 		return edit_fail(.Failed)
 	}
+	dm.drag_position = target
 	return edit_ok()
 }
 

@@ -125,34 +125,24 @@ light_apply :: proc(
 	if next == settings {
 		return edit_ok()
 	}
-	if !light_store(dm, sim, target, id, settings, next) {
-		return edit_fail(.Failed)
-	}
-	return edit_ok()
-}
-
-@(private)
-light_store :: proc(
-	dm: ^Debug_Mode,
-	sim: ^Simulation,
-	target: Light_Edit_Target,
-	id: Object_Id,
-	settings, next: Light_Settings,
-) -> bool {
 	switch target {
 	case .None:
-		return false
+		return edit_fail(.Failed)
 	case .Palette:
 		palette_set_light(&dm.palette, next)
-		return true
+		return edit_ok()
 	case .Object:
-		object_history_record(debug_history(dm), sim)
-		if next.kind != settings.kind {
-			return simulation_set_lamp_kind(sim, id, next.kind)
+		result := object_history_apply(
+			debug_history(dm),
+			sim,
+			History_Light{id = id, settings = settings, next = next},
+		)
+		if !result.applied {
+			return edit_fail(.Failed)
 		}
-		return simulation_set_object_light(sim, id, next)
+		return edit_ok()
 	}
-	return false
+	return edit_fail(.Failed)
 }
 
 @(private)
