@@ -1,21 +1,29 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the agent harness calls this API; the game binary does not
 package game
 
 import "core:mem"
 
 import b3 "libs:box3d"
 
+// The placement settings survive a cancel, so the next arm starts where the last
+// placement stopped.
+Placement_Defaults :: struct {
+	height:      f32,
+	yaw_degrees: f32,
+	snap:        bool,
+}
+
 // The editor owns the debug editing state. Debug mode owns the active flag, the
 // camera, and the saved player, so this value survives a mode toggle.
 Editor :: struct {
-	tool:              Tool,
-	selection:         Selection,
-	dragging:          bool,
-	drag_position:     b3.Vec3,
-	drag_recorded:     bool,
-	history:           ^Object_History,
-	history_allocator: mem.Allocator,
+	tool:               Tool,
+	selection:          Selection,
+	dragging:           bool,
+	drag_position:      b3.Vec3,
+	drag_recorded:      bool,
+	placement_defaults: Placement_Defaults,
+	history:            ^Object_History,
+	history_allocator:  mem.Allocator,
 }
 
 Selection_None :: struct {}
@@ -79,7 +87,7 @@ editor_reset :: proc(editor: ^Editor) {
 
 editor_cancel_editing :: proc(editor: ^Editor) {
 	editor_end_drag(editor)
-	editor.tool = Tool_None{}
+	editor_tool_cancel(editor)
 }
 
 editor_end_drag :: proc(editor: ^Editor) {

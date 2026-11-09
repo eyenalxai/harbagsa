@@ -32,7 +32,7 @@ editor_palette_view :: proc(sim: ^Simulation, editor: ^Editor, active: bool) -> 
 	}
 	palette.open = true
 	palette.title = PALETTE_TITLE
-	palette.selected = tool.selected
+	palette.selected = int(tool.selected)
 	palette.body = body_mode_name(tool.body_mode)
 
 	count := min(PREFAB_COUNT, ui.PALETTE_MAX_ITEMS)

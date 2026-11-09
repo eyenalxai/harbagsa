@@ -1,17 +1,16 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the agent harness calls this API; the game binary does not
 package game
 
 palette_create :: proc(prefab_id: Prefab_Id) -> Palette {
 	return {
-		selected = int(prefab_id),
+		selected = prefab_id,
 		body_mode = prefab(prefab_id).body_mode,
 		light = prefab_light(prefab_id),
 	}
 }
 
 palette_selected :: proc(palette: Palette) -> Prefab_Id {
-	return Prefab_Id(palette.selected)
+	return palette.selected
 }
 
 palette_select :: proc(palette: ^Palette, index: int) -> bool {
@@ -20,8 +19,8 @@ palette_select :: proc(palette: ^Palette, index: int) -> bool {
 	}
 	// A repeat selection keeps the tuned body and light; a new prefab restores its
 	// defaults.
-	if index != palette.selected {
-		palette.selected = index
+	if index != int(palette.selected) {
+		palette.selected = Prefab_Id(index)
 		palette.body_mode = prefab(Prefab_Id(index)).body_mode
 		palette.light = prefab_light(Prefab_Id(index))
 	}
@@ -33,10 +32,6 @@ palette_set_light :: proc(palette: ^Palette, settings: Light_Settings) {
 		palette.body_mode = lamp_kind_body(settings.kind)
 	}
 	palette.light = settings
-}
-
-palette_set_body :: proc(palette: ^Palette, mode: Body_Mode) {
-	palette.body_mode = mode
 }
 
 palette_flip_body :: proc(palette: ^Palette) {
@@ -98,7 +93,7 @@ editor_palette_step :: proc(editor: ^Editor, delta: int) -> Edit_Result {
 	if delta == 0 {
 		return edit_ok()
 	}
-	index := (palette.selected + delta) % PREFAB_COUNT
+	index := (int(palette.selected) + delta) % PREFAB_COUNT
 	if index < 0 {
 		index += PREFAB_COUNT
 	}
