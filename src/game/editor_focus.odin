@@ -1,19 +1,18 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the window loop reads this; the game binary does not
 package game
 
 // The editing half of one frame's ownership. The menu and the platform pointer
-// state sit beside it; the cursor owner reads pointer_free instead of caching a
-// palette latch.
+// state sit beside it. The cursor owner ticket reads pointer_free; the current
+// loop still keeps its own latch.
 Editor_Focus :: struct {
 	active:       bool,
-	tool:         Editor_Tool,
+	tool:         Tool_Kind,
 	dragging:     bool,
 	pointer_free: bool,
 }
 
 editor_focus :: proc(editor: ^Editor, active: bool) -> Editor_Focus {
-	tool := editor_tool_kind(editor.tool)
+	tool := tool_kind(editor.tool)
 	return {
 		active = active,
 		tool = tool,

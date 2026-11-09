@@ -1,5 +1,4 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the agent harness calls this API; the game binary does not
 package game
 
 import b3 "libs:box3d"
@@ -36,7 +35,7 @@ editor_set_next_body :: proc(editor: ^Editor, mode: Body_Mode) -> Edit_Result {
 			return edit_fail(.Lamp_Body_Follows_Kind)
 		}
 		palette := tool
-		palette_set_body(&palette, mode)
+		palette.body_mode = mode
 		editor.tool = palette
 		return edit_ok()
 	case Placement:
@@ -151,14 +150,12 @@ editor_turn :: proc(editor: ^Editor, sim: ^Simulation, steps: int, large: bool) 
 }
 
 @(private)
-editor_set_body :: proc(editor: ^Editor, sim: ^Simulation, mode: Body_Mode) -> Edit_Result {
-	if _, next := editor_next_body(editor); next {
-		return editor_set_next_body(editor, mode)
-	}
-	object, ok := editor_selected_object(editor, sim)
-	if !ok {
-		return edit_fail(.No_Selection)
-	}
+editor_convert_selected :: proc(
+	editor: ^Editor,
+	sim: ^Simulation,
+	object: Placed_Object,
+	mode: Body_Mode,
+) -> Edit_Result {
 	if object.light.active {
 		return edit_fail(.Lamp_Body_Follows_Kind)
 	}
@@ -177,6 +174,18 @@ editor_set_body :: proc(editor: ^Editor, sim: ^Simulation, mode: Body_Mode) -> E
 }
 
 @(private)
+editor_set_body :: proc(editor: ^Editor, sim: ^Simulation, mode: Body_Mode) -> Edit_Result {
+	if _, next := editor_next_body(editor); next {
+		return editor_set_next_body(editor, mode)
+	}
+	object, ok := editor_selected_object(editor, sim)
+	if !ok {
+		return edit_fail(.No_Selection)
+	}
+	return editor_convert_selected(editor, sim, object, mode)
+}
+
+@(private)
 editor_flip_body :: proc(editor: ^Editor, sim: ^Simulation) -> Edit_Result {
 	if current, next := editor_next_body(editor); next {
 		mode: Body_Mode = current == .Static ? .Dynamic : .Static
@@ -186,19 +195,8 @@ editor_flip_body :: proc(editor: ^Editor, sim: ^Simulation) -> Edit_Result {
 	if !ok {
 		return edit_fail(.No_Selection)
 	}
-	if object.light.active {
-		return edit_fail(.Lamp_Body_Follows_Kind)
-	}
 	mode: Body_Mode = object.body_mode == .Static ? .Dynamic : .Static
-	result, _ := object_history_apply(
-		editor_history(editor),
-		sim,
-		History_Convert{id = object.id, mode = mode},
-	)
-	if !result.applied {
-		return result
-	}
-	return edit_ok()
+	return editor_convert_selected(editor, sim, object, mode)
 }
 
 @(private)

@@ -1,5 +1,4 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the agent harness calls this API; the game binary does not
 package game
 
 editor_apply :: proc(
@@ -80,17 +79,17 @@ editor_apply :: proc(
 	case Place_Object:
 		return editor_place_object(editor, sim, value)
 	case Light_Adjust:
-		return editor_light_change(editor, sim, value.change)
+		return editor_light_edit(editor, sim, Light_Edit_Adjust{change = value.change})
 	case Light_Set_Color:
-		return editor_light_set_color(editor, sim, value.color)
+		return editor_light_edit(editor, sim, Light_Edit_Color{color = value.color})
 	case Light_Set_Intensity:
-		return editor_light_set_intensity(editor, sim, value.intensity)
+		return editor_light_edit(editor, sim, Light_Edit_Intensity{intensity = value.intensity})
 	case Light_Set_Range:
-		return editor_light_set_range(editor, sim, value.range)
+		return editor_light_edit(editor, sim, Light_Edit_Range{range = value.range})
 	case Light_Set_Kind:
-		return editor_light_set_kind(editor, sim, value.kind)
+		return editor_light_edit(editor, sim, Light_Edit_Kind{kind = value.kind})
 	case Light_Toggle_Kind:
-		return editor_light_toggle_kind(editor, sim)
+		return editor_light_edit(editor, sim, Light_Edit_Toggle{})
 	case Cancel:
 		return editor_cancel(editor)
 	}

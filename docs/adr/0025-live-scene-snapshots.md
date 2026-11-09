@@ -33,7 +33,7 @@ share one writer and one load path.
   the absolute path. The file is a scenario; the next step is `run`.
 - **The load is a state load, not an edit intent.** Objects go through
   `simulation_apply_snapshot`, the same path as undo and redo. The scene does not
-  call `edit_apply` for every object.
+  call `editor_apply` for every object.
 - **`record` seeds the same scene.** A recording starts with `reset`, one
   `scene`, and the current input. The scene is absolute, so the reset is only a
   clean baseline.

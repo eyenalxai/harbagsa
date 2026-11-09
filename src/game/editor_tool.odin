@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the agent harness calls this API; the game binary does not
+#+vet !unused-procedures // the agent harness reads the tool kind name; the game binary does not
 package game
 
 // One tool owns the frame. The palette and placement payloads live in the active
@@ -7,7 +7,7 @@ package game
 Tool_None :: struct {}
 
 Palette :: struct {
-	selected:  int,
+	selected:  Prefab_Id,
 	body_mode: Body_Mode,
 	light:     Light_Settings,
 }
@@ -21,7 +21,7 @@ Placement :: struct {
 	light:       Light_Settings,
 }
 
-Editor_Tool :: enum {
+Tool_Kind :: enum {
 	None,
 	Palette,
 	Placement,
@@ -33,17 +33,17 @@ Tool :: union #no_nil {
 	Placement,
 }
 
-EDITOR_TOOL_NAMES := [Editor_Tool]string {
+TOOL_KIND_NAMES := [Tool_Kind]string {
 	.None = "none",
 	.Palette = "palette",
 	.Placement = "placement",
 }
 
-editor_tool_name :: proc(tool: Editor_Tool) -> string {
-	return EDITOR_TOOL_NAMES[tool]
+tool_kind_name :: proc(kind: Tool_Kind) -> string {
+	return TOOL_KIND_NAMES[kind]
 }
 
-editor_tool_kind :: proc(tool: Tool) -> Editor_Tool {
+tool_kind :: proc(tool: Tool) -> Tool_Kind {
 	switch _ in tool {
 	case Tool_None:
 		return .None

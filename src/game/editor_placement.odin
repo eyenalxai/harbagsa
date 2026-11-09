@@ -1,5 +1,4 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the agent harness calls this API; the game binary does not
 package game
 
 import "core:math"
@@ -81,15 +80,31 @@ editor_placement_arm :: proc(
 		light = light,
 	}
 	// Re-arming the same placement keeps its height, yaw, and snap; arming from
-	// the palette starts those at their defaults.
+	// the palette uses the last cancelled placement settings.
 	if current, armed := editor.tool.(Placement); armed {
 		placement.height = current.height
 		placement.yaw_degrees = current.yaw_degrees
 		placement.snap = current.snap
+	} else {
+		placement.height = editor.placement_defaults.height
+		placement.yaw_degrees = editor.placement_defaults.yaw_degrees
+		placement.snap = editor.placement_defaults.snap
 	}
 	editor_end_drag(editor)
 	editor.tool = placement
 	return edit_ok()
+}
+
+@(private)
+editor_tool_cancel :: proc(editor: ^Editor) {
+	if placement, armed := editor.tool.(Placement); armed {
+		editor.placement_defaults = {
+			height = placement.height,
+			yaw_degrees = placement.yaw_degrees,
+			snap = placement.snap,
+		}
+	}
+	editor.tool = Tool_None{}
 }
 
 @(private)
@@ -147,7 +162,7 @@ editor_placement_cancel :: proc(editor: ^Editor) -> Edit_Result {
 	if _, armed := editor.tool.(Placement); !armed {
 		return edit_no_change()
 	}
-	editor.tool = Tool_None{}
+	editor_tool_cancel(editor)
 	return edit_ok()
 }
 

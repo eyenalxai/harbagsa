@@ -46,7 +46,7 @@ Editor_Light_Budget :: struct {
 // do not resolve those fields again.
 Editor_View :: struct {
 	active:    bool,
-	tool:      Editor_Tool,
+	tool:      Tool_Kind,
 	palette:   Editor_Palette_View,
 	placement: Editor_Placement_View,
 	selection: Maybe(Editor_Selection_View),
@@ -63,7 +63,7 @@ editor_view :: proc(
 	default_prefab := prefab(.Crate)
 	view := Editor_View {
 		active = active,
-		tool = editor_tool_kind(editor.tool),
+		tool = tool_kind(editor.tool),
 		palette = {
 			prefab = .Crate,
 			body_mode = default_prefab.body_mode,
@@ -92,6 +92,7 @@ editor_view :: proc(
 			body_mode = tool.body_mode,
 		}
 		view.placement.prefab = selected
+		view.placement.body_mode = tool.body_mode
 		view.placement.light = palette_light(tool)
 	case Placement:
 		view.palette = {

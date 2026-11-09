@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the agent harness calls this API; the game binary does not
+#+vet !unused-procedures // the agent harness reads the reason message; the game binary does not
 package game
 
 import b3 "libs:box3d"

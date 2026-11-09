@@ -74,8 +74,8 @@ resolve :: proc(
 
 @(private)
 Key_State :: struct {
-	pointer_tool: game.Editor_Tool,
-	cursor_tool:  game.Editor_Tool,
+	pointer_tool: game.Tool_Kind,
+	cursor_tool:  game.Tool_Kind,
 }
 
 @(private)
@@ -102,7 +102,7 @@ apply_key :: proc(
 			if state.pointer_tool == .Palette {
 				add_action(out, game.Palette_Close{})
 				state.pointer_tool = .None
-			} else {
+			} else if state.pointer_tool != .Placement {
 				add_action(out, game.Palette_Open{})
 				state.pointer_tool = .Palette
 			}
