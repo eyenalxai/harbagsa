@@ -132,13 +132,13 @@ light_apply :: proc(
 		palette_set_light(&dm.palette, next)
 		return edit_ok()
 	case .Object:
-		result := object_history_apply(
+		result, _ := object_history_apply(
 			debug_history(dm),
 			sim,
-			History_Light{id = id, settings = settings, next = next},
+			History_Light{id = id, previous_kind = settings.kind, next = next},
 		)
 		if !result.applied {
-			return edit_fail(.Failed)
+			return result
 		}
 		return edit_ok()
 	}

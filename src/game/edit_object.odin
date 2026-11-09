@@ -25,6 +25,37 @@ selected_object :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> (Placed_Object, bo
 	return simulation_object_find(sim, id)
 }
 
+@(private)
+commit_move :: proc(
+	dm: ^Debug_Mode,
+	sim: ^Simulation,
+	object: Placed_Object,
+	target: b3.Vec3,
+	record: bool,
+) -> Edit_Result {
+	if !b3.Body_IsValid(object.body) {
+		return edit_fail(.Failed)
+	}
+	resolved := target
+	resolved.y = max(resolved.y, prefab(object.prefab).half_extents.y)
+	if resolved == b3.Body_GetPosition(object.body) {
+		return edit_no_change()
+	}
+	if record {
+		result, _ := object_history_apply(
+			debug_history(dm),
+			sim,
+			History_Move{id = object.id, center = resolved},
+		)
+		if !result.applied {
+			return result
+		}
+	} else if !simulation_move_object(sim, object.id, resolved) {
+		return edit_fail(.Failed)
+	}
+	dm.drag_position = resolved
+	return edit_ok()
+}
 
 @(private)
 edit_select_object :: proc(dm: ^Debug_Mode, sim: ^Simulation, id: Object_Id) -> Edit_Result {
@@ -51,24 +82,7 @@ edit_move_selected :: proc(dm: ^Debug_Mode, sim: ^Simulation, center: b3.Vec3) -
 	if !ok {
 		return edit_fail(.No_Selection)
 	}
-	if !b3.Body_IsValid(object.body) {
-		return edit_fail(.Failed)
-	}
-	target := center
-	target.y = max(target.y, prefab(object.prefab).half_extents.y)
-	if target == b3.Body_GetPosition(object.body) {
-		return edit_no_change()
-	}
-	result := object_history_apply(
-		debug_history(dm),
-		sim,
-		History_Move{id = object.id, center = target},
-	)
-	if !result.applied {
-		return edit_fail(.Failed)
-	}
-	dm.drag_position = target
-	return edit_ok()
+	return commit_move(dm, sim, object, center, true)
 }
 
 @(private)
@@ -83,13 +97,13 @@ edit_rotate_selected :: proc(dm: ^Debug_Mode, sim: ^Simulation, degrees: f32) ->
 	if degrees == 0.0 {
 		return edit_ok()
 	}
-	result := object_history_apply(
+	result, _ := object_history_apply(
 		debug_history(dm),
 		sim,
 		History_Rotate{id = object.id, degrees = degrees},
 	)
 	if !result.applied {
-		return edit_fail(.Failed)
+		return result
 	}
 	return edit_ok()
 }
@@ -127,13 +141,13 @@ edit_set_body :: proc(dm: ^Debug_Mode, sim: ^Simulation, mode: Body_Mode) -> Edi
 	if object.body_mode == mode {
 		return edit_ok()
 	}
-	result := object_history_apply(
+	result, _ := object_history_apply(
 		debug_history(dm),
 		sim,
 		History_Convert{id = object.id, mode = mode},
 	)
 	if !result.applied {
-		return edit_fail(.Failed)
+		return result
 	}
 	return edit_ok()
 }
@@ -159,13 +173,13 @@ edit_flip_body :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Result {
 		return edit_fail(.Lamp_Body_Follows_Kind)
 	}
 	mode: Body_Mode = object.body_mode == .Static ? .Dynamic : .Static
-	result := object_history_apply(
+	result, _ := object_history_apply(
 		debug_history(dm),
 		sim,
 		History_Convert{id = object.id, mode = mode},
 	)
 	if !result.applied {
-		return edit_fail(.Failed)
+		return result
 	}
 	return edit_ok()
 }
@@ -179,9 +193,9 @@ edit_delete_selected :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Result {
 	if !ok {
 		return edit_fail(.No_Selection)
 	}
-	result := object_history_apply(debug_history(dm), sim, History_Delete{id = object.id})
+	result, _ := object_history_apply(debug_history(dm), sim, History_Delete{id = object.id})
 	if !result.applied {
-		return edit_fail(.Failed)
+		return result
 	}
 	debug_mode_clear_selection(dm)
 	return edit_ok()
@@ -197,14 +211,14 @@ edit_duplicate_selected :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Resul
 		return edit_fail(.No_Selection)
 	}
 
-	result := object_history_apply(debug_history(dm), sim, History_Duplicate{id = object.id})
+	result, id := object_history_apply(debug_history(dm), sim, History_Duplicate{id = object.id})
 	if !result.applied {
-		return edit_fail(.Failed)
+		return result
 	}
 	debug_mode_end_drag(dm)
 	dm.selection = .Object
-	dm.selected_object_id = result.id
-	dm.drag_position = simulation_object_box(sim, result.id).center
+	dm.selected_object_id = id
+	dm.drag_position = simulation_object_box(sim, id).center
 	return edit_ok()
 }
 
