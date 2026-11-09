@@ -113,6 +113,7 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 				game.snapshot_apply_error_message(apply_error),
 			)
 		}
+		game.editor_repair_selection(&session.debug.editor, &session.sim)
 	}
 
 

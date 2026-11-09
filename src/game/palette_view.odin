@@ -21,15 +21,19 @@ PALETTE_HINTS := [5]ui.Hint_Cell {
 
 PALETTE_LIGHT_HINT :: ui.Hint_Cell{keys = "C [ ] , . K", action = "light / kind"}
 
-debug_palette_view :: proc(sim: ^Simulation, debug: ^Debug_Mode) -> ui.Palette {
+editor_palette_view :: proc(sim: ^Simulation, editor: ^Editor, active: bool) -> ui.Palette {
 	palette: ui.Palette
-	palette.open = debug.active && debug.palette.open
-	if !palette.open {
+	if !active {
 		return palette
 	}
+	tool, open := editor.tool.(Palette)
+	if !open {
+		return palette
+	}
+	palette.open = true
 	palette.title = PALETTE_TITLE
-	palette.selected = debug.palette.selected
-	palette.body = body_mode_name(debug.palette.body_mode)
+	palette.selected = tool.selected
+	palette.body = body_mode_name(tool.body_mode)
 
 	count := min(PREFAB_COUNT, ui.PALETTE_MAX_ITEMS)
 	for id, index in Prefab_Id {
@@ -60,7 +64,7 @@ debug_palette_view :: proc(sim: ^Simulation, debug: ^Debug_Mode) -> ui.Palette {
 		palette.items[index] = item
 	}
 	palette.item_count = count
-	palette_light_preview(&palette, debug, count)
+	palette_light_preview(&palette, tool, count)
 
 	if palette.selected >= 0 && palette.selected < count {
 		info := PREFABS[Prefab_Id(palette.selected)]
@@ -84,7 +88,7 @@ debug_palette_view :: proc(sim: ^Simulation, debug: ^Debug_Mode) -> ui.Palette {
 	for hint, index in PALETTE_HINTS {
 		palette.hints[index] = hint
 	}
-	if palette.selected >= 0 && prefab_has_light(palette_selected(debug.palette)) {
+	if palette.selected >= 0 && prefab_has_light(palette_selected(tool)) {
 		palette.hints[hint_count] = PALETTE_LIGHT_HINT
 		hint_count += 1
 	}
@@ -95,15 +99,15 @@ debug_palette_view :: proc(sim: ^Simulation, debug: ^Debug_Mode) -> ui.Palette {
 // The preview wants the tuned next placement, not the catalog default, so the
 // selected card carries the colour the ghost and the next placement will use.
 @(private)
-palette_light_preview :: proc(palette: ^ui.Palette, debug: ^Debug_Mode, count: int) {
+palette_light_preview :: proc(palette: ^ui.Palette, tool: Palette, count: int) {
 	if palette.selected < 0 || palette.selected >= count {
 		return
 	}
-	id := palette_selected(debug.palette)
+	id := palette_selected(tool)
 	if !prefab_has_light(id) {
 		return
 	}
-	light := placement_light_for(debug, id)
+	light := palette_light(tool)
 	item := &palette.items[palette.selected]
 	item.color = light_color4(light.color)
 	item.light_length = write_light_line(item.light_line[:], light)

@@ -193,7 +193,10 @@ defaults. `remove` deletes by id or name. Names survive undo and scene snapshots
 Enter debug mode before `editor`. The keyboard and harness build the same edit
 actions. Fields cover:
 
-- `open`, `select`, `palette_step`, and `palette_number` for the catalog.
+- `open`, `select`, `palette_step`, and `palette_number` for the catalog. The
+  palette must be open before a catalog action; opening it starts at Crate, and
+  closing it discards the tuned card. A palette action while placement is armed
+  is refused; send `cancel` first.
 - `pick`, `height`, `yaw_deg`, `snap`, and `cancel` for the armed placement.
 - `place` for an exact transform without a placement ray.
 - `select_object`, `move`, `rotate_deg`, `body`, `flip_body`, `delete`, and
@@ -211,7 +214,9 @@ actions. Fields cover:
 `selection`, `history.depth` and `history.redo`, and `lights.active` and
 `lights.lamps`. `selection.present` is false when no object is selected;
 otherwise it carries `id`, `prefab`, `body`, `size`, `position`, `yaw_deg`, and
-`light`. `placement.position` is the ghost centre.
+`light`. `placement.position` is the ghost centre. The editor owns the tool,
+selection, drag, palette, placement, and history; debug mode owns the active flag
+and the camera.
 
 Catalog order: Crate, Small crate, Wide crate, Block, Platform, Ramp, Pillar,
 Wall, Lamp, Light panel, Beacon. A lamp kind is `static` or `dynamic`; a static

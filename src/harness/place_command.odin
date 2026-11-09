@@ -244,5 +244,6 @@ session_remove :: proc(session: ^Session, command: Remove_Command) -> string {
 	if !game.simulation_remove_object(&session.sim, id) {
 		return format_error("object id %d does not exist", id)
 	}
+	game.editor_repair_selection(&session.debug.editor, &session.sim)
 	return ""
 }

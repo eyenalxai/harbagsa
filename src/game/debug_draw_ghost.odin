@@ -4,13 +4,19 @@ package game
 GHOST_COLOR :: [4]f32{0.45, 0.85, 1.0, 1.0}
 GHOST_FOOTPRINT_COLOR :: [4]f32{0.45, 0.85, 1.0, 0.55}
 
-collect_placement_lines :: proc(dm: ^Debug_Mode, collector: ^Debug_Lines) {
-	ghost, ok := debug_ghost_geometry(dm)
+collect_placement_lines :: proc(
+	editor: ^Editor,
+	sim: ^Simulation,
+	camera: Debug_Camera,
+	collector: ^Debug_Lines,
+) {
+	ghost, ok := editor_placement_geometry(editor, sim, camera)
 	if !ok {
 		return
 	}
+	placement, _ := editor.tool.(Placement)
 
-	color := debug_ghost_color(dm)
+	color := placement_ghost_color(placement)
 	footprint := [4]f32{color.x, color.y, color.z, GHOST_FOOTPRINT_COLOR.a}
 	corners := oriented_box_corners(ghost.center, ghost.half_extents, ghost.rotation)
 	append_box_edges(collector, corners, color, .Placement)
@@ -22,6 +28,14 @@ collect_placement_lines :: proc(dm: ^Debug_Mode, collector: ^Debug_Lines) {
 		guide := [3]f32{ghost.bottom.x, ghost.surface.y, ghost.bottom.z}
 		append_debug_line(collector, guide, ghost.bottom, color, .Placement)
 	}
+}
+
+@(private)
+placement_ghost_color :: proc(placement: Placement) -> [4]f32 {
+	if placement.light.active {
+		return light_color4(placement.light.color)
+	}
+	return GHOST_COLOR
 }
 
 @(private)

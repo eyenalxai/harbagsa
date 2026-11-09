@@ -18,6 +18,7 @@ Editor_Placement_View :: struct {
 	height:      f32,
 	yaw_degrees: f32,
 	snap:        bool,
+	body_mode:   Body_Mode,
 	light:       Light_Settings,
 }
 
@@ -40,12 +41,12 @@ Editor_Light_Budget :: struct {
 	lamps:  int,
 }
 
-// The one resolved editor state for the selection, the placement, the history,
-// and the light budget. The HUD and the harness format this value; they do not
-// resolve those fields again.
+// The one resolved editor state for the tool, the selection, the placement, the
+// history, and the light budget. The HUD and the harness format this value; they
+// do not resolve those fields again.
 Editor_View :: struct {
 	active:    bool,
-	tool:      Active_Tool,
+	tool:      Editor_Tool,
 	palette:   Editor_Palette_View,
 	placement: Editor_Placement_View,
 	selection: Maybe(Editor_Selection_View),
@@ -53,37 +54,66 @@ Editor_View :: struct {
 	lights:    Editor_Light_Budget,
 }
 
-editor_view :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Editor_View {
-	tool := active_tool(dm)
+editor_view :: proc(
+	editor: ^Editor,
+	sim: ^Simulation,
+	active: bool,
+	camera: Debug_Camera,
+) -> Editor_View {
+	default_prefab := prefab(.Crate)
 	view := Editor_View {
-		active = dm.active,
-		tool = tool,
+		active = active,
+		tool = editor_tool_kind(editor.tool),
 		palette = {
-			open = tool == .Palette,
-			prefab = palette_selected(dm.palette),
-			body_mode = dm.palette.body_mode,
+			prefab = .Crate,
+			body_mode = default_prefab.body_mode,
 		},
 		placement = {
-			armed = tool == .Placement,
-			prefab = dm.placement.prefab,
-			height = dm.placement.height,
-			yaw_degrees = dm.placement.yaw_degrees,
-			snap = dm.placement.snap,
-			light = next_placement_light(dm),
+			prefab = .Crate,
+			body_mode = default_prefab.body_mode,
+			light = prefab_light(.Crate),
 		},
 		history = {
-			depth = debug_history_depth(dm),
-			redo = debug_history_redo_depth(dm),
+			depth = editor_history_depth(editor),
+			redo = editor_history_redo_depth(editor),
 		},
 		lights = {
 			active = simulation_active_light_count(sim),
 			lamps = simulation_lamp_count(sim),
 		},
 	}
-	if ghost, ok := debug_ghost_geometry(dm); ok {
-		view.placement.center = ghost.center
+
+	switch tool in editor.tool {
+	case Palette:
+		selected := palette_selected(tool)
+		view.palette = {
+			open = true,
+			prefab = selected,
+			body_mode = tool.body_mode,
+		}
+		view.placement.prefab = selected
+		view.placement.light = palette_light(tool)
+	case Placement:
+		view.palette = {
+			prefab = tool.prefab,
+			body_mode = tool.body_mode,
+		}
+		view.placement = {
+			armed = true,
+			prefab = tool.prefab,
+			height = tool.height,
+			yaw_degrees = tool.yaw_degrees,
+			snap = tool.snap,
+			body_mode = tool.body_mode,
+			light = tool.light,
+		}
+		if ghost, ok := editor_placement_geometry(editor, sim, camera); ok {
+			view.placement.center = ghost.center
+		}
+	case Tool_None:
 	}
-	if id, ok := debug_selected_object_id(dm, sim); ok {
+
+	if id, ok := editor_selected_object_id(editor, sim); ok {
 		if object, found := simulation_object_find(sim, id); found {
 			view.selection = Editor_Selection_View {
 				id = id,

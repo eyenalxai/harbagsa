@@ -239,11 +239,16 @@ session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 
 @(private)
 apply_editor_action :: proc(session: ^Session, action: game.Edit_Action) -> string {
-	result := game.edit_apply(
-		&session.debug,
+	result := game.editor_apply(
+		&session.debug.editor,
 		&session.sim,
 		action,
-		{menu_open = session.hud.menu.open, captured = true},
+		{
+			active = session.debug.active,
+			menu_open = session.hud.menu.open,
+			captured = true,
+			camera = session.debug.camera,
+		},
 	)
 	if result.applied || result.reason == .No_Change {
 		return ""
