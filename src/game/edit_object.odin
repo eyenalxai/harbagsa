@@ -2,8 +2,6 @@
 #+vet !unused-procedures // the agent harness calls this API; the game binary does not
 package game
 
-import "core:math"
-
 import b3 "libs:box3d"
 
 @(private)
@@ -27,6 +25,37 @@ selected_object :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> (Placed_Object, bo
 	return simulation_object_find(sim, id)
 }
 
+@(private)
+commit_move :: proc(
+	dm: ^Debug_Mode,
+	sim: ^Simulation,
+	object: Placed_Object,
+	target: b3.Vec3,
+	record: bool,
+) -> Edit_Result {
+	if !b3.Body_IsValid(object.body) {
+		return edit_fail(.Failed)
+	}
+	resolved := target
+	resolved.y = max(resolved.y, prefab(object.prefab).half_extents.y)
+	if resolved == b3.Body_GetPosition(object.body) {
+		return edit_no_change()
+	}
+	if record {
+		result, _ := object_history_apply(
+			debug_history(dm),
+			sim,
+			History_Move{id = object.id, center = resolved},
+		)
+		if !result.applied {
+			return result
+		}
+	} else if !simulation_move_object(sim, object.id, resolved) {
+		return edit_fail(.Failed)
+	}
+	dm.drag_position = resolved
+	return edit_ok()
+}
 
 @(private)
 edit_select_object :: proc(dm: ^Debug_Mode, sim: ^Simulation, id: Object_Id) -> Edit_Result {
@@ -53,14 +82,7 @@ edit_move_selected :: proc(dm: ^Debug_Mode, sim: ^Simulation, center: b3.Vec3) -
 	if !ok {
 		return edit_fail(.No_Selection)
 	}
-	object_history_record(debug_history(dm), sim)
-	target := center
-	target.y = max(target.y, prefab(object.prefab).half_extents.y)
-	dm.drag_position = target
-	if !simulation_move_object(sim, object.id, target) {
-		return edit_fail(.Failed)
-	}
-	return edit_ok()
+	return commit_move(dm, sim, object, center, true)
 }
 
 @(private)
@@ -75,10 +97,13 @@ edit_rotate_selected :: proc(dm: ^Debug_Mode, sim: ^Simulation, degrees: f32) ->
 	if degrees == 0.0 {
 		return edit_ok()
 	}
-	object_history_record(debug_history(dm), sim)
-	yaw := simulation_object_yaw(sim, object.id) + degrees * math.PI / 180.0
-	if !simulation_set_object_yaw(sim, object.id, yaw) {
-		return edit_fail(.Failed)
+	result, _ := object_history_apply(
+		debug_history(dm),
+		sim,
+		History_Rotate{id = object.id, degrees = degrees},
+	)
+	if !result.applied {
+		return result
 	}
 	return edit_ok()
 }
@@ -116,9 +141,13 @@ edit_set_body :: proc(dm: ^Debug_Mode, sim: ^Simulation, mode: Body_Mode) -> Edi
 	if object.body_mode == mode {
 		return edit_ok()
 	}
-	object_history_record(debug_history(dm), sim)
-	if !simulation_convert_object(sim, object.id, mode) {
-		return edit_fail(.Failed)
+	result, _ := object_history_apply(
+		debug_history(dm),
+		sim,
+		History_Convert{id = object.id, mode = mode},
+	)
+	if !result.applied {
+		return result
 	}
 	return edit_ok()
 }
@@ -144,9 +173,13 @@ edit_flip_body :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Result {
 		return edit_fail(.Lamp_Body_Follows_Kind)
 	}
 	mode: Body_Mode = object.body_mode == .Static ? .Dynamic : .Static
-	object_history_record(debug_history(dm), sim)
-	if !simulation_convert_object(sim, object.id, mode) {
-		return edit_fail(.Failed)
+	result, _ := object_history_apply(
+		debug_history(dm),
+		sim,
+		History_Convert{id = object.id, mode = mode},
+	)
+	if !result.applied {
+		return result
 	}
 	return edit_ok()
 }
@@ -160,9 +193,9 @@ edit_delete_selected :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Result {
 	if !ok {
 		return edit_fail(.No_Selection)
 	}
-	object_history_record(debug_history(dm), sim)
-	if !simulation_remove_object(sim, object.id) {
-		return edit_fail(.Failed)
+	result, _ := object_history_apply(debug_history(dm), sim, History_Delete{id = object.id})
+	if !result.applied {
+		return result
 	}
 	debug_mode_clear_selection(dm)
 	return edit_ok()
@@ -178,27 +211,10 @@ edit_duplicate_selected :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Resul
 		return edit_fail(.No_Selection)
 	}
 
-	history := debug_history(dm)
-	snapshot := object_snapshot_capture(sim, history.allocator)
-	spawn := Object_Spawn {
-		prefab    = object.prefab,
-		body_mode = object.body_mode,
-		center    = b3.Body_GetPosition(object.body) + {prefab(object.prefab).half_extents.x, 0.0, 0.0},
-		light     = object.light,
+	result, id := object_history_apply(debug_history(dm), sim, History_Duplicate{id = object.id})
+	if !result.applied {
+		return result
 	}
-	id := create_object_rotated(
-		sim,
-		spawn,
-		b3.Body_GetRotation(object.body),
-		object.color,
-		object.light,
-		false,
-	)
-	if id == INVALID_OBJECT_ID {
-		object_snapshot_destroy(&snapshot, history.allocator)
-		return edit_fail(.Failed)
-	}
-	object_history_push(history, snapshot)
 	debug_mode_end_drag(dm)
 	dm.selection = .Object
 	dm.selected_object_id = id
@@ -211,8 +227,9 @@ edit_undo :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Result {
 	if reason := edit_world_reason(dm); reason != .None {
 		return edit_fail(reason)
 	}
-	if !object_history_undo(debug_history(dm), sim) {
-		return edit_fail(.Nothing_To_Undo)
+	result := object_history_undo(debug_history(dm), sim)
+	if !result.applied {
+		return result
 	}
 	debug_mode_end_drag(dm)
 	if _, ok := debug_selected_object_id(dm, sim); !ok {
@@ -226,8 +243,9 @@ edit_redo :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Edit_Result {
 	if reason := edit_world_reason(dm); reason != .None {
 		return edit_fail(reason)
 	}
-	if !object_history_redo(debug_history(dm), sim) {
-		return edit_fail(.Nothing_To_Redo)
+	result := object_history_redo(debug_history(dm), sim)
+	if !result.applied {
+		return result
 	}
 	debug_mode_end_drag(dm)
 	if _, ok := debug_selected_object_id(dm, sim); !ok {

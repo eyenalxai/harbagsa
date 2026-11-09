@@ -91,10 +91,15 @@ object_name_valid :: proc(name: string) -> bool {
 }
 
 object_name_taken :: proc(sim: ^Simulation, name: string) -> bool {
+	return object_list_name_taken(simulation_objects(sim), name)
+}
+
+@(private)
+object_list_name_taken :: proc(objects: []Placed_Object, name: string) -> bool {
 	if name == "" {
 		return false
 	}
-	for &object in simulation_objects(sim) {
+	for &object in objects {
 		if object_name(&object) == name {
 			return true
 		}

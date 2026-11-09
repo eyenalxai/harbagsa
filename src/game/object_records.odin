@@ -27,6 +27,39 @@ Object_Snapshot :: struct {
 	next_object_id: Object_Id,
 }
 
+Placed_Object_Build :: struct {
+	id:       Object_Id,
+	spawn:    Object_Spawn,
+	rotation: b3.Quat,
+	color:    [4]f32,
+	light:    Light_Settings,
+	settled:  bool,
+}
+
+Snapshot_Apply_Error :: enum {
+	None,
+	Invalid_Simulation,
+	Invalid_Name,
+	Duplicate_Name,
+	Body,
+}
+
+snapshot_apply_error_message :: proc(error: Snapshot_Apply_Error) -> string {
+	switch error {
+	case .None:
+		return ""
+	case .Invalid_Simulation:
+		return "the simulation is not valid"
+	case .Invalid_Name:
+		return "the snapshot has an invalid object name"
+	case .Duplicate_Name:
+		return "the snapshot has a duplicate object name"
+	case .Body:
+		return "the snapshot could not create a body"
+	}
+	return "the snapshot could not be applied"
+}
+
 object_snapshot_capture :: proc(sim: ^Simulation, allocator: mem.Allocator) -> Object_Snapshot {
 	count := simulation_object_count(sim)
 	snapshot := Object_Snapshot {
@@ -61,35 +94,63 @@ object_snapshot_destroy :: proc(snapshot: ^Object_Snapshot, allocator: mem.Alloc
 
 // The snapshot restore path. Every restored object is settled, so undo and redo
 // never play the spawn pop. Ids come from the snapshot; the next id only grows,
-// so a later placement cannot reuse an id that an undo brought back.
-simulation_apply_snapshot :: proc(sim: ^Simulation, snapshot: Object_Snapshot) -> bool {
+// so a later placement cannot reuse an id that an undo brought back. The whole
+// replacement set is built before the live bodies are destroyed, so a failure
+// leaves the old scene intact.
+simulation_apply_snapshot :: proc(
+	sim: ^Simulation,
+	snapshot: Object_Snapshot,
+) -> Snapshot_Apply_Error {
 	if !simulation_is_valid(sim) {
-		return false
+		return .Invalid_Simulation
 	}
-	for object in simulation_objects(sim) {
-		if b3.Body_IsValid(object.body) {
-			b3.DestroyBody(object.body)
-		}
-	}
-	clear(&sim.objects)
-
+	objects := make([dynamic]Placed_Object, 0, len(snapshot.objects), sim.allocator)
 	next_id := snapshot.next_object_id
-	for record in snapshot.objects {
-		name_buffer := record.name
+	for &record in snapshot.objects {
+		name := string(record.name[:record.name_length])
+		if !object_name_valid(name) {
+			destroy_placed_objects(objects)
+			return .Invalid_Name
+		}
+		if object_list_name_taken(objects[:], name) {
+			destroy_placed_objects(objects)
+			return .Duplicate_Name
+		}
 		spawn := Object_Spawn {
-			name      = string(name_buffer[:record.name_length]),
+			name      = name,
 			prefab    = record.prefab,
 			body_mode = record.body_mode,
 			center    = record.center,
 			light     = record.light,
 		}
-		if !spawn_object(sim, record.id, spawn, record.rotation, record.color, record.light, true) {
-			return false
+		object, ok := make_placed_object(
+			sim,
+			{
+				id = record.id,
+				spawn = spawn,
+				rotation = record.rotation,
+				color = record.color,
+				light = record.light,
+				settled = true,
+			},
+		)
+		if !ok {
+			destroy_placed_objects(objects)
+			return .Body
 		}
+		append(&objects, object)
 		next_id = max(next_id, record.id + 1)
 	}
+
+	for object in simulation_objects(sim) {
+		if b3.Body_IsValid(object.body) {
+			b3.DestroyBody(object.body)
+		}
+	}
+	delete(sim.objects)
+	sim.objects = objects
 	sim.next_object_id = max(sim.next_object_id, next_id)
-	return true
+	return .None
 }
 
 @(private)
@@ -100,81 +161,88 @@ create_object :: proc(
 	light: Light_Settings,
 	settled: bool,
 ) -> Object_Id {
-	return create_object_rotated(
+	return create_object_build(
 		sim,
-		spawn,
-		object_rotation(spawn.prefab, spawn.yaw_rad),
-		color,
-		light,
-		settled,
+		{
+			spawn = spawn,
+			rotation = object_rotation(spawn.prefab, spawn.yaw_rad),
+			color = color,
+			light = light,
+			settled = settled,
+		},
 	)
 }
 
 // Duplicate and restore paths that already hold an exact quaternion use this so
 // they do not round the rotation through yaw again.
 @(private)
-create_object_rotated :: proc(
-	sim: ^Simulation,
-	spawn: Object_Spawn,
-	rotation: b3.Quat,
-	color: [4]f32,
-	light: Light_Settings,
-	settled: bool,
-) -> Object_Id {
-	id := sim.next_object_id
-	if !spawn_object(sim, id, spawn, rotation, color, light, settled) {
+create_object_build :: proc(sim: ^Simulation, build: Placed_Object_Build) -> Object_Id {
+	spec := build
+	spec.id = sim.next_object_id
+	if !spawn_object(sim, spec) {
 		return INVALID_OBJECT_ID
 	}
-	sim.next_object_id = id + 1
-	return id
+	sim.next_object_id = spec.id + 1
+	return spec.id
 }
 
 @(private)
-spawn_object :: proc(
-	sim: ^Simulation,
-	id: Object_Id,
-	spawn: Object_Spawn,
-	rotation: b3.Quat,
-	color: [4]f32,
-	light: Light_Settings,
-	settled: bool,
-) -> bool {
-	if !object_name_valid(spawn.name) || object_name_taken(sim, spawn.name) {
+spawn_object :: proc(sim: ^Simulation, build: Placed_Object_Build) -> bool {
+	if !object_name_valid(build.spawn.name) || object_name_taken(sim, build.spawn.name) {
 		return false
 	}
-	box_color := color
-	if light.active {
-		box_color = light_color4(light.color)
+	object, ok := make_placed_object(sim, build)
+	if !ok {
+		return false
 	}
-	info := prefab(spawn.prefab)
-	body_mode := spawn.body_mode
-	if light.active {
-		body_mode = lamp_kind_body(light.kind)
+	append(&sim.objects, object)
+	return true
+}
+
+@(private)
+make_placed_object :: proc(sim: ^Simulation, build: Placed_Object_Build) -> (Placed_Object, bool) {
+	box_color := build.color
+	if build.light.active {
+		box_color = light_color4(build.light.color)
+	}
+	info := prefab(build.spawn.prefab)
+	body_mode := build.spawn.body_mode
+	if build.light.active {
+		body_mode = lamp_kind_body(build.light.kind)
 	}
 	body := create_box_body(
 		sim.world_id,
 		body_type(body_mode),
-		spawn.center,
-		rotation,
+		build.spawn.center,
+		build.rotation,
 		info.half_extents,
 		info.density,
 	)
 	if !b3.Body_IsValid(body) {
-		return false
+		return {}, false
 	}
 
 	object := Placed_Object {
-		id          = id,
-		name_length = u8(len(spawn.name)),
-		prefab      = spawn.prefab,
+		id          = build.id,
+		name_length = u8(len(build.spawn.name)),
+		prefab      = build.spawn.prefab,
 		body_mode   = body_mode,
 		body        = body,
 		color       = box_color,
-		light       = light,
+		light       = build.light,
 		spawn_time  = sim.time,
-		settled     = settled,
+		settled     = build.settled,
 	}
-	copy(object.name[:], spawn.name)
-	append(&sim.objects, object)
-	return true
+	copy(object.name[:], build.spawn.name)
+	return object, true
+}
+
+@(private)
+destroy_placed_objects :: proc(objects: [dynamic]Placed_Object) {
+	for object in objects {
+		if b3.Body_IsValid(object.body) {
+			b3.DestroyBody(object.body)
+		}
+	}
+	delete(objects)
 }

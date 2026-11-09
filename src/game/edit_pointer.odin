@@ -75,23 +75,21 @@ edit_drag_move :: proc(
 	if dm.dragging != .Object || !captured {
 		return edit_no_change()
 	}
-	id, ok := debug_selected_object_id(dm, sim)
+	object, ok := selected_object(dm, sim)
 	if !ok || (look_delta.x == 0.0 && look_delta.y == 0.0) {
 		return edit_no_change()
-	}
-	if !dm.drag_recorded {
-		object_history_record(debug_history(dm), sim)
-		dm.drag_recorded = true
 	}
 
 	forward := debug_camera_forward_horizontal(dm.camera)
 	right := debug_camera_right(dm.camera)
-	dm.drag_position +=
+	target := dm.drag_position +
 		right * (look_delta.x * OBJECT_DRAG_SCALE) + forward * (-look_delta.y * OBJECT_DRAG_SCALE)
-	half := simulation_object_box(sim, id).half_extents
-	dm.drag_position.y = max(dm.drag_position.y, half.y)
-	if !simulation_move_object(sim, id, dm.drag_position) {
-		return edit_fail(.Failed)
+	result := commit_move(dm, sim, object, target, !dm.drag_recorded)
+	if !result.applied {
+		return result
+	}
+	if !dm.drag_recorded {
+		dm.drag_recorded = true
 	}
 	return edit_ok()
 }
@@ -104,6 +102,9 @@ edit_wheel :: proc(
 	large: bool,
 	captured: bool,
 ) -> Edit_Result {
+	if steps == 0 {
+		return edit_no_change()
+	}
 	switch active_tool(dm) {
 	case .Palette:
 		return edit_no_change()
@@ -118,23 +119,16 @@ edit_wheel :: proc(
 	if !captured {
 		return edit_no_change()
 	}
-	id, ok := debug_selected_object_id(dm, sim)
+	object, ok := selected_object(dm, sim)
 	if !ok {
 		return edit_no_change()
 	}
 	if dm.dragging != .Object {
-		dm.drag_position = simulation_object_box(sim, id).center
+		dm.drag_position = b3.Body_GetPosition(object.body)
 	}
-	object_history_record(debug_history(dm), sim)
-	half := simulation_object_box(sim, id).half_extents
-	dm.drag_position.y = max(
-		dm.drag_position.y + f32(steps) * OBJECT_WHEEL_STEP,
-		half.y,
-	)
-	if !simulation_move_object(sim, id, dm.drag_position) {
-		return edit_fail(.Failed)
-	}
-	return edit_ok()
+	target := dm.drag_position
+	target.y += f32(steps) * OBJECT_WHEEL_STEP
+	return commit_move(dm, sim, object, target, true)
 }
 
 
