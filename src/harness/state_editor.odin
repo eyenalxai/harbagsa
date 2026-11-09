@@ -48,7 +48,7 @@ History_State :: struct {
 editor_state_build :: proc(view: game.Editor_View) -> Editor_State {
 	state := Editor_State {
 		active = view.active,
-		tool = game.active_tool_name(view.tool),
+		tool = game.editor_tool_name(view.tool),
 		palette = {
 			open = view.palette.open,
 			selected = int(view.palette.prefab),

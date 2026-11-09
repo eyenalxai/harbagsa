@@ -1,0 +1,129 @@
+#+vet explicit-allocators
+#+vet !unused-procedures // the agent harness calls this API; the game binary does not
+package game
+
+import "core:mem"
+
+import b3 "libs:box3d"
+
+// The editor owns the debug editing state. Debug mode owns the active flag, the
+// camera, and the saved player, so this value survives a mode toggle.
+Editor :: struct {
+	tool:              Tool,
+	selection:         Selection,
+	dragging:          bool,
+	drag_position:     b3.Vec3,
+	drag_recorded:     bool,
+	history:           ^Object_History,
+	history_allocator: mem.Allocator,
+}
+
+Selection_None :: struct {}
+
+Selection_Object :: struct {
+	id: Object_Id,
+}
+
+Selection :: union #no_nil {
+	Selection_None,
+	Selection_Object,
+}
+
+editor_create :: proc(allocator: mem.Allocator) -> Editor {
+	return {history_allocator = allocator}
+}
+
+editor_destroy :: proc(editor: ^Editor) {
+	if editor.history != nil {
+		allocator := editor.history.allocator
+		object_history_destroy(editor.history)
+		free(editor.history, allocator)
+		editor.history = nil
+	}
+	editor^ = {}
+}
+
+// The history lives on the heap. It is allocated on the first edit, so a fresh
+// editor and a fresh Session stay small.
+@(private)
+editor_history :: proc(editor: ^Editor) -> ^Object_History {
+	if editor.history == nil {
+		editor.history = new(Object_History, editor.history_allocator)
+		editor.history^ = object_history_create(editor.history_allocator)
+	}
+	return editor.history
+}
+
+@(private)
+editor_history_depth :: proc(editor: ^Editor) -> int {
+	if editor.history == nil {
+		return 0
+	}
+	return object_history_depth(editor.history)
+}
+
+@(private)
+editor_history_redo_depth :: proc(editor: ^Editor) -> int {
+	if editor.history == nil {
+		return 0
+	}
+	return object_history_redo_depth(editor.history)
+}
+
+editor_reset :: proc(editor: ^Editor) {
+	if editor.history != nil {
+		object_history_clear(editor.history)
+	}
+	editor_clear_selection(editor)
+}
+
+editor_cancel_editing :: proc(editor: ^Editor) {
+	editor_end_drag(editor)
+	editor.tool = Tool_None{}
+}
+
+editor_end_drag :: proc(editor: ^Editor) {
+	editor.dragging = false
+	editor.drag_recorded = false
+}
+
+editor_clear_selection :: proc(editor: ^Editor) {
+	editor_end_drag(editor)
+	editor.selection = Selection_None{}
+}
+
+editor_repair_selection :: proc(editor: ^Editor, sim: ^Simulation) {
+	if _, is_object := editor.selection.(Selection_Object); !is_object {
+		return
+	}
+	if _, live := editor_selected_object_id(editor, sim); !live {
+		editor_clear_selection(editor)
+	}
+}
+
+editor_selected_object_id :: proc(editor: ^Editor, sim: ^Simulation) -> (Object_Id, bool) {
+	selected, is_object := editor.selection.(Selection_Object)
+	if !is_object {
+		return INVALID_OBJECT_ID, false
+	}
+	if _, found := simulation_object_find(sim, selected.id); !found {
+		return INVALID_OBJECT_ID, false
+	}
+	return selected.id, true
+}
+
+@(private)
+editor_selected_object :: proc(editor: ^Editor, sim: ^Simulation) -> (Placed_Object, bool) {
+	id, ok := editor_selected_object_id(editor, sim)
+	if !ok {
+		return {}, false
+	}
+	return simulation_object_find(sim, id)
+}
+
+@(private)
+editor_selection_set :: proc(editor: ^Editor, sim: ^Simulation, id: Object_Id) {
+	editor_end_drag(editor)
+	editor.selection = Selection_Object{id = id}
+	editor.drag_position = simulation_object_box(sim, id).center
+}

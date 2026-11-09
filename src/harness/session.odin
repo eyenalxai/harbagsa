@@ -120,7 +120,8 @@ session_reset :: proc(session: ^Session) -> string {
 	session.has_camera_override = false
 	session.settle.frames = 0
 	session.settle.converged = false
-	// The debug mode holds a saved player from the world that just went away.
+	// The debug mode holds a saved player and editor history from the world that
+	// just went away.
 	game.debug_mode_destroy(&session.debug)
 	session.debug = game.debug_mode_create(session.allocator)
 	return ""

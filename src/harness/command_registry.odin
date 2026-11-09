@@ -46,7 +46,7 @@ COMMANDS := [?]Command_Row {
 	{.Captures, "captures", "Render one frame and write several capture outputs.", parse_captures, execute_captures, .Custom, destroy_captures, .Optional, Captures_Command},
 	{.Camera, "camera", "Move the debug camera or set a camera override.", parse_camera, execute_camera, .Raw, nil, .None, Camera_Command},
 	{.View, "view", "Toggle the HUD, debug draw, capture hint, and perf overlay.", parse_view, execute_view, .Raw, nil, .None, View_Command},
-	{.Debug_Mode, "debug_mode", "Enter or leave the debug mode and drive its palette.", parse_debug_mode, execute_debug_mode, .Raw, nil, .None, Debug_Mode_Command},
+	{.Debug_Mode, "debug_mode", "Enter or leave the debug mode.", parse_debug_mode, execute_debug_mode, .Raw, nil, .None, Debug_Mode_Command},
 	{.Editor, "editor", "Drive the object palette, placement, edits, and history.", parse_editor, execute_editor, .Raw, nil, .None, Editor_Command},
 	{.Menu, "menu", "Open, close, select, and change the settings menu.", parse_menu, execute_menu, .Raw, nil, .None, Menu_Command},
 	{.Record, "record", "Start or stop recording a live session into a scenario.", parse_record, execute_record, .Skip, destroy_record, .None, Record_Command},

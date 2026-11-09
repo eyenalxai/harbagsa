@@ -146,7 +146,9 @@ build_state_settings :: proc(state: ^State, ctx: ^State_Context) {
 
 @(private)
 build_state_editor :: proc(state: ^State, ctx: ^State_Context) {
-	state.editor = editor_state_build(game.editor_view(ctx.debug, ctx.sim))
+	state.editor = editor_state_build(
+		game.editor_view(&ctx.debug.editor, ctx.sim, ctx.debug.active, ctx.debug.camera),
+	)
 }
 
 @(private)

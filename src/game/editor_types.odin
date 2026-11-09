@@ -7,7 +7,7 @@ import b3 "libs:box3d"
 MAX_EDIT_ACTIONS :: 32
 
 // Every edit is one intent. The keyboard and the harness build this set, and
-// `edit_apply` owns the rules so neither caller can drift from the other.
+// `editor_apply` owns the rules so neither caller can drift from the other.
 Edit_Action :: union #no_nil {
 	Palette_Open,
 	Palette_Close,
@@ -137,9 +137,13 @@ Light_Set_Kind :: struct {
 Light_Toggle_Kind :: struct {}
 Cancel :: struct {}
 
+// The editor does not hold the camera. The caller supplies the one the edit is
+// aimed with, so the keyboard and the harness share the same rule.
 Edit_Context :: struct {
+	active:    bool,
 	menu_open: bool,
 	captured:  bool,
+	camera:    Debug_Camera,
 }
 
 Edit_Reason :: enum {
@@ -147,6 +151,7 @@ Edit_Reason :: enum {
 	Inactive,
 	Menu_Open,
 	Palette_Open,
+	Palette_Closed,
 	Placement_Armed,
 	Unknown_Object,
 	No_Selection,
@@ -181,12 +186,6 @@ edit_fail :: proc(reason: Edit_Reason) -> Edit_Result {
 	return {reason = reason}
 }
 
-// The open palette or the armed tool owns the next placement. Body and light
-// edits use this one decision.
-editor_uses_next_placement :: proc(dm: ^Debug_Mode) -> bool {
-	return dm.palette.open || dm.placement.armed
-}
-
 edit_reason_message :: proc(reason: Edit_Reason) -> string {
 	switch reason {
 	case .None:
@@ -197,6 +196,8 @@ edit_reason_message :: proc(reason: Edit_Reason) -> string {
 		return "the settings menu is open"
 	case .Palette_Open:
 		return "the object palette is open"
+	case .Palette_Closed:
+		return "the object palette is closed"
 	case .Placement_Armed:
 		return "the placement tool is armed"
 	case .Unknown_Object:

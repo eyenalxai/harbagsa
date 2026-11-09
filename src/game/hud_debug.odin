@@ -17,7 +17,7 @@ hud_debug_state_update :: proc(
 	debug: ^Debug_Mode,
 	bake: Bake_View,
 ) {
-	view := editor_view(debug, sim)
+	view := editor_view(&debug.editor, sim, debug.active, debug.camera)
 	if view.tool == .Placement {
 		hud_placement_state_update(hud, sim, view, bake)
 		return
@@ -167,7 +167,7 @@ hud_placement_state_update :: proc(
 	hud.rows[2] = {
 		kind  = .Metric,
 		label = "Body",
-		value = body_mode_name(view.palette.body_mode),
+		value = body_mode_name(placement.body_mode),
 	}
 	hud.rows[3] = {
 		kind    = .Metric,

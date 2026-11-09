@@ -313,12 +313,12 @@ _Avoid_: Handle, slot
 
 **Active tool**:
 The one debug tool that owns the frame: the Object palette or the Placement
-tool. `active_tool` reads it; `take_tool` cancels the other. Arming the Placement
-tool closes the palette.
+tool. The `Tool` value carries the active tool and its payload, so the two cannot
+both be active; a palette action while placement is active is refused.
 _Avoid_: Current mode, tool state
 
 **Editor**:
-The subsystem that owns the debug editing state: the active tool, the selection,
+The module that owns the debug editing state: the active tool, the selection,
 the drag, the object palette, the placement, and the undo history. Debug mode is
 the free-fly camera mode that activates it; the editor is not the camera.
 _Avoid_: Edit mode, sandbox
@@ -330,19 +330,20 @@ budget. Both readers format the same value.
 _Avoid_: Debug state, inspector state
 
 **Object palette**:
-The debug-mode prefab chooser. It holds the open flag, the selected catalog
-index, and the body and light settings for the next placement. The bottom dock
-draws twelve cells, an isometric preview, and the key hints.
+The debug-mode prefab chooser. It is the palette variant of the active tool: the
+selected catalog index and the body and light settings for the next placement.
+Closing the palette discards those settings. The bottom dock draws twelve cells,
+an isometric preview, and the key hints.
 _Avoid_: Toolbar, inventory
 
 **Placement**:
-The armed debug tool state: the prefab, the surface anchor, the height offset,
-the yaw, and the grid snap flag. Picking a palette card arms it; placing keeps
-it armed.
+The armed debug tool state: the prefab, the height offset, the yaw, the grid snap
+flag, and a copy of the palette body and light. The surface anchor is the current
+camera aim. Picking a palette card arms it; placing keeps it armed.
 _Avoid_: Spawn mode, build mode
 
 **Editing action**:
-One intent that the keyboard or the harness sends to the edit facade: palette,
+One intent that the keyboard or the harness sends to the editor: palette,
 placement, object, light, pointer, or cancel. One apply proc owns its rule.
 _Avoid_: Edit command, tool call
 
@@ -351,9 +352,9 @@ The outcome of one editing action: applied, or a reason the action did not run.
 _Avoid_: Error code, status
 
 **Next placement light**:
-The light the next placement uses. The open palette or the armed tool holds the
-tuned values; otherwise the prefab default applies. The state and the HUD read
-one proc.
+The light the next placement uses. The open palette or the armed placement holds
+the tuned values; otherwise the prefab default applies. The view and the HUD
+read one proc.
 _Avoid_: Placement light state, preview light
 
 **Ghost**:
@@ -818,7 +819,8 @@ _Avoid_: AA switch
 
 **Debug mode**:
 The `F2` mode where the player becomes a free-fly camera and can edit placed
-objects and lights.
+objects and lights. It owns the active flag, the camera, and the saved player;
+the editor owns the editing state.
 _Avoid_: Edit mode, sandbox
 
 **Free-fly camera**:
@@ -826,7 +828,9 @@ The debug mode camera that ignores gravity and collision.
 _Avoid_: Noclip, spectator
 
 **Selection**:
-The placed object that debug mode acts on.
+The placed object that debug mode acts on. The `Selection` value is either none
+or one live object id; deleting the object clears it, and undo or redo repairs
+it.
 _Avoid_: Focus, target
 
 **Object inspector**:
@@ -836,9 +840,9 @@ changing value uses a fixed field and the mono face.
 _Avoid_: Edit panel, properties
 
 **Undo history**:
-The 64-entry stack of placed-object snapshots that undo and redo restore. Each
-snapshot keeps the object ids and the exact transforms; a restore never plays
-the spawn pop.
+The editor's 64-entry stack of placed-object snapshots that undo and redo
+restore. Each snapshot keeps the object ids and the exact transforms; a restore
+never plays the spawn pop.
 _Avoid_: Journal, transaction log
 
 **Scene reset**:
