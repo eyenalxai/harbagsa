@@ -29,8 +29,6 @@ Placement_State :: struct {
 	light:    Light_State `json:"light"`,
 }
 
-// The resolved selection. `present` is false when no placed object is selected;
-// every other field is then the zero value.
 Selection_State :: struct {
 	present:  bool        `json:"present"`,
 	id:       u32         `json:"id"`,
@@ -53,7 +51,7 @@ editor_state_build :: proc(view: game.Editor_View) -> Editor_State {
 		tool = game.active_tool_name(view.tool),
 		palette = {
 			open = view.palette.open,
-			selected = int(view.palette.selected),
+			selected = int(view.palette.prefab),
 			body = game.body_mode_name(view.palette.body_mode),
 		},
 		placement = {
