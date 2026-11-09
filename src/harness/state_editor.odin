@@ -26,6 +26,7 @@ Placement_State :: struct {
 	height:   f32         `json:"height"`,
 	yaw_deg:  f32         `json:"yaw_deg"`,
 	snap:     bool        `json:"snap"`,
+	body:     string      `json:"body"`,
 	light:    Light_State `json:"light"`,
 }
 
@@ -48,7 +49,7 @@ History_State :: struct {
 editor_state_build :: proc(view: game.Editor_View) -> Editor_State {
 	state := Editor_State {
 		active = view.active,
-		tool = game.active_tool_name(view.tool),
+		tool = game.tool_kind_name(view.tool),
 		palette = {
 			open = view.palette.open,
 			selected = int(view.palette.prefab),
@@ -61,6 +62,7 @@ editor_state_build :: proc(view: game.Editor_View) -> Editor_State {
 			height = view.placement.height,
 			yaw_deg = view.placement.yaw_degrees,
 			snap = view.placement.snap,
+			body = game.body_mode_name(view.placement.body_mode),
 			light = light_state(view.placement.light),
 		},
 		history = {

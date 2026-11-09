@@ -114,7 +114,7 @@ run :: proc() -> bool {
 			pointer_available = loop.cursor.pointer_available,
 		}
 		hit: input.Palette_Hit
-		if focus.game.tool == .Palette && loop.cursor.pointer_available {
+		if focus.game.editor.tool == .Palette && loop.cursor.pointer_available {
 			palette_hit := renderer.palette_hit_test(&state, events.pointer, game.PREFAB_COUNT)
 			hit = {inside = palette_hit.inside, card = palette_hit.card}
 		}

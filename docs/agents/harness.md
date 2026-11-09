@@ -193,8 +193,12 @@ defaults. `remove` deletes by id or name. Names survive undo and scene snapshots
 Enter debug mode before `editor`. The keyboard and harness build the same edit
 actions. Fields cover:
 
-- `open`, `select`, `palette_step`, and `palette_number` for the catalog.
-- `pick`, `height`, `yaw_deg`, `snap`, and `cancel` for the armed placement.
+- `open`, `select`, `palette_step`, and `palette_number` for the catalog. The
+  palette must be open before a catalog action; opening it starts at Crate, and
+  closing it discards the tuned card. A palette action while placement is armed
+  is refused; send `cancel` first.
+- `pick` arms the placement from the open palette. `height`, `yaw_deg`, `snap`,
+  and `cancel` apply to the armed placement.
 - `place` for an exact transform without a placement ray.
 - `select_object`, `move`, `rotate_deg`, `body`, `flip_body`, `delete`, and
   `duplicate` for an object. A body request on a lamp fails with `a lamp body
@@ -209,9 +213,13 @@ actions. Fields cover:
 `state.editor` reports the same view the HUD draws: `active`, `tool` (`none`,
 `palette`, or `placement`), the `palette` and `placement` payloads, the resolved
 `selection`, `history.depth` and `history.redo`, and `lights.active` and
-`lights.lamps`. `selection.present` is false when no object is selected;
+`lights.lamps`. `placement` carries `armed`, `prefab`, `position`, `height`,
+`yaw_deg`, `snap`, `body`, and `light`; while the palette is open it names the
+next placement. `selection.present` is false when no object is selected;
 otherwise it carries `id`, `prefab`, `body`, `size`, `position`, `yaw_deg`, and
-`light`. `placement.position` is the ghost centre.
+`light`. `placement.position` is the ghost centre. The editor owns the tool,
+selection, drag, palette, placement, and history; debug mode owns the active flag
+and the camera.
 
 Catalog order: Crate, Small crate, Wide crate, Block, Platform, Ramp, Pillar,
 Wall, Lamp, Light panel, Beacon. A lamp kind is `static` or `dynamic`; a static

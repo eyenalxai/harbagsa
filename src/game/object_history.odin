@@ -9,8 +9,8 @@ import b3 "libs:box3d"
 
 HISTORY_LIMIT :: 64
 
-// The history keeps snapshots on the heap. Debug_Mode carries a pointer to this
-// header and the allocator, so 64 full scenes never sit inline in the debug
+// The history keeps snapshots on the heap. The editor carries a pointer to this
+// header and the allocator, so 64 full scenes never sit inline in the editor
 // state or in the harness Session.
 Object_History :: struct {
 	allocator: mem.Allocator,

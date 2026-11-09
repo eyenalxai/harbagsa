@@ -129,7 +129,7 @@ build :: proc(
 		game.collect_world_lines(sim, &scratch.debug_lines)
 	}
 	if debug.active {
-		game.collect_editor_lines(debug, sim, &scratch.debug_lines)
+		game.collect_editor_lines(&debug.editor, sim, debug.camera, &scratch.debug_lines)
 	}
 	scene.debug_lines = scratch.debug_lines.lines[:scratch.debug_lines.count]
 
@@ -143,7 +143,7 @@ build :: proc(
 			options.delta_seconds,
 			{status = options.bake.status, key = options.bake.key},
 		)
-		palette := game.debug_palette_view(sim, debug)
+		palette := game.editor_palette_view(sim, &debug.editor, debug.active)
 		if hud.menu.open {
 			palette.open = false
 		}

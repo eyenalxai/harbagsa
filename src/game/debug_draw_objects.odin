@@ -5,8 +5,8 @@ import b3 "libs:box3d"
 
 OBJECT_OUTLINE_COLOR :: [4]f32{1.0, 0.8, 0.2, 1.0}
 
-collect_object_editor_lines :: proc(dm: ^Debug_Mode, sim: ^Simulation, collector: ^Debug_Lines) {
-	id, ok := debug_selected_object_id(dm, sim)
+collect_object_editor_lines :: proc(editor: ^Editor, sim: ^Simulation, collector: ^Debug_Lines) {
+	id, ok := editor_selected_object_id(editor, sim)
 	if !ok {
 		return
 	}

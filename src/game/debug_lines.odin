@@ -28,9 +28,14 @@ collect_world_lines :: proc(sim: ^Simulation, collector: ^Debug_Lines) {
 	b3.World_Draw(sim.world_id, &draw, max(u64))
 }
 
-collect_editor_lines :: proc(dm: ^Debug_Mode, sim: ^Simulation, collector: ^Debug_Lines) {
-	collect_object_editor_lines(dm, sim, collector)
-	collect_placement_lines(dm, collector)
+collect_editor_lines :: proc(
+	editor: ^Editor,
+	sim: ^Simulation,
+	camera: Debug_Camera,
+	collector: ^Debug_Lines,
+) {
+	collect_object_editor_lines(editor, sim, collector)
+	collect_placement_lines(editor, sim, camera, collector)
 }
 
 append_debug_line :: proc "contextless" (
