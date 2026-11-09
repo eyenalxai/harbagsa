@@ -7,7 +7,7 @@ import "src:geometry"
 
 Editor_Palette_View :: struct {
 	open:      bool,
-	selected:  Prefab_Id,
+	prefab:    Prefab_Id,
 	body_mode: Body_Mode,
 }
 
@@ -40,8 +40,9 @@ Editor_Light_Budget :: struct {
 	lamps:  int,
 }
 
-// The one resolved editor state the HUD and the harness read. The readers
-// format this value; they do not resolve the selection or the placement again.
+// The one resolved editor state for the selection, the placement, the history,
+// and the light budget. The HUD and the harness format this value; they do not
+// resolve those fields again.
 Editor_View :: struct {
 	active:    bool,
 	tool:      Active_Tool,
@@ -53,16 +54,17 @@ Editor_View :: struct {
 }
 
 editor_view :: proc(dm: ^Debug_Mode, sim: ^Simulation) -> Editor_View {
+	tool := active_tool(dm)
 	view := Editor_View {
 		active = dm.active,
-		tool = active_tool(dm),
+		tool = tool,
 		palette = {
-			open = dm.palette.open,
-			selected = palette_selected(dm.palette),
+			open = tool == .Palette,
+			prefab = palette_selected(dm.palette),
 			body_mode = dm.palette.body_mode,
 		},
 		placement = {
-			armed = dm.placement.armed,
+			armed = tool == .Placement,
 			prefab = dm.placement.prefab,
 			height = dm.placement.height,
 			yaw_degrees = dm.placement.yaw_degrees,

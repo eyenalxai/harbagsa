@@ -317,6 +317,18 @@ tool. `active_tool` reads it; `take_tool` cancels the other. Arming the Placemen
 tool closes the palette.
 _Avoid_: Current mode, tool state
 
+**Editor**:
+The subsystem that owns the debug editing state: the active tool, the selection,
+the drag, the object palette, the placement, and the undo history. Debug mode is
+the free-fly camera mode that activates it; the editor is not the camera.
+_Avoid_: Edit mode, sandbox
+
+**Editor view**:
+The read-only projection of the editor that the HUD and the harness read: the
+tool, the palette, the placement, the selection, the history, and the light
+budget. Both readers format the same value.
+_Avoid_: Debug state, inspector state
+
 **Object palette**:
 The debug-mode prefab chooser. It holds the open flag, the selected catalog
 index, and the body and light settings for the next placement. The bottom dock
