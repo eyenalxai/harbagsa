@@ -132,31 +132,6 @@ State_Section :: enum {
 
 State_Sections :: bit_set[State_Section]
 
-state_build :: proc(
-	sim: ^game.Simulation,
-	frame: int,
-	hud: ^game.HUD_State,
-	debug: ^game.Debug_Mode,
-	camera: Camera_State,
-	renderer_state: renderer.Renderer_Report,
-	render_digest: string,
-	settle: Settle_State,
-	allocator: mem.Allocator,
-) -> State {
-	return state_build_sections(
-		sim,
-		frame,
-		hud,
-		debug,
-		camera,
-		renderer_state,
-		render_digest,
-		settle,
-		state_all_sections(),
-		allocator,
-	)
-}
-
 // A field names one namespace, so the build runs only that namespace's row.
 // The base fields (frame, camera, settle, bake, renderer) are always set. The
 // digest is the one document that asks for every row.

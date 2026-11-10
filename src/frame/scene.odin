@@ -93,7 +93,7 @@ scene_capture :: proc(
 			hud = view.hud,
 			debug = view.debug_view,
 			hint = !view.captured,
-			perf = view.perf,
+			perf = view.perf_stats != nil,
 		},
 	}
 	view_data := camera_view(sim, debug, camera_override, view.alpha)

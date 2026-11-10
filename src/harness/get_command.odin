@@ -33,24 +33,7 @@ destroy_get :: proc(command: ^Command, allocator: mem.Allocator) {
 }
 
 session_get :: proc(session: ^Session, command: Get_Command, reply: ^Reply) -> string {
-	session_refresh_bake(session)
-	session_refresh_renderer(session)
-	sections := state_section_for_field(command.field)
-	if .Menu in sections || .Notice in sections || .Rows in sections {
-		session_refresh_hud(session)
-	}
-	state := state_build_sections(
-		&session.runtime.sim,
-		session.frame,
-		&session.runtime.hud,
-		&session.runtime.debug,
-		session_camera(session),
-		session.render.report,
-		session.render.digest_text,
-		{frames = session.settle.frames, converged = session.settle.converged},
-		sections,
-		session.allocator,
-	)
+	state := session_observe(session, state_section_for_field(command.field))
 	defer state_destroy(&state, session.allocator)
 	value, field_error := field_value(state, session.capture.captures[:], command.field)
 	if field_error != "" {

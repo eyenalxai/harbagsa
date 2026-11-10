@@ -6,6 +6,7 @@ import "core:strings"
 
 import "src:frame"
 import "src:game"
+import "src:perf"
 import "src:renderer"
 
 // The key and the harness write the same file. The command sets the notice too,
@@ -29,12 +30,16 @@ session_repro :: proc(session: ^Session, path: string, reply: ^Reply) -> string 
 			frame.SNAPSHOT_PATH_BYTES,
 		)
 	}
+	perf_stats: Maybe(perf.Stats)
+	if session.view.perf {
+		perf_stats = perf.Stats{}
+	}
 	options := frame.Options {
 		alpha      = session_view_alpha(session),
 		hud        = session.view.hud,
 		debug_view = session.view.debug,
 		captured   = !session.view.hint,
-		perf       = session.view.perf,
+		perf_stats = perf_stats,
 	}
 	debug: ^renderer.Renderer_Debug
 	if session.render.debug.active {
