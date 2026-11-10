@@ -12,14 +12,16 @@ import "src:game"
 import "src:renderer"
 
 Session :: struct {
-	allocator: mem.Allocator,
-	sim:       game.Simulation,
-	debug:     game.Debug_Mode,
-	hud:       game.HUD_State,
-	scratch:   ^frame.Scratch,
-	input:     game.Input_Snapshot,
-	view:      View,
-	alpha:     f32,
+	allocator:   mem.Allocator,
+	sim:         game.Simulation,
+	debug:       game.Debug_Mode,
+	hud:         game.HUD_State,
+	scratch:     ^frame.Scratch,
+	input:       game.Input_Snapshot,
+	view:          View,
+	default_alpha: f32,
+	drawn_alpha:   f32,
+	drawn_frame:   int,
 
 	camera_override:     renderer.Camera,
 	has_camera_override: bool,
@@ -48,10 +50,11 @@ Session :: struct {
 
 session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 	session := Session {
-		allocator = allocator,
-		alpha = 1.0,
-		debug = game.debug_mode_create(allocator),
-		render = render_state_create(),
+		allocator     = allocator,
+		default_alpha = 1.0,
+		drawn_alpha   = 1.0,
+		debug         = game.debug_mode_create(allocator),
+		render        = render_state_create(),
 	}
 	// The scratch holds the frame's debug lines, so it is too large for a local
 	// Session on the stack.
@@ -104,6 +107,22 @@ session_set_backend :: proc(session: ^Session, backend: ^Backend, present: bool)
 	session.render.present = present
 }
 
+session_override_camera :: proc(session: ^Session) -> ^renderer.Camera {
+	if session.has_camera_override {
+		return &session.camera_override
+	}
+	return nil
+}
+
+// The state names the frame the renderer last built. A step with no draw falls
+// back to the default alpha instead of pairing a new player with an old frame.
+session_view_alpha :: proc(session: ^Session) -> f32 {
+	if session.drawn_frame == session.frame {
+		return session.drawn_alpha
+	}
+	return session.default_alpha
+}
+
 session_reset :: proc(session: ^Session) -> string {
 	game.menu_reset(&session.hud.menu)
 	displays := session.sim.settings.display
@@ -118,6 +137,8 @@ session_reset :: proc(session: ^Session) -> string {
 	session.input = {}
 	session.camera_override = {}
 	session.has_camera_override = false
+	session.drawn_alpha = 1.0
+	session.drawn_frame = session.frame
 	session.settle.frames = 0
 	session.settle.converged = false
 	// The debug mode holds a saved player and editor history from the world that
@@ -131,7 +152,7 @@ session_restart :: proc(session: ^Session) -> string {
 	capture_run_clear_pending(&session.capture, session.allocator)
 	session.frame = 0
 	session.view = {}
-	session.alpha = 1.0
+	session.default_alpha = 1.0
 	return session_reset(session)
 }
 session_failure :: proc(session: ^Session, message: string) {

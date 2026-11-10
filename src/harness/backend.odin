@@ -193,6 +193,8 @@ backend_gpu_times :: proc(ctx: rawptr) -> perf.Gpu_Times {
 backend_scene :: proc(data: ^Backend_Data, session: ^Session, alpha: f32) -> renderer.Render_Input {
 	static := game.simulation_bake_input(&session.sim, &session.scratch.bake, session.allocator)
 	renderer.refresh_bake(&data.renderer, static)
+	session.drawn_alpha = alpha
+	session.drawn_frame = session.frame
 	options := frame.Options {
 		alpha         = alpha,
 		delta_seconds = game.SIMULATION_STEP,
@@ -206,15 +208,11 @@ backend_scene :: proc(data: ^Backend_Data, session: ^Session, alpha: f32) -> ren
 	if session.hud.perf.visible {
 		session.hud.perf.stats = perf.stats(&session.perf.state)
 	}
-	camera_override: ^renderer.Camera
-	if session.has_camera_override {
-		camera_override = &session.camera_override
-	}
 	scene := frame.build(
 		&session.sim,
 		&session.debug,
 		options,
-		camera_override,
+		session_override_camera(session),
 		&session.hud,
 		session.scratch,
 		static,
@@ -256,7 +254,7 @@ backend_pick :: proc(
 	if !backend_poll(data, session) {
 		return {}, .Command, format_error("%s", "session is closed")
 	}
-	scene := backend_scene(data, session, session.alpha)
+	scene := backend_scene(data, session, session.default_alpha)
 	scene.pick_at = at
 	return renderer.pick(&data.renderer, scene)
 }
@@ -275,7 +273,7 @@ backend_render :: proc(
 		return nil, ""
 	}
 
-	alpha := session.alpha
+	alpha := session.default_alpha
 	if len(requests) > 0 {
 		alpha = requests[0].alpha
 	}

@@ -25,14 +25,11 @@ session_record_start :: proc(session: ^Session, path: string, include_scene := t
 	append(&session.recorder.recorded, strings.clone(`{"cmd": "reset"}`, session.allocator))
 	if include_scene {
 		options := frame.Options {
+			alpha      = session_view_alpha(session),
 			hud        = session.view.hud,
 			debug_view = session.view.debug,
 			captured   = !session.view.hint,
 			perf       = session.view.perf,
-		}
-		camera: ^renderer.Camera
-		if session.has_camera_override {
-			camera = &session.camera_override
 		}
 		debug: ^renderer.Renderer_Debug
 		if session.render.debug.active {
@@ -42,7 +39,7 @@ session_record_start :: proc(session: ^Session, path: string, include_scene := t
 			&session.sim,
 			&session.debug,
 			options,
-			camera,
+			session_override_camera(session),
 			debug,
 			session.allocator,
 		)

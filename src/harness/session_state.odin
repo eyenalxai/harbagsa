@@ -57,38 +57,22 @@ session_state :: proc(session: ^Session) -> State {
 	)
 }
 
-// The report names the view the renderer uses, in the order frame.build picks
-// it. `overridden` says the player view is not the one on screen.
+// The report resolves at the alpha of the last frame the renderer built, so a
+// capture at a non-unit alpha and the state after it agree.
 @(private)
 session_camera :: proc(session: ^Session) -> Camera_State {
-	if session.has_camera_override {
-		camera := session.camera_override
-		return {
-			position = vec_state(camera.position),
-			yaw_deg = f32(math.to_degrees(camera.yaw)),
-			pitch_deg = f32(math.to_degrees(camera.pitch)),
-			fov_deg = f32(math.to_degrees(camera.fov_x)),
-			source = "override",
-			overridden = true,
-		}
-	}
-	if session.debug.active {
-		camera := session.debug.camera
-		return {
-			position = vec_state(camera.position),
-			yaw_deg = f32(math.to_degrees(camera.yaw)),
-			pitch_deg = f32(math.to_degrees(camera.pitch)),
-			fov_deg = f32(math.to_degrees(frame.PLAYER_FOV_X)),
-			source = "debug",
-			overridden = true,
-		}
-	}
-	camera := game.spider_camera(&session.sim, 1.0)
+	view := frame.camera_view(
+		&session.sim,
+		&session.debug,
+		session_override_camera(session),
+		session_view_alpha(session),
+	)
 	return {
-		position = vec_state(camera.position),
-		yaw_deg = f32(math.to_degrees(camera.yaw)),
-		pitch_deg = f32(math.to_degrees(camera.pitch)),
-		fov_deg = f32(math.to_degrees(frame.PLAYER_FOV_X)),
-		source = "third_person",
+		position = vec_state(view.camera.position),
+		yaw_deg = f32(math.to_degrees(view.camera.yaw)),
+		pitch_deg = f32(math.to_degrees(view.camera.pitch)),
+		fov_deg = f32(math.to_degrees(view.camera.fov_x)),
+		source = view.source,
+		overridden = view.source != "third_person",
 	}
 }

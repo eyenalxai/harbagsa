@@ -175,8 +175,11 @@ other slice segment is an index.
 
 `state.player` reports the body position, the body yaw, the camera yaw and pitch,
 the gait, the grounded flag, `legs_planted`, and one entry per leg. Each leg
-entry holds `foot` and `planted`. `state.camera` reports the computed
-third-person camera with the source `third_person`.
+entry holds `foot` and `planted`. `state.camera` reports the camera at the alpha
+of the last frame the renderer drew, so a capture at `alpha` and the state after
+it name one view. A third-person view names the source `third_person`, a debug
+camera names `debug`, and an override names `override`. The scene snapshot
+resolves at the same alpha.
 
 A scene player block takes `position` and `yaw_deg`, plus optional
 `camera_yaw_deg`, `camera_pitch_deg`, `velocity`, and `grounded`. A scene camera
