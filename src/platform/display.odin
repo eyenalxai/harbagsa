@@ -15,6 +15,39 @@ Displays :: struct {
 	ids:  [display.MAX_DISPLAYS]sdl3.DisplayID,
 }
 
+Window_Apply_Result :: enum {
+	Applied,
+	No_Window,
+	No_Display,
+	Fullscreen,
+	Minimum_Size,
+	Maximum_Size,
+	Size,
+	Sync,
+}
+
+window_apply_name :: proc(result: Window_Apply_Result) -> string {
+	switch result {
+	case .Applied:
+		return "applied"
+	case .No_Window:
+		return "no window"
+	case .No_Display:
+		return "no display"
+	case .Fullscreen:
+		return "window mode"
+	case .Minimum_Size:
+		return "minimum size"
+	case .Maximum_Size:
+		return "maximum size"
+	case .Size:
+		return "resolution"
+	case .Sync:
+		return "sync"
+	}
+	return "unknown"
+}
+
 query_displays :: proc() -> Displays {
 	displays: Displays
 	count: i32
@@ -61,15 +94,18 @@ apply_window_state :: proc(
 	window: ^Window,
 	displays: ^Displays,
 	settings: display.Window_Settings,
-) -> bool {
-	if window == nil || window.handle == nil || displays == nil {
-		return false
+) -> Window_Apply_Result {
+	if displays == nil {
+		return .No_Display
+	}
+	if window == nil || window.handle == nil {
+		return .No_Window
 	}
 	index := display.clamp_index(&displays.list, settings.display)
 	id := displays.ids[index]
 	if id == 0 {
 		log.error("platform: cannot apply the window settings without a display")
-		return false
+		return .No_Display
 	}
 
 	width := max(settings.resolution.width, 320)
@@ -89,7 +125,7 @@ apply_window_state :: proc(
 		_ = sdl3.SetWindowPosition(window.handle, centered_x, centered_y)
 		if !sdl3.SetWindowFullscreen(window.handle, true) {
 			log.errorf("platform: SDL_SetWindowFullscreen failed: %v", sdl3.GetError())
-			return false
+			return .Fullscreen
 		}
 	case .Windowed:
 		was_fullscreen := .FULLSCREEN in sdl3.GetWindowFlags(window.handle)
@@ -104,15 +140,15 @@ apply_window_state :: proc(
 		_ = sdl3.SetWindowMaximumSize(window.handle, 0, 0)
 		if !sdl3.SetWindowMinimumSize(window.handle, c.int(width), c.int(height)) {
 			log.errorf("platform: SDL_SetWindowMinimumSize failed: %v", sdl3.GetError())
-			return false
+			return .Minimum_Size
 		}
 		if !sdl3.SetWindowMaximumSize(window.handle, c.int(width), c.int(height)) {
 			log.errorf("platform: SDL_SetWindowMaximumSize failed: %v", sdl3.GetError())
-			return false
+			return .Maximum_Size
 		}
 		if !sdl3.SetWindowSize(window.handle, c.int(width), c.int(height)) {
 			log.errorf("platform: SDL_SetWindowSize failed: %v", sdl3.GetError())
-			return false
+			return .Size
 		}
 		// Wayland lets only the compositor place a normal window. The position
 		// still selects the output for the next Borderless fullscreen.
@@ -126,9 +162,9 @@ apply_window_state :: proc(
 	}
 	if !sdl3.SyncWindow(window.handle) {
 		log.errorf("platform: SDL_SyncWindow failed: %v", sdl3.GetError())
-		return false
+		return .Sync
 	}
-	return true
+	return .Applied
 }
 
 @(private)

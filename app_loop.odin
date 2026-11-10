@@ -25,13 +25,13 @@ Loop :: struct {
 	last_alpha:     f32, // the last built frame; the repro path runs before this frame's alpha
 	debug_view:     bool,
 	displays:       platform.Displays,
-	applied_window: display.Window_Settings,
 	repro_dir:      string,
 }
 
 @(private)
 apply_frame_input :: proc(
 	loop: ^Loop,
+	window: ^platform.Window,
 	events: ^platform.Events,
 	intent: input.Frame_Input,
 ) {
@@ -101,25 +101,40 @@ apply_frame_input :: proc(
 			f32(target_width),
 			f32(target_height),
 		)
+		previous_window := loop.sim.settings.window
 		if apply_menu_input(&loop.hud.menu, &loop.sim.settings, intent.menu, layout.slider, pointer) {
 			game.menu_close(&loop.hud.menu)
 			loop.accumulator = 0
+		}
+		if loop.sim.settings.window != previous_window {
+			apply_window_settings(loop, window, previous_window)
 		}
 	}
 }
 
 @(private)
-sync_window :: proc(loop: ^Loop, window: ^platform.Window) {
-	if loop.sim.settings.window == loop.applied_window {
+apply_window_settings :: proc(
+	loop: ^Loop,
+	window: ^platform.Window,
+	previous: display.Window_Settings,
+) {
+	result := platform.apply_window_state(window, &loop.displays, loop.sim.settings.window)
+	if result == .Applied {
+		renderer.notify_resize(loop.renderer)
 		return
 	}
-	if platform.apply_window_state(window, &loop.displays, loop.sim.settings.window) {
-		loop.applied_window = loop.sim.settings.window
+	loop.sim.settings.window = previous
+	restore := platform.apply_window_state(window, &loop.displays, previous)
+	restored := restore == .Applied
+	if restored {
+		renderer.notify_resize(loop.renderer)
 	} else {
-		log.warn("harbagsa: the window settings were not applied")
-		loop.sim.settings.window = loop.applied_window
+		log.warnf(
+			"harbagsa: the previous window settings were not restored: %s",
+			platform.window_apply_name(restore),
+		)
 	}
-	renderer.notify_resize(loop.renderer)
+	game.menu_window_apply_failed(&loop.hud.menu, platform.window_apply_name(result), restored)
 }
 
 @(private)

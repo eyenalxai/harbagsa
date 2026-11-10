@@ -66,15 +66,20 @@ A blocked change sets one of five strings:
 - `"Minimum weight · nothing to change"`
 - `"Maximum weight · nothing to change"`
 
+A window apply can fail after `Changed`: the setting reverts to its previous
+value, the window is restored, and the status note names the failed step. A
+failed restore is named in the same note. The launch path shows the failure as
+a notice instead of a menu status.
+
 The status note holds for two seconds of frame time. A new blocked press
 restarts the hold; a successful change clears it immediately. When the hold
 ends, the default note returns.
 
 ## Applying a change
 
-A change applies immediately. There is no OK, Cancel, or dirty state, and
-closing the menu does not revert anything. `Shift+R` resets the scene, not the
-settings.
+A change applies immediately, or reverts visibly when the platform rejects it.
+There is no OK, Cancel, or dirty state, and closing the menu does not revert
+anything. `Shift+R` resets the scene, not the settings.
 
 One press is one action. `Left` and `Right` step a setting; `Enter` tries to
 change the selected setting, or closes on `Resume`. The slider also accepts a
