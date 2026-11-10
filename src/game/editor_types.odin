@@ -164,6 +164,8 @@ Edit_Reason :: enum {
 	No_Change,
 	Failed,
 	Restore_Invalid_Scene,
+	Restore_Invalid_Id,
+	Restore_Duplicate_Id,
 	Restore_Invalid_Name,
 	Restore_Duplicate_Name,
 	Restore_Body,
@@ -222,6 +224,10 @@ edit_reason_message :: proc(reason: Edit_Reason) -> string {
 		return "the edit failed"
 	case .Restore_Invalid_Scene:
 		return "the snapshot simulation is not valid"
+	case .Restore_Invalid_Id:
+		return "the snapshot has an invalid object id"
+	case .Restore_Duplicate_Id:
+		return "the snapshot has a duplicate object id"
 	case .Restore_Invalid_Name:
 		return "the snapshot has an invalid object name"
 	case .Restore_Duplicate_Name:

@@ -10,6 +10,60 @@ import "src:game"
 
 session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 	scene := command.scene
+
+	// A rejected object snapshot must not leave the settings or display blocks
+	// applied, so the object block runs first.
+	if command.has_objects {
+		records := make([]game.Object_Record, len(scene.objects), session.allocator)
+		defer delete(records, session.allocator)
+		next_id := game.Object_Id(1)
+		for object, index in scene.objects {
+			prefab, prefab_ok := game.prefab_parse(object.prefab)
+			body, body_ok := game.body_mode_parse(object.body)
+			color, color_ok := game.light_color_parse(object.light.color)
+			kind, kind_ok := game.lamp_kind_parse(object.light.kind)
+			if !prefab_ok || !body_ok || !color_ok || !kind_ok {
+				return format_error("%s", "scene object holds an unknown prefab, body, light kind, or light colour")
+			}
+			record := game.Object_Record {
+				id = game.Object_Id(object.id),
+				prefab = prefab,
+				body_mode = body,
+				center = {object.position[0], object.position[1], object.position[2]},
+				rotation = quaternion(
+					x = object.rotation[0],
+					y = object.rotation[1],
+					z = object.rotation[2],
+					w = object.rotation[3],
+				),
+				color = object.color,
+				light = {
+					active = object.light.active,
+					kind = kind,
+					color = color,
+					intensity = object.light.intensity,
+					range = object.light.range,
+					emissive = object.light.emissive,
+				},
+			}
+			record.name_length = u8(len(object.name))
+			copy(record.name[:], object.name)
+			records[index] = record
+			next_id = max(next_id, game.Object_Id(object.id) + 1)
+		}
+		snapshot := game.Object_Snapshot {
+			objects = records,
+			next_object_id = next_id,
+		}
+		if failure := game.simulation_apply_snapshot(&session.sim, snapshot); failure.error != .None {
+			return format_error(
+				"cannot apply the scene objects: %s",
+				game.snapshot_apply_error_message(failure),
+			)
+		}
+		game.editor_repair_selection(&session.debug.editor, &session.sim)
+	}
+
 	if command.has_displays {
 		list: display.List
 		list.count = len(scene.displays)
@@ -54,68 +108,6 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 			session.sim.settings.type_weight = weight
 		}
 	}
-
-	if command.has_objects {
-		for object, index in scene.objects {
-			if object.name == "" {
-				continue
-			}
-			for previous in scene.objects[:index] {
-				if previous.name == object.name {
-					return format_error("scene object name %q is given twice", object.name)
-				}
-			}
-		}
-		records := make([]game.Object_Record, len(scene.objects), session.allocator)
-		defer delete(records, session.allocator)
-		next_id := game.Object_Id(1)
-		for object, index in scene.objects {
-			prefab, prefab_ok := game.prefab_parse(object.prefab)
-			body, body_ok := game.body_mode_parse(object.body)
-			color, color_ok := game.light_color_parse(object.light.color)
-			kind, kind_ok := game.lamp_kind_parse(object.light.kind)
-			if !prefab_ok || !body_ok || !color_ok || !kind_ok {
-				return format_error("%s", "scene object holds an unknown prefab, body, light kind, or light colour")
-			}
-			record := game.Object_Record {
-				id = game.Object_Id(object.id),
-				prefab = prefab,
-				body_mode = body,
-				center = {object.position[0], object.position[1], object.position[2]},
-				rotation = quaternion(
-					x = object.rotation[0],
-					y = object.rotation[1],
-					z = object.rotation[2],
-					w = object.rotation[3],
-				),
-				color = object.color,
-				light = {
-					active = object.light.active,
-					kind = kind,
-					color = color,
-					intensity = object.light.intensity,
-					range = object.light.range,
-					emissive = object.light.emissive,
-				},
-			}
-			record.name_length = u8(len(object.name))
-			copy(record.name[:], object.name)
-			records[index] = record
-			next_id = max(next_id, game.Object_Id(object.id) + 1)
-		}
-		snapshot := game.Object_Snapshot {
-			objects = records,
-			next_object_id = next_id,
-		}
-		if apply_error := game.simulation_apply_snapshot(&session.sim, snapshot); apply_error != .None {
-			return format_error(
-				"cannot apply the scene objects: %s",
-				game.snapshot_apply_error_message(apply_error),
-			)
-		}
-		game.editor_repair_selection(&session.debug.editor, &session.sim)
-	}
-
 
 	if command.has_camera {
 		yaw := f32(math.to_radians(f64(scene.camera.yaw_deg)))

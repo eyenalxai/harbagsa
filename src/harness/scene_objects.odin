@@ -47,8 +47,8 @@ parse_scene_objects :: proc(value: json.Value, allocator: mem.Allocator) -> ([]f
 		_, body_parsed := game.body_mode_parse(body_name)
 		position, position_ok := vec3_field(object, "position")
 		rotation, rotation_ok := vec4_float_field(object, "rotation")
-		if !id_ok || id < 0 || !prefab_ok || !prefab_parsed || !body_ok || !body_parsed ||
-		   !position_ok || !rotation_ok {
+		if !id_ok || id < 0 || id > int(max(u32)) || !prefab_ok || !prefab_parsed ||
+		   !body_ok || !body_parsed || !position_ok || !rotation_ok {
 			return nil, format_error(
 				"scene object %d needs id, prefab, body, position, and rotation",
 				index,
