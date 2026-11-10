@@ -36,11 +36,6 @@ Editor_History_View :: struct {
 	redo:  int,
 }
 
-Editor_Light_Budget :: struct {
-	active: int,
-	lamps:  int,
-}
-
 // The one resolved editor state for the tool, the selection, the placement, the
 // history, and the light budget. The HUD and the harness format this value; they
 // do not resolve those fields again.
@@ -51,7 +46,7 @@ Editor_View :: struct {
 	placement: Editor_Placement_View,
 	selection: Maybe(Editor_Selection_View),
 	history:   Editor_History_View,
-	lights:    Editor_Light_Budget,
+	lights:    Light_Budget,
 }
 
 editor_view :: proc(
@@ -61,7 +56,6 @@ editor_view :: proc(
 	camera: Debug_Camera,
 ) -> Editor_View {
 	default_prefab := prefab(.Crate)
-	active_lights, lamps := simulation_light_counts(sim)
 	view := Editor_View {
 		active = active,
 		tool = tool_kind(editor.tool),
@@ -78,10 +72,7 @@ editor_view :: proc(
 			depth = editor_history_depth(editor),
 			redo = editor_history_redo_depth(editor),
 		},
-		lights = {
-			active = active_lights,
-			lamps = lamps,
-		},
+		lights = simulation_light_budget(sim),
 	}
 
 	switch tool in editor.tool {

@@ -240,7 +240,7 @@ hud_bake_line :: proc(hud: ^HUD_State, slot: int, bake: Bake_View) -> string {
 }
 
 @(private)
-hud_light_budget :: proc(hud: ^HUD_State, slot: int, budget: Editor_Light_Budget) -> string {
+hud_light_budget :: proc(hud: ^HUD_State, slot: int, budget: Light_Budget) -> string {
 	return line_format(
 		&hud.storage,
 		slot,
