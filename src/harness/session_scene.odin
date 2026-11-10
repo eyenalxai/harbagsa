@@ -107,10 +107,10 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 			objects = records,
 			next_object_id = next_id,
 		}
-		if apply_error := game.simulation_apply_snapshot(&session.sim, snapshot); apply_error != .None {
+		if failure := game.simulation_apply_snapshot(&session.sim, snapshot); failure.error != .None {
 			return format_error(
 				"cannot apply the scene objects: %s",
-				game.snapshot_apply_error_message(apply_error),
+				game.snapshot_apply_error_message(failure),
 			)
 		}
 		game.editor_repair_selection(&session.debug.editor, &session.sim)
