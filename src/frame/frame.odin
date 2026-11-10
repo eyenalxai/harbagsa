@@ -212,9 +212,5 @@ draw :: proc(
 	scene: renderer.Render_Input,
 	capture := renderer.Frame_Capture{},
 ) -> renderer.Frame_Status {
-	frame, begin_status := renderer.begin_frame(state, scene, capture)
-	if begin_status != .Ok {
-		return begin_status
-	}
-	return renderer.end_frame(state, frame)
+	return renderer.render_frame(state, scene, capture).status
 }
