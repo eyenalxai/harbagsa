@@ -199,18 +199,18 @@ backend_scene :: proc(data: ^Backend_Data, session: ^Session, alpha: f32) -> ren
 	renderer.refresh_bake(&data.renderer, static)
 	session.drawn_alpha = alpha
 	session.drawn_frame = session.frame
+	perf_stats: Maybe(perf.Stats)
+	if session.view.perf {
+		perf_stats = perf.stats(&session.perf.state)
+	}
 	options := frame.Options {
 		alpha         = alpha,
 		delta_seconds = game.SIMULATION_STEP,
 		debug_view    = session.view.debug,
 		captured      = !session.view.hint,
 		hud           = session.view.hud,
-		perf          = session.view.perf,
+		perf_stats    = perf_stats,
 		bake          = renderer.bake_report(&data.renderer),
-	}
-	session.runtime.hud.perf.visible = session.view.perf
-	if session.runtime.hud.perf.visible {
-		session.runtime.hud.perf.stats = perf.stats(&session.perf.state)
 	}
 	scene := frame.runtime_compose(
 		&session.runtime,
