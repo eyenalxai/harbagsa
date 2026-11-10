@@ -3,7 +3,6 @@ package renderer
 
 import "core:log"
 
-import "src:geometry"
 import vk "vendor:vulkan"
 
 // A term view is one extra lit pass at the frame's camera and jitter, resolved
@@ -15,7 +14,7 @@ record_scene_view :: proc(
 	capture: Frame_Capture,
 	view: Capture_View,
 	image_index: u32,
-	boxes: []geometry.Box,
+	boxes: []Frame_Box,
 ) -> bool {
 	scene := Pass {
 		name        = .Scene,

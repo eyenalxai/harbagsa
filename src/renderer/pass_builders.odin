@@ -1,7 +1,6 @@
 #+vet explicit-allocators
 package renderer
 
-import "src:geometry"
 import "src:perf"
 import vk "vendor:vulkan"
 
@@ -10,7 +9,7 @@ build_pass :: proc(
 	pass: ^Pass,
 	kind: perf.Pass,
 	image_index: u32,
-	boxes: []geometry.Box,
+	boxes: []Frame_Box,
 ) {
 	pass^ = {
 		name        = kind,

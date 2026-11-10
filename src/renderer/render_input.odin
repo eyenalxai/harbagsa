@@ -15,12 +15,37 @@ View_Flag :: enum {
 
 View_Flags :: bit_set[View_Flag]
 
+Arena_Box_Identity :: struct {
+	index: int,
+}
+
+Object_Identity :: struct {
+	id: u32,
+}
+
+Spider_Box_Identity :: struct {
+	index: int,
+}
+
+// A pick resolves the box back to its source through this identity, so a new
+// box group cannot change which object the pick names.
+Frame_Box_Identity :: union #no_nil {
+	Arena_Box_Identity,
+	Object_Identity,
+	Spider_Box_Identity,
+}
+
+Frame_Box :: struct {
+	box:      geometry.Box,
+	slot:     bake.Box_Slot,
+	identity: Frame_Box_Identity,
+}
+
 Render_Input :: struct {
 	width:        u32,
 	height:       u32,
 	camera:       Camera,
-	boxes:        []geometry.Box,
-	box_slots:    []bake.Box_Slot,
+	boxes:        []Frame_Box,
 	lights:       []Light,
 	debug_lines:  []geometry.Line,
 	hud:          HUD_Frame,
