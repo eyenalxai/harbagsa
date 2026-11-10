@@ -73,10 +73,11 @@ parse_scene_objects :: proc(value: json.Value, allocator: mem.Allocator) -> ([]f
 		name := ""
 		if name_value, has := json_get(object, "name"); has {
 			text, text_ok := json_string(name_value)
-			if !text_ok || !game.object_name_valid(text) {
+			if !text_ok || !game.object_name_storable(text) {
 				return nil, format_error(
-					"scene object %d name must use at most 31 letters, digits, '-' or '_'",
+					"scene object %d name must use %s",
 					index,
+					game.OBJECT_NAME_RULE_TEXT,
 				)
 			}
 			name = strings.clone(text, allocator)

@@ -1042,8 +1042,8 @@ has no undo entry and draws no editor lines. **Avoid**: editor place,
 spawn (a spawn is the game API).
 
 ### Remove command
-The harness `remove` command deletes one object by id without entering debug
-mode. **Avoid**: delete (the editor action).
+The harness `remove` command deletes one object by id or name without entering
+debug mode. **Avoid**: delete (the editor action).
 
 ### Display list
 The harness's scripted set of displays and modes. It replaces the compositor

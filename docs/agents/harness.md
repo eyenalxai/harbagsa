@@ -162,12 +162,12 @@ and one capture. It is not a live-session command.
 
 ## State fields
 
-`get` resolves one path against the state document. A path segment is a JSON
-name and a slice segment is an index. An object handle is explicit:
+`get` resolves one path against the state document. An object handle is explicit:
 `objects.id.<id>.<field>` addresses an object by id,
 `objects.name.<name>.<field>` addresses it by name, and `objects.count` is the
-list length. Every name that `place` accepts works in the name form, including
-`12` and `count`.
+list length. Every non-empty name that `place` accepts works in the name form,
+including `12` and `count`. Every other path segment is a JSON name and every
+other slice segment is an index.
 
 ## Player state
 
