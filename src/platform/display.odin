@@ -35,15 +35,15 @@ window_apply_name :: proc(result: Window_Apply_Result) -> string {
 	case .No_Display:
 		return "no display"
 	case .Fullscreen:
-		return "fullscreen"
+		return "window mode"
 	case .Minimum_Size:
 		return "minimum size"
 	case .Maximum_Size:
 		return "maximum size"
 	case .Size:
-		return "window size"
+		return "resolution"
 	case .Sync:
-		return "window sync"
+		return "sync"
 	}
 	return "unknown"
 }
@@ -95,7 +95,10 @@ apply_window_state :: proc(
 	displays: ^Displays,
 	settings: display.Window_Settings,
 ) -> Window_Apply_Result {
-	if window == nil || window.handle == nil || displays == nil {
+	if displays == nil {
+		return .No_Display
+	}
+	if window == nil || window.handle == nil {
 		return .No_Window
 	}
 	index := display.clamp_index(&displays.list, settings.display)

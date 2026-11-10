@@ -87,17 +87,16 @@ run :: proc() -> bool {
 	initial_display := platform.display_index_for_window(&window, &loop.displays)
 	if initial_display >= 0 {
 		loop.sim.settings.window.display = initial_display
-	} else {
-		log.warn("harbagsa: the launch display is not in the display list")
-	}
-	if initial_display >= 0 {
 		result := platform.apply_window_state(&window, &loop.displays, loop.sim.settings.window)
 		if result != .Applied {
 			log.warnf(
 				"harbagsa: the initial window settings were not applied: %s",
 				platform.window_apply_name(result),
 			)
+			game.hud_notice_window_failed(&loop.hud, platform.window_apply_name(result))
 		}
+	} else {
+		log.warn("harbagsa: the launch display is not in the display list")
 	}
 	renderer.notify_resize(&state)
 	last_time := time.now()

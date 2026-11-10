@@ -106,7 +106,6 @@ apply_frame_input :: proc(
 		}
 		if loop.sim.settings.window != previous_window {
 			apply_window_settings(loop, window, previous_window)
-			renderer.notify_resize(loop.renderer)
 		}
 	}
 }
@@ -119,21 +118,21 @@ apply_window_settings :: proc(
 ) {
 	result := platform.apply_window_state(window, &loop.displays, loop.sim.settings.window)
 	if result == .Applied {
+		renderer.notify_resize(loop.renderer)
 		return
 	}
-	game.menu_window_apply_failed(
-		&loop.hud.menu,
-		&loop.sim.settings,
-		previous,
-		platform.window_apply_name(result),
-	)
+	loop.sim.settings.window = previous
 	restore := platform.apply_window_state(window, &loop.displays, previous)
-	if restore != .Applied {
+	restored := restore == .Applied
+	if restored {
+		renderer.notify_resize(loop.renderer)
+	} else {
 		log.warnf(
 			"harbagsa: the previous window settings were not restored: %s",
 			platform.window_apply_name(restore),
 		)
 	}
+	game.menu_window_apply_failed(&loop.hud.menu, platform.window_apply_name(result), restored)
 }
 
 @(private)

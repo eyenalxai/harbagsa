@@ -25,6 +25,12 @@ hud_notice_scene_snapshot :: proc(hud: ^HUD_State, path: string, ok: bool) {
 	hud.notice.remaining = NOTICE_SECONDS
 }
 
+hud_notice_window_failed :: proc(hud: ^HUD_State, reason: string) {
+	written := fmt.bprintf(hud.notice.text[:], "Window change failed · %s", reason)
+	hud.notice.length = len(written)
+	hud.notice.remaining = NOTICE_SECONDS
+}
+
 hud_notice_update :: proc(hud: ^HUD_State, delta_seconds: f32) {
 	if hud.notice.length == 0 {
 		return
