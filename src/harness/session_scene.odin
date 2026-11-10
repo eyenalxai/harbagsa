@@ -10,62 +10,10 @@ import "src:game"
 
 session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 	scene := command.scene
-	if command.has_displays {
-		list: display.List
-		list.count = len(scene.displays)
-		for scene_display, index in scene.displays {
-			info := &list.items[index]
-			display.set_name(info, scene_display.name)
-			display.set_desktop(info, {scene_display.desktop[0], scene_display.desktop[1]})
-			for mode in scene_display.modes {
-				display.add_mode(info, {mode[0], mode[1]})
-			}
-			display.sort_modes(info)
-		}
-		session.sim.settings.display = list
-	}
 
-	if command.has_settings {
-		settings := command.settings
-		if name, has := settings.window_mode.?; has {
-			mode, mode_ok := game.window_mode_parse(name)
-			if !mode_ok {
-				return format_error("%s", "scene settings hold an unknown window mode")
-			}
-			session.sim.settings.window.mode = mode
-		}
-		if index, has := settings.display.?; has {
-			session.sim.settings.window.display = display.clamp_index(
-				&session.sim.settings.display,
-				index,
-			)
-		}
-		if resolution, has := settings.resolution.?; has {
-			session.sim.settings.window.resolution = {resolution[0], resolution[1]}
-		}
-		if name, has := settings.sprint_mode.?; has {
-			mode, mode_ok := game.input_mode_parse(name)
-			if !mode_ok {
-				return format_error("%s", "scene settings hold an unknown sprint mode")
-			}
-			session.sim.settings.sprint_mode = mode
-		}
-		if weight, has := settings.type_weight.?; has {
-			session.sim.settings.type_weight = weight
-		}
-	}
-
+	// A rejected object snapshot must not leave the settings or display blocks
+	// applied, so the object block runs first.
 	if command.has_objects {
-		for object, index in scene.objects {
-			if object.name == "" {
-				continue
-			}
-			for previous in scene.objects[:index] {
-				if previous.name == object.name {
-					return format_error("scene object name %q is given twice", object.name)
-				}
-			}
-		}
 		records := make([]game.Object_Record, len(scene.objects), session.allocator)
 		defer delete(records, session.allocator)
 		next_id := game.Object_Id(1)
@@ -116,6 +64,50 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 		game.editor_repair_selection(&session.debug.editor, &session.sim)
 	}
 
+	if command.has_displays {
+		list: display.List
+		list.count = len(scene.displays)
+		for scene_display, index in scene.displays {
+			info := &list.items[index]
+			display.set_name(info, scene_display.name)
+			display.set_desktop(info, {scene_display.desktop[0], scene_display.desktop[1]})
+			for mode in scene_display.modes {
+				display.add_mode(info, {mode[0], mode[1]})
+			}
+			display.sort_modes(info)
+		}
+		session.sim.settings.display = list
+	}
+
+	if command.has_settings {
+		settings := command.settings
+		if name, has := settings.window_mode.?; has {
+			mode, mode_ok := game.window_mode_parse(name)
+			if !mode_ok {
+				return format_error("%s", "scene settings hold an unknown window mode")
+			}
+			session.sim.settings.window.mode = mode
+		}
+		if index, has := settings.display.?; has {
+			session.sim.settings.window.display = display.clamp_index(
+				&session.sim.settings.display,
+				index,
+			)
+		}
+		if resolution, has := settings.resolution.?; has {
+			session.sim.settings.window.resolution = {resolution[0], resolution[1]}
+		}
+		if name, has := settings.sprint_mode.?; has {
+			mode, mode_ok := game.input_mode_parse(name)
+			if !mode_ok {
+				return format_error("%s", "scene settings hold an unknown sprint mode")
+			}
+			session.sim.settings.sprint_mode = mode
+		}
+		if weight, has := settings.type_weight.?; has {
+			session.sim.settings.type_weight = weight
+		}
+	}
 
 	if command.has_camera {
 		yaw := f32(math.to_radians(f64(scene.camera.yaw_deg)))
