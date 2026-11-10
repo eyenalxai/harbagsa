@@ -226,8 +226,9 @@ actions. Fields cover:
 
 `state.editor` reports the same view the HUD draws: `active`, `focus`, `tool`
 (`none`, `palette`, or `placement`), the `palette` and `placement` payloads, the
-resolved `selection`, `history.depth` and `history.redo`, and `lights.active`
-and `lights.lamps`. `focus` carries `pointer_free`, which is true while the
+resolved `selection`, `history.depth` and `history.redo`, and the light budget
+as `lights.active` (active lights) and `lights.lamps` (placed lamp prefabs).
+`focus` carries `pointer_free`, which is true while the
 menu or the object palette is open and false otherwise. `placement` carries `armed`,
 `prefab`, `position`, `height`, `yaw_deg`, `snap`, `body`, and `light`; while the
 palette is open it names the next placement. `selection.present` is false when

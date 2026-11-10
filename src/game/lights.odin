@@ -174,18 +174,22 @@ simulation_collect_lights :: proc(sim: ^Simulation) -> []Active_Light {
 	return sim.light_scratch[:]
 }
 
-simulation_lamp_count :: proc(sim: ^Simulation) -> int {
-	count := 0
-	for object in simulation_objects(sim) {
-		if object.light.active {
-			count += 1
-		}
-	}
-	return count
+Light_Budget :: struct {
+	active: int,
+	lamps:  int,
 }
 
-simulation_active_light_count :: proc(sim: ^Simulation) -> int {
-	return simulation_lamp_count(sim)
+// Every object with an active light is in the budget; the lamp count includes
+// lamp prefabs whose light is off, so the HUD can show the difference.
+simulation_light_budget :: proc(sim: ^Simulation) -> Light_Budget {
+	budget: Light_Budget
+	budget.active = len(simulation_collect_lights(sim))
+	for object in simulation_objects(sim) {
+		if prefab_has_light(object.prefab) {
+			budget.lamps += 1
+		}
+	}
+	return budget
 }
 
 simulation_set_object_light :: proc(sim: ^Simulation, id: Object_Id, settings: Light_Settings) -> bool {

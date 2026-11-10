@@ -265,7 +265,7 @@ A prefab with an active point light and an emissive box. The catalog has the Lam
 _Avoid_: Light object, bulb
 
 **Light budget**:
-The set of active point lights. Every placed lamp with an active light is in the budget; the renderer no longer keeps a nearest subset. The inspector shows the active count against the lamp count.
+The set of active point lights. Every object with an active light is in the budget; the renderer no longer keeps a nearest subset. The inspector shows the active light count against the placed lamp-prefab count, which includes lamp prefabs whose light is off.
 _Avoid_: Light cap, light count (that is the reported number)
 
 **Emissive box**:
