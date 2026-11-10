@@ -52,7 +52,7 @@ binary.
 ## Controls
 
 - `WASD`: move relative to the camera. The spider turns toward the movement.
-- Mouse: orbit the camera. Left click captures the cursor.
+- Mouse: orbit the camera. The cursor is captured unless the settings menu or the object palette is open.
 - `Left Shift`: sprint. The settings menu switches Hold and Toggle.
 - `Space`: jump.
 - `R`: return the player to spawn.

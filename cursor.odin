@@ -3,44 +3,37 @@ package main
 
 import "core:log"
 
+import "src:game"
 import "src:platform"
 
+// Whether the palette hit test can read the pointer.
 Cursor_State :: struct {
-	palette_was_open:  bool,
 	pointer_available: bool,
 }
 
-// sync_palette_cursor frees the cursor while the object palette is open and
-// captures it when the palette closes. The settings menu owns the cursor
-// separately, so the palette leaves it alone while the menu is open.
+// A free pointer cannot recapture on the next click, so a menu or palette click
+// never leaks into the world.
 @(private)
-sync_palette_cursor :: proc(
+sync_cursor :: proc(
 	window: ^platform.Window,
-	debug_active: bool,
-	menu_open: bool,
-	want_free: bool,
+	focus: game.Focus,
+	current_captured: bool,
 	state: ^Cursor_State,
 ) {
-	if !debug_active || menu_open {
-		// The palette cannot be open outside debug mode, and opening the menu
-		// cancels editing. The old sync stored the post-cancel palette flag.
-		state.palette_was_open = false
+	desired := !focus.pointer_free
+	platform.set_click_capture(window, desired)
+	if desired == current_captured {
+		state.pointer_available = !desired
 		return
 	}
-	if want_free == state.palette_was_open {
+	if desired {
+		state.pointer_available = false
+		_ = platform.set_cursor_capture(window, true)
 		return
 	}
-	state.palette_was_open = want_free
-	if want_free {
-		platform.set_click_capture(window, false)
-		released := !platform.set_cursor_capture(window, false)
-		state.pointer_available = released
-		if !released {
-			log.warn("harbagsa: cursor release for the palette failed; using the keyboard path")
-		}
-		return
+	released := !platform.set_cursor_capture(window, false)
+	state.pointer_available = released
+	if !released {
+		log.warn("harbagsa: cursor release failed; using the keyboard path")
 	}
-	platform.set_click_capture(window, true)
-	_ = platform.set_cursor_capture(window, true)
-	state.pointer_available = false
 }

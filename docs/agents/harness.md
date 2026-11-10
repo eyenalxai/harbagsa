@@ -210,14 +210,15 @@ actions. Fields cover:
 - `undo` and `redo` for history.
 - `camera` for the free-fly camera.
 
-`state.editor` reports the same view the HUD draws: `active`, `tool` (`none`,
-`palette`, or `placement`), the `palette` and `placement` payloads, the resolved
-`selection`, `history.depth` and `history.redo`, and `lights.active` and
-`lights.lamps`. `placement` carries `armed`, `prefab`, `position`, `height`,
-`yaw_deg`, `snap`, `body`, and `light`; while the palette is open it names the
-next placement. `selection.present` is false when no object is selected;
-otherwise it carries `id`, `prefab`, `body`, `size`, `position`, `yaw_deg`, and
-`light`. `placement.position` is the ghost centre. The editor owns the tool,
+`state.editor` reports the same view the HUD draws: `active`, `focus`, `tool`
+(`none`, `palette`, or `placement`), the `palette` and `placement` payloads, the
+resolved `selection`, `history.depth` and `history.redo`, and `lights.active`
+and `lights.lamps`. `focus` carries `pointer_free`, which is true while the
+menu or the object palette is open and false otherwise. `placement` carries `armed`,
+`prefab`, `position`, `height`, `yaw_deg`, `snap`, `body`, and `light`; while the
+palette is open it names the next placement. `selection.present` is false when
+no object is selected; otherwise it carries `id`, `prefab`, `body`, `size`,
+`position`, `yaw_deg`, and `light`. `placement.position` is the ghost centre. The editor owns the tool,
 selection, drag, palette, placement, and history; debug mode owns the active flag
 and the camera.
 
