@@ -10,7 +10,7 @@ build_palette :: proc(o: ^Overlay, width, height: f32, palette: ui.Palette) {
 	theme := o.theme
 	view := palette
 	ctx: Layout_Context
-	layout_context_init(&ctx, theme, &o.atlas, width, height)
+	layout_context_init(&ctx, o, width, height)
 	layout := ui.palette_layout(ctx.inputs, view.item_count)
 
 	hud_emit_rect(
@@ -279,7 +279,7 @@ Palette_Hit :: struct {
 palette_hit_test :: proc(r: ^Renderer, pointer: [2]f32, item_count: int) -> Palette_Hit {
 	width, height := target_extent(r)
 	ctx: Layout_Context
-	layout_context_init(&ctx, ui_theme_init(height), nil, f32(width), f32(height))
+	layout_context_init(&ctx, &r.overlay, f32(width), f32(height))
 	layout := ui.palette_layout(ctx.inputs, item_count)
 	point := ui.pointer_to_target(pointer, f32(width), f32(height))
 	return {

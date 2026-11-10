@@ -6,7 +6,7 @@ import "src:ui"
 build_menu :: proc(o: ^Overlay, width, height: f32, menu: ui.Menu) {
 	theme := o.theme
 	ctx: Layout_Context
-	layout_context_init(&ctx, theme, &o.atlas, width, height)
+	layout_context_init(&ctx, o, width, height)
 	layout := ui.menu_layout(ctx.inputs, menu)
 
 	hud_emit_rect(o, 0, 0, width, height, theme.scrim)
