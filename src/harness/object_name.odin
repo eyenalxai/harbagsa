@@ -11,7 +11,7 @@ Object_Name :: struct {
 }
 
 object_name_from_text :: proc(text: string) -> (Object_Name, bool) {
-	if !game.object_name_valid(text) {
+	if !game.object_name_storable(text) {
 		return {}, false
 	}
 	name: Object_Name

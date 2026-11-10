@@ -16,6 +16,7 @@ INVALID_OBJECT_ID :: Object_Id(0)
 // every path. The cap is one short scenario handle, not a label.
 OBJECT_NAME_BYTES :: 32
 OBJECT_NAME_MAX :: OBJECT_NAME_BYTES - 1
+OBJECT_NAME_RULE_TEXT :: "at most 31 letters, digits, '-' or '_'"
 
 Placed_Object :: struct {
 	id:         Object_Id,
@@ -62,7 +63,7 @@ object_name :: proc(object: ^Placed_Object) -> string {
 
 // An empty name is unnamed. The rule is the storage rule only; a query path
 // decides whether a handle is an id or a name.
-object_name_valid :: proc(name: string) -> bool {
+object_name_storable :: proc(name: string) -> bool {
 	if name == "" {
 		return true
 	}

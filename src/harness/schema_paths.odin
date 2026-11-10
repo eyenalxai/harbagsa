@@ -35,6 +35,7 @@ schema_collect_paths :: proc(
 			path := strings.concatenate({prefix, separator, json_name}, allocator)
 			if prefix == "" && json_name == "objects" {
 				schema_collect_paths(typeid_of(Object_State), "objects.id.1", paths, allocator)
+				schema_collect_paths(typeid_of(Object_State), "objects.name.1", paths, allocator)
 				delete(path, allocator)
 				continue
 			}
