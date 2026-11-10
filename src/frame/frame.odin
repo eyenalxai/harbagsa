@@ -11,6 +11,12 @@ import "src:renderer"
 
 PLAYER_FOV_X :: f32(90.0 * math.PI / 180.0)
 
+Camera_View :: struct {
+	source: string,
+	camera: renderer.Camera,
+	player: Maybe(game.Render_Snapshot),
+}
+
 Options :: struct {
 	alpha:         f32,
 	delta_seconds: f32,
@@ -59,6 +65,39 @@ scratch_prepare :: proc(scratch: ^Scratch) {
 	}
 }
 
+camera_view :: proc(
+	sim: ^game.Simulation,
+	debug: ^game.Debug_Mode,
+	camera_override: ^renderer.Camera,
+	alpha: f32,
+) -> Camera_View {
+	if camera_override != nil {
+		return {source = "override", camera = camera_override^}
+	}
+	if debug.active {
+		return {
+			source = "debug",
+			camera = {
+				position = debug.camera.position,
+				yaw = debug.camera.yaw,
+				pitch = debug.camera.pitch,
+				fov_x = PLAYER_FOV_X,
+			},
+		}
+	}
+	camera := game.spider_camera(sim, alpha)
+	return {
+		source = "third_person",
+		camera = {
+			position = camera.position,
+			yaw = camera.yaw,
+			pitch = camera.pitch,
+			fov_x = PLAYER_FOV_X,
+		},
+		player = game.simulation_snapshot(sim),
+	}
+}
+
 build :: proc(
 	sim: ^game.Simulation,
 	debug: ^game.Debug_Mode,
@@ -72,24 +111,11 @@ build :: proc(
 	scene.hud.weight = sim.settings.type_weight
 	scene.light_shadows = true
 
-	snapshot := game.simulation_snapshot(sim)
-	if camera_override != nil {
-		scene.camera = camera_override^
-	} else if debug.active {
-		scene.camera = renderer.Camera {
-			position = debug.camera.position,
-			yaw      = debug.camera.yaw,
-			pitch    = debug.camera.pitch,
-			fov_x    = PLAYER_FOV_X,
-		}
-	} else {
-		camera := game.spider_camera(sim, options.alpha)
-		scene.camera = renderer.Camera {
-			position = camera.position,
-			yaw      = camera.yaw,
-			pitch    = camera.pitch,
-			fov_x    = PLAYER_FOV_X,
-		}
+	view := camera_view(sim, debug, camera_override, options.alpha)
+	scene.camera = view.camera
+	snapshot, has_player := view.player.?
+	if !has_player {
+		snapshot = game.simulation_snapshot(sim)
 	}
 
 	scratch_prepare(scratch)
