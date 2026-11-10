@@ -2,6 +2,14 @@
 
 An Odin project. Build and check commands live in `README.md`.
 
+## Documentation
+
+Documentation is a lead, not the source of truth. It records a moment and goes
+stale. A doc speaks only to its subject: a note about world motion says nothing
+about UI motion. Check a doc claim against the code, the harness, or a run
+before you rely on it. When they disagree, follow the code and correct the doc in
+the same change. Justify a decision with code, not with a doc line.
+
 ## Code changes
 
 Backwards compatibility does not matter. Rip and tear if needed. Refactor anything you need; you have free rein over the code. Focus on long-term maintenance. Do not write duplicated code. Re-use existing code when possible.
