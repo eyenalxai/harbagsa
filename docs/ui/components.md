@@ -17,7 +17,7 @@ draw at the same time; it does not replace this panel.
 theme := o.theme
 padding := theme.spacing.lg
 ctx: Layout_Context
-layout_context_init(&ctx, theme, &o.atlas, 0, 0)
+layout_context_init(&ctx, o, 0, 0)
 options := ui.Rows_Options{value_align = .Left}
 layout := ui.rows_layout(ctx.inputs, rows, options)
 
