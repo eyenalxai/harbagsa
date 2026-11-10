@@ -3,44 +3,36 @@ package main
 
 import "core:log"
 
+import "src:game"
 import "src:platform"
 
+// The capture state the loop has applied, and whether the palette hit test can
+// read the pointer. The owner is derived from the current frame, not a latch.
 Cursor_State :: struct {
-	palette_was_open:  bool,
+	captured:          bool,
 	pointer_available: bool,
 }
 
-// sync_palette_cursor frees the cursor while the object palette is open and
-// captures it when the palette closes. The settings menu owns the cursor
-// separately, so the palette leaves it alone while the menu is open.
+// sync_cursor applies the one owner rule: the menu and the editor focus decide
+// the relative mode and the click policy together. A free pointer cannot
+// recapture on the next click, so a menu or palette click never leaks into the
+// world.
 @(private)
-sync_palette_cursor :: proc(
-	window: ^platform.Window,
-	debug_active: bool,
-	menu_open: bool,
-	want_free: bool,
-	state: ^Cursor_State,
-) {
-	if !debug_active || menu_open {
-		// The palette cannot be open outside debug mode, and opening the menu
-		// cancels editing. The old sync stored the post-cancel palette flag.
-		state.palette_was_open = false
+sync_cursor :: proc(window: ^platform.Window, focus: game.Focus, state: ^Cursor_State) {
+	captured := !focus.menu_open && !focus.editor.pointer_free
+	if captured == state.captured {
 		return
 	}
-	if want_free == state.palette_was_open {
+	platform.set_click_capture(window, captured)
+	if captured {
+		state.captured = platform.set_cursor_capture(window, true)
+		state.pointer_available = !state.captured
 		return
 	}
-	state.palette_was_open = want_free
-	if want_free {
-		platform.set_click_capture(window, false)
-		released := !platform.set_cursor_capture(window, false)
-		state.pointer_available = released
-		if !released {
-			log.warn("harbagsa: cursor release for the palette failed; using the keyboard path")
-		}
-		return
+	released := !platform.set_cursor_capture(window, false)
+	state.captured = !released
+	state.pointer_available = released
+	if !released {
+		log.warn("harbagsa: cursor release failed; using the keyboard path")
 	}
-	platform.set_click_capture(window, true)
-	_ = platform.set_cursor_capture(window, true)
-	state.pointer_available = false
 }

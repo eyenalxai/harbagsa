@@ -2,8 +2,7 @@
 package game
 
 // The editing half of one frame's ownership. The menu and the platform pointer
-// state sit beside it. The cursor owner ticket reads pointer_free; the current
-// loop still keeps its own latch.
+// state sit beside it; the cursor sync derives the capture from pointer_free.
 Editor_Focus :: struct {
 	active:       bool,
 	tool:         Tool_Kind,

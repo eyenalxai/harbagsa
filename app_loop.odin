@@ -23,7 +23,6 @@ Loop :: struct {
 	cursor:         Cursor_State,
 	accumulator:    f32,
 	debug_view:     bool,
-	menu_recapture: bool,
 	displays:       platform.Displays,
 	applied_window: display.Window_Settings,
 	repro_dir:      string,
@@ -32,7 +31,6 @@ Loop :: struct {
 @(private)
 apply_frame_input :: proc(
 	loop: ^Loop,
-	window: ^platform.Window,
 	events: ^platform.Events,
 	intent: input.Frame_Input,
 ) {
@@ -40,14 +38,15 @@ apply_frame_input :: proc(
 		loop.hud.perf.visible = !loop.hud.perf.visible
 	}
 
-	// The menu owns the cursor and the accumulator while it is open.
+	// The menu owns the accumulator while it is open. The cursor sync reads the
+	// menu after the edit actions.
 	if intent.view.menu_toggle {
 		if loop.hud.menu.open {
-			events.captured = close_settings_menu(window, &loop.hud.menu, loop.menu_recapture)
+			game.menu_close(&loop.hud.menu)
 			loop.accumulator = 0
 		} else {
-			loop.menu_recapture = events.captured
-			events.captured = open_settings_menu(window, &loop.hud.menu, &loop.debug)
+			game.menu_open(&loop.hud.menu)
+			game.debug_mode_cancel_editing(&loop.debug)
 			loop.accumulator = game.SIMULATION_STEP
 			input.clear_latches(&loop.resolver)
 			game.menu_view(&loop.hud.menu, &loop.sim.settings, loop.debug.active, 0)
@@ -92,14 +91,6 @@ apply_frame_input :: proc(
 		}
 	}
 
-	sync_palette_cursor(
-		window,
-		loop.debug.active,
-		loop.hud.menu.open,
-		intent.want_cursor_free,
-		&loop.cursor,
-	)
-
 	if loop.hud.menu.open {
 		layout := renderer.menu_layout_for(loop.renderer, loop.hud.menu.view)
 		target_width, target_height := renderer.target_extent(loop.renderer)
@@ -109,7 +100,7 @@ apply_frame_input :: proc(
 			f32(target_height),
 		)
 		if apply_menu_input(&loop.hud.menu, &loop.sim.settings, intent.menu, layout.slider, pointer) {
-			events.captured = close_settings_menu(window, &loop.hud.menu, loop.menu_recapture)
+			game.menu_close(&loop.hud.menu)
 			loop.accumulator = 0
 		}
 	}

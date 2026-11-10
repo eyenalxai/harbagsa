@@ -3,34 +3,7 @@ package main
 
 import "src:game"
 import "src:input"
-import "src:platform"
 import "src:ui"
-
-@(private)
-open_settings_menu :: proc(
-	window: ^platform.Window,
-	menu: ^game.Menu_State,
-	debug: ^game.Debug_Mode,
-) -> bool {
-	game.menu_open(menu)
-	game.debug_mode_cancel_editing(debug)
-	platform.set_click_capture(window, false)
-	return platform.set_cursor_capture(window, false)
-}
-
-@(private)
-close_settings_menu :: proc(
-	window: ^platform.Window,
-	menu: ^game.Menu_State,
-	recapture: bool,
-) -> bool {
-	game.menu_close(menu)
-	platform.set_click_capture(window, true)
-	if recapture {
-		return platform.set_cursor_capture(window, true)
-	}
-	return false
-}
 
 // apply_menu_input applies one frame of navigation and the weight slider. It
 // returns true when the menu asked to close.

@@ -36,12 +36,10 @@ resolve :: proc(
 		return out
 	}
 
-	// The tool that owns this frame's pointer can change during the frame (Tab
-	// and Esc). The old flags changed immediately for Tab and only after the
-	// apply for Esc, so keep both facts: one for the pointer, one for the cursor.
+	// The tool that owns this frame's pointer can change during the frame (Tab,
+	// Enter, and Esc), so the pointer route tracks it as the keys apply.
 	state := Key_State {
 		pointer_tool = focus.game.editor.tool,
-		cursor_tool  = focus.game.editor.tool,
 	}
 	for index in 0 ..< events.key_count {
 		apply_key(r, &out, &state, events.keys[index], focus)
@@ -57,7 +55,6 @@ resolve :: proc(
 
 	if focus.game.editor.active {
 		apply_debug_pointer(&out, events, focus, &state, hit)
-		out.want_cursor_free = state.cursor_tool == .Palette
 		return out
 	}
 
@@ -75,7 +72,6 @@ resolve :: proc(
 @(private)
 Key_State :: struct {
 	pointer_tool: game.Tool_Kind,
-	cursor_tool:  game.Tool_Kind,
 }
 
 @(private)
@@ -93,7 +89,6 @@ apply_key :: proc(
 	case .Escape:
 		if focus.game.editor.active && focus.game.editor.tool != .None {
 			add_action(out, game.Cancel{})
-			state.cursor_tool = .None
 		} else {
 			out.view.menu_toggle = true
 		}
@@ -106,7 +101,6 @@ apply_key :: proc(
 				add_action(out, game.Palette_Open{})
 				state.pointer_tool = .Palette
 			}
-			state.cursor_tool = state.pointer_tool
 		}
 	case .Up, .Down, .Left, .Right, .Enter:
 		if state.pointer_tool == .Palette {
@@ -236,7 +230,6 @@ apply_palette_navigation :: proc(
 	case .Enter:
 		add_action(out, game.Palette_Pick{})
 		state.pointer_tool = .None
-		state.cursor_tool = .None
 	}
 }
 
@@ -254,7 +247,6 @@ apply_debug_pointer :: proc(
 		if events.secondary_pressed {
 			add_action(out, game.Palette_Close{})
 			state.pointer_tool = .None
-			state.cursor_tool = .None
 			return
 		}
 		if !focus.pointer_available {
@@ -268,11 +260,9 @@ apply_debug_pointer :: proc(
 				add_action(out, game.Palette_Select{index = hit.card})
 				add_action(out, game.Palette_Pick{})
 				state.pointer_tool = .None
-				state.cursor_tool = .None
 			} else if !hit.inside {
 				add_action(out, game.Palette_Close{})
 				state.pointer_tool = .None
-				state.cursor_tool = .None
 			}
 		}
 		return
