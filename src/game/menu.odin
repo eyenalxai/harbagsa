@@ -25,7 +25,8 @@ MENU_STATUS_ONE_MODE :: "One mode · nothing to change"
 MENU_STATUS_MIN_WEIGHT :: "Minimum weight · nothing to change"
 MENU_STATUS_MAX_WEIGHT :: "Maximum weight · nothing to change"
 MENU_WINDOW_APPLY_FAILED :: "Window change failed · %s"
-MENU_STATUS_LINE :: 4
+MENU_WINDOW_RESTORE_FAILED :: "Window change failed · %s · restore failed"
+MENU_LINE_STATUS :: 4
 
 MENU_ITEM_NAMES := [MENU_ITEM_COUNT]string {
 	"Window mode",
@@ -182,14 +183,9 @@ menu_clear_status :: proc(menu: ^Menu_State) {
 	menu.status_remaining = 0
 }
 
-menu_window_apply_failed :: proc(
-	menu: ^Menu_State,
-	settings: ^Settings,
-	previous: display.Window_Settings,
-	reason: string,
-) {
-	settings.window = previous
-	menu_set_status(menu, line_format(&menu.storage, MENU_STATUS_LINE, MENU_WINDOW_APPLY_FAILED, reason))
+menu_window_apply_failed :: proc(menu: ^Menu_State, reason: string, restored: bool) {
+	format := restored ? MENU_WINDOW_APPLY_FAILED : MENU_WINDOW_RESTORE_FAILED
+	menu_set_status(menu, line_format(&menu.storage, MENU_LINE_STATUS, format, reason))
 }
 
 menu_view :: proc(menu: ^Menu_State, settings: ^Settings, debug_active: bool, delta_seconds: f32) {
