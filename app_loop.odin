@@ -22,6 +22,7 @@ Loop :: struct {
 	resolver:       input.Resolver,
 	cursor:         Cursor_State,
 	accumulator:    f32,
+	frame_alpha:    f32,
 	debug_view:     bool,
 	displays:       platform.Displays,
 	applied_window: display.Window_Settings,
@@ -71,6 +72,7 @@ apply_frame_input :: proc(
 				&loop.debug,
 				&loop.hud,
 				frame.Options {
+					alpha = loop.frame_alpha,
 					debug_view = loop.debug_view,
 					captured = events.captured,
 					hud = true,
