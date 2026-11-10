@@ -4,12 +4,10 @@ package renderer
 import "core:log"
 
 import "src:bake"
-import "src:geometry"
 
 write_object_data :: proc(
 	r: ^Renderer,
-	boxes: []geometry.Box,
-	slots: []bake.Box_Slot,
+	boxes: []Frame_Box,
 	lightmap_enabled, probe_enabled: bool,
 ) -> bool {
 	taa := &r.taa
@@ -26,33 +24,26 @@ write_object_data :: proc(
 		)
 		return false
 	}
-	if len(slots) != len(boxes) {
-		log.errorf(
-			"renderer: %d box slots do not match %d boxes",
-			len(slots),
-			len(boxes),
-		)
-		return false
-	}
 
 	if len(taa.prev_models) < len(boxes) {
 		resize(&taa.prev_models, len(boxes))
 	}
 
 	probe_missing := 0
-	for box, index in boxes {
+	for frame_box, index in boxes {
+		box := frame_box.box
 		model := box_model_matrix(box)
 		previous := model
 		if index < taa.prev_model_count {
 			previous = taa.prev_models[index]
 		}
-		slot, has_lightmap := bake_box_slot(r, slots[index])
+		slot, has_lightmap := bake_box_slot(r, frame_box.slot)
 		weight := f32(0.0)
 		if has_lightmap && lightmap_enabled {
 			weight = 1.0
 		}
 		probe_weight := f32(0.0)
-		if r.bake.loaded && probe_enabled && !slots[index].has_slot {
+		if r.bake.loaded && probe_enabled && !frame_box.slot.has_slot {
 			probe_weight = 1.0
 			if probe_outside_volume(r.bake.data.header, box.center) {
 				probe_missing += 1

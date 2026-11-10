@@ -1,7 +1,6 @@
 #+vet explicit-allocators
 package renderer
 
-import "src:geometry"
 import "src:perf"
 import vk "vendor:vulkan"
 
@@ -23,7 +22,7 @@ Pass :: struct {
 	draw:         proc(r: ^Renderer, command_buffer: vk.CommandBuffer, pass: ^Pass),
 	image_index:  u32,
 	view:         Capture_View,
-	boxes:        []geometry.Box,
+	boxes:        []Frame_Box,
 	force_tlas:   bool,
 }
 

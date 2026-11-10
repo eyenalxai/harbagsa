@@ -1,7 +1,6 @@
 #+vet explicit-allocators
 package renderer
 
-import "src:geometry"
 import vk "vendor:vulkan"
 
 Acceleration_Frame :: struct {
@@ -119,11 +118,12 @@ write_acceleration_descriptors :: proc(r: ^Renderer) {
 record_acceleration :: proc(
 	r: ^Renderer,
 	command_buffer: vk.CommandBuffer,
-	boxes: []geometry.Box,
+	boxes: []Frame_Box,
 ) {
 	frame := &r.acceleration.frames[r.frame_index]
 	instances := cast([^]vk.AccelerationStructureInstanceKHR)frame.instances_mapped
-	for box, index in boxes {
+	for frame_box, index in boxes {
+		box := frame_box.box
 		instance: vk.AccelerationStructureInstanceKHR
 		instance.transform = acceleration_transform(box_model_matrix(box))
 		instance.mask = box_instance_mask(box)

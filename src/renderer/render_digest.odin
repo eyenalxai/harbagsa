@@ -21,7 +21,6 @@ RENDER_DIGEST_FIELDS := [?]Render_Digest_Field {
 	{"height", true, write_height, ""},
 	{"camera", true, write_camera, ""},
 	{"boxes", true, write_boxes, ""},
-	{"box_slots", true, write_box_slots, ""},
 	{"lights", true, write_lights, ""},
 	{"jitter", true, write_jitter, ""},
 	{"atlas_weight", true, write_atlas_weight, ""},
@@ -73,7 +72,8 @@ write_camera :: proc(hash: ^digest.FNV, input: Render_Input) {
 @(private)
 write_boxes :: proc(hash: ^digest.FNV, input: Render_Input) {
 	digest.write_u64(hash, u64(len(input.boxes)))
-	for box in input.boxes {
+	for frame_box in input.boxes {
+		box := frame_box.box
 		digest.write_f32(hash, box.center.x)
 		digest.write_f32(hash, box.center.y)
 		digest.write_f32(hash, box.center.z)
@@ -91,16 +91,13 @@ write_boxes :: proc(hash: ^digest.FNV, input: Render_Input) {
 		digest.write_f32(hash, box.emissive)
 		digest.write_bool(hash, box.visual_only)
 	}
-}
-
-@(private)
-write_box_slots :: proc(hash: ^digest.FNV, input: Render_Input) {
 	// The static/dynamic split picks the lightmap term, so it belongs to the
-	// effective render input even when the boxes and lights match.
-	digest.write_u64(hash, u64(len(input.box_slots)))
-	for slot in input.box_slots {
-		digest.write_bool(hash, slot.has_slot)
-		digest.write_u64(hash, slot.key)
+	// effective render input even when the boxes and lights match. The repeated
+	// count keeps the old two-list byte stream and its digest values.
+	digest.write_u64(hash, u64(len(input.boxes)))
+	for frame_box in input.boxes {
+		digest.write_bool(hash, frame_box.slot.has_slot)
+		digest.write_u64(hash, frame_box.slot.key)
 	}
 }
 

@@ -15,12 +15,16 @@ View_Flag :: enum {
 
 View_Flags :: bit_set[View_Flag]
 
+Frame_Box :: struct {
+	box:  geometry.Box,
+	slot: bake.Box_Slot,
+}
+
 Render_Input :: struct {
 	width:        u32,
 	height:       u32,
 	camera:       Camera,
-	boxes:        []geometry.Box,
-	box_slots:    []bake.Box_Slot,
+	boxes:        []Frame_Box,
 	lights:       []Light,
 	debug_lines:  []geometry.Line,
 	hud:          HUD_Frame,
