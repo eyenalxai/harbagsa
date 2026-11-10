@@ -15,9 +15,7 @@ Editor_State :: struct {
 }
 
 Focus_State :: struct {
-	active:       bool `json:"active"`,
 	pointer_free: bool `json:"pointer_free"`,
-	dragging:     bool `json:"dragging"`,
 }
 
 Palette_State :: struct {
@@ -53,13 +51,11 @@ History_State :: struct {
 	redo:  int `json:"redo"`,
 }
 
-editor_state_build :: proc(view: game.Editor_View, menu_open: bool) -> Editor_State {
+editor_state_build :: proc(view: game.Editor_View, focus: game.Focus) -> Editor_State {
 	state := Editor_State {
 		active = view.active,
 		focus = {
-			active = view.focus.active,
-			pointer_free = view.focus.pointer_free || menu_open,
-			dragging = view.focus.dragging,
+			pointer_free = focus.pointer_free,
 		},
 		tool = game.tool_kind_name(view.tool),
 		palette = {

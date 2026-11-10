@@ -148,8 +148,12 @@ run :: proc() -> bool {
 		step_simulation(&loop, delta, &intent)
 		// The edit actions above can open or close the palette, so the cursor
 		// sync runs after them and sees the tool the frame applied.
-		sync_cursor(&window, game.focus(&loop.debug, &loop.hud.menu), &loop.cursor)
-		events.captured = loop.cursor.captured
+		sync_cursor(
+			&window,
+			game.focus(&loop.debug, &loop.hud.menu),
+			events.captured,
+			&loop.cursor,
+		)
 
 		if loop.hud.perf.visible {
 			loop.hud.perf.stats = perf.stats(&perf_state)

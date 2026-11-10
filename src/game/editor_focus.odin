@@ -2,7 +2,7 @@
 package game
 
 // The editing half of one frame's ownership. The menu and the platform pointer
-// state sit beside it; the cursor sync derives the capture from pointer_free.
+// state sit beside it; the frame focus combines them.
 Editor_Focus :: struct {
 	active:       bool,
 	tool:         Tool_Kind,
@@ -24,13 +24,16 @@ editor_focus :: proc(editor: ^Editor, active: bool) -> Editor_Focus {
 // platform half (captured, pointer_available); this value says which part of
 // the game owns the frame.
 Focus :: struct {
-	menu_open: bool,
-	editor:    Editor_Focus,
+	menu_open:   bool,
+	editor:      Editor_Focus,
+	pointer_free: bool,
 }
 
 focus :: proc(dm: ^Debug_Mode, menu: ^Menu_State) -> Focus {
+	editor := editor_focus(&dm.editor, dm.active)
 	return {
 		menu_open = menu.open,
-		editor = editor_focus(&dm.editor, dm.active),
+		editor = editor,
+		pointer_free = menu.open || editor.pointer_free,
 	}
 }
