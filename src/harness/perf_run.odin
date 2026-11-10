@@ -5,6 +5,7 @@ import "core:fmt"
 import "core:strings"
 import "core:time"
 
+import "src:frame"
 import "src:game"
 import "src:perf"
 import "src:renderer"
@@ -13,7 +14,7 @@ import "src:renderer"
 // clipped. Prime and warmup frames fill the swapchain, the timestamp slots, and
 // the device clocks before the measured window starts.
 session_perf :: proc(session: ^Session, command: Perf_Command) -> string {
-	if session.hud.menu.open {
+	if session.runtime.hud.menu.open {
 		return format_error("menu is open; close the menu to run perf")
 	}
 	// One trace per run keeps the trace file and the report aligned. A second
@@ -295,7 +296,15 @@ session_perf_frame :: proc(session: ^Session) -> string {
 	perf.begin_frame(&session.perf.state)
 	perf.mark(&session.perf.state, .Events)
 	input := session.input
-	game.simulation_step(&session.sim, input, game.SIMULATION_STEP)
+	frame.runtime_step(
+		&session.runtime,
+		frame.Step {
+			steps = 1,
+			delta = game.SIMULATION_STEP,
+			snapshot = input,
+			motion = {captured = true},
+		},
+	)
 	session.input.jump_pressed = false
 	session.input.sprint_pressed = false
 	session.frame += 1

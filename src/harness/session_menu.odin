@@ -4,7 +4,7 @@ package harness
 import "src:game"
 
 session_menu :: proc(session: ^Session, command: Menu_Command) -> string {
-	will_open := session.hud.menu.open
+	will_open := session.runtime.hud.menu.open
 	if command.has_open {
 		will_open = command.open
 	}
@@ -20,24 +20,28 @@ session_menu :: proc(session: ^Session, command: Menu_Command) -> string {
 
 	if command.has_open {
 		if command.open {
-			game.menu_open(&session.hud.menu)
-			game.debug_mode_cancel_editing(&session.debug)
+			game.menu_open(&session.runtime.hud.menu)
+			game.debug_mode_cancel_editing(&session.runtime.debug)
 		} else {
-			game.menu_close(&session.hud.menu)
+			game.menu_close(&session.runtime.hud.menu)
 		}
 	}
 	if command.has_item {
-		game.menu_select(&session.hud.menu, int(command.item))
+		game.menu_select(&session.runtime.hud.menu, int(command.item))
 	}
 	if command.activate {
 		direction := 1
 		if command.has_direction {
 			direction = command.direction
 		}
-		_ = game.menu_activate(&session.hud.menu, &session.sim.settings, direction)
+		_ = game.menu_activate(&session.runtime.hud.menu, &session.runtime.sim.settings, direction)
 	}
 	if command.has_set {
-		_ = game.menu_set_type_weight(&session.hud.menu, &session.sim.settings, f32(command.set))
+		_ = game.menu_set_type_weight(
+			&session.runtime.hud.menu,
+			&session.runtime.sim.settings,
+			f32(command.set),
+		)
 	}
 	return ""
 }

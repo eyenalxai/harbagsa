@@ -191,7 +191,11 @@ backend_gpu_times :: proc(ctx: rawptr) -> perf.Gpu_Times {
 // The frame input a capture, a settle, and a pick all draw.
 @(private)
 backend_scene :: proc(data: ^Backend_Data, session: ^Session, alpha: f32) -> renderer.Render_Input {
-	static := game.simulation_bake_input(&session.sim, &session.scratch.bake, session.allocator)
+	static := game.simulation_bake_input(
+		&session.runtime.sim,
+		&session.runtime.scratch.bake,
+		session.allocator,
+	)
 	renderer.refresh_bake(&data.renderer, static)
 	session.drawn_alpha = alpha
 	session.drawn_frame = session.frame
@@ -204,17 +208,14 @@ backend_scene :: proc(data: ^Backend_Data, session: ^Session, alpha: f32) -> ren
 		perf          = session.view.perf,
 		bake          = renderer.bake_report(&data.renderer),
 	}
-	session.hud.perf.visible = session.view.perf
-	if session.hud.perf.visible {
-		session.hud.perf.stats = perf.stats(&session.perf.state)
+	session.runtime.hud.perf.visible = session.view.perf
+	if session.runtime.hud.perf.visible {
+		session.runtime.hud.perf.stats = perf.stats(&session.perf.state)
 	}
-	scene := frame.build(
-		&session.sim,
-		&session.debug,
+	scene := frame.runtime_compose(
+		&session.runtime,
 		options,
 		session_override_camera(session),
-		&session.hud,
-		session.scratch,
 		static,
 	)
 	perf.mark(&session.perf.state, .Build)
@@ -279,7 +280,7 @@ backend_render :: proc(
 	}
 	scene := backend_scene(data, session, alpha)
 	if len(requests) > 0 {
-		if !renderer.text_atlas_sync(&data.renderer, session.sim.settings.type_weight) {
+		if !renderer.text_atlas_sync(&data.renderer, session.runtime.sim.settings.type_weight) {
 			return nil, format_error("text atlas sync failed")
 		}
 		if !renderer.text_atlas_wait(&data.renderer) {

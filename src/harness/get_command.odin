@@ -40,10 +40,10 @@ session_get :: proc(session: ^Session, command: Get_Command, reply: ^Reply) -> s
 		session_refresh_hud(session)
 	}
 	state := state_build_sections(
-		&session.sim,
+		&session.runtime.sim,
 		session.frame,
-		&session.hud,
-		&session.debug,
+		&session.runtime.hud,
+		&session.runtime.debug,
 		session_camera(session),
 		session.render.report,
 		session.render.digest_text,
