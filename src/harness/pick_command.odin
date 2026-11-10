@@ -89,8 +89,8 @@ session_pick :: proc(session: ^Session, command: Pick_Command) -> string {
 	return ""
 }
 
-// The instance custom index is the box order the frame compose produces: static
-// arena boxes, then placed objects, then the spider.
+// The frame box identity names the source; the harness does not know the box
+// order.
 @(private)
 pick_result_build :: proc(
 	sim: ^game.Simulation,
@@ -101,30 +101,34 @@ pick_result_build :: proc(
 		return {hit = false}
 	}
 	result := Pick_Result{hit = true}
-	arena_count := len(game.arena_static_boxes())
-	objects := game.simulation_objects(sim)
-	if hit.instance < u32(arena_count) {
+	switch identity in hit.identity {
+	case renderer.Arena_Box_Identity:
 		result.object = Pick_Object {
 			kind  = "static_box",
-			index = int(hit.instance),
+			index = identity.index,
 		}
-	} else if hit.instance < u32(arena_count + len(objects)) {
-		object := objects[int(hit.instance) - arena_count]
-		prefab := strings.clone(game.prefab_name(object.prefab), allocator)
-		picked := Pick_Object {
-			kind   = "object",
-			id     = object.id,
-			prefab = prefab,
+	case renderer.Object_Identity:
+		result.object = Pick_Object {
+			kind = "object",
+			id   = identity.id,
 		}
-		if name := game.simulation_object_name(sim, object.id); name != "" {
-			picked.name = strings.clone(name, allocator)
+		if object, found := game.simulation_object_find(sim, identity.id); found {
+			prefab := strings.clone(game.prefab_name(object.prefab), allocator)
+			picked := Pick_Object {
+				kind   = "object",
+				id     = object.id,
+				prefab = prefab,
+			}
+			if name := game.object_name(&object); name != "" {
+				picked.name = strings.clone(name, allocator)
+			}
+			result.object = picked
+			result.prefab = prefab
 		}
-		result.object = picked
-		result.prefab = prefab
-	} else {
+	case renderer.Spider_Box_Identity:
 		result.object = Pick_Object {
 			kind  = "spider",
-			index = int(hit.instance) - arena_count - len(objects),
+			index = identity.index,
 		}
 	}
 	result.distance = hit.distance

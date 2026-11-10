@@ -374,9 +374,9 @@ extent.
 {"cmd": "pick", "at": [640, 360]}
 ```
 
-`scenarios/pick.json` picks a lit static crate and then empty space. The
-instance custom index is the scene box order: static arena boxes, placed
-objects, then the spider.
+`scenarios/pick.json` picks a lit static crate and then empty space. A frame
+box carries its source identity, so the pick names the crate, arena box, or
+spider part regardless of where a new box group sits in the list.
 
 ## Renderer state
 
