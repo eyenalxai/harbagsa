@@ -14,10 +14,7 @@ import "src:ui"
 // Loop is the mutable state of the window loop. main owns the lifetime; the
 // loop module owns the phases.
 Loop :: struct {
-	sim:            game.Simulation,
-	debug:          game.Debug_Mode,
-	hud:            game.HUD_State,
-	scratch:        frame.Scratch,
+	runtime:        frame.Runtime,
 	renderer:       ^renderer.Renderer,
 	resolver:       input.Resolver,
 	cursor:         Cursor_State,
@@ -36,30 +33,30 @@ apply_frame_input :: proc(
 	intent: input.Frame_Input,
 ) {
 	if intent.view.perf {
-		loop.hud.perf.visible = !loop.hud.perf.visible
+		loop.runtime.hud.perf.visible = !loop.runtime.hud.perf.visible
 	}
 
 	// The menu owns the accumulator while it is open. The cursor sync reads the
 	// menu after the edit actions.
 	if intent.view.menu_toggle {
-		if loop.hud.menu.open {
-			game.menu_close(&loop.hud.menu)
+		if loop.runtime.hud.menu.open {
+			game.menu_close(&loop.runtime.hud.menu)
 			loop.accumulator = 0
 		} else {
-			game.menu_open(&loop.hud.menu)
-			game.debug_mode_cancel_editing(&loop.debug)
+			game.menu_open(&loop.runtime.hud.menu)
+			game.debug_mode_cancel_editing(&loop.runtime.debug)
 			loop.accumulator = game.SIMULATION_STEP
 			input.clear_latches(&loop.resolver)
-			game.menu_view(&loop.hud.menu, &loop.sim.settings, loop.debug.active, 0)
+			game.menu_view(&loop.runtime.hud.menu, &loop.runtime.sim.settings, loop.runtime.debug.active, 0)
 		}
 	}
 
-	if !loop.hud.menu.open {
+	if !loop.runtime.hud.menu.open {
 		if intent.view.debug_view {
 			loop.debug_view = !loop.debug_view
 		}
 		if intent.view.debug_mode {
-			game.debug_mode_toggle(&loop.debug, &loop.sim)
+			game.debug_mode_toggle(&loop.runtime.debug, &loop.runtime.sim)
 			input.clear_latches(&loop.resolver)
 		}
 		if intent.view.taa {
@@ -68,45 +65,51 @@ apply_frame_input :: proc(
 		if intent.view.repro {
 			renderer_debug := renderer.renderer_debug(loop.renderer)
 			_ = write_repro(
-				&loop.sim,
-				&loop.debug,
-				&loop.hud,
+				&loop.runtime.sim,
+				&loop.runtime.debug,
+				&loop.runtime.hud,
 				frame.Options {
 					alpha = loop.last_alpha,
 					debug_view = loop.debug_view,
 					captured = events.captured,
 					hud = true,
-					perf = loop.hud.perf.visible,
+					perf = loop.runtime.hud.perf.visible,
 				},
 				&renderer_debug,
 				loop.repro_dir,
 			)
 		}
 		if intent.view.reset_scene {
-			game.debug_mode_reset_scene(&loop.debug, &loop.sim)
+			game.debug_mode_reset_scene(&loop.runtime.debug, &loop.runtime.sim)
 			renderer.reset_history(loop.renderer, .Scene_Reset)
 			input.clear_latches(&loop.resolver)
 		} else if intent.view.reset_player {
-			game.debug_mode_reset_player(&loop.debug, &loop.sim)
+			game.debug_mode_reset_player(&loop.runtime.debug, &loop.runtime.sim)
 			renderer.reset_history(loop.renderer, .Player_Reset)
 			input.clear_latches(&loop.resolver)
 		}
 	}
 
-	if loop.hud.menu.open {
-		layout := renderer.menu_layout_for(loop.renderer, loop.hud.menu.view)
+	if loop.runtime.hud.menu.open {
+		layout := renderer.menu_layout_for(loop.renderer, loop.runtime.hud.menu.view)
 		target_width, target_height := renderer.target_extent(loop.renderer)
 		pointer := ui.pointer_to_target(
 			intent.menu.pointer,
 			f32(target_width),
 			f32(target_height),
 		)
-		previous_window := loop.sim.settings.window
-		if apply_menu_input(&loop.hud.menu, &loop.sim.settings, intent.menu, layout.slider, pointer) {
-			game.menu_close(&loop.hud.menu)
+		previous_window := loop.runtime.sim.settings.window
+		if apply_menu_input(
+			&loop.runtime.hud.menu,
+			&loop.runtime.sim.settings,
+			intent.menu,
+			layout.slider,
+			pointer,
+		) {
+			game.menu_close(&loop.runtime.hud.menu)
 			loop.accumulator = 0
 		}
-		if loop.sim.settings.window != previous_window {
+		if loop.runtime.sim.settings.window != previous_window {
 			apply_window_settings(loop, window, previous_window)
 		}
 	}
@@ -118,12 +121,12 @@ apply_window_settings :: proc(
 	window: ^platform.Window,
 	previous: display.Window_Settings,
 ) {
-	result := platform.apply_window_state(window, &loop.displays, loop.sim.settings.window)
+	result := platform.apply_window_state(window, &loop.displays, loop.runtime.sim.settings.window)
 	if result == .Applied {
 		renderer.notify_resize(loop.renderer)
 		return
 	}
-	loop.sim.settings.window = previous
+	loop.runtime.sim.settings.window = previous
 	restore := platform.apply_window_state(window, &loop.displays, previous)
 	restored := restore == .Applied
 	if restored {
@@ -134,50 +137,5 @@ apply_window_settings :: proc(
 			platform.window_apply_name(restore),
 		)
 	}
-	game.menu_window_apply_failed(&loop.hud.menu, platform.window_apply_name(result), restored)
-}
-
-@(private)
-step_simulation :: proc(loop: ^Loop, delta: f32, intent: ^input.Frame_Input) {
-	resolved := intent^
-	// Look is per frame. Action edges are latched so a press survives a frame
-	// with no step.
-	if !loop.hud.menu.open && !loop.debug.active {
-		game.simulation_look(&loop.sim, resolved.look_delta)
-	}
-
-	if !loop.hud.menu.open {
-		loop.accumulator += delta
-		steps := 0
-		snapshot := resolved.snapshot
-		for loop.accumulator >= game.SIMULATION_STEP && steps < MAX_STEPS_PER_FRAME {
-			if loop.debug.active {
-				game.simulation_step_world(&loop.sim, game.SIMULATION_STEP)
-			} else {
-				game.simulation_step(&loop.sim, snapshot, game.SIMULATION_STEP)
-				input.clear_latches(&loop.resolver)
-				snapshot.jump_pressed = false
-				snapshot.sprint_pressed = false
-			}
-			game.hud_notice_update(&loop.hud, game.SIMULATION_STEP)
-			loop.accumulator -= game.SIMULATION_STEP
-			steps += 1
-		}
-		if steps == MAX_STEPS_PER_FRAME && loop.accumulator >= game.SIMULATION_STEP {
-			// Drop a backlog that cannot drain.
-			loop.accumulator = 0
-		}
-	}
-
-	// Edit after the fixed steps so a dragged transform is the one rendered.
-	if loop.debug.active && !loop.hud.menu.open {
-		game.debug_mode_update(
-			&loop.debug,
-			&loop.sim,
-			resolved.motion,
-			resolved.actions[:resolved.action_count],
-			loop.hud.menu.open,
-			delta,
-		)
-	}
+	game.menu_window_apply_failed(&loop.runtime.hud.menu, platform.window_apply_name(result), restored)
 }

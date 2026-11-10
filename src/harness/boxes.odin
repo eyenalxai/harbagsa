@@ -34,10 +34,10 @@ cli_boxes :: proc(args: []string) -> int {
 	defer session_destroy(&session)
 
 	state := state_build_sections(
-		&session.sim,
+		&session.runtime.sim,
 		0,
-		&session.hud,
-		&session.debug,
+		&session.runtime.hud,
+		&session.runtime.debug,
 		{},
 		{},
 		"",

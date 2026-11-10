@@ -68,33 +68,34 @@ run :: proc() -> bool {
 	defer renderer.deinit(&state)
 
 	loop: Loop
-	defer frame.scratch_destroy(&loop.scratch)
 	loop.last_alpha = 1.0
-	loop.sim = game.simulation_create(context.allocator)
-	if !game.simulation_is_valid(&loop.sim) {
+	loop.runtime = frame.runtime_create(context.allocator)
+	defer frame.runtime_destroy(&loop.runtime)
+	if !frame.runtime_is_valid(&loop.runtime) {
 		log.error("harbagsa: simulation init failed")
 		return false
 	}
-	defer game.simulation_destroy(&loop.sim)
-	loop.debug = game.debug_mode_create(context.allocator)
-	defer game.debug_mode_destroy(&loop.debug)
 	loop.renderer = &state
 	loop.repro_dir = repro_dir
 	loop.displays = platform.query_displays()
 	if loop.displays.list.count == 0 {
 		log.warn("harbagsa: SDL reported no displays; keeping the created window")
 	}
-	loop.sim.settings.display = loop.displays.list
+	loop.runtime.sim.settings.display = loop.displays.list
 	initial_display := platform.display_index_for_window(&window, &loop.displays)
 	if initial_display >= 0 {
-		loop.sim.settings.window.display = initial_display
-		result := platform.apply_window_state(&window, &loop.displays, loop.sim.settings.window)
+		loop.runtime.sim.settings.window.display = initial_display
+		result := platform.apply_window_state(
+			&window,
+			&loop.displays,
+			loop.runtime.sim.settings.window,
+		)
 		if result != .Applied {
 			log.warnf(
 				"harbagsa: the initial window settings were not applied: %s",
 				platform.window_apply_name(result),
 			)
-			game.hud_notice_window_failed(&loop.hud, platform.window_apply_name(result))
+			game.hud_notice_window_failed(&loop.runtime.hud, platform.window_apply_name(result))
 		}
 	} else {
 		log.warn("harbagsa: the launch display is not in the display list")
@@ -113,7 +114,7 @@ run :: proc() -> bool {
 		}
 
 		focus := input.Focus {
-			game = game.focus(&loop.debug, &loop.hud.menu),
+			game = game.focus(&loop.runtime.debug, &loop.runtime.hud.menu),
 			captured = events.captured,
 			pointer_available = loop.cursor.pointer_available,
 		}
@@ -148,39 +149,67 @@ run :: proc() -> bool {
 		last_time = now
 		delta = clamp(delta, 0, MAX_FRAME_DELTA)
 
-		step_simulation(&loop, delta, &intent)
+		// Look is per frame. Action edges are latched so a press survives a frame
+		// with no step.
+		if !loop.runtime.hud.menu.open && !loop.runtime.debug.active {
+			game.simulation_look(&loop.runtime.sim, intent.look_delta)
+		}
+		steps := 0
+		if !loop.runtime.hud.menu.open {
+			loop.accumulator += delta
+			for loop.accumulator >= game.SIMULATION_STEP && steps < MAX_STEPS_PER_FRAME {
+				loop.accumulator -= game.SIMULATION_STEP
+				steps += 1
+			}
+			if steps == MAX_STEPS_PER_FRAME && loop.accumulator >= game.SIMULATION_STEP {
+				// Drop a backlog that cannot drain.
+				loop.accumulator = 0
+			}
+		}
+		frame.runtime_step(&loop.runtime, frame.Step {
+			steps = steps,
+			delta = delta,
+			snapshot = intent.snapshot,
+			motion = intent.motion,
+			actions = intent.actions[:intent.action_count],
+			menu_open = loop.runtime.hud.menu.open,
+		})
+		if !loop.runtime.debug.active && steps > 0 {
+			input.clear_latches(&loop.resolver)
+		}
 		// The edit actions above can open or close the palette, so the cursor
 		// sync runs after them and sees the tool the frame applied.
 		sync_cursor(
 			&window,
-			game.focus(&loop.debug, &loop.hud.menu),
+			game.focus(&loop.runtime.debug, &loop.runtime.hud.menu),
 			events.captured,
 			&loop.cursor,
 		)
 
-		if loop.hud.perf.visible {
-			loop.hud.perf.stats = perf.stats(&perf_state)
+		if loop.runtime.hud.perf.visible {
+			loop.runtime.hud.perf.stats = perf.stats(&perf_state)
 		}
 
 		alpha := clamp(loop.accumulator / game.SIMULATION_STEP, 0, 1)
 		loop.last_alpha = alpha
-		static := game.simulation_bake_input(&loop.sim, &loop.scratch.bake, context.allocator)
+		static := game.simulation_bake_input(
+			&loop.runtime.sim,
+			&loop.runtime.scratch.bake,
+			context.allocator,
+		)
 		renderer.refresh_bake(&state, static)
-		scene := frame.build(
-			&loop.sim,
-			&loop.debug,
+		scene := frame.runtime_compose(
+			&loop.runtime,
 			frame.Options {
 				alpha = alpha,
 				delta_seconds = delta,
 				debug_view = loop.debug_view,
 				captured = events.captured,
 				hud = true,
-				perf = loop.hud.perf.visible,
+				perf = loop.runtime.hud.perf.visible,
 				bake = renderer.bake_report(&state),
 			},
 			nil,
-			&loop.hud,
-			&loop.scratch,
 			static,
 		)
 		perf.mark(&perf_state, .Build)

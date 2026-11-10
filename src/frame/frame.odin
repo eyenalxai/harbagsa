@@ -98,6 +98,7 @@ camera_view :: proc(
 	}
 }
 
+@(private)
 build :: proc(
 	sim: ^game.Simulation,
 	debug: ^game.Debug_Mode,

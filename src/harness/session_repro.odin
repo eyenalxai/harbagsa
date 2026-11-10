@@ -41,14 +41,14 @@ session_repro :: proc(session: ^Session, path: string, reply: ^Reply) -> string 
 		debug = &session.render.debug
 	}
 	absolute, write_error := frame.scene_write(
-		&session.sim,
-		&session.debug,
+		&session.runtime.sim,
+		&session.runtime.debug,
 		options,
 		session_override_camera(session),
 		debug,
 		target,
 	)
-	game.hud_notice_scene_snapshot(&session.hud, path, write_error == "")
+	game.hud_notice_scene_snapshot(&session.runtime.hud, path, write_error == "")
 	if write_error != "" {
 		return write_error
 	}
