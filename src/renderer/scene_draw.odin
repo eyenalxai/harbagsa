@@ -75,7 +75,7 @@ record_scene :: proc(
 	if !update_camera(r, input) {
 		return false
 	}
-	if !write_object_data(r, input.boxes, input.box_slots, input.lightmap, input.probe) {
+	if !write_object_data(r, input.boxes, input.lightmap, input.probe) {
 		return false
 	}
 
