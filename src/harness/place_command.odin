@@ -87,7 +87,7 @@ parse_place :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 		if !text_ok || !parsed_ok {
 			return {}, format_error(
 				"%s",
-				"'name' must use at most 31 letters, digits, '-' or '_' and not be all digits",
+				"'name' must use at most 31 letters, digits, '-' or '_'",
 			)
 		}
 		command.place.name = parsed

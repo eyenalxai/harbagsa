@@ -1028,10 +1028,12 @@ absolute. **Avoid**: replay file, state dump.
 
 ### Object name
 An optional unique handle on a placed object. `place` and a scene object set it;
-`remove`, a `get` path (`objects.<name>.<field>`), and `editor.select_object`
-accept it. It uses at most 31 letters, digits, `-`, or `_`, is not all digits,
-and is not `count`. It survives undo and a scene snapshot and stays out of the
-simulation digest. **Avoid**: label, tag, alias.
+`remove` and `editor.select_object` accept it by name, and a `get` path uses
+`objects.name.<name>.<field>`. An id path is `objects.id.<id>.<field>`, and
+`objects.count` is the list length. A name uses at most 31 letters, digits, `-`,
+or `_`, so an all-digit name and `count` are both valid. It survives undo and a
+scene snapshot and stays out of the simulation digest. **Avoid**: label, tag,
+alias.
 
 ### Place command
 The harness `place` command creates one object from a prefab at an exact

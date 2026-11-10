@@ -30,17 +30,46 @@ state_field :: proc(state: State, path: string) -> (Field_Value, string) {
 		}
 		handle, object_path, has_object_path := split_field(rest)
 		object: Object_State
+		object_label: string
 		found: bool
-		if id, id_ok := parse_object_id(handle); id_ok {
-			if id <= 0 {
-				return {}, fmt.aprintf("object id %q is not valid", handle, allocator = context.allocator)
+		switch handle {
+		case "id":
+			id_text, id_path, has_id_path := split_field(object_path)
+			if id_text == "" {
+				return {}, format_error("%s", "objects.id needs an id and a field")
 			}
+			id, id_ok := parse_object_id(id_text)
+			if !id_ok || id <= 0 {
+				return {}, fmt.aprintf(
+					"object id %q is not valid",
+					id_text,
+					allocator = context.allocator,
+				)
+			}
+			object_label = id_text
+			object_path, has_object_path = id_path, has_id_path
 			object, found = find_object_state(state.objects, id)
-		} else {
-			object, found = find_object_state_by_name(state.objects, handle)
+		case "name":
+			name, name_path, has_name_path := split_field(object_path)
+			if name == "" {
+				return {}, format_error("%s", "objects.name needs a name and a field")
+			}
+			object_label = name
+			object_path, has_object_path = name_path, has_name_path
+			object, found = find_object_state_by_name(state.objects, name)
+		case:
+			return {}, fmt.aprintf(
+				"object handle %q must be 'id' or 'name'",
+				handle,
+				allocator = context.allocator,
+			)
 		}
 		if !found {
-			return {}, fmt.aprintf("object %q is not in the list", handle, allocator = context.allocator)
+			return {}, fmt.aprintf(
+				"object %q is not in the list",
+				object_label,
+				allocator = context.allocator,
+			)
 		}
 		if !has_object_path {
 			return {}, format_error("%s", "object needs a field")
