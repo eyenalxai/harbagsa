@@ -15,7 +15,7 @@ editor_focus :: proc(editor: ^Editor, active: bool) -> Editor_Focus {
 	return {
 		active = active,
 		tool = tool,
-		dragging = editor.dragging,
+		dragging = editor_dragging(editor),
 		pointer_free = tool == .Palette,
 	}
 }
