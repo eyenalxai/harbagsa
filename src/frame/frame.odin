@@ -6,6 +6,7 @@ import "core:mem"
 
 import "src:bake"
 import "src:game"
+import "src:perf"
 import "src:renderer"
 
 PLAYER_FOV_X :: f32(90.0 * math.PI / 180.0)
@@ -22,7 +23,7 @@ Options :: struct {
 	debug_view:    bool,
 	captured:      bool,
 	hud:           bool,
-	perf:          bool,
+	perf_stats:    Maybe(perf.Stats),
 	bake:          renderer.Bake_Report,
 }
 
@@ -151,6 +152,8 @@ build :: proc(
 	}
 	scene.debug_lines = scratch.debug_lines.lines[:scratch.debug_lines.count]
 
+	perf_stats, has_perf_stats := options.perf_stats.?
+	hud.perf = {visible = has_perf_stats, stats = perf_stats}
 	if options.hud || hud.menu.open {
 		game.hud_state_update(
 			hud,

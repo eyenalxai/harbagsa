@@ -40,11 +40,13 @@ session_refresh_renderer :: proc(session: ^Session) {
 	session.render.digest_text = digest.hex(snapshot.digest, session.allocator)
 }
 
-session_state :: proc(session: ^Session) -> State {
+// One observation refreshes every derived owner before the build, so a section
+// cannot pair a fresh value with a stale HUD.
+session_observe :: proc(session: ^Session, sections: State_Sections) -> State {
 	session_refresh_bake(session)
 	session_refresh_renderer(session)
 	session_refresh_hud(session)
-	return state_build(
+	return state_build_sections(
 		&session.runtime.sim,
 		session.frame,
 		&session.runtime.hud,
@@ -52,9 +54,14 @@ session_state :: proc(session: ^Session) -> State {
 		session_camera(session),
 		session.render.report,
 		session.render.digest_text,
-		{ frames = session.settle.frames, converged = session.settle.converged },
+		{frames = session.settle.frames, converged = session.settle.converged},
+		sections,
 		session.allocator,
 	)
+}
+
+session_state :: proc(session: ^Session) -> State {
+	return session_observe(session, state_all_sections())
 }
 
 // The report resolves at the alpha of the last frame the renderer built, so a
