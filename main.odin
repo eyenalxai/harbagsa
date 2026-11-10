@@ -166,13 +166,12 @@ run :: proc() -> bool {
 				loop.accumulator = 0
 			}
 		}
-		frame.runtime_step(&loop.runtime, frame.Step {
-			steps = steps,
+		frame.runtime_step(&loop.runtime, frame.Frame_Step {
+			fixed_steps = steps,
 			delta = delta,
 			snapshot = intent.snapshot,
 			motion = intent.motion,
 			actions = intent.actions[:intent.action_count],
-			menu_open = loop.runtime.hud.menu.open,
 		})
 		if !loop.runtime.debug.active && steps > 0 {
 			input.clear_latches(&loop.resolver)

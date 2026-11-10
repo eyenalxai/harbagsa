@@ -8,9 +8,7 @@ import "src:bake"
 import "src:game"
 import "src:renderer"
 
-// Runtime is the mutable frame state the window loop and the harness share. It
-// owns the simulation, the debug mode, the HUD, and the scratch the compose
-// fills.
+// Runtime is the mutable frame state the window loop and the harness share.
 Runtime :: struct {
 	allocator: mem.Allocator,
 	sim:       game.Simulation,
@@ -19,15 +17,24 @@ Runtime :: struct {
 	scratch:   ^Scratch,
 }
 
-// Step is one call of the fixed-step order. The caller owns the accumulator and
-// the per-frame look; steps is the count it resolved for this frame.
-Step :: struct {
-	steps:     int,
-	delta:     f32,
-	snapshot:  game.Input_Snapshot,
-	motion:    game.Debug_Motion,
-	actions:   []game.Edit_Action,
-	menu_open: bool,
+// Frame_Step is one call of the fixed-step order. The caller owns the
+// accumulator and the per-frame look; fixed_steps is the count it resolved.
+Frame_Step :: struct {
+	fixed_steps: int,
+	delta:       f32,
+	snapshot:    game.Input_Snapshot,
+	motion:      game.Debug_Motion,
+	actions:     []game.Edit_Action,
+}
+
+// The harness has no pointer capture; keep the editor drag alive across a step.
+fixed_step :: proc(snapshot: game.Input_Snapshot) -> Frame_Step {
+	return {
+		fixed_steps = 1,
+		delta = game.SIMULATION_STEP,
+		snapshot = snapshot,
+		motion = {captured = true},
+	}
 }
 
 runtime_create :: proc(allocator: mem.Allocator) -> Runtime {
@@ -77,12 +84,12 @@ runtime_reset :: proc(runtime: ^Runtime) -> bool {
 	return true
 }
 
-runtime_step :: proc(runtime: ^Runtime, step: Step) {
-	if step.menu_open {
+runtime_step :: proc(runtime: ^Runtime, step: Frame_Step) {
+	if runtime.hud.menu.open {
 		return
 	}
 	snapshot := step.snapshot
-	for _ in 0 ..< step.steps {
+	for _ in 0 ..< step.fixed_steps {
 		if runtime.debug.active {
 			game.simulation_step_world(&runtime.sim, game.SIMULATION_STEP)
 		} else {
@@ -99,7 +106,7 @@ runtime_step :: proc(runtime: ^Runtime, step: Step) {
 			&runtime.sim,
 			step.motion,
 			step.actions,
-			step.menu_open,
+			runtime.hud.menu.open,
 			step.delta,
 		)
 	}

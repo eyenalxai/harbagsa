@@ -192,15 +192,7 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 			input.jump_pressed = false
 			input.sprint_pressed = false
 		}
-		frame.runtime_step(
-			&session.runtime,
-			frame.Step {
-				steps = 1,
-				delta = game.SIMULATION_STEP,
-				snapshot = input,
-				motion = {captured = true},
-			},
-		)
+		frame.runtime_step(&session.runtime, frame.fixed_step(input))
 		session.input.jump_pressed = false
 		session.frame += 1
 		if render_error := session_finish_frame(session); render_error != "" {
