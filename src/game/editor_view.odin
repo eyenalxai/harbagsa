@@ -61,6 +61,7 @@ editor_view :: proc(
 	camera: Debug_Camera,
 ) -> Editor_View {
 	default_prefab := prefab(.Crate)
+	active_lights, lamps := simulation_light_counts(sim)
 	view := Editor_View {
 		active = active,
 		tool = tool_kind(editor.tool),
@@ -78,8 +79,8 @@ editor_view :: proc(
 			redo = editor_history_redo_depth(editor),
 		},
 		lights = {
-			active = simulation_active_light_count(sim),
-			lamps = simulation_lamp_count(sim),
+			active = active_lights,
+			lamps = lamps,
 		},
 	}
 
