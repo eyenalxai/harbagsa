@@ -12,12 +12,9 @@ import "src:game"
 import "src:renderer"
 
 Session :: struct {
-	allocator:   mem.Allocator,
-	sim:         game.Simulation,
-	debug:       game.Debug_Mode,
-	hud:         game.HUD_State,
-	scratch:     ^frame.Scratch,
-	input:       game.Input_Snapshot,
+	allocator:     mem.Allocator,
+	runtime:       frame.Runtime,
+	input:         game.Input_Snapshot,
 	view:          View,
 	default_alpha: f32,
 	drawn_alpha:   f32,
@@ -53,20 +50,14 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 		allocator     = allocator,
 		default_alpha = 1.0,
 		drawn_alpha   = 1.0,
-		debug         = game.debug_mode_create(allocator),
 		render        = render_state_create(),
 	}
-	// The scratch holds the frame's debug lines, so it is too large for a local
-	// Session on the stack.
-	session.scratch = new(frame.Scratch, allocator)
-	session.scratch.allocator = allocator
-	session.sim = game.simulation_create(session.allocator)
-	if !game.simulation_is_valid(&session.sim) {
-		game.debug_mode_destroy(&session.debug)
-		free(session.scratch, allocator)
+	session.runtime = frame.runtime_create(allocator)
+	if !frame.runtime_is_valid(&session.runtime) {
+		frame.runtime_destroy(&session.runtime)
 		return {}, format_error("%s", "simulation init failed")
 	}
-	session.sim.settings.display = display.fallback_list()
+	session.runtime.sim.settings.display = display.fallback_list()
 	session.capture = capture_run_create(allocator)
 	session.picks = make([dynamic]Pick_Result, 0, 8, allocator)
 	session.recorder = recorder_create(allocator)
@@ -84,10 +75,7 @@ session_results_destroy :: proc(session: ^Session) {
 }
 
 session_destroy :: proc(session: ^Session) {
-	game.debug_mode_destroy(&session.debug)
-	if game.simulation_is_valid(&session.sim) {
-		game.simulation_destroy(&session.sim)
-	}
+	frame.runtime_destroy(&session.runtime)
 	session_results_destroy(session)
 	capture_run_destroy(&session.capture, session.allocator)
 	for &pick in session.picks {
@@ -97,8 +85,6 @@ session_destroy :: proc(session: ^Session) {
 	recorder_destroy(&session.recorder, session.allocator)
 	perf_run_destroy(&session.perf, session.allocator)
 	render_state_destroy(&session.render, session.allocator)
-	frame.scratch_destroy(session.scratch)
-	free(session.scratch, session.allocator)
 	session^ = {}
 }
 
@@ -124,16 +110,9 @@ session_view_alpha :: proc(session: ^Session) -> f32 {
 }
 
 session_reset :: proc(session: ^Session) -> string {
-	game.menu_reset(&session.hud.menu)
-	displays := session.sim.settings.display
-	if game.simulation_is_valid(&session.sim) {
-		game.simulation_destroy(&session.sim)
-	}
-	session.sim = game.simulation_create(session.allocator)
-	if !game.simulation_is_valid(&session.sim) {
+	if !frame.runtime_reset(&session.runtime) {
 		return format_error("%s", "simulation init failed")
 	}
-	session.sim.settings.display = displays
 	session.input = {}
 	session.camera_override = {}
 	session.has_camera_override = false
@@ -141,10 +120,6 @@ session_reset :: proc(session: ^Session) -> string {
 	session.drawn_frame = session.frame
 	session.settle.frames = 0
 	session.settle.converged = false
-	// The debug mode holds a saved player and editor history from the world that
-	// just went away.
-	game.debug_mode_destroy(&session.debug)
-	session.debug = game.debug_mode_create(session.allocator)
 	return ""
 }
 
@@ -205,7 +180,7 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 			allocator = context.allocator,
 		)
 	}
-	if session.hud.menu.open {
+	if session.runtime.hud.menu.open {
 		return fmt.aprintf("menu is open; close the menu to step", allocator = context.allocator)
 	}
 	for index in 0 ..< frames {
@@ -217,12 +192,7 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 			input.jump_pressed = false
 			input.sprint_pressed = false
 		}
-		if session.debug.active {
-			game.simulation_step_world(&session.sim, game.SIMULATION_STEP)
-		} else {
-			game.simulation_step(&session.sim, input, game.SIMULATION_STEP)
-		}
-		game.hud_notice_update(&session.hud, game.SIMULATION_STEP)
+		frame.runtime_step(&session.runtime, frame.fixed_step(input))
 		session.input.jump_pressed = false
 		session.frame += 1
 		if render_error := session_finish_frame(session); render_error != "" {

@@ -81,7 +81,11 @@ session_bake :: proc(session: ^Session, command: Bake_Command) -> string {
 		threads = default_threads
 	}
 
-	static := game.simulation_bake_input(&session.sim, &session.scratch.bake, session.allocator)
+	static := game.simulation_bake_input(
+		&session.runtime.sim,
+		&session.runtime.scratch.bake,
+		session.allocator,
+	)
 	artifact, report, build_error := bake.build(
 		static,
 		{quality = quality, threads = threads},

@@ -195,7 +195,7 @@ parse_remove :: proc(object: json.Object, allocator: mem.Allocator) -> (Command,
 session_place :: proc(session: ^Session, command: Place_Command, reply: ^Reply) -> string {
 	place_name := command.name
 	name := object_name_text(&place_name)
-	if name != "" && game.object_name_taken(&session.sim, name) {
+	if name != "" && game.object_name_taken(&session.runtime.sim, name) {
 		return format_error("object name %q is taken", name)
 	}
 	light := game.prefab_light(command.prefab)
@@ -213,7 +213,7 @@ session_place :: proc(session: ^Session, command: Place_Command, reply: ^Reply) 
 		light.range = command.light.range
 	}
 	id := game.simulation_create_object(
-		&session.sim,
+		&session.runtime.sim,
 		{
 			name = name,
 			prefab = command.prefab,
@@ -235,15 +235,15 @@ session_remove :: proc(session: ^Session, command: Remove_Command) -> string {
 	if command.has_name {
 		remove_name := command.name
 		name := object_name_text(&remove_name)
-		object, found := game.simulation_object_find_by_name(&session.sim, name)
+		object, found := game.simulation_object_find_by_name(&session.runtime.sim, name)
 		if !found {
 			return format_error("object name %q does not exist", name)
 		}
 		id = object.id
 	}
-	if !game.simulation_remove_object(&session.sim, id) {
+	if !game.simulation_remove_object(&session.runtime.sim, id) {
 		return format_error("object id %d does not exist", id)
 	}
-	game.editor_repair_selection(&session.debug.editor, &session.sim)
+	game.editor_repair_selection(&session.runtime.debug.editor, &session.runtime.sim)
 	return ""
 }
