@@ -15,6 +15,7 @@ spider_boxes :: proc(
 	snapshot: game.Render_Snapshot,
 	alpha: f32,
 ) {
+	start := len(boxes^)
 	weight := clamp(alpha, 0.0, 1.0)
 	feet :=
 		snapshot.previous_position + (snapshot.position - snapshot.previous_position) * weight
@@ -33,6 +34,7 @@ spider_boxes :: proc(
 				color = game.SPIDER_CEPHALOTHORAX_COLOR,
 				rotation = rotation,
 			},
+			identity = renderer.Spider_Box_Identity{index = len(boxes^) - start},
 		},
 	)
 	append(
@@ -44,6 +46,7 @@ spider_boxes :: proc(
 				color = game.SPIDER_ABDOMEN_COLOR,
 				rotation = rotation,
 			},
+			identity = renderer.Spider_Box_Identity{index = len(boxes^) - start},
 		},
 	)
 
@@ -58,6 +61,7 @@ spider_boxes :: proc(
 					rotation = rotation,
 					emissive = game.SPIDER_EYE_EMISSIVE,
 				},
+				identity = renderer.Spider_Box_Identity{index = len(boxes^) - start},
 			},
 		)
 	}
@@ -72,6 +76,7 @@ spider_boxes :: proc(
 					rotation = rotation,
 					emissive = game.SPIDER_MARK_EMISSIVE,
 				},
+				identity = renderer.Spider_Box_Identity{index = len(boxes^) - start},
 			},
 		)
 	}
@@ -85,6 +90,7 @@ spider_boxes :: proc(
 
 		append(boxes, renderer.Frame_Box {
 			box = geometry.box_between(hip, knee, game.LEG_THICKNESS, game.SPIDER_LEG_COLOR),
+			identity = renderer.Spider_Box_Identity{index = len(boxes^) - start},
 		})
 		append(
 			boxes,
@@ -95,6 +101,7 @@ spider_boxes :: proc(
 					game.LEG_THICKNESS * 0.78,
 					game.SPIDER_LEG_COLOR,
 				),
+				identity = renderer.Spider_Box_Identity{index = len(boxes^) - start},
 			},
 		)
 		append(
@@ -106,6 +113,7 @@ spider_boxes :: proc(
 					color = game.SPIDER_KNEE_COLOR,
 					rotation = rotation,
 				},
+				identity = renderer.Spider_Box_Identity{index = len(boxes^) - start},
 			},
 		)
 	}

@@ -117,12 +117,14 @@ build :: proc(
 		append(&scratch.boxes, renderer.Frame_Box {
 			box = box,
 			slot = game.bake_arena_slot(index),
+			identity = renderer.Arena_Box_Identity{index = index},
 		})
 	}
 	for object in game.simulation_objects(sim) {
 		append(&scratch.boxes, renderer.Frame_Box {
 			box = game.simulation_object_visual_box(sim, object.id),
 			slot = game.bake_placed_slot(object),
+			identity = renderer.Object_Identity{id = object.id},
 		})
 	}
 	spider_boxes(&scratch.boxes, snapshot, options.alpha)
