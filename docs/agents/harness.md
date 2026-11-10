@@ -162,6 +162,15 @@ session remains usable. `step` and `settle` are errors while the menu is open.
 A `shot` is scenario-only shorthand. It expands to an optional camera, a settle,
 and one capture. It is not a live-session command.
 
+## State fields
+
+`get` resolves one path against the state document. An object handle is explicit:
+`objects.id.<id>.<field>` addresses an object by id,
+`objects.name.<name>.<field>` addresses it by name, and `objects.count` is the
+list length. Every non-empty name that `place` accepts works in the name form,
+including `12` and `count`. Every other path segment is a JSON name and every
+other slice segment is an index.
+
 ## Player state
 
 `state.player` reports the body position, the body yaw, the camera yaw and pitch,
@@ -179,8 +188,8 @@ stance, eye-height, and step-smoothing keys are command errors.
 `place` creates one object without entering debug mode. It draws no editor
 lines and adds no undo entry. `prefab` and `position` are required. `body`
 defaults to the prefab. A lamp body follows its `light.kind`: `static` gives a
-static fixture, and `dynamic` gives a dynamic lamp. A name is unique, at most 31
-letters, digits, `-`, or `_`, and is neither all digits nor `count`.
+static fixture, and `dynamic` gives a dynamic lamp. A name is unique and uses at
+most 31 letters, digits, `-`, or `_`.
 
 ```json
 {"cmd":"place","prefab":"Lamp","position":[13.5,2.75,10.5],"body":"static",

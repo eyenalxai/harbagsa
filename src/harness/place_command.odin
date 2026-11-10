@@ -86,8 +86,8 @@ parse_place :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 		parsed, parsed_ok := object_name_from_text(text)
 		if !text_ok || !parsed_ok {
 			return {}, format_error(
-				"%s",
-				"'name' must use at most 31 letters, digits, '-' or '_' and not be all digits",
+				"'name' must use %s",
+				game.OBJECT_NAME_RULE_TEXT,
 			)
 		}
 		command.place.name = parsed

@@ -16,6 +16,7 @@ INVALID_OBJECT_ID :: Object_Id(0)
 // every path. The cap is one short scenario handle, not a label.
 OBJECT_NAME_BYTES :: 32
 OBJECT_NAME_MAX :: OBJECT_NAME_BYTES - 1
+OBJECT_NAME_RULE_TEXT :: "at most 31 letters, digits, '-' or '_'"
 
 Placed_Object :: struct {
 	id:         Object_Id,
@@ -60,22 +61,19 @@ object_name :: proc(object: ^Placed_Object) -> string {
 	return string(object.name[:object.name_length])
 }
 
-// An empty name is unnamed. A name may not be all digits, because a field path
-// reads `objects.<id>` when the handle parses as a number, and it may not be
-// `count`, which is the list length.
-object_name_valid :: proc(name: string) -> bool {
+// An empty name is unnamed. The rule is the storage rule only; a query path
+// decides whether a handle is an id or a name.
+object_name_storable :: proc(name: string) -> bool {
 	if name == "" {
 		return true
 	}
-	if len(name) > OBJECT_NAME_MAX || name == "count" {
+	if len(name) > OBJECT_NAME_MAX {
 		return false
 	}
-	digits_only := true
 	for character in name {
 		if character >= '0' && character <= '9' {
 			continue
 		}
-		digits_only = false
 		if character >= 'a' && character <= 'z' {
 			continue
 		}
@@ -87,7 +85,7 @@ object_name_valid :: proc(name: string) -> bool {
 		}
 		return false
 	}
-	return !digits_only
+	return true
 }
 
 object_name_taken :: proc(sim: ^Simulation, name: string) -> bool {
