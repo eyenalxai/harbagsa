@@ -52,7 +52,6 @@ Frame_Input :: struct {
 	menu:             Menu_Input,
 	view:             View_Intents,
 	pause:            bool,
-	want_cursor_free: bool,
 }
 
 // Resolver holds the edge latches that must survive a frame with no fixed step.

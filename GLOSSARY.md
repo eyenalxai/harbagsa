@@ -325,8 +325,8 @@ _Avoid_: Edit mode, sandbox
 
 **Editor view**:
 The read-only projection of the editor that the HUD and the harness read: the
-tool, the palette, the placement, the selection, the history, and the light
-budget. Both readers format the same value.
+tool, the focus, the palette, the placement, the selection, the history, and the
+light budget. Both readers format the same value.
 _Avoid_: Debug state, inspector state
 
 **Object palette**:
@@ -540,7 +540,8 @@ _Avoid_: Window target
 
 **Cursor capture**:
 The state where the mouse controls the camera and the pointer is hidden. The
-settings menu releases the capture while it is open.
+settings menu and the object palette release the capture while they are open;
+the loop derives the capture from the menu and the editor focus every frame.
 _Avoid_: Mouse lock
 
 **Debug draw**:
