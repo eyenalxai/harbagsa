@@ -111,8 +111,12 @@ build :: proc(
 	scene.hud.weight = sim.settings.type_weight
 	scene.light_shadows = true
 
-	snapshot := game.simulation_snapshot(sim)
-	scene.camera = camera_view(sim, debug, camera_override, options.alpha).camera
+	view := camera_view(sim, debug, camera_override, options.alpha)
+	scene.camera = view.camera
+	snapshot, has_player := view.player.?
+	if !has_player {
+		snapshot = game.simulation_snapshot(sim)
+	}
 
 	scratch_prepare(scratch)
 	clear(&scratch.boxes)

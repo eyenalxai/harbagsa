@@ -30,7 +30,7 @@ session_repro :: proc(session: ^Session, path: string, reply: ^Reply) -> string 
 		)
 	}
 	options := frame.Options {
-		alpha      = session.drawn_alpha,
+		alpha      = session_view_alpha(session),
 		hud        = session.view.hud,
 		debug_view = session.view.debug,
 		captured   = !session.view.hint,
