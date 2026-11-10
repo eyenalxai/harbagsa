@@ -79,7 +79,10 @@ editor_commit_move :: proc(
 	} else if !simulation_move_object(sim, object.id, resolved) {
 		return edit_fail(.Failed)
 	}
-	editor.drag_position = resolved
+	if active, dragging := editor.drag.(Drag_Active); dragging {
+		active.position = resolved
+		editor.drag = active
+	}
 	return edit_ok()
 }
 
@@ -93,7 +96,7 @@ editor_select_object :: proc(editor: ^Editor, sim: ^Simulation, id: Object_Id) -
 	if _, ok := simulation_object_find(sim, id); !ok {
 		return edit_fail(.Unknown_Object)
 	}
-	editor_selection_set(editor, sim, id)
+	editor_selection_set(editor, id)
 	return edit_ok()
 }
 
@@ -237,7 +240,7 @@ editor_duplicate_selected :: proc(editor: ^Editor, sim: ^Simulation) -> Edit_Res
 	if !result.applied {
 		return result
 	}
-	editor_selection_set(editor, sim, id)
+	editor_selection_set(editor, id)
 	return edit_ok()
 }
 

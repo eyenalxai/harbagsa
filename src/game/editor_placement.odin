@@ -153,7 +153,7 @@ editor_place_spawn :: proc(
 	if !result.applied {
 		return result
 	}
-	editor_selection_set(editor, sim, id)
+	editor_selection_set(editor, id)
 	return edit_ok()
 }
 
