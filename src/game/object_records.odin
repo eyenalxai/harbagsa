@@ -48,8 +48,8 @@ Snapshot_Apply_Error :: enum {
 }
 
 Snapshot_Apply_Failure :: struct {
-	error: Snapshot_Apply_Error,
-	id:    Object_Id,
+	error:        Snapshot_Apply_Error,
+	offending_id: Object_Id,
 }
 
 snapshot_apply_error_message :: proc(failure: Snapshot_Apply_Failure) -> string {
@@ -59,9 +59,9 @@ snapshot_apply_error_message :: proc(failure: Snapshot_Apply_Failure) -> string 
 	case .Invalid_Simulation:
 		return "the simulation is not valid"
 	case .Invalid_Id:
-		return fmt.tprintf("object id %d is not valid", failure.id)
+		return fmt.tprintf("object id %d is not valid", failure.offending_id)
 	case .Duplicate_Id:
-		return fmt.tprintf("object id %d is given twice", failure.id)
+		return fmt.tprintf("object id %d is given twice", failure.offending_id)
 	case .Invalid_Name:
 		return "the snapshot has an invalid object name"
 	case .Duplicate_Name:
@@ -118,11 +118,11 @@ simulation_apply_snapshot :: proc(
 	}
 	for record, index in snapshot.objects {
 		if record.id == INVALID_OBJECT_ID {
-			return {error = .Invalid_Id, id = record.id}
+			return {error = .Invalid_Id, offending_id = record.id}
 		}
 		for previous in snapshot.objects[:index] {
 			if previous.id == record.id {
-				return {error = .Duplicate_Id, id = record.id}
+				return {error = .Duplicate_Id, offending_id = record.id}
 			}
 		}
 	}
