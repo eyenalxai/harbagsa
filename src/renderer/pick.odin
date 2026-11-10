@@ -41,11 +41,11 @@ Pick_Failure :: enum {
 	Frame,
 }
 
-// The hit in renderer terms. Identity stays in the harness: the renderer only
-// knows the instance custom index, which is the box order.
+// The hit in renderer terms. The identity names the frame box source, so the
+// harness resolves an object without knowing the box order.
 Pick_Hit :: struct {
 	hit:            bool,
-	instance:       u32,
+	identity:       Frame_Box_Identity,
 	distance:       f32,
 	position:       [3]f32,
 	normal:         [3]f32,
@@ -104,7 +104,16 @@ pick :: proc(
 	if !hit.hit {
 		return hit, .None, ""
 	}
-	hit.instance = u32(raw.hit_info[1])
+	instance := u32(raw.hit_info[1])
+	if instance >= u32(len(input.boxes)) {
+		return {}, .Frame, fmt.aprintf(
+			"pick instance %d is outside the %d-box frame",
+			instance,
+			len(input.boxes),
+			allocator = context.allocator,
+		)
+	}
+	hit.identity = input.boxes[int(instance)].identity
 	hit.face = i32(raw.hit_info[2])
 	hit.probe_inside = raw.hit_info[3] != 0
 	hit.distance = raw.sample_info[0]

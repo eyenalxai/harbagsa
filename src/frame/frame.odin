@@ -6,7 +6,6 @@ import "core:mem"
 
 import "src:bake"
 import "src:game"
-import "src:geometry"
 import "src:perf"
 import "src:renderer"
 
@@ -30,8 +29,7 @@ Options :: struct {
 
 Scratch :: struct {
 	allocator:   mem.Allocator,
-	boxes:       [dynamic]geometry.Box,
-	box_slots:   [dynamic]bake.Box_Slot,
+	boxes:       [dynamic]renderer.Frame_Box,
 	lights:      [dynamic]renderer.Light,
 	bake:        game.Bake_Input,
 	debug_lines: game.Debug_Lines,
@@ -40,9 +38,6 @@ Scratch :: struct {
 scratch_destroy :: proc(scratch: ^Scratch) {
 	if scratch.boxes != nil {
 		delete(scratch.boxes)
-	}
-	if scratch.box_slots != nil {
-		delete(scratch.box_slots)
 	}
 	if scratch.lights != nil {
 		delete(scratch.lights)
@@ -56,10 +51,7 @@ scratch_prepare :: proc(scratch: ^Scratch) {
 		scratch.allocator = context.allocator
 	}
 	if scratch.boxes == nil {
-		scratch.boxes = make([dynamic]geometry.Box, 0, 0, scratch.allocator)
-	}
-	if scratch.box_slots == nil {
-		scratch.box_slots = make([dynamic]bake.Box_Slot, 0, 0, scratch.allocator)
+		scratch.boxes = make([dynamic]renderer.Frame_Box, 0, 0, scratch.allocator)
 	}
 	if scratch.lights == nil {
 		scratch.lights = make([dynamic]renderer.Light, 0, 0, scratch.allocator)
@@ -122,23 +114,22 @@ build :: proc(
 
 	scratch_prepare(scratch)
 	clear(&scratch.boxes)
-	clear(&scratch.box_slots)
 	for box, index in game.arena_static_boxes() {
-		append(&scratch.boxes, box)
-		append(&scratch.box_slots, game.bake_arena_slot(index))
+		append(&scratch.boxes, renderer.Frame_Box {
+			box = box,
+			slot = game.bake_arena_slot(index),
+			identity = renderer.Arena_Box_Identity{index = index},
+		})
 	}
 	for object in game.simulation_objects(sim) {
-		box := game.simulation_object_visual_box(sim, object.id)
-		append(&scratch.boxes, box)
-		append(&scratch.box_slots, game.bake_placed_slot(object))
+		append(&scratch.boxes, renderer.Frame_Box {
+			box = game.simulation_object_visual_box(sim, object.id),
+			slot = game.bake_placed_slot(object),
+			identity = renderer.Object_Identity{id = object.id},
+		})
 	}
-	spider_start := len(scratch.boxes)
 	spider_boxes(&scratch.boxes, snapshot, options.alpha)
-	for _ in spider_start ..< len(scratch.boxes) {
-		append(&scratch.box_slots, bake.Box_Slot{})
-	}
 	scene.boxes = scratch.boxes[:]
-	scene.box_slots = scratch.box_slots[:]
 
 	active := game.simulation_collect_lights(sim)
 	clear(&scratch.lights)

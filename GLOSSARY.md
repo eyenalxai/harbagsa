@@ -483,7 +483,7 @@ The renderer-owned color image a term view resolves into before the readback cop
 _Avoid_: View buffer, view target
 
 **Pick**:
-One pixel resolved to the surface under it: the object identity, distance, world position and normal, face, lightmap rect and texel, probe cell, and the five terms. The renderer traces the pixel's camera ray against the frame TLAS in a one-pixel compute pass that reads the shared term include; the harness maps the instance custom index to the scene object. `pick` is a command error while the menu is open and when `at` is outside the capture extent.
+One pixel resolved to the surface under it: the object identity, distance, world position and normal, face, lightmap rect and texel, probe cell, and the five terms. The renderer traces the pixel's camera ray against the frame TLAS in a one-pixel compute pass that reads the shared term include; the harness reads the frame box identity to name the scene object. `pick` is a command error while the menu is open and when `at` is outside the capture extent.
 _Avoid_: Pixel probe, raycast (that word belongs to the bake)
 
 **Capture format**:
