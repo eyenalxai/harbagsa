@@ -25,7 +25,7 @@ session_record_start :: proc(session: ^Session, path: string, include_scene := t
 	append(&session.recorder.recorded, strings.clone(`{"cmd": "reset"}`, session.allocator))
 	if include_scene {
 		options := frame.Options {
-			alpha      = session.drawn_alpha,
+			alpha      = session_view_alpha(session),
 			hud        = session.view.hud,
 			debug_view = session.view.debug,
 			captured   = !session.view.hint,

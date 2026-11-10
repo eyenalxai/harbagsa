@@ -22,7 +22,7 @@ Loop :: struct {
 	resolver:       input.Resolver,
 	cursor:         Cursor_State,
 	accumulator:    f32,
-	frame_alpha:    f32,
+	last_alpha:     f32, // the last built frame; the repro path runs before this frame's alpha
 	debug_view:     bool,
 	displays:       platform.Displays,
 	applied_window: display.Window_Settings,
@@ -72,7 +72,7 @@ apply_frame_input :: proc(
 				&loop.debug,
 				&loop.hud,
 				frame.Options {
-					alpha = loop.frame_alpha,
+					alpha = loop.last_alpha,
 					debug_view = loop.debug_view,
 					captured = events.captured,
 					hud = true,

@@ -69,7 +69,7 @@ run :: proc() -> bool {
 
 	loop: Loop
 	defer frame.scratch_destroy(&loop.scratch)
-	loop.frame_alpha = 1.0
+	loop.last_alpha = 1.0
 	loop.sim = game.simulation_create(context.allocator)
 	if !game.simulation_is_valid(&loop.sim) {
 		log.error("harbagsa: simulation init failed")
@@ -161,7 +161,7 @@ run :: proc() -> bool {
 		}
 
 		alpha := clamp(loop.accumulator / game.SIMULATION_STEP, 0, 1)
-		loop.frame_alpha = alpha
+		loop.last_alpha = alpha
 		static := game.simulation_bake_input(&loop.sim, &loop.scratch.bake, context.allocator)
 		renderer.refresh_bake(&state, static)
 		scene := frame.build(

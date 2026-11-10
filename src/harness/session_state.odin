@@ -6,7 +6,6 @@ import "core:math"
 import "src:digest"
 import "src:frame"
 import "src:game"
-import "src:renderer"
 
 @(private)
 session_refresh_bake :: proc(session: ^Session) {
@@ -58,14 +57,6 @@ session_state :: proc(session: ^Session) -> State {
 	)
 }
 
-@(private)
-session_override_camera :: proc(session: ^Session) -> ^renderer.Camera {
-	if session.has_camera_override {
-		return &session.camera_override
-	}
-	return nil
-}
-
 // The report resolves at the alpha of the last frame the renderer built, so a
 // capture at a non-unit alpha and the state after it agree.
 @(private)
@@ -74,15 +65,14 @@ session_camera :: proc(session: ^Session) -> Camera_State {
 		&session.sim,
 		&session.debug,
 		session_override_camera(session),
-		session.drawn_alpha,
+		session_view_alpha(session),
 	)
-	_, has_player := view.player.?
 	return {
 		position = vec_state(view.camera.position),
 		yaw_deg = f32(math.to_degrees(view.camera.yaw)),
 		pitch_deg = f32(math.to_degrees(view.camera.pitch)),
 		fov_deg = f32(math.to_degrees(view.camera.fov_x)),
 		source = view.source,
-		overridden = !has_player,
+		overridden = view.source != "third_person",
 	}
 }

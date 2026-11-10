@@ -13,7 +13,7 @@ session_queue_capture :: proc(
 	error: string,
 ) {
 	frame := command.has_frame ? command.frame : session.frame
-	alpha := command.has_alpha ? command.alpha : session.alpha
+	alpha := command.has_alpha ? command.alpha : session.default_alpha
 	base_name := command.name
 	owned_name := false
 	if base_name == "" {
@@ -39,7 +39,7 @@ session_queue_captures :: proc(
 	error: string,
 ) {
 	frame := command.has_frame ? command.frame : session.frame
-	alpha := command.has_alpha ? command.alpha : session.alpha
+	alpha := command.has_alpha ? command.alpha : session.default_alpha
 	requests := make([dynamic]Capture_Request, 0, len(command.outputs), context.temp_allocator)
 	defer delete(requests)
 	for output in command.outputs {
