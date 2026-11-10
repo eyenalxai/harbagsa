@@ -5,12 +5,17 @@ import "src:game"
 
 Editor_State :: struct {
 	active:    bool               `json:"active"`,
+	focus:     Focus_State        `json:"focus"`,
 	tool:      string             `json:"tool"`,
 	palette:   Palette_State      `json:"palette"`,
 	placement: Placement_State    `json:"placement"`,
 	selection: Selection_State    `json:"selection"`,
 	history:   History_State      `json:"history"`,
 	lights:    Light_Budget_State `json:"lights"`,
+}
+
+Focus_State :: struct {
+	pointer_free: bool `json:"pointer_free"`,
 }
 
 Palette_State :: struct {
@@ -46,9 +51,12 @@ History_State :: struct {
 	redo:  int `json:"redo"`,
 }
 
-editor_state_build :: proc(view: game.Editor_View) -> Editor_State {
+editor_state_build :: proc(view: game.Editor_View, focus: game.Focus) -> Editor_State {
 	state := Editor_State {
 		active = view.active,
+		focus = {
+			pointer_free = focus.pointer_free,
+		},
 		tool = game.tool_kind_name(view.tool),
 		palette = {
 			open = view.palette.open,
