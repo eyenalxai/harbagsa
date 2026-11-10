@@ -9,7 +9,7 @@ build_notice :: proc(o: ^Overlay, width: f32, notice: ui.Notice) {
 		return
 	}
 	ctx: Layout_Context
-	layout_context_init(&ctx, o.theme, &o.atlas, width, 0)
+	layout_context_init(&ctx, o, width, 0)
 	layout := ui.notice_layout(ctx.inputs, notice)
 	theme := o.theme
 

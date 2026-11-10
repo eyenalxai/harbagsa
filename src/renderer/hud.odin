@@ -86,7 +86,7 @@ build_status_panel :: proc(o: ^Overlay, view: ui.Hud) {
 	padding := theme.spacing.lg
 	options := ui.Rows_Options{value_align = .Left}
 	ctx: Layout_Context
-	layout_context_init(&ctx, theme, &o.atlas, 0, 0)
+	layout_context_init(&ctx, o, 0, 0)
 	layout := ui.rows_layout(ctx.inputs, rows, options)
 
 	x := theme.spacing.md

@@ -14,21 +14,22 @@ Layout_Context :: struct {
 
 // The metrics adapter lives on the caller's stack. It is passed into one layout
 // call and never stored, so a draw and an input pass can each own their result.
+// Both read the theme and atlas the overlay last drew with, so a hit test cannot
+// measure against a theme the draw never used.
 layout_context_init :: proc(
 	ctx: ^Layout_Context,
-	theme: UI_Theme,
-	atlas: ^Text_Atlas,
+	o: ^Overlay,
 	width, height: f32,
 ) {
-	ctx.theme = theme
-	ctx.atlas = atlas
+	ctx.theme = o.theme
+	ctx.atlas = &o.atlas
 	ctx.inputs = {
 		width = width,
 		height = height,
-		spacing = theme.spacing,
-		hairline = theme.hairline,
-		density = theme.density,
-		menu_min_width = theme.menu_min_width,
+		spacing = ctx.theme.spacing,
+		hairline = ctx.theme.hairline,
+		density = ctx.theme.density,
+		menu_min_width = ctx.theme.menu_min_width,
 		metrics = {
 			ctx = ctx,
 			measure = layout_measure,
@@ -69,13 +70,7 @@ text_style_for_role :: proc(theme: UI_Theme, role: ui.Text_Role, color: [4]f32) 
 menu_layout_for :: proc(r: ^Renderer, menu: ui.Menu) -> ui.Menu_Layout {
 	width, height := target_extent(r)
 	ctx: Layout_Context
-	layout_context_init(
-		&ctx,
-		r.overlay.theme,
-		&r.overlay.atlas,
-		f32(width),
-		f32(height),
-	)
+	layout_context_init(&ctx, &r.overlay, f32(width), f32(height))
 	return ui.menu_layout(ctx.inputs, menu)
 }
 
