@@ -7,6 +7,7 @@ import "src:display"
 import "src:frame"
 import "src:game"
 import "src:input"
+import "src:perf"
 import "src:platform"
 import "src:renderer"
 import "src:ui"
@@ -21,6 +22,7 @@ Loop :: struct {
 	accumulator:    f32,
 	last_alpha:     f32, // the last built frame; the repro path runs before this frame's alpha
 	debug_view:     bool,
+	perf_visible:   bool,
 	displays:       platform.Displays,
 	repro_dir:      string,
 }
@@ -33,7 +35,7 @@ apply_frame_input :: proc(
 	intent: input.Frame_Input,
 ) {
 	if intent.view.perf {
-		loop.runtime.hud.perf.visible = !loop.runtime.hud.perf.visible
+		loop.perf_visible = !loop.perf_visible
 	}
 
 	// The menu owns the accumulator while it is open. The cursor sync reads the
@@ -64,6 +66,10 @@ apply_frame_input :: proc(
 		}
 		if intent.view.repro {
 			renderer_debug := renderer.renderer_debug(loop.renderer)
+			perf_stats: Maybe(perf.Stats)
+			if loop.perf_visible {
+				perf_stats = perf.Stats{}
+			}
 			_ = write_repro(
 				&loop.runtime.sim,
 				&loop.runtime.debug,
@@ -73,7 +79,7 @@ apply_frame_input :: proc(
 					debug_view = loop.debug_view,
 					captured = events.captured,
 					hud = true,
-					perf = loop.runtime.hud.perf.visible,
+					perf_stats = perf_stats,
 				},
 				&renderer_debug,
 				loop.repro_dir,

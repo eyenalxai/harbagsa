@@ -185,10 +185,6 @@ run :: proc() -> bool {
 			&loop.cursor,
 		)
 
-		if loop.runtime.hud.perf.visible {
-			loop.runtime.hud.perf.stats = perf.stats(&perf_state)
-		}
-
 		alpha := clamp(loop.accumulator / game.SIMULATION_STEP, 0, 1)
 		loop.last_alpha = alpha
 		static := game.simulation_bake_input(
@@ -197,6 +193,10 @@ run :: proc() -> bool {
 			context.allocator,
 		)
 		renderer.refresh_bake(&state, static)
+		perf_stats: Maybe(perf.Stats)
+		if loop.perf_visible {
+			perf_stats = perf.stats(&perf_state)
+		}
 		scene := frame.runtime_compose(
 			&loop.runtime,
 			frame.Options {
@@ -205,7 +205,7 @@ run :: proc() -> bool {
 				debug_view = loop.debug_view,
 				captured = events.captured,
 				hud = true,
-				perf = loop.runtime.hud.perf.visible,
+				perf_stats = perf_stats,
 				bake = renderer.bake_report(&state),
 			},
 			nil,
