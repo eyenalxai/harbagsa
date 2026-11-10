@@ -209,11 +209,11 @@ execute_displays :: proc(session: ^Session, command: Command, reply: ^Reply) -> 
 
 @(private)
 execute_rows :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
-	session_refresh_bake(session)
-	session_refresh_renderer(session)
-	session_refresh_hud(session)
+	state := session_observe(session, {.Rows})
+	defer state_destroy(&state, session.allocator)
 	reply.rows = new(Rows_State, session.allocator)
-	reply.rows^ = rows_state_build(&session.runtime.hud, session.allocator)
+	reply.rows^ = state.rows
+	state.rows = {}
 	return ""
 }
 
