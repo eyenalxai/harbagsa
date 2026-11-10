@@ -89,32 +89,13 @@ pick :: proc(
 		)
 	}
 
-	picked_index := 0
-	recorded := false
-	for _ in 0 ..< 2 {
-		frame, begin_status := begin_frame(r, input, {})
-		if begin_status == .Skipped {
-			continue
-		}
-		if begin_status != .Ok {
-			return {}, .Frame, fmt.aprintf("%s", "pick frame failed", allocator = context.allocator)
-		}
-		picked_index = r.frame_index
-		end_status := end_frame(r, frame)
-		if end_status == .Skipped {
-			continue
-		}
-		if end_status != .Ok {
-			return {}, .Frame, fmt.aprintf("%s", "pick frame failed", allocator = context.allocator)
-		}
-		recorded = true
-		break
-	}
-	if !recorded {
-		return {}, .Frame, fmt.aprintf("%s", "pick frame skipped", allocator = context.allocator)
+	result := render_frame(r, input, {})
+	if result.status != .Ok {
+		message := result.status == .Skipped ? "pick frame skipped" : "pick frame failed"
+		return {}, .Frame, fmt.aprintf("%s", message, allocator = context.allocator)
 	}
 
-	mapped := r.scene.pick_mapped[picked_index]
+	mapped := r.scene.pick_mapped[result.slot]
 	if mapped == nil {
 		return {}, .Frame, fmt.aprintf("%s", "pick result buffer is not mapped", allocator = context.allocator)
 	}
