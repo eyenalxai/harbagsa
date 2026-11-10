@@ -6,7 +6,6 @@ import "core:strings"
 import "core:time"
 
 import "src:frame"
-import "src:game"
 import "src:perf"
 import "src:renderer"
 
@@ -296,15 +295,7 @@ session_perf_frame :: proc(session: ^Session) -> string {
 	perf.begin_frame(&session.perf.state)
 	perf.mark(&session.perf.state, .Events)
 	input := session.input
-	frame.runtime_step(
-		&session.runtime,
-		frame.Step {
-			steps = 1,
-			delta = game.SIMULATION_STEP,
-			snapshot = input,
-			motion = {captured = true},
-		},
-	)
+	frame.runtime_step(&session.runtime, frame.fixed_step(input))
 	session.input.jump_pressed = false
 	session.input.sprint_pressed = false
 	session.frame += 1
