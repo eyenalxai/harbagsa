@@ -49,6 +49,43 @@ init_frames :: proc(r: ^Renderer) -> Error {
 	return .None
 }
 
+MAX_FRAME_ATTEMPTS :: 2
+
+Frame_Result :: struct {
+	status: Frame_Status,
+	// The frame ring slot the submission used; -1 when every attempt skipped.
+	slot:   int,
+}
+
+// One call owns the frame protocol. A swapchain recreate can skip the begin or
+// the present, so the retry lives here instead of at each caller.
+render_frame :: proc(
+	r: ^Renderer,
+	input: Render_Input,
+	capture := Frame_Capture{},
+) -> Frame_Result {
+	for _ in 0 ..< MAX_FRAME_ATTEMPTS {
+		frame, begin_status := begin_frame(r, input, capture)
+		if begin_status == .Skipped {
+			continue
+		}
+		if begin_status != .Ok {
+			return {status = begin_status, slot = -1}
+		}
+		slot := r.frame_index
+		switch end_frame(r, frame) {
+		case .Ok:
+			return {status = .Ok, slot = slot}
+		case .Skipped:
+			continue
+		case .Fatal:
+			return {status = .Fatal, slot = -1}
+		}
+	}
+	return {status = .Skipped, slot = -1}
+}
+
+@(private)
 begin_frame :: proc(
 	r: ^Renderer,
 	input: Render_Input,
@@ -141,6 +178,7 @@ begin_frame :: proc(
 	}, .Ok
 }
 
+@(private)
 end_frame :: proc(r: ^Renderer, frame: Frame) -> Frame_Status {
 	command_buffer := frame.command_buffer
 	image_index := frame.image_index

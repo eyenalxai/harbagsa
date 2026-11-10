@@ -297,16 +297,7 @@ backend_render :: proc(
 		}
 	}
 	capture_request := renderer.Frame_Capture{targets = targets, views = views}
-	status: renderer.Frame_Status
-	for _ in 0 ..< 2 {
-		status = frame.draw(&data.renderer, scene, capture_request)
-		if status == .Ok {
-			break
-		}
-		if status == .Fatal {
-			break
-		}
-	}
+	status := frame.draw(&data.renderer, scene, capture_request)
 	if status != .Ok {
 		if status == .Fatal {
 			return nil, format_error("render failed")
