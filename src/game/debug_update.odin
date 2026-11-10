@@ -19,7 +19,7 @@ debug_mode_update :: proc(
 	}
 
 	primary_press := edit_actions_have_primary_press(actions)
-	if motion.captured && !dm.editor.dragging && !primary_press {
+	if motion.captured && !editor_dragging(&dm.editor) && !primary_press {
 		dm.camera.yaw = b3.UnwindAngle(dm.camera.yaw - motion.look_delta.x * YAW_SENSITIVITY)
 		dm.camera.pitch = clamp(
 			dm.camera.pitch - motion.look_delta.y * PITCH_SENSITIVITY,
