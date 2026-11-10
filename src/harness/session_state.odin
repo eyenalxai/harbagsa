@@ -13,8 +13,8 @@ session_refresh_bake :: proc(session: ^Session) {
 		return
 	}
 	static := game.simulation_bake_input(
-		&session.sim,
-		&session.scratch.bake,
+		&session.runtime.sim,
+		&session.runtime.scratch.bake,
 		session.allocator,
 	)
 	session.render.backend.refresh_bake(session.render.backend.ctx, static)
@@ -45,10 +45,10 @@ session_state :: proc(session: ^Session) -> State {
 	session_refresh_renderer(session)
 	session_refresh_hud(session)
 	return state_build(
-		&session.sim,
+		&session.runtime.sim,
 		session.frame,
-		&session.hud,
-		&session.debug,
+		&session.runtime.hud,
+		&session.runtime.debug,
 		session_camera(session),
 		session.render.report,
 		session.render.digest_text,
@@ -62,8 +62,8 @@ session_state :: proc(session: ^Session) -> State {
 @(private)
 session_camera :: proc(session: ^Session) -> Camera_State {
 	view := frame.camera_view(
-		&session.sim,
-		&session.debug,
+		&session.runtime.sim,
+		&session.runtime.debug,
 		session_override_camera(session),
 		session_view_alpha(session),
 	)

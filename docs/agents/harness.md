@@ -97,7 +97,8 @@ scenario, 3 renderer, backend, or file failure.
 Rules:
 
 - Commands run verbatim. `record` writes the same form.
-- One step is one fixed simulation step. The runner does not use wall time.
+- One step is one fixed simulation step, followed by the debug editor update
+  when debug mode is active. The runner does not use wall time.
 - `look` applies once. `input` persists. Jump is an edge on the first frame.
 - Only `capture` or `captures` writes an image. A scenario without captures or
   perf does not create a Vulkan device unless `--present` is set.

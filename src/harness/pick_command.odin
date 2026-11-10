@@ -66,7 +66,7 @@ session_pick :: proc(session: ^Session, command: Pick_Command) -> string {
 	if !session.render.enabled {
 		return format_error("%s", "pick requires a renderer; rendering is disabled")
 	}
-	if session.hud.menu.open {
+	if session.runtime.hud.menu.open {
 		return format_error("%s", "menu is open; close the menu to pick")
 	}
 	if session.render.backend == nil || session.render.backend.pick == nil {
@@ -84,12 +84,12 @@ session_pick :: proc(session: ^Session, command: Pick_Command) -> string {
 		}
 		return pick_error
 	}
-	append(&session.picks, pick_result_build(&session.sim, hit, session.allocator))
+	append(&session.picks, pick_result_build(&session.runtime.sim, hit, session.allocator))
 	session_refresh_renderer(session)
 	return ""
 }
 
-// The instance custom index is the box order `frame.build` produces: static
+// The instance custom index is the box order the frame compose produces: static
 // arena boxes, then placed objects, then the spider.
 @(private)
 pick_result_build :: proc(

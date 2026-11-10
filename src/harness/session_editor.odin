@@ -6,12 +6,12 @@ import "core:math"
 import "src:game"
 
 session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
-	if !session.debug.active {
+	if !session.runtime.debug.active {
 		return format_error("%s", "editor needs debug mode; send {\"cmd\": \"debug_mode\", \"active\": true} first")
 	}
 
 	if command.has_camera {
-		session.debug.camera = {
+		session.runtime.debug.camera = {
 			position = command.camera.position,
 			yaw      = command.camera.yaw_rad,
 			pitch    = command.camera.pitch_rad,
@@ -54,7 +54,7 @@ session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 	if command.object.has_select_name {
 		select_name := command.object.select_name
 		name := object_name_text(&select_name)
-		object, found := game.simulation_object_find_by_name(&session.sim, name)
+		object, found := game.simulation_object_find_by_name(&session.runtime.sim, name)
 		if !found {
 			return format_error("object name %q does not exist", name)
 		}
@@ -240,14 +240,14 @@ session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 @(private)
 apply_editor_action :: proc(session: ^Session, action: game.Edit_Action) -> string {
 	result := game.editor_apply(
-		&session.debug.editor,
-		&session.sim,
+		&session.runtime.debug.editor,
+		&session.runtime.sim,
 		action,
 		{
-			active = session.debug.active,
-			menu_open = session.hud.menu.open,
+			active = session.runtime.debug.active,
+			menu_open = session.runtime.hud.menu.open,
 			captured = true,
-			camera = session.debug.camera,
+			camera = session.runtime.debug.camera,
 		},
 	)
 	if result.applied || result.reason == .No_Change {
