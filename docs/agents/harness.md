@@ -146,6 +146,8 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `rows`: HUD and menu rows.
 - `scene`: exact `camera`, `objects`, `settings`, `view`, `displays`, and
   `renderer_debug` blocks. Every block is optional; at least one is required.
+  Object ids must be nonzero and unique. A scene that breaks either rule is
+  rejected and the current objects stay in place.
 - `place`: `prefab`, `position`, optional `yaw_deg`, `body`, `name`, and `light`.
 - `remove`: object `id` or `name`.
 - `bake`: rebuild and publish the static indirect; optional `probe_spacing`,
