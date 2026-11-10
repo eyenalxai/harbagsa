@@ -200,9 +200,9 @@ object_history_step :: proc(
 	index := len(from^) - 1
 	restore := from^[index]
 	opposite := object_snapshot_capture(sim, history.allocator)
-	if apply_error := simulation_apply_snapshot(sim, restore); apply_error != .None {
+	if failure := simulation_apply_snapshot(sim, restore); failure.error != .None {
 		object_snapshot_destroy(&opposite, history.allocator)
-		return edit_fail(snapshot_restore_reason(apply_error))
+		return edit_fail(snapshot_restore_reason(failure.error))
 	}
 	object_snapshot_destroy(&from^[index], history.allocator)
 	ordered_remove(from, index)
@@ -217,6 +217,10 @@ snapshot_restore_reason :: proc(error: Snapshot_Apply_Error) -> Edit_Reason {
 		return .None
 	case .Invalid_Simulation:
 		return .Restore_Invalid_Scene
+	case .Invalid_Id:
+		return .Restore_Invalid_Id
+	case .Duplicate_Id:
+		return .Restore_Duplicate_Id
 	case .Invalid_Name:
 		return .Restore_Invalid_Name
 	case .Duplicate_Name:

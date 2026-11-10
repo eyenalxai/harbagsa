@@ -308,7 +308,8 @@ _Avoid_: Body type
 
 **Object id**:
 The stable number that addresses a placed object through the game API and the
-harness. The list index stays internal.
+harness. It is nonzero and unique; the simulation snapshot boundary rejects a
+snapshot that breaks either rule. The list index stays internal.
 _Avoid_: Handle, slot
 
 **Active tool**:

@@ -2,6 +2,7 @@
 #+vet !unused-procedures // the agent harness calls this API; the game binary does not
 package game
 
+import "core:fmt"
 import "core:mem"
 
 import b3 "libs:box3d"
@@ -39,17 +40,28 @@ Placed_Object_Build :: struct {
 Snapshot_Apply_Error :: enum {
 	None,
 	Invalid_Simulation,
+	Invalid_Id,
+	Duplicate_Id,
 	Invalid_Name,
 	Duplicate_Name,
 	Body,
 }
 
-snapshot_apply_error_message :: proc(error: Snapshot_Apply_Error) -> string {
-	switch error {
+Snapshot_Apply_Failure :: struct {
+	error:        Snapshot_Apply_Error,
+	offending_id: Object_Id,
+}
+
+snapshot_apply_error_message :: proc(failure: Snapshot_Apply_Failure) -> string {
+	switch failure.error {
 	case .None:
 		return ""
 	case .Invalid_Simulation:
 		return "the simulation is not valid"
+	case .Invalid_Id:
+		return fmt.tprintf("object id %d is not valid", failure.offending_id)
+	case .Duplicate_Id:
+		return fmt.tprintf("object id %d is given twice", failure.offending_id)
 	case .Invalid_Name:
 		return "the snapshot has an invalid object name"
 	case .Duplicate_Name:
@@ -100,9 +112,19 @@ object_snapshot_destroy :: proc(snapshot: ^Object_Snapshot, allocator: mem.Alloc
 simulation_apply_snapshot :: proc(
 	sim: ^Simulation,
 	snapshot: Object_Snapshot,
-) -> Snapshot_Apply_Error {
+) -> Snapshot_Apply_Failure {
 	if !simulation_is_valid(sim) {
-		return .Invalid_Simulation
+		return {error = .Invalid_Simulation}
+	}
+	for record, index in snapshot.objects {
+		if record.id == INVALID_OBJECT_ID {
+			return {error = .Invalid_Id, offending_id = record.id}
+		}
+		for previous in snapshot.objects[:index] {
+			if previous.id == record.id {
+				return {error = .Duplicate_Id, offending_id = record.id}
+			}
+		}
 	}
 	objects := make([dynamic]Placed_Object, 0, len(snapshot.objects), sim.allocator)
 	next_id := snapshot.next_object_id
@@ -110,11 +132,11 @@ simulation_apply_snapshot :: proc(
 		name := string(record.name[:record.name_length])
 		if !object_name_valid(name) {
 			destroy_placed_objects(objects)
-			return .Invalid_Name
+			return {error = .Invalid_Name}
 		}
 		if object_list_name_taken(objects[:], name) {
 			destroy_placed_objects(objects)
-			return .Duplicate_Name
+			return {error = .Duplicate_Name}
 		}
 		spawn := Object_Spawn {
 			name      = name,
@@ -136,7 +158,7 @@ simulation_apply_snapshot :: proc(
 		)
 		if !ok {
 			destroy_placed_objects(objects)
-			return .Body
+			return {error = .Body}
 		}
 		append(&objects, object)
 		next_id = max(next_id, record.id + 1)
@@ -150,7 +172,7 @@ simulation_apply_snapshot :: proc(
 	delete(sim.objects)
 	sim.objects = objects
 	sim.next_object_id = max(sim.next_object_id, next_id)
-	return .None
+	return {}
 }
 
 @(private)
