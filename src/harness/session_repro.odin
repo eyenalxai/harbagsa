@@ -30,14 +30,11 @@ session_repro :: proc(session: ^Session, path: string, reply: ^Reply) -> string 
 		)
 	}
 	options := frame.Options {
+		alpha      = session.drawn_alpha,
 		hud        = session.view.hud,
 		debug_view = session.view.debug,
 		captured   = !session.view.hint,
 		perf       = session.view.perf,
-	}
-	camera: ^renderer.Camera
-	if session.has_camera_override {
-		camera = &session.camera_override
 	}
 	debug: ^renderer.Renderer_Debug
 	if session.render.debug.active {
@@ -47,7 +44,7 @@ session_repro :: proc(session: ^Session, path: string, reply: ^Reply) -> string 
 		&session.sim,
 		&session.debug,
 		options,
-		camera,
+		session_override_camera(session),
 		debug,
 		target,
 	)

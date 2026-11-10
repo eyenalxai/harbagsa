@@ -193,6 +193,7 @@ backend_gpu_times :: proc(ctx: rawptr) -> perf.Gpu_Times {
 backend_scene :: proc(data: ^Backend_Data, session: ^Session, alpha: f32) -> renderer.Render_Input {
 	static := game.simulation_bake_input(&session.sim, &session.scratch.bake, session.allocator)
 	renderer.refresh_bake(&data.renderer, static)
+	session.drawn_alpha = alpha
 	options := frame.Options {
 		alpha         = alpha,
 		delta_seconds = game.SIMULATION_STEP,
@@ -206,15 +207,11 @@ backend_scene :: proc(data: ^Backend_Data, session: ^Session, alpha: f32) -> ren
 	if session.hud.perf.visible {
 		session.hud.perf.stats = perf.stats(&session.perf.state)
 	}
-	camera_override: ^renderer.Camera
-	if session.has_camera_override {
-		camera_override = &session.camera_override
-	}
 	scene := frame.build(
 		&session.sim,
 		&session.debug,
 		options,
-		camera_override,
+		session_override_camera(session),
 		&session.hud,
 		session.scratch,
 		static,

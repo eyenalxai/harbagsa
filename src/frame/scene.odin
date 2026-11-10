@@ -96,25 +96,13 @@ scene_capture :: proc(
 			perf = view.perf,
 		},
 	}
-	scene.camera.fov_deg = f32(math.to_degrees(PLAYER_FOV_X))
-	if camera_override != nil {
-		scene.camera.source = strings.clone("override", allocator)
-		scene.camera.position = camera_override.position
-		scene.camera.yaw_deg = f32(math.to_degrees(camera_override.yaw))
-		scene.camera.pitch_deg = f32(math.to_degrees(camera_override.pitch))
-		scene.camera.fov_deg = f32(math.to_degrees(camera_override.fov_x))
-	} else if debug.active {
-		scene.camera.source = strings.clone("debug", allocator)
-		scene.camera.position = debug.camera.position
-		scene.camera.yaw_deg = f32(math.to_degrees(debug.camera.yaw))
-		scene.camera.pitch_deg = f32(math.to_degrees(debug.camera.pitch))
-	} else {
-		snapshot := game.simulation_snapshot(sim)
-		camera := game.spider_camera(sim, 1.0)
-		scene.camera.source = strings.clone("third_person", allocator)
-		scene.camera.position = camera.position
-		scene.camera.yaw_deg = f32(math.to_degrees(camera.yaw))
-		scene.camera.pitch_deg = f32(math.to_degrees(camera.pitch))
+	view_data := camera_view(sim, debug, camera_override, view.alpha)
+	scene.camera.source = strings.clone(view_data.source, allocator)
+	scene.camera.position = view_data.camera.position
+	scene.camera.yaw_deg = f32(math.to_degrees(view_data.camera.yaw))
+	scene.camera.pitch_deg = f32(math.to_degrees(view_data.camera.pitch))
+	scene.camera.fov_deg = f32(math.to_degrees(view_data.camera.fov_x))
+	if snapshot, has_player := view_data.player.?; has_player {
 		scene.camera.player = Scene_Player {
 			position = snapshot.position,
 			yaw_deg = f32(math.to_degrees(snapshot.body_yaw)),
