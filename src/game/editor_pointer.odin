@@ -26,9 +26,8 @@ editor_primary_press :: proc(editor: ^Editor, sim: ^Simulation, ctx: Edit_Contex
 	if hit.hit {
 		id := simulation_object_id_for_body(sim, b3.Shape_GetBody(hit.shapeId))
 		if id != INVALID_OBJECT_ID {
-			editor_selection_set(editor, sim, id)
-			editor.dragging = true
-			editor.drag_recorded = false
+			editor_selection_set(editor, id)
+			editor.drag = Drag_Active{position = simulation_object_box(sim, id).center}
 			return edit_ok()
 		}
 	}
@@ -38,9 +37,7 @@ editor_primary_press :: proc(editor: ^Editor, sim: ^Simulation, ctx: Edit_Contex
 
 @(private)
 editor_primary_release :: proc(editor: ^Editor) -> Edit_Result {
-	if editor.dragging {
-		editor_end_drag(editor)
-	}
+	editor_end_drag(editor)
 	return edit_ok()
 }
 
@@ -64,7 +61,8 @@ editor_drag_move :: proc(
 	look_delta: [2]f32,
 	ctx: Edit_Context,
 ) -> Edit_Result {
-	if !editor.dragging || !ctx.captured {
+	active, dragging := editor.drag.(Drag_Active)
+	if !dragging || !ctx.captured {
 		return edit_no_change()
 	}
 	object, ok := editor_selected_object(editor, sim)
@@ -74,14 +72,16 @@ editor_drag_move :: proc(
 
 	forward := debug_camera_forward_horizontal(ctx.camera)
 	right := debug_camera_right(ctx.camera)
-	target := editor.drag_position +
+	target := active.position +
 		right * (look_delta.x * OBJECT_DRAG_SCALE) + forward * (-look_delta.y * OBJECT_DRAG_SCALE)
-	result := editor_commit_move(editor, sim, object, target, !editor.drag_recorded)
+	result := editor_commit_move(editor, sim, object, target, !active.recorded)
 	if !result.applied {
 		return result
 	}
-	if !editor.drag_recorded {
-		editor.drag_recorded = true
+	if !active.recorded {
+		current, _ := editor.drag.(Drag_Active)
+		current.recorded = true
+		editor.drag = current
 	}
 	return edit_ok()
 }
@@ -114,16 +114,17 @@ editor_wheel :: proc(
 	if !ok {
 		return edit_no_change()
 	}
-	if !editor.dragging {
-		editor.drag_position = b3.Body_GetPosition(object.body)
+	target := b3.Body_GetPosition(object.body)
+	if active, dragging := editor.drag.(Drag_Active); dragging {
+		target = active.position
 	}
-	target := editor.drag_position
 	target.y += f32(steps) * OBJECT_WHEEL_STEP
 	return editor_commit_move(editor, sim, object, target, true)
 }
 
 @(private)
 editor_cancel :: proc(editor: ^Editor) -> Edit_Result {
+	editor_end_drag(editor)
 	switch _ in editor.tool {
 	case Palette:
 		return editor_palette_close(editor)

@@ -18,9 +18,7 @@ Placement_Defaults :: struct {
 Editor :: struct {
 	tool:               Tool,
 	selection:          Selection,
-	dragging:           bool,
-	drag_position:      b3.Vec3,
-	drag_recorded:      bool,
+	drag:               Drag,
 	placement_defaults: Placement_Defaults,
 	history:            ^Object_History,
 	history_allocator:  mem.Allocator,
@@ -35,6 +33,20 @@ Selection_Object :: struct {
 Selection :: union #no_nil {
 	Selection_None,
 	Selection_Object,
+}
+
+Drag_None :: struct {}
+
+Drag_Active :: struct {
+	recorded: bool,
+	position: b3.Vec3,
+}
+
+// The drag is idle or active as one value, so a position can never outlive the
+// drag that owned it.
+Drag :: union #no_nil {
+	Drag_None,
+	Drag_Active,
 }
 
 editor_create :: proc(allocator: mem.Allocator) -> Editor {
@@ -91,8 +103,13 @@ editor_cancel_editing :: proc(editor: ^Editor) {
 }
 
 editor_end_drag :: proc(editor: ^Editor) {
-	editor.dragging = false
-	editor.drag_recorded = false
+	editor.drag = Drag_None{}
+}
+
+@(private)
+editor_dragging :: proc(editor: ^Editor) -> bool {
+	_, dragging := editor.drag.(Drag_Active)
+	return dragging
 }
 
 editor_clear_selection :: proc(editor: ^Editor) {
@@ -130,8 +147,7 @@ editor_selected_object :: proc(editor: ^Editor, sim: ^Simulation) -> (Placed_Obj
 }
 
 @(private)
-editor_selection_set :: proc(editor: ^Editor, sim: ^Simulation, id: Object_Id) {
+editor_selection_set :: proc(editor: ^Editor, id: Object_Id) {
 	editor_end_drag(editor)
 	editor.selection = Selection_Object{id = id}
-	editor.drag_position = simulation_object_box(sim, id).center
 }
