@@ -21,9 +21,9 @@ render-only field out of the simulation digest.
 
 - `State` and its `json` tags are the schema. `state_schema.odin` walks the
   struct, the nested objects, the slices, and the arrays. A path segment is the
-  JSON name; a slice segment is an index. `objects.<id>` is the one special
-  case, because the document addresses objects by id; `objects.count` is the
-  other.
+  JSON name; a slice segment is an index. `objects.id.<id>.<field>` and
+  `objects.name.<name>.<field>` address an object explicitly, and
+  `objects.count` is the list length.
 - `state_build_sections` builds only the sections a field names. `state_build`
   is the full document. `digest` is the only field that asks for every section.
 - `state_build_sections` is pure: the HUD and menu update happens in

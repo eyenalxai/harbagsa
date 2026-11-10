@@ -130,7 +130,7 @@ simulation_apply_snapshot :: proc(
 	next_id := snapshot.next_object_id
 	for &record in snapshot.objects {
 		name := string(record.name[:record.name_length])
-		if !object_name_valid(name) {
+		if !object_name_storable(name) {
 			destroy_placed_objects(objects)
 			return {error = .Invalid_Name}
 		}
@@ -210,7 +210,7 @@ create_object_build :: proc(sim: ^Simulation, build: Placed_Object_Build) -> Obj
 
 @(private)
 spawn_object :: proc(sim: ^Simulation, build: Placed_Object_Build) -> bool {
-	if !object_name_valid(build.spawn.name) || object_name_taken(sim, build.spawn.name) {
+	if !object_name_storable(build.spawn.name) || object_name_taken(sim, build.spawn.name) {
 		return false
 	}
 	object, ok := make_placed_object(sim, build)
