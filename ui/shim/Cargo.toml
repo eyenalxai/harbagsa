@@ -1,0 +1,18 @@
+[package]
+name = "harbagsa-ui"
+version = "0.0.1"
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["staticlib", "rlib"]
+
+[[bin]]
+name = "ui-spike"
+path = "src/spike.rs"
+
+[dependencies]
+rune = { path = "../../vendor/rune/crates/rune" }
+wgpu = { version = "30.0.1", features = ["vulkan"] }
+ash = "0.38"
+pollster = "0.4"
