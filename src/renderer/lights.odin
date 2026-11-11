@@ -17,8 +17,8 @@ Light :: struct {
 LAMP_INSTANCE_MASK :: 0x01
 BOX_INSTANCE_MASK :: 0xFF
 
-// A lamp must not block its own point light, so it gets a mask the shadow ray
-// does not test. Every other box uses all bits.
+// A lamp is excluded from every shadow ray, not only its own, so it gets a mask
+// the shadow ray does not test. Every other box uses all bits.
 box_instance_mask :: proc(is_lamp: bool) -> u32 {
 	return is_lamp ? LAMP_INSTANCE_MASK : BOX_INSTANCE_MASK
 }
