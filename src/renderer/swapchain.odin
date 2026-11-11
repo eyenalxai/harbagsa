@@ -205,6 +205,9 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 			return .Fatal
 		}
 	}
+	if !ui_attach_target(r) {
+		return .Fatal
+	}
 	r.target.dirty = false
 
 	return .Ok
