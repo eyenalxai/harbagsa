@@ -3,6 +3,8 @@ use std::sync::OnceLock;
 
 use ash::vk;
 use ash::vk::Handle;
+use rune::render::Renderer;
+use rune::{Cx, El, Env, Runtime};
 
 #[repr(C)]
 pub struct UiVkConfig {
@@ -19,10 +21,27 @@ pub struct UiVkDevice {
     pub present_queue: *mut c_void,
 }
 
+#[repr(C)]
+pub struct UiTarget {
+    pub format: u32,
+    pub width: u32,
+    pub height: u32,
+    pub scale: f32,
+    pub images: *const u64,
+    pub image_count: u32,
+}
+
 struct Host {
     _instance: wgpu::Instance,
-    _device: wgpu::Device,
-    _queue: wgpu::Queue,
+    device: wgpu::Device,
+    queue: wgpu::Queue,
+    format: Option<wgpu::TextureFormat>,
+    runtime: Option<Runtime<()>>,
+    renderer: Option<Renderer>,
+    textures: Vec<wgpu::Texture>,
+    views: Vec<wgpu::TextureView>,
+    width: u32,
+    height: u32,
 }
 
 static HOST: OnceLock<usize> = OnceLock::new();
@@ -192,8 +211,15 @@ unsafe fn adopt(
         },
         Host {
             _instance: instance,
-            _device: device,
-            _queue: queue,
+            device,
+            queue,
+            format: None,
+            runtime: None,
+            renderer: None,
+            textures: Vec::new(),
+            views: Vec::new(),
+            width: 0,
+            height: 0,
         },
     ))
 }
@@ -219,4 +245,163 @@ pub extern "C" fn ui_vk_init(
             1
         }
     }
+}
+
+fn texture_format(value: u32) -> Option<wgpu::TextureFormat> {
+    Some(match vk::Format::from_raw(value as i32) {
+        vk::Format::R8G8B8A8_UNORM => wgpu::TextureFormat::Rgba8Unorm,
+        vk::Format::R8G8B8A8_SRGB => wgpu::TextureFormat::Rgba8UnormSrgb,
+        vk::Format::B8G8R8A8_UNORM => wgpu::TextureFormat::Bgra8Unorm,
+        vk::Format::B8G8R8A8_SRGB => wgpu::TextureFormat::Bgra8UnormSrgb,
+        _ => return None,
+    })
+}
+
+fn host() -> Option<&'static mut Host> {
+    HOST.get().map(|&pointer| unsafe { &mut *(pointer as *mut Host) })
+}
+
+fn view(_: &(), _: &mut Cx<()>) -> El {
+    use rune::{Color, el, text};
+    el()
+        .w_full()
+        .h_full()
+        .padding(24.0)
+        .child(
+            el()
+                .padding(16.0)
+                .radius(10.0)
+                .fill(Color { r: 0.06, g: 0.07, b: 0.09, a: 0.92 })
+                .child(text("Rune").color(Color::WHITE)),
+        )
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ui_attach(target: *const UiTarget) -> i32 {
+    if target.is_null() {
+        return 1;
+    }
+    let target = unsafe { &*target };
+    let Some(host) = host() else { return 2 };
+    let Some(format) = texture_format(target.format) else {
+        eprintln!("harbagsa-ui: unsupported target format {}", target.format);
+        return 3;
+    };
+    if target.images.is_null() || target.image_count == 0 {
+        return 4;
+    }
+
+    let mut textures = Vec::new();
+    let mut views = Vec::new();
+    {
+        let Some(hal) = (unsafe { host.device.as_hal::<wgpu::hal::api::Vulkan>() }) else {
+            return 5;
+        };
+        for index in 0..target.image_count as usize {
+            let raw = unsafe { *target.images.add(index) };
+            let hal_desc = wgpu::hal::TextureDescriptor {
+                label: Some("ui-target"),
+                size: wgpu::Extent3d {
+                    width: target.width,
+                    height: target.height,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format,
+                usage: wgpu::TextureUses::COLOR_TARGET,
+                memory_flags: wgpu::hal::MemoryFlags::empty(),
+                view_formats: vec![],
+            };
+            let hal_texture = unsafe {
+                hal.texture_from_raw(
+                    vk::Image::from_raw(raw),
+                    &hal_desc,
+                    Some(Box::new(|| {})),
+                    wgpu::hal::vulkan::TextureMemory::External,
+                )
+            };
+            let desc = wgpu::TextureDescriptor {
+                label: Some("ui-target"),
+                size: hal_desc.size,
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                view_formats: &[],
+            };
+            let texture = unsafe {
+                host.device.create_texture_from_hal::<wgpu::hal::api::Vulkan>(
+                    hal_texture,
+                    &desc,
+                    wgpu::TextureUses::COLOR_TARGET,
+                )
+            };
+            views.push(texture.create_view(&wgpu::TextureViewDescriptor::default()));
+            textures.push(texture);
+        }
+    }
+
+    host.format = Some(format);
+    host.width = target.width;
+    host.height = target.height;
+    host.renderer = Some(Renderer::new(&host.device, format));
+    let mut runtime = Runtime::new(
+        (),
+        view,
+        (target.width as f32, target.height as f32),
+        Env::new(false, target.scale),
+    );
+    runtime.frame(0.0);
+    host.runtime = Some(runtime);
+    host.textures = textures;
+    host.views = views;
+    0
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ui_draw(image_index: u32) -> i32 {
+    let Some(host) = host() else { return 1 };
+    let index = image_index as usize;
+    if index >= host.views.len() {
+        return 2;
+    }
+    let Some(format) = host.format else { return 3 };
+    let Some(runtime) = host.runtime.as_mut() else { return 4 };
+    let Some(renderer) = host.renderer.as_mut() else { return 5 };
+
+    runtime.frame(0.0);
+    renderer.prepare(
+        &host.device,
+        &host.queue,
+        &mut runtime.text.atlas,
+        &runtime.instances,
+        (host.width, host.height),
+    );
+    let mut encoder = host
+        .device
+        .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("rune-ui") });
+    renderer.encode_layers(&mut encoder);
+    renderer.draw_target_range_with(
+        &mut encoder,
+        &host.views[index],
+        format,
+        wgpu::LoadOp::Load,
+        0..runtime.instances.len() as u32,
+        &mut |_, _| {},
+    );
+    let submission = renderer.submit(&host.queue, encoder);
+    if host
+        .device
+        .poll(wgpu::PollType::Wait {
+            submission_index: Some(submission),
+            timeout: None,
+        })
+        .is_err()
+    {
+        return 6;
+    }
+    0
 }
