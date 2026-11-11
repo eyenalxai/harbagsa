@@ -348,11 +348,12 @@ pub extern "C" fn ui_attach(target: *const UiTarget) -> i32 {
     host.width = target.width;
     host.height = target.height;
     host.renderer = Some(Renderer::new(&host.device, format));
+    let scale = if target.scale > 0.0 { target.scale } else { 1.0 };
     let mut runtime = Runtime::new(
         (),
         view,
-        (target.width as f32, target.height as f32),
-        Env::new(false, target.scale),
+        (target.width as f32 / scale, target.height as f32 / scale),
+        Env::new(false, scale),
     );
     runtime.frame(0.0);
     host.runtime = Some(runtime);
