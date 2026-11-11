@@ -1,6 +1,7 @@
 ODIN ?= odin
 ODIN_FLAGS ?= -vet -vet-style -vet-semicolon -vet-tabs -vet-using-param -vet-unused-procedures -vet-packages:main,platform,renderer,font,game,geometry,frame,perf,harness,display,ui,input,bake -strict-style -warnings-as-errors -disallow-do
 ODIN_COLLECTIONS := -collection:libs=vendor -collection:src=src
+LINKER_FLAGS := -extra-linker-flags:"-lxkbcommon"
 # Library checks cannot know which procedures another package calls, so they
 # omit -vet-unused-procedures. The main check still runs it across every
 # imported package.
@@ -21,7 +22,7 @@ HARNESS_REVISION := $(shell git rev-parse --short HEAD 2>/dev/null || printf unk
 # sees neither.
 HARNESS_DIRTY := $(shell if git rev-parse --git-dir >/dev/null 2>&1 && [ -z "$$(git status --porcelain 2>/dev/null)" ]; then printf false; else printf true; fi)
 AGENT_DEFINES := -define:HARNESS_REVISION='"$(HARNESS_REVISION)"' -define:HARNESS_DIRTY=$(HARNESS_DIRTY)
-AGENT_BUILD := $(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) $(AGENT_DEFINES) -out:$(AGENT_BIN)
+AGENT_BUILD := $(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) $(AGENT_DEFINES) $(LINKER_FLAGS) -out:$(AGENT_BIN)
 SCENARIO ?=
 OUT ?=
 JQ ?= jq
@@ -176,7 +177,7 @@ agent: $(RUST_LIB) $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 
 build: $(RUST_LIB) $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	mkdir -p bin
-	$(ODIN) build . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -out:$(BIN)
+	$(ODIN) build . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) $(LINKER_FLAGS) -out:$(BIN)
 	$(AGENT_BUILD)
 
 $(BAKE_BIN): $(BAKE_SOURCES) $(BOX3D_LIB)
@@ -221,7 +222,7 @@ check-lines:
 	exit $$status
 
 run: $(RUST_LIB) $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
-	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
+	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) $(LINKER_FLAGS)
 
 check-validation-layer:
 	@found=false; \
@@ -271,7 +272,7 @@ shot: agent
 	printf '%s\n' "$$paths"
 
 validate-demo: check-validation-layer $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
-	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ENABLE_VALIDATION_LAYERS=true
+	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) $(LINKER_FLAGS) -define:ENABLE_VALIDATION_LAYERS=true
 
 clean:
 	rm -rf bin build $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB)
