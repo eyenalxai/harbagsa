@@ -53,7 +53,9 @@ ray_cast :: proc(bvh: ^Bvh, ray: Ray, tmin, tmax: f64) -> (Hit, bool) #no_bounds
 	return best, found
 }
 
-// The bake skips emissive boxes: a lamp must not block its own point light.
+// The bake skips every emissive box, not only lamps. A static emissive box
+// therefore cannot occlude another light in the bake; the frame path uses
+// explicit lamp identity.
 shadow_occluded :: proc(bvh: ^Bvh, ray: Ray, tmin, tmax: f64) -> bool #no_bounds_check {
 	if tmax <= tmin || len(bvh.nodes) == 0 {
 		return false
