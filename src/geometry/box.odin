@@ -11,8 +11,8 @@ Box :: struct {
 	half_extents: [3]f32,
 	color:        [4]f32,
 	rotation:     [4]f32,
-	// A non-zero strength makes the box a lamp: it glows and it does not block
-	// its own point light.
+	// A non-zero strength makes the box glow. It does not decide shadow
+	// blocking; the frame box carries lamp identity for that.
 	emissive:     f32,
 	visual_only:  bool,
 }

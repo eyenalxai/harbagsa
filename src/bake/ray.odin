@@ -53,8 +53,7 @@ ray_cast :: proc(bvh: ^Bvh, ray: Ray, tmin, tmax: f64) -> (Hit, bool) #no_bounds
 	return best, found
 }
 
-// Shadow rays use the same mask rule as the frame: a lamp or any emissive box
-// does not block a point light.
+// The bake skips emissive boxes: a lamp must not block its own point light.
 shadow_occluded :: proc(bvh: ^Bvh, ray: Ray, tmin, tmax: f64) -> bool #no_bounds_check {
 	if tmax <= tmin || len(bvh.nodes) == 0 {
 		return false
