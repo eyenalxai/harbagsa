@@ -129,6 +129,7 @@ make bake
 ./bin/harbagsa-agent run scenarios/probe-bright-emitter.json --param basis=sh9 --param moments=16
 ```
 
-The run directories are `runs/probe-thin-wall-*` and
-`runs/probe-bright-emitter-*`. The PNGs, artifacts, and `.time` sidecars stay
-out of the repository.
+The run directories from this pass are `runs/final-probe-thin-wall-*` and
+`runs/final-probe-bright-emitter-*`. The commands above write the default
+`runs/probe-thin-wall` and `runs/probe-bright-emitter` stems. The PNGs,
+artifacts, and `.time` sidecars stay out of the repository.
