@@ -39,6 +39,7 @@ Frame_Box :: struct {
 	box:      geometry.Box,
 	slot:     bake.Box_Slot,
 	identity: Frame_Box_Identity,
+	is_lamp:  bool,
 }
 
 Render_Input :: struct {

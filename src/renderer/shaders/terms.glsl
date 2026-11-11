@@ -120,7 +120,7 @@ vec3 point_light_radiance(
         float falloff = 1.0 - reach * reach;
         falloff *= falloff;
         float visibility = 1.0;
-        if (trace_shadows && camera.lights.y > 0.5) {
+        if (trace_shadows && camera.lights.y > 0.5 && diffuse > 0.0) {
             float shadow_distance = max(distance - POINT_SHADOW_END_BIAS, 0.0);
             if (occluded(
                 world_position + normal * 0.002,
