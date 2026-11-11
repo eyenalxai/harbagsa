@@ -4,7 +4,7 @@
 
 **Date:** 2026-11-10
 
-**Status:** Complete. Read-only research; no code, build, or commit changes. Sources were checked on 2026-11-10. Claims that could not be verified are listed under **Not found** rather than guessed.
+**Status:** Complete. Research snapshot; no code or build changes. Sources were checked on 2026-11-10. Claims that could not be verified are listed under **Not found** rather than guessed.
 
 **Scope:** "Noise-free" here means no random variance: deterministic sampling, no stochastic noise, no temporal denoiser. Deterministic quadrature error and discretization error still count as error. The existing offline bake and the existing hard ray-query direct shadows are the baseline. Real-time path-traced/ray-traced GI systems appear only as shipped-engine context; the offline bake's existing deterministic ray sampling is part of the baseline, not a new recommendation.
 

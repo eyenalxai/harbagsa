@@ -4,7 +4,7 @@
 
 **Date.** 2026-11-10
 
-**Status.** Research note. Read-only: no code, build, or commit changes. Sources were checked on 2026-11-10. Claims that could not be verified are marked in **Not found** or inline as "not verified." This note does not change any ADR. The existing bake and the existing hard ray-query shadows are the baseline, not recommendations.
+**Status.** Research note. Research snapshot: no code or build changes. Sources were checked on 2026-11-10. Claims that could not be verified are marked in **Not found** or inline as "not verified." This note does not change any ADR. Current rule: movable lights are direct-only, so the dynamic-GI techniques below are out of scope; the note records them only for the case where that rule changes. The existing bake and the existing hard ray-query shadows are the baseline, not recommendations.
 
 **Constraint used throughout.** "Noise-free" means no Monte Carlo variance: no stochastic sample selection, no random ray directions, no temporal denoising. A technique can be noise-free and still be biased, blocky, or leaky. Those are separate failures and are called out separately.
 

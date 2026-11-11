@@ -4,7 +4,7 @@
 
 **Date.** 2026-11-10
 
-**Status.** Research note. Read-only: no code, build, or commit was changed. The
+**Status.** Research note. Research snapshot: no code or build was changed. The
 repository's code and measured evidence are the source of truth for harbagsa
 numbers; external sources are cited by section or page. Stochastic and
 path-traced methods are out of scope by instruction. The existing offline bake

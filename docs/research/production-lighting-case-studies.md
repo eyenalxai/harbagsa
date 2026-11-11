@@ -4,7 +4,7 @@
 
 **Date.** 2026-11-10
 
-**Status.** Complete. Research only: no code, build, or commit changes. The comparison is limited to noise-free architectures: deterministic sampling, baked transport, probe fields, and coarse volumetric approximations. The existing offline bake and hard ray-query shadows are the baseline, not a recommendation. Some cited bakers (Frostbite Flux, Unity's Progressive Lightmapper) are stochastic internally; they are evidence of shipped baked architecture, not a recommendation to add path tracing. The shipped frame is what this document compares: no stochastic noise and no temporal denoise.
+**Status.** Complete. Research snapshot: no code or build changes. The comparison is limited to noise-free architectures: deterministic sampling, baked transport, probe fields, and coarse volumetric approximations. The existing offline bake and hard ray-query shadows are the baseline, not a recommendation. Some cited bakers (Frostbite Flux, Unity's Progressive Lightmapper) are stochastic internally; they are evidence of shipped baked architecture, not a recommendation to add path tracing. The shipped frame is what this document compares: no stochastic noise and no temporal denoise.
 
 **Citation convention.** `[R#]` points to **References**. Section and slide names are quoted from the source. Items marked **secondary** are press, community, or third-party summaries, not the studio or engine vendor. Items marked **inference** are my reasoning from the cited facts, not a claim the source makes.
 
