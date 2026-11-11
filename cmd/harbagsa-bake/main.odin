@@ -17,6 +17,8 @@ main :: proc() {
 run :: proc(args: []string) -> int {
 	output := DEFAULT_OUTPUT
 	spacing := f32(bake.PROBE_SPACING)
+	basis := bake.Probe_Basis.Octa
+	moments := u32(bake.PROBE_MOMENT_TEXELS)
 	threads, counted := bake.default_threads()
 	if !counted {
 		fmt.eprintln("harbagsa-bake: cannot read the CPU count; using one thread")
@@ -45,6 +47,28 @@ run :: proc(args: []string) -> int {
 				return argument_error("--probe-spacing must be 1 or 2")
 			}
 			spacing = value
+			index += 2
+		case "--probe-basis":
+			if index + 1 >= len(args) {
+				return argument_error("--probe-basis needs octa or sh9")
+			}
+			parsed, parsed_ok := bake.probe_basis_parse(args[index + 1])
+			if !parsed_ok {
+				return argument_error("--probe-basis must be octa or sh9")
+			}
+			basis = parsed
+			index += 2
+		case "--probe-moments":
+			if index + 1 >= len(args) {
+				return argument_error("--probe-moments needs 8 or 16")
+			}
+			value, value_ok := strconv.parse_int(args[index + 1])
+			if !value_ok ||
+			   (value != int(bake.PROBE_MOMENT_TEXELS) &&
+			    value != int(bake.PROBE_MOMENT_TEXELS_HIGH)) {
+				return argument_error("--probe-moments must be 8 or 16")
+			}
+			moments = u32(value)
 			index += 2
 		case "--threads":
 			if index + 1 >= len(args) {
@@ -75,6 +99,8 @@ run :: proc(args: []string) -> int {
 
 	quality := bake.DEFAULT_QUALITY
 	quality.probe_spacing = spacing
+	quality.probe_basis = u32(basis)
+	quality.probe_moment_texels = moments
 	artifact, report, build_error := bake.build(
 		static,
 		{quality = quality, threads = threads},
@@ -93,15 +119,18 @@ run :: proc(args: []string) -> int {
 	if time_error := bake.write_time(output, report.bake_ms); time_error != "" {
 		fmt.eprintf("harbagsa-bake: %s\n", time_error)
 	}
-	print_report(output, spacing, threads, report)
+	print_report(output, spacing, basis, moments, threads, report)
 	return 0
 }
 
 @(private)
 usage :: proc() {
-	fmt.println("usage: harbagsa-bake [--out PATH] [--probe-spacing 1|2] [--threads N]")
+	fmt.println("usage: harbagsa-bake [--out PATH] [--probe-spacing 1|2] [--probe-basis octa|sh9]")
+	fmt.println("                     [--probe-moments 8|16] [--threads N]")
 	fmt.println("  --out PATH          artifact path (default build/bake/arena.hbake)")
 	fmt.println("  --probe-spacing M   1 m grid, or the 2 m fallback")
+	fmt.println("  --probe-basis B     octa irradiance, or the SH9 A/B option")
+	fmt.println("  --probe-moments N   8 x 8 depth moments, or the 16 x 16 A/B option")
 	fmt.println("  --threads N         worker count; the result does not depend on it")
 }
 
@@ -113,9 +142,22 @@ argument_error :: proc(message: string) -> int {
 }
 
 @(private)
-print_report :: proc(path: string, spacing: f32, threads: int, report: bake.Build_Report) {
+print_report :: proc(
+	path: string,
+	spacing: f32,
+	basis: bake.Probe_Basis,
+	moments: u32,
+	threads: int,
+	report: bake.Build_Report,
+) {
 	fmt.printf("harbagsa-bake: %s\n", path)
 	fmt.printf("  key %016x  payload %016x\n", report.key, report.payload_hash)
+	fmt.printf(
+		"  probe basis %s  moments %d x %d\n",
+		bake.probe_basis_name(basis),
+		moments,
+		moments,
+	)
 	fmt.printf("  bake %d ms  threads %d\n", report.bake_ms, threads)
 	fmt.printf(
 		"  stages: bvh %d ms  lightmap %d ms  probes %d ms  encode %d ms\n",

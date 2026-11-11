@@ -1,12 +1,12 @@
 {
-  "note": "One simulation frame, eight diagnostic views: the composed frame and each radiance term.",
+  "note": "One simulation frame, nine diagnostic views: the composed frame, each radiance term, and the linear probe reconstruction.",
   "size": "1280x720",
   "view": {"hud": false, "debug": false, "hint": false, "perf": false},
   "commands": [
     {"cmd": "bake"},
     {"cmd": "camera", "position": [-2.0, 2.4, 10.0], "look_at": [-3.0, 0.3, 6.0]},
     {"cmd": "settle", "frames": 30},
-    {"cmd": "capture", "name": "terms", "views": ["beauty", "direct", "lightmap", "probe", "emissive", "shadow", "lightmap_grid", "probe_cell"]},
+    {"cmd": "capture", "name": "terms", "views": ["beauty", "direct", "lightmap", "probe", "emissive", "shadow", "lightmap_grid", "probe_cell", "probe_linear"]},
     {"cmd": "capture", "name": "after", "format": "stats", "png": true}
   ]
 }

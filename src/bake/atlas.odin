@@ -208,6 +208,14 @@ f16_slice_to_bytes :: proc(values: []f16, allocator: mem.Allocator) -> []u8 {
 	return bytes
 }
 
+u32_slice_to_bytes :: proc(values: []u32, allocator: mem.Allocator) -> []u8 {
+	bytes := make([]u8, len(values) * size_of(u32), allocator)
+	if len(values) > 0 {
+		mem.copy(raw_data(bytes), raw_data(values), len(bytes))
+	}
+	return bytes
+}
+
 atlas_to_bytes :: proc(atlas: []f32, allocator: mem.Allocator) -> []u8 {
 	bytes, values := f16_buffer(len(atlas), allocator)
 	for value, index in atlas {

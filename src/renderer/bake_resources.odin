@@ -76,6 +76,15 @@ create_bake_resources :: proc(r: ^Renderer, b: ^Bake_Resources) -> bool {
 	) {
 		return false
 	}
+	basis := bake.Probe_Basis(data.header.probe_basis)
+	irradiance_format := vk.Format.R16G16B16A16_SFLOAT
+	if basis == .Octa {
+		irradiance_format = .B10G11R11_UFLOAT_PACK32
+	}
+	if !format_supports(r, irradiance_format, {.SAMPLED_IMAGE_FILTER_LINEAR}) {
+		log_bake_error(r, "the device cannot filter the probe irradiance format")
+		return false
+	}
 	volume := Bake_Volume_Uniform {
 		min           = data.header.probe_min,
 		spacing       = data.header.probe_spacing,
@@ -83,15 +92,17 @@ create_bake_resources :: proc(r: ^Renderer, b: ^Bake_Resources) -> bool {
 		probe_texels  = data.header.probe_texels,
 		atlas_columns = data.header.probe_atlas_columns,
 		probe_count   = data.header.probe_count,
-		atlas_width   = data.probe_atlas_width,
-		atlas_height  = data.probe_atlas_height,
+		basis         = data.header.probe_basis,
+		moment_texels = data.header.probe_moment_texels,
 	}
 	if !create_bake_probes(
 		r,
 		b,
-		data.probe_atlas_width,
-		data.probe_atlas_height,
-		.R16G16B16A16_SFLOAT,
+		data.probe_irradiance_width,
+		data.probe_irradiance_height,
+		data.probe_moment_width,
+		data.probe_moment_height,
+		irradiance_format,
 		.R16G16_SFLOAT,
 		data.probe_irradiance,
 		data.probe_moments,

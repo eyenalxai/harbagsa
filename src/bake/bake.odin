@@ -5,12 +5,12 @@ package bake
 
 import "src:geometry"
 
-FORMAT_VERSION :: 1
-TOOL_VERSION :: 2
+FORMAT_VERSION :: 2
+TOOL_VERSION :: 3
 
 // The bake key mixes this version too, so a changed input rule invalidates an
 // old artifact without a format bump.
-KEY_VERSION :: 1
+KEY_VERSION :: 2
 
 MAGIC :: [4]u8{'H', 'B', 'A', 'K'}
 
@@ -22,12 +22,20 @@ MIN_CHART_TEXELS :: 8
 
 PROBE_TEXELS :: 8
 PROBE_TEXEL_COUNT :: PROBE_TEXELS * PROBE_TEXELS
-PROBE_IRRADIANCE_CHANNELS :: 4
+PROBE_MOMENT_TEXELS :: 8
+PROBE_MOMENT_TEXELS_HIGH :: 16
+PROBE_SH_COEFFS :: 9
+PROBE_SH_TEXELS :: PROBE_SH_COEFFS
 PROBE_MOMENT_CHANNELS :: 2
-PROBE_BYTES_PER_IRRADIANCE_TEXEL :: 8
+PROBE_BYTES_PER_IRRADIANCE_TEXEL :: 4
 PROBE_BYTES_PER_MOMENT_TEXEL :: 4
 PROBE_SPACING :: 1.0
 PROBE_SPACING_FALLBACK :: 2.0
+
+// SH9 is signed, so it cannot use the packed unsigned HDR format. One probe is
+// nine RGBA16F texels in a 9 x probe count image. This device does not sample
+// RGB16F, so the fourth channel is padding on the optional signed path only.
+PROBE_SH_BYTES_PER_PROBE :: PROBE_SH_TEXELS * 8
 
 LIGHTMAP_RAYS :: 128
 PROBE_RAYS :: 1024
@@ -36,28 +44,55 @@ BOUNCES :: 1
 // A probe shelf atlas must stay inside the minimum Vulkan 2D extent.
 MAX_PROBE_ATLAS_DIM :: 16384
 
+Probe_Basis :: enum u32 {
+	Octa = 0,
+	SH9  = 1,
+}
+
+PROBE_BASIS_NAMES := [Probe_Basis]string {
+	.Octa = "octa",
+	.SH9  = "sh9",
+}
+
+probe_basis_name :: proc(basis: Probe_Basis) -> string {
+	return PROBE_BASIS_NAMES[basis]
+}
+
+probe_basis_parse :: proc(name: string) -> (basis: Probe_Basis, ok: bool) {
+	for candidate in Probe_Basis {
+		if PROBE_BASIS_NAMES[candidate] == name {
+			return candidate, true
+		}
+	}
+	return .Octa, false
+}
+
 Quality :: struct #packed {
-	atlas_size:       u32,
-	texels_per_meter: u32,
-	gutter_texels:    u32,
-	min_chart:        u32,
-	lightmap_rays:    u32,
-	probe_rays:       u32,
-	bounces:          u32,
-	probe_spacing:    f32,
-	probe_texels:     u32,
+	atlas_size:          u32,
+	texels_per_meter:    u32,
+	gutter_texels:       u32,
+	min_chart:           u32,
+	lightmap_rays:       u32,
+	probe_rays:          u32,
+	bounces:             u32,
+	probe_spacing:       f32,
+	probe_texels:        u32,
+	probe_moment_texels: u32,
+	probe_basis:         u32,
 }
 
 DEFAULT_QUALITY :: Quality {
-	atlas_size       = ATLAS_SIZE,
-	texels_per_meter = TEXELS_PER_METER,
-	gutter_texels    = GUTTER_TEXELS,
-	min_chart        = MIN_CHART_TEXELS,
-	lightmap_rays    = LIGHTMAP_RAYS,
-	probe_rays       = PROBE_RAYS,
-	bounces          = BOUNCES,
-	probe_spacing    = PROBE_SPACING,
-	probe_texels     = PROBE_TEXELS,
+	atlas_size          = ATLAS_SIZE,
+	texels_per_meter    = TEXELS_PER_METER,
+	gutter_texels       = GUTTER_TEXELS,
+	min_chart           = MIN_CHART_TEXELS,
+	lightmap_rays       = LIGHTMAP_RAYS,
+	probe_rays          = PROBE_RAYS,
+	bounces             = BOUNCES,
+	probe_spacing       = PROBE_SPACING,
+	probe_texels        = PROBE_TEXELS,
+	probe_moment_texels = PROBE_MOMENT_TEXELS,
+	probe_basis         = u32(Probe_Basis.Octa),
 }
 
 // The loader and the writer share this rule so a fresh artifact cannot be
@@ -76,6 +111,14 @@ quality_supported :: proc(quality: Quality) -> bool {
 		return false
 	}
 	if quality.probe_texels != PROBE_TEXELS {
+		return false
+	}
+	if quality.probe_moment_texels != PROBE_MOMENT_TEXELS &&
+	   quality.probe_moment_texels != PROBE_MOMENT_TEXELS_HIGH {
+		return false
+	}
+	if quality.probe_basis != u32(Probe_Basis.Octa) &&
+	   quality.probe_basis != u32(Probe_Basis.SH9) {
 		return false
 	}
 	return quality.probe_spacing == PROBE_SPACING ||
@@ -192,6 +235,8 @@ Build_Report :: struct {
 	lights:         int,
 	charts:         int,
 	probes:         int,
+	probe_basis:    Probe_Basis,
+	probe_moments:  u32,
 	atlas_size:     int,
 	valid_texels:   int,
 	invalid_texels: int,

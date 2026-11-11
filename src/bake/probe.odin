@@ -7,37 +7,42 @@ import "core:mem"
 PROBE_KIND :: u64(2)
 
 Probe_Result :: struct {
-	irradiance:    []u8,
-	moments:       []u8,
-	states:        []Probe_State,
-	min:           [3]f32,
-	spacing:       f32,
-	counts:        [3]u32,
-	columns:       u32,
-	rays:          u64,
-	shadow_rays:   u64,
-	invalid_probes: int,
-	dilated_probes: int,
+	irradiance:       []u8,
+	moments:          []u8,
+	states:           []Probe_State,
+	min:              [3]f32,
+	spacing:          f32,
+	counts:           [3]u32,
+	basis:            Probe_Basis,
+	moment_texels:    u32,
+	columns:          u32,
+	rays:             u64,
+	shadow_rays:      u64,
+	invalid_probes:   int,
+	dilated_probes:   int,
 }
 
 Probe_Work :: struct {
-	static:        Static,
-	bvh:           ^Bvh,
-	irradiance:    []f16,
-	moments:       []f16,
-	states:        []Probe_State,
-	min:           DVec3,
-	spacing:       f64,
-	counts:        [3]int,
-	count:         int,
-	columns:       int,
-	rays:          int,
-	workers:       int,
-	directions:    []DVec3,
-	radiance:      []DVec3,
-	distances:     []f64,
-	shadow_counts: []u64,
-	invalid_counts: []int,
+	static:           Static,
+	bvh:              ^Bvh,
+	basis:            Probe_Basis,
+	moment_texels:    int,
+	irradiance_u32:   []u32,
+	irradiance_f16:   []f16,
+	moments:          []f16,
+	states:           []Probe_State,
+	min:              DVec3,
+	spacing:          f64,
+	counts:           [3]int,
+	count:            int,
+	columns:          int,
+	rays:             int,
+	workers:          int,
+	directions:       []DVec3,
+	radiance:         []DVec3,
+	distances:        []f64,
+	shadow_counts:    []u64,
+	invalid_counts:   []int,
 }
 
 probe_bake :: proc(
@@ -50,7 +55,11 @@ probe_bake :: proc(
 	result: Probe_Result,
 	err: Build_Error,
 ) {
-	if quality.probe_texels != PROBE_TEXELS {
+	basis := Probe_Basis(quality.probe_basis)
+	moment_texels := int(quality.probe_moment_texels)
+	if quality.probe_texels != PROBE_TEXELS ||
+	   (basis != .Octa && basis != .SH9) ||
+	   (moment_texels != PROBE_MOMENT_TEXELS && moment_texels != PROBE_MOMENT_TEXELS_HIGH) {
 		return {}, .Probe_Count
 	}
 	min, counts := probe_grid(quality.probe_spacing)
@@ -59,22 +68,45 @@ probe_bake :: proc(
 		return {}, .Probe_Count
 	}
 	columns := probe_columns(count)
+	rows := count / columns
+	irradiance_width, irradiance_height := columns * PROBE_TEXELS, rows * PROBE_TEXELS
+	if basis == .SH9 {
+		irradiance_width, irradiance_height = PROBE_SH_TEXELS, count
+	}
+	moment_width, moment_height := columns * moment_texels, rows * moment_texels
+	if irradiance_width > MAX_PROBE_ATLAS_DIM || irradiance_height > MAX_PROBE_ATLAS_DIM ||
+	   moment_width > MAX_PROBE_ATLAS_DIM || moment_height > MAX_PROBE_ATLAS_DIM {
+		return {}, .Probe_Count
+	}
 
 	result.min = min
 	result.spacing = quality.probe_spacing
 	result.counts = counts
+	result.basis = basis
+	result.moment_texels = u32(moment_texels)
 	result.columns = u32(columns)
 	result.states = make([]Probe_State, count, allocator)
 	mem.set(raw_data(result.states), 0, count * size_of(Probe_State))
-	irradiance := make(
-		[]f16,
-		count * PROBE_TEXEL_COUNT * PROBE_IRRADIANCE_CHANNELS,
-		allocator,
-	)
-	defer delete(irradiance, allocator)
-	moments := make([]f16, count * PROBE_TEXEL_COUNT * PROBE_MOMENT_CHANNELS, allocator)
+	irradiance_u32: []u32
+	irradiance_f16: []f16
+	if basis == .Octa {
+		irradiance_u32 = make([]u32, count * PROBE_TEXEL_COUNT, allocator)
+		mem.set(raw_data(irradiance_u32), 0, len(irradiance_u32) * size_of(u32))
+	} else {
+		irradiance_f16 = make([]f16, count * PROBE_SH_COEFFS * 4, allocator)
+		mem.set(raw_data(irradiance_f16), 0, len(irradiance_f16) * size_of(f16))
+	}
+	defer {
+		if irradiance_u32 != nil {
+			delete(irradiance_u32, allocator)
+		}
+		if irradiance_f16 != nil {
+			delete(irradiance_f16, allocator)
+		}
+	}
+	moment_count := count * moment_texels * moment_texels
+	moments := make([]f16, moment_count * PROBE_MOMENT_CHANNELS, allocator)
 	defer delete(moments, allocator)
-	mem.set(raw_data(irradiance), 0, len(irradiance) * size_of(f16))
 	mem.set(raw_data(moments), 0, len(moments) * size_of(f16))
 
 	rays := int(quality.probe_rays)
@@ -93,7 +125,10 @@ probe_bake :: proc(
 	work := Probe_Work {
 		static         = static,
 		bvh            = bvh,
-		irradiance     = irradiance,
+		basis          = basis,
+		moment_texels  = moment_texels,
+		irradiance_u32 = irradiance_u32,
+		irradiance_f16 = irradiance_f16,
 		moments        = moments,
 		states         = result.states,
 		min            = dv(min),
@@ -122,7 +157,11 @@ probe_bake :: proc(
 		result.invalid_probes += value
 	}
 	result.rays = u64(count - result.invalid_probes) * u64(rays)
-	result.irradiance = f16_slice_to_bytes(irradiance, allocator)
+	if basis == .Octa {
+		result.irradiance = u32_slice_to_bytes(irradiance_u32, allocator)
+	} else {
+		result.irradiance = f16_slice_to_bytes(irradiance_f16, allocator)
+	}
 	result.moments = f16_slice_to_bytes(moments, allocator)
 	return result, .None
 }
@@ -181,74 +220,6 @@ probe_worker :: proc(job: rawptr, worker: int) #no_bounds_check {
 		probe_blend(work, probe, directions, radiance, distances)
 	}
 	work.shadow_counts[worker] = shadows
-}
-
-// The stored octahedral irradiance and depth moments use the legacy gamma-5
-// storage encoding: irradiance is (radiance/2)^(1/5), and the moments are
-// halved. The sampler decodes the irradiance with pow(encoded, 2.5) and applies
-// the final 2x factor, so the bake and the shader must change together.
-@(private)
-probe_blend :: proc(
-	work: ^Probe_Work,
-	probe: int,
-	directions: []DVec3,
-	radiance: []DVec3,
-	distances: []f64,
-) #no_bounds_check {
-	max_distance := work.spacing * math.sqrt(3.0) * 1.5
-	normals: [PROBE_TEXEL_COUNT]DVec3
-	sum_x, sum_y, sum_z: [PROBE_TEXEL_COUNT]f64
-	cosine_sum, distance_sum, distance2_sum, distance_weight: [PROBE_TEXEL_COUNT]f64
-	for ty in 0 ..< PROBE_TEXELS {
-		for tx in 0 ..< PROBE_TEXELS {
-			normals[ty * PROBE_TEXELS + tx] = oct_texel_normal(tx, ty, PROBE_TEXELS)
-		}
-	}
-
-	for ray_index in 0 ..< work.rays {
-		direction := directions[ray_index]
-		value := radiance[ray_index]
-		distance_value := min(math.abs(distances[ray_index]), max_distance)
-		front := distances[ray_index] >= 0
-		for texel in 0 ..< PROBE_TEXEL_COUNT {
-			cosine := dv_dot(normals[texel], direction)
-			if cosine <= 0 {
-				continue
-			}
-			if front {
-				sum_x[texel] += value.x * cosine
-				sum_y[texel] += value.y * cosine
-				sum_z[texel] += value.z * cosine
-				cosine_sum[texel] += cosine
-			}
-			weight := pow50(cosine)
-			distance_sum[texel] += distance_value * weight
-			distance2_sum[texel] += distance_value * distance_value * weight
-			distance_weight[texel] += weight
-		}
-	}
-
-	for ty in 0 ..< PROBE_TEXELS {
-		for tx in 0 ..< PROBE_TEXELS {
-			texel := ty * PROBE_TEXELS + tx
-			denominator := 2.0 * max(cosine_sum[texel], 1e-9)
-			encoded := DVec3 {
-				pow_ratio(sum_x[texel] / denominator, 1.0 / PROBE_IRRADIANCE_GAMMA),
-				pow_ratio(sum_y[texel] / denominator, 1.0 / PROBE_IRRADIANCE_GAMMA),
-				pow_ratio(sum_z[texel] / denominator, 1.0 / PROBE_IRRADIANCE_GAMMA),
-			}
-			depth_denominator := 2.0 * max(distance_weight[texel], 1e-9)
-			pixel := probe_atlas_pixel(probe, tx, ty, work.columns, PROBE_TEXELS)
-			irradiance_base := pixel * PROBE_IRRADIANCE_CHANNELS
-			work.irradiance[irradiance_base + 0] = f16(encoded.x)
-			work.irradiance[irradiance_base + 1] = f16(encoded.y)
-			work.irradiance[irradiance_base + 2] = f16(encoded.z)
-			work.irradiance[irradiance_base + 3] = 1.0
-			moment_base := pixel * PROBE_MOMENT_CHANNELS
-			work.moments[moment_base + 0] = f16(distance_sum[texel] / depth_denominator)
-			work.moments[moment_base + 1] = f16(distance2_sum[texel] / depth_denominator)
-		}
-	}
 }
 
 @(private)

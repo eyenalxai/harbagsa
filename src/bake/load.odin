@@ -71,6 +71,8 @@ load :: proc(bytes: []u8) -> (data: Data, err: Error) {
 	   quality.atlas_size != header.atlas_width ||
 	   header.atlas_width != header.atlas_height ||
 	   quality.probe_texels != header.probe_texels ||
+	   quality.probe_moment_texels != header.probe_moment_texels ||
+	   quality.probe_basis != header.probe_basis ||
 	   quality.probe_spacing != header.probe_spacing {
 		return {}, .Quality
 	}
@@ -106,6 +108,14 @@ load :: proc(bytes: []u8) -> (data: Data, err: Error) {
 	   header.probe_spacing <= 0 {
 		return {}, .Layout
 	}
+	basis := Probe_Basis(header.probe_basis)
+	if basis != .Octa && basis != .SH9 {
+		return {}, .Quality
+	}
+	moment_texels := u64(header.probe_moment_texels)
+	if moment_texels != PROBE_MOMENT_TEXELS && moment_texels != PROBE_MOMENT_TEXELS_HIGH {
+		return {}, .Quality
+	}
 	if header.probe_atlas_columns == 0 || header.probe_atlas_columns > header.probe_count {
 		return {}, .Layout
 	}
@@ -114,9 +124,18 @@ load :: proc(bytes: []u8) -> (data: Data, err: Error) {
 	if probe_count % columns != 0 {
 		return {}, .Layout
 	}
-	probe_atlas_width := columns * PROBE_TEXELS
-	probe_atlas_height := (probe_count + columns - 1) / columns * PROBE_TEXELS
-	if probe_atlas_width > MAX_PROBE_ATLAS_DIM || probe_atlas_height > MAX_PROBE_ATLAS_DIM {
+	irradiance_width, irradiance_height: u64
+	if basis == .SH9 {
+		irradiance_width = PROBE_SH_TEXELS
+		irradiance_height = probe_count
+	} else {
+		irradiance_width = columns * PROBE_TEXELS
+		irradiance_height = probe_count / columns * PROBE_TEXELS
+	}
+	moment_width := columns * moment_texels
+	moment_height := probe_count / columns * moment_texels
+	if irradiance_width > MAX_PROBE_ATLAS_DIM || irradiance_height > MAX_PROBE_ATLAS_DIM ||
+	   moment_width > MAX_PROBE_ATLAS_DIM || moment_height > MAX_PROBE_ATLAS_DIM {
 		return {}, .Layout
 	}
 	if !finite_vec3(header.probe_min) {
@@ -137,13 +156,15 @@ load :: proc(bytes: []u8) -> (data: Data, err: Error) {
 	   !check_typed_section(state_section, size_of(Probe_State), header.probe_count) {
 		return {}, .Section_Size
 	}
-	probe_texels := u64(header.probe_texels) * u64(header.probe_texels)
-	if !check_raw_section(
-		irradiance_section,
-		probe_count * probe_texels * PROBE_BYTES_PER_IRRADIANCE_TEXEL,
-	) || !check_raw_section(
+	irradiance_bytes := probe_count * u64(PROBE_TEXELS * PROBE_TEXELS) *
+		PROBE_BYTES_PER_IRRADIANCE_TEXEL
+	if basis == .SH9 {
+		irradiance_bytes = probe_count * u64(PROBE_SH_BYTES_PER_PROBE)
+	}
+	if !check_raw_section(irradiance_section, irradiance_bytes) ||
+	   !check_raw_section(
 		moments_section,
-		probe_count * probe_texels * PROBE_BYTES_PER_MOMENT_TEXEL,
+		probe_count * moment_texels * moment_texels * PROBE_BYTES_PER_MOMENT_TEXEL,
 	) {
 		return {}, .Section_Size
 	}
@@ -178,8 +199,10 @@ load :: proc(bytes: []u8) -> (data: Data, err: Error) {
 		probe_moments = bytes[int(moments_section.offset):int(
 			moments_section.offset + moments_section.size,
 		)],
-		probe_atlas_width = u32(probe_atlas_width),
-		probe_atlas_height = u32(probe_atlas_height),
+		probe_irradiance_width = u32(irradiance_width),
+		probe_irradiance_height = u32(irradiance_height),
+		probe_moment_width = u32(moment_width),
+		probe_moment_height = u32(moment_height),
 	}
 	if !layout_valid(data) {
 		return {}, .Layout
