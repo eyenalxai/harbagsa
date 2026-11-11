@@ -152,7 +152,8 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `place`: `prefab`, `position`, optional `yaw_deg`, `body`, `name`, and `light`.
 - `remove`: object `id` or `name`.
 - `bake`: rebuild and publish the static indirect; optional `probe_spacing`,
-  `threads`, and `out`.
+  `probe_basis` (`octa` or `sh9`), `probe_moments` (8 or 16), `threads`, and
+  `out`.
 - `pick`: resolve one pixel with `at`; see **Pick**.
 - `get`: one state or capture `field`.
 - `quit`: stop the session.
@@ -303,7 +304,7 @@ name its own `views`.
 
 ### Diagnostic views
 
-`views` on a `capture` output names one to eight views. One simulation frame
+`views` on a `capture` output names one to nine views. One simulation frame
 writes one capture entry per view, named `<name>-<view>`, each with a `view`
 field and the same `frame`, camera, and renderer report. `target` and `views` are
 mutually exclusive, and per-view output options apply to every view.
@@ -314,6 +315,7 @@ mutually exclusive, and per-view output options apply to every view.
 | `direct` | shadowed direct light times albedo |
 | `lightmap` | the weighted baked lightmap term times albedo |
 | `probe` | the weighted static probe term times albedo |
+| `probe_linear` | the same probe term with every octa tap decoded before weighting |
 | `emissive` | the emission term times albedo |
 | `shadow` | shadow visibility as a grey ramp: shadowed direct over open direct |
 | `lightmap_grid` | atlas texel checker plus a red chart-edge line; magenta with no tile |
@@ -330,8 +332,11 @@ identical to the same capture before views existed.
 {"cmd":"capture","name":"terms","views":["beauty","direct","lightmap","probe"]}
 ```
 
-`scenarios/capture-views.json` captures all eight views in one frame and then a
-plain color capture to prove the history survived.
+`scenarios/capture-views.json` captures all nine views in one frame and then a
+plain color capture to prove the history survived. `probe_linear` renders the
+same baked data as `probe`, so the pair is the gamma-2 versus linear capture at
+one camera and one frame. `scenarios/probe-bright-emitter.json` writes the pair
+as part of the probe A/B.
 
 A named capture exposes its own renderer state through `get`, for example
 `capture.named.lit.renderer.light_count` and
@@ -387,7 +392,8 @@ period, and debug line counts. `state.bake` is the lifecycle view and `state.ren
 same report inside the renderer block. Both report the status (`missing`,
 `stale`, `current`, or `failed`), the current key, the artifact key, format and
 tool versions, the measured bake time, atlas and probe counts, probe spacing,
-the invalid-probe count before dilation, the dynamic boxes whose centre is
+the probe basis and moment resolution, the invalid-probe count before dilation,
+the dynamic boxes whose centre is
 outside the probe volume (`probe_missing`), artifact and GPU bytes, and the load
 or publish error. `state.render_digest` covers target extent, camera, boxes, box
 slots, emissive strengths, point lights, jitter, atlas weight, clip height,
@@ -400,32 +406,37 @@ The renderer loads `build/bake/arena.hbake` by default. `make bake` writes it
 from the static arena boxes, placed static bodies, and static fixtures; dynamic
 lamps and dynamic bodies never enter the bake. `bin/harbagsa-bake
 --probe-spacing 2` writes the 2 m fallback, and the runtime validates either
-spacing against the artifact's own quality block. The tool reports its bake
-time, ray counts, static light count, byte sizes, invalid and dilated texels,
-and invalid and dilated probes. The artifact stores zero bake time so identical
-inputs produce identical bytes.
+spacing against the artifact's own quality block. `--probe-basis octa|sh9` and
+`--probe-moments 8|16` select the A/B variants; the default is octa with 8 x 8
+moments. The tool reports its bake time, ray counts, static light count, byte
+sizes, invalid and dilated texels, and invalid and dilated probes. The artifact
+stores zero bake time so identical inputs produce identical bytes.
 
 A current artifact is sampled by both indirect paths. Each static face derives
 its atlas UV from the local position and local face normal, so no vertex UV
 channel is added. The lightmap carries static indirect only; direct light and
 hard shadows stay real-time. Dynamic boxes sample the probe field tetrahedrally
 over the four probes of the containing cell: normal bias, facing weight, and the
-baked depth-moment test select and weight the probes. The stored probe
-irradiance is `(radiance/2)^(1/5)`; the shader decodes it with
-`pow(encoded, 2.5)`, averages, squares, and applies the 2x factor, which puts
-probes and the lightmap on one scale. Invalid probes are skipped, never
-black-filled. The bake dilates a probe that the virtual offset could not repair
+baked depth-moment test select and weight the probes. The default octa
+irradiance is `R11G11B10F`; the shader stores `(radiance/2)^(1/5)` per texel,
+decodes it with `pow(encoded, 2.5)`, averages, squares, and applies the 2x
+factor, which puts probes and the lightmap on one scale. The `probe_linear` view
+decodes every tap with `2 * pow(encoded, 5)` before weighting. The optional SH9
+basis stores nine signed `RGBA16F` coefficients and reconstructs linearly.
+Invalid probes are skipped, never black-filled. The bake dilates a probe that the virtual offset could not repair
 by copying the nearest valid probe and pointing the offset at that probe's
 sample position, so the copied moments keep their origin.
 `state.bake.invalid_probes` is the count before that dilation.
 
 The `bake` command rebuilds from the current static input and publishes the new
 artifact without restarting the renderer. It accepts optional `probe_spacing`
-(1 or 2), `threads` (1 to 256), and `out` (write the artifact to this path).
-The command requires a renderer. The default build uses 1 m probes, 128 lightmap
-rays, 1024 probe rays, and one bounce; it takes about 5 s at 16 threads. Use
-`probe_spacing: 2` for the measured fallback when probe work or memory is the
-limit. `make bake` writes `<artifact>.time` beside the artifact; the renderer
+(1 or 2), `probe_basis` (`octa` or `sh9`), `probe_moments` (8 or 16), `threads`
+(1 to 256), and `out` (write the artifact to this path). The command requires a
+renderer. The default build uses 1 m probes, 128 lightmap rays, 1024 probe rays,
+and one bounce; it takes about 5 s at 16 threads. Use `probe_spacing: 2` for the
+measured fallback when probe work or memory is the limit. The A/B result and
+the reasons the defaults stay octa with 8 x 8 moments are in
+`docs/evidence/probe-format.md`. `make bake` writes `<artifact>.time` beside the artifact; the renderer
 reads that sidecar so a loaded bake reports its measured time without changing
 the artifact bytes. `state.bake.bake_ms` is the measured wall time of the last
 publish or the loaded sidecar.
@@ -468,6 +479,9 @@ noise on an unlit wall, with a clean window and the term off as the control.
 `scenarios/lighting-missing.json` is the missing-artifact view; run it
 with `--bake` pointing at a path that does not exist. The numbers and the
 accepted limits are in `docs/evidence/mixed-lighting.md`.
+`scenarios/probe-thin-wall.json` and `scenarios/probe-bright-emitter.json` run
+the probe basis and moment A/B; `docs/evidence/probe-format.md` records the
+result and the default choice.
 
 ## Renderer debug overrides
 

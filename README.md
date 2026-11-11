@@ -228,16 +228,16 @@ intermediate targets default to stats. A stats capture accepts `region`,
 `crop` and `profile`.
 
 A capture can name diagnostic views instead of a target: `beauty`, `direct`,
-`lightmap`, `probe`, `emissive`, `shadow`, `lightmap_grid`, and `probe_cell`. One
-frame writes one entry per view, named `<name>-<view>`, so a term image compares
-and diff like any other capture. Term views share the frame's TAA history, so
-capturing them does not change the next beauty frame.
+`lightmap`, `probe`, `probe_linear`, `emissive`, `shadow`, `lightmap_grid`, and
+`probe_cell`. One frame writes one entry per view, named `<name>-<view>`, so a
+term image compares and diff like any other capture. Term views share the
+frame's TAA history, so capturing them does not change the next beauty frame.
 
 ```json
 {"cmd": "capture", "name": "terms", "views": ["beauty", "direct", "shadow"]}
 ```
 
-`scenarios/capture-views.json` writes all eight.
+`scenarios/capture-views.json` writes all nine.
 
 `harbagsa-agent compare A B --delta` writes a before/after/delta panel. Keep PNGs
 under `runs/`; never commit them.
