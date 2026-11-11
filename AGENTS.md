@@ -2,6 +2,10 @@
 
 An Odin project. Build and check commands live in `README.md`.
 
+## Documentation
+
+No document is a source of truth. Documentation is malleable: the code and the current direction decide, and a document that stops being true is rewritten or deleted. This covers every document in the repo, including ADRs, research notes, and this file.
+
 ## Code changes
 
 Backwards compatibility does not matter. Rip and tear if needed. Refactor anything you need; you have free rein over the code. Focus on long-term maintenance. Do not write duplicated code. Re-use existing code when possible.
