@@ -4,8 +4,8 @@
 
 **Date.** 2026-11-10
 
-**Status.** Research complete for the sources listed. Read-only: no code, build, or
-commit changes. DDGI and light field probes are analyzed as contrasts, not
+**Status.** Research complete for the sources listed. Research snapshot: no code or
+build changes. DDGI and light field probes are analyzed as contrasts, not
 recommendations; the baseline is the existing offline bake and the existing hard
 ray-query shadows. Claims marked **analysis** are arithmetic or reasoning from
 the cited source, not a measured result.
