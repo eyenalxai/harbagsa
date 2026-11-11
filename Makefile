@@ -12,6 +12,10 @@ BAKE_BIN := bin/harbagsa-bake
 BAKE_TOOL := cmd/harbagsa-bake
 BAKE_OUT := build/bake/arena.hbake
 BAKE_SOURCES := $(shell find src cmd -name '*.odin')
+RUST_DIR := ui
+RUST_LIB := build/libharbagsa_ui.a
+RUST_SOURCES := $(shell find $(RUST_DIR)/shim/src -name '*.rs') \
+	$(RUST_DIR)/Cargo.toml $(RUST_DIR)/shim/Cargo.toml $(RUST_DIR)/Cargo.lock
 HARNESS_REVISION := $(shell git rev-parse --short HEAD 2>/dev/null || printf unknown)
 # `git status --porcelain` covers staged and untracked files; `git diff --quiet`
 # sees neither.
@@ -91,6 +95,11 @@ FORCE:
 
 all: build
 
+$(RUST_LIB): $(RUST_SOURCES)
+	@mkdir -p $(@D)
+	cargo build --release --manifest-path $(RUST_DIR)/Cargo.toml -p harbagsa-ui --lib
+	cp $(RUST_DIR)/target/release/libharbagsa_ui.a $@
+
 # Build aside so a failed ar never leaves a broken archive.
 $(BOX3D_LIB): $(BOX3D_OBJ)
 	@mkdir -p $(@D)
@@ -161,11 +170,11 @@ check-spirv: shaders
 		exit $$status; \
 	fi
 
-agent: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
+agent: $(RUST_LIB) $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	@mkdir -p $(dir $(AGENT_BIN))
 	$(AGENT_BUILD)
 
-build: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
+build: $(RUST_LIB) $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	mkdir -p bin
 	$(ODIN) build . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -out:$(BIN)
 	$(AGENT_BUILD)
@@ -180,7 +189,7 @@ $(BAKE_OUT): $(BAKE_BIN) $(BAKE_SOURCES)
 
 bake: $(BAKE_OUT)
 
-check: check-lines check-spirv $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
+check: check-lines check-spirv $(RUST_LIB) $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) check . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
 	$(ODIN) check $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS)
 	$(ODIN) check $(BAKE_TOOL) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS)
@@ -211,7 +220,7 @@ check-lines:
 	done; \
 	exit $$status
 
-run: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
+run: $(RUST_LIB) $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
 
 check-validation-layer:

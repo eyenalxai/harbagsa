@@ -62,6 +62,26 @@ init_instance :: proc(r: ^Renderer) -> Error {
 		}
 	}
 
+	ui_count: u32
+	ui_extensions := ui_vk_instance_extensions(&ui_count)
+	if ui_extensions == nil {
+		log.error("renderer: the UI shim could not name its instance extensions")
+		return .Vulkan_Loader
+	}
+	for index in 0 ..< ui_count {
+		name := ui_extensions[index]
+		known := false
+		for existing in instance_extensions {
+			if string(existing) == string(name) {
+				known = true
+				break
+			}
+		}
+		if !known {
+			append(&instance_extensions, name)
+		}
+	}
+
 	app_info := vk.ApplicationInfo{
 		sType              = .APPLICATION_INFO,
 		pApplicationName   = "harbagsa",

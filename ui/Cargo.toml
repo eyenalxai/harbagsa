@@ -1,0 +1,10 @@
+[workspace]
+resolver = "3"
+members = ["shim"]
+
+[workspace.package]
+edition = "2024"
+publish = false
+
+[profile.release]
+panic = "abort"
