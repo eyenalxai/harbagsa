@@ -48,6 +48,8 @@ write_quality :: proc(hash: ^digest.FNV, quality: Quality) {
 	digest.write_u32(hash, quality.bounces)
 	digest.write_f32(hash, canonical_f32(quality.probe_spacing))
 	digest.write_u32(hash, quality.probe_texels)
+	digest.write_u32(hash, quality.probe_moment_texels)
+	digest.write_u32(hash, quality.probe_basis)
 }
 
 @(private)

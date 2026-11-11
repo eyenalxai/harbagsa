@@ -22,6 +22,7 @@ const uint VIEW_EMISSIVE = 4u;
 const uint VIEW_SHADOW = 5u;
 const uint VIEW_LIGHTMAP_GRID = 6u;
 const uint VIEW_PROBE_CELL = 7u;
+const uint VIEW_PROBE_LINEAR = 8u;
 
 // src/bake/bake.odin ATLAS_SIZE.
 const float LIGHTMAP_ATLAS_SIZE = 1024.0;
@@ -302,6 +303,10 @@ vec3 view_term(
     }
     if (view == VIEW_PROBE) {
         return albedo * probe_indirect(world_position, normal) * object.probe_weight;
+    }
+    if (view == VIEW_PROBE_LINEAR) {
+        return albedo * probe_indirect_linear(world_position, normal) *
+               object.probe_weight;
     }
     if (view == VIEW_EMISSIVE) {
         return albedo * emissive_term(object);
