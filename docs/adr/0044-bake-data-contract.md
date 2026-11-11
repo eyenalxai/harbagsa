@@ -33,7 +33,7 @@ never a fill value.
   probe counts, the probe volume, and the section table. Every section is
   16-byte aligned and checked against its declared stride and count. Raw
   sections hold the atlas and probe payloads; typed sections hold 32-byte face
-  rects, 16-byte slots, 8-byte probe states, 36-byte quality, and 40-byte stats.
+  rects, 16-byte slots, 8-byte probe states, 44-byte quality, and 40-byte stats.
   Section sizes must match the header exactly.
 - **Atlas.** One linear `R16G16B16A16_SFLOAT` image, one mip, one layer, 1024
   square, 4 texels per metre, an 8-texel minimum chart, and a 4-texel gutter.
@@ -41,9 +41,12 @@ never a fill value.
   `i` owns faces `i * 6` through `i * 6 + 5` in the face order +X, -X, +Y, -Y,
   +Z, -Z. The rects are center-to-center and stay inside `[0, 1]`.
 - **Probes.** A regular grid at 1 m spacing is the default; 2 m remains the
-  quality fallback. Each probe stores an 8 x 8 octahedral irradiance block and
-  an 8 x 8 first/second moment block. Probes are packed into a 2D shelf atlas;
-  the header stores the column count so a reader can derive both image extents.
+  quality fallback. Each probe stores an 8 x 8 octahedral `R11G11B10F`
+  irradiance block and an 8 x 8 or 16 x 16 first/second moment block. The
+  quality block and header also accept an optional SH9 irradiance basis, stored
+  as nine signed `RGBA16F` coefficients. Probes are packed into a 2D shelf
+  atlas; the header stores the column count so a reader can derive both image
+  extents.
   The probe state buffer carries the valid flag and virtual offset, so the
   runtime never re-derives validity from live geometry. The bake repairs a
   probe that the virtual offset cannot move out of geometry by dilating it:
@@ -72,7 +75,8 @@ never a fill value.
   `failed` with the loader error. Neither falls back to black or to an old bake.
 - **Observability.** `state.renderer.bake` reports the status, the current key,
   the artifact key, format and tool versions, atlas and probe counts, spacing,
-  the invalid-probe count before dilation, the dynamic boxes whose centre is
+  the probe basis and moment resolution, the invalid-probe count before
+  dilation, the dynamic boxes whose centre is
   outside the probe volume, artifact and GPU bytes, bake time, and the load
   error. The render digest includes the current key, the applied status, and the
   lightmap and probe switches, so two bakes or two indirect configurations
