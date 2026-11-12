@@ -118,10 +118,10 @@ cool Light panel, and one red Beacon as static fixtures in front of the spawn.
 Newly placed lamps default to dynamic; `K` toggles the kind and the body follows
 it.
 
-A lamp-free view is black. One lamp restores readable light. Moving a static
-fixture moves its direct light and shadow and leaves the bake stale. Moving a
-dynamic lamp moves only its direct light and shadow. A sealed wall stops the
-baked bounce.
+A lamp-free view is black. One lamp restores readable light. An authored change
+to a static fixture moves its direct light and shadow and leaves the bake stale
+until the publish; the runtime editor refuses the edit. Moving a dynamic lamp
+moves only its direct light and shadow. A sealed wall stops the baked bounce.
 
 ## No texture
 

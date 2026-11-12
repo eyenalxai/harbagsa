@@ -256,16 +256,24 @@ actions. Fields cover:
   is refused; send `cancel` first.
 - `pick` arms the placement from the open palette. `height`, `yaw_deg`, `snap`,
   and `cancel` apply to the armed placement.
-- `place` for an exact transform without a placement ray.
+- `place` for an exact dynamic transform without a placement ray. A static body
+  or a static fixture is refused; use the `place` command outside the editor
+  and bake.
 - `select_object`, `move`, `rotate_deg`, `body`, `flip_body`, `delete`, and
-  `duplicate` for an object. A body request on a lamp fails with `a lamp body
-  follows its kind`; change `light_kind` instead.
+  `duplicate` for a dynamic object. A bake input returns `bake inputs are
+  authored, not created or edited at runtime`; a dynamic lamp body request
+  returns `a lamp body follows its kind`.
 - `turn`, `wheel`, `large`, `primary`, `secondary`, `drag_move`, and
-  `drag_release` for pointer-relative input.
+  `drag_release` for pointer-relative input on a dynamic object.
 - `light_kind`, `light_color`, `light_intensity`, and `light_range` for the next
-  or selected lamp.
-- `undo` and `redo` for history.
+  dynamic placement or a selected dynamic lamp. A static fixture is read-only.
+- `undo` and `redo` for dynamic history. The `place`, `remove`, and `scene`
+  commands clear the history, so undo cannot cross an authoring change.
 - `camera` for the free-fly camera.
+
+The runtime editor does not create a bake input. A static body or static fixture
+is authored with the `place` or `scene` command, then `bake` publishes the new
+artifact. The editor error is explicit and leaves the object untouched.
 
 `state.editor` reports the same view the HUD draws: `active`, `focus`, `tool`
 (`none`, `palette`, or `placement`), the `palette` and `placement` payloads, the
@@ -504,7 +512,7 @@ the old indirect stays bound and visible until the publish. A dynamic lamp or
 crate move through the editor leaves the key unchanged and the status `current`.
 The runtime editor refuses a move, rotate, delete, duplicate, body flip,
 lamp-kind flip, or static placement of a bake input; the error is `bake inputs
-are authored, not edited at runtime`. The slot key still includes the transform,
+are authored, not created or edited at runtime`. The slot key still includes the transform,
 so a mismatch between an authored box and the loaded artifact falls back to
 direct light instead of carrying a previous lightmap to the new position. A
 publish failure leaves the old artifact bound and reports `failed`; it never

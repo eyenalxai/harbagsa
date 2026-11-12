@@ -90,6 +90,8 @@ editor_history_redo_depth :: proc(editor: ^Editor) -> int {
 	return object_history_redo_depth(editor.history)
 }
 
+// A scene replacement is outside the undo history; undo must not restore an
+// input from before the replacement.
 editor_reset :: proc(editor: ^Editor) {
 	if editor.history != nil {
 		object_history_clear(editor.history)

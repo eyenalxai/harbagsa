@@ -64,7 +64,7 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 				game.snapshot_apply_error_message(failure),
 			)
 		}
-		game.editor_repair_selection(&session.runtime.debug.editor, &session.runtime.sim)
+		game.editor_reset(&session.runtime.debug.editor)
 	}
 
 	if command.has_displays {

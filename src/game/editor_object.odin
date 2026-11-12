@@ -16,14 +16,6 @@ editor_tool_block_reason :: proc(editor: ^Editor) -> Edit_Reason {
 }
 
 @(private)
-editor_bake_input_reason :: proc(object: Placed_Object) -> Edit_Reason {
-	if object_is_bake_input(object) {
-		return .Bake_Input_Immutable
-	}
-	return .None
-}
-
-@(private)
 editor_next_body :: proc(editor: ^Editor) -> (Body_Mode, bool) {
 	switch tool in editor.tool {
 	case Palette:
@@ -38,7 +30,7 @@ editor_next_body :: proc(editor: ^Editor) -> (Body_Mode, bool) {
 @(private)
 editor_set_next_body :: proc(editor: ^Editor, mode: Body_Mode) -> Edit_Result {
 	if mode == .Static {
-		return edit_fail(.Bake_Input_Immutable)
+		return edit_fail(.Bake_Input_Authoring_Only)
 	}
 	switch tool in editor.tool {
 	case Palette:
@@ -73,8 +65,8 @@ editor_commit_move :: proc(
 	if !b3.Body_IsValid(object.body) {
 		return edit_fail(.Failed)
 	}
-	if reason := editor_bake_input_reason(object); reason != .None {
-		return edit_fail(reason)
+	if object_is_bake_input(object) {
+		return edit_fail(.Bake_Input_Authoring_Only)
 	}
 	resolved := target
 	resolved.y = max(resolved.y, prefab(object.prefab).half_extents.y)
@@ -146,8 +138,8 @@ editor_rotate_selected :: proc(
 	if degrees == 0.0 {
 		return edit_ok()
 	}
-	if reason := editor_bake_input_reason(object); reason != .None {
-		return edit_fail(reason)
+	if object_is_bake_input(object) {
+		return edit_fail(.Bake_Input_Authoring_Only)
 	}
 	result, _ := object_history_apply(
 		editor_history(editor),
@@ -176,8 +168,8 @@ editor_convert_selected :: proc(
 	object: Placed_Object,
 	mode: Body_Mode,
 ) -> Edit_Result {
-	if reason := editor_bake_input_reason(object); reason != .None {
-		return edit_fail(reason)
+	if object_is_bake_input(object) {
+		return edit_fail(.Bake_Input_Authoring_Only)
 	}
 	if object.light.active {
 		return edit_fail(.Lamp_Body_Follows_Kind)
@@ -186,7 +178,7 @@ editor_convert_selected :: proc(
 		return edit_ok()
 	}
 	if mode == .Static {
-		return edit_fail(.Bake_Input_Immutable)
+		return edit_fail(.Bake_Input_Authoring_Only)
 	}
 	result, _ := object_history_apply(
 		editor_history(editor),
@@ -234,8 +226,8 @@ editor_delete_selected :: proc(editor: ^Editor, sim: ^Simulation) -> Edit_Result
 	if !ok {
 		return edit_fail(.No_Selection)
 	}
-	if reason := editor_bake_input_reason(object); reason != .None {
-		return edit_fail(reason)
+	if object_is_bake_input(object) {
+		return edit_fail(.Bake_Input_Authoring_Only)
 	}
 	result, _ := object_history_apply(
 		editor_history(editor),
@@ -258,8 +250,8 @@ editor_duplicate_selected :: proc(editor: ^Editor, sim: ^Simulation) -> Edit_Res
 	if !ok {
 		return edit_fail(.No_Selection)
 	}
-	if reason := editor_bake_input_reason(object); reason != .None {
-		return edit_fail(reason)
+	if object_is_bake_input(object) {
+		return edit_fail(.Bake_Input_Authoring_Only)
 	}
 	result, id := object_history_apply(
 		editor_history(editor),

@@ -36,11 +36,15 @@ object_has_bake_slot :: proc(object: Placed_Object) -> bool {
 	return object.body_mode == .Static
 }
 
-// A bake input is a static box or a static fixture. The editor guard and the
-// bake input use the same two conditions.
+// A static body and a static fixture are separate bake inputs; the editor guard
+// must use both conditions.
+bake_input_body_and_light :: proc(body_mode: Body_Mode, light: Light_Settings) -> bool {
+	return body_mode == .Static ||
+	       (light.active && light.kind == .Static_Fixture)
+}
+
 object_is_bake_input :: proc(object: Placed_Object) -> bool {
-	return object_has_bake_slot(object) ||
-	       (object.light.active && object.light.kind == .Static_Fixture)
+	return bake_input_body_and_light(object.body_mode, object.light)
 }
 
 bake_arena_slot :: proc(index: int, box: geometry.Box) -> bake.Box_Slot {

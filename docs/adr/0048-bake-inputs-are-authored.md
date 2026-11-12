@@ -27,9 +27,9 @@ editable at runtime.
 ## Decisions
 
 - **Runtime guard.** The editor refuses move, rotate, delete, duplicate, body
-  flip, lamp-kind flip, and static placement for a bake input. The drag, wheel,
-  pointer, keyboard, and harness `editor` paths share the guard. The refusal is
-  `bake inputs are authored, not edited at runtime`.
+  flip, lamp-kind flip, light edits, and static placement for a bake input. The
+  drag, wheel, pointer, keyboard, and harness `editor` paths share the guard. The refusal is
+  `bake inputs are authored, not created or edited at runtime`.
 - **Creation is guarded too.** A runtime placement cannot create a static body
   or a static fixture. A body conversion cannot create a static body, and a lamp
   kind change cannot create a static fixture.
@@ -39,8 +39,9 @@ editable at runtime.
 - **Dynamic edits.** Dynamic bodies can be moved, rotated, deleted, duplicated,
   and placed. Dynamic lamps can change colour, intensity, and range. Their body
   mode and lamp kind are authoring properties.
-- **Undo/redo.** Static edits never enter the history, so an undo or redo cannot
-  replay one. The snapshot restore keeps the current static input.
+- **Undo/redo.** Static edits never enter the history, and the authoring
+  `place`/`remove`/`scene` commands clear it. An undo cannot cross a static input
+  change.
 - **Slot-key fallback.** The slot key keeps the transform check. A mismatch
   between an authored box and the loaded artifact still falls back to direct
   light instead of sampling a chart baked for another position. The fallback is
@@ -66,5 +67,5 @@ editable at runtime.
   and the artifact stay unchanged.
 - The initial arena and the initial static fixtures are read-only in debug mode.
   Their light settings and transforms are source data.
-- The `bake-static-move` evidence changes from a runtime move to a refusal; the
-  authoring path uses `scene`/`place` followed by `bake`.
+- The `bake-static-move` evidence authors a replacement with `remove`/`place`
+  and republishes; the runtime refusal is surfaced by the harness editor error.

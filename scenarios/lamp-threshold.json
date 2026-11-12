@@ -7,7 +7,7 @@
     {"cmd": "renderer_debug", "taa": false},
     {"cmd": "debug_mode", "active": true},
     {"cmd": "editor", "camera": {"position": [17.5, 1.7, -17.2], "yaw_deg": -47.3836, "pitch_deg": -14.8396}},
-    {"cmd": "place", "prefab": "Lamp", "position": ["${lamp_x}", 2.0, -19.5], "body": "static",
+    {"cmd": "place", "prefab": "Lamp", "position": ["${lamp_x}", 2.0, -19.5],
      "name": "threshold-lamp",
      "light": {"kind": "static", "color": "warm", "intensity": 4.0, "range": 10}},
     {"cmd": "bake"},

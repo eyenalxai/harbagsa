@@ -99,25 +99,30 @@ the current run.
 
 ### Debug mode
 
-`F2` replaces the player with a free-fly camera and enables scene editing.
+`F2` replaces the player with a free-fly camera and enables dynamic object
+editing. Bake inputs (static boxes and static fixtures) are read-only; author
+them in the scene source or with the harness `scene`/`place` command, then bake.
 
 - `WASD`: fly horizontally. Mouse: look.
 - `Space` / `Ctrl`: fly up / down.
 - `Tab`: open or close the object palette. Tab is refused while placement is
   armed; press `Esc` to cancel placement first.
-- Left click: select and drag an object, or place the armed prefab.
-- Wheel: raise or lower the ghost or selected object.
-- `Q` / `E`: rotate in 15 degree steps. Hold `Shift` for 45 degree steps.
+- Left click: select and drag a dynamic object, or place the armed prefab.
+- Wheel: raise or lower the ghost or selected dynamic object.
+- `Q` / `E`: rotate a dynamic object in 15 degree steps. Hold `Shift` for 45
+  degree steps.
 - `G`: toggle 0.25 m grid snap.
-- `M`: flip a non-lamp target between static and dynamic. A lamp body follows
-  its kind.
-- `Ctrl+D`: duplicate the selected object.
-- `Delete` or `X`: remove it.
-- `Ctrl+Z` / `Ctrl+Shift+Z`: undo / redo.
-- `C`: cycle lamp colour through warm, cool, red, green, and blue.
-- `K`: switch a lamp between static fixture and dynamic lamp.
-- `[` / `]`: change lamp intensity from 0.2 to 4.0.
-- `,` / `.`: change lamp range from 2 to 20 m.
+- `M`: flip the next placement to dynamic. A bake input is read-only; a lamp
+  body follows its kind.
+- `Ctrl+D`: duplicate a dynamic object.
+- `Delete` or `X`: remove a dynamic object.
+- `Ctrl+Z` / `Ctrl+Shift+Z`: undo / redo dynamic edits. An authoring command
+  clears the history.
+- `C`: cycle a dynamic lamp's colour through warm, cool, red, green, and blue.
+- `K`: the lamp kind is an authoring property; the runtime editor places dynamic
+  lamps.
+- `[` / `]`: change a dynamic lamp's intensity from 0.2 to 4.0.
+- `,` / `.`: change a dynamic lamp's range from 2 to 20 m.
 - `R`: reset the player and camera.
 - `Shift+R`: reset placed objects and the player.
 - `F5`: write a scene snapshot.

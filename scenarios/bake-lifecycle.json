@@ -8,7 +8,7 @@
     {"cmd": "settle", "frames": 10},
     {"cmd": "capture", "name": "current", "format": "stats", "png": true},
     {"cmd": "remove", "name": "initial-lamp"},
-    {"cmd": "place", "prefab": "Lamp", "position": [-5.0, 1.2, 6.0], "body": "static",
+    {"cmd": "place", "prefab": "Lamp", "position": [-5.0, 1.2, 6.0],
      "name": "initial-lamp",
      "light": {"kind": "static", "color": "warm", "intensity": 1.5, "range": 8}},
     {"cmd": "settle", "frames": 10},

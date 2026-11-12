@@ -226,6 +226,7 @@ session_place :: proc(session: ^Session, command: Place_Command, reply: ^Reply) 
 	if id == game.INVALID_OBJECT_ID {
 		return format_error("%s", "place failed")
 	}
+	game.editor_reset(&session.runtime.debug.editor)
 	reply.placed = id
 	return ""
 }
@@ -244,6 +245,6 @@ session_remove :: proc(session: ^Session, command: Remove_Command) -> string {
 	if !game.simulation_remove_object(&session.runtime.sim, id) {
 		return format_error("object id %d does not exist", id)
 	}
-	game.editor_repair_selection(&session.runtime.debug.editor, &session.runtime.sim)
+	game.editor_reset(&session.runtime.debug.editor)
 	return ""
 }

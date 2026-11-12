@@ -34,10 +34,6 @@ palette_set_light :: proc(palette: ^Palette, settings: Light_Settings) {
 	palette.light = settings
 }
 
-palette_flip_body :: proc(palette: ^Palette) {
-	palette.body_mode = palette.body_mode == .Static ? Body_Mode.Dynamic : Body_Mode.Static
-}
-
 palette_light :: proc(palette: Palette) -> Light_Settings {
 	settings := palette.light
 	if !settings.active {
@@ -106,12 +102,8 @@ editor_palette_flip_body :: proc(editor: ^Editor) -> Edit_Result {
 	if !open {
 		return editor_palette_not_open(editor)
 	}
-	if prefab_has_light(palette_selected(palette)) {
-		return edit_fail(.Lamp_Body_Follows_Kind)
-	}
-	palette_flip_body(&palette)
-	editor.tool = palette
-	return edit_ok()
+	mode: Body_Mode = palette.body_mode == .Static ? .Dynamic : .Static
+	return editor_set_next_body(editor, mode)
 }
 
 @(private)

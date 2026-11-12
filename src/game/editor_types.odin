@@ -157,7 +157,7 @@ Edit_Reason :: enum {
 	No_Selection,
 	No_Lamp,
 	Lamp_Body_Follows_Kind,
-	Bake_Input_Immutable,
+	Bake_Input_Authoring_Only,
 	Bad_Index,
 	Not_Armed,
 	Nothing_To_Undo,
@@ -211,8 +211,8 @@ edit_reason_message :: proc(reason: Edit_Reason) -> string {
 		return "the target is not a lamp"
 	case .Lamp_Body_Follows_Kind:
 		return "a lamp body follows its kind"
-	case .Bake_Input_Immutable:
-		return "bake inputs are authored, not edited at runtime"
+	case .Bake_Input_Authoring_Only:
+		return "bake inputs are authored, not created or edited at runtime"
 	case .Bad_Index:
 		return "the palette index is out of range"
 	case .Not_Armed:
