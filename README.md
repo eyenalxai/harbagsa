@@ -87,8 +87,10 @@ display, resolution, type weight, and the sprint input mode.
 closes the menu. The menu is keyboard-driven. `Debug` in the status action row
 toggles debug mode; `Close` returns `Close_Menu`, but the game ignores it while
 the menu is closed. The Type weight setting applies to every Rune text node: the
-status panel, the menu, and the palette. A weight of 400 is Rune's default; 900
-is the heaviest.
+status panel, the menu, and the palette. The shim embeds Geist Variable and Geist
+Mono Variable from `ui/shim/assets/`; the weight axis is continuous from 100 to
+900, so 565 works. A weight of 400 is the old default; 900 is the heaviest.
+Numeric values draw in Geist Mono.
 
 Window mode is Borderless or Windowed. Borderless uses the selected display's
 desktop size. Windowed uses the chosen resolution and a normal title bar. The
