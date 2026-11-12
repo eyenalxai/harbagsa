@@ -4,7 +4,7 @@ use std::sync::OnceLock;
 use ash::vk;
 use ash::vk::Handle;
 use rune::render::Renderer;
-use rune::{Cx, El, Env, Runtime};
+use rune::{Cx, El, Env, Key, KeyEvent, Mods, Runtime};
 
 #[repr(C)]
 pub struct UiVkConfig {
@@ -19,6 +19,39 @@ pub struct UiVkDevice {
     pub device: *mut c_void,
     pub graphics_queue: *mut c_void,
     pub present_queue: *mut c_void,
+}
+
+struct UiState {
+    speed: f32,
+    grounded: bool,
+    menu_open: bool,
+    actions: Vec<UiAction>,
+}
+
+#[repr(C)]
+pub struct UiSnapshot {
+    pub speed: f32,
+    pub grounded: u32,
+    pub menu_open: u32,
+    pub palette_open: u32,
+}
+
+#[repr(C)]
+pub struct UiEvent {
+    pub kind: u32,
+    pub flags: u32,
+    pub x: f32,
+    pub y: f32,
+    pub dx: f32,
+    pub dy: f32,
+    pub key: i32,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct UiAction {
+    pub kind: u32,
+    pub value: i32,
 }
 
 #[repr(C)]
@@ -36,7 +69,7 @@ struct Host {
     device: wgpu::Device,
     queue: wgpu::Queue,
     format: Option<wgpu::TextureFormat>,
-    runtime: Option<Runtime<()>>,
+    runtime: Option<Runtime<UiState>>,
     renderer: Option<Renderer>,
     textures: Vec<wgpu::Texture>,
     views: Vec<wgpu::TextureView>,
@@ -261,18 +294,43 @@ fn host() -> Option<&'static mut Host> {
     HOST.get().map(|&pointer| unsafe { &mut *(pointer as *mut Host) })
 }
 
-fn view(_: &(), _: &mut Cx<()>) -> El {
-    use rune::{Color, el, text};
-    el()
+fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
+    use rune::{Color, col, el, text};
+    let ink = Color { r: 0.04, g: 0.05, b: 0.07, a: 1.0 };
+    let dim = Color { r: 0.72, g: 0.76, b: 0.81, a: 1.0 };
+    let accent = Color { r: 0.90, g: 0.69, b: 0.23, a: 1.0 };
+    col()
         .w_full()
         .h_full()
         .padding(24.0)
         .child(
-            el()
+            col()
                 .padding(16.0)
+                .gap(10.0)
                 .radius(10.0)
                 .fill(Color { r: 0.06, g: 0.07, b: 0.09, a: 0.92 })
-                .child(text("Rune").color(Color::WHITE)),
+                .child(text(format!("speed {:.1}", state.speed)).color(Color::WHITE))
+                .child(text(if state.grounded { "grounded" } else { "airborne" }).color(dim))
+                .child(
+                    el()
+                        .padding(8.0)
+                        .radius(6.0)
+                        .fill(accent)
+                        .child(text("Close").color(ink))
+                        .on_press(|s: &mut UiState| {
+                            s.actions.push(UiAction { kind: 1, value: 0 });
+                        }),
+                )
+                .child(
+                    el()
+                        .padding(8.0)
+                        .radius(6.0)
+                        .fill(if state.menu_open { accent } else { Color { r: 0.16, g: 0.19, b: 0.24, a: 1.0 } })
+                        .child(text("Debug").color(ink))
+                        .on_press(|s: &mut UiState| {
+                            s.actions.push(UiAction { kind: 2, value: 0 });
+                        }),
+                ),
         )
 }
 
@@ -350,7 +408,7 @@ pub extern "C" fn ui_attach(target: *const UiTarget) -> i32 {
     host.renderer = Some(Renderer::new(&host.device, format));
     let scale = if target.scale > 0.0 { target.scale } else { 1.0 };
     let mut runtime = Runtime::new(
-        (),
+        UiState { speed: 0.0, grounded: false, menu_open: false, actions: Vec::new() },
         view,
         (target.width as f32 / scale, target.height as f32 / scale),
         Env::new(false, scale),
@@ -373,7 +431,6 @@ pub extern "C" fn ui_draw(image_index: u32) -> i32 {
     let Some(runtime) = host.runtime.as_mut() else { return 4 };
     let Some(renderer) = host.renderer.as_mut() else { return 5 };
 
-    runtime.frame(0.0);
     renderer.prepare(
         &host.device,
         &host.queue,
@@ -405,4 +462,69 @@ pub extern "C" fn ui_draw(image_index: u32) -> i32 {
         return 6;
     }
     0
+}
+
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ui_frame(
+    dt: f64,
+    snapshot: *const UiSnapshot,
+    events: *const UiEvent,
+    count: u32,
+) -> i32 {
+    let Some(host) = host() else { return 1 };
+    let Some(snapshot) = (unsafe { snapshot.as_ref() }) else { return 2 };
+    let Some(runtime) = host.runtime.as_mut() else { return 3 };
+
+    runtime.state.speed = snapshot.speed;
+    runtime.state.grounded = snapshot.grounded != 0;
+    runtime.state.menu_open = snapshot.menu_open != 0;
+    runtime.state.actions.clear();
+
+    if !events.is_null() {
+        for index in 0..count as usize {
+            let event = unsafe { &*events.add(index) };
+            match event.kind {
+                1 => runtime.pointer_move(event.x, event.y),
+                2 => runtime.pointer_down(event.x, event.y),
+                3 => runtime.pointer_up(event.x, event.y),
+                4 => runtime.wheel_xy(event.x, event.y, event.dx, event.dy),
+                5 => {
+                    let key = match event.key {
+                        0 => Key::Enter,
+                        1 => Key::Escape,
+                        2 => Key::Up,
+                        3 => Key::Down,
+                        4 => Key::Left,
+                        5 => Key::Right,
+                        6 => Key::Tab,
+                        _ => continue,
+                    };
+                    runtime.key(KeyEvent { key, mods: Mods::default() });
+                }
+                _ => {}
+            }
+        }
+    }
+    runtime.frame(dt);
+    0
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ui_actions(count: *mut u32) -> *const UiAction {
+    let Some(host) = host() else { return std::ptr::null() };
+    let Some(runtime) = host.runtime.as_ref() else { return std::ptr::null() };
+    if !count.is_null() {
+        unsafe { *count = runtime.state.actions.len() as u32 };
+    }
+    runtime.state.actions.as_ptr()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ui_actions_clear() {
+    if let Some(host) = host()
+        && let Some(runtime) = host.runtime.as_mut()
+    {
+        runtime.state.actions.clear();
+    }
 }
