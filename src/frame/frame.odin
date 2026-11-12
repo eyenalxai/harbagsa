@@ -196,6 +196,12 @@ build :: proc(
 				pointer_pressed = options.pointer_pressed,
 				pointer_down    = options.pointer_down,
 				keys            = options.ui_keys,
+				panel_rows      = hud.view.rows,
+				notice          = hud.view.notice.text,
+				capture_hint    = hud.capture_hint,
+				captured        = hud.captured,
+				palette_open    = palette.open,
+				owns_panel      = true,
 			},
 		}
 	}

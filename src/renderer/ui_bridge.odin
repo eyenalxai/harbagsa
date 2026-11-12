@@ -14,7 +14,7 @@ foreign ui_lib {
 	ui_vk_init :: proc(config: ^Ui_Vk_Config, out: ^Ui_Vk_Device) -> i32 ---
 	ui_attach :: proc(target: ^Ui_Target) -> i32 ---
 	ui_draw :: proc(image_index: u32) -> i32 ---
-	ui_frame :: proc(dt: f64, snapshot: ^Ui_Snapshot, events: [^]Ui_Event, count: u32) -> i32 ---
+	ui_frame :: proc(dt: f64, snapshot: ^Ui_Snapshot, panel: ^Ui_Panel, events: [^]Ui_Event, count: u32) -> i32 ---
 	ui_actions :: proc(count: ^u32) -> [^]Ui_Action ---
 	ui_actions_clear :: proc() ---
 }
@@ -46,6 +46,28 @@ Ui_Snapshot :: struct {
 	grounded:     u32,
 	menu_open:    u32,
 	palette_open: u32,
+}
+
+Ui_Row :: struct {
+	kind:      u32,
+	flags:     u32,
+	label:     [^]u8,
+	label_len: u32,
+	value:     [^]u8,
+	value_len: u32,
+	ratio:     f32,
+	ticks:     u32,
+}
+
+Ui_Panel :: struct {
+	rows:             [^]Ui_Row,
+	row_count:        u32,
+	notice:           [^]u8,
+	notice_len:       u32,
+	capture_hint:     [^]u8,
+	capture_hint_len: u32,
+	captured:         u32,
+	palette_open:     u32,
 }
 
 Ui_Event :: struct {
@@ -136,7 +158,38 @@ ui_step :: proc(r: ^Renderer, frame: UI_Frame) {
 		menu_open    = frame.snapshot.menu_open,
 		palette_open = frame.snapshot.palette_open,
 	}
-	if ui_frame(frame.dt, &snapshot, raw_data(events[:count]), u32(count)) != 0 {
+	rows: [64]Ui_Row
+	row_count := min(len(frame.panel_rows), len(rows))
+	for row, index in frame.panel_rows[:row_count] {
+		flags: u32
+		if row.numeric {
+			flags |= 1
+		}
+		if row.blocked {
+			flags |= 2
+		}
+		rows[index] = {
+			kind      = u32(row.kind),
+			flags     = flags,
+			label     = raw_data(row.label),
+			label_len = u32(len(row.label)),
+			value     = raw_data(row.value),
+			value_len = u32(len(row.value)),
+			ratio     = row.ratio,
+			ticks     = u32(row.ticks),
+		}
+	}
+	panel := Ui_Panel {
+		rows             = raw_data(rows[:row_count]),
+		row_count        = u32(row_count),
+		notice           = raw_data(frame.notice),
+		notice_len       = u32(len(frame.notice)),
+		capture_hint     = raw_data(frame.capture_hint),
+		capture_hint_len = u32(len(frame.capture_hint)),
+		captured         = u32(frame.captured),
+		palette_open     = u32(frame.palette_open),
+	}
+	if ui_frame(frame.dt, &snapshot, &panel, raw_data(events[:count]), u32(count)) != 0 {
 		log.error("renderer: the UI shim could not step")
 	}
 }
@@ -157,7 +210,7 @@ ui_click :: proc(r: ^Renderer, x, y: f32) -> []Ui_Action {
 		{kind = 3, x = x, y = y},
 	}
 	snapshot: Ui_Snapshot
-	if ui_frame(0, &snapshot, raw_data(events[:]), 3) != 0 {
+	if ui_frame(0, &snapshot, nil, raw_data(events[:]), 3) != 0 {
 		return nil
 	}
 	return ui_actions_slice()
