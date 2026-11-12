@@ -2,7 +2,7 @@
   "requires": {"renderer_debug": true},
   "size": "1280x720",
   "parameters": {"lamp_x": 20.0},
-  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "view": {"hud": false, "debug": false, "hint": false},
   "commands": [
     {"cmd": "renderer_debug", "taa": false},
     {"cmd": "debug_mode", "active": true},

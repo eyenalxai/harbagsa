@@ -3,7 +3,7 @@
   "size": "1280x720",
   "requires": {"renderer_debug": true},
   "parameters": {"bounces": 2},
-  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "view": {"hud": false, "debug": false, "hint": false},
   "commands": [
     {"cmd": "renderer_debug", "taa": false, "jitter": false},
     {"cmd": "place", "prefab": "Lamp", "position": [-4.2, 1.6, 8.0], "name": "contact-lamp", "light": {"kind": "static", "color": "warm", "intensity": 3.0, "range": 5}},

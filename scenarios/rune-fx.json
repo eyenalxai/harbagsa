@@ -1,7 +1,7 @@
 {
   "note": "The status action row carries an opt-in rune-fx glow over the scene.",
   "size": "1280x720",
-  "view": {"hud": true, "debug": false, "hint": false, "perf": false, "fx": true},
+  "view": {"hud": true, "debug": false, "hint": false, "fx": true},
   "commands": [
     {"cmd": "capture", "name": "fx", "format": "png"}
   ]

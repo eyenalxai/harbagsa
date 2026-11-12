@@ -1,7 +1,7 @@
 {
   "note": "One simulation frame, nine diagnostic views: the composed frame, each radiance term, and the linear probe reconstruction.",
   "size": "1280x720",
-  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "view": {"hud": false, "debug": false, "hint": false},
   "commands": [
     {"cmd": "bake"},
     {"cmd": "camera", "position": [-2.0, 2.4, 10.0], "look_at": [-3.0, 0.3, 6.0]},

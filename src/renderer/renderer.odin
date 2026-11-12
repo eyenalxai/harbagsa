@@ -52,6 +52,7 @@ Frame :: struct {
 	color_slot:     int,
 	// A pick reads a mapped result after submit, so its frame waits too.
 	wait:           bool,
+	ui_enabled:     bool,
 }
 
 Config :: struct {

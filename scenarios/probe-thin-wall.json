@@ -3,7 +3,7 @@
   "size": "1280x720",
   "parameters": {"basis": "octa", "moments": 8, "threads": 16},
   "requires": {"renderer_debug": true},
-  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "view": {"hud": false, "debug": false, "hint": false},
   "commands": [
     {"cmd": "renderer_debug", "taa": false, "jitter": false},
     {"cmd": "place", "prefab": "Wall", "position": [-16.0, 1.5, -6.0], "name": "thin-wall"},

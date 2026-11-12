@@ -1,7 +1,7 @@
 {
   "note": "One pick on a lit static crate and one on empty space above the arena.",
   "size": "1280x720",
-  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "view": {"hud": false, "debug": false, "hint": false},
   "commands": [
     {"cmd": "place", "prefab": "Crate", "position": [0, 0.5, 9.5], "body": "static", "name": "pick-target"},
     {"cmd": "bake"},

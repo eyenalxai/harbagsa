@@ -13,9 +13,10 @@ Render_Digest_Field :: struct {
 
 // The digest names the effective render inputs, not the game state. Two frames
 // with the same digest draw the same scene before the resolve. `hud` and
-// `debug_lines` are unhashed on purpose: they draw after the resolve. The view
-// flags cover the HUD and the F1 world draw, but editor lines follow F2 and the
-// active tool, so `renderer.debug_vertices` is the count to check.
+// `debug_lines` are unhashed on purpose: the Rune UI draws over the target after
+// the scene and the debug line pass records after the resolve. Editor lines
+// follow F2 and the active tool, so `renderer.debug_vertices` is the count to
+// check.
 RENDER_DIGEST_FIELDS := [?]Render_Digest_Field {
 	{"width", true, write_width, ""},
 	{"height", true, write_height, ""},
@@ -23,15 +24,13 @@ RENDER_DIGEST_FIELDS := [?]Render_Digest_Field {
 	{"boxes", true, write_boxes, ""},
 	{"lights", true, write_lights, ""},
 	{"jitter", true, write_jitter, ""},
-	{"atlas_weight", true, write_atlas_weight, ""},
 	{"clip_height", true, write_clip_height, ""},
 	{"light_shadows", true, write_light_shadows, ""},
 	{"lightmap", true, write_lightmap, ""},
 	{"probe", true, write_probe, ""},
 	{"bake", true, write_bake, ""},
-	{"view_flags", true, write_view_flags, ""},
 	{"debug_lines", false, nil, "draws after the resolve"},
-	{"hud", false, nil, "draws after the resolve"},
+	{"hud", false, nil, "draws after the scene"},
 }
 
 // The digest names the effective render inputs, not the game state. Two frames
@@ -133,13 +132,6 @@ write_jitter :: proc(hash: ^digest.FNV, input: Render_Input) {
 }
 
 @(private)
-write_atlas_weight :: proc(hash: ^digest.FNV, input: Render_Input) {
-	// The applied atlas weight changes the text pixels, so it belongs to the
-	// render digest, not the simulation digest.
-	digest.write_f32(hash, input.atlas_weight)
-}
-
-@(private)
 write_clip_height :: proc(hash: ^digest.FNV, input: Render_Input) {
 	digest.write_f32(hash, input.clip_height)
 }
@@ -155,9 +147,4 @@ write_bake :: proc(hash: ^digest.FNV, input: Render_Input) {
 	// lights, so the applied bake state belongs to the render digest.
 	digest.write_u64(hash, input.bake_key)
 	digest.write_u64(hash, u64(input.bake_status))
-}
-
-@(private)
-write_view_flags :: proc(hash: ^digest.FNV, input: Render_Input) {
-	digest.write_u32(hash, u32(transmute(u8)input.view_flags))
 }

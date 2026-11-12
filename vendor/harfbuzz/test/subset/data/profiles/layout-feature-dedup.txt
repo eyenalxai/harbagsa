@@ -1,4 +1,0 @@
---gids=*
---retain-gids
---notdef-outline
---layout-features=*

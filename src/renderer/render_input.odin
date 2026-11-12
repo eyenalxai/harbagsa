@@ -4,17 +4,6 @@ package renderer
 import "src:bake"
 import "src:geometry"
 
-View_Flag :: enum {
-	HUD,
-	Menu,
-	Palette,
-	Debug_Draw,
-	Capture_Hint,
-	Perf,
-}
-
-View_Flags :: bit_set[View_Flag]
-
 Arena_Box_Identity :: struct {
 	index: int,
 }
@@ -50,9 +39,7 @@ Render_Input :: struct {
 	lights:       []Light,
 	debug_lines:  []geometry.Line,
 	hud:          HUD_Frame,
-	view_flags:   View_Flags,
 	jitter:       [2]f32,
-	atlas_weight: f32,
 	clip_height:  f32,
 	light_shadows: bool,
 	lightmap:     bool,

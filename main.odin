@@ -189,10 +189,6 @@ run :: proc() -> bool {
 			context.allocator,
 		)
 		renderer.refresh_bake(&state, static)
-		perf_stats: Maybe(perf.Stats)
-		if loop.perf_visible {
-			perf_stats = perf.stats(&perf_state)
-		}
 		ui_keys: renderer.UI_KEYS
 		if intent.menu.up {
 			ui_keys += {.Up}
@@ -217,7 +213,6 @@ run :: proc() -> bool {
 				debug_view = loop.debug_view,
 				captured = events.captured,
 				hud = true,
-				perf_stats = perf_stats,
 				bake = renderer.bake_report(&state),
 				pointer = intent.menu.pointer,
 				pointer_pressed = intent.menu.pointer_pressed,
