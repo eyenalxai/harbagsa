@@ -114,17 +114,11 @@ build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
 		return
 	}
 	if hud.ui.owns_panel {
-		if hud.palette.open && !hud.ui.owns_palette {
-			build_palette(o, width, height, hud.palette)
-		}
 		return
 	}
 
 	build_status_panel(o, hud.view)
 	build_notice(o, width, hud.view.notice)
-	if hud.palette.open {
-		build_palette(o, width, height, hud.palette)
-	}
 	build_capture_hint(o, width, height, hud)
 }
 
