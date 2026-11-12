@@ -42,6 +42,8 @@ Bake_Report :: struct {
 	atlas_width:    u32    `json:"atlas_width"`,
 	atlas_height:   u32    `json:"atlas_height"`,
 	texels:         int    `json:"texels"`,
+	allocated_texels: int  `json:"allocated_texels"`,
+	occupancy:      f32    `json:"occupancy"`,
 	faces:          int    `json:"faces"`,
 	slots:          int    `json:"slots"`,
 	probes:         int    `json:"probes"`,
@@ -199,6 +201,12 @@ bake_report :: proc(r: ^Renderer) -> Bake_Report {
 		report.atlas_width = header.atlas_width
 		report.atlas_height = header.atlas_height
 		report.texels = int(header.atlas_width) * int(header.atlas_height)
+		report.allocated_texels = bake.atlas_allocated_texels(
+			r.bake.data.faces,
+			int(header.atlas_width),
+			int(r.bake.data.quality.gutter_texels),
+		)
+		report.occupancy = f32(report.allocated_texels) / f32(report.texels)
 		report.faces = int(header.face_count)
 		report.slots = int(header.slot_count)
 		report.probes = int(header.probe_count)

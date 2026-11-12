@@ -121,14 +121,14 @@ build :: proc(
 	for box, index in game.arena_static_boxes() {
 		append(&scratch.boxes, renderer.Frame_Box {
 			box = box,
-			slot = game.bake_arena_slot(index),
+			slot = game.bake_arena_slot(index, box),
 			identity = renderer.Arena_Box_Identity{index = index},
 		})
 	}
 	for object in game.simulation_objects(sim) {
 		append(&scratch.boxes, renderer.Frame_Box {
 			box = game.simulation_object_visual_box(sim, object.id),
-			slot = game.bake_placed_slot(object),
+			slot = game.bake_placed_slot(sim, object),
 			identity = renderer.Object_Identity{id = object.id},
 			is_lamp = object.light.active,
 		})

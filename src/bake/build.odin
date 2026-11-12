@@ -77,6 +77,9 @@ build :: proc(
 		valid_texels   = lightmap.valid_texels,
 		invalid_texels = lightmap.invalid_texels,
 		dilated_texels = lightmap.dilated_texels,
+		allocated_texels = lightmap.allocated_texels,
+		occupancy      = f32(lightmap.allocated_texels) /
+			f32(options.quality.atlas_size * options.quality.atlas_size),
 		lightmap_rays  = lightmap.rays,
 		probe_rays     = probes.rays,
 		shadow_rays    = lightmap.shadow_rays + probes.shadow_rays,
@@ -133,6 +136,31 @@ build :: proc(
 	report.artifact_bytes = len(artifact)
 	report.payload_hash = payload_hash
 	return artifact, report, .None
+}
+
+// Scale the canonical static input for an atlas capacity run. The identity and
+// the bake key stay derived from the scaled box, so the published artifact is
+// stale against an unscaled scene instead of pretending to fit it.
+scale_static :: proc(static: Static, scale: f32) {
+	for &entry in static.boxes {
+		entry.box.center = {
+			entry.box.center.x * scale,
+			entry.box.center.y * scale,
+			entry.box.center.z * scale,
+		}
+		entry.box.half_extents = {
+			entry.box.half_extents.x * scale,
+			entry.box.half_extents.y * scale,
+			entry.box.half_extents.z * scale,
+		}
+	}
+	for &light in static.lights {
+		light.position = {
+			light.position.x * scale,
+			light.position.y * scale,
+			light.position.z * scale,
+		}
+	}
 }
 
 @(private)

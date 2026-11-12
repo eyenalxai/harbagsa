@@ -6,7 +6,7 @@ package bake
 import "src:geometry"
 
 FORMAT_VERSION :: 2
-TOOL_VERSION :: 3
+TOOL_VERSION :: 4
 
 // The bake key mixes this version too, so a changed input rule invalidates an
 // old artifact without a format bump.
@@ -17,8 +17,13 @@ MAGIC :: [4]u8{'H', 'B', 'A', 'K'}
 ATLAS_SIZE :: 1024
 ATLAS_BYTES_PER_TEXEL :: 8
 TEXELS_PER_METER :: 4
-GUTTER_TEXELS :: 4
-MIN_CHART_TEXELS :: 8
+GUTTER_TEXELS :: 1
+MIN_CHART_TEXELS :: 4
+
+// The previous layout stays loadable so an artifact built by tool 3 reports
+// stale instead of failed.
+GUTTER_TEXELS_LEGACY :: 4
+MIN_CHART_TEXELS_LEGACY :: 8
 
 PROBE_TEXELS :: 8
 PROBE_TEXEL_COUNT :: PROBE_TEXELS * PROBE_TEXELS
@@ -113,7 +118,12 @@ quality_supported :: proc(quality: Quality) -> bool {
 	if quality.texels_per_meter == 0 || quality.texels_per_meter > 64 {
 		return false
 	}
-	if quality.gutter_texels != GUTTER_TEXELS || quality.min_chart != MIN_CHART_TEXELS {
+	if quality.gutter_texels != GUTTER_TEXELS &&
+	   quality.gutter_texels != GUTTER_TEXELS_LEGACY {
+		return false
+	}
+	if quality.min_chart != MIN_CHART_TEXELS &&
+	   quality.min_chart != MIN_CHART_TEXELS_LEGACY {
 		return false
 	}
 	if quality.bounces != BOUNCES || quality.lightmap_rays == 0 || quality.probe_rays == 0 {
@@ -246,6 +256,8 @@ Build_Report :: struct {
 	valid_texels:   int,
 	invalid_texels: int,
 	dilated_texels: int,
+	allocated_texels: int,
+	occupancy:      f32,
 	lightmap_rays:  u64,
 	probe_rays:     u64,
 	shadow_rays:    u64,
