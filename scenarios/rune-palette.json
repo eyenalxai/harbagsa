@@ -1,0 +1,10 @@
+{
+  "note": "The object palette draws as a Rune dock with cards and a preview.",
+  "size": "1280x720",
+  "view": {"hud": true, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "debug_mode", "active": true},
+    {"cmd": "editor", "open": true},
+    {"cmd": "capture", "name": "palette", "format": "png"}
+  ]
+}
