@@ -42,10 +42,8 @@ execute_ui :: proc(session: ^Session, command: Command, reply: ^Reply) -> string
 	}
 	data := cast(^Backend_Data) session.render.backend.ctx
 	actions := renderer.ui_click(&data.renderer, command.ui.x, command.ui.y)
-	for action in actions {
-		if action.kind == u32(renderer.UI_Action_Kind.Close_Menu) {
-			return ""
-		}
+	if len(actions) == 0 {
+		return format_error("%s", "the UI click produced no action")
 	}
-	return format_error("%s", "the UI click produced no action")
+	return ""
 }

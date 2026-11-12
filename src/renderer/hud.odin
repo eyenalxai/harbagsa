@@ -17,8 +17,9 @@ UI_Key :: enum {
 UI_KEYS :: bit_set[UI_Key]
 
 UI_Action_Kind :: enum(u32) {
-	Close_Menu   = 1,
-	Toggle_Debug = 2,
+	Close_Menu     = 1,
+	Toggle_Debug   = 2,
+	Palette_Select = 3,
 }
 
 UI_Snapshot :: struct {
