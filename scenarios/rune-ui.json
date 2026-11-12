@@ -1,0 +1,10 @@
+{
+  "note": "The Rune view draws, accepts a click on Close, and returns the action.",
+  "size": "1280x720",
+  "view": {"hud": true, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "settle", "frames": 1},
+    {"cmd": "ui", "x": 65, "y": 118},
+    {"cmd": "capture", "name": "ui", "format": "png"}
+  ]
+}

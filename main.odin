@@ -197,6 +197,22 @@ run :: proc() -> bool {
 		if loop.perf_visible {
 			perf_stats = perf.stats(&perf_state)
 		}
+		ui_keys: renderer.UI_KEYS
+		if intent.menu.up {
+			ui_keys += {.Up}
+		}
+		if intent.menu.down {
+			ui_keys += {.Down}
+		}
+		if intent.menu.left {
+			ui_keys += {.Left}
+		}
+		if intent.menu.right {
+			ui_keys += {.Right}
+		}
+		if intent.menu.confirm {
+			ui_keys += {.Confirm}
+		}
 		scene := frame.runtime_compose(
 			&loop.runtime,
 			frame.Options {
@@ -207,13 +223,30 @@ run :: proc() -> bool {
 				hud = true,
 				perf_stats = perf_stats,
 				bake = renderer.bake_report(&state),
+				pointer = intent.menu.pointer,
+				pointer_pressed = intent.menu.pointer_pressed,
+				pointer_down = intent.menu.pointer_down,
+				ui_keys = ui_keys,
 			},
 			nil,
 			static,
 		)
 		perf.mark(&perf_state, .Build)
 
-		switch frame.draw(&state, scene) {
+		status := frame.draw(&state, scene)
+		for action in renderer.ui_actions_slice() {
+			#partial switch renderer.UI_Action_Kind(action.kind) {
+			case .Close_Menu:
+				if loop.runtime.hud.menu.open {
+					game.menu_close(&loop.runtime.hud.menu)
+					loop.accumulator = 0
+				}
+			case .Toggle_Debug:
+				loop.debug_view = !loop.debug_view
+			}
+		}
+		renderer.ui_actions_clear()
+		switch status {
 		case .Ok:
 			perf.mark(&perf_state, .Present)
 			perf.set_gpu(&perf_state, renderer.gpu_times(&state))
