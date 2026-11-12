@@ -42,6 +42,7 @@ run path. `--out DIR` chooses the whole run directory.
 | drive the simulation | **Scenario format** and **Commands** |
 | place or remove an object | **Place and remove** |
 | drive the editor | **Editor** |
+| drive the Rune UI | **UI** |
 | build and publish a bake | **Bake lifecycle** |
 | capture the final image | **Capture targets** |
 | capture one lighting term | **Capture targets** and **Diagnostic views** |
@@ -139,6 +140,8 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `debug_mode`: `active` boolean.
 - `editor`: palette, placement, object, light, camera, pointer, and history fields.
 - `menu`: `open`, `item`, `activate`, `direction`, and `set`.
+- `ui`: click the Rune view at `x` and `y` in points. The run fails when the
+  click produces no action.
 - `record`: start with `path` and optional `actions`; stop with no path.
 - `replay`: `path` to a recorded scenario.
 - `repro`: `path` for a live scene snapshot.
@@ -165,6 +168,25 @@ session remains usable. `step` and `settle` are errors while the menu is open.
 
 A `shot` is scenario-only shorthand. It expands to an optional camera, a settle,
 and one capture. It is not a live-session command.
+
+## UI
+
+The overlay is a Rune view. The shim draws it over the scene in the same frame,
+so a capture includes it; there is no separate UI target.
+
+- `menu` opens the settings menu and changes a row. Menu keys stay on the game
+  path.
+- `editor` with `open: true` opens the object palette.
+- `ui` clicks the Rune view at `x` and `y` in points and fails when the click
+  produces no action. It hit-tests the layout targets, not Rune's drawn rects.
+- `capture` writes the frame with the UI.
+
+`scenarios/rune-palette.json` opens the palette and clicks a row.
+`scenarios/rune-menu.json` opens the settings menu and sets the type weight.
+`scenarios/rune-ui.json` clicks the status panel action.
+
+`ui` needs the renderer, so it is an error with `--no-render`. The menu and
+palette state still open without a renderer, but there is no frame to click.
 
 ## State fields
 
