@@ -15,6 +15,8 @@ foreign ui_lib {
 	ui_attach :: proc(target: ^Ui_Target) -> i32 ---
 	ui_draw :: proc(image_index: u32) -> i32 ---
 	ui_frame :: proc(dt: f64, snapshot: ^Ui_Snapshot, panel: ^Ui_Panel, menu: ^Ui_Menu, palette: ^Ui_Palette, events: [^]Ui_Event, count: u32) -> i32 ---
+	ui_click_point :: proc(x, y: f32) -> i32 ---
+	ui_click_element :: proc(pointer: [^]u8, len: u32) -> i32 ---
 	ui_actions :: proc(count: ^u32) -> [^]Ui_Action ---
 	ui_actions_clear :: proc() ---
 }
@@ -120,15 +122,7 @@ Ui_Panel :: struct {
 	palette_open:     u32,
 }
 
-Ui_Event :: struct {
-	kind:  u32,
-	flags: u32,
-	x:     f32,
-	y:     f32,
-	dx:    f32,
-	dy:    f32,
-	key:   i32,
-}
+Ui_Event :: UI_Event
 
 Ui_Action :: struct {
 	kind:  u32,
@@ -170,40 +164,19 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 		return
 	}
 	scale := clamp(f32(height) / 720.0, 1.0, 2.0)
-	x := frame.pointer.x * f32(width) / scale
-	y := frame.pointer.y * f32(height) / scale
 
-	events: [16]Ui_Event
-	count := 0
-	events[count] = {kind = 1, x = x, y = y}
-	count += 1
-	if frame.pointer_pressed {
-		events[count] = {kind = 2, x = x, y = y}
-		count += 1
-	}
-	if !frame.pointer_down && r.ui_pointer_down {
-		events[count] = {kind = 3, x = x, y = y}
-		count += 1
-	}
-	r.ui_pointer_down = frame.pointer_down
-	for key in frame.keys {
-		code: i32
-		switch key {
-		case .Up:
-			code = 2
-		case .Down:
-			code = 3
-		case .Left:
-			code = 4
-		case .Right:
-			code = 5
-		case .Confirm:
-			code = 0
-		case .Escape:
-			code = 1
+	events: [64]Ui_Event
+	count := min(len(frame.events), len(events))
+	for event, index in frame.events[:count] {
+		events[index] = {
+			kind  = event.kind,
+			flags = event.flags,
+			x     = event.x * f32(width) / scale,
+			y     = event.y * f32(height) / scale,
+			dx    = event.dx,
+			dy    = event.dy,
+			key   = event.key,
 		}
-		events[count] = {kind = 5, key = code}
-		count += 1
 	}
 
 	snapshot := frame.snapshot
@@ -337,14 +310,15 @@ ui_actions_slice :: proc() -> []Ui_Action {
 	return pointer[:count]
 }
 
-ui_click :: proc(r: ^Renderer, x, y: f32) -> []Ui_Action {
-	events := [3]Ui_Event {
-		{kind = 1, x = x, y = y},
-		{kind = 2, x = x, y = y},
-		{kind = 3, x = x, y = y},
+ui_click_at :: proc(x, y: f32) -> []Ui_Action {
+	if ui_click_point(x, y) != 0 {
+		return nil
 	}
-	snapshot: Ui_Snapshot
-	if ui_frame(0, &snapshot, nil, nil, nil, raw_data(events[:]), 3) != 0 {
+	return ui_actions_slice()
+}
+
+ui_click_key :: proc(key: string) -> []Ui_Action {
+	if ui_click_element(raw_data(key), u32(len(key))) != 0 {
 		return nil
 	}
 	return ui_actions_slice()

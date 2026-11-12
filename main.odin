@@ -11,6 +11,7 @@ import "src:input"
 import "src:perf"
 import "src:platform"
 import "src:renderer"
+import "src:uiaction"
 
 MAX_FRAME_DELTA :: f32(0.1)
 MAX_STEPS_PER_FRAME :: 8
@@ -102,6 +103,7 @@ run :: proc() -> bool {
 	}
 	renderer.notify_resize(&state)
 	last_time := time.now()
+	ui_event_buffer: UI_Event_Buffer
 
 	for {
 		perf.begin_frame(&perf_state)
@@ -116,10 +118,8 @@ run :: proc() -> bool {
 		focus := input.Focus {
 			game = game.focus(&loop.runtime.debug, &loop.runtime.hud.menu),
 			captured = events.captured,
-			pointer_available = loop.cursor.pointer_available,
 		}
-		hit: input.Palette_Hit
-		intent := input.resolve(&loop.resolver, events, focus, hit)
+		intent := input.resolve(&loop.resolver, events, focus)
 
 		apply_frame_input(&loop, &window, &events, intent)
 		perf.mark(&perf_state, .Events)
@@ -174,12 +174,8 @@ run :: proc() -> bool {
 		}
 		// The edit actions above can open or close the palette, so the cursor
 		// sync runs after them and sees the tool the frame applied.
-		sync_cursor(
-			&window,
-			game.focus(&loop.runtime.debug, &loop.runtime.hud.menu),
-			events.captured,
-			&loop.cursor,
-		)
+		ui_focus := game.focus(&loop.runtime.debug, &loop.runtime.hud.menu)
+		sync_cursor(&window, ui_focus, events.captured)
 
 		alpha := clamp(loop.accumulator / game.SIMULATION_STEP, 0, 1)
 		loop.last_alpha = alpha
@@ -189,22 +185,6 @@ run :: proc() -> bool {
 			context.allocator,
 		)
 		renderer.refresh_bake(&state, static)
-		ui_keys: renderer.UI_KEYS
-		if intent.menu.up {
-			ui_keys += {.Up}
-		}
-		if intent.menu.down {
-			ui_keys += {.Down}
-		}
-		if intent.menu.left {
-			ui_keys += {.Left}
-		}
-		if intent.menu.right {
-			ui_keys += {.Right}
-		}
-		if intent.menu.confirm {
-			ui_keys += {.Confirm}
-		}
 		scene := frame.runtime_compose(
 			&loop.runtime,
 			frame.Options {
@@ -214,10 +194,7 @@ run :: proc() -> bool {
 				captured = events.captured,
 				hud = true,
 				bake = renderer.bake_report(&state),
-				pointer = intent.menu.pointer,
-				pointer_pressed = intent.menu.pointer_pressed,
-				pointer_down = intent.menu.pointer_down,
-				ui_keys = ui_keys,
+				ui_events = build_ui_events(events, &ui_event_buffer, ui_focus.pointer_free),
 			},
 			nil,
 			static,
@@ -226,28 +203,20 @@ run :: proc() -> bool {
 
 		status := frame.draw(&state, scene)
 		for action in renderer.ui_actions_slice() {
-			#partial switch renderer.UI_Action_Kind(action.kind) {
-			case .Close_Menu:
-				if loop.runtime.hud.menu.open {
-					game.menu_close(&loop.runtime.hud.menu)
-					loop.accumulator = 0
-				}
-			case .Toggle_Debug:
-				loop.debug_view = !loop.debug_view
-			case .Palette_Select:
-				if loop.runtime.debug.active {
-					_ = game.editor_apply(
-						&loop.runtime.debug.editor,
-						&loop.runtime.sim,
-						game.Palette_Select{index = int(action.value)},
-						{
-							active = loop.runtime.debug.active,
-							menu_open = loop.runtime.hud.menu.open,
-							captured = events.captured,
-							camera = loop.runtime.debug.camera,
-						},
-					)
-				}
+			result := uiaction.apply(
+				{
+					sim = &loop.runtime.sim,
+					debug = &loop.runtime.debug,
+					menu = &loop.runtime.hud.menu,
+					captured = events.captured,
+				},
+				action,
+			)
+			if !result.handled {
+				log.warnf("harbagsa: unknown UI action kind %d", action.kind)
+			}
+			if result.closed_menu {
+				loop.accumulator = 0
 			}
 		}
 		renderer.ui_actions_clear()

@@ -38,8 +38,9 @@ fills the object palette. `src/frame/frame.odin` copies those values into the
 during the `ui_frame` call; Odin keeps ownership and may reuse the storage on the
 next frame.
 
-The pointer and the six menu keys travel in the same snapshot. Rune hit-tests
-the view and returns flat actions through `ui_actions`.
+The pointer, wheel, key, and focus events travel in one flat batch. Rune
+hit-tests the view, routes focus and drag, and returns flat actions through
+`ui_actions`.
 
 `Row`, `Menu`, `Palette`, and `Hud` are the wire model: the shim consumes those
 flat values, so they stay. The old row vocabulary (the Odin layout and draw

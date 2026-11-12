@@ -82,7 +82,6 @@ Renderer :: struct {
 	command_buffers: [MAX_FRAMES_IN_FLIGHT]vk.CommandBuffer,
 	finalize_buffers: [MAX_FRAMES_IN_FLIGHT]vk.CommandBuffer,
 	ui_ready:        bool,
-	ui_pointer_down: bool,
 	image_available: [MAX_FRAMES_IN_FLIGHT]vk.Semaphore,
 	in_flight:       [MAX_FRAMES_IN_FLIGHT]vk.Fence,
 	query_pools:     [MAX_FRAMES_IN_FLIGHT]vk.QueryPool,
