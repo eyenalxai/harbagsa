@@ -1,0 +1,10 @@
+{
+  "note": "The settings menu draws as a Rune view with live rows and a slider.",
+  "size": "1280x720",
+  "view": {"hud": true, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "settle", "frames": 1},
+    {"cmd": "menu", "open": true, "item": "Type weight", "set": 600},
+    {"cmd": "capture", "name": "menu", "format": "png"}
+  ]
+}
