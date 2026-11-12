@@ -85,13 +85,20 @@ Ui_Menu :: struct {
 }
 
 Ui_Palette_Item :: struct {
-	name:      [^]u8,
-	name_len:  u32,
-	short:     [^]u8,
-	short_len: u32,
-	color:     [4]f32,
-	key:       [^]u8,
-	key_len:   u32,
+	name:           [^]u8,
+	name_len:       u32,
+	short:          [^]u8,
+	short_len:      u32,
+	half_extents:   [3]f32,
+	color:          [4]f32,
+	base_pitch:     f32,
+	body:           [^]u8,
+	body_len:       u32,
+	key:            [^]u8,
+	key_len:        u32,
+	light_line:     [^]u8,
+	light_line_len: u32,
+	emissive:       u32,
 }
 
 Ui_Palette :: struct {
@@ -125,8 +132,10 @@ Ui_Panel :: struct {
 Ui_Event :: UI_Event
 
 Ui_Action :: struct {
-	kind:  u32,
-	value: i32,
+	kind:   u32,
+	id:     u32,
+	value:  i32,
+	scalar: f32,
 }
 
 ui_attach_target :: proc(r: ^Renderer) -> bool {
@@ -259,15 +268,22 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 	palette_source := frame.palette
 	palette_items: [12]Ui_Palette_Item
 	palette_item_count := min(len(palette_source.items), len(palette_items))
-	for item, index in palette_source.items[:palette_item_count] {
+	for &item, index in palette_source.items[:palette_item_count] {
 		palette_items[index] = {
-			name      = raw_data(item.name),
-			name_len  = u32(len(item.name)),
-			short     = raw_data(item.short_name),
-			short_len = u32(len(item.short_name)),
-			color     = item.color,
-			key       = raw_data(item.key),
-			key_len   = u32(len(item.key)),
+			name           = raw_data(item.name),
+			name_len       = u32(len(item.name)),
+			short          = raw_data(item.short_name),
+			short_len      = u32(len(item.short_name)),
+			half_extents   = item.half_extents,
+			color          = item.color,
+			base_pitch     = item.base_pitch,
+			body           = raw_data(item.body),
+			body_len       = u32(len(item.body)),
+			key            = raw_data(item.key),
+			key_len        = u32(len(item.key)),
+			light_line     = raw_data(item.light_line[:item.light_length]),
+			light_line_len = u32(item.light_length),
+			emissive       = u32(item.emissive),
 		}
 	}
 	palette_hints: [8]Ui_Hint

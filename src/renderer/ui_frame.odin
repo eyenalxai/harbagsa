@@ -4,10 +4,42 @@ package renderer
 import "src:ui"
 
 UI_Action_Kind :: enum(u32) {
-	Close_Menu     = 1,
-	Toggle_Debug   = 2,
-	Palette_Select = 3,
-	Palette_Close  = 4,
+	Close_Menu       = 1,
+	Toggle_Debug     = 2,
+	Palette_Select   = 3,
+	Palette_Close    = 4,
+	Settings_Set     = 5,
+	Type_Weight_Set  = 6,
+	Palette_Pick     = 7,
+	Object_Set       = 8,
+	Object_Toggle    = 9,
+	Object_Duplicate = 10,
+	Object_Delete    = 11,
+	Lamp_Set         = 12,
+	Lamp_Kind        = 13,
+	Lamp_Color       = 14,
+	Toggle_Inspector = 15,
+}
+
+UI_Settings_Id :: enum(u32) {
+	Window_Mode,
+	Display,
+	Resolution,
+	Sprint_Mode,
+	Hud_Opacity,
+	Reduce_Motion,
+}
+
+UI_Object_Field :: enum(u32) {
+	Body,
+	Yaw,
+}
+
+UI_Lamp_Field :: enum(u32) {
+	Kind,
+	Color,
+	Intensity,
+	Range,
 }
 
 UI_EVENT_POINTER_MOVE :: u32(1)

@@ -17,6 +17,7 @@ workspace = true
 [dependencies]
 rune = { path = "../../vendor/rune/crates/rune" }
 rune-fx = { path = "../../vendor/rune/crates/rune-fx" }
+rune-kit = { path = "../../vendor/rune/crates/rune-kit" }
 wgpu = { version = "30.0.1", features = ["vulkan"] }
 ash = "0.38"
 pollster = "0.4"
