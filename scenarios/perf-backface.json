@@ -1,0 +1,18 @@
+{
+  "note": "96 synthetic lights above a platform. Its underside faces away from every light, so the back-face gate removes the shadow rays that cannot change the result.",
+  "size": "1920x1080",
+  "requires": {"renderer_debug": true},
+  "renderer_debug": {"synthetic_lights": 96, "lightmap": false, "probe": false},
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "place", "prefab": "Platform", "position": [0.0, 1.0, 0.0], "body": "static"},
+    {"cmd": "camera", "position": [0.0, 0.35, 1.4], "look_at": [0.0, 0.9, 0.0]},
+    {"cmd": "settle", "frames": 2},
+    {"cmd": "perf", "name": "backface-shadow-cost", "frames": 120, "warmup": 30,
+     "prime": "once", "rounds": 3, "baseline": "on",
+     "variants": {
+       "on": {"light_shadows": true},
+       "off": {"light_shadows": false}
+     }}
+  ]
+}

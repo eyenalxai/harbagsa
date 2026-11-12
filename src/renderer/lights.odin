@@ -4,8 +4,6 @@ package renderer
 import "core:log"
 import "core:math"
 
-import "src:geometry"
-
 // The shader reads this as two vec4s: position.xyz + intensity, color.rgb + range.
 Light :: struct {
 	position:  [3]f32,
@@ -19,10 +17,10 @@ Light :: struct {
 LAMP_INSTANCE_MASK :: 0x01
 BOX_INSTANCE_MASK :: 0xFF
 
-// A lamp must not block its own point light, so it gets a mask the shadow ray
-// does not test. Every other box uses all bits.
-box_instance_mask :: proc(box: geometry.Box) -> u32 {
-	return box.emissive > 0 ? LAMP_INSTANCE_MASK : BOX_INSTANCE_MASK
+// A lamp is excluded from every shadow ray, not only its own, so it gets a mask
+// the shadow ray does not test. Every other box uses all bits.
+box_instance_mask :: proc(is_lamp: bool) -> u32 {
+	return is_lamp ? LAMP_INSTANCE_MASK : BOX_INSTANCE_MASK
 }
 
 SYNTHETIC_LIGHT_COLOR :: [3]f32{1.0, 0.82, 0.62}

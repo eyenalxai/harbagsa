@@ -130,6 +130,7 @@ build :: proc(
 			box = game.simulation_object_visual_box(sim, object.id),
 			slot = game.bake_placed_slot(object),
 			identity = renderer.Object_Identity{id = object.id},
+			is_lamp = object.light.active,
 		})
 	}
 	spider_boxes(&scratch.boxes, snapshot, options.alpha)
