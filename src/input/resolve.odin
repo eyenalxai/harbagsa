@@ -14,14 +14,10 @@ resolve :: proc(
 	r: ^Resolver,
 	events: platform.Events,
 	focus: Focus,
-	hit: Palette_Hit,
 ) -> Frame_Input {
 	out := Frame_Input {
 		pause = focus.game.menu_open,
 	}
-	out.menu.pointer = events.pointer
-	out.menu.pointer_pressed = events.pointer_pressed
-	out.menu.pointer_down = events.pointer_down
 
 	// A pause or a free cursor drops every latch, so a press never queues
 	// through the menu or a released pointer.
@@ -54,7 +50,7 @@ resolve :: proc(
 	}
 
 	if focus.game.editor.active {
-		apply_debug_pointer(&out, events, focus, &state, hit)
+		apply_debug_pointer(&out, events, focus, &state)
 		return out
 	}
 
@@ -235,32 +231,10 @@ apply_debug_pointer :: proc(
 	events: platform.Events,
 	focus: Focus,
 	state: ^Key_State,
-	hit: Palette_Hit,
 ) {
 	if state.pointer_tool == .Palette {
-		// The palette owns the cursor, so a right click closes it before the
-		// world sees the press. The same press must not also clear a selection.
-		if events.secondary_pressed {
-			add_action(out, game.Palette_Close{})
-			state.pointer_tool = .None
-			return
-		}
-		if !focus.pointer_available {
-			return
-		}
-		if events.pointer_moved && hit.card >= 0 {
-			add_action(out, game.Palette_Select{index = hit.card})
-		}
-		if events.pointer_pressed {
-			if hit.card >= 0 {
-				add_action(out, game.Palette_Select{index = hit.card})
-				add_action(out, game.Palette_Pick{})
-				state.pointer_tool = .None
-			} else if !hit.inside {
-				add_action(out, game.Palette_Close{})
-				state.pointer_tool = .None
-			}
-		}
+		// Rune owns the pointer while the palette is open; the row press returns
+		// a flat action and the game applies it after the draw.
 		return
 	}
 	switch state.pointer_tool {

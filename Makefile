@@ -1,5 +1,5 @@
 ODIN ?= odin
-ODIN_FLAGS ?= -vet -vet-style -vet-semicolon -vet-tabs -vet-using-param -vet-unused-procedures -vet-packages:main,platform,renderer,game,geometry,frame,perf,harness,display,ui,input,bake -strict-style -warnings-as-errors -disallow-do
+ODIN_FLAGS ?= -vet -vet-style -vet-semicolon -vet-tabs -vet-using-param -vet-unused-procedures -vet-packages:main,platform,renderer,game,geometry,frame,perf,harness,display,ui,input,bake,uiaction -strict-style -warnings-as-errors -disallow-do
 ODIN_COLLECTIONS := -collection:libs=vendor -collection:src=src
 LINKER_FLAGS := -extra-linker-flags:"-lxkbcommon"
 # Library checks cannot know which procedures another package calls, so they
@@ -155,6 +155,7 @@ check: check-lines check-spirv check-rust $(RUST_LIB) $(BOX3D_LIB) shaders
 	$(ODIN) check src/harness $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/ui $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 	$(ODIN) check src/input $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
+	$(ODIN) check src/uiaction $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) -no-entry-point
 
 check-references:
 	@python3 tools/check-references.py
