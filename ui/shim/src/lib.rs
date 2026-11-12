@@ -72,6 +72,7 @@ struct UiState {
     panel: PanelState,
     menu: MenuState,
     palette: PaletteState,
+    press_key: Option<String>,
 }
 
 #[repr(C)]
@@ -510,6 +511,7 @@ fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
     let ink = Color { r: 0.04, g: 0.05, b: 0.07, a: 1.0 };
     let accent = Color { r: 0.90, g: 0.69, b: 0.23, a: 1.0 };
     let close = el()
+        .key("action:1")
         .padding(8.0)
         .radius(6.0)
         .fill(accent)
@@ -518,6 +520,7 @@ fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
             s.actions.push(UiAction { kind: 1, value: 0 });
         });
     let debug = el()
+        .key("action:2")
         .padding(8.0)
         .radius(6.0)
         .fill(Color { r: 0.16, g: 0.19, b: 0.24, a: 1.0 })
@@ -626,6 +629,7 @@ pub extern "C" fn ui_attach(target: *const UiTarget) -> i32 {
             panel: PanelState::default(),
             menu: MenuState::default(),
             palette: PaletteState::default(),
+            press_key: None,
         },
         view,
         (target.width as f32 / scale, target.height as f32 / scale),
@@ -774,10 +778,20 @@ pub extern "C" fn ui_frame(
         for index in 0..count as usize {
             let event = unsafe { &*events.add(index) };
             match event.kind {
-                1 => runtime.pointer_move(event.x, event.y),
-                2 => runtime.pointer_down(event.x, event.y),
-                3 => runtime.pointer_up(event.x, event.y),
-                4 => runtime.wheel_xy(event.x, event.y, event.dx, event.dy),
+                1 => {}
+                2 => {
+                    runtime.state.press_key = element_key_at(runtime, event.x, event.y);
+                }
+                3 => {
+                    let key = element_key_at(runtime, event.x, event.y);
+                    if key.is_some() && key == runtime.state.press_key {
+                        if let Some(key) = key {
+                            push_key_action(&mut runtime.state, &key);
+                        }
+                    }
+                    runtime.state.press_key = None;
+                }
+                4 => {}
                 5 => {
                     let key = match event.key {
                         0 => Key::Enter,
@@ -820,10 +834,10 @@ pub extern "C" fn ui_actions_clear() {
 }
 
 fn menu_view(state: &UiState) -> El {
-    menu_panel(&state.menu)
+    menu_panel(&state.menu, None)
 }
 
-fn menu_panel(menu: &MenuState) -> El {
+fn menu_panel(menu: &MenuState, key_prefix: Option<&str>) -> El {
     use rune::{Color, col, el, row, spacer, text};
     let scrim = Color { r: 0.0, g: 0.0, b: 0.0, a: 0.62 };
     let surface = Color { r: 0.08, g: 0.10, b: 0.13, a: 1.0 };
@@ -860,7 +874,7 @@ fn menu_panel(menu: &MenuState) -> El {
         }
         let selected = index == menu.selected;
         let label_color = if selected { primary } else { secondary };
-        let line = row()
+        let mut line = row()
             .w_full()
             .padding(4.0)
             .gap(12.0)
@@ -869,6 +883,9 @@ fn menu_panel(menu: &MenuState) -> El {
             .child(text(r.label.as_str()).color(label_color))
             .child(spacer())
             .child(text(r.value.as_str()).color(primary));
+        if let Some(prefix) = key_prefix {
+            line = line.key(format!("{prefix}{index}"));
+        }
         panel = panel.child(line);
         if r.kind == 4 {
             let track = el()
@@ -930,7 +947,27 @@ fn palette_view(state: &UiState) -> El {
         note: state.palette.body.clone(),
         hints: state.palette.hints.clone(),
     };
-    menu_panel(&menu)
+    menu_panel(&menu, Some("palette:"))
+}
+
+fn element_key_at(runtime: &Runtime<UiState>, x: f32, y: f32) -> Option<String> {
+    runtime.elements().iter().rev().find_map(|element| {
+        let r = element.target;
+        let inside = x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3];
+        if inside { element.key.clone() } else { None }
+    })
+}
+
+fn push_key_action(state: &mut UiState, key: &str) {
+    if let Some(rest) = key.strip_prefix("palette:") {
+        if let Ok(index) = rest.parse::<i32>() {
+            state.actions.push(UiAction { kind: 3, value: index });
+        }
+    } else if let Some(rest) = key.strip_prefix("action:") {
+        if let Ok(kind) = rest.parse::<u32>() {
+            state.actions.push(UiAction { kind, value: 0 });
+        }
+    }
 }
 
 /// # Safety
