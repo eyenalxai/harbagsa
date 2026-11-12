@@ -41,6 +41,25 @@ struct MenuState {
     hints: Vec<(String, String)>,
 }
 
+struct PaletteItem {
+    name: String,
+    short: String,
+    color: [f32; 4],
+    key: String,
+}
+
+#[derive(Default)]
+struct PaletteState {
+    open: bool,
+    title: String,
+    items: Vec<PaletteItem>,
+    selected: usize,
+    body: String,
+    size: String,
+    count: String,
+    hints: Vec<(String, String)>,
+}
+
 #[derive(Default)]
 struct PanelState {
     rows: Vec<PanelRow>,
@@ -57,6 +76,7 @@ struct UiState {
     actions: Vec<UiAction>,
     panel: PanelState,
     menu: MenuState,
+    palette: PaletteState,
 }
 
 #[repr(C)]
@@ -100,6 +120,35 @@ pub struct UiMenu {
     pub hints: *const UiHint,
     pub hint_count: u32,
     pub hint_columns: u32,
+}
+
+#[repr(C)]
+pub struct UiPaletteItem {
+    pub name: *const u8,
+    pub name_len: u32,
+    pub short: *const u8,
+    pub short_len: u32,
+    pub color: [f32; 4],
+    pub key: *const u8,
+    pub key_len: u32,
+}
+
+#[repr(C)]
+pub struct UiPalette {
+    pub open: u32,
+    pub title: *const u8,
+    pub title_len: u32,
+    pub items: *const UiPaletteItem,
+    pub item_count: u32,
+    pub selected: u32,
+    pub body: *const u8,
+    pub body_len: u32,
+    pub size: *const u8,
+    pub size_len: u32,
+    pub count: *const u8,
+    pub count_len: u32,
+    pub hints: *const UiHint,
+    pub hint_count: u32,
 }
 
 #[repr(C)]
@@ -377,6 +426,9 @@ fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
     if state.menu_open || state.menu.open {
         return menu_view(state);
     }
+    if state.palette.open {
+        return palette_view(state);
+    }
     let surface = Color { r: 0.06, g: 0.08, b: 0.10, a: 0.94 };
     let hairline = Color { r: 0.35, g: 0.38, b: 0.42, a: 0.25 };
     let primary = Color { r: 0.93, g: 0.95, b: 0.97, a: 1.0 };
@@ -540,6 +592,7 @@ pub extern "C" fn ui_attach(target: *const UiTarget) -> i32 {
             actions: Vec::new(),
             panel: PanelState::default(),
             menu: MenuState::default(),
+            palette: PaletteState::default(),
         },
         view,
         (target.width as f32 / scale, target.height as f32 / scale),
@@ -603,6 +656,7 @@ pub extern "C" fn ui_frame(
     snapshot: *const UiSnapshot,
     panel: *const UiPanel,
     menu: *const UiMenu,
+    palette: *const UiPalette,
     events: *const UiEvent,
     count: u32,
 ) -> i32 {
@@ -674,6 +728,41 @@ pub extern "C" fn ui_frame(
         };
     }
 
+    if let Some(palette) = unsafe { palette.as_ref() } {
+        let mut items = Vec::with_capacity(palette.item_count as usize);
+        if !palette.items.is_null() {
+            for index in 0..palette.item_count as usize {
+                let item = unsafe { &*palette.items.add(index) };
+                items.push(PaletteItem {
+                    name: text_bytes(item.name, item.name_len),
+                    short: text_bytes(item.short, item.short_len),
+                    color: item.color,
+                    key: text_bytes(item.key, item.key_len),
+                });
+            }
+        }
+        let mut hints = Vec::with_capacity(palette.hint_count as usize);
+        if !palette.hints.is_null() {
+            for index in 0..palette.hint_count as usize {
+                let hint = unsafe { &*palette.hints.add(index) };
+                hints.push((
+                    text_bytes(hint.keys, hint.keys_len),
+                    text_bytes(hint.action, hint.action_len),
+                ));
+            }
+        }
+        runtime.state.palette = PaletteState {
+            open: palette.open != 0,
+            title: text_bytes(palette.title, palette.title_len),
+            items,
+            selected: palette.selected as usize,
+            body: text_bytes(palette.body, palette.body_len),
+            size: text_bytes(palette.size, palette.size_len),
+            count: text_bytes(palette.count, palette.count_len),
+            hints,
+        };
+    }
+
     if !events.is_null() {
         for index in 0..count as usize {
             let event = unsafe { &*events.add(index) };
@@ -724,6 +813,10 @@ pub extern "C" fn ui_actions_clear() {
 }
 
 fn menu_view(state: &UiState) -> El {
+    menu_panel(&state.menu)
+}
+
+fn menu_panel(menu: &MenuState) -> El {
     use rune::{Color, col, el, row, spacer, text};
     let scrim = Color { r: 0.0, g: 0.0, b: 0.0, a: 0.62 };
     let surface = Color { r: 0.08, g: 0.10, b: 0.13, a: 1.0 };
@@ -744,12 +837,12 @@ fn menu_view(state: &UiState) -> El {
             row()
                 .w_full()
                 .child(spacer())
-                .child(text(state.menu.title.as_str()).color(primary))
+                .child(text(menu.title.as_str()).color(primary))
                 .child(spacer()),
         )
         .child(el().h(1.0).w_full().fill(hairline));
 
-    for (index, r) in state.menu.rows.iter().enumerate() {
+    for (index, r) in menu.rows.iter().enumerate() {
         if r.kind == 5 {
             panel = panel.child(el().h(1.0).w_full().fill(hairline));
             continue;
@@ -758,7 +851,7 @@ fn menu_view(state: &UiState) -> El {
             panel = panel.child(text(r.label.as_str()).color(tertiary));
             continue;
         }
-        let selected = index == state.menu.selected;
+        let selected = index == menu.selected;
         let label_color = if selected { primary } else { secondary };
         let line = row()
             .w_full()
@@ -780,16 +873,16 @@ fn menu_view(state: &UiState) -> El {
         }
     }
 
-    let note = if state.menu.note.is_empty() {
+    let note = if menu.note.is_empty() {
         col()
     } else {
-        text(state.menu.note.as_str()).color(tertiary)
+        text(menu.note.as_str()).color(tertiary)
     };
     panel = panel.child(note);
 
     let mut hints = col().w_full().gap(4.0);
     let per_row = 3usize;
-    for chunk in state.menu.hints.chunks(per_row) {
+    for chunk in menu.hints.chunks(per_row) {
         let mut line = row().gap(16.0);
         for (keys, action) in chunk {
             line = line
@@ -807,6 +900,31 @@ fn menu_view(state: &UiState) -> El {
         .justify_center()
         .child(el().absolute(0.0, 0.0).w_full().h_full().fill(scrim))
         .child(panel)
+}
+
+fn palette_view(state: &UiState) -> El {
+    let rows: Vec<PanelRow> = state
+        .palette
+        .items
+        .iter()
+        .map(|item| PanelRow {
+            kind: 0,
+            flags: 0,
+            label: item.short.clone(),
+            value: item.name.clone(),
+            ratio: 0.0,
+            ticks: 0,
+        })
+        .collect();
+    let menu = MenuState {
+        open: true,
+        title: state.palette.title.clone(),
+        rows,
+        selected: state.palette.selected,
+        note: state.palette.body.clone(),
+        hints: state.palette.hints.clone(),
+    };
+    menu_panel(&menu)
 }
 
 fn text_bytes(pointer: *const u8, len: u32) -> String {
