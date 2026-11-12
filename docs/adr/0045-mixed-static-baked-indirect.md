@@ -47,12 +47,14 @@ free number.
   chart is one planar face, so the kernel cannot bleed across a surface. The
   texel seed follows `(source, id, face, x, y)`, not the atlas position, so a
   static edit that only moves charts leaves their noise field alone.
-  `TOOL_VERSION` is 2.
+  `TOOL_VERSION` is 3.
 - **Probes.** A static 1 m grid covers the playable volume; 2 m is the quality
-  fallback. Each probe stores an 8 x 8 octahedral irradiance block and depth
-  moments. Dynamic boxes sample the four probes of the containing tetrahedron
-  with normal bias, facing weight, and the baked depth test. Static boxes never
-  read the probes.
+  fallback. Each probe stores an 8 x 8 octahedral `R11G11B10F` irradiance block
+  and 8 x 8 depth moments. SH9 irradiance and 16 x 16 moments are selectable
+  A/B options, not the default: the capture evidence finds no quality win and a
+  false bright-emitter back lobe for SH9. Dynamic boxes sample the four probes
+  of the containing tetrahedron with normal bias, facing weight, and the baked
+  depth test. Static boxes never read the probes.
 - **Key and status.** The bake key hashes the canonical static boxes, the active
   static fixtures, the quality, and the tool version. The renderer recomputes it
   from the current static input. A missing artifact is `missing`; a parse failure
@@ -103,14 +105,15 @@ free number.
   until the next publish. A dynamic lamp or crate move reports `current`.
 - A bake is deterministic for the same static input, quality, and tool version.
   The measured wall time travels in a `.time` sidecar, not in the artifact bytes.
-- The lightmap is denoised per chart, so an artifact built by tool version 1 is
-  `stale` and must be rebuilt. A static edit that only moves charts leaves their
-  noise field byte-identical.
+- The lightmap is denoised per chart, so an artifact built by an older tool
+  version is `stale` and must be rebuilt; the current tool version is 3. A
+  static edit that only moves charts leaves their noise field byte-identical.
 - The default bake is about 5 s at 16 threads, not the 2 s target. The 2 m probe
   fallback reduces probe work. Quality and performance measurement stay in the
   follow-up ticket.
-- The bake artifact is about 14 MiB for the default arena and stays under the
-  32 MiB budget.
+- The bake artifact is about 12 MiB for the default arena and stays under the
+  32 MiB budget. The optional 16 x 16 moments raise it to about 18 MiB and the
+  optional SH9 basis lowers it by about 1.5 MiB; neither is the default.
 - This supersedes ADR 0042 (dynamic DDGI), ADR 0039 (dynamic-only lamps), and
   the "no probe" wording in ADR 0041. The no-ambient-floor rule, direct clustered
   lights, hard shadows, TAA, and the emissive term stay in force.

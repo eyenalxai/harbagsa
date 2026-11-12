@@ -13,6 +13,7 @@ Capture_View :: enum {
 	Shadow,
 	Lightmap_Grid,
 	Probe_Cell,
+	Probe_Linear,
 }
 
 Capture_Views :: bit_set[Capture_View]
@@ -26,6 +27,7 @@ CAPTURE_VIEW_NAMES := [Capture_View]string {
 	.Shadow        = "shadow",
 	.Lightmap_Grid = "lightmap_grid",
 	.Probe_Cell    = "probe_cell",
+	.Probe_Linear  = "probe_linear",
 }
 
 capture_view_name :: proc(view: Capture_View) -> string {

@@ -1,0 +1,20 @@
+{
+  "note": "Thin-wall probe A/B: a bright static fixture lights one side of a 0.5 m wall; a dynamic crate on the far side receives the probe field. The camera looks past the wall end at the crate face that the wall shadows.",
+  "size": "1280x720",
+  "parameters": {"basis": "octa", "moments": 8, "threads": 16},
+  "requires": {"renderer_debug": true},
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "renderer_debug", "taa": false, "jitter": false},
+    {"cmd": "place", "prefab": "Wall", "position": [-16.0, 1.5, -6.0], "name": "thin-wall"},
+    {"cmd": "place", "prefab": "Lamp", "position": [-16.0, 1.2, -4.9], "name": "thin-wall-light",
+     "light": {"kind": "static", "color": "warm", "intensity": 4.0, "range": 8}},
+    {"cmd": "place", "prefab": "Crate", "position": [-16.0, 0.5, -7.5], "name": "thin-wall-crate"},
+    {"cmd": "bake", "probe_basis": "${basis}", "probe_moments": "${moments}",
+     "threads": "${threads}", "out": "runs/probe-thin-wall-${basis}-${moments}.hbake"},
+    {"cmd": "camera", "position": [-11.0, 1.7, -6.0], "look_at": [-16.0, 0.6, -7.2], "fov_deg": 55},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "thin-wall", "views": ["beauty", "direct", "probe"]},
+    {"cmd": "pick", "at": [720, 380]}
+  ]
+}

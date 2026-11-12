@@ -39,6 +39,8 @@ Header :: struct #packed {
 	slot_count:           u32,
 	probe_count:          u32,
 	probe_texels:         u32,
+	probe_moment_texels:  u32,
+	probe_basis:          u32,
 	probe_atlas_columns:  u32,
 	probe_min:            [3]f32,
 	probe_spacing:        f32,
@@ -98,13 +100,13 @@ Stats :: struct #packed {
 	invalid_probes: u32,
 }
 
-#assert(size_of(Header) == 104)
+#assert(size_of(Header) == 112)
 #assert(size_of(Section) == 28)
 #assert(size_of(Face) == 32)
 #assert(size_of(Slot) == 16)
 #assert(size_of(Probe_State) == 8)
 #assert(size_of(Stats) == 40)
-#assert(size_of(Quality) == 36)
+#assert(size_of(Quality) == 44)
 
 Error :: enum {
 	None,
@@ -156,9 +158,11 @@ Data :: struct {
 	faces:             []Face,
 	slots:             []Slot,
 	probe_states:      []Probe_State,
-	atlas:             []u8,
-	probe_irradiance:  []u8,
-	probe_moments:     []u8,
-	probe_atlas_width:  u32,
-	probe_atlas_height: u32,
+	atlas:                  []u8,
+	probe_irradiance:       []u8,
+	probe_moments:          []u8,
+	probe_irradiance_width: u32,
+	probe_irradiance_height: u32,
+	probe_moment_width:     u32,
+	probe_moment_height:    u32,
 }

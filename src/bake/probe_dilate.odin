@@ -17,8 +17,12 @@ probe_dilate :: proc(work: ^Probe_Work, allocator: mem.Allocator) -> (dilated: i
 		sources[probe] = work.states[probe].valid != 0
 	}
 
-	irradiance_span := PROBE_TEXEL_COUNT * PROBE_IRRADIANCE_CHANNELS
-	moment_span := PROBE_TEXEL_COUNT * PROBE_MOMENT_CHANNELS
+	irradiance_span := PROBE_TEXEL_COUNT
+	if work.basis == .SH9 {
+		irradiance_span = PROBE_SH_TEXELS
+	}
+	moment_count := work.moment_texels * work.moment_texels
+	moment_span := moment_count * PROBE_MOMENT_CHANNELS
 	for probe in 0 ..< work.count {
 		if sources[probe] {
 			continue
@@ -59,10 +63,17 @@ probe_dilate :: proc(work: ^Probe_Work, allocator: mem.Allocator) -> (dilated: i
 
 		source_base := best_probe * irradiance_span
 		destination_base := probe * irradiance_span
-		copy(
-			work.irradiance[destination_base:destination_base + irradiance_span],
-			work.irradiance[source_base:source_base + irradiance_span],
-		)
+		if work.basis == .SH9 {
+			copy(
+				work.irradiance_f16[destination_base:destination_base + irradiance_span],
+				work.irradiance_f16[source_base:source_base + irradiance_span],
+			)
+		} else {
+			copy(
+				work.irradiance_u32[destination_base:destination_base + irradiance_span],
+				work.irradiance_u32[source_base:source_base + irradiance_span],
+			)
+		}
 		source_moment_base := best_probe * moment_span
 		destination_moment_base := probe * moment_span
 		copy(
