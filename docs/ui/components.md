@@ -39,9 +39,8 @@ a knob control.
 The menu title is a text row. The note is tertiary text under the rows. The hint
 grid is three key/action pairs per line.
 
-The Type weight row edits a stored setting. The Rune view draws Rune's default
-text weight; applying the setting to the view is a port item. See
-[type.md](type.md).
+The Type weight row edits a stored setting. The Rune view applies it to every
+text node as a span weight; 400 leaves Rune's default. See [type.md](type.md).
 
 ## Object palette
 

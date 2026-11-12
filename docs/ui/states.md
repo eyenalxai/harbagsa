@@ -42,8 +42,8 @@ The Type weight row is the only slider. Left and Right step by 10 within
 the unfilled track is white at 20%, and the filled width follows the ratio in the
 accent colour. There is no knob and no tick mark. The slider has no drag path;
 the menu is keyboard-driven and the Rune view does not return a drag action.
-The Type weight value is stored and reported, but the Rune view draws Rune's
-default text weight; applying it is a port item.
+The Type weight value applies to every Rune text node as a span weight. A value
+of 400 leaves Rune's default.
 
 ## Change results
 

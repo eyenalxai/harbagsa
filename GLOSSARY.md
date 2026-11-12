@@ -620,7 +620,7 @@ The static Rust library built from `ui/shim`. It adopts the game's Vulkan instan
 _Avoid_: UI backend, renderer plugin
 
 **UI snapshot**:
-The flat data the game sends through `src/renderer/ui_bridge.odin`: player speed and grounded state, menu and palette flags, pointer events, menu keys, panel rows, notice, capture hint, menu, and palette. Strings stay owned by Odin for the duration of one call.
+The flat data the game sends through `src/renderer/ui_bridge.odin`: player speed and grounded state, type weight, menu and palette flags, pointer events, menu keys, panel rows, notice, capture hint, menu, and palette. Strings stay owned by Odin for the duration of one call.
 _Avoid_: UI frame (the Odin wrapper is `UI_Frame`), scene graph
 
 **UI action**:
@@ -628,7 +628,7 @@ One flat intent returned by the shim: `Close_Menu`, `Toggle_Debug`, or `Palette_
 _Avoid_: Callback, event
 
 **Type weight**:
-The settings value from 100 to 900 that the settings menu edits. It is stored in `Settings.type_weight` and reported by the harness. The Rune view does not apply it to its text yet; the number changes, the glyphs do not.
+The settings value from 100 to 900 that the settings menu edits. It is stored in `Settings.type_weight`, reported by the harness, and applied to every Rune text node as a span weight. A weight of 400 leaves Rune's default; zero leaves the default text style untouched.
 _Avoid_: Font weight, boldness
 
 **View scale**:

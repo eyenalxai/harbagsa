@@ -47,6 +47,7 @@ Ui_Snapshot :: struct {
 	menu_open:    u32,
 	palette_open: u32,
 	fx:           u32,
+	weight:       f32,
 }
 
 Ui_Row :: struct {
@@ -206,6 +207,7 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 	}
 
 	snapshot := frame.snapshot
+	snapshot.weight = hud.weight
 	rows: [64]Ui_Row
 	row_count := min(len(frame.panel_rows), len(rows))
 	for row, index in frame.panel_rows[:row_count] {

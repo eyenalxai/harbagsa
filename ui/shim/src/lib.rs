@@ -4,7 +4,7 @@ use std::sync::OnceLock;
 use ash::vk;
 use ash::vk::Handle;
 use rune::render::{EffectPhase, EffectSite, Renderer};
-use rune::{Cx, El, Env, Key, KeyEvent, Mods, Runtime};
+use rune::{Cx, El, Env, Key, KeyEvent, Mods, Runtime, Span, text};
 use rune_fx::{Fx, FxFrame, FxLayer, FxOptions, FxRenderer, FxSlot, GlowParams, Shape, rgb};
 
 #[repr(C)]
@@ -70,6 +70,7 @@ struct UiState {
     grounded: bool,
     menu_open: bool,
     fx: bool,
+    weight: f32,
     actions: Vec<UiAction>,
     panel: PanelState,
     menu: MenuState,
@@ -84,6 +85,7 @@ pub struct UiSnapshot {
     pub menu_open: u32,
     pub palette_open: u32,
     pub fx: u32,
+    pub weight: f32,
 }
 
 #[repr(C)]
@@ -464,8 +466,16 @@ fn host() -> Option<&'static mut Host> {
     HOST.get().map(|&pointer| unsafe { &mut *(pointer as *mut Host) })
 }
 
+fn weighted_text(content: &str, weight: f32) -> El {
+    let element = text(content);
+    if weight <= 0.0 {
+        return element;
+    }
+    element.spans(vec![Span::new(0, content.len()).weight(weight)])
+}
+
 fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
-    use rune::{Color, col, el, row, spacer, text};
+    use rune::{Color, col, el, row, spacer};
     if state.menu_open || state.menu.open {
         return menu_view(state);
     }
@@ -487,16 +497,16 @@ fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
     for r in &state.panel.rows {
         panel = match r.kind {
             5 => panel.child(el().h(1.0).w_full().fill(hairline)),
-            6 => panel.child(text(r.label.as_str()).color(tertiary)),
+            6 => panel.child(weighted_text(r.label.as_str(), state.weight).color(tertiary)),
             0 | 1 | 2 | 3 | 4 => {
                 let label_color = if r.kind == 3 { tertiary } else { secondary };
                 let value_color = if r.flags & 2 != 0 { secondary } else { primary };
                 let line = row()
                     .w_full()
                     .gap(12.0)
-                    .child(text(r.label.as_str()).color(label_color))
+                    .child(weighted_text(r.label.as_str(), state.weight).color(label_color))
                     .child(spacer())
-                    .child(text(r.value.as_str()).color(value_color));
+                    .child(weighted_text(r.value.as_str(), state.weight).color(value_color));
                 panel.child(line)
             }
             _ => panel,
@@ -509,12 +519,12 @@ fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
     {
         col()
     } else {
-        text(state.panel.capture_hint.as_str()).color(primary)
+        weighted_text(state.panel.capture_hint.as_str(), state.weight).color(primary)
     };
     let notice = if state.panel.notice.is_empty() {
         col()
     } else {
-        text(state.panel.notice.as_str()).color(primary)
+        weighted_text(state.panel.notice.as_str(), state.weight).color(primary)
     };
 
     let ink = Color { r: 0.04, g: 0.05, b: 0.07, a: 1.0 };
@@ -524,7 +534,7 @@ fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
         .padding(8.0)
         .radius(6.0)
         .fill(accent)
-        .child(text("Close").color(ink))
+        .child(weighted_text("Close", state.weight).color(ink))
         .on_press(|s: &mut UiState| {
             s.actions.push(UiAction { kind: 1, value: 0 });
         });
@@ -533,7 +543,7 @@ fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
         .padding(8.0)
         .radius(6.0)
         .fill(Color { r: 0.16, g: 0.19, b: 0.24, a: 1.0 })
-        .child(text("Debug").color(Color::WHITE))
+        .child(weighted_text("Debug", state.weight).color(Color::WHITE))
         .on_press(|s: &mut UiState| {
             s.actions.push(UiAction { kind: 2, value: 0 });
         });
@@ -649,6 +659,7 @@ pub extern "C" fn ui_attach(target: *const UiTarget) -> i32 {
             grounded: false,
             menu_open: false,
             fx: false,
+            weight: 0.0,
             actions: Vec::new(),
             panel: PanelState::default(),
             menu: MenuState::default(),
@@ -759,6 +770,7 @@ pub extern "C" fn ui_frame(
     runtime.state.grounded = snapshot.grounded != 0;
     runtime.state.menu_open = snapshot.menu_open != 0;
     runtime.state.fx = snapshot.fx != 0;
+    runtime.state.weight = snapshot.weight;
     runtime.state.actions.clear();
 
     if let Some(panel) = unsafe { panel.as_ref() } {
@@ -889,11 +901,11 @@ pub extern "C" fn ui_actions_clear() {
 }
 
 fn menu_view(state: &UiState) -> El {
-    menu_panel(&state.menu, None)
+    menu_panel(&state.menu, None, state.weight)
 }
 
-fn menu_panel(menu: &MenuState, key_prefix: Option<&str>) -> El {
-    use rune::{Color, col, el, row, spacer, text};
+fn menu_panel(menu: &MenuState, key_prefix: Option<&str>, weight: f32) -> El {
+    use rune::{Color, col, el, row, spacer};
     let scrim = Color { r: 0.0, g: 0.0, b: 0.0, a: 0.62 };
     let surface = Color { r: 0.08, g: 0.10, b: 0.13, a: 1.0 };
     let raised = Color { r: 0.15, g: 0.19, b: 0.24, a: 1.0 };
@@ -913,7 +925,7 @@ fn menu_panel(menu: &MenuState, key_prefix: Option<&str>) -> El {
             row()
                 .w_full()
                 .child(spacer())
-                .child(text(menu.title.as_str()).color(primary))
+                .child(weighted_text(menu.title.as_str(), weight).color(primary))
                 .child(spacer()),
         )
         .child(el().h(1.0).w_full().fill(hairline));
@@ -924,7 +936,7 @@ fn menu_panel(menu: &MenuState, key_prefix: Option<&str>) -> El {
             continue;
         }
         if r.kind == 6 {
-            panel = panel.child(text(r.label.as_str()).color(tertiary));
+            panel = panel.child(weighted_text(r.label.as_str(), weight).color(tertiary));
             continue;
         }
         let selected = index == menu.selected;
@@ -935,9 +947,9 @@ fn menu_panel(menu: &MenuState, key_prefix: Option<&str>) -> El {
             .gap(12.0)
             .fill(if selected { raised } else { Color::TRANSPARENT })
             .child(if selected { el().w(2.0).h(18.0).fill(accent) } else { el() })
-            .child(text(r.label.as_str()).color(label_color))
+            .child(weighted_text(r.label.as_str(), weight).color(label_color))
             .child(spacer())
-            .child(text(r.value.as_str()).color(primary));
+            .child(weighted_text(r.value.as_str(), weight).color(primary));
         if let Some(prefix) = key_prefix {
             line = line.key(format!("{prefix}{index}"));
         }
@@ -955,7 +967,7 @@ fn menu_panel(menu: &MenuState, key_prefix: Option<&str>) -> El {
     let note = if menu.note.is_empty() {
         col()
     } else {
-        text(menu.note.as_str()).color(tertiary)
+        weighted_text(menu.note.as_str(), weight).color(tertiary)
     };
     panel = panel.child(note);
 
@@ -965,8 +977,8 @@ fn menu_panel(menu: &MenuState, key_prefix: Option<&str>) -> El {
         let mut line = row().gap(16.0);
         for (keys, action) in chunk {
             line = line
-                .child(text(keys.as_str()).color(primary))
-                .child(text(action.as_str()).color(secondary));
+                .child(weighted_text(keys.as_str(), weight).color(primary))
+                .child(weighted_text(action.as_str(), weight).color(secondary));
         }
         hints = hints.child(line);
     }
@@ -1002,7 +1014,7 @@ fn palette_view(state: &UiState) -> El {
         note: state.palette.body.clone(),
         hints: state.palette.hints.clone(),
     };
-    menu_panel(&menu, Some("palette:"))
+    menu_panel(&menu, Some("palette:"), state.weight)
 }
 
 fn element_key_at(runtime: &Runtime<UiState>, x: f32, y: f32) -> Option<String> {
