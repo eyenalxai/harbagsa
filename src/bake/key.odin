@@ -79,13 +79,27 @@ write_box :: proc(hash: ^digest.FNV, box: geometry.Box) {
 }
 
 @(private)
+canonical_quat :: proc(value: [4]f32) -> [4]f32 {
+	for component in value {
+		if component > 0 {
+			return value
+		}
+		if component < 0 {
+			return {-value.x, -value.y, -value.z, -value.w}
+		}
+	}
+	return value
+}
+
+@(private)
 write_transform :: proc(hash: ^digest.FNV, box: geometry.Box) {
 	write_vec3(hash, box.center)
 	write_vec3(hash, box.half_extents)
-	digest.write_f32(hash, canonical_f32(box.rotation.x))
-	digest.write_f32(hash, canonical_f32(box.rotation.y))
-	digest.write_f32(hash, canonical_f32(box.rotation.z))
-	digest.write_f32(hash, canonical_f32(box.rotation.w))
+	rotation := canonical_quat(box.rotation)
+	digest.write_f32(hash, canonical_f32(rotation.x))
+	digest.write_f32(hash, canonical_f32(rotation.y))
+	digest.write_f32(hash, canonical_f32(rotation.z))
+	digest.write_f32(hash, canonical_f32(rotation.w))
 }
 
 @(private)

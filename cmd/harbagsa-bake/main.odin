@@ -74,7 +74,7 @@ run :: proc(args: []string) -> int {
 				return argument_error("--scale needs a factor")
 			}
 			value, value_ok := strconv.parse_f32(args[index + 1])
-			if !value_ok || value <= 0 || value > 8 {
+			if !value_ok || !bake.scale_supported(value) {
 				return argument_error("--scale must be in (0, 8]")
 			}
 			scale = value

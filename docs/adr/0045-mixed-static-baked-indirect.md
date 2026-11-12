@@ -66,9 +66,12 @@ free number.
   old chart: the lookup misses and the box falls back to direct light.
 - **Publish.** A static fixture or static geometry edit changes the key and marks
   the bake stale. Direct light updates immediately; the old indirect remains
-  bound and visible. An explicit `bake` command rebuilds from the current static
-  input and publishes the new artifact. A failed publish leaves the old artifact
-  bound and reports `failed`; it never falls back to black or to another bake.
+  bound and visible, except for a box whose transform changed. That box's slot
+  key no longer matches, so it falls back to direct light instead of carrying a
+  chart baked for its previous position. An explicit `bake` command rebuilds
+  from the current static input and publishes the new artifact. A failed publish
+  leaves the old artifact bound and reports `failed`; it never falls back to
+  black or to another bake.
 - **Harness.** The `bake` command builds, optionally writes the artifact, and
   publishes it. `scale` scales the static geometry for an atlas capacity run and
   publishes an artifact that is stale against the unscaled scene. `state.bake`
@@ -114,10 +117,9 @@ free number.
 - A bake is deterministic for the same static input, quality, and tool version.
   The measured wall time travels in a `.time` sidecar, not in the artifact bytes.
 - The lightmap is denoised per chart, so an artifact built by an older tool
-  version is `stale` and must be rebuilt; the current tool version is 4. The
-  loader still accepts the previous 4-texel gutter and 8-texel minimum chart, so
-  a tool 3 artifact loads and reports `stale` instead of `failed`. A static edit
-  that only moves charts leaves their noise field byte-identical.
+  version with the old layout is rejected and must be rebuilt; the current tool
+  version is 4. A tool 4 artifact becomes `stale` on a static edit. A static
+  edit that only moves charts leaves their noise field byte-identical.
 - The default bake is about 5 s at 16 threads, not the 2 s target. The 2 m probe
   fallback reduces probe work. Quality and performance measurement stay in the
   follow-up ticket.
