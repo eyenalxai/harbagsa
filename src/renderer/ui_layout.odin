@@ -67,13 +67,6 @@ text_style_for_role :: proc(theme: UI_Theme, role: ui.Text_Role, color: [4]f32) 
 	return {type = text_type_for_role(theme, role), color = color}
 }
 
-menu_layout_for :: proc(r: ^Renderer, menu: ui.Menu) -> ui.Menu_Layout {
-	width, height := target_extent(r)
-	ctx: Layout_Context
-	layout_context_init(&ctx, &r.overlay, f32(width), f32(height))
-	return ui.menu_layout(ctx.inputs, menu)
-}
-
 @(private)
 layout_measure :: proc(ctx: rawptr, role: ui.Text_Role, text: string) -> f32 {
 	layout := cast(^Layout_Context)ctx
