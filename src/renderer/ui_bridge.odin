@@ -14,7 +14,7 @@ foreign ui_lib {
 	ui_vk_init :: proc(config: ^Ui_Vk_Config, out: ^Ui_Vk_Device) -> i32 ---
 	ui_attach :: proc(target: ^Ui_Target) -> i32 ---
 	ui_draw :: proc(image_index: u32) -> i32 ---
-	ui_frame :: proc(dt: f64, snapshot: ^Ui_Snapshot, panel: ^Ui_Panel, menu: ^Ui_Menu, events: [^]Ui_Event, count: u32) -> i32 ---
+	ui_frame :: proc(dt: f64, snapshot: ^Ui_Snapshot, panel: ^Ui_Panel, menu: ^Ui_Menu, palette: ^Ui_Palette, events: [^]Ui_Event, count: u32) -> i32 ---
 	ui_actions :: proc(count: ^u32) -> [^]Ui_Action ---
 	ui_actions_clear :: proc() ---
 }
@@ -78,6 +78,33 @@ Ui_Menu :: struct {
 	hints:        [^]Ui_Hint,
 	hint_count:   u32,
 	hint_columns: u32,
+}
+
+Ui_Palette_Item :: struct {
+	name:      [^]u8,
+	name_len:  u32,
+	short:     [^]u8,
+	short_len: u32,
+	color:     [4]f32,
+	key:       [^]u8,
+	key_len:   u32,
+}
+
+Ui_Palette :: struct {
+	open:       u32,
+	title:      [^]u8,
+	title_len:  u32,
+	items:      [^]Ui_Palette_Item,
+	item_count: u32,
+	selected:   u32,
+	body:       [^]u8,
+	body_len:   u32,
+	size:       [^]u8,
+	size_len:   u32,
+	count:      [^]u8,
+	count_len:  u32,
+	hints:      [^]Ui_Hint,
+	hint_count: u32,
 }
 
 Ui_Panel :: struct {
@@ -254,7 +281,47 @@ ui_step :: proc(r: ^Renderer, frame: UI_Frame) {
 		hint_count   = u32(hint_count),
 		hint_columns = u32(frame.menu.hint_columns),
 	}
-	if ui_frame(frame.dt, &snapshot, &panel, &menu, raw_data(events[:count]), u32(count)) != 0 {
+	palette_source := frame.palette
+	palette_items: [12]Ui_Palette_Item
+	palette_item_count := min(len(palette_source.items), len(palette_items))
+	for item, index in palette_source.items[:palette_item_count] {
+		palette_items[index] = {
+			name      = raw_data(item.name),
+			name_len  = u32(len(item.name)),
+			short     = raw_data(item.short_name),
+			short_len = u32(len(item.short_name)),
+			color     = item.color,
+			key       = raw_data(item.key),
+			key_len   = u32(len(item.key)),
+		}
+	}
+	palette_hints: [8]Ui_Hint
+	palette_hint_count := min(len(palette_source.hints), len(palette_hints))
+	for hint, index in palette_source.hints[:palette_hint_count] {
+		palette_hints[index] = {
+			keys       = raw_data(hint.keys),
+			keys_len   = u32(len(hint.keys)),
+			action     = raw_data(hint.action),
+			action_len = u32(len(hint.action)),
+		}
+	}
+	palette_c := Ui_Palette {
+		open       = u32(palette_source.open),
+		title      = raw_data(palette_source.title),
+		title_len  = u32(len(palette_source.title)),
+		items      = raw_data(palette_items[:palette_item_count]),
+		item_count = u32(palette_item_count),
+		selected   = u32(palette_source.selected),
+		body       = raw_data(palette_source.body),
+		body_len   = u32(len(palette_source.body)),
+		size       = raw_data(palette_source.size[:palette_source.size_length]),
+		size_len   = u32(palette_source.size_length),
+		count      = raw_data(palette_source.count[:palette_source.count_length]),
+		count_len  = u32(palette_source.count_length),
+		hints      = raw_data(palette_hints[:palette_hint_count]),
+		hint_count = u32(palette_hint_count),
+	}
+	if ui_frame(frame.dt, &snapshot, &panel, &menu, &palette_c, raw_data(events[:count]), u32(count)) != 0 {
 		log.error("renderer: the UI shim could not step")
 	}
 }
@@ -275,7 +342,7 @@ ui_click :: proc(r: ^Renderer, x, y: f32) -> []Ui_Action {
 		{kind = 3, x = x, y = y},
 	}
 	snapshot: Ui_Snapshot
-	if ui_frame(0, &snapshot, nil, nil, raw_data(events[:]), 3) != 0 {
+	if ui_frame(0, &snapshot, nil, nil, nil, raw_data(events[:]), 3) != 0 {
 		return nil
 	}
 	return ui_actions_slice()
