@@ -11,6 +11,9 @@ crate-type = ["staticlib", "rlib"]
 name = "ui-spike"
 path = "src/spike.rs"
 
+[lints]
+workspace = true
+
 [dependencies]
 rune = { path = "../../vendor/rune/crates/rune" }
 wgpu = { version = "30.0.1", features = ["vulkan"] }
