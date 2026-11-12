@@ -30,11 +30,10 @@ selectable bake options for later A/B work.
   the high 10. The shader still stores `(radiance/2)^(1/5)` and decodes with
   `pow(encoded, 2.5)`, so the default image matches the old one within one
   8-bit step.
-- **Basis option.** `Quality.probe_basis` is `octa` or `sh9`. SH9 stores nine
-  signed `RGBA16F` coefficients per probe in a 9 x probe-count image, projected
-  with the clamped-cosine band factors and a Lanczos window. The fourth channel
-  is padding on this optional path because the device does not sample RGB16F.
-  The default is `octa`.
+- **Basis option.** `Quality.probe_basis` is `octa` or `sh9`. SH9 stores 27
+  signed `R16F` values per probe (nine coefficients x three channels) in a
+  27 x probe-count image, projected with the clamped-cosine band factors and a
+  Lanczos window. There is no padding channel. The default is `octa`.
 - **Depth option.** `Quality.probe_moment_texels` is 8 or 16. The moment atlas
   derives its own shelf extents from the tile size, so either resolution can
   pair with either basis. The default is 8.
@@ -67,8 +66,9 @@ selectable bake options for later A/B work.
 
 ## Consequences
 
-- The default artifact is about 12.6 MB for the default arena; the worst A/B
-  option is about 18.7 MB. Both are under the 32 MiB budget.
+- The default artifact is about 12.6 MB for the default arena, SH9 8 x 8 is
+  about 10.9 MB, and the worst A/B option is about 18.7 MB. All are under the
+  32 MiB budget.
 - The bake remains deterministic: the same input and quality produce
   byte-identical artifacts at one and sixteen threads.
 - Existing version-1 artifacts are rejected and must be rebuilt.

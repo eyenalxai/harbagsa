@@ -93,7 +93,7 @@ probe_bake :: proc(
 		irradiance_u32 = make([]u32, count * PROBE_TEXEL_COUNT, allocator)
 		mem.set(raw_data(irradiance_u32), 0, len(irradiance_u32) * size_of(u32))
 	} else {
-		irradiance_f16 = make([]f16, count * PROBE_SH_COEFFS * 4, allocator)
+		irradiance_f16 = make([]f16, count * PROBE_SH_TEXELS, allocator)
 		mem.set(raw_data(irradiance_f16), 0, len(irradiance_f16) * size_of(f16))
 	}
 	defer {

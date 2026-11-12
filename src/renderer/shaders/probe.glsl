@@ -113,12 +113,14 @@ float sh_basis(uint index, vec3 direction) {
 
 vec3 probe_irradiance_sh9(uint probe_index, vec3 direction) {
     vec3 sum = vec3(0.0);
+    int row = int(probe_index);
     for (uint index = 0u; index < PROBE_SH_COEFFS; ++index) {
-        vec3 coefficient = texelFetch(
-            probe_irradiance_atlas,
-            ivec2(int(index), int(probe_index)),
-            0
-        ).rgb;
+        int base = int(index) * 3;
+        vec3 coefficient = vec3(
+            texelFetch(probe_irradiance_atlas, ivec2(base + 0, row), 0).r,
+            texelFetch(probe_irradiance_atlas, ivec2(base + 1, row), 0).r,
+            texelFetch(probe_irradiance_atlas, ivec2(base + 2, row), 0).r
+        );
         sum += coefficient * sh_basis(index, direction);
     }
     return sum;

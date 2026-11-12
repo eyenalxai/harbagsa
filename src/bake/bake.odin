@@ -25,7 +25,7 @@ PROBE_TEXEL_COUNT :: PROBE_TEXELS * PROBE_TEXELS
 PROBE_MOMENT_TEXELS :: 8
 PROBE_MOMENT_TEXELS_HIGH :: 16
 PROBE_SH_COEFFS :: 9
-PROBE_SH_TEXELS :: PROBE_SH_COEFFS
+PROBE_SH_TEXELS :: PROBE_SH_COEFFS * 3
 PROBE_MOMENT_CHANNELS :: 2
 PROBE_BYTES_PER_IRRADIANCE_TEXEL :: 4
 PROBE_BYTES_PER_MOMENT_TEXEL :: 4
@@ -33,9 +33,9 @@ PROBE_SPACING :: 1.0
 PROBE_SPACING_FALLBACK :: 2.0
 
 // SH9 is signed, so it cannot use the packed unsigned HDR format. One probe is
-// nine RGBA16F texels in a 9 x probe count image. This device does not sample
-// RGB16F, so the fourth channel is padding on the optional signed path only.
-PROBE_SH_BYTES_PER_PROBE :: PROBE_SH_TEXELS * 8
+// 27 R16F texels (nine coefficients x three channels) in a 27 x probe count
+// image, with no padding channel.
+PROBE_SH_BYTES_PER_PROBE :: PROBE_SH_TEXELS * 2
 
 LIGHTMAP_RAYS :: 128
 PROBE_RAYS :: 1024

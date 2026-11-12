@@ -253,7 +253,7 @@ The axis-aligned grid of probes. The default covers the arena at 1 m spacing: 40
 _Avoid_: GI grid, light grid
 
 **Probe atlas**:
-The irradiance and depth maps for one probe. The default irradiance is an 8 x 8 octahedral `R11G11B10F` map with gamma-5 storage; the optional SH9 basis stores nine signed `RGBA16F` coefficients. Depth stores the first and second moments at 8 x 8 or 16 x 16. The lit pass samples the four probes of the containing tetrahedron.
+The irradiance and depth maps for one probe. The default irradiance is an 8 x 8 octahedral `R11G11B10F` map with gamma-5 storage; the optional SH9 basis stores 27 signed `R16F` values (nine coefficients x three channels). Depth stores the first and second moments at 8 x 8 or 16 x 16. The lit pass samples the four probes of the containing tetrahedron.
 _Avoid_: Irradiance map, probe texture
 
 **Coverage fraction**:

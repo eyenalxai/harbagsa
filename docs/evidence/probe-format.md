@@ -12,10 +12,9 @@ The default stays octa with `R11G11B10F` and 8 x 8 moments.
   `probe_linear` diagnostic view decodes every tap with `2 * pow(encoded, 5)`
   before weighting, so one capture writes the gamma-2 and linear pair from one
   frame.
-- `probe_basis` selects `octa` or `sh9`. SH9 stores nine signed `RGBA16F`
-  coefficients per probe; the fourth channel is padding because this device
-  does not sample `RGB16F`. The projection is scaled by the clamped-cosine band
-  factors and a Lanczos window.
+- `probe_basis` selects `octa` or `sh9`. SH9 stores 27 signed `R16F` values per
+  probe (nine coefficients x three channels), with no padding channel. The
+  projection is scaled by the clamped-cosine band factors and a Lanczos window.
 - `probe_moments` selects an 8 x 8 or 16 x 16 first/second moment block. The
   moment atlas keeps its own shelf extents, so the irradiance basis and the
   moment resolution vary independently.
@@ -50,12 +49,12 @@ Probe-term image deltas against the octa 8 x 8 baseline:
 | --- | --- | --: | --: | --: | --: | --: |
 | Thin wall | octa 8 x 8 | 12,560,896 | 65.1051 | 0 | 0 | 0% |
 | Thin wall | octa 16 x 16 | 18,704,896 | 65.1051 | 0 | 0 | 0% |
-| Thin wall | SH9 8 x 8 | 11,088,896 | 65.1895 | 0.1385 | 14 | 5.7% |
-| Thin wall | SH9 16 x 16 | 17,232,896 | 65.1895 | 0.1385 | 14 | 5.7% |
+| Thin wall | SH9 8 x 8 | 10,944,896 | 65.1895 | 0.1385 | 14 | 5.7% |
+| Thin wall | SH9 16 x 16 | 17,088,896 | 65.1895 | 0.1385 | 14 | 5.7% |
 | Bright emitter | octa 8 x 8 | 12,560,688 | 70.7498 | 0 | 0 | 0% |
 | Bright emitter | octa 16 x 16 | 18,704,688 | 70.7498 | 0 | 1 | <0.1% |
-| Bright emitter | SH9 8 x 8 | 11,088,688 | 71.2086 | 0.4883 | 11 | 8.6% |
-| Bright emitter | SH9 16 x 16 | 17,232,688 | 71.2086 | 0.4883 | 11 | 8.6% |
+| Bright emitter | SH9 8 x 8 | 10,944,688 | 71.2086 | 0.4883 | 11 | 8.6% |
+| Bright emitter | SH9 16 x 16 | 17,088,688 | 71.2086 | 0.4883 | 11 | 8.6% |
 
 The picked away-side crate face in the bright-emitter scene:
 
@@ -113,7 +112,7 @@ sixteen threads.
 | Variant | SHA-256 |
 | --- | --- |
 | thin-wall octa 8 x 8, 1 and 16 threads | `e7aa197066be5441bb45846a2ac6d13447ef3cbde51a620fd650ee9f3414373f` |
-| default-arena SH9 16 x 16, 1 and 16 threads | `db8c68b40c1a4cc33f7dc1b53a7e44d38b349ff2777ed6d280f9e59a6cbd53a9` |
+| default-arena SH9 16 x 16, 1 and 16 threads | `bf01a0829e315e9bd748f971ea0a428e94bfb84ac35adf21abba9864b7985245` |
 
 The captured PNGs are byte-identical across the two thread counts as well. The
 measured wall time lives in the `.time` sidecar, not in the artifact.
