@@ -119,10 +119,6 @@ run :: proc() -> bool {
 			pointer_available = loop.cursor.pointer_available,
 		}
 		hit: input.Palette_Hit
-		if focus.game.editor.tool == .Palette && loop.cursor.pointer_available {
-			palette_hit := renderer.palette_hit_test(&state, events.pointer, game.PREFAB_COUNT)
-			hit = {inside = palette_hit.inside, card = palette_hit.card}
-		}
 		intent := input.resolve(&loop.resolver, events, focus, hit)
 
 		apply_frame_input(&loop, &window, &events, intent)
@@ -243,6 +239,20 @@ run :: proc() -> bool {
 				}
 			case .Toggle_Debug:
 				loop.debug_view = !loop.debug_view
+			case .Palette_Select:
+				if loop.runtime.debug.active {
+					_ = game.editor_apply(
+						&loop.runtime.debug.editor,
+						&loop.runtime.sim,
+						game.Palette_Select{index = int(action.value)},
+						{
+							active = loop.runtime.debug.active,
+							menu_open = loop.runtime.hud.menu.open,
+							captured = events.captured,
+							camera = loop.runtime.debug.camera,
+						},
+					)
+				}
 			}
 		}
 		renderer.ui_actions_clear()

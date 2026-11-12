@@ -267,23 +267,3 @@ build_palette_footer :: proc(o: ^Overlay, layout: ui.Palette_Layout, hints: []ui
 		x += text_measure(&o.atlas, action_style.type, hint.action) + theme.spacing.xl
 	}
 }
-
-Palette_Hit :: struct {
-	inside: bool,
-	card:   int,
-}
-
-// The game loop asks the renderer where a normalized pointer lands. The layout
-// and the hit test stay together, so a card cannot move under the pointer
-// unnoticed.
-palette_hit_test :: proc(r: ^Renderer, pointer: [2]f32, item_count: int) -> Palette_Hit {
-	width, height := target_extent(r)
-	ctx: Layout_Context
-	layout_context_init(&ctx, &r.overlay, f32(width), f32(height))
-	layout := ui.palette_layout(ctx.inputs, item_count)
-	point := ui.pointer_to_target(pointer, f32(width), f32(height))
-	return {
-		inside = ui.rect_contains(layout.panel, point.x, point.y),
-		card = ui.palette_card_at(layout, point),
-	}
-}
