@@ -3,8 +3,9 @@
 The Rune view owns type. The Odin side ships no font, no atlas, no shaper, and no
 type tokens. Rune bundles Inter for native builds and falls back to the system
 faces for characters Inter does not cover. The shim does not set a font family,
-size, weight, or tracking; it uses Rune's default text style. Change a text
-style in `ui/shim/src/lib.rs` and let Rune lay it out.
+size, or tracking; it uses Rune's default text style, except for weight, which
+follows the Type weight setting. Change a text style in `ui/shim/src/lib.rs` and
+let Rune lay it out.
 
 ## The status panel
 
@@ -25,10 +26,13 @@ label and a value; the selected row adds the raised surface and the accent bar. 
 width follows `ui.Row.ratio`. It is a row list, not a knob slider, and `ticks` is
 unused.
 
-The Type weight row edits `Settings.type_weight` from 100 to 900. The value is
-stored and reported by the harness. The Rune view draws Rune's default text
-weight, so a weight change changes the number, not the glyphs. Applying the
-value to Rune text is a port item, not a second type system.
+The Type weight row edits `Settings.type_weight` from 100 to 900. The game sends
+the value in the UI snapshot and the shim applies it to every text node through
+`weighted_text`, a span over the whole string. The status panel, the menu title
+and rows, the hints, and the palette all get it. A weight of 400 leaves Rune's
+default; a zero or absent weight leaves the default text style untouched.
+`scenarios/rune-weight.json` captures the status panel at 400 and 900 after the
+menu sets the weight.
 
 ## Numbers
 
