@@ -628,7 +628,7 @@ One flat intent returned by the shim: `Close_Menu`, `Toggle_Debug`, or `Palette_
 _Avoid_: Callback, event
 
 **Type weight**:
-The settings value from 100 to 900 that the settings menu edits. It is stored in `Settings.type_weight`, reported by the harness, and applied to every Rune text node as a span weight. A weight of 400 leaves Rune's default; zero leaves the default text style untouched.
+The settings value from 100 to 900 that the settings menu edits in steps of 5. It is stored in `Settings.type_weight`, reported by the harness, and applied to every Rune text node as a span weight. The shim draws with Geist Variable and Geist Mono Variable from `ui/shim/assets/`; the `wght` axis is continuous, so 565 is valid. A weight of 400 is the old default; zero leaves the default text style untouched.
 _Avoid_: Font weight, boldness
 
 **View scale**:

@@ -47,7 +47,7 @@ Ship Geist and Geist Mono as the two overlay faces.
 
 - Text runs wider. The status panel and the settings menu grow; both still fit
   at 1280x720.
-- `src/renderer/fonts/PROVENANCE.md` records the new source, subset command, and
+- `ui/shim/assets/PROVENANCE.md` records the new source, subset command, and
   hashes.
 - The mono weight clamp and `TYPE_WEIGHT_MONO_MAX` are gone. Every face follows
   the settings weight from 100 to 900.

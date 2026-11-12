@@ -40,7 +40,8 @@ The menu title is a text row. The note is tertiary text under the rows. The hint
 grid is three key/action pairs per line.
 
 The Type weight row edits a stored setting. The Rune view applies it to every
-text node as a span weight; 400 leaves Rune's default. See [type.md](type.md).
+text node as a span weight; 400 is the old default and Geist's continuous axis
+reaches 565. Numeric values draw in Geist Mono. See [type.md](type.md).
 
 ## Object palette
 

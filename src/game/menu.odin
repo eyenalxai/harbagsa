@@ -15,7 +15,7 @@ MENU_ROW_HEADER :: 7
 MENU_HINT_COLUMNS :: 3
 MENU_CONTROL_HINT_COUNT :: 12
 MENU_HINT_COUNT :: 22
-TYPE_WEIGHT_STEP :: f32(10)
+TYPE_WEIGHT_STEP :: f32(5)
 
 MENU_TITLE :: "Settings"
 MENU_NOTE :: "Up/Down select · Left/Right change · Enter change · Esc close"
