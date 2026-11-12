@@ -6,7 +6,7 @@ package bake
 import "src:geometry"
 
 FORMAT_VERSION :: 2
-TOOL_VERSION :: 4
+TOOL_VERSION :: 5
 
 // The bake key mixes this version too, so a changed input rule invalidates an
 // old artifact without a format bump.
@@ -39,7 +39,8 @@ PROBE_SH_BYTES_PER_PROBE :: PROBE_SH_TEXELS * 2
 
 LIGHTMAP_RAYS :: 128
 PROBE_RAYS :: 1024
-BOUNCES :: 1
+DEFAULT_BOUNCES :: 2
+MAX_BOUNCES :: 2
 
 // A probe shelf atlas must stay inside the minimum Vulkan 2D extent.
 MAX_PROBE_ATLAS_DIM :: 16384
@@ -88,7 +89,7 @@ DEFAULT_QUALITY :: Quality {
 	min_chart           = MIN_CHART_TEXELS,
 	lightmap_rays       = LIGHTMAP_RAYS,
 	probe_rays          = PROBE_RAYS,
-	bounces             = BOUNCES,
+	bounces             = DEFAULT_BOUNCES,
 	probe_spacing       = PROBE_SPACING,
 	probe_texels        = PROBE_TEXELS,
 	probe_moment_texels = PROBE_MOMENT_TEXELS,
@@ -106,6 +107,10 @@ probe_moments_supported :: proc(value: u32) -> bool {
 	return value == PROBE_MOMENT_TEXELS || value == PROBE_MOMENT_TEXELS_HIGH
 }
 
+bounces_supported :: proc(value: u32) -> bool {
+	return value >= 1 && value <= MAX_BOUNCES
+}
+
 scale_supported :: proc(value: f32) -> bool {
 	return value > 0 && value <= 8
 }
@@ -120,7 +125,8 @@ quality_supported :: proc(quality: Quality) -> bool {
 	if quality.gutter_texels != GUTTER_TEXELS || quality.min_chart != MIN_CHART_TEXELS {
 		return false
 	}
-	if quality.bounces != BOUNCES || quality.lightmap_rays == 0 || quality.probe_rays == 0 {
+	if !bounces_supported(quality.bounces) ||
+	   quality.lightmap_rays == 0 || quality.probe_rays == 0 {
 		return false
 	}
 	if quality.probe_texels != PROBE_TEXELS {
@@ -246,6 +252,7 @@ Build_Report :: struct {
 	probes:         int,
 	probe_basis:    Probe_Basis,
 	probe_moments:  u32,
+	bounces:        u32,
 	atlas_size:     int,
 	valid_texels:   int,
 	invalid_texels: int,

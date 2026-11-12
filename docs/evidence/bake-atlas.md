@@ -6,6 +6,11 @@ allocated texels and occupancy, and a static box slot key includes the box
 transform. The 2x linear arena fits the 1024² atlas. A moved static box reports
 stale and falls back to direct light instead of sampling its old chart.
 
+These measurements were taken with tool 4, before the two-bounce default. Tool 5
+changes the default to two bounces and the bake key, not the atlas layout or the
+chart allocation below. A tool 4 artifact still loads and reports `stale`;
+rebuild it with `make bake` for the tool 5 artifact.
+
 ## What changed
 
 - `GUTTER_TEXELS` is 1 and `MIN_CHART_TEXELS` is 4. The atlases in
@@ -17,9 +22,9 @@ stale and falls back to direct light instead of sampling its old chart.
 - `allocated_texels` is the sum of the chart rectangles plus 2 x gutter on each
   axis. `occupancy` is that sum divided by `atlas_width * atlas_height`. It is
   not `valid_texels` and not the baked count.
-- `TOOL_VERSION` is 4. The loader rejects the previous 4-texel gutter and
-  8-texel minimum chart as an unsupported quality block, so a tool 3 artifact
-  must be rebuilt with tool 4.
+- `TOOL_VERSION` was 4 at this measurement; it is 5 now. The loader rejects the
+  previous 4-texel gutter and 8-texel minimum chart as an unsupported quality
+  block, so a tool 3 artifact must be rebuilt with the current tool.
 - A slot key hashes `(source, id, transform)`. The frame recomputes it. A moved
   static box misses the artifact's slot and `bake_box_slot` returns no tile.
   The texel seed still follows `(source, id, face, x, y)`, so the transform does

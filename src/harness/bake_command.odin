@@ -16,6 +16,8 @@ Bake_Command :: struct {
 	has_probe_basis:   bool,
 	probe_moments:     u32,
 	has_probe_moments: bool,
+	bounces:           u32,
+	has_bounces:       bool,
 	scale:             f32,
 	has_scale:         bool,
 	threads:           int,
@@ -28,7 +30,7 @@ Bake_Command :: struct {
 parse_bake :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(
 		object,
-		{"cmd", "probe_spacing", "probe_basis", "probe_moments", "scale", "threads", "out"},
+		{"cmd", "probe_spacing", "probe_basis", "probe_moments", "bounces", "scale", "threads", "out"},
 	); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
@@ -44,11 +46,22 @@ parse_bake :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, s
 	}
 	if value, has := json_get(object, "probe_moments"); has {
 		moments, ok := json_integer(value)
-		if !ok || !bake.probe_moments_supported(u32(moments)) {
+		if !ok ||
+		   moments < int(bake.PROBE_MOMENT_TEXELS) ||
+		   moments > int(bake.PROBE_MOMENT_TEXELS_HIGH) ||
+		   !bake.probe_moments_supported(u32(moments)) {
 			return {}, format_error("%s", "'probe_moments' must be 8 or 16")
 		}
 		command.bake.probe_moments = u32(moments)
 		command.bake.has_probe_moments = true
+	}
+	if value, has := json_get(object, "bounces"); has {
+		bounces, ok := json_integer(value)
+		if !ok || bounces < 1 || bounces > 2 || !bake.bounces_supported(u32(bounces)) {
+			return {}, format_error("%s", "'bounces' must be 1 or 2")
+		}
+		command.bake.bounces = u32(bounces)
+		command.bake.has_bounces = true
 	}
 	if value, has := json_get(object, "probe_spacing"); has {
 		spacing, ok := json_number(value)
@@ -112,6 +125,9 @@ session_bake :: proc(session: ^Session, command: Bake_Command) -> string {
 	if command.has_probe_moments {
 		quality.probe_moment_texels = command.probe_moments
 	}
+	if command.has_bounces {
+		quality.bounces = command.bounces
+	}
 	threads := command.threads
 	if !command.has_threads {
 		default_threads, counted := bake.default_threads()
@@ -157,11 +173,12 @@ session_bake :: proc(session: ^Session, command: Bake_Command) -> string {
 		return publish_error
 	}
 	log.infof(
-		"harness: bake key %016x boxes %d lights %d probes %d basis %s moments %d allocated %d occupancy %.2f%% in %d ms",
+		"harness: bake key %016x boxes %d lights %d probes %d bounces %d basis %s moments %d allocated %d occupancy %.2f%% in %d ms",
 		report.key,
 		report.boxes,
 		report.lights,
 		report.probes,
+		report.bounces,
 		bake.probe_basis_name(report.probe_basis),
 		report.probe_moments,
 		report.allocated_texels,

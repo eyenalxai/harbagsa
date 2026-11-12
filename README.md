@@ -6,9 +6,9 @@ tall west walls, a high platform, a closed ceiling, pushable crates, and three
 static fixture lamps. Two-bone inverse kinematics plant the feet on the floor,
 and a spring-arm camera orbits behind the body.
 SDL3 provides the window and input, Vulkan 1.3 draws the scene, and Box3D runs
-physics. Direct point lights, hard ray-query shadows, a baked one-bounce static
-indirect (a lightmap for static boxes and a probe field for dynamic boxes), and
-emissive boxes shade every frame. An unlit surface is black. There is no ambient
+physics. Direct point lights, hard ray-query shadows, a baked static indirect
+(two diffuse bounces by default for the lightmap; a one-bounce probe field for
+dynamic boxes), and emissive boxes shade every frame. An unlit surface is black. There is no ambient
 floor, directional light, background pass, shadow map, or per-frame GI.
 
 ## Requirements
@@ -211,7 +211,7 @@ degrees and ends in `_deg`. Positions and ranges are metres. One `step` or
 - `scene`: apply exact camera, objects, settings, view, displays, and renderer debug blocks.
 - `place`: create one object without entering debug mode.
 - `remove`: delete one object by id or name.
-- `bake`: rebuild the static indirect from the current scene and publish it.
+- `bake`: rebuild the static indirect from the current scene and publish it; `bounces` selects one or two, default two.
 - `pick`: resolve one pixel to its object, surface, and lighting terms.
 - `get`: resolve one state or capture field.
 - `quit`: close a live session.

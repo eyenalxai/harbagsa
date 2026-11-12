@@ -1,0 +1,23 @@
+{
+  "note": "Colour bleed: a saturated green static box beside a white static wall, both lit by a static fixture. The white wall's lightmap term is its albedo-free bounce, so picks near the box and far from it read the corner hue directly.",
+  "size": "1280x720",
+  "requires": {"renderer_debug": true},
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "renderer_debug", "taa": false, "jitter": false},
+    {"cmd": "scene", "objects": [{"id": 1, "name": "bleed-wall", "prefab": "Wall", "body": "static", "position": [14.0, 1.5, -10.0], "rotation": [0, 0, 0, 1], "color": [1, 1, 1, 1], "light": {"active": false, "kind": "dynamic", "color": "warm", "intensity": 0, "range": 0, "emissive": 0}}, {"id": 2, "name": "bleed-box", "prefab": "Crate", "body": "static", "position": [14.9, 0.5, -9.2], "rotation": [0, 0, 0, 1], "color": [0.05, 0.95, 0.1, 1], "light": {"active": false, "kind": "dynamic", "color": "warm", "intensity": 0, "range": 0, "emissive": 0}}, {"id": 3, "name": "bleed-lamp", "prefab": "Lamp", "body": "static", "position": [13.2, 2.6, -8.0], "rotation": [0, 0, 0, 1], "color": [0, 0, 0, 1], "light": {"active": true, "kind": "static", "color": "warm", "intensity": 4.0, "range": 6, "emissive": 1.0}}]},
+    {"cmd": "settle", "frames": 30},
+    {"cmd": "bake"},
+    {"cmd": "camera", "position": [14.0, 1.8, -6.5], "look_at": [14.5, 1.2, -9.6], "fov_deg": 55},
+    {"cmd": "settle", "frames": 12},
+    {"cmd": "capture", "name": "colour-bleed", "views": ["beauty", "direct", "lightmap"], "format": "stats", "png": true, "note": "The white wall above and beside the green box."},
+    {"cmd": "pick", "at": [640, 300]},
+    {"cmd": "pick", "at": [700, 300]},
+    {"cmd": "pick", "at": [760, 300]},
+    {"cmd": "pick", "at": [820, 300]},
+    {"cmd": "pick", "at": [400, 300]},
+    {"cmd": "pick", "at": [300, 300]},
+    {"cmd": "pick", "at": [700, 200]},
+    {"cmd": "pick", "at": [700, 400]}
+  ]
+}
