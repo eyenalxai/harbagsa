@@ -86,8 +86,9 @@ display, resolution, type weight, and the sprint input mode.
 `Up` and `Down` select a row. `Left`, `Right`, and `Enter` change it. `Resume`
 closes the menu. The menu is keyboard-driven. `Debug` in the status action row
 toggles debug mode; `Close` returns `Close_Menu`, but the game ignores it while
-the menu is closed. The Type weight value is stored and reported; applying it to
-the Rune view is a port item, so the glyphs keep Rune's default weight.
+the menu is closed. The Type weight setting applies to every Rune text node: the
+status panel, the menu, and the palette. A weight of 400 is Rune's default; 900
+is the heaviest.
 
 Window mode is Borderless or Windowed. Borderless uses the selected display's
 desktop size. Windowed uses the chosen resolution and a normal title bar. The

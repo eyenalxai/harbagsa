@@ -171,6 +171,7 @@ build :: proc(
 		}
 		scene.hud = renderer.HUD_Frame {
 			enabled = true,
+			weight = sim.settings.type_weight,
 			ui = {
 				dt = f64(options.delta_seconds),
 				snapshot = {

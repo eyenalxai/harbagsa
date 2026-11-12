@@ -40,5 +40,6 @@ UI_Frame :: struct {
 
 HUD_Frame :: struct {
 	enabled: bool,
+	weight:  f32,
 	ui:      UI_Frame,
 }
