@@ -6,7 +6,6 @@ import "core:mem"
 
 import "src:bake"
 import "src:game"
-import "src:perf"
 import "src:renderer"
 
 PLAYER_FOV_X :: f32(90.0 * math.PI / 180.0)
@@ -24,7 +23,6 @@ Options :: struct {
 	fx_view:         bool,
 	captured:        bool,
 	hud:             bool,
-	perf_stats:      Maybe(perf.Stats),
 	bake:            renderer.Bake_Report,
 	pointer:         [2]f32,
 	pointer_pressed: bool,
@@ -107,7 +105,6 @@ build :: proc(
 	bake_static: bake.Static,
 ) -> renderer.Render_Input {
 	scene: renderer.Render_Input
-	scene.hud.weight = sim.settings.type_weight
 	scene.light_shadows = true
 
 	view := camera_view(sim, debug, camera_override, options.alpha)
@@ -158,9 +155,7 @@ build :: proc(
 	}
 	scene.debug_lines = scratch.debug_lines.lines[:scratch.debug_lines.count]
 
-	perf_stats, has_perf_stats := options.perf_stats.?
-	hud.perf = {visible = has_perf_stats, stats = perf_stats}
-	if options.hud || hud.menu.open {
+	if options.hud {
 		game.hud_state_update(
 			hud,
 			sim,
@@ -175,14 +170,7 @@ build :: proc(
 			palette.open = false
 		}
 		scene.hud = renderer.HUD_Frame {
-			enabled      = true,
-			menu_open    = hud.menu.open,
-			view         = hud.view,
-			capture_hint = hud.capture_hint,
-			captured     = hud.captured,
-			menu         = hud.menu.view,
-			palette      = palette,
-			weight       = sim.settings.type_weight,
+			enabled = true,
 			ui = {
 				dt = f64(options.delta_seconds),
 				snapshot = {
@@ -204,31 +192,10 @@ build :: proc(
 				capture_hint    = hud.capture_hint,
 				captured        = hud.captured,
 				palette_open    = palette.open,
-				owns_panel      = true,
 				menu            = hud.menu.view,
-				owns_menu       = true,
 				palette         = palette,
-				owns_palette    = true,
 			},
 		}
-	}
-	if scene.hud.enabled {
-		scene.view_flags |= {.HUD}
-		if hud.perf.visible {
-			scene.view_flags |= {.Perf}
-		}
-		if scene.hud.palette.open && !scene.hud.menu_open {
-			scene.view_flags |= {.Palette}
-		}
-		if !scene.hud.captured && scene.hud.capture_hint != "" && !scene.hud.palette.open {
-			scene.view_flags |= {.Capture_Hint}
-		}
-	}
-	if scene.hud.menu_open {
-		scene.view_flags |= {.Menu}
-	}
-	if options.debug_view {
-		scene.view_flags |= {.Debug_Draw}
 	}
 
 	return scene

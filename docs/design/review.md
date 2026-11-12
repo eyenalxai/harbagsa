@@ -15,8 +15,10 @@ that captures the view under review:
 Point the review at `runs/design-review`. Do not commit the PNG. The repository
 bans images, and a run directory is reproducible from its scenario.
 
-If the change needs a view that no scenario covers, add the scenario in the same
-change. The harness is part of the feature.
+For a UI change, start with `scenarios/rune-ui.json`, `rune-menu.json`,
+`rune-palette.json`, and `rune-fx.json`. If the change needs a view that no
+scenario covers, add the scenario in the same change. The harness is part of the
+feature.
 
 ## Subtract first
 
@@ -27,52 +29,44 @@ repeats a label.
 
 ## Flag on sight
 
-This is the short form of the order below. Use it for a fast pass; use the
-order for the full review.
-
-- A literal colour outside `src/renderer/ui_theme.odin`.
-- A bare pixel size in `src/renderer/hud.odin`, `src/renderer/hud_menu.odin`,
-  `src/renderer/hud_rows.odin`, or `src/ui/layout.odin`.
-- `accent` on anything but the selection bar.
+- A colour literal outside `ui/shim/src/lib.rs` or the game's content data.
+- A type size, font file, atlas, or layout pass in the Odin tree.
+- A vertex buffer, shader, or draw call added for the 2D layer.
+- `accent` on anything but the selected-row bar and the `Close` button.
 - `text_tertiary` as the label or value of a selectable row.
-- Any fade, slide, or scale on the overlay.
-- A new `Row_Kind` without the five touch points.
+- Any fade, slide, or scale on the overlay. The rune-fx glow is opt-in and static.
+- A new `Row_Kind` without updating both the game and the shim.
 - A third hue.
 - A player light, or an emissive spider part that is not an eye or one of the two
   abdomen marks.
 - A foot that hovers above the floor or sinks through it.
 - A camera that crosses a wall, the floor, or a ceiling.
-- A value column that moves.
+- A row value whose width changes.
+- `view.fx` turned on by default.
 
 ## Order
 
 The order is the triage order. A broken interaction outranks a weak colour.
 
 1. **Keyboard only.** Every action is reachable from the keyboard. The pointer is
-   an addition, not a requirement: the Type weight slider takes arrow keys and a
-   drag, and no action hides behind a hover.
+   an addition: it can click a palette row or an action button, and no action
+   hides behind a hover. The Type weight slider takes Left and Right.
 2. **Fits at 800x600.** The menu and every panel are fully visible at the
-   smallest supported window. Nothing clips and nothing is cut.
+   smallest supported window. Rune scales the view; nothing clips.
 3. **Contrast on the brightest frame.** Read the text over the brightest lamp
    field the renderer can produce, not over a dim scene. The floors are in
    [colour.md](../ui/colour.md).
 4. **Fixed fields.** Every number that changes during play is in a fixed-width
-   field and drawn in mono. The panel width must not move on a selection or a
-   value change; a type-weight change may resize it once.
-5. **Token only.** No literal colour and no bare pixel size in
-   `src/renderer/hud.odin`, `src/renderer/hud_menu.odin`,
-   `src/renderer/hud_rows.odin`, or `src/ui/layout.odin`. The one
-   exception is the documented 2 px accent-bar floor. Every other value belongs in
-   `src/renderer/ui_theme.odin`.
-6. **One of the documented components.** A new panel is a status panel, a capture
-   hint, or the settings panel; the selection band, legend, rows,
-   and slider are parts of those. Otherwise read
+   field. The panel text must not move on a selection or a value change.
+5. **One owner of the view.** A UI change touches `src/game` data and
+   `ui/shim/src/lib.rs`. A change that adds layout, colour, or text rendering to
+   `src/ui`, `src/frame`, or `src/renderer` is in the wrong layer.
+6. **One of the documented components.** A new panel is the status panel, the
+   settings menu, or the palette. Otherwise read
    [README.md](../ui/README.md#adding-a-surface) first.
-7. **No new row kind.** The kind set is closed. A new kind must extend
-   `row_label_style`, `row_value_style`, `row_gap`, `row_height`, and
-   `rows_emit_row`, plus any emitter it draws.
-8. **No motion.** The overlay does not animate. See
-   [motion.md](motion.md).
+7. **No new row kind without both sides.** The kind set is closed. A new kind
+   must update the game producer and the shim's Rune view in the same change.
+8. **No motion.** The overlay does not animate. See [motion.md](motion.md).
 9. **Copy rules.** Sentence case in the source, `·` between peers, `×` for
    dimensions, `…` for an ellipsis.
 10. **Evidence matches the claim.** The capture shows the thing the change says it

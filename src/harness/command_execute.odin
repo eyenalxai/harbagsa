@@ -98,9 +98,6 @@ execute_view :: proc(session: ^Session, command: Command, reply: ^Reply) -> stri
 	if command.view.has_hint {
 		session.view.hint = command.view.hint
 	}
-	if command.view.has_perf {
-		session.view.perf = command.view.perf
-	}
 	if command.view.has_fx {
 		session.view.fx = command.view.fx
 	}

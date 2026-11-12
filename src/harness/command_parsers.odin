@@ -21,7 +21,7 @@ parse_step :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, 
 
 @(private)
 parse_view :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "hud", "debug", "hint", "perf"}); unknown {
+	if key, unknown := json_unknown_key(object, {"cmd", "hud", "debug", "hint", "fx"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 	view, view_error := parse_view_fields(object)
@@ -39,9 +39,6 @@ parse_view_fields :: proc(object: json.Object) -> (view: View_Command, error: st
 		return {}, field_error
 	}
 	if field_error := json_optional_bool(object, "hint", &view.hint, &view.has_hint); field_error != "" {
-		return {}, field_error
-	}
-	if field_error := json_optional_bool(object, "perf", &view.perf, &view.has_perf); field_error != "" {
 		return {}, field_error
 	}
 	if field_error := json_optional_bool(object, "fx", &view.fx, &view.has_fx); field_error != "" {

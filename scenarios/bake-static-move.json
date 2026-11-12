@@ -2,7 +2,7 @@
   "note": "Place a static box, bake, then move it. The bake reports stale and the moved box no longer maps to its old lightmap chart.",
   "size": "1280x720",
   "requires": {"renderer_debug": true},
-  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "view": {"hud": false, "debug": false, "hint": false},
   "commands": [
     {"cmd": "renderer_debug", "taa": false, "jitter": false},
     {"cmd": "place", "prefab": "Crate", "position": [0, 0.5, 9.5], "body": "static", "name": "moved-static"},

@@ -32,9 +32,9 @@ compare_write_pages :: proc(
 	delta: bool,
 	allocator: mem.Allocator,
 ) -> ([]string, string) {
-	text := compare_text_init(allocator)
+	text := compare_text_init()
 	if !text.ok {
-		return nil, format_error("%s", "cannot build the compare text atlas")
+		return nil, format_error("%s", "cannot initialise the compare text")
 	}
 	defer compare_text_destroy(&text)
 

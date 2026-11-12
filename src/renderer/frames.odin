@@ -68,7 +68,7 @@ render_frame :: proc(
 	capture := Frame_Capture{},
 ) -> Frame_Result {
 	if r.ui_ready {
-		ui_step(r, input.hud.ui)
+		ui_step(r, input.hud)
 	}
 	for _ in 0 ..< MAX_FRAME_ATTEMPTS {
 		frame, begin_status := begin_frame(r, input, capture)
@@ -182,6 +182,7 @@ begin_frame :: proc(
 		capture = capture_slot_count(capture) > 0,
 		color_slot = capture_target_slot(capture, .Color),
 		wait = input.pick_at != nil,
+		ui_enabled = input.hud.enabled,
 	}, .Ok
 }
 
@@ -215,7 +216,7 @@ end_frame :: proc(r: ^Renderer, frame: Frame) -> Frame_Status {
 		}
 	}
 
-	if r.ui_ready && ui_draw(image_index) != 0 {
+	if r.ui_ready && frame.ui_enabled && ui_draw(image_index) != 0 {
 		log.error("renderer: the UI shim could not draw")
 		return .Fatal
 	}

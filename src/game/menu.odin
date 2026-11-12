@@ -13,12 +13,12 @@ MENU_ROW_DIVIDER :: 5
 MENU_ROW_RESUME :: 6
 MENU_ROW_HEADER :: 7
 MENU_HINT_COLUMNS :: 3
-MENU_CONTROL_HINT_COUNT :: 13
-MENU_HINT_COUNT :: 23
+MENU_CONTROL_HINT_COUNT :: 12
+MENU_HINT_COUNT :: 22
 TYPE_WEIGHT_STEP :: f32(10)
 
 MENU_TITLE :: "Settings"
-MENU_NOTE :: "Up/Down select · Left/Right change · Drag slider · Enter change · Esc close"
+MENU_NOTE :: "Up/Down select · Left/Right change · Enter change · Esc close"
 MENU_STATUS_ONE_DISPLAY :: "One display · nothing to change"
 MENU_STATUS_NO_MODES :: "No modes · nothing to change"
 MENU_STATUS_ONE_MODE :: "One mode · nothing to change"
@@ -63,19 +63,16 @@ Menu_State :: struct {
 	rows:            [MENU_ROW_COUNT]ui.Row,
 	hints:           [MENU_HINT_COUNT]ui.Hint_Cell,
 	storage:         Line_Buffer,
-	dragging_weight:  bool,
 	status:           string,
 	status_remaining: f32,
 }
 
 menu_open :: proc(menu: ^Menu_State) {
 	menu.open = true
-	menu.dragging_weight = false
 }
 
 menu_close :: proc(menu: ^Menu_State) {
 	menu.open = false
-	menu.dragging_weight = false
 	menu_clear_status(menu)
 	menu.view = {}
 }
@@ -155,6 +152,18 @@ menu_change_setting :: proc(
 		settings.sprint_mode = toggle_input_mode(settings.sprint_mode)
 	}
 	return .Changed
+}
+
+menu_set_type_weight :: proc(menu: ^Menu_State, settings: ^Settings, weight: f32) -> bool {
+	if !menu.open {
+		return false
+	}
+	next := clamp(math.round(weight), ui.TYPE_WEIGHT_MIN, ui.TYPE_WEIGHT_MAX)
+	if next != settings.type_weight {
+		settings.type_weight = next
+		menu_clear_status(menu)
+	}
+	return true
 }
 
 menu_activate :: proc(menu: ^Menu_State, settings: ^Settings, direction := 1) -> bool {

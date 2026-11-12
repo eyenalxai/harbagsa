@@ -1,7 +1,7 @@
 {
   "note": "Current bake, stale after a static fixture move, current after publish, and current after a dynamic crate move.",
   "size": "1280x720",
-  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "view": {"hud": false, "debug": false, "hint": false},
   "commands": [
     {"cmd": "debug_mode", "active": true},
     {"cmd": "bake"},

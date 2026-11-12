@@ -7,7 +7,6 @@ View_State :: struct {
 	hud:   bool `json:"hud"`,
 	debug: bool `json:"debug"`,
 	hint:  bool `json:"hint"`,
-	perf:  bool `json:"perf"`,
 	fx:    bool `json:"fx"`,
 }
 
@@ -45,7 +44,7 @@ setup_build :: proc(
 		revision = trim_revision(HARNESS_REVISION),
 		dirty = HARNESS_DIRTY,
 		renderer_debug = renderer_debug || renderer.RENDERER_DEBUG_ENABLED,
-		view = {hud = view.hud, debug = view.debug, hint = view.hint, perf = view.perf, fx = view.fx},
+		view = {hud = view.hud, debug = view.debug, hint = view.hint, fx = view.fx},
 		renderer = {
 			shader_digest = renderer.shader_digest(),
 			frames_in_flight = 0,

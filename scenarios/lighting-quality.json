@@ -2,7 +2,7 @@
   "note": "Mixed-lighting pair: baked bounce against direct only, a moving crate, a moving dynamic lamp, and a removed static fixture before and after the publish.",
   "size": "1280x720",
   "requires": {"renderer_debug": true},
-  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "view": {"hud": false, "debug": false, "hint": false},
   "commands": [
     {"cmd": "renderer_debug", "taa": false, "jitter": false},
     {"cmd": "bake"},

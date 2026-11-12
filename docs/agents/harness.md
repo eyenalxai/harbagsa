@@ -85,7 +85,7 @@ scenario, 3 renderer, backend, or file failure.
 
 ```json
 {
-  "view": {"hud": false, "debug": false, "hint": false, "perf": false, "fx": false},
+  "view": {"hud": false, "debug": false, "hint": false, "fx": false},
   "commands": [
     {"cmd": "look", "dx": 220, "dy": 0},
     {"cmd": "input", "forward": 1},
@@ -136,8 +136,8 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `captures`: up to eight outputs from one frame.
 - `camera`: `position` plus `look_at` or `yaw_deg`/`pitch_deg`, optional
   `fov_deg`; `clear: true` removes the override.
-- `view`: `hud`, `debug`, `hint`, `perf`, and `fx` flags. `fx` turns on the
-  rune-fx demo; it is off by default.
+- `view`: `hud`, `debug`, `hint`, and `fx` flags. `fx` turns on the rune-fx
+  demo over the status action row; it is off by default.
 - `debug_mode`: `active` boolean.
 - `editor`: palette, placement, object, light, camera, pointer, and history fields.
 - `menu`: `open`, `item`, `activate`, `direction`, and `set`.
@@ -173,13 +173,15 @@ and one capture. It is not a live-session command.
 ## UI
 
 The overlay is a Rune view. The shim draws it over the scene in the same frame,
-so a capture includes it; there is no separate UI target.
+so a capture includes it; there is no separate UI target. A frame with
+`hud: false` has `HUD_Frame.enabled` false: `ui_step` does not rebuild the view
+and `ui_draw` is not called, so the capture has no overlay.
 
 - `menu` opens the settings menu and changes a row. Menu keys stay on the game
   path.
 - `editor` with `open: true` opens the object palette.
 - `ui` clicks the Rune view at `x` and `y` in points and fails when the click
-  produces no action. It hit-tests the layout targets, not Rune's drawn rects.
+  produces no action. Rune hit-tests the element targets it laid out.
 - `capture` writes the frame with the UI.
 
 `scenarios/rune-palette.json` opens the palette and clicks a row.
@@ -190,6 +192,13 @@ rune-fx glow.
 
 `ui` needs the renderer, so it is an error with `--no-render`. The menu and
 palette state still open without a renderer, but there is no frame to click.
+
+## Compare panel text
+
+The harness comparison page uses a private 5x7 block font in
+`src/harness/compare_text.odin` for its labels and row names. It is
+harness-only: the game and the Rune shim do not use it, and it is not a new UI
+text stack.
 
 ## State fields
 
@@ -414,8 +423,8 @@ spider part regardless of where a new box group sits in the list.
 
 `state.renderer` reports frame count, TAA state, jitter index, history validity,
 convergence frames, history read index and weight, reset count and reason,
-active light count, cluster overflow, atlas weight, text counters, timestamp
-period, and debug line counts. `state.bake` is the lifecycle view and `state.renderer.bake` is the
+active light count, cluster overflow, timestamp period, and debug line counts.
+`state.bake` is the lifecycle view and `state.renderer.bake` is the
 same report inside the renderer block. Both report the status (`missing`,
 `stale`, `current`, or `failed`), the current key, the artifact key, format and
 tool versions, the measured bake time, atlas and probe counts, allocated texels
@@ -425,9 +434,10 @@ centre is outside the probe volume (`probe_missing`), artifact and GPU bytes, an
 the load or publish error. `allocated_texels` is the sum of the chart rectangles plus
 their gutters; `occupancy` is that sum divided by the atlas texel count. Neither
 is the valid-texel or baked-texel count. `state.render_digest` covers target extent, camera, boxes, box
-slots, emissive strengths, point lights, jitter, atlas weight, clip height,
-shadow visibility, lightmap, probe, bake key, bake status, and view flags.
-`setup.renderer.shader_digest` covers the embedded SPIR-V.
+slots, emissive strengths, point lights, jitter, clip height,
+shadow visibility, lightmap, probe, bake key, and bake status. The Rune UI draws
+after the scene and is not in the digest. `setup.renderer.shader_digest` covers
+the embedded SPIR-V.
 
 ## Bake lifecycle
 
@@ -612,7 +622,9 @@ would otherwise be measured as frame time. The interval is comparable with the
 GPU total plus submit cost. Do not compare an interval measured before that
 change with one measured after it.
 
-GPU passes are TLAS, cluster, depth, scene, TAA, and overlay. A capture with
+GPU passes are TLAS, cluster, depth, scene, TAA, and overlay. The overlay pass
+times the Odin debug line draw; the Rune UI is drawn by the Rust shim outside
+this Vulkan command buffer and is not in the overlay number. A capture with
 diagnostic views adds one untimed lit pass and one resolve per view after the
 measured passes, so a perf window never includes them. The report carries
 `p50`, `p95`, and `mean` for each CPU phase and GPU pass. Perf data is

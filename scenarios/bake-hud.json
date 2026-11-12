@@ -1,7 +1,7 @@
 {
   "note": "The debug HUD shows the selected lamp kind and the current bake status.",
   "size": "1280x720",
-  "view": {"hud": true, "debug": false, "hint": false, "perf": false},
+  "view": {"hud": true, "debug": false, "hint": false},
   "commands": [
     {"cmd": "debug_mode", "active": true},
     {"cmd": "bake"},

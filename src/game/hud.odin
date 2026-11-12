@@ -2,22 +2,13 @@
 #+vet !unused-procedures // main calls this API; library checks compile game as a dependency
 package game
 
-import "src:perf"
 import "src:ui"
 
 HUD_ROW_COUNT :: 6
-// The debug inspector rows live in hud_debug.odin; the panel still reserves the
-// widest debug mode so the perf rows fit after it.
-HUD_PERF_ROW_COUNT :: 2
-HUD_MAX_ROWS :: HUD_INSPECTOR_ROW_COUNT + HUD_PERF_ROW_COUNT
+HUD_MAX_ROWS :: HUD_INSPECTOR_ROW_COUNT
 
 HUD_CAPTURE_HINT :: "Click to capture mouse"
 HUD_HEADER_SEPARATOR :: " · "
-
-HUD_Perf :: struct {
-	visible: bool,
-	stats:   perf.Stats,
-}
 
 // The renderer owns the bake state; the HUD only needs the status and key.
 Bake_View :: struct {
@@ -33,7 +24,6 @@ HUD_State :: struct {
 	captured:     bool,
 	notice:       Notice_State,
 	menu:         Menu_State,
-	perf:         HUD_Perf,
 }
 
 hud_state_update :: proc(
@@ -54,7 +44,6 @@ hud_state_update :: proc(
 	} else {
 		hud_player_state_update(hud, snapshot)
 	}
-	hud_perf_append(hud)
 }
 
 
@@ -92,34 +81,6 @@ hud_player_state_update :: proc(hud: ^HUD_State, snapshot: Render_Snapshot) {
 		numeric = true,
 	}
 	hud.view.rows = hud.rows[:HUD_ROW_COUNT]
-}
-
-@(private)
-hud_perf_append :: proc(hud: ^HUD_State) {
-	if !hud.perf.visible {
-		return
-	}
-	index := len(hud.view.rows)
-	if index >= HUD_MAX_ROWS {
-		return
-	}
-	hud.rows[index] = {
-		kind    = .Detail,
-		label   = "Perf",
-		value   = perf.format_summary(hud.storage.storage[index][:], hud.perf.stats),
-		numeric = true,
-	}
-	index += 1
-	if hud.perf.stats.gpu.available && index < HUD_MAX_ROWS {
-		hud.rows[index] = {
-			kind    = .Detail,
-			label   = "Passes",
-			value   = perf.format_passes(hud.storage.storage[index][:], hud.perf.stats),
-			numeric = true,
-		}
-		index += 1
-	}
-	hud.view.rows = hud.rows[:index]
 }
 
 @(private)
