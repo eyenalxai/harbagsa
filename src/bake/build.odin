@@ -73,6 +73,7 @@ build :: proc(
 		probes         = len(probes.states),
 		probe_basis    = probes.basis,
 		probe_moments  = probes.moment_texels,
+		bounces        = options.quality.bounces,
 		atlas_size     = int(options.quality.atlas_size),
 		valid_texels   = lightmap.valid_texels,
 		invalid_texels = lightmap.invalid_texels,

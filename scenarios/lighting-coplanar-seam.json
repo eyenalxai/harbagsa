@@ -1,0 +1,25 @@
+{
+  "note": "Coplanar seam: two static wall boxes share a 3 m vertical edge on one coplanar front face. Each face owns a separate lightmap chart. Picks on both sides of the seam and a lightmap band measure the term along the seam; the lightmap_grid view names the two chart edges.",
+  "size": "1280x720",
+  "requires": {"renderer_debug": true},
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "renderer_debug", "taa": false, "jitter": false},
+    {"cmd": "place", "prefab": "Wall", "position": [-2.0, 1.5, -4.0], "name": "seam-west"},
+    {"cmd": "place", "prefab": "Wall", "position": [2.0, 1.5, -4.0], "name": "seam-east"},
+    {"cmd": "place", "prefab": "Lamp", "position": [-1.5, 2.6, -1.5], "name": "seam-lamp", "light": {"kind": "static", "color": "warm", "intensity": 4.0, "range": 6}},
+    {"cmd": "settle", "frames": 30},
+    {"cmd": "bake"},
+    {"cmd": "camera", "position": [0.0, 1.6, 2.0], "look_at": [0.0, 1.5, -4.0], "fov_deg": 55},
+    {"cmd": "settle", "frames": 12},
+    {"cmd": "capture", "name": "coplanar-seam", "views": ["beauty", "lightmap", "lightmap_grid"], "format": "stats", "png": true, "region": {"x": 560, "y": 100, "w": 160, "h": 400}, "note": "The shared edge across both wall charts."},
+    {"cmd": "pick", "at": [636, 200]},
+    {"cmd": "pick", "at": [644, 200]},
+    {"cmd": "pick", "at": [636, 300]},
+    {"cmd": "pick", "at": [644, 300]},
+    {"cmd": "pick", "at": [636, 400]},
+    {"cmd": "pick", "at": [644, 400]},
+    {"cmd": "pick", "at": [600, 300]},
+    {"cmd": "pick", "at": [680, 300]}
+  ]
+}

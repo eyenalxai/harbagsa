@@ -50,6 +50,7 @@ Bake_Report :: struct {
 	probe_spacing:  f32    `json:"probe_spacing"`,
 	probe_basis:    string `json:"probe_basis"`,
 	probe_moments:  u32    `json:"probe_moments"`,
+	bounces:        u32    `json:"bounces"`,
 	invalid_probes: u32    `json:"invalid_probes"`,
 	probe_missing:  int    `json:"probe_missing"`,
 	artifact_bytes: int    `json:"artifact_bytes"`,
@@ -213,6 +214,7 @@ bake_report :: proc(r: ^Renderer) -> Bake_Report {
 		report.probe_spacing = header.probe_spacing
 		report.probe_basis = bake.probe_basis_name(bake.Probe_Basis(header.probe_basis))
 		report.probe_moments = header.probe_moment_texels
+		report.bounces = r.bake.data.quality.bounces
 		report.invalid_probes = r.bake.data.stats.invalid_probes
 		report.artifact_bytes = len(r.bake.data.bytes)
 	}

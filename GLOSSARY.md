@@ -176,7 +176,7 @@ A light with a position, colour, intensity, and range. The renderer holds every 
 _Avoid_: Lamp (the prefab), bulb
 
 **Lamp kind**:
-Static fixture or dynamic lamp. A static fixture uses a static body and bakes one diffuse bounce; a dynamic lamp uses a dynamic body and contributes direct light and hard shadows only. The kind is separate from the prefab and from an ordinary box body mode. Newly placed lamps default to dynamic; `K` toggles the kind and the body follows it.
+Static fixture or dynamic lamp. A static fixture uses a static body and bakes the diffuse bounce chain (two bounces by default); a dynamic lamp uses a dynamic body and contributes direct light and hard shadows only. The kind is separate from the prefab and from an ordinary box body mode. Newly placed lamps default to dynamic; `K` toggles the kind and the body follows it.
 _Avoid_: Light type, lamp mode
 
 **Static fixture**:
@@ -211,7 +211,7 @@ The forward lighting path that builds a light index list per cluster in a comput
 _Avoid_: Tiled forward, light grid
 
 **Indirect light (GI)**:
-Light that reaches a surface after one diffuse bounce from a static fixture or a static emissive box. Static boxes read it from the lightmap; dynamic boxes read it from the probe field. It is baked, not updated per frame. It is not a default fill: with no static fixture, it is zero.
+Light that reaches a surface after diffuse bounces from a static fixture or a static emissive box; the default bake traces two bounces. Static boxes read it from the lightmap; dynamic boxes read it from the probe field. It is baked, not updated per frame. It is not a default fill: with no static fixture, it is zero.
 _Avoid_: Ambient, global illumination cache
 
 **Bake**:

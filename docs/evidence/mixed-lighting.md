@@ -5,6 +5,11 @@ described in [ADR 0045](../adr/0045-mixed-static-baked-indirect.md). The bake
 data contract is [ADR 0044](../adr/0044-bake-data-contract.md); the work is
 [HARB-305](https://linear.app/utbetdix/issue/HARB-305/measure-mixed-lighting-quality-and-performance).
 
+These measurements predate the two-bounce default. The bake timings below are
+the one-bounce tool 2/4 runs; the tool 5 default is two bounces and takes about
+7.5 s at 16 threads. [bounce-and-contact.md](bounce-and-contact.md) records the
+second-bounce cost and the default decision.
+
 ## Machine
 
 - AMD Ryzen 7 5700X, 8 cores and 16 hardware threads.
@@ -68,8 +73,9 @@ the chart edge, with weights that sum to one. One chart is one planar face with
 one normal, so the kernel cannot bleed across a surface, and the gutter still
 isolates neighbouring charts. The texel seed follows `(source, id, face, x, y)`
 instead of the atlas index, so a static edit that only moves charts does not
-re-roll their noise. At this measurement `TOOL_VERSION` is 2 and the format and
-key versions are 1; the current artifact is format 2, tool 4, key 2.
+re-roll their noise. At this measurement `TOOL_VERSION` was 2 and the format and
+key versions were 1; the artifact at that time was format 2, tool 4, key 2. The
+current tool is 5.
 
 ```sh
 ./bin/harbagsa-agent run scenarios/lighting-noise.json --out runs/lighting-noise
