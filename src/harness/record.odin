@@ -7,7 +7,6 @@ import "core:path/filepath"
 import "core:strings"
 
 import "src:frame"
-import "src:perf"
 import "src:renderer"
 
 session_record_start :: proc(session: ^Session, path: string, include_scene := true) -> string {
@@ -25,17 +24,12 @@ session_record_start :: proc(session: ^Session, path: string, include_scene := t
 
 	append(&session.recorder.recorded, strings.clone(`{"cmd": "reset"}`, session.allocator))
 	if include_scene {
-		perf_stats: Maybe(perf.Stats)
-		if session.view.perf {
-			perf_stats = perf.Stats{}
-		}
 		options := frame.Options {
 			alpha      = session_view_alpha(session),
 			hud        = session.view.hud,
 			debug_view = session.view.debug,
 			fx_view    = session.view.fx,
 			captured   = !session.view.hint,
-			perf_stats = perf_stats,
 		}
 		debug: ^renderer.Renderer_Debug
 		if session.render.debug.active {

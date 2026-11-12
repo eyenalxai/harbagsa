@@ -22,8 +22,6 @@ shader_digest :: proc() -> string {
 			TAA_VIEW_FRAGMENT_SPIRV,
 			DEBUG_VERTEX_SPIRV,
 			DEBUG_FRAGMENT_SPIRV,
-			HUD_VERTEX_SPIRV,
-			HUD_FRAGMENT_SPIRV,
 		}) {
 			digest.write_bytes(&hash, bytes)
 			digest.write_bytes(&hash, []u8{0})

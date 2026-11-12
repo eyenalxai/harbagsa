@@ -34,7 +34,6 @@ View_Intents :: struct {
 	debug_view:   bool,
 	debug_mode:   bool,
 	taa:          bool,
-	perf:         bool,
 	repro:        bool,
 	reset_player: bool,
 	reset_scene:  bool,

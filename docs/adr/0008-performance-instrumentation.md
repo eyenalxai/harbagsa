@@ -19,10 +19,10 @@ The demo measures its own frame. One perf sample holds the frame interval, five 
 
 ## Consequences
 
-- Timestamps are always recorded when the device supports them. `F4` only controls display.
+- Timestamps are always recorded when the device supports them. There is no on-screen perf overlay; the harness report reads the timestamps.
 - A slot reports the last completed frame, not the frame being recorded.
 - A perf run primes the device before warmup. Prime frames stay out of the trace and statistics.
 - A run keeps every named perf result in `report.json`. Each duration carries `p50`, `p95`, and `mean`.
 - A device without timestamp support reports CPU numbers and marks GPU fields unavailable.
-- The overlay and harness reports derive from the same statistics procedure.
+- The harness report derives from the same statistics procedure.
 - Perf data never enters the simulation state, state digest, pixel hash, or recorded command stream.

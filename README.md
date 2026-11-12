@@ -20,7 +20,8 @@ floor, directional light, background pass, shadow map, or per-frame GI.
   `VK_KHR_deferred_host_operations`)
 - `glslc` from shaderc to compile the GLSL shaders
 - `spirv-val` from SPIRV-Tools to validate the compiled shaders (optional)
-- A C and C++ compiler for the vendored Box3D, FreeType, and HarfBuzz libraries
+- A C compiler for the vendored Box3D library
+- A Rust toolchain and `cargo` for the Rune UI shim in `ui/shim`
 - `python3` for reference checks and the perf A/B report
 - `make` (optional)
 
@@ -45,9 +46,14 @@ only until one is present.
 make run
 ```
 
-The first build compiles the vendored libraries and takes about a minute. Later
-builds reuse them. SPIR-V lives in `build/shaders/` and is embedded into the
-binary.
+The first build compiles the vendored Box3D library and the Rust UI shim and
+takes a few minutes. Later builds reuse them. SPIR-V lives in `build/shaders/`
+and is embedded into the binary.
+
+The overlay is a Rune view drawn by the Rust shim in `ui/shim`. It is the only
+UI path: Odin fills flat rows and sends them over `src/renderer/ui_bridge.odin`,
+and the shim draws onto the same target image. See `docs/ui/` for the layer
+rules.
 
 ## Controls
 
@@ -60,7 +66,6 @@ binary.
 - `F1`: toggle physics debug draw.
 - `F2`: toggle debug mode.
 - `F3`: toggle temporal anti-aliasing (TAA).
-- `F4`: toggle the perf overlay.
 - `F5`: write a repro scenario to `runs/repro/`.
 - `Esc`: open or close the settings menu.
 
@@ -79,7 +84,10 @@ the eight feet tuck under the body in the air.
 The menu pauses the simulation and releases the cursor. It changes window mode,
 display, resolution, type weight, and the sprint input mode.
 `Up` and `Down` select a row. `Left`, `Right`, and `Enter` change it. `Resume`
-closes the menu. The Type weight track also accepts a drag.
+closes the menu. The menu is keyboard-driven. `Debug` in the status action row
+toggles debug mode; `Close` returns `Close_Menu`, but the game ignores it while
+the menu is closed. The Type weight value is stored and reported; applying it to
+the Rune view is a port item, so the glyphs keep Rune's default weight.
 
 Window mode is Borderless or Windowed. Borderless uses the selected display's
 desktop size. Windowed uses the chosen resolution and a normal title bar. The
@@ -120,14 +128,6 @@ warm, cool, and red pools on the closed shell and a baked bounce in the corners.
 Newly placed lamps default to dynamic. Closing the palette discards its selected
 card and tuned body and light; arming placement copies them into the placement
 tool.
-
-### Perf overlay
-
-The summary shows FPS, frame interval, CPU frame time, p95 interval, spike
-count, and GPU total with the costliest pass. The pass row shows TLAS, cluster
-assignment, depth prepass, lit scene, TAA resolve, and overlay times. GPU numbers
-belong to the last completed frame. A device without timestamp support shows CPU
-numbers only.
 
 ## Agent harness
 
@@ -171,7 +171,7 @@ Common options:
 
 ```json
 {
-  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "view": {"hud": false, "debug": false, "hint": false, "fx": false},
   "commands": [
     {"cmd": "place", "prefab": "Lamp", "position": [0, 1, 6], "name": "key-lamp"},
     {"cmd": "settle", "frames": 40},
@@ -197,10 +197,11 @@ degrees and ends in `_deg`. Positions and ranges are metres. One `step` or
 - `capture`: render and write one output, or one output per named diagnostic view.
 - `captures`: write several outputs from one frame.
 - `camera`: set or clear an inspection camera.
-- `view`: set HUD, debug draw, capture hint, and perf flags.
+- `view`: set the HUD, debug draw, capture hint, and opt-in rune-fx flags.
 - `debug_mode`: enter or leave debug mode.
 - `editor`: drive the palette, placement, object edits, light settings, and history. `state.editor` reports the active tool, the resolved selection, the placement, the history, and the light budget.
 - `menu`: drive the settings menu.
+- `ui`: click the Rune view at `x` and `y` in points.
 - `record`: start or stop a recording.
 - `replay`: reset and run a recorded scenario.
 - `repro`: write the live view as a scene snapshot.

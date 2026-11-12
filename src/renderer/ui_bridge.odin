@@ -159,7 +159,11 @@ ui_attach_target :: proc(r: ^Renderer) -> bool {
 	return true
 }
 
-ui_step :: proc(r: ^Renderer, frame: UI_Frame) {
+ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
+	if !hud.enabled {
+		return
+	}
+	frame := hud.ui
 	width, height := target_extent(r)
 	if width == 0 || height == 0 {
 		return
@@ -201,13 +205,7 @@ ui_step :: proc(r: ^Renderer, frame: UI_Frame) {
 		count += 1
 	}
 
-	snapshot := Ui_Snapshot {
-		speed        = frame.snapshot.speed,
-		grounded     = frame.snapshot.grounded,
-		menu_open    = frame.snapshot.menu_open,
-		palette_open = frame.snapshot.palette_open,
-		fx           = frame.snapshot.fx,
-	}
+	snapshot := frame.snapshot
 	rows: [64]Ui_Row
 	row_count := min(len(frame.panel_rows), len(rows))
 	for row, index in frame.panel_rows[:row_count] {

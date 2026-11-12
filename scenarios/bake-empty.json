@@ -1,7 +1,7 @@
 {
   "note": "Remove every static fixture, publish an empty bake, and capture a lamp-free floor.",
   "size": "1280x720",
-  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "view": {"hud": false, "debug": false, "hint": false},
   "commands": [
     {"cmd": "bake"},
     {"cmd": "remove", "name": "initial-lamp"},

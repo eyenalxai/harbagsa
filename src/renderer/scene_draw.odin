@@ -21,8 +21,8 @@ record_scene :: proc(
 	}
 	box_count := len(input.boxes)
 
-	if !prepare_overlay(r, input.debug_lines, input.hud) {
-		log.error("renderer: overlay vertex upload failed")
+	if !prepare_overlay(r, input.debug_lines) {
+		log.error("renderer: debug line upload failed")
 		return false
 	}
 	if r.taa.has_prev_models && box_count != r.taa.prev_model_count {
@@ -55,7 +55,6 @@ record_scene :: proc(
 	} else {
 		input.jitter = taa_frame_jitter(r, extent)
 	}
-	input.atlas_weight = text_atlas_applied_weight(r)
 	debug := renderer_debug(r)
 	input.clip_height = debug.clip_height
 	input.lightmap = debug.lightmap

@@ -8,8 +8,8 @@ HUD_SNAP_OFF :: "off"
 HUD_SNAP_GRID :: "0.25 m"
 
 // The selection, the count, the body, the size, the position, the yaw, and the
-// snap state. Every changing value uses a fixed field and the mono face through
-// `numeric`, so the panel width does not move when the selection changes.
+// snap state. Every changing value uses a fixed field through `numeric`, so the
+// panel width does not move when the selection changes.
 @(private)
 hud_debug_state_update :: proc(
 	hud: ^HUD_State,

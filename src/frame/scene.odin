@@ -62,7 +62,7 @@ Scene_View :: struct {
 	hud:   bool `json:"hud"`,
 	debug: bool `json:"debug"`,
 	hint:  bool `json:"hint"`,
-	perf:  bool `json:"perf"`,
+	fx:    bool `json:"fx"`,
 }
 
 Scene_Display :: struct {
@@ -93,7 +93,7 @@ scene_capture :: proc(
 			hud = view.hud,
 			debug = view.debug_view,
 			hint = !view.captured,
-			perf = view.perf_stats != nil,
+			fx = view.fx_view,
 		},
 	}
 	view_data := camera_view(sim, debug, camera_override, view.alpha)

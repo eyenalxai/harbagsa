@@ -189,8 +189,6 @@ apply_key :: proc(
 		out.view.debug_mode = true
 	case .F3:
 		out.view.taa = true
-	case .F4:
-		out.view.perf = true
 	case .F5:
 		out.view.repro = true
 	}
@@ -211,8 +209,6 @@ apply_menu_key :: proc(out: ^Frame_Input, edge: platform.Key_Edge) {
 		out.menu.right = true
 	case .Enter:
 		out.menu.confirm = true
-	case .F4:
-		out.view.perf = true
 	}
 }
 
