@@ -29,14 +29,14 @@ Lightmap_Work :: struct {
 	bvh:           ^Bvh,
 	layout:        ^Atlas_Layout,
 	atlas:         []f32,
-	first:         []f32,
+	first_bounce:  []f32,
 	charts:        []int,
 	jobs:          []Texel_Job,
 	rays:          int,
 	workers:       int,
 	shadow_counts: []u64,
 	atlas_size:    int,
-	second:        bool,
+	second_pass:   bool,
 }
 
 lightmap_bake :: proc(
@@ -131,9 +131,9 @@ lightmap_bake :: proc(
 	if bounces > 1 {
 		// The second gather reads the finished first-bounce field and writes
 		// only the added term, so a one-bounce build is byte-identical.
-		first := make([]f32, len(atlas), allocator)
-		defer delete(first, allocator)
-		copy(first, atlas)
+		first_bounce := make([]f32, len(atlas), allocator)
+		defer delete(first_bounce, allocator)
+		copy(first_bounce, atlas)
 		mem.set(raw_data(atlas), 0, len(atlas) * size_of(f32))
 		mem.set(raw_data(valid), 0, len(valid))
 		for job in jobs {
@@ -141,20 +141,17 @@ lightmap_bake :: proc(
 		}
 		charts := make([]int, len(static.boxes) * FACE_COUNT, allocator)
 		defer delete(charts, allocator)
-		for &entry in charts {
-			entry = -1
-		}
 		for chart, chart_index in layout.charts {
 			charts[chart.box * FACE_COUNT + chart.face] = chart_index
 		}
-		work.first = first
+		work.first_bounce = first_bounce
 		work.charts = charts
-		work.second = true
+		work.second_pass = true
 		if !parallel_run(&Parallel_Work{job = &work, run = lightmap_worker}, threads, allocator) {
 			atlas_layout_destroy(&layout, allocator)
 			return {}, .Threads
 		}
-		lightmap_filter_charts(
+		result.dilated_texels += lightmap_filter_charts(
 			atlas,
 			valid,
 			&layout,
@@ -162,8 +159,11 @@ lightmap_bake :: proc(
 			int(quality.gutter_texels),
 			allocator,
 		)
-		for index in 0 ..< len(atlas) {
-			atlas[index] += first[index]
+		for index in 0 ..< len(atlas) / 4 {
+			atlas[index * 4 + 0] += first_bounce[index * 4 + 0]
+			atlas[index * 4 + 1] += first_bounce[index * 4 + 1]
+			atlas[index * 4 + 2] += first_bounce[index * 4 + 2]
+			atlas[index * 4 + 3] = 1.0
 		}
 	}
 	result.atlas = atlas_to_bytes(atlas, allocator)
@@ -232,7 +232,7 @@ lightmap_trace :: proc(work: ^Lightmap_Work, texel: Texel_Job) -> u64 #no_bounds
 		if !hit_ok {
 			continue
 		}
-		if work.second {
+		if work.second_pass {
 			point := dv_add(ray.origin, dv_mul(ray.direction, hit.t))
 			sum = dv_add(sum, second_bounce_radiance(work, hit, point))
 			continue
@@ -260,8 +260,8 @@ second_bounce_radiance :: proc(work: ^Lightmap_Work, hit: Hit, point: DVec3) -> 
 	}
 }
 
-// The hit normal selects the chart; the hit point's local position then maps
-// back to the same face parameterisation `face_point` used to bake it.
+// The local face and its coordinates use the same `face_point` mapping that
+// baked the chart, so the sample lands on the hit surface.
 @(private)
 lightmap_sample :: proc(work: ^Lightmap_Work, box_index: int, point, normal: DVec3) -> DVec3 {
 	local_normal := quat_inverse_rotate(work.bvh.rotations[box_index], normal)
@@ -276,11 +276,7 @@ lightmap_sample :: proc(work: ^Lightmap_Work, box_index: int, point, normal: DVe
 	if local_normal[axis] < 0 {
 		face += 1
 	}
-	chart_index := work.charts[box_index * FACE_COUNT + face]
-	if chart_index < 0 {
-		return {}
-	}
-	chart := work.layout.charts[chart_index]
+	chart := work.layout.charts[work.charts[box_index * FACE_COUNT + face]]
 	entry := work.static.boxes[box_index]
 	local := quat_inverse_rotate(
 		work.bvh.rotations[box_index],
@@ -292,7 +288,7 @@ lightmap_sample :: proc(work: ^Lightmap_Work, box_index: int, point, normal: DVe
 	v_axis := face_axis(basis.v)
 	s := 0.5 + local[u_axis] * f64(basis.u[u_axis]) / (2.0 * f64(half[u_axis]))
 	t := 0.5 + local[v_axis] * f64(basis.v[v_axis]) / (2.0 * f64(half[v_axis]))
-	return lightmap_bilinear(work.first, work.atlas_size, chart, s, t)
+	return lightmap_bilinear(work.first_bounce, work.atlas_size, chart, s, t)
 }
 
 @(private)

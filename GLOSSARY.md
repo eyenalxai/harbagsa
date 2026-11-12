@@ -211,7 +211,7 @@ The forward lighting path that builds a light index list per cluster in a comput
 _Avoid_: Tiled forward, light grid
 
 **Indirect light (GI)**:
-Light that reaches a surface after diffuse bounces from a static fixture or a static emissive box; the default bake traces two bounces. Static boxes read it from the lightmap; dynamic boxes read it from the probe field. It is baked, not updated per frame. It is not a default fill: with no static fixture, it is zero.
+Light that reaches a surface after diffuse bounces from a static fixture or a static emissive box; the default bake traces two bounces for the lightmap, while the probe field stays one bounce. Static boxes read the lightmap; dynamic boxes read the probe field. It is baked, not updated per frame. It is not a default fill: with no static fixture, it is zero.
 _Avoid_: Ambient, global illumination cache
 
 **Bake**:

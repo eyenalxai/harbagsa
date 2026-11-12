@@ -46,7 +46,10 @@ parse_bake :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, s
 	}
 	if value, has := json_get(object, "probe_moments"); has {
 		moments, ok := json_integer(value)
-		if !ok || !bake.probe_moments_supported(u32(moments)) {
+		if !ok ||
+		   moments < int(bake.PROBE_MOMENT_TEXELS) ||
+		   moments > int(bake.PROBE_MOMENT_TEXELS_HIGH) ||
+		   !bake.probe_moments_supported(u32(moments)) {
 			return {}, format_error("%s", "'probe_moments' must be 8 or 16")
 		}
 		command.bake.probe_moments = u32(moments)
@@ -54,7 +57,7 @@ parse_bake :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, s
 	}
 	if value, has := json_get(object, "bounces"); has {
 		bounces, ok := json_integer(value)
-		if !ok || !bake.bounces_supported(u32(bounces)) {
+		if !ok || bounces < 1 || bounces > 2 || !bake.bounces_supported(u32(bounces)) {
 			return {}, format_error("%s", "'bounces' must be 1 or 2")
 		}
 		command.bake.bounces = u32(bounces)

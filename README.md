@@ -7,8 +7,8 @@ static fixture lamps. Two-bone inverse kinematics plant the feet on the floor,
 and a spring-arm camera orbits behind the body.
 SDL3 provides the window and input, Vulkan 1.3 draws the scene, and Box3D runs
 physics. Direct point lights, hard ray-query shadows, a baked static indirect
-(two diffuse bounces by default; a lightmap for static boxes and a probe field
-for dynamic boxes), and emissive boxes shade every frame. An unlit surface is black. There is no ambient
+(two diffuse bounces by default for the lightmap; a one-bounce probe field for
+dynamic boxes), and emissive boxes shade every frame. An unlit surface is black. There is no ambient
 floor, directional light, background pass, shadow map, or per-frame GI.
 
 ## Requirements

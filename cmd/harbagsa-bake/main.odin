@@ -65,7 +65,10 @@ run :: proc(args: []string) -> int {
 				return argument_error("--probe-moments needs 8 or 16")
 			}
 			value, value_ok := strconv.parse_int(args[index + 1])
-			if !value_ok || !bake.probe_moments_supported(u32(value)) {
+			if !value_ok ||
+			   value < int(bake.PROBE_MOMENT_TEXELS) ||
+			   value > int(bake.PROBE_MOMENT_TEXELS_HIGH) ||
+			   !bake.probe_moments_supported(u32(value)) {
 				return argument_error("--probe-moments must be 8 or 16")
 			}
 			moments = u32(value)
@@ -75,7 +78,7 @@ run :: proc(args: []string) -> int {
 				return argument_error("--bounces needs 1 or 2")
 			}
 			value, value_ok := strconv.parse_int(args[index + 1])
-			if !value_ok || !bake.bounces_supported(u32(value)) {
+			if !value_ok || value < 1 || value > 2 || !bake.bounces_supported(u32(value)) {
 				return argument_error("--bounces must be 1 or 2")
 			}
 			bounces = u32(value)

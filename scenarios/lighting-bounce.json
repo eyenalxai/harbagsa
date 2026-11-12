@@ -2,7 +2,7 @@
   "note": "Corner 1-vs-2-bounce A/B: a static fixture behind the camera lights the south-west arena corner. Run with --param bounces=1 and --param bounces=2; the camera, 12 settle frames, TAA, and jitter are identical. The corner region is the decision measure; corner-full is the whole frame.",
   "size": "1280x720",
   "requires": {"renderer_debug": true},
-  "parameters": {"bounces": 1},
+  "parameters": {"bounces": 2},
   "view": {"hud": false, "debug": false, "hint": false, "perf": false},
   "commands": [
     {"cmd": "renderer_debug", "taa": false, "jitter": false},
