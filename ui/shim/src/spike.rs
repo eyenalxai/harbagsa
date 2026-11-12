@@ -84,11 +84,11 @@ fn main() {
 
     let hal_adapter = unsafe { adapter.as_hal::<wgpu::hal::api::Vulkan>() }
         .expect("adapter hal");
-    let raw_physical = unsafe { hal_adapter.raw_physical_device() };
+    let raw_physical = hal_adapter.raw_physical_device();
     let features = wgpu::Features::empty();
-    let device_extensions = unsafe { hal_adapter.required_device_extensions(features) };
+    let device_extensions = hal_adapter.required_device_extensions(features);
     let mut device_features =
-        unsafe { hal_adapter.physical_device_features(&device_extensions, features) };
+        hal_adapter.physical_device_features(&device_extensions, features);
     let limits = adapter.limits();
     let memory_hints = wgpu::MemoryHints::default();
 

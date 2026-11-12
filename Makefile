@@ -14,9 +14,11 @@ BAKE_TOOL := cmd/harbagsa-bake
 BAKE_OUT := build/bake/arena.hbake
 BAKE_SOURCES := $(shell find src cmd -name '*.odin')
 RUST_DIR := ui
+RUST_MANIFEST := $(RUST_DIR)/Cargo.toml
+RUST_PACKAGE := harbagsa-ui
 RUST_LIB := build/libharbagsa_ui.a
 RUST_SOURCES := $(shell find $(RUST_DIR)/shim/src -name '*.rs') \
-	$(RUST_DIR)/Cargo.toml $(RUST_DIR)/shim/Cargo.toml $(RUST_DIR)/Cargo.lock
+	$(RUST_MANIFEST) $(RUST_DIR)/shim/Cargo.toml $(RUST_DIR)/Cargo.lock
 HARNESS_REVISION := $(shell git rev-parse --short HEAD 2>/dev/null || printf unknown)
 # `git status --porcelain` covers staged and untracked files; `git diff --quiet`
 # sees neither.
@@ -90,7 +92,7 @@ VULKAN_LAYER_DIRS ?= \
 	/usr/share/vulkan/explicit_layer.d
 VALIDATION_LAYER := VK_LAYER_KHRONOS_validation
 
-.PHONY: all FORCE build agent bake check check-spirv check-lines run shaders check-validation-layer validate-demo check-references shot clean
+.PHONY: all FORCE build agent bake check check-rust check-spirv check-lines run shaders check-validation-layer validate-demo check-references shot clean
 
 FORCE:
 
@@ -98,7 +100,7 @@ all: build
 
 $(RUST_LIB): $(RUST_SOURCES)
 	@mkdir -p $(@D)
-	cargo build --release --manifest-path $(RUST_DIR)/Cargo.toml -p harbagsa-ui --lib
+	cargo build --release --manifest-path $(RUST_MANIFEST) -p $(RUST_PACKAGE) --lib
 	cp $(RUST_DIR)/target/release/libharbagsa_ui.a $@
 
 # Build aside so a failed ar never leaves a broken archive.
@@ -190,7 +192,13 @@ $(BAKE_OUT): $(BAKE_BIN) $(BAKE_SOURCES)
 
 bake: $(BAKE_OUT)
 
-check: check-lines check-spirv $(RUST_LIB) $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
+# The archive is a file target, so a clean tree would skip the Rust build.
+# The phony check re-runs the crate check so the warning policy is enforced
+# even when the archive is current.
+check-rust:
+	cargo check --manifest-path $(RUST_MANIFEST) -p $(RUST_PACKAGE)
+
+check: check-lines check-spirv check-rust $(RUST_LIB) $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) check . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
 	$(ODIN) check $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS)
 	$(ODIN) check $(BAKE_TOOL) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS)
