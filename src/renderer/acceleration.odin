@@ -126,7 +126,7 @@ record_acceleration :: proc(
 		box := frame_box.box
 		instance: vk.AccelerationStructureInstanceKHR
 		instance.transform = acceleration_transform(box_model_matrix(box))
-		instance.mask = box_instance_mask(box)
+		instance.mask = box_instance_mask(frame_box.is_lamp)
 		instance.instanceCustomIndex = u32(index)
 		instance.accelerationStructureReference = u64(r.acceleration.blas_address)
 		instances[index] = instance
