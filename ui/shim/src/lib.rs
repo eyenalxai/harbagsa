@@ -28,7 +28,6 @@ struct PanelRow {
     label: String,
     value: String,
     ratio: f32,
-    ticks: u32,
 }
 
 #[derive(Default)]
@@ -44,8 +43,6 @@ struct MenuState {
 struct PaletteItem {
     name: String,
     short: String,
-    color: [f32; 4],
-    key: String,
 }
 
 #[derive(Default)]
@@ -55,8 +52,6 @@ struct PaletteState {
     items: Vec<PaletteItem>,
     selected: usize,
     body: String,
-    size: String,
-    count: String,
     hints: Vec<(String, String)>,
 }
 
@@ -96,6 +91,7 @@ pub struct UiRow {
     pub value: *const u8,
     pub value_len: u32,
     pub ratio: f32,
+    /// Reserved for the remaining UI port; the Rune view does not read it.
     pub ticks: u32,
 }
 
@@ -128,7 +124,9 @@ pub struct UiPaletteItem {
     pub name_len: u32,
     pub short: *const u8,
     pub short_len: u32,
+    /// Reserved for the remaining UI port; the Rune view does not read it.
     pub color: [f32; 4],
+    /// Reserved for the remaining UI port; the Rune view does not read it.
     pub key: *const u8,
     pub key_len: u32,
 }
@@ -143,8 +141,10 @@ pub struct UiPalette {
     pub selected: u32,
     pub body: *const u8,
     pub body_len: u32,
+    /// Reserved for the remaining UI port; the Rune view does not read it.
     pub size: *const u8,
     pub size_len: u32,
+    /// Reserved for the remaining UI port; the Rune view does not read it.
     pub count: *const u8,
     pub count_len: u32,
     pub hints: *const UiHint,
@@ -211,6 +211,7 @@ fn instance_extensions() -> Result<&'static Vec<usize>, String> {
     if let Some(list) = EXTENSIONS.get() {
         return Ok(list);
     }
+    // SAFETY: The Vulkan loader is process-global and loaded by the game.
     let entry = unsafe { ash::Entry::load() }.map_err(|e| format!("load Vulkan: {e}"))?;
     let extensions = wgpu::hal::vulkan::Instance::desired_extensions(
         &entry,
@@ -237,41 +238,59 @@ pub extern "C" fn ui_vk_instance_extensions(count: *mut u32) -> *const *const c_
     list.as_ptr() as *const *const c_char
 }
 
+/// Adopt the game's Vulkan instance and physical device.
+///
+/// # Safety
+///
+/// `config` must point at a live Vulkan instance and physical device created by
+/// the game. The queue families must be valid for that physical device, and the
+/// game must not destroy the instance or device while the returned `Host` lives.
 unsafe fn adopt(
     config: &UiVkConfig,
 ) -> Result<(UiVkDevice, Host), String> {
-    let entry = ash::Entry::load().map_err(|e| format!("load Vulkan: {e}"))?;
+    // SAFETY: The game has already initialized Vulkan, so the loader is loaded
+    // in this process; `Entry::load` only resolves its entry points.
+    let entry = unsafe { ash::Entry::load() }.map_err(|e| format!("load Vulkan: {e}"))?;
     let instance_extensions = instance_extensions()?;
+    // SAFETY: The extension names are static NUL-terminated strings owned by
+    // the Vulkan loader.
     let names: Vec<&std::ffi::CStr> = instance_extensions
         .iter()
         .map(|&p| unsafe { std::ffi::CStr::from_ptr(p as *const c_char) })
         .collect();
 
     let raw_instance = vk::Instance::from_raw(config.instance as u64);
+    // SAFETY: `raw_instance` is the game's live instance and `entry` was loaded
+    // from the same loader.
     let ash_instance =
-        ash::Instance::load(entry.static_fn(), raw_instance);
-    let hal_instance = wgpu::hal::vulkan::Instance::from_raw(
-        entry.clone(),
-        ash_instance.clone(),
-        vk::API_VERSION_1_3,
-        0,
-        None,
-        names,
-        wgpu::InstanceFlags::default(),
-        wgpu::MemoryBudgetThresholds::default(),
-        false,
-        Some(Box::new(|| {})),
-    )
+        unsafe { ash::Instance::load(entry.static_fn(), raw_instance) };
+    // SAFETY: The entry, instance, and extension names are live; wgpu takes
+    // ownership of the HAL instance.
+    let hal_instance = unsafe {
+        wgpu::hal::vulkan::Instance::from_raw(
+            entry.clone(),
+            ash_instance.clone(),
+            vk::API_VERSION_1_3,
+            0,
+            None,
+            names,
+            wgpu::InstanceFlags::default(),
+            wgpu::MemoryBudgetThresholds::default(),
+            false,
+            Some(Box::new(|| {})),
+        )
+    }
     .map_err(|e| format!("adopt the instance: {e:?}"))?;
+    // SAFETY: `hal_instance` is a valid HAL instance that wgpu now owns.
     let instance =
-        wgpu::Instance::from_hal::<wgpu::hal::api::Vulkan>(hal_instance);
+        unsafe { wgpu::Instance::from_hal::<wgpu::hal::api::Vulkan>(hal_instance) };
 
     let raw_physical = vk::PhysicalDevice::from_raw(config.physical_device as u64);
     let adapters = pollster::block_on(instance.enumerate_adapters(wgpu::Backends::VULKAN));
     let adapter = adapters
         .into_iter()
         .find(|a| unsafe { a.as_hal::<wgpu::hal::api::Vulkan>() }
-            .is_some_and(|h| unsafe { h.raw_physical_device() } == raw_physical))
+            .is_some_and(|h| h.raw_physical_device() == raw_physical))
         .ok_or_else(|| "no wgpu adapter for the game physical device".to_string())?;
     let features = adapter.features();
     if !features.contains(wgpu::Features::EXPERIMENTAL_RAY_QUERY) {
@@ -281,17 +300,18 @@ unsafe fn adopt(
     let limits = adapter.limits();
     let hints = wgpu::MemoryHints::default();
 
+    // SAFETY: The adapter is a live Vulkan adapter; the HAL handle is valid
+    // while `adapter` lives.
     let hal_adapter = unsafe { adapter.as_hal::<wgpu::hal::api::Vulkan>() }
         .ok_or_else(|| "no Vulkan adapter".to_string())?;
-    let mut extensions =
-        unsafe { hal_adapter.required_device_extensions(features) };
+    let mut extensions = hal_adapter.required_device_extensions(features);
     if config.present_family != u32::MAX
         && !extensions.contains(&ash::khr::swapchain::NAME)
     {
         extensions.push(ash::khr::swapchain::NAME);
     }
     let mut device_features =
-        unsafe { hal_adapter.physical_device_features(&extensions, features) };
+        hal_adapter.physical_device_features(&extensions, features);
 
     let priority = [1.0f32];
     let mut queue_families = vec![config.graphics_family];
@@ -322,19 +342,29 @@ unsafe fn adopt(
             .shader_demote_to_helper_invocation(true);
     let create_info = create_info.push_next(&mut demote).push_next(&mut dynamic);
 
-    let raw_device = ash_instance
-        .create_device(raw_physical, &create_info, None)
-        .map_err(|e| format!("vkCreateDevice: {e:?}"))?;
+    // SAFETY: The caller guarantees the physical device and queue families; the
+    // extensions and features came from this adapter; the HAL device owns the
+    // returned raw device.
+    let raw_device = unsafe {
+        ash_instance.create_device(raw_physical, &create_info, None)
+    }
+    .map_err(|e| format!("vkCreateDevice: {e:?}"))?;
     let raw_device_handle = raw_device.handle();
-    let graphics_queue = raw_device.get_device_queue(config.graphics_family, 0);
+    // SAFETY: The device was created with this queue family; index 0 is valid.
+    let graphics_queue =
+        unsafe { raw_device.get_device_queue(config.graphics_family, 0) };
     let present_queue = if config.present_family == u32::MAX
         || config.present_family == config.graphics_family
     {
         graphics_queue
     } else {
-        raw_device.get_device_queue(config.present_family, 0)
+        // SAFETY: The present family was included in the queue create infos
+        // above; index 0 is valid.
+        unsafe { raw_device.get_device_queue(config.present_family, 0) }
     };
 
+    // SAFETY: The raw device was created from this adapter with the requested
+    // extensions and features; wgpu takes ownership of it.
     let open_device = unsafe {
         hal_adapter.device_from_raw(
             raw_device,
@@ -348,6 +378,8 @@ unsafe fn adopt(
         )
     }
     .map_err(|e| format!("adopt the device: {e:?}"))?;
+    // SAFETY: The HAL device came from this adapter and is not used elsewhere;
+    // wgpu takes ownership of it.
     let (device, queue) = unsafe {
         adapter.create_device_from_hal::<wgpu::hal::api::Vulkan>(
             open_device,
@@ -418,6 +450,7 @@ fn texture_format(value: u32) -> Option<wgpu::TextureFormat> {
 }
 
 fn host() -> Option<&'static mut Host> {
+    // SAFETY: `HOST` only stores the pointer from `Box::leak` in `ui_vk_init`.
     HOST.get().map(|&pointer| unsafe { &mut *(pointer as *mut Host) })
 }
 
@@ -670,60 +703,38 @@ pub extern "C" fn ui_frame(
     runtime.state.actions.clear();
 
     if let Some(panel) = unsafe { panel.as_ref() } {
-        let mut rows = Vec::with_capacity(panel.row_count as usize);
-        if !panel.rows.is_null() {
-            for index in 0..panel.row_count as usize {
-                let row = unsafe { &*panel.rows.add(index) };
-                rows.push(PanelRow {
-                    kind: row.kind,
-                    flags: row.flags,
-                    label: text_bytes(row.label, row.label_len),
-                    value: text_bytes(row.value, row.value_len),
-                    ratio: row.ratio,
-                    ticks: row.ticks,
-                });
-            }
-        }
+        // SAFETY: The FFI caller owns the row array for this call.
+        let rows = unsafe { panel_rows(panel.rows, panel.row_count) };
         runtime.state.panel = PanelState {
             rows,
-            notice: text_bytes(panel.notice, panel.notice_len),
-            capture_hint: text_bytes(panel.capture_hint, panel.capture_hint_len),
+            notice: unsafe { text_bytes(panel.notice, panel.notice_len) },
+            capture_hint: unsafe {
+                text_bytes(panel.capture_hint, panel.capture_hint_len)
+            },
             captured: panel.captured != 0,
             palette_open: panel.palette_open != 0,
         };
     }
 
     if let Some(menu) = unsafe { menu.as_ref() } {
-        let mut rows = Vec::with_capacity(menu.row_count as usize);
-        if !menu.rows.is_null() {
-            for index in 0..menu.row_count as usize {
-                let row = unsafe { &*menu.rows.add(index) };
-                rows.push(PanelRow {
-                    kind: row.kind,
-                    flags: row.flags,
-                    label: text_bytes(row.label, row.label_len),
-                    value: text_bytes(row.value, row.value_len),
-                    ratio: row.ratio,
-                    ticks: row.ticks,
-                });
-            }
-        }
+        // SAFETY: The FFI caller owns the row array for this call.
+        let rows = unsafe { panel_rows(menu.rows, menu.row_count) };
         let mut hints = Vec::with_capacity(menu.hint_count as usize);
         if !menu.hints.is_null() {
             for index in 0..menu.hint_count as usize {
                 let hint = unsafe { &*menu.hints.add(index) };
                 hints.push((
-                    text_bytes(hint.keys, hint.keys_len),
-                    text_bytes(hint.action, hint.action_len),
+                    unsafe { text_bytes(hint.keys, hint.keys_len) },
+                    unsafe { text_bytes(hint.action, hint.action_len) },
                 ));
             }
         }
         runtime.state.menu = MenuState {
             open: menu.open != 0,
-            title: text_bytes(menu.title, menu.title_len),
+            title: unsafe { text_bytes(menu.title, menu.title_len) },
             rows,
             selected: menu.selected as usize,
-            note: text_bytes(menu.note, menu.note_len),
+            note: unsafe { text_bytes(menu.note, menu.note_len) },
             hints,
         };
     }
@@ -734,10 +745,8 @@ pub extern "C" fn ui_frame(
             for index in 0..palette.item_count as usize {
                 let item = unsafe { &*palette.items.add(index) };
                 items.push(PaletteItem {
-                    name: text_bytes(item.name, item.name_len),
-                    short: text_bytes(item.short, item.short_len),
-                    color: item.color,
-                    key: text_bytes(item.key, item.key_len),
+                    name: unsafe { text_bytes(item.name, item.name_len) },
+                    short: unsafe { text_bytes(item.short, item.short_len) },
                 });
             }
         }
@@ -746,19 +755,17 @@ pub extern "C" fn ui_frame(
             for index in 0..palette.hint_count as usize {
                 let hint = unsafe { &*palette.hints.add(index) };
                 hints.push((
-                    text_bytes(hint.keys, hint.keys_len),
-                    text_bytes(hint.action, hint.action_len),
+                    unsafe { text_bytes(hint.keys, hint.keys_len) },
+                    unsafe { text_bytes(hint.action, hint.action_len) },
                 ));
             }
         }
         runtime.state.palette = PaletteState {
             open: palette.open != 0,
-            title: text_bytes(palette.title, palette.title_len),
+            title: unsafe { text_bytes(palette.title, palette.title_len) },
             items,
             selected: palette.selected as usize,
-            body: text_bytes(palette.body, palette.body_len),
-            size: text_bytes(palette.size, palette.size_len),
-            count: text_bytes(palette.count, palette.count_len),
+            body: unsafe { text_bytes(palette.body, palette.body_len) },
             hints,
         };
     }
@@ -913,7 +920,6 @@ fn palette_view(state: &UiState) -> El {
             label: item.short.clone(),
             value: item.name.clone(),
             ratio: 0.0,
-            ticks: 0,
         })
         .collect();
     let menu = MenuState {
@@ -927,10 +933,39 @@ fn palette_view(state: &UiState) -> El {
     menu_panel(&menu)
 }
 
-fn text_bytes(pointer: *const u8, len: u32) -> String {
+/// # Safety
+///
+/// `pointer` must point to `len` readable bytes that stay valid for the call,
+/// or be null with any length.
+unsafe fn text_bytes(pointer: *const u8, len: u32) -> String {
     if pointer.is_null() || len == 0 {
         return String::new();
     }
+    // SAFETY: The caller guarantees the pointer and length; the null and zero
+    // checks above cover the empty slice.
     String::from_utf8_lossy(unsafe { std::slice::from_raw_parts(pointer, len as usize) })
         .into_owned()
+}
+
+/// # Safety
+///
+/// `rows` must point to `count` valid `UiRow` values whose label and value
+/// pointers are readable for their lengths or null, or be null.
+unsafe fn panel_rows(rows: *const UiRow, count: u32) -> Vec<PanelRow> {
+    if rows.is_null() {
+        return Vec::new();
+    }
+    (0..count as usize)
+        .map(|index| {
+            // SAFETY: The caller guarantees the pointer and count.
+            let row = unsafe { &*rows.add(index) };
+            PanelRow {
+                kind: row.kind,
+                flags: row.flags,
+                label: unsafe { text_bytes(row.label, row.label_len) },
+                value: unsafe { text_bytes(row.value, row.value_len) },
+                ratio: row.ratio,
+            }
+        })
+        .collect()
 }
