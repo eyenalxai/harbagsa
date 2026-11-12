@@ -178,6 +178,9 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 		if value, has := command.view.perf.?; has {
 			session.view.perf = value
 		}
+		if value, has := command.view.fx.?; has {
+			session.view.fx = value
+		}
 	}
 	if debug, has := command.renderer_debug.?; has {
 		if session.render.backend == nil || !session.render.backend.ready {

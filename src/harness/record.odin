@@ -33,6 +33,7 @@ session_record_start :: proc(session: ^Session, path: string, include_scene := t
 			alpha      = session_view_alpha(session),
 			hud        = session.view.hud,
 			debug_view = session.view.debug,
+			fx_view    = session.view.fx,
 			captured   = !session.view.hint,
 			perf_stats = perf_stats,
 		}
