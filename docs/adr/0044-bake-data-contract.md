@@ -45,6 +45,11 @@ never a fill value.
   set a mostly empty row. A slot key hashes the box identity and its transform;
   a moved static box misses its old chart instead of sampling a lightmap baked
   for its previous position.
+- **Bounces.** The quality block accepts one or two diffuse bounces; two is the
+  default. The second gather reuses the first-bounce ray set and samples the
+  first lightmap at each hit, so it adds no stochastic noise and needs no extra
+  section. A one-bounce artifact remains valid data; its key differs because the
+  quality and tool version are hashed.
 - **Probes.** A regular grid at 1 m spacing is the default; 2 m remains the
   quality fallback. Each probe stores an 8 x 8 octahedral `R11G11B10F`
   irradiance block and an 8 x 8 or 16 x 16 first/second moment block. The

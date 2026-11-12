@@ -1,0 +1,20 @@
+{
+  "note": "Corner 1-vs-2-bounce A/B: a static fixture behind the camera lights the south-west arena corner. Run with --param bounces=1 and --param bounces=2; the camera, 12 settle frames, TAA, and jitter are identical. The corner region is the decision measure; corner-full is the whole frame.",
+  "size": "1280x720",
+  "requires": {"renderer_debug": true},
+  "parameters": {"bounces": 2},
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "renderer_debug", "taa": false, "jitter": false},
+    {"cmd": "place", "prefab": "Lamp", "position": [-13.5, 3.4, -13.5], "name": "corner-lamp", "light": {"kind": "static", "color": "warm", "intensity": 4.0, "range": 14}},
+    {"cmd": "settle", "frames": 30},
+    {"cmd": "bake", "bounces": "${bounces}", "out": "runs/lighting-bounce-${bounces}.hbake"},
+    {"cmd": "camera", "position": [-12.5, 2.2, -12.5], "look_at": [-19.6, 1.2, -19.6], "fov_deg": 55},
+    {"cmd": "settle", "frames": 12},
+    {"cmd": "capture", "name": "corner", "views": ["beauty", "lightmap"], "format": "stats", "png": true, "region": {"x": 380, "y": 120, "w": 520, "h": 420}, "note": "The south-west corner and the wall/floor crease."},
+    {"cmd": "capture", "name": "corner-full", "views": ["beauty", "lightmap"], "format": "stats", "note": "The whole-frame statistics; the corner view PNGs are the full frame the compare tool reads."},
+    {"cmd": "pick", "at": [640, 300]},
+    {"cmd": "pick", "at": [640, 480]},
+    {"cmd": "pick", "at": [700, 250]}
+  ]
+}
