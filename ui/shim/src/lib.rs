@@ -21,11 +21,29 @@ pub struct UiVkDevice {
     pub present_queue: *mut c_void,
 }
 
+#[derive(Default)]
+struct PanelRow {
+    kind: u32,
+    flags: u32,
+    label: String,
+    value: String,
+}
+
+#[derive(Default)]
+struct PanelState {
+    rows: Vec<PanelRow>,
+    notice: String,
+    capture_hint: String,
+    captured: bool,
+    palette_open: bool,
+}
+
 struct UiState {
     speed: f32,
     grounded: bool,
     menu_open: bool,
     actions: Vec<UiAction>,
+    panel: PanelState,
 }
 
 #[repr(C)]
@@ -33,6 +51,30 @@ pub struct UiSnapshot {
     pub speed: f32,
     pub grounded: u32,
     pub menu_open: u32,
+    pub palette_open: u32,
+}
+
+#[repr(C)]
+pub struct UiRow {
+    pub kind: u32,
+    pub flags: u32,
+    pub label: *const u8,
+    pub label_len: u32,
+    pub value: *const u8,
+    pub value_len: u32,
+    pub ratio: f32,
+    pub ticks: u32,
+}
+
+#[repr(C)]
+pub struct UiPanel {
+    pub rows: *const UiRow,
+    pub row_count: u32,
+    pub notice: *const u8,
+    pub notice_len: u32,
+    pub capture_hint: *const u8,
+    pub capture_hint_len: u32,
+    pub captured: u32,
     pub palette_open: u32,
 }
 
@@ -295,42 +337,89 @@ fn host() -> Option<&'static mut Host> {
 }
 
 fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
-    use rune::{Color, col, el, text};
+    use rune::{Color, col, el, row, spacer, text};
+    if state.menu_open {
+        return col();
+    }
+    let surface = Color { r: 0.06, g: 0.08, b: 0.10, a: 0.94 };
+    let hairline = Color { r: 0.35, g: 0.38, b: 0.42, a: 0.25 };
+    let primary = Color { r: 0.93, g: 0.95, b: 0.97, a: 1.0 };
+    let secondary = Color { r: 0.65, g: 0.70, b: 0.75, a: 1.0 };
+    let tertiary = Color { r: 0.50, g: 0.55, b: 0.60, a: 1.0 };
+
+    let mut panel = col()
+        .absolute(12.0, 12.0)
+        .w(380.0)
+        .padding(12.0)
+        .gap(6.0)
+        .fill(surface);
+    for r in &state.panel.rows {
+        panel = match r.kind {
+            5 => panel.child(el().h(1.0).w_full().fill(hairline)),
+            6 => panel.child(text(r.label.as_str()).color(tertiary)),
+            0 | 1 | 2 | 3 | 4 => {
+                let label_color = if r.kind == 3 { tertiary } else { secondary };
+                let value_color = if r.flags & 2 != 0 { secondary } else { primary };
+                let line = row()
+                    .w_full()
+                    .gap(12.0)
+                    .child(text(r.label.as_str()).color(label_color))
+                    .child(spacer())
+                    .child(text(r.value.as_str()).color(value_color));
+                panel.child(line)
+            }
+            _ => panel,
+        };
+    }
+
+    let hint = if state.panel.capture_hint.is_empty()
+        || state.panel.captured
+        || state.panel.palette_open
+    {
+        col()
+    } else {
+        text(state.panel.capture_hint.as_str()).color(primary)
+    };
+    let notice = if state.panel.notice.is_empty() {
+        col()
+    } else {
+        text(state.panel.notice.as_str()).color(primary)
+    };
+
     let ink = Color { r: 0.04, g: 0.05, b: 0.07, a: 1.0 };
-    let dim = Color { r: 0.72, g: 0.76, b: 0.81, a: 1.0 };
     let accent = Color { r: 0.90, g: 0.69, b: 0.23, a: 1.0 };
+    let close = el()
+        .padding(8.0)
+        .radius(6.0)
+        .fill(accent)
+        .child(text("Close").color(ink))
+        .on_press(|s: &mut UiState| {
+            s.actions.push(UiAction { kind: 1, value: 0 });
+        });
+    let debug = el()
+        .padding(8.0)
+        .radius(6.0)
+        .fill(Color { r: 0.16, g: 0.19, b: 0.24, a: 1.0 })
+        .child(text("Debug").color(Color::WHITE))
+        .on_press(|s: &mut UiState| {
+            s.actions.push(UiAction { kind: 2, value: 0 });
+        });
+
     col()
         .w_full()
         .h_full()
-        .padding(24.0)
+        .child(panel)
         .child(
             col()
+                .w_full()
+                .h_full()
+                .justify_end()
+                .items_center()
                 .padding(16.0)
-                .gap(10.0)
-                .radius(10.0)
-                .fill(Color { r: 0.06, g: 0.07, b: 0.09, a: 0.92 })
-                .child(text(format!("speed {:.1}", state.speed)).color(Color::WHITE))
-                .child(text(if state.grounded { "grounded" } else { "airborne" }).color(dim))
-                .child(
-                    el()
-                        .padding(8.0)
-                        .radius(6.0)
-                        .fill(accent)
-                        .child(text("Close").color(ink))
-                        .on_press(|s: &mut UiState| {
-                            s.actions.push(UiAction { kind: 1, value: 0 });
-                        }),
-                )
-                .child(
-                    el()
-                        .padding(8.0)
-                        .radius(6.0)
-                        .fill(if state.menu_open { accent } else { Color { r: 0.16, g: 0.19, b: 0.24, a: 1.0 } })
-                        .child(text("Debug").color(ink))
-                        .on_press(|s: &mut UiState| {
-                            s.actions.push(UiAction { kind: 2, value: 0 });
-                        }),
-                ),
+                .gap(8.0)
+                .child(notice)
+                .child(hint)
+                .child(row().gap(8.0).child(close).child(debug)),
         )
 }
 
@@ -408,7 +497,13 @@ pub extern "C" fn ui_attach(target: *const UiTarget) -> i32 {
     host.renderer = Some(Renderer::new(&host.device, format));
     let scale = if target.scale > 0.0 { target.scale } else { 1.0 };
     let mut runtime = Runtime::new(
-        UiState { speed: 0.0, grounded: false, menu_open: false, actions: Vec::new() },
+        UiState {
+            speed: 0.0,
+            grounded: false,
+            menu_open: false,
+            actions: Vec::new(),
+            panel: PanelState::default(),
+        },
         view,
         (target.width as f32 / scale, target.height as f32 / scale),
         Env::new(false, scale),
@@ -469,6 +564,7 @@ pub extern "C" fn ui_draw(image_index: u32) -> i32 {
 pub extern "C" fn ui_frame(
     dt: f64,
     snapshot: *const UiSnapshot,
+    panel: *const UiPanel,
     events: *const UiEvent,
     count: u32,
 ) -> i32 {
@@ -480,6 +576,28 @@ pub extern "C" fn ui_frame(
     runtime.state.grounded = snapshot.grounded != 0;
     runtime.state.menu_open = snapshot.menu_open != 0;
     runtime.state.actions.clear();
+
+    if let Some(panel) = unsafe { panel.as_ref() } {
+        let mut rows = Vec::with_capacity(panel.row_count as usize);
+        if !panel.rows.is_null() {
+            for index in 0..panel.row_count as usize {
+                let row = unsafe { &*panel.rows.add(index) };
+                rows.push(PanelRow {
+                    kind: row.kind,
+                    flags: row.flags,
+                    label: text_bytes(row.label, row.label_len),
+                    value: text_bytes(row.value, row.value_len),
+                });
+            }
+        }
+        runtime.state.panel = PanelState {
+            rows,
+            notice: text_bytes(panel.notice, panel.notice_len),
+            capture_hint: text_bytes(panel.capture_hint, panel.capture_hint_len),
+            captured: panel.captured != 0,
+            palette_open: panel.palette_open != 0,
+        };
+    }
 
     if !events.is_null() {
         for index in 0..count as usize {
@@ -527,4 +645,12 @@ pub extern "C" fn ui_actions_clear() {
     {
         runtime.state.actions.clear();
     }
+}
+
+fn text_bytes(pointer: *const u8, len: u32) -> String {
+    if pointer.is_null() || len == 0 {
+        return String::new();
+    }
+    String::from_utf8_lossy(unsafe { std::slice::from_raw_parts(pointer, len as usize) })
+        .into_owned()
 }
