@@ -35,6 +35,12 @@ UI_Frame :: struct {
 	pointer_pressed: bool,
 	pointer_down:    bool,
 	keys:            UI_KEYS,
+	panel_rows:      []ui.Row,
+	notice:          string,
+	capture_hint:    string,
+	captured:        bool,
+	palette_open:    bool,
+	owns_panel:      bool,
 }
 
 HUD_Frame :: struct {
@@ -98,6 +104,12 @@ build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
 	}
 	if hud.menu_open {
 		build_menu(o, width, height, hud.menu)
+		return
+	}
+	if hud.ui.owns_panel {
+		if hud.palette.open {
+			build_palette(o, width, height, hud.palette)
+		}
 		return
 	}
 
