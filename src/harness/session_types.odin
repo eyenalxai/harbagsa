@@ -5,6 +5,5 @@ View :: struct {
 	hud:   bool,
 	debug: bool,
 	hint:  bool,
-	perf:  bool,
 	fx:    bool,
 }

@@ -1,7 +1,8 @@
 # Motion
 
-Every motion in the game belongs to the player. The overlay never animates. The
-camera has no idle motion.
+Every motion in the game belongs to the player. The Rune overlay never animates.
+The camera has no idle motion. The rune-fx glow is an opt-in demo, off by default,
+and is the only exception on the overlay.
 
 ## The frequency rule
 
@@ -9,7 +10,8 @@ Ask how often the player sees the motion, then decide once.
 
 - The overlay is read, not acted on. It never moves: no fade, no slide, no scale,
   no highlight transition, no easing. The settings menu opens and closes in one
-  frame.
+  frame. The opt-in `view.fx` demo is a static glow over the action row, not a
+  pulse or a transition.
 - The world moves only when the player moves. No sway, no breathing, no idle
   camera work, no idle leg tap. The spider's legs are still when the player is
   still.
@@ -95,7 +97,8 @@ rotation is always current.
 - A field-of-view punch on sprint or jump. The horizontal field of view is 90
   degrees in every state.
 - Recoil or kick.
-- A fade or slide on any overlay surface.
+- A fade or slide on any overlay surface. The opt-in rune-fx demo adds a static
+  glow; it must not become a transition.
 - A camera that eases out of a wall.
 
 If a future feature wants one of these, it is a design change, not a tweak. It
@@ -105,5 +108,6 @@ remove.
 
 ## The menu
 
-The menu does not animate. It swaps in one frame, and the selection band moves
-without a transition. Key press to redraw is one frame at most.
+The menu does not animate. It swaps in one frame, and the selection moves
+without a transition. Key press to redraw is one frame at most. The Rune view
+still draws every frame; it simply reads the new state.

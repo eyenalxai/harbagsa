@@ -199,10 +199,6 @@ backend_scene :: proc(data: ^Backend_Data, session: ^Session, alpha: f32) -> ren
 	renderer.refresh_bake(&data.renderer, static)
 	session.drawn_alpha = alpha
 	session.drawn_frame = session.frame
-	perf_stats: Maybe(perf.Stats)
-	if session.view.perf {
-		perf_stats = perf.stats(&session.perf.state)
-	}
 	options := frame.Options {
 		alpha         = alpha,
 		delta_seconds = game.SIMULATION_STEP,
@@ -210,7 +206,6 @@ backend_scene :: proc(data: ^Backend_Data, session: ^Session, alpha: f32) -> ren
 		fx_view       = session.view.fx,
 		captured      = !session.view.hint,
 		hud           = session.view.hud,
-		perf_stats    = perf_stats,
 		bake          = renderer.bake_report(&data.renderer),
 	}
 	scene := frame.runtime_compose(
@@ -280,14 +275,6 @@ backend_render :: proc(
 		alpha = requests[0].alpha
 	}
 	scene := backend_scene(data, session, alpha)
-	if len(requests) > 0 {
-		if !renderer.text_atlas_sync(&data.renderer, session.runtime.sim.settings.type_weight) {
-			return nil, format_error("text atlas sync failed")
-		}
-		if !renderer.text_atlas_wait(&data.renderer) {
-			return nil, format_error("text atlas did not settle")
-		}
-	}
 	targets: renderer.Capture_Targets
 	views: renderer.Capture_Views
 	for request in requests {

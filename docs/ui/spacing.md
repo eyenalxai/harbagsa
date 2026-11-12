@@ -1,112 +1,76 @@
 # Spacing and surfaces
 
-One scale, one hairline width, square corners. Depth comes from a surface step
-and a hairline ring, not from a blur.
+Rune lays out the view. The numbers below are Rune points in
+`ui/shim/src/lib.rs`, not pixels computed in Odin. Rune scales the view by
+`scale = clamp(target_height / 720, 1, 2)` and passes it to `Env::new`; a 720p
+target gets 1, a 1080p target 1.5, a 1440p target 2.
 
 ## The scale
 
-Values are pixels at density 1 and multiply by density. Tokens are in
-`src/renderer/ui_theme.odin`.
+| Value | Use |
+| --- | --- |
+| 2 | the selected-row accent bar width |
+| 4 | menu row padding |
+| 6 | status panel gap between rows |
+| 8 | status action gap, menu gap, button padding |
+| 12 | status panel inset and padding, gap between a menu label and its value |
+| 16 | bottom action column padding, menu panel padding |
 
-| Token | 720p | 1080p | Where |
-| --- | --- | --- | --- |
-| `spacing.xxs` | 2 | 3 | band padding above and below a selected row |
-| `spacing.xs` | 4 | 6 | gap above a `Metric` or `Detail` row, key to action |
-| `spacing.sm` | 6 | 9 | gap above a `Setting`, `Action`, or `Slider` row, gap above a divider, slider tick height and track gap, menu label inset |
-| `spacing.md` | 8 | 12 | status panel and notice margin, capture hint and notice padding, slider knob |
-| `spacing.lg` | 12 | 18 | status panel padding, gap above a section header, note gap, slider track zone |
-| `spacing.xl` | 16 | 24 | settings panel padding, label-to-value gutter, legend column gap |
-| `spacing.xxl` | 24 | 36 | reserved for a future full-bleed split |
+Use the nearest existing value. A new number is a layout change, not a token
+addition.
 
-Use the nearest step. A value between two steps means the layout is wrong, not
-that the scale needs a new entry.
-
-## Hairlines
-
-`theme.hairline` is `max(1, round(density))` device pixels: 1 px at 720p, 2 px at
-1080p and above. It never lands on a fraction: a 1.5 px line resolves to a
-two-pixel grey smear.
-
-- A panel ring is `line_hairline` on all four edges. `hud_emit_frame` draws the
-  top and bottom full width and the sides the inner height, so each corner is
-  covered once.
-- A translucent surface cannot take a border by filling a larger rect behind it,
-  because the fill shows through the panel. An opaque surface hides the larger
-  rect instead, so it gets no border at all.
-- A divider is `line_separator`, one hairline tall, spanning the panel's inner
-  width.
-- The accent bar is `max(2, hairline * 2)`: two device pixels minimum, so it is a
-  bar and not a line.
-
-## Panel anatomy
+## Status panel
 
 ```
-┌──────────────────────────────────────────┐  ← hairline ring, line_hairline
-│  padding.xl                              │
-│  Title                                   │  ← type_title, centred
-│  ──────────────────────────────────────  │  ← separator, inner width
-│  padding.sm                              │  ← rows start sm inside the inner edge
-│  Label            value                  │  ← label type_body_strong
-│  Type weight          400                │  ← Slider, line one
-│  ─────●─────────────                    │  ← Slider track, ticks, knob
-│  ──────────────────────────────────────  │
-│  Action                                  │
-│                                          │
-│  SECTION HEADER                          │  ← type_caption_caps
-│  key  action    key  action    key  act  │  ← legend grid
-│  padding.xl                              │
-│  note, centred                           │  ← type_caption, tertiary
+┌──────────────────────────────────────────┐ 12 pt from the top-left corner
+│ 12 pt padding                            │
+│ row                                      │
+│ row                                      │
 └──────────────────────────────────────────┘
 ```
 
-Rules that follow from the drawing:
+- Width 380 points.
+- Inset `12, 12` from the target's top-left.
+- Padding 12, row gap 6.
+- The bottom action row is a separate full-width column: `justify_end`,
+  `items_center`, padding 16, gap 8.
 
-- The value column ends on `panel_x + panel_width - padding`, not on the widest
-  row. `build_menu` widens `rows_layout.value_width` to reach the edge.
-- The label column is the widest label. `ui.rows_layout` skips a `Header` when
-  it measures that column, and skips values on `Header` and `Divider` rows. The
-  value column starts `spacing.xl` after the label column.
-- One gap, one owner: the row layout adds the gap above a row, so no row carries
-  its own margin and the last row leaves no trailing gap. A row gets `spacing.xs`
-  above it, a `Setting`, `Action`, or `Slider` row `spacing.sm`, a divider
-  `spacing.sm`, and a section header `spacing.lg`.
-- A `Slider` row is `type_body.line_height + spacing.sm + spacing.lg`, which is
-  40.5 px at density 1. The track spans `frame_x .. frame_x + frame_width`; the
-  knob travel is the inner width minus `spacing.md`, so the ticks and the knob
-  stay inside the panel.
-- The settings content width is measured on every layout, with 5 % headroom.
-  There is no frozen width and no draw-time cache. Input and draw call the same
-  `ui.menu_layout` with the same theme and metrics.
-- A divider and the selection band both span `frame_x .. frame_x + frame_width`,
-  the panel's inner rectangle. They share one edge with each other. The legend
-  grid has its own pitch: caption line height plus `spacing.xxs`.
-- The status panel uses the same row layout with `value_align = .Left`, because a
-  readout reads label-then-value, while a settings list reads label-then-edge.
+The status panel is translucent. The menu surface is opaque. A selected row
+lifts to the raised surface; it does not get a border.
+
+## Settings menu
+
+- Width 430 points, centred on the target.
+- The scrim covers the whole target.
+- Panel padding 16, row gap 8.
+- A row pads 4 points and gaps label and value by 12.
+- The selected row has a 2 point accent bar and an 18 point label-height band.
+- The slider track is 4 points tall under the value row; the filled width is
+  `ratio * 390`.
+- The hint grid puts three hint pairs on a line.
+
+## Object palette
+
+The palette reuses the menu panel with the same 430 point width, padding, and
+gap. Each item is a row. The selected row uses the same raised surface and accent
+bar. The body note and hints sit below the list.
 
 ## Surfaces
 
-Square corners, always. The world is boxes; a rounded card would be the only soft
-edge on screen.
-
 | Surface | Fill | Edge |
 | --- | --- | --- |
-| Status panel | `surface_hud` | `line_hairline` ring |
-| Capture hint | `surface_hud` | `line_hairline` ring |
-| Notice | `surface_hud` | `line_hairline` ring |
-| Settings panel | `surface_menu` over `scrim` | `line_hairline` ring |
-| Selected row | `surface_raised` | `accent` bar on the leading edge |
+| Status panel | status surface, 94% | none |
+| Menu and palette | menu surface over the scrim | 1 point hairline separator |
+| Selected row | raised surface | 2 point accent bar on the leading edge |
+| Notice and capture hint | no box of their own | text on the action column |
 
-No shadow, no gradient, no radius token. `docs/ui/README.md` explains why.
+No rounded panel, no shadow, no gradient. The action buttons are the only
+rounded edges Rune draws.
 
 ## Bans
 
-- No per-child margins. The parent owns the gap.
-- No `width: auto` equivalent: every panel width traces to measured content plus
-  padding: rows, the hint grid, the title, or the note, raised to the
-  `menu_min_width` floor of 200 px at density 1. The settings menu then freezes
-  its content at 5 % headroom for the weight axis.
-- No nested panels. A row is not a card.
-- No clipping. The settings panel is 494 px wide and 517 px tall at 720p at the
-  default weight; the smallest supported window is 800x600, so it fits. The panel
-  still clamps its top to `spacing.md`, so an offscreen target of any size keeps
-  the header on screen. A new surface must say what happens when it does not fit.
+- No per-row margin. The parent owns the gap.
+- No measured width in Odin. Rune sizes the panel from its content.
+- No clipping. The menu fits at 800x600; Rune scales the whole view, so a larger
+  target keeps the same proportions.
+- No Odin layout pass and no hit-test rectangle. Rune owns both.

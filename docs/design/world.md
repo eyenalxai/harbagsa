@@ -9,8 +9,8 @@ lightmap and a static probe field.
 ## The palette
 
 Colours are authored as linear RGBA floats, because the renderer shades in linear
-space. This is the opposite of the 2D layer, which authors sRGB hex
-([colour.md](../ui/colour.md)). Do not copy a value between the two tables.
+space. The Rune view authors its own RGBA floats in `ui/shim/src/lib.rs`; a value
+does not move between the two tables. See [colour.md](../ui/colour.md).
 
 | Surface | Linear RGBA | Source |
 | --- | --- | --- |
@@ -38,9 +38,9 @@ Rules:
   player names the feature.
 - Crates use their own high-chroma palette, never a wall hue, so a pushed crate
   reads against every surface.
-- The debug selection amber is `1.00 0.80 0.20` in linear space. The UI accent is
-  `#E6AF3A` in sRGB. They are different colours in different spaces. Keep both
-  values. Do not merge them into one token.
+- The debug selection amber is `1.00 0.80 0.20` in linear space. The UI accent
+  is the amber literal in `ui/shim`. They are different colours in different
+  spaces. Keep both values. Do not merge them into one token.
 - The spider owns the red family. No arena surface uses it, so the player never
   reads as a prop. Its four eyes and two abdomen markings are the only emissive
   surfaces that are not lamp prefabs: the eyes read at the front, and two bars on

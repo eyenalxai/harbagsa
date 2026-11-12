@@ -20,7 +20,6 @@ Scene_View_Patch :: struct {
 	hud:   Maybe(bool),
 	debug: Maybe(bool),
 	hint:  Maybe(bool),
-	perf:  Maybe(bool),
 	fx:    Maybe(bool),
 }
 
@@ -85,7 +84,7 @@ parse_scene_view :: proc(value: json.Value) -> (Scene_View_Patch, string) {
 	if !object_ok {
 		return {}, format_error("%s", "scene 'view' must be an object")
 	}
-	if key, unknown := json_unknown_key(object, {"hud", "debug", "hint", "perf", "fx"}); unknown {
+	if key, unknown := json_unknown_key(object, {"hud", "debug", "hint", "fx"}); unknown {
 		return {}, format_error("unknown view key %q", key)
 	}
 	view: Scene_View_Patch
@@ -100,10 +99,6 @@ parse_scene_view :: proc(value: json.Value) -> (Scene_View_Patch, string) {
 	}
 	if hint, has := json_boolean(json_get_required(object, "hint")); has {
 		view.hint = hint
-		present = true
-	}
-	if perf, has := json_boolean(json_get_required(object, "perf")); has {
-		view.perf = perf
 		present = true
 	}
 	if fx, has := json_boolean(json_get_required(object, "fx")); has {

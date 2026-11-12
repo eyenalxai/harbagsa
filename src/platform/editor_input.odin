@@ -35,7 +35,6 @@ Key :: enum {
 	F1,
 	F2,
 	F3,
-	F4,
 	F5,
 	Digit_1,
 	Digit_2,
@@ -113,8 +112,6 @@ key_from_scancode :: proc(scancode: sdl3.Scancode) -> Key {
 		return .F2
 	case .F3:
 		return .F3
-	case .F4:
-		return .F4
 	case .F5:
 		return .F5
 	case ._1:

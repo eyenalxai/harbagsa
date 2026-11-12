@@ -2,7 +2,7 @@
   "note": "A sealed four-wall cell with a static fixture inside, then the same fixture moved out of range. The cell geometry and chart sizes do not change, so the outer face must not change.",
   "size": "1280x720",
   "requires": {"renderer_debug": true},
-  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "view": {"hud": false, "debug": false, "hint": false},
   "commands": [
     {"cmd": "renderer_debug", "taa": false, "jitter": false},
     {"cmd": "place", "prefab": "Wall", "position": [8.0, 1.5, 0.0], "yaw_deg": 90, "name": "cell-west-low"},

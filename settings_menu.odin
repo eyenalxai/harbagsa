@@ -3,17 +3,15 @@ package main
 
 import "src:game"
 import "src:input"
-import "src:ui"
 
-// apply_menu_input applies one frame of navigation and the weight slider. It
-// returns true when the menu asked to close.
+// apply_menu_input applies one frame of navigation. It returns true when the
+// menu asked to close. The Rune view also returns click actions through the
+// renderer; this path owns the keyboard and the setting values.
 @(private)
 apply_menu_input :: proc(
 	menu: ^game.Menu_State,
 	settings: ^game.Settings,
 	frame: input.Menu_Input,
-	slider: ui.Slider_Rect,
-	pointer: [2]f32,
 ) -> bool {
 	if frame.up {
 		game.menu_move(menu, -1)
@@ -27,17 +25,8 @@ apply_menu_input :: proc(
 	if frame.right {
 		_ = game.menu_change_setting(menu, settings, 1)
 	}
-	closed := false
 	if frame.confirm && game.menu_activate(menu, settings) {
-		closed = true
+		return true
 	}
-	game.menu_weight_input(
-		menu,
-		settings,
-		slider,
-		pointer,
-		frame.pointer_pressed,
-		frame.pointer_down,
-	)
-	return closed
+	return false
 }

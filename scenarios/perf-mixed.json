@@ -2,7 +2,7 @@
   "note": "96 synthetic point lights at 1080p. One perf command brackets direct, lightmap, probe, and mixed with a direct window, three rounds, so a clock drift cannot masquerade as a term cost.",
   "size": "1920x1080",
   "requires": {"renderer_debug": true},
-  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "view": {"hud": false, "debug": false, "hint": false},
   "commands": [
     {"cmd": "bake"},
     {"cmd": "renderer_debug", "synthetic_lights": 96},

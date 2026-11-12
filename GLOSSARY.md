@@ -167,8 +167,8 @@ _Avoid_: Map, level
 
 **World palette**:
 The scene colours, authored as linear RGBA floats because the renderer shades in
-linear space. The 2D layer authors sRGB hex instead; a value does not move
-between the two tables.
+linear space. The Rune view authors its own RGBA floats in `ui/shim`; a value
+does not move between the two tables.
 _Avoid_: Scene colours, 3D palette
 
 **Point light**:
@@ -351,8 +351,8 @@ _Avoid_: Input state, mode
 **Object palette**:
 The debug-mode prefab chooser. It is the palette variant of the active tool: the
 selected catalog index and the body and light settings for the next placement.
-Closing the palette discards those settings. The bottom dock draws twelve cells,
-an isometric preview, and the key hints.
+Closing the palette discards those settings. The Rune view draws it as a list of
+short name and full name, with the body note and key hints.
 _Avoid_: Toolbar, inventory
 
 **Placement**:
@@ -429,10 +429,7 @@ edge latches.
 _Avoid_: Input state, input command
 
 **Settings**:
-The runtime window and input-mode choices: window mode, display, resolution,
-and the sprint input mode. A new simulation starts Borderless on display 0; the
-stored Windowed size is 1280x720, with sprint Hold. A player reset keeps the
-current settings.
+The runtime window and input choices: window mode, display, resolution, type weight, and the sprint input mode. A new simulation starts Borderless on display 0; the stored Windowed size is 1280x720, with sprint Hold. A player reset keeps the current settings.
 _Avoid_: Options, preferences
 
 **Window mode**:
@@ -568,8 +565,8 @@ The line pass that shows the physics world: shape bounds and contacts.
 _Avoid_: Debug view, wireframe
 
 **Overlay**:
-The screen-space pass that draws the debug draw and the HUD over the scene. It does not write depth.
-_Avoid_: UI layer
+The screen-space layer over the scene. It has two owners: the Odin debug line pipeline draws physics and editor lines, and the Rust Rune shim draws the UI. Neither writes depth.
+_Avoid_: UI layer, 2D pass
 
 **Scene pass**:
 The scopes that draw the scene into the depth, color, and velocity targets: the
@@ -605,92 +602,54 @@ for the depth prepass and one for the lit pass.
 _Avoid_: Render pass (that word belongs to the Vulkan object)
 
 **HUD**:
-The 2D part of the overlay: crosshair, player state, and the notice. It does not
-show the control list.
-_Avoid_: UI
+The Rune status panel: the player or debug rows, the notice, the capture hint, and the `Close`/`Debug` action row. It is one Rune view, not an Odin draw pass.
+_Avoid_: UI, overlay draw
 
 **Settings menu**:
-The paused overlay opened with `Esc`. It lists the active control set and changes
-the window mode, display, resolution, type weight, and three input modes. The harness opens
+The paused Rune view opened with `Esc`. It lists the active control set and changes
+the window mode, display, resolution, type weight, and sprint input mode. The harness opens
 it with the `menu` command and reports `settings.*` and `menu.*` in the state.
 _Avoid_: Options screen, pause menu
 
-**UI theme**:
-The tokens the 2D layer draws with: colour, type, spacing, and the hairline
-width. Built once per frame from the render height. `src/renderer/ui_theme.odin`
-is the only place a colour or a size is written.
-_Avoid_: Style sheet, skin
+**Rune UI**:
+The Rust view in `ui/shim` that draws the status panel, settings menu, palette, notice, and capture hint. Rune owns layout, type, colour, hit testing, and the wgpu overlay pass.
+_Avoid_: Odin HUD, ImGui
 
-**Density**:
-The type and spacing scale factor, `clamp(render height / 720, 1, 2)`. A 720p
-target gets 1, a 1080p target 1.5, a 1440p target 2.
-_Avoid_: DPI scale, zoom
+**UI shim**:
+The static Rust library built from `ui/shim`. It adopts the game's Vulkan instance and device, runs one Rune `Runtime`, and draws onto the game's current target image.
+_Avoid_: UI backend, renderer plugin
 
-**OKLCH**:
-A perceptual colour space with lightness, chroma, and hue. The neutral tokens
-are authored in it so one hue can be held across the ramp.
-_Avoid_: HSL, HSV
+**UI snapshot**:
+The flat data the game sends through `src/renderer/ui_bridge.odin`: player speed and grounded state, menu and palette flags, pointer events, menu keys, panel rows, notice, capture hint, menu, and palette. Strings stay owned by Odin for the duration of one call.
+_Avoid_: UI frame (the Odin wrapper is `UI_Frame`), scene graph
 
-**Neutral ramp**:
-The six cool ink and surface tokens: `text_primary`, `text_secondary`,
-`text_tertiary`, `surface_hud`, `surface_menu`, and `surface_raised`. They are
-authored at OKLCH hue 253; the 8-bit hex leaves a measured spread of 7.8
-degrees.
-_Avoid_: Grey scale, grey ramp
-
-**WCAG 2**:
-The W3C contrast standard for text and non-text elements. The 2D layer uses its
-4.5:1 body-text floor as the gate.
-_Avoid_: Contrast score
-
-**APCA**:
-The perceptual contrast algorithm built for WCAG 3. It reports Lc and accounts
-for font size and weight. The project records its scores as a reference, not a
-gate.
-_Avoid_: Contrast ratio
-
-**Type scale**:
-The five type roles the overlay uses: title, body, label, detail, and section
-header. Each role fixes an em size, leading, weight, and tracking. A size is the
-em in device pixels, so a 15 px role draws a 15 px em. See `docs/ui/type.md`.
-_Avoid_: Font sizes, text styles
-
-**Coverage atlas**:
-The one texture that holds every glyph as the fraction of each pixel the glyph
-covers, rasterized at the device pixel size from the subset Geist and Geist Mono
-faces. It holds one layer per face, weight, and pixel size the theme can draw,
-and it is repacked when the density or the type weight changes.
-_Avoid_: SDF atlas, font texture, bitmap font, glyph sheet
+**UI action**:
+One flat intent returned by the shim: `Close_Menu`, `Toggle_Debug`, or `Palette_Select`. The game applies the queue after `ui_draw`. `Close_Menu` only acts while the settings menu is open; the status view's `Close` button is inert because that view is shown with the menu closed.
+_Avoid_: Callback, event
 
 **Type weight**:
-The variable-font weight the 2D layer draws at, from 100 to 900. The settings
-menu and the `menu` command set it, every type role derives from it, and the
-coverage atlas rebuilds on a worker when it changes.
+The settings value from 100 to 900 that the settings menu edits. It is stored in `Settings.type_weight` and reported by the harness. The Rune view does not apply it to its text yet; the number changes, the glyphs do not.
 _Avoid_: Font weight, boldness
 
-**Sub-pixel phase**:
-One of four horizontal offsets a glyph is rasterized at, so text placed on a
-fraction of a pixel still lands on the pixel grid. The glyph keeps its fractional
-advance; the phase absorbs the fraction.
-_Avoid_: Sub-pixel offset, hinting
+**View scale**:
+The Rune scale factor `clamp(target height / 720, 1, 2)`. It scales the whole view, not individual tokens in Odin.
+_Avoid_: DPI scale, zoom
 
-**Glyph**:
-One drawable letter in the coverage atlas: a uv rectangle per sub-pixel phase, an
-offset from the pen, and an advance. The HUD never draws a character directly; it
-draws glyphs.
-_Avoid_: Character, letter
+**Contrast floor**:
+The WCAG 2 ratio the Rune view must meet: 4.5:1 for text and 3:1 for a non-text element such as the accent bar. These are measured on the shim's authored colours.
+_Avoid_: Contrast score
 
 **Row**:
-One line of the overlay: a kind, a label, a value, and whether the value is
-numeric. The game fills rows; the renderer lays them out. The kind set is closed:
-setting, action, metric, detail, header, divider, spacer.
+One line of the Rune view: a kind, a label, a value, and whether the value is
+numeric. The game fills rows; the shim draws them. The kind set is closed:
+setting, action, metric, detail, slider, header, divider.
 _Avoid_: Line, item, entry
 
 **Blocked row**:
 A settings row that cannot change in the current state. It stays selectable and
-keeps its selection band; only its value moves to `text_secondary`. Display and
-Resolution can be blocked. The Type weight row is not blocked at an axis end,
-because one direction still moves.
+keeps its selected surface and accent bar; only its value moves to secondary text.
+Display and Resolution can be blocked. The Type weight row is not blocked at an
+axis end, because one direction still moves.
 _Avoid_: Disabled row, greyed row
 
 **Status note**:
@@ -700,25 +659,21 @@ press restarts the hold; a successful change clears it.
 _Avoid_: Error message, toast, tooltip
 
 **Notice**:
-A one-line message on the top-right margin after an action whose result is not
-on screen. It names the scene snapshot path, or says the write failed, and holds
-for two seconds of frame time. Unlike the status note, it is not inside a panel.
+A one-line message in the bottom action column after an action whose result is
+not on screen. It names the scene snapshot path, or says the write failed, and
+holds for two seconds of frame time. Unlike the status note, it is not inside a
+panel.
 _Avoid_: Toast, popup, tooltip
 
-**Value column**:
-The measured x where row values start, or end when they are right-aligned. It is
-the widest label plus one gutter, so every value in a panel shares one edge.
-_Avoid_: Column, tab stop
-
 **Hint legend**:
-The control list inside the settings menu, drawn as a grid of keyboard keys and
-their actions. Not a list of rows: it is documentation, so it must not look
-selectable.
+The control list inside the settings menu and the palette, drawn as key/action
+pairs. The shim puts three pairs on a line. It is documentation, so it must not
+look selectable.
 _Avoid_: Control list, key list
 
-**Selection band**:
-The two signals that mark the selected menu row: the raised surface and the
-accent bar on the leading edge. Neither alone is enough.
+**Selected row**:
+The two signals that mark the active menu or palette row: the raised surface and
+the 2 point accent bar on the leading edge. Neither alone is enough.
 _Avoid_: Highlight, hover, cursor
 
 **Pause**:
@@ -794,17 +749,18 @@ _Avoid_: State slice, partial document
 **Renderer state**:
 The harness state block that describes the last rendered frame: frame count, TAA
 state, jitter index, history validity, convergence frames, history read index and
-weight, reset count and reason, active point-light count, timestamp period,
-bake status and key, lightmap and probe switches, and the debug vertex counts by
-source. A capture
+weight, reset count and reason, active point-light count, cluster overflow,
+timestamp period, bake status and key, lightmap and probe switches, and the debug
+vertex counts by source. A capture
 carries the same block for the frame that wrote it.
 _Avoid_: Render stats, GPU state
 
 **Render digest**:
 The FNV-1a hash of the effective render inputs: extent, camera, boxes, box
-emissive strengths, point lights, jitter, atlas weight, clip height, shadow
-visibility, lightmap and probe switches, bake key, bake status, and view flags.
-It is separate from the simulation digest.
+emissive strengths, point lights, jitter, clip height, shadow
+visibility, lightmap and probe switches, bake key, and bake status. It is
+separate from the simulation digest and from the Rune UI, which draws over the
+target after the scene.
 _Avoid_: Frame hash, image hash
 
 **History reset reason**:
@@ -830,7 +786,9 @@ The `ENABLE_RENDERER_DEBUG` build define or the `--debug-renderer` flag that let
 _Avoid_: Debug mode (that word belongs to `F2`)
 
 **View flags**:
-The toggles that change the overlay: HUD, menu, debug draw, capture hint, and perf. The render digest covers them because they change the image.
+The scenario toggles that change the frame: `hud`, `debug` draw, capture `hint`,
+and the opt-in `fx` glow. The Rune UI draws after the scene and is not part of
+the render digest; `debug` and `hint` change the scene or the snapshot.
 _Avoid_: Draw flags
 
 **TAA toggle**:
@@ -856,7 +814,7 @@ _Avoid_: Focus, target
 **Object inspector**:
 The debug HUD block that shows the selected object's prefab and id, the object
 count and capacity, and the body, size, position, yaw, and snap state. Every
-changing value uses a fixed field and the mono face.
+changing value uses a fixed field.
 _Avoid_: Edit panel, properties
 
 **Undo history**:
@@ -895,14 +853,9 @@ the GPU pass times.
 _Avoid_: Frame stats, metrics
 
 **Perf ring**:
-The fixed-size buffer of the most recent perf samples that the live overlay and
-the aggregate stats read.
+The fixed-size buffer of the most recent perf samples that the aggregate stats
+read.
 _Avoid_: History buffer, window
-
-**Perf overlay**:
-The on-screen lines toggled with `F4` that show the live frame interval, the
-CPU frame time, and the GPU pass times.
-_Avoid_: FPS counter, stats overlay
 
 **Perf run**:
 A harness run that measures frames instead of simulation state. It reads the
