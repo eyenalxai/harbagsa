@@ -1,12 +1,13 @@
 {
-  "note": "The object palette draws as a Rune list and a row click returns a selection action.",
+  "note": "The palette draws as a Rune list; selecting a row applies the editor selection.",
   "size": "1280x720",
   "view": {"hud": true, "debug": false, "hint": false},
   "commands": [
     {"cmd": "debug_mode", "active": true},
     {"cmd": "editor", "open": true},
     {"cmd": "settle", "frames": 1},
-    {"cmd": "ui", "x": 500, "y": 200},
+    {"cmd": "ui", "key": "palette:4"},
+    {"cmd": "state"},
     {"cmd": "capture", "name": "palette", "format": "png"}
   ]
 }

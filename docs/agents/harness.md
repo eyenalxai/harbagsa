@@ -141,8 +141,9 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `debug_mode`: `active` boolean.
 - `editor`: palette, placement, object, light, camera, pointer, and history fields.
 - `menu`: `open`, `item`, `activate`, `direction`, and `set`.
-- `ui`: click the Rune view at `x` and `y` in points. The run fails when the
-  click produces no action.
+- `ui`: click the Rune view by element `key`, or at `x` and `y` in points. The
+  run fails when the click produces no action; the action is applied before the
+  command returns.
 - `record`: start with `path` and optional `actions`; stop with no path.
 - `replay`: `path` to a recorded scenario.
 - `repro`: `path` for a live scene snapshot.
@@ -180,13 +181,17 @@ and `ui_draw` is not called, so the capture has no overlay.
 - `menu` opens the settings menu and changes a row. Menu keys stay on the game
   path.
 - `editor` with `open: true` opens the object palette.
-- `ui` clicks the Rune view at `x` and `y` in points and fails when the click
-  produces no action. Rune hit-tests the element targets it laid out.
+- `ui` clicks the Rune view by element `key`, or at `x` and `y` in points. It
+  fails when the click produces no action, applies the action through the game
+  path, and clears the queue before returning. Rune hit-tests the element targets
+  it laid out.
 - `capture` writes the frame with the UI.
 
-`scenarios/rune-palette.json` opens the palette and clicks a row.
+Pointer, wheel, key-down, key-up, key-repeat, and focus events reach Rune in one
+batch per frame. A harness click uses the same Rune hit path as a live click.
+`scenarios/rune-palette.json` opens the palette and selects a row by key.
 `scenarios/rune-menu.json` opens the settings menu and sets the type weight.
-`scenarios/rune-ui.json` clicks the status panel action.
+`scenarios/rune-ui.json` activates the status panel action by key.
 `scenarios/rune-fx.json` sets `view.fx` and shows the status action row with its
 rune-fx glow.
 

@@ -32,7 +32,7 @@ repeats a label.
 - A colour literal outside `ui/shim/src/lib.rs` or the game's content data.
 - A type size, font file, atlas, or layout pass in the Odin tree.
 - A vertex buffer, shader, or draw call added for the 2D layer.
-- `accent` on anything but the selected-row bar and the `Close` button.
+- `accent` on anything but the selected-row bar, the focus ring, and the primary action.
 - `text_tertiary` as the label or value of a selectable row.
 - Any fade, slide, or scale on the overlay. The rune-fx glow is opt-in and static.
 - A new `Row_Kind` without updating both the game and the shim.

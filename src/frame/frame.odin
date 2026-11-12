@@ -24,10 +24,7 @@ Options :: struct {
 	captured:        bool,
 	hud:             bool,
 	bake:            renderer.Bake_Report,
-	pointer:         [2]f32,
-	pointer_pressed: bool,
-	pointer_down:    bool,
-	ui_keys:         renderer.UI_KEYS,
+	ui_events: []renderer.UI_Event,
 }
 
 Scratch :: struct {
@@ -184,11 +181,8 @@ build :: proc(
 					palette_open = u32(palette.open),
 					fx           = u32(options.fx_view),
 				},
-				pointer         = options.pointer,
-				pointer_pressed = options.pointer_pressed,
-				pointer_down    = options.pointer_down,
-				keys            = options.ui_keys,
-				panel_rows      = hud.view.rows,
+				events     = options.ui_events,
+				panel_rows = hud.view.rows,
 				notice          = hud.view.notice.text,
 				capture_hint    = hud.capture_hint,
 				captured        = hud.captured,

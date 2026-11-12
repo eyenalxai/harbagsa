@@ -49,7 +49,7 @@ COMMANDS := [?]Command_Row {
 	{.Debug_Mode, "debug_mode", "Enter or leave the debug mode.", parse_debug_mode, execute_debug_mode, .Raw, nil, .None, Debug_Mode_Command},
 	{.Editor, "editor", "Drive the object palette, placement, edits, and history.", parse_editor, execute_editor, .Raw, nil, .None, Editor_Command},
 	{.Menu, "menu", "Open, close, select, and change the settings menu.", parse_menu, execute_menu, .Raw, nil, .None, Menu_Command},
-	{.Ui, "ui", "Click a point in the Rune view.", parse_ui, execute_ui, .Raw, nil, .Required, Ui_Command},
+	{.Ui, "ui", "Click a Rune element by key, or a point at x and y.", parse_ui, execute_ui, .Raw, nil, .Required, Ui_Command},
 	{.Record, "record", "Start or stop recording a live session into a scenario.", parse_record, execute_record, .Skip, destroy_record, .None, Record_Command},
 	{.Replay, "replay", "Replay a recorded scenario inside the live session.", parse_replay, execute_replay, .Skip, destroy_replay, .Optional, Replay_Command},
 	{.Repro, "repro", "Write the live view as a scene scenario and show the notice.", parse_repro, execute_repro, .Skip, destroy_repro, .None, Repro_Command},

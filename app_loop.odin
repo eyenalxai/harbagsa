@@ -16,7 +16,6 @@ Loop :: struct {
 	runtime:        frame.Runtime,
 	renderer:       ^renderer.Renderer,
 	resolver:       input.Resolver,
-	cursor:         Cursor_State,
 	accumulator:    f32,
 	last_alpha:     f32, // the last built frame; the repro path runs before this frame's alpha
 	debug_view:     bool,

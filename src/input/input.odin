@@ -4,30 +4,19 @@ package input
 
 import "src:game"
 
-// Focus is the whole frame's ownership: the game half from game.focus, and the
-// two platform facts the resolver cannot know.
+// Focus is the whole frame's ownership: the game half from game.focus and the
+// platform's captured fact.
 Focus :: struct {
-	game:              game.Focus,
-	captured:          bool,
-	pointer_available: bool,
-}
-
-// Palette_Hit is the renderer's answer, reduced to the two facts the resolver
-// needs. main computes it; input never imports the renderer.
-Palette_Hit :: struct {
-	inside: bool,
-	card:   int,
+	game:     game.Focus,
+	captured: bool,
 }
 
 Menu_Input :: struct {
-	up:              bool,
-	down:            bool,
-	left:            bool,
-	right:           bool,
-	confirm:         bool,
-	pointer:         [2]f32,
-	pointer_pressed: bool,
-	pointer_down:    bool,
+	up:      bool,
+	down:    bool,
+	left:    bool,
+	right:   bool,
+	confirm: bool,
 }
 
 View_Intents :: struct {

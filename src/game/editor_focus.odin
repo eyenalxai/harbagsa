@@ -21,8 +21,8 @@ editor_focus :: proc(editor: ^Editor, active: bool) -> Editor_Focus {
 }
 
 // Focus is the game half of one frame's input state. The input module owns the
-// platform half (captured, pointer_available); this value says which part of
-// the game owns the frame.
+// platform's captured fact; this value says which part of the game owns the
+// frame.
 Focus :: struct {
 	menu_open:   bool,
 	editor:      Editor_Focus,

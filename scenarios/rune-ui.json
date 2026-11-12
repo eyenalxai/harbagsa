@@ -1,10 +1,10 @@
 {
-  "note": "The Rune view draws, accepts a click on Close, and returns the action.",
+  "note": "The Rune view draws and activates the Close button by element key.",
   "size": "1280x720",
   "view": {"hud": true, "debug": false, "hint": false},
   "commands": [
     {"cmd": "settle", "frames": 1},
-    {"cmd": "ui", "x": 615, "y": 686},
+    {"cmd": "ui", "key": "action:1"},
     {"cmd": "capture", "name": "ui", "format": "png"}
   ]
 }

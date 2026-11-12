@@ -81,7 +81,6 @@ struct UiState {
     panel: PanelState,
     menu: MenuState,
     palette: PaletteState,
-    press_key: Option<String>,
 }
 
 #[repr(C)]
@@ -550,6 +549,10 @@ fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
         .key("action:1")
         .padding(8.0)
         .radius(6.0)
+        .focusable(true)
+        .focus_ring(2.0, 2.0, accent)
+        .hover(Color { r: 1.0, g: 1.0, b: 1.0, a: 0.10 })
+        .press(Color { r: 1.0, g: 1.0, b: 1.0, a: 0.18 })
         .fill(accent)
         .child(weighted_text("Close", state.weight, false).color(ink))
         .on_press(|s: &mut UiState| {
@@ -559,6 +562,10 @@ fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
         .key("action:2")
         .padding(8.0)
         .radius(6.0)
+        .focusable(true)
+        .focus_ring(2.0, 2.0, accent)
+        .hover(Color { r: 1.0, g: 1.0, b: 1.0, a: 0.08 })
+        .press(Color { r: 1.0, g: 1.0, b: 1.0, a: 0.14 })
         .fill(Color { r: 0.16, g: 0.19, b: 0.24, a: 1.0 })
         .child(weighted_text("Debug", state.weight, false).color(Color::WHITE))
         .on_press(|s: &mut UiState| {
@@ -670,27 +677,34 @@ pub extern "C" fn ui_attach(target: *const UiTarget) -> i32 {
     fx.add_format(&host.device, wgpu::TextureFormat::Rgba16Float);
     host.fx = Some(fx);
     host.scale = scale;
-    let text_system = TextSystem::new(&[GEIST, GEIST_MONO], ("Geist", "Geist Mono"));
-    let mut runtime = Runtime::with_text(
-        UiState {
-            speed: 0.0,
-            grounded: false,
-            menu_open: false,
-            fx: false,
-            weight: 0.0,
-            actions: Vec::new(),
-            panel: PanelState::default(),
-            menu: MenuState::default(),
-            palette: PaletteState::default(),
-            press_key: None,
-        },
-        view,
-        (target.width as f32 / scale, target.height as f32 / scale),
-        Env::new(false, scale),
-        text_system,
-    );
-    runtime.frame(0.0);
-    host.runtime = Some(runtime);
+    let viewport = (target.width as f32 / scale, target.height as f32 / scale);
+    if let Some(runtime) = host.runtime.as_mut() {
+        // The target can be recreated on a resize; keep the view model, focus,
+        // and text atlas instead of rebuilding the whole runtime.
+        runtime.env.scale = scale;
+        runtime.set_viewport(viewport, scale);
+    } else {
+        let text_system = TextSystem::new(&[GEIST, GEIST_MONO], ("Geist", "Geist Mono"));
+        let mut runtime = Runtime::with_text(
+            UiState {
+                speed: 0.0,
+                grounded: false,
+                menu_open: false,
+                fx: false,
+                weight: 0.0,
+                actions: Vec::new(),
+                panel: PanelState::default(),
+                menu: MenuState::default(),
+                palette: PaletteState::default(),
+            },
+            view,
+            viewport,
+            Env::new(false, scale),
+            text_system,
+        );
+        runtime.frame(0.0);
+        host.runtime = Some(runtime);
+    }
     host.textures = textures;
     host.views = views;
     0
@@ -790,7 +804,6 @@ pub extern "C" fn ui_frame(
     runtime.state.menu_open = snapshot.menu_open != 0;
     runtime.state.fx = snapshot.fx != 0;
     runtime.state.weight = snapshot.weight;
-    runtime.state.actions.clear();
 
     if let Some(panel) = unsafe { panel.as_ref() } {
         // SAFETY: The FFI caller owns the row array for this call.
@@ -864,33 +877,27 @@ pub extern "C" fn ui_frame(
         for index in 0..count as usize {
             let event = unsafe { &*events.add(index) };
             match event.kind {
-                1 => {}
-                2 => {
-                    runtime.state.press_key = element_key_at(runtime, event.x, event.y);
-                }
-                3 => {
-                    let key = element_key_at(runtime, event.x, event.y);
-                    if key.is_some() && key == runtime.state.press_key {
-                        if let Some(key) = key {
-                            push_key_action(&mut runtime.state, &key);
-                        }
+                UI_EVENT_POINTER_MOVE => runtime.pointer_move(event.x, event.y),
+                UI_EVENT_POINTER_DOWN => runtime.pointer_down(event.x, event.y),
+                UI_EVENT_POINTER_UP => runtime.pointer_up(event.x, event.y),
+                UI_EVENT_POINTER_LEAVE => runtime.pointer_leave(),
+                UI_EVENT_WHEEL => runtime.wheel(event.x, event.y, -event.dy * 40.0),
+                UI_EVENT_KEY_DOWN => {
+                    if let Some(key) = key_from_code(event.key) {
+                        runtime.key(KeyEvent { key, mods: Mods::default() });
                     }
-                    runtime.state.press_key = None;
                 }
-                4 => {}
-                5 => {
-                    let key = match event.key {
-                        0 => Key::Enter,
-                        1 => Key::Escape,
-                        2 => Key::Up,
-                        3 => Key::Down,
-                        4 => Key::Left,
-                        5 => Key::Right,
-                        6 => Key::Tab,
-                        _ => continue,
-                    };
-                    runtime.key(KeyEvent { key, mods: Mods::default() });
+                UI_EVENT_KEY_UP => {
+                    if let Some(key) = key_from_code(event.key) {
+                        runtime.key_up(KeyEvent { key, mods: Mods::default() });
+                    }
                 }
+                UI_EVENT_KEY_REPEAT => {
+                    if let Some(key) = key_from_code(event.key) {
+                        runtime.repeat_key(KeyEvent { key, mods: Mods::default() });
+                    }
+                }
+                UI_EVENT_FOCUS => runtime.window_focus(event.flags & 1 != 0),
                 _ => {}
             }
         }
@@ -898,6 +905,29 @@ pub extern "C" fn ui_frame(
     runtime.invalidate();
     runtime.frame(dt);
     0
+}
+
+const UI_EVENT_POINTER_MOVE: u32 = 1;
+const UI_EVENT_POINTER_DOWN: u32 = 2;
+const UI_EVENT_POINTER_UP: u32 = 3;
+const UI_EVENT_POINTER_LEAVE: u32 = 4;
+const UI_EVENT_WHEEL: u32 = 7;
+const UI_EVENT_KEY_DOWN: u32 = 8;
+const UI_EVENT_KEY_UP: u32 = 9;
+const UI_EVENT_KEY_REPEAT: u32 = 10;
+const UI_EVENT_FOCUS: u32 = 11;
+
+fn key_from_code(code: i32) -> Option<Key> {
+    Some(match code {
+        1 => Key::Up,
+        2 => Key::Down,
+        3 => Key::Left,
+        4 => Key::Right,
+        5 => Key::Enter,
+        6 => Key::Escape,
+        7 => Key::Tab,
+        _ => return None,
+    })
 }
 
 #[unsafe(no_mangle)]
@@ -919,6 +949,32 @@ pub extern "C" fn ui_actions_clear() {
     }
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn ui_click_point(x: f32, y: f32) -> i32 {
+    let Some(host) = host() else { return 1 };
+    let Some(runtime) = host.runtime.as_mut() else { return 2 };
+    click_runtime(runtime, x, y);
+    0
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ui_click_element(pointer: *const u8, len: u32) -> i32 {
+    let Some(host) = host() else { return 1 };
+    let Some(runtime) = host.runtime.as_mut() else { return 2 };
+    let key = unsafe { text_bytes(pointer, len) };
+    let Some((x, y)) = runtime.find(&key) else { return 3 };
+    click_runtime(runtime, x, y);
+    0
+}
+
+fn click_runtime(runtime: &mut Runtime<UiState>, x: f32, y: f32) {
+    runtime.pointer_move(x, y);
+    runtime.pointer_down(x, y);
+    runtime.pointer_up(x, y);
+    runtime.invalidate();
+    runtime.frame(0.0);
+}
+
 fn menu_view(state: &UiState) -> El {
     menu_panel(&state.menu, None, state.weight)
 }
@@ -938,7 +994,8 @@ fn menu_panel(menu: &MenuState, key_prefix: Option<&str>, weight: f32) -> El {
         .w(430.0)
         .padding(16.0)
         .gap(8.0)
-        .fill(surface);
+        .fill(surface)
+        .on_press(|_: &mut UiState| {});
     panel = panel
         .child(
             row()
@@ -974,7 +1031,14 @@ fn menu_panel(menu: &MenuState, key_prefix: Option<&str>, weight: f32) -> El {
                 r.flags & ROW_NUMERIC != 0,
             ).color(primary));
         if let Some(prefix) = key_prefix {
-            line = line.key(format!("{prefix}{index}"));
+            let index_value = index as i32;
+            line = line
+                .key(format!("{prefix}{index}"))
+                .hover(Color { r: 1.0, g: 1.0, b: 1.0, a: 0.06 })
+                .press(Color { r: 1.0, g: 1.0, b: 1.0, a: 0.10 })
+                .on_press(move |s: &mut UiState| {
+                    s.actions.push(UiAction { kind: 3, value: index_value });
+                });
         }
         panel = panel.child(line);
         if r.kind == 4 {
@@ -1007,12 +1071,22 @@ fn menu_panel(menu: &MenuState, key_prefix: Option<&str>, weight: f32) -> El {
     }
     panel = panel.child(hints);
 
+    let scrim_action: u32 = if key_prefix.is_some() { 4 } else { 1 };
     col()
         .w_full()
         .h_full()
         .items_center()
         .justify_center()
-        .child(el().absolute(0.0, 0.0).w_full().h_full().fill(scrim))
+        .child(
+            el()
+                .absolute(0.0, 0.0)
+                .w_full()
+                .h_full()
+                .fill(scrim)
+                .on_press(move |s: &mut UiState| {
+                    s.actions.push(UiAction { kind: scrim_action, value: 0 });
+                }),
+        )
         .child(panel)
 }
 
@@ -1038,26 +1112,6 @@ fn palette_view(state: &UiState) -> El {
         hints: state.palette.hints.clone(),
     };
     menu_panel(&menu, Some("palette:"), state.weight)
-}
-
-fn element_key_at(runtime: &Runtime<UiState>, x: f32, y: f32) -> Option<String> {
-    runtime.elements().iter().rev().find_map(|element| {
-        let r = element.target;
-        let inside = x >= r[0] && x <= r[0] + r[2] && y >= r[1] && y <= r[1] + r[3];
-        if inside { element.key.clone() } else { None }
-    })
-}
-
-fn push_key_action(state: &mut UiState, key: &str) {
-    if let Some(rest) = key.strip_prefix("palette:") {
-        if let Ok(index) = rest.parse::<i32>() {
-            state.actions.push(UiAction { kind: 3, value: index });
-        }
-    } else if let Some(rest) = key.strip_prefix("action:") {
-        if let Ok(kind) = rest.parse::<u32>() {
-            state.actions.push(UiAction { kind, value: 0 });
-        }
-    }
 }
 
 struct FxSlotPlan {
