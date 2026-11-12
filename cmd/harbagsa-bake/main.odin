@@ -19,6 +19,7 @@ run :: proc(args: []string) -> int {
 	spacing := f32(bake.PROBE_SPACING)
 	basis := bake.Probe_Basis.Octa
 	moments := u32(bake.PROBE_MOMENT_TEXELS)
+	scale := f32(1.0)
 	threads, counted := bake.default_threads()
 	if !counted {
 		fmt.eprintln("harbagsa-bake: cannot read the CPU count; using one thread")
@@ -68,6 +69,16 @@ run :: proc(args: []string) -> int {
 			}
 			moments = u32(value)
 			index += 2
+		case "--scale":
+			if index + 1 >= len(args) {
+				return argument_error("--scale needs a factor")
+			}
+			value, value_ok := strconv.parse_f32(args[index + 1])
+			if !value_ok || value <= 0 || value > 8 {
+				return argument_error("--scale must be in (0, 8]")
+			}
+			scale = value
+			index += 2
 		case "--threads":
 			if index + 1 >= len(args) {
 				return argument_error("--threads needs a count")
@@ -94,6 +105,7 @@ run :: proc(args: []string) -> int {
 	input: game.Bake_Input
 	defer game.bake_input_destroy(&input)
 	static := game.simulation_bake_input(&simulation, &input, context.allocator)
+	bake.scale_static(static, scale)
 
 	quality := bake.DEFAULT_QUALITY
 	quality.probe_spacing = spacing
@@ -117,19 +129,20 @@ run :: proc(args: []string) -> int {
 	if time_error := bake.write_time(output, report.bake_ms); time_error != "" {
 		fmt.eprintf("harbagsa-bake: %s\n", time_error)
 	}
-	print_report(output, spacing, basis, moments, threads, report)
+	print_report(output, spacing, basis, moments, threads, scale, report)
 	return 0
 }
 
 @(private)
 usage :: proc() {
 	fmt.println("usage: harbagsa-bake [--out PATH] [--probe-spacing 1|2] [--probe-basis octa|sh9]")
-	fmt.println("                     [--probe-moments 8|16] [--threads N]")
+	fmt.println("                     [--probe-moments 8|16] [--threads N] [--scale FACTOR]")
 	fmt.println("  --out PATH          artifact path (default build/bake/arena.hbake)")
 	fmt.println("  --probe-spacing M   1 m grid, or the 2 m fallback")
 	fmt.println("  --probe-basis B     octa irradiance, or the SH9 A/B option")
 	fmt.println("  --probe-moments N   8 x 8 depth moments, or the 16 x 16 A/B option")
 	fmt.println("  --threads N         worker count; the result does not depend on it")
+	fmt.println("  --scale FACTOR      scale the static arena for an atlas capacity run")
 }
 
 @(private)
@@ -146,6 +159,7 @@ print_report :: proc(
 	basis: bake.Probe_Basis,
 	moments: u32,
 	threads: int,
+	scale: f32,
 	report: bake.Build_Report,
 ) {
 	fmt.printf("harbagsa-bake: %s\n", path)
@@ -156,7 +170,7 @@ print_report :: proc(
 		moments,
 		moments,
 	)
-	fmt.printf("  bake %d ms  threads %d\n", report.bake_ms, threads)
+	fmt.printf("  bake %d ms  threads %d  scale %.2fx\n", report.bake_ms, threads, scale)
 	fmt.printf(
 		"  stages: bvh %d ms  lightmap %d ms  probes %d ms  encode %d ms\n",
 		report.bvh_ms,
@@ -171,10 +185,12 @@ print_report :: proc(
 		report.charts,
 	)
 	fmt.printf(
-		"  atlas %dx%d (%d texels)  baked %d  invalid %d  dilated %d  %d bytes\n",
+		"  atlas %dx%d (%d texels)  allocated %d (%.2f%%)  baked %d  invalid %d  dilated %d  %d bytes\n",
 		report.atlas_size,
 		report.atlas_size,
 		report.atlas_size * report.atlas_size,
+		report.allocated_texels,
+		report.occupancy * 100.0,
 		report.valid_texels,
 		report.invalid_texels,
 		report.dilated_texels,

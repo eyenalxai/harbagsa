@@ -1,0 +1,23 @@
+{
+  "note": "Place a static box, bake, then move it. The bake reports stale and the moved box no longer maps to its old lightmap chart.",
+  "size": "1280x720",
+  "requires": {"renderer_debug": true},
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "renderer_debug", "taa": false, "jitter": false},
+    {"cmd": "place", "prefab": "Crate", "position": [0, 0.5, 9.5], "body": "static", "name": "moved-static"},
+    {"cmd": "bake"},
+    {"cmd": "camera", "position": [2, 3, 11], "look_at": [0, 0.5, 9.5]},
+    {"cmd": "settle", "frames": 30},
+    {"cmd": "pick", "at": [640, 360]},
+    {"cmd": "capture", "name": "baked", "views": ["beauty", "lightmap"], "format": "stats", "png": true},
+    {"cmd": "debug_mode", "active": true},
+    {"cmd": "editor", "select_object": "moved-static"},
+    {"cmd": "editor", "move": [2.0, 0.5, 9.5]},
+    {"cmd": "debug_mode", "active": false},
+    {"cmd": "camera", "position": [4, 3, 11], "look_at": [2, 0.5, 9.5]},
+    {"cmd": "settle", "frames": 30},
+    {"cmd": "pick", "at": [640, 360]},
+    {"cmd": "capture", "name": "moved", "views": ["beauty", "lightmap"], "format": "stats", "png": true}
+  ]
+}

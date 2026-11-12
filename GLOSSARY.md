@@ -222,6 +222,10 @@ _Avoid_: GI pass, probe pass
 The FNV hash of the canonical static boxes, active static fixtures, quality, and tool version. The renderer recomputes it from the current static input; a mismatch is `stale`.
 _Avoid_: Scene hash, light hash
 
+**Bake slot key**:
+The FNV hash of a static box's source, id, and transform. The artifact stores one slot key per static box; the frame recomputes it. A moved static box misses its old slot and falls back to direct light, so it never samples a chart baked for its previous position.
+_Avoid_: Box id, chart key
+
 **Bake status**:
 The applied artifact state: `missing`, `stale`, `current`, or `failed`. A
 missing or failed load binds placeholders and reports the reason; a failed
@@ -237,8 +241,12 @@ time lives in a `.time` sidecar so the artifact bytes stay deterministic.
 _Avoid_: Bake file, lightmap file
 
 **Lightmap**:
-The one linear `1024²` `RGBA16F` atlas that holds one tile per static box face. It carries static indirect only; direct light and hard shadows stay real-time. It is lighting data, not a surface or material texture.
+The one linear `1024²` `RGBA16F` atlas that holds one tile per static box face. It carries static indirect only; direct light and hard shadows stay real-time. It is lighting data, not a surface or material texture. Charts use a 1-texel gutter and a 4-texel minimum chart.
 _Avoid_: Baked texture, GI map
+
+**Atlas occupancy**:
+The sum of the chart allocation rectangles divided by the atlas texel count. `state.bake.allocated_texels` is that sum, including the one-texel gutter on each side of every chart; `occupancy` is the ratio. It is not the valid-texel or baked-texel count.
+_Avoid_: Fill rate, valid fraction
 
 **Lightmap denoise**:
 The separable 3x3 binomial pass that the bake runs over one chart after the buried fill and before the gutter, with clamp-to-edge weights that sum to one. One chart is one planar face, so the pass cannot bleed across a surface and the gutter still isolates neighbouring charts. The texel seed follows the surface, not the atlas position.

@@ -16,6 +16,8 @@ Bake_Command :: struct {
 	has_probe_basis:   bool,
 	probe_moments:     u32,
 	has_probe_moments: bool,
+	scale:             f32,
+	has_scale:         bool,
 	threads:           int,
 	has_threads:       bool,
 	out:               string,
@@ -26,7 +28,7 @@ Bake_Command :: struct {
 parse_bake :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(
 		object,
-		{"cmd", "probe_spacing", "probe_basis", "probe_moments", "threads", "out"},
+		{"cmd", "probe_spacing", "probe_basis", "probe_moments", "scale", "threads", "out"},
 	); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
@@ -57,6 +59,14 @@ parse_bake :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, s
 		}
 		command.bake.probe_spacing = f32(spacing)
 		command.bake.has_probe_spacing = true
+	}
+	if value, has := json_get(object, "scale"); has {
+		scale, ok := json_number(value)
+		if !ok || scale <= 0 || scale > 8 {
+			return {}, format_error("%s", "'scale' must be in (0, 8]")
+		}
+		command.bake.scale = f32(scale)
+		command.bake.has_scale = true
 	}
 	if value, has := json_get(object, "threads"); has {
 		threads, ok := json_integer(value)
@@ -116,6 +126,9 @@ session_bake :: proc(session: ^Session, command: Bake_Command) -> string {
 		&session.runtime.scratch.bake,
 		session.allocator,
 	)
+	if command.has_scale {
+		bake.scale_static(static, command.scale)
+	}
 	artifact, report, build_error := bake.build(
 		static,
 		{quality = quality, threads = threads},
@@ -144,13 +157,15 @@ session_bake :: proc(session: ^Session, command: Bake_Command) -> string {
 		return publish_error
 	}
 	log.infof(
-		"harness: bake key %016x boxes %d lights %d probes %d basis %s moments %d in %d ms",
+		"harness: bake key %016x boxes %d lights %d probes %d basis %s moments %d allocated %d occupancy %.2f%% in %d ms",
 		report.key,
 		report.boxes,
 		report.lights,
 		report.probes,
 		bake.probe_basis_name(report.probe_basis),
 		report.probe_moments,
+		report.allocated_texels,
+		f64(report.occupancy) * 100.0,
 		report.bake_ms,
 	)
 	return ""

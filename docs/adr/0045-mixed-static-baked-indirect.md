@@ -39,15 +39,18 @@ free number.
 - **One bounce.** The bake traces one diffuse bounce. A miss returns zero; there
   is no sky, sun, or ambient term.
 - **Lightmap.** One linear `1024²` `RGBA16F` atlas holds one tile per static box
-  face. Face UVs come from the local position and face normal, so there is no
-  vertex UV channel. The lightmap contains static indirect only; direct light and
-  hard shadows stay real-time.
+  face. The gutter is 1 texel and the minimum chart is 4 texels; charts are
+  sorted by allocation height before the shelf pack. Face UVs come from the
+  local position and face normal, so there is no vertex UV channel. The
+  lightmap contains static indirect only; direct light and hard shadows stay
+  real-time.
 - **Denoise.** The bake filters each chart once, after the buried fill and before
   the gutter: a separable 3x3 binomial over RGB, clamped at the chart edge. One
   chart is one planar face, so the kernel cannot bleed across a surface. The
   texel seed follows `(source, id, face, x, y)`, not the atlas position, so a
-  static edit that only moves charts leaves their noise field alone.
-  `TOOL_VERSION` is 3.
+  static edit that only moves charts leaves their noise field alone. A moved box
+  keeps its field after the republish because the transform is not in the seed.
+  `TOOL_VERSION` is 4.
 - **Probes.** A static 1 m grid covers the playable volume; 2 m is the quality
   fallback. Each probe stores an 8 x 8 octahedral `R11G11B10F` irradiance block
   and 8 x 8 depth moments. SH9 irradiance and 16 x 16 moments are selectable
@@ -58,16 +61,21 @@ free number.
 - **Key and status.** The bake key hashes the canonical static boxes, the active
   static fixtures, the quality, and the tool version. The renderer recomputes it
   from the current static input. A missing artifact is `missing`; a parse failure
-  is `failed`; a key mismatch is `stale`; a match is `current`.
+  is `failed`; a key mismatch is `stale`; a match is `current`. The slot key
+  hashes the source, id, and transform, so a moved static box does not keep its
+  old chart: the lookup misses and the box falls back to direct light.
 - **Publish.** A static fixture or static geometry edit changes the key and marks
   the bake stale. Direct light updates immediately; the old indirect remains
   bound and visible. An explicit `bake` command rebuilds from the current static
   input and publishes the new artifact. A failed publish leaves the old artifact
   bound and reports `failed`; it never falls back to black or to another bake.
 - **Harness.** The `bake` command builds, optionally writes the artifact, and
-  publishes it. `state.bake` reports the status, key, artifact key, format and
-  tool versions, measured bake time, atlas and probe counts, memory, and the load
-  or publish error. `make bake` writes `build/bake/arena.hbake` for the game.
+  publishes it. `scale` scales the static geometry for an atlas capacity run and
+  publishes an artifact that is stale against the unscaled scene. `state.bake`
+  reports the status, key, artifact key, format and tool versions, measured bake
+  time, atlas and probe counts, allocated texels and occupancy, memory, and the
+  load or publish error. `make bake` writes `build/bake/arena.hbake` for the
+  game.
 - **Empty bake.** Removing every static fixture and publishing a fresh bake
   yields zero indirect. A lamp-free scene stays black.
 - **Editor and docs.** The editor HUD shows the lamp kind and the bake status.
@@ -106,8 +114,10 @@ free number.
 - A bake is deterministic for the same static input, quality, and tool version.
   The measured wall time travels in a `.time` sidecar, not in the artifact bytes.
 - The lightmap is denoised per chart, so an artifact built by an older tool
-  version is `stale` and must be rebuilt; the current tool version is 3. A
-  static edit that only moves charts leaves their noise field byte-identical.
+  version is `stale` and must be rebuilt; the current tool version is 4. The
+  loader still accepts the previous 4-texel gutter and 8-texel minimum chart, so
+  a tool 3 artifact loads and reports `stale` instead of `failed`. A static edit
+  that only moves charts leaves their noise field byte-identical.
 - The default bake is about 5 s at 16 threads, not the 2 s target. The 2 m probe
   fallback reduces probe work. Quality and performance measurement stay in the
   follow-up ticket.

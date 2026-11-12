@@ -37,10 +37,14 @@ never a fill value.
   rects, 16-byte slots, 8-byte probe states, 44-byte quality, and 40-byte stats.
   Section sizes must match the header exactly.
 - **Atlas.** One linear `R16G16B16A16_SFLOAT` image, one mip, one layer, 1024
-  square, 4 texels per metre, an 8-texel minimum chart, and a 4-texel gutter.
+  square, 4 texels per metre, a 4-texel minimum chart, and a 1-texel gutter.
   Every static box owns one slot and six face rects. Slots are slot-major: slot
   `i` owns faces `i * 6` through `i * 6 + 5` in the face order +X, -X, +Y, -Y,
-  +Z, -Z. The rects are center-to-center and stay inside `[0, 1]`.
+  +Z, -Z. The rects are center-to-center and stay inside `[0, 1]`. Charts are
+  sorted by allocation height before the shelf pack, so a tall face does not
+  set a mostly empty row. A slot key hashes the box identity and its transform;
+  a moved static box misses its old chart instead of sampling a lightmap baked
+  for its previous position.
 - **Probes.** A regular grid at 1 m spacing is the default; 2 m remains the
   quality fallback. Each probe stores an 8 x 8 octahedral `R11G11B10F`
   irradiance block and an 8 x 8 or 16 x 16 first/second moment block. The
@@ -61,7 +65,9 @@ never a fill value.
   and the tool version. Dynamic lamps and dynamic bodies are excluded. The
   renderer recomputes the key with the artifact's own quality block, so a 1 m
   or 2 m artifact validates against the same static inputs. The runtime reports
-  `current` or `stale`.
+  `current` or `stale`. The slot key is separate: it hashes the source, the id,
+  and the box transform, so a moved static box falls back to the direct path
+  while the artifact is stale.
 - **Runtime resources.** The lightmap image and sampler, the probe irradiance
   and moment images, the shared linear clamp sampler, the face and slot buffers,
   the probe state buffer, and the probe volume buffer are created with the
@@ -75,13 +81,14 @@ never a fill value.
   checkout can be exercised. A missing file is `missing`; a parse failure is
   `failed` with the loader error. Neither falls back to black or to an old bake.
 - **Observability.** `state.renderer.bake` reports the status, the current key,
-  the artifact key, format and tool versions, atlas and probe counts, spacing,
-  the probe basis and moment resolution, the invalid-probe count before
-  dilation, the dynamic boxes whose centre is
+  the artifact key, format and tool versions, atlas and probe counts, allocated
+  texels and occupancy, spacing, the probe basis and moment resolution, the
+  invalid-probe count before dilation, the dynamic boxes whose centre is
   outside the probe volume, artifact and GPU bytes, bake time, and the load
-  error. The render digest includes the current key, the applied status, and the
-  lightmap and probe switches, so two bakes or two indirect configurations
-  cannot compare as the same image.
+  error. Allocated texels are the chart rectangles plus their gutters, not the
+  valid or baked texel count. The render digest includes the current key, the
+  applied status, and the lightmap and probe switches, so two bakes or two
+  indirect configurations cannot compare as the same image.
 
 ## Considered options
 
