@@ -202,6 +202,8 @@ build :: proc(
 				captured        = hud.captured,
 				palette_open    = palette.open,
 				owns_panel      = true,
+				menu            = hud.menu.view,
+				owns_menu       = true,
 			},
 		}
 	}

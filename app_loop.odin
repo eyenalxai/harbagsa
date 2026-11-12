@@ -97,7 +97,6 @@ apply_frame_input :: proc(
 	}
 
 	if loop.runtime.hud.menu.open {
-		layout := renderer.menu_layout_for(loop.renderer, loop.runtime.hud.menu.view)
 		target_width, target_height := renderer.target_extent(loop.renderer)
 		pointer := ui.pointer_to_target(
 			intent.menu.pointer,
@@ -109,7 +108,7 @@ apply_frame_input :: proc(
 			&loop.runtime.hud.menu,
 			&loop.runtime.sim.settings,
 			intent.menu,
-			layout.slider,
+			{},
 			pointer,
 		) {
 			game.menu_close(&loop.runtime.hud.menu)

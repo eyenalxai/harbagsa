@@ -27,6 +27,18 @@ struct PanelRow {
     flags: u32,
     label: String,
     value: String,
+    ratio: f32,
+    ticks: u32,
+}
+
+#[derive(Default)]
+struct MenuState {
+    open: bool,
+    title: String,
+    rows: Vec<PanelRow>,
+    selected: usize,
+    note: String,
+    hints: Vec<(String, String)>,
 }
 
 #[derive(Default)]
@@ -44,6 +56,7 @@ struct UiState {
     menu_open: bool,
     actions: Vec<UiAction>,
     panel: PanelState,
+    menu: MenuState,
 }
 
 #[repr(C)]
@@ -64,6 +77,29 @@ pub struct UiRow {
     pub value_len: u32,
     pub ratio: f32,
     pub ticks: u32,
+}
+
+#[repr(C)]
+pub struct UiHint {
+    pub keys: *const u8,
+    pub keys_len: u32,
+    pub action: *const u8,
+    pub action_len: u32,
+}
+
+#[repr(C)]
+pub struct UiMenu {
+    pub open: u32,
+    pub title: *const u8,
+    pub title_len: u32,
+    pub rows: *const UiRow,
+    pub row_count: u32,
+    pub selected: u32,
+    pub note: *const u8,
+    pub note_len: u32,
+    pub hints: *const UiHint,
+    pub hint_count: u32,
+    pub hint_columns: u32,
 }
 
 #[repr(C)]
@@ -338,8 +374,8 @@ fn host() -> Option<&'static mut Host> {
 
 fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
     use rune::{Color, col, el, row, spacer, text};
-    if state.menu_open {
-        return col();
+    if state.menu_open || state.menu.open {
+        return menu_view(state);
     }
     let surface = Color { r: 0.06, g: 0.08, b: 0.10, a: 0.94 };
     let hairline = Color { r: 0.35, g: 0.38, b: 0.42, a: 0.25 };
@@ -503,6 +539,7 @@ pub extern "C" fn ui_attach(target: *const UiTarget) -> i32 {
             menu_open: false,
             actions: Vec::new(),
             panel: PanelState::default(),
+            menu: MenuState::default(),
         },
         view,
         (target.width as f32 / scale, target.height as f32 / scale),
@@ -565,6 +602,7 @@ pub extern "C" fn ui_frame(
     dt: f64,
     snapshot: *const UiSnapshot,
     panel: *const UiPanel,
+    menu: *const UiMenu,
     events: *const UiEvent,
     count: u32,
 ) -> i32 {
@@ -587,6 +625,8 @@ pub extern "C" fn ui_frame(
                     flags: row.flags,
                     label: text_bytes(row.label, row.label_len),
                     value: text_bytes(row.value, row.value_len),
+                    ratio: row.ratio,
+                    ticks: row.ticks,
                 });
             }
         }
@@ -596,6 +636,41 @@ pub extern "C" fn ui_frame(
             capture_hint: text_bytes(panel.capture_hint, panel.capture_hint_len),
             captured: panel.captured != 0,
             palette_open: panel.palette_open != 0,
+        };
+    }
+
+    if let Some(menu) = unsafe { menu.as_ref() } {
+        let mut rows = Vec::with_capacity(menu.row_count as usize);
+        if !menu.rows.is_null() {
+            for index in 0..menu.row_count as usize {
+                let row = unsafe { &*menu.rows.add(index) };
+                rows.push(PanelRow {
+                    kind: row.kind,
+                    flags: row.flags,
+                    label: text_bytes(row.label, row.label_len),
+                    value: text_bytes(row.value, row.value_len),
+                    ratio: row.ratio,
+                    ticks: row.ticks,
+                });
+            }
+        }
+        let mut hints = Vec::with_capacity(menu.hint_count as usize);
+        if !menu.hints.is_null() {
+            for index in 0..menu.hint_count as usize {
+                let hint = unsafe { &*menu.hints.add(index) };
+                hints.push((
+                    text_bytes(hint.keys, hint.keys_len),
+                    text_bytes(hint.action, hint.action_len),
+                ));
+            }
+        }
+        runtime.state.menu = MenuState {
+            open: menu.open != 0,
+            title: text_bytes(menu.title, menu.title_len),
+            rows,
+            selected: menu.selected as usize,
+            note: text_bytes(menu.note, menu.note_len),
+            hints,
         };
     }
 
@@ -645,6 +720,92 @@ pub extern "C" fn ui_actions_clear() {
     {
         runtime.state.actions.clear();
     }
+}
+
+fn menu_view(state: &UiState) -> El {
+    use rune::{Color, col, el, row, spacer, text};
+    let scrim = Color { r: 0.0, g: 0.0, b: 0.0, a: 0.62 };
+    let surface = Color { r: 0.08, g: 0.10, b: 0.13, a: 1.0 };
+    let raised = Color { r: 0.15, g: 0.19, b: 0.24, a: 1.0 };
+    let hairline = Color { r: 0.35, g: 0.38, b: 0.42, a: 0.25 };
+    let primary = Color { r: 0.93, g: 0.95, b: 0.97, a: 1.0 };
+    let secondary = Color { r: 0.65, g: 0.70, b: 0.75, a: 1.0 };
+    let tertiary = Color { r: 0.50, g: 0.55, b: 0.60, a: 1.0 };
+    let accent = Color { r: 0.90, g: 0.69, b: 0.23, a: 1.0 };
+
+    let mut panel = col()
+        .w(430.0)
+        .padding(16.0)
+        .gap(8.0)
+        .fill(surface);
+    panel = panel
+        .child(
+            row()
+                .w_full()
+                .child(spacer())
+                .child(text(state.menu.title.as_str()).color(primary))
+                .child(spacer()),
+        )
+        .child(el().h(1.0).w_full().fill(hairline));
+
+    for (index, r) in state.menu.rows.iter().enumerate() {
+        if r.kind == 5 {
+            panel = panel.child(el().h(1.0).w_full().fill(hairline));
+            continue;
+        }
+        if r.kind == 6 {
+            panel = panel.child(text(r.label.as_str()).color(tertiary));
+            continue;
+        }
+        let selected = index == state.menu.selected;
+        let label_color = if selected { primary } else { secondary };
+        let line = row()
+            .w_full()
+            .padding(4.0)
+            .gap(12.0)
+            .fill(if selected { raised } else { Color::TRANSPARENT })
+            .child(if selected { el().w(2.0).h(18.0).fill(accent) } else { el() })
+            .child(text(r.label.as_str()).color(label_color))
+            .child(spacer())
+            .child(text(r.value.as_str()).color(primary));
+        panel = panel.child(line);
+        if r.kind == 4 {
+            let track = el()
+                .w_full()
+                .h(4.0)
+                .fill(Color { r: 1.0, g: 1.0, b: 1.0, a: 0.20 })
+                .child(el().w(r.ratio * 390.0).h_full().fill(accent));
+            panel = panel.child(track);
+        }
+    }
+
+    let note = if state.menu.note.is_empty() {
+        col()
+    } else {
+        text(state.menu.note.as_str()).color(tertiary)
+    };
+    panel = panel.child(note);
+
+    let mut hints = col().w_full().gap(4.0);
+    let per_row = 3usize;
+    for chunk in state.menu.hints.chunks(per_row) {
+        let mut line = row().gap(16.0);
+        for (keys, action) in chunk {
+            line = line
+                .child(text(keys.as_str()).color(primary))
+                .child(text(action.as_str()).color(secondary));
+        }
+        hints = hints.child(line);
+    }
+    panel = panel.child(hints);
+
+    col()
+        .w_full()
+        .h_full()
+        .items_center()
+        .justify_center()
+        .child(el().absolute(0.0, 0.0).w_full().h_full().fill(scrim))
+        .child(panel)
 }
 
 fn text_bytes(pointer: *const u8, len: u32) -> String {
