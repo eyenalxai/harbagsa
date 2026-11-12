@@ -11,6 +11,14 @@ a run before you rely on it. When they disagree, follow the code and correct or
 delete the doc in the same change. Justify a decision with code, not with a doc
 line.
 
+## When to stop
+
+Stop only when the owner must act: a decision only the owner can make, a
+credential or approval only the owner holds, or a PR ready to review or merge.
+A failed build, a layout that will not size, a missing API, or any other
+technical blocker is work for the agent. Report it in the run log and keep
+going. Never end a turn with a next step the agent could perform itself.
+
 ## Code changes
 
 Backwards compatibility does not matter. Rip and tear if needed. Refactor anything you need; you have free rein over the code. Focus on long-term maintenance. Do not write duplicated code. Re-use existing code when possible.
