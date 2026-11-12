@@ -1,0 +1,12 @@
+{
+  "note": "Scale the static arena 2x linearly and publish the bake to measure atlas capacity. The live scene is unscaled, so the published artifact reports stale.",
+  "size": "1280x720",
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "bake", "scale": 2.0, "out": "runs/bake-atlas-2x/arena-2x.hbake"},
+    {"cmd": "camera", "position": [-2.0, 2.4, 10.0], "look_at": [-3.0, 0.3, 6.0]},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "unscaled-scene", "format": "stats", "png": true,
+     "note": "The 2x artifact is stale against the unscaled scene; every static box falls back to direct light."}
+  ]
+}

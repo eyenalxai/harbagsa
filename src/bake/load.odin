@@ -247,8 +247,9 @@ slice_section :: proc(bytes: []u8, section: Section, $T: typeid, count: int) -> 
 layout_valid :: proc(data: Data) -> bool {
 	atlas_width := f32(data.header.atlas_width)
 	atlas_height := f32(data.header.atlas_height)
-	pad_u := f32(GUTTER_TEXELS) / atlas_width
-	pad_v := f32(GUTTER_TEXELS) / atlas_height
+	pad_u := f32(data.quality.gutter_texels) / atlas_width
+	pad_v := f32(data.quality.gutter_texels) / atlas_height
+	min_chart := f32(data.quality.min_chart)
 	for slot, slot_index in data.slots {
 		if slot.face_count != 6 ||
 		   u64(slot.first_face) + 6 > u64(len(data.faces)) {
@@ -271,8 +272,8 @@ layout_valid :: proc(data: Data) -> bool {
 			   rect[0] > rect[2] || rect[1] > rect[3] {
 				return false
 			}
-			if (rect[2] - rect[0]) * atlas_width < f32(MIN_CHART_TEXELS - 1) ||
-			   (rect[3] - rect[1]) * atlas_height < f32(MIN_CHART_TEXELS - 1) {
+			if (rect[2] - rect[0]) * atlas_width < min_chart - 1 ||
+			   (rect[3] - rect[1]) * atlas_height < min_chart - 1 {
 				return false
 			}
 		}

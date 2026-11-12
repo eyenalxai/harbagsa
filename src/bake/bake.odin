@@ -6,7 +6,7 @@ package bake
 import "src:geometry"
 
 FORMAT_VERSION :: 2
-TOOL_VERSION :: 3
+TOOL_VERSION :: 4
 
 // The bake key mixes this version too, so a changed input rule invalidates an
 // old artifact without a format bump.
@@ -17,8 +17,8 @@ MAGIC :: [4]u8{'H', 'B', 'A', 'K'}
 ATLAS_SIZE :: 1024
 ATLAS_BYTES_PER_TEXEL :: 8
 TEXELS_PER_METER :: 4
-GUTTER_TEXELS :: 4
-MIN_CHART_TEXELS :: 8
+GUTTER_TEXELS :: 1
+MIN_CHART_TEXELS :: 4
 
 PROBE_TEXELS :: 8
 PROBE_TEXEL_COUNT :: PROBE_TEXELS * PROBE_TEXELS
@@ -104,6 +104,10 @@ probe_basis_supported :: proc(value: u32) -> bool {
 
 probe_moments_supported :: proc(value: u32) -> bool {
 	return value == PROBE_MOMENT_TEXELS || value == PROBE_MOMENT_TEXELS_HIGH
+}
+
+scale_supported :: proc(value: f32) -> bool {
+	return value > 0 && value <= 8
 }
 
 quality_supported :: proc(quality: Quality) -> bool {
@@ -246,6 +250,8 @@ Build_Report :: struct {
 	valid_texels:   int,
 	invalid_texels: int,
 	dilated_texels: int,
+	allocated_texels: int,
+	occupancy:      f32,
 	lightmap_rays:  u64,
 	probe_rays:     u64,
 	shadow_rays:    u64,

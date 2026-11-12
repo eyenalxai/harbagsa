@@ -11,6 +11,7 @@ Lightmap_Result :: struct {
 	valid_texels:   int,
 	invalid_texels: int,
 	dilated_texels: int,
+	allocated_texels: int,
 	rays:           u64,
 	shadow_rays:    u64,
 }
@@ -50,6 +51,11 @@ lightmap_bake :: proc(
 	}
 	result.layout = layout
 	atlas_size := int(quality.atlas_size)
+	result.allocated_texels = atlas_allocated_texels(
+		layout.faces,
+		atlas_size,
+		int(quality.gutter_texels),
+	)
 	atlas := make([]f32, atlas_size * atlas_size * 4, allocator)
 	defer delete(atlas, allocator)
 	valid := make([]bool, atlas_size * atlas_size, allocator)
@@ -102,8 +108,8 @@ lightmap_bake :: proc(
 	}
 
 	// `dilated_texels` counts every copied texel: repaired buried interiors plus
-	// the four-texel gutter. `invalid_texels` counts the buried interiors before
-	// the repair, so the two counts overlap by design.
+	// the gutter. `invalid_texels` counts the buried interiors before the
+	// repair, so the two counts overlap by design.
 	queue := make([dynamic]int, 0, 0, allocator)
 	defer delete(queue)
 	scratch := make([]f32, denoise_scratch_len(&layout), allocator)
@@ -183,10 +189,11 @@ lightmap_trace :: proc(work: ^Lightmap_Work, texel: Texel_Job) -> u64 #no_bounds
 
 // The noise field follows the surface, not the atlas position, so an unrelated
 // static edit does not re-roll every texel of an unchanged wall. Hashing the
-// surface key and then the face gives every face its own field.
+// identity and then the face gives every face its own field. The transform is
+// deliberately absent: a moved box keeps its field after the republish.
 @(private)
 lightmap_seed :: proc(entry: Box_Entry, face, x, y: int) -> u64 {
-	surface := hash64(hash64(slot_key(entry.source, entry.id)) ~ u64(face))
+	surface := hash64(hash64(slot_identity(entry.source, entry.id)) ~ u64(face))
 	return seed_for(LIGHTMAP_KIND, surface ~ (u64(x) | u64(y) << 32))
 }
 

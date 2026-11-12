@@ -12,6 +12,21 @@ canonical_f32 :: proc(value: f32) -> f32 {
 	return value
 }
 
+// The high half is the source and the low half is the arena index or the placed
+// object id, so the two independent id spaces cannot collide.
+slot_identity :: proc(source: Box_Source, id: u32) -> u64 {
+	return u64(source) << 32 | u64(id)
+}
+
+// A slot carries the transform. A moved static box must miss its old chart;
+// otherwise the runtime binds a lightmap baked for its previous position.
+slot_key :: proc(source: Box_Source, id: u32, box: geometry.Box) -> u64 {
+	hash := digest.fnv()
+	digest.write_u64(&hash, slot_identity(source, id))
+	write_transform(&hash, box)
+	return hash.value
+}
+
 key :: proc(static: Static, quality: Quality) -> u64 {
 	hash := digest.fnv()
 	digest.write_u32(&hash, KEY_VERSION)
@@ -54,18 +69,37 @@ write_quality :: proc(hash: ^digest.FNV, quality: Quality) {
 
 @(private)
 write_box :: proc(hash: ^digest.FNV, box: geometry.Box) {
-	write_vec3(hash, box.center)
-	write_vec3(hash, box.half_extents)
-	digest.write_f32(hash, canonical_f32(box.rotation.x))
-	digest.write_f32(hash, canonical_f32(box.rotation.y))
-	digest.write_f32(hash, canonical_f32(box.rotation.z))
-	digest.write_f32(hash, canonical_f32(box.rotation.w))
+	write_transform(hash, box)
 	digest.write_f32(hash, canonical_f32(box.color.x))
 	digest.write_f32(hash, canonical_f32(box.color.y))
 	digest.write_f32(hash, canonical_f32(box.color.z))
 	digest.write_f32(hash, canonical_f32(box.color.w))
 	digest.write_f32(hash, canonical_f32(box.emissive))
 	digest.write_bool(hash, box.visual_only)
+}
+
+@(private)
+canonical_quat :: proc(value: [4]f32) -> [4]f32 {
+	for component in value {
+		if component > 0 {
+			return value
+		}
+		if component < 0 {
+			return {-value.x, -value.y, -value.z, -value.w}
+		}
+	}
+	return value
+}
+
+@(private)
+write_transform :: proc(hash: ^digest.FNV, box: geometry.Box) {
+	write_vec3(hash, box.center)
+	write_vec3(hash, box.half_extents)
+	rotation := canonical_quat(box.rotation)
+	digest.write_f32(hash, canonical_f32(rotation.x))
+	digest.write_f32(hash, canonical_f32(rotation.y))
+	digest.write_f32(hash, canonical_f32(rotation.z))
+	digest.write_f32(hash, canonical_f32(rotation.w))
 }
 
 @(private)
