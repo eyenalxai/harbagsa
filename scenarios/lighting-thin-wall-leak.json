@@ -1,5 +1,5 @@
 {
-  "note": "Thin-wall leak: a 0.5 m static wall between a bright static fixture and a dynamic crate on the far side. The thinnest wall tested is 0.5 m, the Wall prefab. The side view picks the crate's probe term; the far view picks the wall's far-face lightmap term. The wall is then removed and the bake republished to measure the occlusion the probe field applies.",
+  "note": "Thin-wall leak: a 0.5 m static wall between a bright static fixture and a dynamic crate on the far side. The thinnest wall tested is 0.5 m, the Wall prefab; 0.1-0.2 m remains untested. The side view picks the crate's probe term; the far view picks the wall's far-face lightmap term. The wall is then removed and the bake republished to measure the occlusion the probe field applies.",
   "size": "1280x720",
   "requires": {"renderer_debug": true},
   "view": {"hud": false, "debug": false, "hint": false, "perf": false},

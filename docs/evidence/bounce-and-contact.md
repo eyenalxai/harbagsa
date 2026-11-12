@@ -82,10 +82,12 @@ and the floor contact; it does not add a new edge.
 
 Two bounces is the default. The corner reads: a 46.9% red lift at the crease,
 +3.42% on the corner beauty mean, +2.46% on the whole frame, and a 16.3% lift on
-the corner lightmap term. The flat box look survives; the change fills the
-corner instead of moving a hard edge. The cost is bake time only: the lightmap
-stage is 1.75x and the total bake is 1.4x, and the artifact and GPU bytes do not
-move.
+the corner lightmap term. The same lift is global: the whole-frame lightmap mean
+rises 14.78%, and the wall-away control 70 cm from the corner rises 32.7-41.1%.
+The second bounce is a physical indirect term, not a corner-specific fix. The
+flat box look survives; the change fills the corner instead of moving a hard
+edge. The cost is bake time only: the lightmap stage is 1.75x and the total bake
+is 1.4x, and the artifact and GPU bytes do not move.
 
 The 2 s bake target remains missed: 7.5 s against 5.3 s for the one-bounce
 build. A caller that wants the old cost passes `bounces: 1`; the artifact
@@ -108,14 +110,16 @@ scenario with `--param bounces=1` writes `runs/lighting-crate-contact-1`, bake
 | --- | --- | --: | --: | --: | --: |
 | Crate front face, `[-2.999, 0.448, 6.500]` | probe | 0.215656 | 0.113656 | 0.024134 | 0.1289 |
 | Crate front face, `[-2.999, 0.005, 6.500]` | probe | 0.215656 | 0.113656 | 0.024134 | 0.1289 |
-| Floor at the contact, `[-2.999, 0.000, 6.772]` | lightmap | 0.043106 | 0.038233 | 0.031353 | 0.0388 |
+| Floor one texel from the contact (27 cm), `[-2.999, 0.000, 6.772]` | lightmap | 0.043106 | 0.038233 | 0.031353 | 0.0388 |
 | Floor 24 cm out, `[-2.999, 0.000, 7.017]` | lightmap | 0.042374 | 0.037734 | 0.031052 | 0.0384 |
 | Floor 60 cm left, `[-3.398, 0.000, 6.772]` | lightmap | 0.045172 | 0.039584 | 0.031671 | 0.0407 |
 | Floor 60 cm right, `[-2.599, 0.000, 6.772]` | lightmap | 0.037170 | 0.034348 | 0.030255 | 0.0351 |
 
 The crate's probe term is constant over the face: `0.215656 / 0.113656 /
 0.024134` at both the top and the bottom pick. The floor lightmap term varies
-only 0.0372-0.0452 across the 80 cm pick span. At the contact the crate's probe
+only 0.0372-0.0452 across the 80 cm pick span. The floor pick is 27 cm from the
+crate face, one 25 cm lightmap texel, so the ratio is a one-texel-away
+approximation rather than the exact contact line. At that point the crate's probe
 term is 5.0x the floor's red term, 3.0x green, and 0.77x blue; by luminance it is
 3.3x brighter. The step is the 1 m probe field against the 25 cm lightmap, not a
 texture gradient: the crate's indirect is visibly brighter than the floor it
@@ -132,7 +136,7 @@ probe term is 4.7x the floor by luminance against 3.3x with the two-bounce
 lightmap. The second bounce narrows this static/dynamic contact step; it does not
 close it, because the probe resolution and the one-bounce probe field remain.
 
-## Thin-wall leak
+## Thin-wall leak (0.5 m)
 
 `scenarios/lighting-thin-wall-leak.json` extends the probe thin-wall scene: a
 0.5 m wall (the Wall prefab, the thinnest wall the prefab provides) between a
@@ -148,13 +152,14 @@ then the wall is removed and the bake republished in the same run.
 
 The wall's far face is the `-Z` face at `z = -6.25`; the three picked points span
 `x = -16.49` to `-15.52` at `y = 1.51`. Its lightmap term is 0.00769-0.00961 red.
-The dynamic crate's probe term with the wall is 0.00445 red, about half the static
-far-face term, so the probe field is not brighter than the wall it is behind. The
-wall removal raises the crate's probe term 7.9x, so the 0.5 m wall is applied to
-the baked field. The residual is the field around the wall ends and the far-side
-first and second bounce, not a through-wall add. The near-wall-end pick shows the
-second path: removing the wall raises it to 0.173776 red and the direct term to
-0.977514, because the fixture then sees the crate past the wall end.
+The dynamic crate's probe term with the wall is 0.00445 red, 0.00838 green, and
+0.00307 blue (luminance 0.00716). The wall's far face is 0.00893 / 0.00367 /
+0.00172 (luminance 0.00465). The crate is brighter than the wall by luminance,
+so the red-only "darker than the wall" check does not rule out a through-wall
+add. The wall-removal control raises the crate 7.9x, but it also removes the
+wall's bounce and opens the around-end path; the far-side pick at the wall end
+rises 219x. The capture does not separate through-wall transfer from around-end
+transfer. The 0.5 m wall is the thinnest prefab; 0.1-0.2 m remains untested.
 
 ## Coplanar seam
 
@@ -205,8 +210,8 @@ field on the white wall.
 
 ## Determinism
 
-Tool 5, default arena, two runs at 16 threads and one at 8 threads for each
-bounce count:
+Tool 5, default arena, two 16-thread runs and one 8-thread run for two bounces,
+and one 16-thread and one 8-thread run for one bounce:
 
 ```sh
 ./bin/harbagsa-bake --out runs/lighting-bounce-check/arena-2t16-a.hbake --bounces 2 --threads 16
@@ -218,7 +223,8 @@ sha256sum runs/lighting-bounce-check/*.hbake
 ```
 
 The three two-bounce artifacts are byte-identical at
-`014473d76db6bbbad610bd0c6ebb6dbfe55d3bbd04b91962c438f029a103b6b0`. The two
+`2529d04bc507f64a1f95e1f392d48abaea0e6ca77af247419e4f73777b8bcbd6` (re-run
+after the alpha-channel fix; the rendered pixels are unchanged). The two
 one-bounce artifacts are byte-identical at
 `b20cf70147262ce64ed924faae95d4764ecb5b6b57532291af6c1beb7a6e629c`. The
 one-bounce payload hash is `3a680665ebcdd171`, the same as the tool 4

@@ -74,8 +74,7 @@ one normal, so the kernel cannot bleed across a surface, and the gutter still
 isolates neighbouring charts. The texel seed follows `(source, id, face, x, y)`
 instead of the atlas index, so a static edit that only moves charts does not
 re-roll their noise. At this measurement `TOOL_VERSION` was 2 and the format and
-key versions were 1; the artifact at that time was format 2, tool 4, key 2. The
-current tool is 5.
+key versions were 1. The current artifact is format 2, tool 5, key 2.
 
 ```sh
 ./bin/harbagsa-agent run scenarios/lighting-noise.json --out runs/lighting-noise
