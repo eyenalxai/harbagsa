@@ -207,6 +207,7 @@ backend_scene :: proc(data: ^Backend_Data, session: ^Session, alpha: f32) -> ren
 		alpha         = alpha,
 		delta_seconds = game.SIMULATION_STEP,
 		debug_view    = session.view.debug,
+		fx_view       = session.view.fx,
 		captured      = !session.view.hint,
 		hud           = session.view.hud,
 		perf_stats    = perf_stats,

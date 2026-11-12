@@ -1114,6 +1114,7 @@ dependencies = [
  "ash",
  "pollster 0.4.0",
  "rune",
+ "rune-fx",
  "wgpu",
 ]
 
@@ -2685,6 +2686,16 @@ dependencies = [
  "xkbcommon",
  "zbus 6.2.1",
  "zeroize",
+]
+
+[[package]]
+name = "rune-fx"
+version = "0.0.1"
+dependencies = [
+ "bytemuck",
+ "rune-motion",
+ "rune-staging",
+ "wgpu",
 ]
 
 [[package]]
