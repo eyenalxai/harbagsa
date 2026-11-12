@@ -699,6 +699,7 @@ pub extern "C" fn ui_frame(
             }
         }
     }
+    runtime.invalidate();
     runtime.frame(dt);
     0
 }
