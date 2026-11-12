@@ -37,13 +37,14 @@ status note is the signal there.
 
 ## Slider
 
-The Type weight row is the only slider. Left and Right step by 10 within
-100..900. The value is the number only. The track spans the panel inner width,
-the unfilled track is white at 20%, and the filled width follows the ratio in the
-accent colour. There is no knob and no tick mark. The slider has no drag path;
-the menu is keyboard-driven and the Rune view does not return a drag action.
+The Type weight row is the only slider. Left and Right step by 5 within
+100..900. The value is the number only and draws in Geist Mono. The track spans
+the panel inner width, the unfilled track is white at 20%, and the filled width
+follows the ratio in the accent colour. There is no knob and no tick mark. The
+slider has no drag path; the menu is keyboard-driven and the Rune view does not
+return a drag action.
 The Type weight value applies to every Rune text node as a span weight. A value
-of 400 leaves Rune's default.
+of 400 is the old default. Geist's continuous `wght` axis reaches 565.
 
 ## Change results
 

@@ -4,8 +4,14 @@ use std::sync::OnceLock;
 use ash::vk;
 use ash::vk::Handle;
 use rune::render::{EffectPhase, EffectSite, Renderer};
+use rune::text::TextSystem;
 use rune::{Cx, El, Env, Key, KeyEvent, Mods, Runtime, Span, text};
 use rune_fx::{Fx, FxFrame, FxLayer, FxOptions, FxRenderer, FxSlot, GlowParams, Shape, rgb};
+
+const GEIST: &[u8] = include_bytes!("../assets/Geist-Variable.ttf");
+const GEIST_MONO: &[u8] = include_bytes!("../assets/GeistMono-Variable.ttf");
+const ROW_NUMERIC: u32 = 1;
+const ROW_BLOCKED: u32 = 2;
 
 #[repr(C)]
 pub struct UiVkConfig {
@@ -466,12 +472,19 @@ fn host() -> Option<&'static mut Host> {
     HOST.get().map(|&pointer| unsafe { &mut *(pointer as *mut Host) })
 }
 
-fn weighted_text(content: &str, weight: f32) -> El {
+fn weighted_text(content: &str, weight: f32, mono: bool) -> El {
     let element = text(content);
-    if weight <= 0.0 {
+    if weight <= 0.0 && !mono {
         return element;
     }
-    element.spans(vec![Span::new(0, content.len()).weight(weight)])
+    let mut span = Span::new(0, content.len());
+    if weight > 0.0 {
+        span = span.weight(weight);
+    }
+    if mono {
+        span = span.mono();
+    }
+    element.spans(vec![span])
 }
 
 fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
@@ -497,16 +510,20 @@ fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
     for r in &state.panel.rows {
         panel = match r.kind {
             5 => panel.child(el().h(1.0).w_full().fill(hairline)),
-            6 => panel.child(weighted_text(r.label.as_str(), state.weight).color(tertiary)),
+            6 => panel.child(weighted_text(r.label.as_str(), state.weight, false).color(tertiary)),
             0 | 1 | 2 | 3 | 4 => {
                 let label_color = if r.kind == 3 { tertiary } else { secondary };
-                let value_color = if r.flags & 2 != 0 { secondary } else { primary };
+                let value_color = if r.flags & ROW_BLOCKED != 0 { secondary } else { primary };
                 let line = row()
                     .w_full()
                     .gap(12.0)
-                    .child(weighted_text(r.label.as_str(), state.weight).color(label_color))
+                    .child(weighted_text(r.label.as_str(), state.weight, false).color(label_color))
                     .child(spacer())
-                    .child(weighted_text(r.value.as_str(), state.weight).color(value_color));
+                    .child(weighted_text(
+                        r.value.as_str(),
+                        state.weight,
+                        r.flags & ROW_NUMERIC != 0,
+                    ).color(value_color));
                 panel.child(line)
             }
             _ => panel,
@@ -519,12 +536,12 @@ fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
     {
         col()
     } else {
-        weighted_text(state.panel.capture_hint.as_str(), state.weight).color(primary)
+        weighted_text(state.panel.capture_hint.as_str(), state.weight, false).color(primary)
     };
     let notice = if state.panel.notice.is_empty() {
         col()
     } else {
-        weighted_text(state.panel.notice.as_str(), state.weight).color(primary)
+        weighted_text(state.panel.notice.as_str(), state.weight, false).color(primary)
     };
 
     let ink = Color { r: 0.04, g: 0.05, b: 0.07, a: 1.0 };
@@ -534,7 +551,7 @@ fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
         .padding(8.0)
         .radius(6.0)
         .fill(accent)
-        .child(weighted_text("Close", state.weight).color(ink))
+        .child(weighted_text("Close", state.weight, false).color(ink))
         .on_press(|s: &mut UiState| {
             s.actions.push(UiAction { kind: 1, value: 0 });
         });
@@ -543,7 +560,7 @@ fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
         .padding(8.0)
         .radius(6.0)
         .fill(Color { r: 0.16, g: 0.19, b: 0.24, a: 1.0 })
-        .child(weighted_text("Debug", state.weight).color(Color::WHITE))
+        .child(weighted_text("Debug", state.weight, false).color(Color::WHITE))
         .on_press(|s: &mut UiState| {
             s.actions.push(UiAction { kind: 2, value: 0 });
         });
@@ -653,7 +670,8 @@ pub extern "C" fn ui_attach(target: *const UiTarget) -> i32 {
     fx.add_format(&host.device, wgpu::TextureFormat::Rgba16Float);
     host.fx = Some(fx);
     host.scale = scale;
-    let mut runtime = Runtime::new(
+    let text_system = TextSystem::new(&[GEIST, GEIST_MONO], ("Geist", "Geist Mono"));
+    let mut runtime = Runtime::with_text(
         UiState {
             speed: 0.0,
             grounded: false,
@@ -669,6 +687,7 @@ pub extern "C" fn ui_attach(target: *const UiTarget) -> i32 {
         view,
         (target.width as f32 / scale, target.height as f32 / scale),
         Env::new(false, scale),
+        text_system,
     );
     runtime.frame(0.0);
     host.runtime = Some(runtime);
@@ -925,7 +944,7 @@ fn menu_panel(menu: &MenuState, key_prefix: Option<&str>, weight: f32) -> El {
             row()
                 .w_full()
                 .child(spacer())
-                .child(weighted_text(menu.title.as_str(), weight).color(primary))
+                .child(weighted_text(menu.title.as_str(), weight, false).color(primary))
                 .child(spacer()),
         )
         .child(el().h(1.0).w_full().fill(hairline));
@@ -936,7 +955,7 @@ fn menu_panel(menu: &MenuState, key_prefix: Option<&str>, weight: f32) -> El {
             continue;
         }
         if r.kind == 6 {
-            panel = panel.child(weighted_text(r.label.as_str(), weight).color(tertiary));
+            panel = panel.child(weighted_text(r.label.as_str(), weight, false).color(tertiary));
             continue;
         }
         let selected = index == menu.selected;
@@ -947,9 +966,13 @@ fn menu_panel(menu: &MenuState, key_prefix: Option<&str>, weight: f32) -> El {
             .gap(12.0)
             .fill(if selected { raised } else { Color::TRANSPARENT })
             .child(if selected { el().w(2.0).h(18.0).fill(accent) } else { el() })
-            .child(weighted_text(r.label.as_str(), weight).color(label_color))
+            .child(weighted_text(r.label.as_str(), weight, false).color(label_color))
             .child(spacer())
-            .child(weighted_text(r.value.as_str(), weight).color(primary));
+            .child(weighted_text(
+                r.value.as_str(),
+                weight,
+                r.flags & ROW_NUMERIC != 0,
+            ).color(primary));
         if let Some(prefix) = key_prefix {
             line = line.key(format!("{prefix}{index}"));
         }
@@ -967,7 +990,7 @@ fn menu_panel(menu: &MenuState, key_prefix: Option<&str>, weight: f32) -> El {
     let note = if menu.note.is_empty() {
         col()
     } else {
-        weighted_text(menu.note.as_str(), weight).color(tertiary)
+        weighted_text(menu.note.as_str(), weight, false).color(tertiary)
     };
     panel = panel.child(note);
 
@@ -977,8 +1000,8 @@ fn menu_panel(menu: &MenuState, key_prefix: Option<&str>, weight: f32) -> El {
         let mut line = row().gap(16.0);
         for (keys, action) in chunk {
             line = line
-                .child(weighted_text(keys.as_str(), weight).color(primary))
-                .child(weighted_text(action.as_str(), weight).color(secondary));
+                .child(weighted_text(keys.as_str(), weight, false).color(primary))
+                .child(weighted_text(action.as_str(), weight, false).color(secondary));
         }
         hints = hints.child(line);
     }
