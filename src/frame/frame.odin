@@ -205,6 +205,8 @@ build :: proc(
 				owns_panel      = true,
 				menu            = hud.menu.view,
 				owns_menu       = true,
+				palette         = palette,
+				owns_palette    = true,
 			},
 		}
 	}

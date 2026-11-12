@@ -43,6 +43,8 @@ UI_Frame :: struct {
 	owns_panel:      bool,
 	menu:            ui.Menu,
 	owns_menu:       bool,
+	palette:         ui.Palette,
+	owns_palette:    bool,
 }
 
 HUD_Frame :: struct {
@@ -111,7 +113,7 @@ build_hud :: proc(o: ^Overlay, width, height: f32, hud: HUD_Frame) {
 		return
 	}
 	if hud.ui.owns_panel {
-		if hud.palette.open {
+		if hud.palette.open && !hud.ui.owns_palette {
 			build_palette(o, width, height, hud.palette)
 		}
 		return
