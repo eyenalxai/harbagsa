@@ -85,7 +85,7 @@ scenario, 3 renderer, backend, or file failure.
 
 ```json
 {
-  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false, "fx": false},
   "commands": [
     {"cmd": "look", "dx": 220, "dy": 0},
     {"cmd": "input", "forward": 1},
@@ -136,7 +136,8 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `captures`: up to eight outputs from one frame.
 - `camera`: `position` plus `look_at` or `yaw_deg`/`pitch_deg`, optional
   `fov_deg`; `clear: true` removes the override.
-- `view`: `hud`, `debug`, `hint`, and `perf` flags.
+- `view`: `hud`, `debug`, `hint`, `perf`, and `fx` flags. `fx` turns on the
+  rune-fx demo; it is off by default.
 - `debug_mode`: `active` boolean.
 - `editor`: palette, placement, object, light, camera, pointer, and history fields.
 - `menu`: `open`, `item`, `activate`, `direction`, and `set`.
@@ -184,6 +185,8 @@ so a capture includes it; there is no separate UI target.
 `scenarios/rune-palette.json` opens the palette and clicks a row.
 `scenarios/rune-menu.json` opens the settings menu and sets the type weight.
 `scenarios/rune-ui.json` clicks the status panel action.
+`scenarios/rune-fx.json` sets `view.fx` and shows the status action row with its
+rune-fx glow.
 
 `ui` needs the renderer, so it is an error with `--no-render`. The menu and
 palette state still open without a renderer, but there is no frame to click.

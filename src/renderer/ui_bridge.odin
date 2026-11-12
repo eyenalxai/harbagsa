@@ -46,6 +46,7 @@ Ui_Snapshot :: struct {
 	grounded:     u32,
 	menu_open:    u32,
 	palette_open: u32,
+	fx:           u32,
 }
 
 Ui_Row :: struct {
@@ -205,6 +206,7 @@ ui_step :: proc(r: ^Renderer, frame: UI_Frame) {
 		grounded     = frame.snapshot.grounded,
 		menu_open    = frame.snapshot.menu_open,
 		palette_open = frame.snapshot.palette_open,
+		fx           = frame.snapshot.fx,
 	}
 	rows: [64]Ui_Row
 	row_count := min(len(frame.panel_rows), len(rows))

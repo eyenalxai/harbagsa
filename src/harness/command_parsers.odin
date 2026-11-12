@@ -44,6 +44,9 @@ parse_view_fields :: proc(object: json.Object) -> (view: View_Command, error: st
 	if field_error := json_optional_bool(object, "perf", &view.perf, &view.has_perf); field_error != "" {
 		return {}, field_error
 	}
+	if field_error := json_optional_bool(object, "fx", &view.fx, &view.has_fx); field_error != "" {
+		return {}, field_error
+	}
 	return view, ""
 }
 

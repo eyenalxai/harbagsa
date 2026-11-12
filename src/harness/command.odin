@@ -119,10 +119,12 @@ View_Command :: struct {
 	debug:     bool,
 	hint:      bool,
 	perf:      bool,
+	fx:        bool,
 	has_hud:   bool,
 	has_debug: bool,
 	has_hint:  bool,
 	has_perf:  bool,
+	has_fx:    bool,
 }
 
 Record_Command :: struct {
