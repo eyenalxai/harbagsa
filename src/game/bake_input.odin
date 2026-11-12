@@ -5,6 +5,7 @@ package game
 import "core:mem"
 
 import "src:bake"
+import "src:geometry"
 
 Bake_Input :: struct {
 	boxes:  [dynamic]bake.Box_Entry,
@@ -35,17 +36,20 @@ object_has_bake_slot :: proc(object: Placed_Object) -> bool {
 	return object.body_mode == .Static
 }
 
-bake_arena_slot :: proc(index: int) -> bake.Box_Slot {
+bake_arena_slot :: proc(index: int, box: geometry.Box) -> bake.Box_Slot {
 	source, id := arena_identity(index)
-	return {key = bake.slot_key(source, id), has_slot = true}
+	return {key = bake.slot_key(source, id, box), has_slot = true}
 }
 
-bake_placed_slot :: proc(object: Placed_Object) -> bake.Box_Slot {
+bake_placed_slot :: proc(sim: ^Simulation, object: Placed_Object) -> bake.Box_Slot {
 	if !object_has_bake_slot(object) {
 		return {}
 	}
 	source, id := placed_identity(object)
-	return {key = bake.slot_key(source, id), has_slot = true}
+	return {
+		key = bake.slot_key(source, id, simulation_object_box(sim, object.id)),
+		has_slot = true,
+	}
 }
 
 // The static bake input is exactly the arena boxes, placed static bodies, and

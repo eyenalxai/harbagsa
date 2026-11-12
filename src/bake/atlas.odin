@@ -3,6 +3,7 @@ package bake
 
 import "core:math"
 import "core:mem"
+import "core:slice"
 
 Chart :: struct {
 	box:    int,
@@ -11,6 +12,18 @@ Chart :: struct {
 	y:      int,
 	width:  int,
 	height: int,
+}
+
+// The packer sorts these before placement. A tall chart first means the shelf
+// height is set by the tallest entry, so smaller faces do not leave a tall row
+// with a mostly empty upper half.
+Chart_Plan :: struct {
+	box:         int,
+	face:        int,
+	width:       int,
+	height:      int,
+	alloc_width: int,
+	alloc_height: int,
 }
 
 Atlas_Layout :: struct {
@@ -51,11 +64,10 @@ atlas_layout :: proc(
 	layout.faces = make([]Face, slot_count * FACE_COUNT, allocator)
 	layout.slots = make([]Slot, slot_count, allocator)
 
-	cursor_x := 0
-	cursor_y := 0
-	row_height := 0
+	plans := make([dynamic]Chart_Plan, 0, slot_count * FACE_COUNT, allocator)
+	defer delete(plans)
 	for entry, box_index in static.boxes {
-		key := slot_key(entry.source, entry.id)
+		key := slot_key(entry.source, entry.id, entry.box)
 		layout.slots[box_index] = {
 			key        = key,
 			first_face = u32(box_index * FACE_COUNT),
@@ -66,41 +78,77 @@ atlas_layout :: proc(
 			texels := f64(quality.texels_per_meter)
 			width := max(int(quality.min_chart), int(math.ceil(width_meters * texels)))
 			height := max(int(quality.min_chart), int(math.ceil(height_meters * texels)))
-			alloc_width := width + 2 * pad
-			alloc_height := height + 2 * pad
-			if alloc_width > atlas_size || alloc_height > atlas_size {
-				atlas_layout_destroy(&layout, allocator)
-				return {}, .Atlas_Full
-			}
-			if cursor_x + alloc_width > atlas_size {
-				cursor_x = 0
-				cursor_y += row_height
-				row_height = 0
-			}
-			if cursor_y + alloc_height > atlas_size {
-				atlas_layout_destroy(&layout, allocator)
-				return {}, .Atlas_Full
-			}
-			chart := Chart {
-				box    = box_index,
-				face   = face,
-				x      = cursor_x + pad,
-				y      = cursor_y + pad,
-				width  = width,
+			append(&plans, Chart_Plan {
+				box = box_index,
+				face = face,
+				width = width,
 				height = height,
-			}
-			append(&layout.charts, chart)
-			layout.faces[box_index * FACE_COUNT + face] = {
-				key     = key,
-				slot    = u32(box_index),
-				face    = u8(face),
-				uv_rect = center_to_center(chart, atlas_size),
-			}
-			cursor_x += alloc_width
-			row_height = max(row_height, alloc_height)
+				alloc_width = width + 2 * pad,
+				alloc_height = height + 2 * pad,
+			})
 		}
 	}
+	slice.sort_by(plans[:], proc(a, b: Chart_Plan) -> bool {
+		if a.alloc_height != b.alloc_height {
+			return a.alloc_height > b.alloc_height
+		}
+		if a.alloc_width != b.alloc_width {
+			return a.alloc_width > b.alloc_width
+		}
+		if a.box != b.box {
+			return a.box < b.box
+		}
+		return a.face < b.face
+	})
+
+	cursor_x := 0
+	cursor_y := 0
+	row_height := 0
+	for plan in plans {
+		if plan.alloc_width > atlas_size || plan.alloc_height > atlas_size {
+			atlas_layout_destroy(&layout, allocator)
+			return {}, .Atlas_Full
+		}
+		if cursor_x + plan.alloc_width > atlas_size {
+			cursor_x = 0
+			cursor_y += row_height
+			row_height = 0
+		}
+		if cursor_y + plan.alloc_height > atlas_size {
+			atlas_layout_destroy(&layout, allocator)
+			return {}, .Atlas_Full
+		}
+		chart := Chart {
+			box    = plan.box,
+			face   = plan.face,
+			x      = cursor_x + pad,
+			y      = cursor_y + pad,
+			width  = plan.width,
+			height = plan.height,
+		}
+		append(&layout.charts, chart)
+		layout.faces[plan.box * FACE_COUNT + plan.face] = {
+			key     = layout.slots[plan.box].key,
+			slot    = u32(plan.box),
+			face    = u8(plan.face),
+			uv_rect = center_to_center(chart, atlas_size),
+		}
+		cursor_x += plan.alloc_width
+		row_height = max(row_height, plan.alloc_height)
+	}
 	return layout, .None
+}
+
+// Every chart owns the chart rect plus one gutter on each side. The sum is the
+// atlas texels the layout allocates, not the baked or valid texel count.
+atlas_allocated_texels :: proc(faces: []Face, atlas_size, pad: int) -> int {
+	total := 0
+	for face in faces {
+		width := int(math.round(f64((face.uv_rect[2] - face.uv_rect[0]) * f32(atlas_size)))) + 1
+		height := int(math.round(f64((face.uv_rect[3] - face.uv_rect[1]) * f32(atlas_size)))) + 1
+		total += (width + 2 * pad) * (height + 2 * pad)
+	}
+	return total
 }
 
 @(private)

@@ -57,6 +57,7 @@ run path. `--out DIR` chooses the whole run directory.
 | measure the arena from above | `scenarios/perf-arena.json` |
 | measure 96 lights at 1080p | `scenarios/perf-mixed.json` |
 | review the mixed-lighting evidence | `docs/evidence/mixed-lighting.md` |
+| review the bake atlas evidence | `docs/evidence/bake-atlas.md` |
 | measure performance | **Performance** |
 | reproduce a live view | **Live repro** |
 | understand a design choice | `docs/adr/0045-mixed-static-baked-indirect.md` |
@@ -152,8 +153,8 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `place`: `prefab`, `position`, optional `yaw_deg`, `body`, `name`, and `light`.
 - `remove`: object `id` or `name`.
 - `bake`: rebuild and publish the static indirect; optional `probe_spacing`,
-  `probe_basis` (`octa` or `sh9`), `probe_moments` (8 or 16), `threads`, and
-  `out`.
+  `probe_basis` (`octa` or `sh9`), `probe_moments` (8 or 16), `scale` (0, 8],
+  `threads`, and `out`.
 - `pick`: resolve one pixel with `at`; see **Pick**.
 - `get`: one state or capture `field`.
 - `quit`: stop the session.
@@ -391,11 +392,13 @@ active light count, cluster overflow, atlas weight, text counters, timestamp
 period, and debug line counts. `state.bake` is the lifecycle view and `state.renderer.bake` is the
 same report inside the renderer block. Both report the status (`missing`,
 `stale`, `current`, or `failed`), the current key, the artifact key, format and
-tool versions, the measured bake time, atlas and probe counts, probe spacing,
-the probe basis and moment resolution, the invalid-probe count before dilation,
-the dynamic boxes whose centre is
+tool versions, the measured bake time, atlas and probe counts, allocated texels
+and occupancy, probe spacing, the probe basis and moment resolution, the
+invalid-probe count before dilation, the dynamic boxes whose centre is
 outside the probe volume (`probe_missing`), artifact and GPU bytes, and the load
-or publish error. `state.render_digest` covers target extent, camera, boxes, box
+or publish error. `allocated_texels` is the sum of the chart rectangles plus
+their gutters; `occupancy` is that sum divided by the atlas texel count. Neither
+is the valid-texel or baked-texel count. `state.render_digest` covers target extent, camera, boxes, box
 slots, emissive strengths, point lights, jitter, atlas weight, clip height,
 shadow visibility, lightmap, probe, bake key, bake status, and view flags.
 `setup.renderer.shader_digest` covers the embedded SPIR-V.
@@ -409,8 +412,10 @@ lamps and dynamic bodies never enter the bake. `bin/harbagsa-bake
 spacing against the artifact's own quality block. `--probe-basis octa|sh9` and
 `--probe-moments 8|16` select the A/B variants; the default is octa with 8 x 8
 moments. The tool reports its bake time, ray counts, static light count, byte
-sizes, invalid and dilated texels, and invalid and dilated probes. The artifact
-stores zero bake time so identical inputs produce identical bytes.
+sizes, allocated texels and occupancy, invalid and dilated texels, and invalid
+and dilated probes. The artifact stores zero bake time so identical inputs
+produce identical bytes. The atlas uses a 1-texel gutter and a 4-texel minimum
+chart, and the packer sorts charts by allocation height before the shelf pack.
 
 A current artifact is sampled by both indirect paths. Each static face derives
 its atlas UV from the local position and local face normal, so no vertex UV
@@ -431,10 +436,13 @@ sample position, so the copied moments keep their origin.
 
 The `bake` command rebuilds from the current static input and publishes the new
 artifact without restarting the renderer. It accepts optional `probe_spacing`
-(1 or 2), `probe_basis` (`octa` or `sh9`), `probe_moments` (8 or 16), `threads`
-(1 to 256), and `out` (write the artifact to this path). The command requires a
-renderer. The default build uses 1 m probes, 128 lightmap rays, 1024 probe rays,
-and one bounce; it takes about 5 s at 16 threads. Use `probe_spacing: 2` for the
+(1 or 2), `probe_basis` (`octa` or `sh9`), `probe_moments` (8 or 16), `scale`
+(0, 8], `threads` (1 to 256), and `out` (write the artifact to this path). The
+command requires a renderer. `scale` multiplies the static box centres, half
+extents, and light positions for an atlas capacity run; the published artifact
+is stale against the unscaled scene because its key covers the scaled boxes. The
+default build uses 1 m probes, 128 lightmap rays, 1024 probe rays, and one
+bounce; it takes about 5 s at 16 threads. Use `probe_spacing: 2` for the
 measured fallback when probe work or memory is the limit. The A/B result and
 the reasons the defaults stay octa with 8 x 8 moments are in
 `docs/evidence/probe-format.md`. `make bake` writes `<artifact>.time` beside the artifact; the renderer
@@ -449,10 +457,20 @@ publish or the loaded sidecar.
 A static fixture or static geometry edit changes the key and sets the status to
 `stale` immediately, even before the next frame. Direct light updates at once;
 the old indirect stays bound and visible until the publish. A dynamic lamp or
-crate move leaves the key unchanged and the status `current`. A publish failure
-leaves the old artifact bound and reports `failed`; it never falls back to black
-or to another bake. Removing every static fixture and publishing a fresh bake
-yields zero indirect, and a lamp-free view stays black.
+crate move leaves the key unchanged and the status `current`. A moved static box
+is the exception: its slot key includes the transform, so the old chart no
+longer matches and that box falls back to direct light instead of carrying its
+previous lightmap to the new position. `scenarios/bake-static-move.json` places a
+static box, bakes, moves it, and picks the moved face; the second pick reports a
+zero rect and `texel: [-1, -1]`. A publish failure leaves the old artifact bound
+and reports `failed`; it never falls back to black or to another bake. Removing
+every static fixture and publishing a fresh bake yields zero indirect, and a
+lamp-free view stays black.
+
+`scenarios/bake-atlas-2x.json` publishes a bake of the static geometry scaled 2x
+linearly; `state.bake.allocated_texels` and `occupancy` report the capacity. The
+default 2x run fits in the 1024² atlas. `bin/harbagsa-bake --scale 2` writes the
+same artifact from the tool.
 
 Use `--bake PATH` on `run` or `session` to load another artifact:
 
@@ -462,10 +480,14 @@ Use `--bake PATH` on `run` or `session` to load another artifact:
 ```
 
 A version or layout mismatch sets `status` to `failed` and records the loader
-error. The artifact format is documented in
+error. A tool 3 artifact has the previous 4-texel gutter and 8-texel minimum
+chart; the loader rejects that quality block, so the artifact must be rebuilt.
+The artifact format is documented in
 `docs/adr/0044-bake-data-contract.md`; the mixed-lighting decision is
 `docs/adr/0045-mixed-static-baked-indirect.md`. `scenarios/bake-lifecycle.json`
 exercises the current, stale, and dynamic-move states;
+`scenarios/bake-static-move.json` exercises the moved-static-box slot;
+`scenarios/bake-atlas-2x.json` exercises the 2x atlas capacity;
 `scenarios/bake-empty.json` removes every static fixture and captures the
 lamp-free result; `scenarios/bake-hud.json` captures the lamp kind and bake
 status in the debug HUD.
