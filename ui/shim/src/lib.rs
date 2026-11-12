@@ -3,8 +3,9 @@ use std::sync::OnceLock;
 
 use ash::vk;
 use ash::vk::Handle;
-use rune::render::Renderer;
+use rune::render::{EffectPhase, EffectSite, Renderer};
 use rune::{Cx, El, Env, Key, KeyEvent, Mods, Runtime};
+use rune_fx::{Fx, FxFrame, FxLayer, FxOptions, FxRenderer, FxSlot, GlowParams, Shape, rgb};
 
 #[repr(C)]
 pub struct UiVkConfig {
@@ -68,6 +69,7 @@ struct UiState {
     speed: f32,
     grounded: bool,
     menu_open: bool,
+    fx: bool,
     actions: Vec<UiAction>,
     panel: PanelState,
     menu: MenuState,
@@ -81,6 +83,7 @@ pub struct UiSnapshot {
     pub grounded: u32,
     pub menu_open: u32,
     pub palette_open: u32,
+    pub fx: u32,
 }
 
 #[repr(C)]
@@ -199,11 +202,15 @@ struct Host {
     format: Option<wgpu::TextureFormat>,
     runtime: Option<Runtime<UiState>>,
     renderer: Option<Renderer>,
+    fx: Option<FxRenderer>,
     textures: Vec<wgpu::Texture>,
     views: Vec<wgpu::TextureView>,
     width: u32,
     height: u32,
+    scale: f32,
 }
+
+const FX_GLOW: u32 = 1;
 
 static HOST: OnceLock<usize> = OnceLock::new();
 static EXTENSIONS: OnceLock<Vec<usize>> = OnceLock::new();
@@ -409,10 +416,12 @@ unsafe fn adopt(
             format: None,
             runtime: None,
             renderer: None,
+            fx: None,
             textures: Vec::new(),
             views: Vec::new(),
             width: 0,
             height: 0,
+            scale: 1.0,
         },
     ))
 }
@@ -529,6 +538,10 @@ fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
             s.actions.push(UiAction { kind: 2, value: 0 });
         });
 
+    let glow = rune::effect(FX_GLOW)
+        .effect_data([0.9, 0.0, 0.0, 0.0])
+        .effect_bleed(60.0)
+        .opacity(0.85);
     col()
         .w_full()
         .h_full()
@@ -543,7 +556,13 @@ fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
                 .gap(8.0)
                 .child(notice)
                 .child(hint)
-                .child(row().gap(8.0).child(close).child(debug)),
+                .child({
+                    let mut actions = row().gap(8.0);
+                    if state.fx {
+                        actions = actions.child(glow.absolute(0.0, 0.0).w_full().h_full());
+                    }
+                    actions.child(close).child(debug)
+                }),
         )
 }
 
@@ -620,11 +639,16 @@ pub extern "C" fn ui_attach(target: *const UiTarget) -> i32 {
     host.height = target.height;
     host.renderer = Some(Renderer::new(&host.device, format));
     let scale = if target.scale > 0.0 { target.scale } else { 1.0 };
+    let mut fx = FxRenderer::new(&host.device, format, FxOptions { dither: true });
+    fx.add_format(&host.device, wgpu::TextureFormat::Rgba16Float);
+    host.fx = Some(fx);
+    host.scale = scale;
     let mut runtime = Runtime::new(
         UiState {
             speed: 0.0,
             grounded: false,
             menu_open: false,
+            fx: false,
             actions: Vec::new(),
             panel: PanelState::default(),
             menu: MenuState::default(),
@@ -660,17 +684,47 @@ pub extern "C" fn ui_draw(image_index: u32) -> i32 {
         &runtime.instances,
         (host.width, host.height),
     );
+    let plan = fx_plan(runtime);
+    if let Some(fx) = host.fx.as_mut() {
+        let _ = fx.prepare_with_slots(
+            &host.device,
+            &host.queue,
+            &FxFrame {
+                viewport: [host.width, host.height],
+                scale: host.scale,
+                layers: &plan.layers,
+                backdrop: None,
+                sources: &[],
+            },
+            &plan.slots,
+        );
+    }
+    let fx = host.fx.as_ref();
     let mut encoder = host
         .device
         .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("rune-ui") });
-    renderer.encode_layers(&mut encoder);
+    renderer.encode_layers_with(&mut encoder, &mut |pass, site| {
+        if site.in_layer {
+            if let Some(fx) = fx {
+                draw_effect(fx, &plan.effects, pass, site);
+            }
+        }
+    });
     renderer.draw_target_range_with(
         &mut encoder,
         &host.views[index],
         format,
         wgpu::LoadOp::Load,
         0..runtime.instances.len() as u32,
-        &mut |_, _| {},
+        &mut |phase, site| {
+            if let EffectPhase::Draw(pass) = phase {
+                if !site.in_layer {
+                    if let Some(fx) = fx {
+                        draw_effect(fx, &plan.effects, pass, site);
+                    }
+                }
+            }
+        },
     );
     let submission = renderer.submit(&host.queue, encoder);
     if host
@@ -704,6 +758,7 @@ pub extern "C" fn ui_frame(
     runtime.state.speed = snapshot.speed;
     runtime.state.grounded = snapshot.grounded != 0;
     runtime.state.menu_open = snapshot.menu_open != 0;
+    runtime.state.fx = snapshot.fx != 0;
     runtime.state.actions.clear();
 
     if let Some(panel) = unsafe { panel.as_ref() } {
@@ -967,6 +1022,68 @@ fn push_key_action(state: &mut UiState, key: &str) {
         if let Ok(kind) = rest.parse::<u32>() {
             state.actions.push(UiAction { kind, value: 0 });
         }
+    }
+}
+
+struct FxSlotPlan {
+    instance: u32,
+    layer: usize,
+}
+
+struct FxPlan {
+    layers: Vec<FxLayer>,
+    slots: Vec<FxSlot>,
+    effects: Vec<FxSlotPlan>,
+}
+
+fn fx_plan(runtime: &Runtime<UiState>) -> FxPlan {
+    // Layers and slots upload before the pass; the hook can only draw them.
+    let mut layers = Vec::new();
+    let mut slots = Vec::new();
+    let mut plans = Vec::new();
+    for (index, instance) in runtime.instances.iter().enumerate() {
+        if instance.params[1] != rune::render::KIND_EFFECT {
+            continue;
+        }
+        let mark = instance.border[0] as u32 | ((instance.border[1] as u32) << 16);
+        if mark != FX_GLOW {
+            continue;
+        }
+        let k = instance.params[3];
+        let [x, y, w, h] = instance.rect;
+        let fx = Fx::glow(GlowParams {
+            color: rgb(0x7C5CFF),
+            core: rgb(0xF4F0FF),
+            intensity: instance.uv[0].clamp(0.0, 3.0),
+            radius: 12.0,
+            ..Default::default()
+        });
+        layers.push(fx.on(Shape::rounded(x / k, y / k, w / k, h / k, 0.0)));
+        slots.push(FxSlot::default().scale(k).clip(instance.clip, instance.fade));
+        plans.push(FxSlotPlan {
+            instance: index as u32,
+            layer: layers.len() - 1,
+        });
+    }
+    FxPlan { layers, slots, effects: plans }
+}
+
+fn draw_effect(
+    fx: &FxRenderer,
+    plans: &[FxSlotPlan],
+    pass: &mut wgpu::RenderPass<'_>,
+    site: &EffectSite<'_>,
+) {
+    if site.mark != FX_GLOW {
+        return;
+    }
+    let Some(plan) = plans.iter().find(|plan| plan.instance == site.index) else {
+        return;
+    };
+    if site.in_layer {
+        fx.draw_layer_in(pass, site.format, site.origin, plan.layer);
+    } else {
+        fx.draw_layer(pass, plan.layer);
     }
 }
 

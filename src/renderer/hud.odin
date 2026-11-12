@@ -27,6 +27,7 @@ UI_Snapshot :: struct {
 	grounded:     u32,
 	menu_open:    u32,
 	palette_open: u32,
+	fx:           u32,
 }
 
 UI_Frame :: struct {
