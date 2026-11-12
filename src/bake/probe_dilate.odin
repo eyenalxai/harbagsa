@@ -19,7 +19,7 @@ probe_dilate :: proc(work: ^Probe_Work, allocator: mem.Allocator) -> (dilated: i
 
 	irradiance_span := PROBE_TEXEL_COUNT
 	if work.basis == .SH9 {
-		irradiance_span = PROBE_SH_COEFFS * 4
+		irradiance_span = PROBE_SH_TEXELS
 	}
 	moment_count := work.moment_texels * work.moment_texels
 	moment_span := moment_count * PROBE_MOMENT_CHANNELS

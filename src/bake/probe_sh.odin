@@ -86,10 +86,9 @@ probe_blend_sh9 :: proc(
 	projection := 4.0 * math.PI / f64(work.rays)
 	for index in 0 ..< PROBE_SH_COEFFS {
 		scale := projection * sh_band_scale(sh_band(index)) * sh_window(index)
-		base := (probe * PROBE_SH_COEFFS + index) * 4
+		base := probe * PROBE_SH_TEXELS + index * 3
 		work.irradiance_f16[base + 0] = f16(sums[index].x * scale)
 		work.irradiance_f16[base + 1] = f16(sums[index].y * scale)
 		work.irradiance_f16[base + 2] = f16(sums[index].z * scale)
-		work.irradiance_f16[base + 3] = 1.0
 	}
 }

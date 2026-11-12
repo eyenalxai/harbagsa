@@ -44,7 +44,7 @@ never a fill value.
   quality fallback. Each probe stores an 8 x 8 octahedral `R11G11B10F`
   irradiance block and an 8 x 8 or 16 x 16 first/second moment block. The
   quality block and header also accept an optional SH9 irradiance basis, stored
-  as nine signed `RGBA16F` coefficients. Probes are packed into a 2D shelf
+  as 27 signed `R16F` values (nine coefficients x three channels). Probes are packed into a 2D shelf
   atlas; the header stores the column count so a reader can derive both image
   extents.
   The probe state buffer carries the valid flag and virtual offset, so the

@@ -77,7 +77,7 @@ create_bake_resources :: proc(r: ^Renderer, b: ^Bake_Resources) -> bool {
 		return false
 	}
 	basis := bake.Probe_Basis(data.header.probe_basis)
-	irradiance_format := vk.Format.R16G16B16A16_SFLOAT
+	irradiance_format := vk.Format.R16_SFLOAT
 	if basis == .Octa {
 		irradiance_format = .B10G11R11_UFLOAT_PACK32
 	}

@@ -113,7 +113,7 @@ free number.
   follow-up ticket.
 - The bake artifact is about 12 MiB for the default arena and stays under the
   32 MiB budget. The optional 16 x 16 moments raise it to about 18 MiB and the
-  optional SH9 basis lowers it by about 1.4 MiB; neither is the default.
+  optional SH9 basis lowers it by about 1.5 MiB; neither is the default.
 - This supersedes ADR 0042 (dynamic DDGI), ADR 0039 (dynamic-only lamps), and
   the "no probe" wording in ADR 0041. The no-ambient-floor rule, direct clustered
   lights, hard shadows, TAA, and the emissive term stay in force.

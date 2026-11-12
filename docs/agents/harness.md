@@ -422,7 +422,8 @@ irradiance is `R11G11B10F`; the shader stores `(radiance/2)^(1/5)` per texel,
 decodes it with `pow(encoded, 2.5)`, averages, squares, and applies the 2x
 factor, which puts probes and the lightmap on one scale. The `probe_linear` view
 decodes every tap with `2 * pow(encoded, 5)` before weighting. The optional SH9
-basis stores nine signed `RGBA16F` coefficients and reconstructs linearly.
+basis stores 27 signed `R16F` values (nine coefficients x three channels) and
+reconstructs linearly.
 Invalid probes are skipped, never black-filled. The bake dilates a probe that the virtual offset could not repair
 by copying the nearest valid probe and pointing the offset at that probe's
 sample position, so the copied moments keep their origin.
