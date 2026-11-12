@@ -480,9 +480,9 @@ Use `--bake PATH` on `run` or `session` to load another artifact:
 ```
 
 A version or layout mismatch sets `status` to `failed` and records the loader
-error. A tool 3 artifact still loads with its 4-texel gutter and 8-texel minimum
-chart, but the tool version makes the key mismatch and the status `stale`. The
-artifact format is documented in
+error. A tool 3 artifact has the previous 4-texel gutter and 8-texel minimum
+chart; the loader rejects that quality block, so the artifact must be rebuilt.
+The artifact format is documented in
 `docs/adr/0044-bake-data-contract.md`; the mixed-lighting decision is
 `docs/adr/0045-mixed-static-baked-indirect.md`. `scenarios/bake-lifecycle.json`
 exercises the current, stale, and dynamic-move states;

@@ -17,9 +17,9 @@ stale and falls back to direct light instead of sampling its old chart.
 - `allocated_texels` is the sum of the chart rectangles plus 2 x gutter on each
   axis. `occupancy` is that sum divided by `atlas_width * atlas_height`. It is
   not `valid_texels` and not the baked count.
-- `TOOL_VERSION` is 4. The loader still accepts the 4-texel gutter and 8-texel
-  minimum chart, so a tool 3 artifact loads and reports `stale`; it is not
-  rejected as a bad quality block.
+- `TOOL_VERSION` is 4. The loader rejects the previous 4-texel gutter and
+  8-texel minimum chart as an unsupported quality block, so a tool 3 artifact
+  must be rebuilt with tool 4.
 - A slot key hashes `(source, id, transform)`. The frame recomputes it. A moved
   static box misses the artifact's slot and `bake_box_slot` returns no tile.
   The texel seed still follows `(source, id, face, x, y)`, so the transform does
@@ -44,22 +44,17 @@ artifact with the same definition (chart rectangle plus gutter).
 | Artifact bytes | 12,560,480 | 12,560,480 | 0 |
 | Bake time | 5,690 ms | 5,835 ms | +145 ms |
 
-The artifact size is fixed by the 1024² atlas and the probe field. The bake time
+The occupancy drop is the smaller chart allocation, not a packing regression.
+The packer's effect is isolated in the 2x sorted-versus-unsorted run below. The
+artifact size is fixed by the 1024² atlas and the probe field. The bake time
 difference is inside the ±100 ms stage spread measured in
 `docs/evidence/mixed-lighting.md`; the lightmap stage is 3,377 ms before and
 3,077 ms after.
 
-A tool 3 artifact loaded by the tool 4 runtime:
-
-```sh
-./bin/harbagsa-agent run scenarios/lighting-missing.json \
-  --bake runs/before/arena.hbake --out runs/after/old-artifact
-```
-
-`state.bake` reports `status: stale`, `tool_version: 3`,
-`artifact_key: 17336313517104979256`, `key: 2886782810029003299`,
-`allocated_texels: 301,504`, and `occupancy: 0.28753662`. The same scenario
-against the tool 4 artifact reports `status: current`, `tool_version: 4`,
+The tool 4 runtime rejects the tool 3 artifact because its quality block names
+the previous 4-texel gutter and 8-texel minimum chart. The status is `failed`,
+not `stale`; rebuild with `make bake`. The same scenario against the tool 4
+artifact reports `status: current`, `tool_version: 4`,
 `artifact_key == key: 651230722116722838`, `allocated_texels: 187,052`, and
 `occupancy: 0.17838669`.
 

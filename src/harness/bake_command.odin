@@ -62,7 +62,7 @@ parse_bake :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, s
 	}
 	if value, has := json_get(object, "scale"); has {
 		scale, ok := json_number(value)
-		if !ok || scale <= 0 || scale > 8 {
+		if !ok || !bake.scale_supported(f32(scale)) {
 			return {}, format_error("%s", "'scale' must be in (0, 8]")
 		}
 		command.bake.scale = f32(scale)

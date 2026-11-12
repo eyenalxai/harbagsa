@@ -20,11 +20,6 @@ TEXELS_PER_METER :: 4
 GUTTER_TEXELS :: 1
 MIN_CHART_TEXELS :: 4
 
-// The previous layout stays loadable so an artifact built by tool 3 reports
-// stale instead of failed.
-GUTTER_TEXELS_LEGACY :: 4
-MIN_CHART_TEXELS_LEGACY :: 8
-
 PROBE_TEXELS :: 8
 PROBE_TEXEL_COUNT :: PROBE_TEXELS * PROBE_TEXELS
 PROBE_MOMENT_TEXELS :: 8
@@ -111,6 +106,10 @@ probe_moments_supported :: proc(value: u32) -> bool {
 	return value == PROBE_MOMENT_TEXELS || value == PROBE_MOMENT_TEXELS_HIGH
 }
 
+scale_supported :: proc(value: f32) -> bool {
+	return value > 0 && value <= 8
+}
+
 quality_supported :: proc(quality: Quality) -> bool {
 	if quality.atlas_size == 0 || quality.atlas_size > MAX_ATLAS_DIM {
 		return false
@@ -118,12 +117,7 @@ quality_supported :: proc(quality: Quality) -> bool {
 	if quality.texels_per_meter == 0 || quality.texels_per_meter > 64 {
 		return false
 	}
-	if quality.gutter_texels != GUTTER_TEXELS &&
-	   quality.gutter_texels != GUTTER_TEXELS_LEGACY {
-		return false
-	}
-	if quality.min_chart != MIN_CHART_TEXELS &&
-	   quality.min_chart != MIN_CHART_TEXELS_LEGACY {
+	if quality.gutter_texels != GUTTER_TEXELS || quality.min_chart != MIN_CHART_TEXELS {
 		return false
 	}
 	if quality.bounces != BOUNCES || quality.lightmap_rays == 0 || quality.probe_rays == 0 {
