@@ -1,7 +1,8 @@
 # Diagnostic views capture one frame per term
 
-A capture can name up to eight views: `beauty`, `direct`, `lightmap`, `probe`,
-`emissive`, `shadow`, `lightmap_grid`, and `probe_cell`. One simulation frame
+A capture can name up to nine views: `beauty`, `direct`, `lightmap`, `probe`,
+`probe_linear`, `emissive`, `shadow`, `lightmap_grid`, and `probe_cell`. One
+simulation frame
 yields one capture entry per view, each with its own PNG and a `view` field. The
 frame is drawn once, the depth prepass is shared, and each term view is one extra
 lit pass at the same camera and jitter. The term views share the TAA history with
@@ -34,6 +35,10 @@ the beauty frame instead of resetting it.
   and dither path as beauty, with history read and write disabled. The resolve
   pipeline has one colour attachment, so it cannot write history. `float` and
   `raw` views are command errors; use `scene_color` for linear analysis.
+  `probe_linear` is the probe term with each octa tap decoded before weighting,
+  so the `probe` and `probe_linear` entries of one frame are the gamma-2 versus
+  linear pair from the same baked data. Under the SH9 basis there is no octa tap
+  to decode, so `probe_linear` matches `probe`.
 - **Beauty is untouched.** A capture without `views` renders, resolves, and
   writes exactly as before. The composed pixel is the original expression in the
   original shader, and a beauty capture in a `views` list is the same image as a

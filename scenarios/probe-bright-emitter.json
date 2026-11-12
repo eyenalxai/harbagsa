@@ -1,0 +1,20 @@
+{
+  "note": "Bright-emitter probe A/B: a bright static fixture sits behind a dynamic crate and the camera looks at the crate face that points away from it. Direct light is zero there; the probe term exposes the directional basis back lobe.",
+  "size": "1280x720",
+  "parameters": {"basis": "octa", "moments": 8, "threads": 16},
+  "requires": {"renderer_debug": true},
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "renderer_debug", "taa": false, "jitter": false},
+    {"cmd": "place", "prefab": "Lamp", "position": [-16.0, 1.2, -5.0], "name": "bright-emitter",
+     "light": {"kind": "static", "color": "warm", "intensity": 4.0, "range": 10}},
+    {"cmd": "place", "prefab": "Crate", "position": [-16.0, 0.5, -6.0], "name": "bright-emitter-crate"},
+    {"cmd": "bake", "probe_basis": "${basis}", "probe_moments": "${moments}",
+     "threads": "${threads}", "out": "runs/probe-bright-emitter-${basis}-${moments}.hbake"},
+    {"cmd": "camera", "position": [-12.0, 1.7, -9.0], "look_at": [-16.0, 0.5, -6.0], "fov_deg": 55},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "capture", "name": "bright-emitter", "views": ["beauty", "direct", "probe"]},
+    {"cmd": "capture", "name": "gamma-linear", "views": ["probe", "probe_linear"]},
+    {"cmd": "pick", "at": [640, 380]}
+  ]
+}

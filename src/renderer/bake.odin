@@ -46,6 +46,8 @@ Bake_Report :: struct {
 	slots:          int    `json:"slots"`,
 	probes:         int    `json:"probes"`,
 	probe_spacing:  f32    `json:"probe_spacing"`,
+	probe_basis:    string `json:"probe_basis"`,
+	probe_moments:  u32    `json:"probe_moments"`,
 	invalid_probes: u32    `json:"invalid_probes"`,
 	probe_missing:  int    `json:"probe_missing"`,
 	artifact_bytes: int    `json:"artifact_bytes"`,
@@ -61,8 +63,8 @@ Bake_Volume_Uniform :: struct {
 	probe_texels:  u32,
 	atlas_columns: u32,
 	probe_count:   u32,
-	atlas_width:   u32,
-	atlas_height:  u32,
+	basis:         u32,
+	moment_texels: u32,
 }
 
 #assert(size_of(Bake_Volume_Uniform) == 48)
@@ -201,6 +203,8 @@ bake_report :: proc(r: ^Renderer) -> Bake_Report {
 		report.slots = int(header.slot_count)
 		report.probes = int(header.probe_count)
 		report.probe_spacing = header.probe_spacing
+		report.probe_basis = bake.probe_basis_name(bake.Probe_Basis(header.probe_basis))
+		report.probe_moments = header.probe_moment_texels
 		report.invalid_probes = r.bake.data.stats.invalid_probes
 		report.artifact_bytes = len(r.bake.data.bytes)
 	}

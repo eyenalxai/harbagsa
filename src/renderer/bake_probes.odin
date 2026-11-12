@@ -10,7 +10,8 @@ import vk "vendor:vulkan"
 create_bake_probes :: proc(
 	r: ^Renderer,
 	b: ^Bake_Resources,
-	width, height: u32,
+	irradiance_width, irradiance_height: u32,
+	moment_width, moment_height: u32,
 	irradiance_format, moment_format: vk.Format,
 	irradiance_bytes, moment_bytes: []u8,
 	states: []bake.Probe_State,
@@ -18,8 +19,8 @@ create_bake_probes :: proc(
 ) -> bool {
 	irradiance, irradiance_ok := upload_texture(
 		r,
-		width,
-		height,
+		irradiance_width,
+		irradiance_height,
 		irradiance_format,
 		irradiance_bytes,
 	)
@@ -30,8 +31,8 @@ create_bake_probes :: proc(
 
 	moments, moments_ok := upload_texture(
 		r,
-		width,
-		height,
+		moment_width,
+		moment_height,
 		moment_format,
 		moment_bytes,
 	)

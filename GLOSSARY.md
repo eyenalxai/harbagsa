@@ -245,7 +245,7 @@ The separable 3x3 binomial pass that the bake runs over one chart after the buri
 _Avoid_: Blur, smoothing, post-process
 
 **Probe**:
-One sample point in the baked static probe field. The bake traces 1024 rays and stores an 8 x 8 octahedral irradiance and depth atlas.
+One sample point in the baked static probe field. The bake traces 1024 rays and stores an 8 x 8 octahedral irradiance block and an 8 x 8 or 16 x 16 depth-moment block.
 _Avoid_: Light sample, photon
 
 **Probe volume**:
@@ -253,7 +253,7 @@ The axis-aligned grid of probes. The default covers the arena at 1 m spacing: 40
 _Avoid_: GI grid, light grid
 
 **Probe atlas**:
-The irradiance and depth maps for one probe. Irradiance uses an 8 x 8 octahedral map with gamma encoding; depth stores the first and second moments. The lit pass samples the four probes of the containing tetrahedron.
+The irradiance and depth maps for one probe. The default irradiance is an 8 x 8 octahedral `R11G11B10F` map with gamma-5 storage; the optional SH9 basis stores 27 signed `R16F` values (nine coefficients x three channels). Depth stores the first and second moments at 8 x 8 or 16 x 16. The lit pass samples the four probes of the containing tetrahedron.
 _Avoid_: Irradiance map, probe texture
 
 **Coverage fraction**:
@@ -471,7 +471,7 @@ The image a capture reads: the final color, the velocity target, the history, th
 _Avoid_: Render layer
 
 **Diagnostic view**:
-One named image a capture can request from one simulation frame: `beauty`, `direct`, `lightmap`, `probe`, `emissive`, `shadow`, `lightmap_grid`, or `probe_cell`. A `views` list writes one capture entry per view, named `<name>-<view>`, each with a `view` field. A view is not a capture target, and `target` and `views` are mutually exclusive.
+One named image a capture can request from one simulation frame: `beauty`, `direct`, `lightmap`, `probe`, `probe_linear`, `emissive`, `shadow`, `lightmap_grid`, or `probe_cell`. A `views` list writes one capture entry per view, named `<name>-<view>`, each with a `view` field. A view is not a capture target, and `target` and `views` are mutually exclusive.
 _Avoid_: Debug view, render layer
 
 **Term view**:

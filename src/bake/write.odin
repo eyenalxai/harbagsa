@@ -16,6 +16,8 @@ Artifact_Input :: struct {
 	probe_spacing:    f32,
 	probe_counts:     [3]u32,
 	probe_texels:     u32,
+	probe_moment_texels: u32,
+	probe_basis:      Probe_Basis,
 	probe_columns:    u32,
 	atlas:            []u8,
 	probe_irradiance: []u8,
@@ -33,9 +35,14 @@ encode_artifact :: proc(
 	atlas_texels := u64(input.quality.atlas_size) * u64(input.quality.atlas_size)
 	probe_count := u64(len(input.probe_states))
 	probe_texels := u64(input.probe_texels) * u64(input.probe_texels)
+	moment_texels := u64(input.probe_moment_texels) * u64(input.probe_moment_texels)
+	irradiance_bytes := probe_count * probe_texels * PROBE_BYTES_PER_IRRADIANCE_TEXEL
+	if input.probe_basis == .SH9 {
+		irradiance_bytes = probe_count * u64(PROBE_SH_BYTES_PER_PROBE)
+	}
 	if u64(len(input.atlas)) != atlas_texels * ATLAS_BYTES_PER_TEXEL ||
-	   u64(len(input.probe_irradiance)) != probe_count * probe_texels * PROBE_BYTES_PER_IRRADIANCE_TEXEL ||
-	   u64(len(input.probe_moments)) != probe_count * probe_texels * PROBE_BYTES_PER_MOMENT_TEXEL {
+	   u64(len(input.probe_irradiance)) != irradiance_bytes ||
+	   u64(len(input.probe_moments)) != probe_count * moment_texels * PROBE_BYTES_PER_MOMENT_TEXEL {
 		return nil, 0, .Artifact
 	}
 	if len(input.faces) != len(input.slots) * FACE_COUNT {
@@ -79,6 +86,8 @@ encode_artifact :: proc(
 		slot_count          = u32(len(input.slots)),
 		probe_count         = u32(probe_count),
 		probe_texels        = input.probe_texels,
+		probe_moment_texels = input.probe_moment_texels,
+		probe_basis         = u32(input.probe_basis),
 		probe_atlas_columns = input.probe_columns,
 		probe_min           = input.probe_min,
 		probe_spacing       = input.probe_spacing,

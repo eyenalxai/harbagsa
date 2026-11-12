@@ -22,12 +22,14 @@ create_bake_placeholder :: proc(r: ^Renderer) -> bool {
 		probe_texels  = bake.PROBE_TEXELS,
 		atlas_columns = 1,
 		probe_count   = 1,
-		atlas_width   = 1,
-		atlas_height  = 1,
+		basis         = u32(bake.Probe_Basis.Octa),
+		moment_texels = bake.PROBE_MOMENT_TEXELS,
 	}
 	return create_bake_probes(
 		r,
 		&r.bake,
+		1,
+		1,
 		1,
 		1,
 		.R8G8B8A8_UNORM,
