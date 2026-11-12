@@ -43,8 +43,9 @@ never a fill value.
   +Z, -Z. The rects are center-to-center and stay inside `[0, 1]`. Charts are
   sorted by allocation height before the shelf pack, so a tall face does not
   set a mostly empty row. A slot key hashes the box identity and its transform;
-  a moved static box misses its old chart instead of sampling a lightmap baked
-  for its previous position.
+  a mismatch between an authored box and the loaded artifact misses the old
+  chart instead of sampling a lightmap baked for another position. The runtime
+  editor does not move a bake input; see ADR 0048.
 - **Bounces.** The quality block accepts one or two diffuse bounces; two is the
   default. The second gather reuses the first-bounce ray set and samples the
   first lightmap at each hit, so it adds no stochastic noise and needs no extra
@@ -71,7 +72,7 @@ never a fill value.
   renderer recomputes the key with the artifact's own quality block, so a 1 m
   or 2 m artifact validates against the same static inputs. The runtime reports
   `current` or `stale`. The slot key is separate: it hashes the source, the id,
-  and the box transform, so a moved static box falls back to the direct path
+  and the box transform, so an authored mismatch falls back to the direct path
   while the artifact is stale.
 - **Runtime resources.** The lightmap image and sampler, the probe irradiance
   and moment images, the shared linear clamp sampler, the face and slot buffers,

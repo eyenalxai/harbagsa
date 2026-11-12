@@ -29,6 +29,9 @@ editor_next_body :: proc(editor: ^Editor) -> (Body_Mode, bool) {
 
 @(private)
 editor_set_next_body :: proc(editor: ^Editor, mode: Body_Mode) -> Edit_Result {
+	if mode == .Static {
+		return edit_fail(.Bake_Input_Authoring_Only)
+	}
 	switch tool in editor.tool {
 	case Palette:
 		if prefab_has_light(palette_selected(tool)) {
@@ -61,6 +64,9 @@ editor_commit_move :: proc(
 ) -> Edit_Result {
 	if !b3.Body_IsValid(object.body) {
 		return edit_fail(.Failed)
+	}
+	if object_is_bake_input(object) {
+		return edit_fail(.Bake_Input_Authoring_Only)
 	}
 	resolved := target
 	resolved.y = max(resolved.y, prefab(object.prefab).half_extents.y)
@@ -132,6 +138,9 @@ editor_rotate_selected :: proc(
 	if degrees == 0.0 {
 		return edit_ok()
 	}
+	if object_is_bake_input(object) {
+		return edit_fail(.Bake_Input_Authoring_Only)
+	}
 	result, _ := object_history_apply(
 		editor_history(editor),
 		sim,
@@ -159,11 +168,17 @@ editor_convert_selected :: proc(
 	object: Placed_Object,
 	mode: Body_Mode,
 ) -> Edit_Result {
+	if object_is_bake_input(object) {
+		return edit_fail(.Bake_Input_Authoring_Only)
+	}
 	if object.light.active {
 		return edit_fail(.Lamp_Body_Follows_Kind)
 	}
 	if object.body_mode == mode {
 		return edit_ok()
+	}
+	if mode == .Static {
+		return edit_fail(.Bake_Input_Authoring_Only)
 	}
 	result, _ := object_history_apply(
 		editor_history(editor),
@@ -211,6 +226,9 @@ editor_delete_selected :: proc(editor: ^Editor, sim: ^Simulation) -> Edit_Result
 	if !ok {
 		return edit_fail(.No_Selection)
 	}
+	if object_is_bake_input(object) {
+		return edit_fail(.Bake_Input_Authoring_Only)
+	}
 	result, _ := object_history_apply(
 		editor_history(editor),
 		sim,
@@ -231,6 +249,9 @@ editor_duplicate_selected :: proc(editor: ^Editor, sim: ^Simulation) -> Edit_Res
 	object, ok := editor_selected_object(editor, sim)
 	if !ok {
 		return edit_fail(.No_Selection)
+	}
+	if object_is_bake_input(object) {
+		return edit_fail(.Bake_Input_Authoring_Only)
 	}
 	result, id := object_history_apply(
 		editor_history(editor),

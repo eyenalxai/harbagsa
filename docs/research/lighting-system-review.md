@@ -461,26 +461,18 @@ gutter/min chart and pack better; add a second page or a 4-byte format; only
 then raise the atlas or lower the density. `texlod`-style variable density is
 the option after that, when a specific surface reads flat.
 
-### 4.10 Medium: a stale bake after a static transform is a texture-space error
+### 4.10 Medium: a static transform is an authoring change
 
-The bake key hashes the static box transforms, so moving a static box marks the
-bake stale. But the runtime slot key is `(source, id)`, not the transform
-(`src/bake/key.odin:17`, `src/game/bake_input.odin:43`). The old artifact still
-has a chart for that key, so `bake_box_slot` returns it, `lightmap_weight` stays
-1, and the box samples the old lightmap in its new position
-(`src/renderer/bake.odin:178`, `src/renderer/scene_object_data.odin:40`). The UV
-is local, so the old lighting travels with the box.
+The bake key and the runtime slot key both hash the static box transforms. A
+mismatch between an authored box and the loaded artifact misses the chart and
+falls back to direct light, so the box never carries a lightmap from its previous
+position. The runtime editor refuses a bake-input edit; a transform change is
+authored in the scene source or through `scene`/`place`, then rebaked. See ADR
+0048 and `docs/evidence/bake-atlas.md`.
 
-For a moved static fixture this is a world-space stale field: the receivers did
-not move, so the old bounce is simply old. For a moved static box it is a
-texture-space error: the box carries a lightmap that describes its previous
-location. The status says `stale`, so it is not a silent lie, but the image is
-more wrong than "the old indirect is still bound".
-
-Options: invalidate the slot on a transform change (fall back to probes or zero),
-store the transform in the slot key so the lookup fails, or rebake the moved
-box's charts incrementally. The evidence only covers a removed fixture; add a
-moved static box to the stale-state scenario.
+The old indirect for an authored fixture change is a world-space stale field
+until the publish: the receivers did not move, so the old bounce remains. The
+status says `stale`, so the state is visible.
 
 ### 4.11 Low for the current target, high if portability changes: ray-query-only shadows
 

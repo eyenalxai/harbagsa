@@ -8,10 +8,11 @@ Light_Edit_Target :: enum {
 }
 
 Light_Target :: struct {
-	kind:     Light_Edit_Target,
-	id:       Object_Id,
-	settings: Light_Settings,
-	ok:       bool,
+	kind:       Light_Edit_Target,
+	id:         Object_Id,
+	settings:   Light_Settings,
+	ok:         bool,
+	bake_input: bool,
 }
 
 Light_Edit_Adjust :: struct {
@@ -63,7 +64,13 @@ light_target :: proc(editor: ^Editor, sim: ^Simulation) -> Light_Target {
 		if !found || !object.light.active {
 			return {}
 		}
-		return {kind = .Object, id = selected_id, settings = object.light, ok = true}
+		return {
+			kind = .Object,
+			id = selected_id,
+			settings = object.light,
+			ok = true,
+			bake_input = object_is_bake_input(object),
+		}
 	}
 	return {}
 }
@@ -77,6 +84,9 @@ editor_light_edit :: proc(
 	target := light_target(editor, sim)
 	if !target.ok {
 		return edit_fail(.No_Lamp)
+	}
+	if target.bake_input {
+		return edit_fail(.Bake_Input_Authoring_Only)
 	}
 	next := target.settings
 	switch value in edit {
@@ -96,6 +106,9 @@ editor_light_edit :: proc(
 			kind = .Static_Fixture
 		}
 		next = light_with_kind(target.settings, kind)
+	}
+	if next.kind == .Static_Fixture && target.settings.kind != .Static_Fixture {
+		return edit_fail(.Bake_Input_Authoring_Only)
 	}
 	return editor_light_apply(editor, sim, target, next)
 }

@@ -74,6 +74,10 @@ editor_placement_arm :: proc(
 		}
 	}
 
+	if bake_input_body_and_light(body_mode, light) {
+		return edit_fail(.Bake_Input_Authoring_Only)
+	}
+
 	placement := Placement {
 		prefab = prefab_id,
 		body_mode = body_mode,
@@ -149,6 +153,9 @@ editor_place_spawn :: proc(
 	sim: ^Simulation,
 	spawn: Object_Spawn,
 ) -> Edit_Result {
+	if bake_input_body_and_light(spawn.body_mode, spawn.light) {
+		return edit_fail(.Bake_Input_Authoring_Only)
+	}
 	result, id := object_history_apply(editor_history(editor), sim, History_Place{spawn = spawn})
 	if !result.applied {
 		return result
