@@ -1,6 +1,7 @@
 ODIN ?= odin
 ODIN_FLAGS ?= -vet -vet-style -vet-semicolon -vet-tabs -vet-using-param -vet-unused-procedures -vet-packages:main,platform,renderer,font,game,geometry,frame,perf,harness,display,ui,input,bake -strict-style -warnings-as-errors -disallow-do
 ODIN_COLLECTIONS := -collection:libs=vendor -collection:src=src
+LINKER_FLAGS := -extra-linker-flags:"-lxkbcommon"
 # Library checks cannot know which procedures another package calls, so they
 # omit -vet-unused-procedures. The main check still runs it across every
 # imported package.
@@ -12,12 +13,16 @@ BAKE_BIN := bin/harbagsa-bake
 BAKE_TOOL := cmd/harbagsa-bake
 BAKE_OUT := build/bake/arena.hbake
 BAKE_SOURCES := $(shell find src cmd -name '*.odin')
+RUST_DIR := ui
+RUST_LIB := build/libharbagsa_ui.a
+RUST_SOURCES := $(shell find $(RUST_DIR)/shim/src -name '*.rs') \
+	$(RUST_DIR)/Cargo.toml $(RUST_DIR)/shim/Cargo.toml $(RUST_DIR)/Cargo.lock
 HARNESS_REVISION := $(shell git rev-parse --short HEAD 2>/dev/null || printf unknown)
 # `git status --porcelain` covers staged and untracked files; `git diff --quiet`
 # sees neither.
 HARNESS_DIRTY := $(shell if git rev-parse --git-dir >/dev/null 2>&1 && [ -z "$$(git status --porcelain 2>/dev/null)" ]; then printf false; else printf true; fi)
 AGENT_DEFINES := -define:HARNESS_REVISION='"$(HARNESS_REVISION)"' -define:HARNESS_DIRTY=$(HARNESS_DIRTY)
-AGENT_BUILD := $(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) $(AGENT_DEFINES) -out:$(AGENT_BIN)
+AGENT_BUILD := $(ODIN) build $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS) $(AGENT_DEFINES) $(LINKER_FLAGS) -out:$(AGENT_BIN)
 SCENARIO ?=
 OUT ?=
 JQ ?= jq
@@ -91,6 +96,11 @@ FORCE:
 
 all: build
 
+$(RUST_LIB): $(RUST_SOURCES)
+	@mkdir -p $(@D)
+	cargo build --release --manifest-path $(RUST_DIR)/Cargo.toml -p harbagsa-ui --lib
+	cp $(RUST_DIR)/target/release/libharbagsa_ui.a $@
+
 # Build aside so a failed ar never leaves a broken archive.
 $(BOX3D_LIB): $(BOX3D_OBJ)
 	@mkdir -p $(@D)
@@ -161,13 +171,13 @@ check-spirv: shaders
 		exit $$status; \
 	fi
 
-agent: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
+agent: $(RUST_LIB) $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	@mkdir -p $(dir $(AGENT_BIN))
 	$(AGENT_BUILD)
 
-build: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
+build: $(RUST_LIB) $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	mkdir -p bin
-	$(ODIN) build . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -out:$(BIN)
+	$(ODIN) build . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) $(LINKER_FLAGS) -out:$(BIN)
 	$(AGENT_BUILD)
 
 $(BAKE_BIN): $(BAKE_SOURCES) $(BOX3D_LIB)
@@ -180,7 +190,7 @@ $(BAKE_OUT): $(BAKE_BIN) $(BAKE_SOURCES)
 
 bake: $(BAKE_OUT)
 
-check: check-lines check-spirv $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
+check: check-lines check-spirv $(RUST_LIB) $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
 	$(ODIN) check . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
 	$(ODIN) check $(AGENT) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS)
 	$(ODIN) check $(BAKE_TOOL) $(ODIN_LIB_CHECK_FLAGS) $(ODIN_COLLECTIONS)
@@ -211,8 +221,8 @@ check-lines:
 	done; \
 	exit $$status
 
-run: $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
-	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS)
+run: $(RUST_LIB) $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
+	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) $(LINKER_FLAGS)
 
 check-validation-layer:
 	@found=false; \
@@ -262,7 +272,7 @@ shot: agent
 	printf '%s\n' "$$paths"
 
 validate-demo: check-validation-layer $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB) shaders
-	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) -define:ENABLE_VALIDATION_LAYERS=true
+	$(ODIN) run . $(ODIN_FLAGS) $(ODIN_COLLECTIONS) $(LINKER_FLAGS) -define:ENABLE_VALIDATION_LAYERS=true
 
 clean:
 	rm -rf bin build $(BOX3D_LIB) $(FREETYPE_LIB) $(HARFBUZZ_LIB)

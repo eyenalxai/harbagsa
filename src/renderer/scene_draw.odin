@@ -98,7 +98,7 @@ record_scene :: proc(
 	}
 	slot := 0
 	for target in capture.targets {
-		if !record_capture_copy(r, command_buffer, image_index, target, slot) {
+		if target != .Color && !record_capture_copy(r, command_buffer, image_index, target, slot) {
 			return false
 		}
 		slot += 1
@@ -115,10 +115,6 @@ record_scene :: proc(
 			return false
 		}
 	}
-	if r.target.kind == .Swapchain {
-		record_present_pass(r, command_buffer, image_index)
-	}
-
 	if !check(vk.EndCommandBuffer(command_buffer), "vkEndCommandBuffer") {
 		return false
 	}
@@ -130,13 +126,3 @@ record_scene :: proc(
 	return true
 }
 
-// The present transition is its own pass concern. The capture pass puts the
-// target back in the colour-attachment layout, so this barrier has no capture
-// branch.
-record_present_pass :: proc(
-	r: ^Renderer,
-	command_buffer: vk.CommandBuffer,
-	image_index: u32,
-) {
-	record_present_barrier(r, command_buffer, image_index)
-}

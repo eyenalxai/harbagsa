@@ -12,3 +12,6 @@ runs/
 
 # T3 worktree artifacts
 /t3-*
+
+# Rust UI workspace
+ui/target/

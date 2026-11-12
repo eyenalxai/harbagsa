@@ -18,13 +18,17 @@ Camera_View :: struct {
 }
 
 Options :: struct {
-	alpha:         f32,
-	delta_seconds: f32,
-	debug_view:    bool,
-	captured:      bool,
-	hud:           bool,
-	perf_stats:    Maybe(perf.Stats),
-	bake:          renderer.Bake_Report,
+	alpha:           f32,
+	delta_seconds:   f32,
+	debug_view:      bool,
+	captured:        bool,
+	hud:             bool,
+	perf_stats:      Maybe(perf.Stats),
+	bake:            renderer.Bake_Report,
+	pointer:         [2]f32,
+	pointer_pressed: bool,
+	pointer_down:    bool,
+	ui_keys:         renderer.UI_KEYS,
 }
 
 Scratch :: struct {
@@ -177,6 +181,30 @@ build :: proc(
 			menu         = hud.menu.view,
 			palette      = palette,
 			weight       = sim.settings.type_weight,
+			ui = {
+				dt = f64(options.delta_seconds),
+				snapshot = {
+					speed = math.sqrt(
+						snapshot.velocity.x * snapshot.velocity.x +
+						snapshot.velocity.z * snapshot.velocity.z,
+					),
+					grounded     = u32(snapshot.grounded),
+					menu_open    = u32(hud.menu.open),
+					palette_open = u32(palette.open),
+				},
+				pointer         = options.pointer,
+				pointer_pressed = options.pointer_pressed,
+				pointer_down    = options.pointer_down,
+				keys            = options.ui_keys,
+				panel_rows      = hud.view.rows,
+				notice          = hud.view.notice.text,
+				capture_hint    = hud.capture_hint,
+				captured        = hud.captured,
+				palette_open    = palette.open,
+				owns_panel      = true,
+				menu            = hud.menu.view,
+				owns_menu       = true,
+			},
 		}
 	}
 	if scene.hud.enabled {
