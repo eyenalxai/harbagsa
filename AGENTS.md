@@ -4,11 +4,12 @@ An Odin project. Build and check commands live in `README.md`.
 
 ## Documentation
 
-Documentation is a lead, not the source of truth. It records a moment and goes
-stale. A doc speaks only to its subject: a note about world motion says nothing
-about UI motion. Check a doc claim against the code, the harness, or a run
-before you rely on it. When they disagree, follow the code and correct the doc in
-the same change. Justify a decision with code, not with a doc line.
+Documentation is a lead, not the source of truth. It is malleable: it records a
+moment and goes stale. A doc speaks only to its subject: a note about world motion
+says nothing about UI motion. Check a doc claim against the code, the harness, or
+a run before you rely on it. When they disagree, follow the code and correct or
+delete the doc in the same change. Justify a decision with code, not with a doc
+line.
 
 ## Code changes
 
