@@ -5,6 +5,38 @@ import "core:math"
 
 import "src:ui"
 
+UI_Key :: enum {
+	Up,
+	Down,
+	Left,
+	Right,
+	Confirm,
+	Escape,
+}
+
+UI_KEYS :: bit_set[UI_Key]
+
+UI_Action_Kind :: enum(u32) {
+	Close_Menu   = 1,
+	Toggle_Debug = 2,
+}
+
+UI_Snapshot :: struct {
+	speed:        f32,
+	grounded:     u32,
+	menu_open:    u32,
+	palette_open: u32,
+}
+
+UI_Frame :: struct {
+	dt:              f64,
+	snapshot:        UI_Snapshot,
+	pointer:         [2]f32,
+	pointer_pressed: bool,
+	pointer_down:    bool,
+	keys:            UI_KEYS,
+}
+
 HUD_Frame :: struct {
 	enabled:      bool,
 	menu_open:    bool,
@@ -14,6 +46,7 @@ HUD_Frame :: struct {
 	menu:         ui.Menu,
 	palette:      ui.Palette,
 	weight:       f32,
+	ui:           UI_Frame,
 }
 
 hud_emit_textured_quad :: proc(

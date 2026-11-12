@@ -67,6 +67,9 @@ render_frame :: proc(
 	input: Render_Input,
 	capture := Frame_Capture{},
 ) -> Frame_Result {
+	if r.ui_ready {
+		ui_step(r, input.hud.ui)
+	}
 	for _ in 0 ..< MAX_FRAME_ATTEMPTS {
 		frame, begin_status := begin_frame(r, input, capture)
 		if begin_status == .Skipped {
