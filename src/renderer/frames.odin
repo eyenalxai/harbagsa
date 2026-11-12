@@ -32,6 +32,9 @@ init_frames :: proc(r: ^Renderer) -> Error {
 	if !check(vk.AllocateCommandBuffers(r.device, &alloc_info, &r.command_buffers[0]), "vkAllocateCommandBuffers") {
 		return .Create_Frames
 	}
+	if !check(vk.AllocateCommandBuffers(r.device, &alloc_info, &r.finalize_buffers[0]), "vkAllocateCommandBuffers") {
+		return .Create_Frames
+	}
 
 	fence_info := vk.FenceCreateInfo {
 		sType = .FENCE_CREATE_INFO,
@@ -64,6 +67,9 @@ render_frame :: proc(
 	input: Render_Input,
 	capture := Frame_Capture{},
 ) -> Frame_Result {
+	if r.ui_ready {
+		ui_step(r, input.hud.ui)
+	}
 	for _ in 0 ..< MAX_FRAME_ATTEMPTS {
 		frame, begin_status := begin_frame(r, input, capture)
 		if begin_status == .Skipped {
@@ -174,6 +180,7 @@ begin_frame :: proc(
 		image_index = image_index,
 		command_buffer = command_buffer,
 		capture = capture_slot_count(capture) > 0,
+		color_slot = capture_target_slot(capture, .Color),
 		wait = input.pick_at != nil,
 	}, .Ok
 }
@@ -185,19 +192,16 @@ end_frame :: proc(r: ^Renderer, frame: Frame) -> Frame_Status {
 
 	if r.target.kind == .Swapchain {
 		image_available := r.image_available[r.frame_index]
-		render_finished := r.target.render_finished[image_index]
 		wait_stage := vk.PipelineStageFlags{.COLOR_ATTACHMENT_OUTPUT}
 		submit := vk.SubmitInfo{
-			sType                = .SUBMIT_INFO,
-			waitSemaphoreCount   = 1,
-			pWaitSemaphores      = &image_available,
-			pWaitDstStageMask    = &wait_stage,
-			commandBufferCount   = 1,
-			pCommandBuffers      = &command_buffer,
-			signalSemaphoreCount = 1,
-			pSignalSemaphores    = &render_finished,
+			sType              = .SUBMIT_INFO,
+			waitSemaphoreCount = 1,
+			pWaitSemaphores    = &image_available,
+			pWaitDstStageMask  = &wait_stage,
+			commandBufferCount = 1,
+			pCommandBuffers    = &command_buffer,
 		}
-		if !check(vk.QueueSubmit(r.graphics_queue, 1, &submit, r.in_flight[r.frame_index]), "vkQueueSubmit") {
+		if !check(vk.QueueSubmit(r.graphics_queue, 1, &submit, vk.Fence(0)), "vkQueueSubmit") {
 			return .Fatal
 		}
 	} else {
@@ -206,7 +210,57 @@ end_frame :: proc(r: ^Renderer, frame: Frame) -> Frame_Status {
 			commandBufferCount = 1,
 			pCommandBuffers    = &command_buffer,
 		}
-		if !check(vk.QueueSubmit(r.graphics_queue, 1, &submit, r.in_flight[r.frame_index]), "vkQueueSubmit") {
+		if !check(vk.QueueSubmit(r.graphics_queue, 1, &submit, vk.Fence(0)), "vkQueueSubmit") {
+			return .Fatal
+		}
+	}
+
+	if r.ui_ready && ui_draw(image_index) != 0 {
+		log.error("renderer: the UI shim could not draw")
+		return .Fatal
+	}
+
+	finalize := r.finalize_buffers[r.frame_index]
+	if !check(vk.ResetCommandBuffer(finalize, {}), "vkResetCommandBuffer") {
+		return .Fatal
+	}
+	finalize_begin := vk.CommandBufferBeginInfo {
+		sType = .COMMAND_BUFFER_BEGIN_INFO,
+		flags = {.ONE_TIME_SUBMIT},
+	}
+	if !check(vk.BeginCommandBuffer(finalize, &finalize_begin), "vkBeginCommandBuffer") {
+		return .Fatal
+	}
+	if frame.color_slot >= 0 {
+		if !record_capture_copy(r, finalize, image_index, .Color, frame.color_slot) {
+			return .Fatal
+		}
+	}
+	if r.target.kind == .Swapchain {
+		record_present_barrier(r, finalize, image_index)
+	}
+	if !check(vk.EndCommandBuffer(finalize), "vkEndCommandBuffer") {
+		return .Fatal
+	}
+	if r.target.kind == .Swapchain {
+		render_finished := r.target.render_finished[image_index]
+		finalize_submit := vk.SubmitInfo{
+			sType                = .SUBMIT_INFO,
+			commandBufferCount   = 1,
+			pCommandBuffers      = &finalize,
+			signalSemaphoreCount = 1,
+			pSignalSemaphores    = &render_finished,
+		}
+		if !check(vk.QueueSubmit(r.graphics_queue, 1, &finalize_submit, r.in_flight[r.frame_index]), "vkQueueSubmit") {
+			return .Fatal
+		}
+	} else {
+		finalize_submit := vk.SubmitInfo{
+			sType              = .SUBMIT_INFO,
+			commandBufferCount = 1,
+			pCommandBuffers    = &finalize,
+		}
+		if !check(vk.QueueSubmit(r.graphics_queue, 1, &finalize_submit, r.in_flight[r.frame_index]), "vkQueueSubmit") {
 			return .Fatal
 		}
 	}

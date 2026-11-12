@@ -189,76 +189,20 @@ score_physical_device :: proc(
 }
 
 create_logical_device :: proc(r: ^Renderer) -> Error {
-	queue_priorities := [1]f32{1.0}
-	queue_infos: [2]vk.DeviceQueueCreateInfo
-	queue_count: u32 = 1
-	queue_infos[0] = vk.DeviceQueueCreateInfo{
-		sType            = .DEVICE_QUEUE_CREATE_INFO,
-		queueFamilyIndex = r.graphics_family,
-		queueCount       = 1,
-		pQueuePriorities = &queue_priorities[0],
+	config := Ui_Vk_Config {
+		instance        = cast(rawptr)r.instance,
+		physical_device = cast(rawptr)r.physical_device,
+		graphics_family = r.graphics_family,
+		present_family  = r.present_family,
 	}
-	if r.present_family != r.graphics_family {
-		queue_infos[1] = vk.DeviceQueueCreateInfo{
-			sType            = .DEVICE_QUEUE_CREATE_INFO,
-			queueFamilyIndex = r.present_family,
-			queueCount       = 1,
-			pQueuePriorities = &queue_priorities[0],
-		}
-		queue_count = 2
-	}
-
-	device_extensions: [4]cstring
-	device_extension_count: u32
-	if r.target.kind == .Swapchain {
-		device_extensions[device_extension_count] = vk.KHR_SWAPCHAIN_EXTENSION_NAME
-		device_extension_count += 1
-	}
-	device_extensions[device_extension_count] = vk.KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME
-	device_extension_count += 1
-	device_extensions[device_extension_count] = vk.KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME
-	device_extension_count += 1
-	device_extensions[device_extension_count] = vk.KHR_RAY_QUERY_EXTENSION_NAME
-	device_extension_count += 1
-
-	features_rq := vk.PhysicalDeviceRayQueryFeaturesKHR {
-		sType = .PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
-		rayQuery = true,
-	}
-	features_as := vk.PhysicalDeviceAccelerationStructureFeaturesKHR {
-		sType = .PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
-		pNext = &features_rq,
-		accelerationStructure = true,
-	}
-	features12 := vk.PhysicalDeviceVulkan12Features {
-		sType = .PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
-		pNext = &features_as,
-		bufferDeviceAddress = true,
-	}
-	features13 := vk.PhysicalDeviceVulkan13Features {
-		sType                          = .PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-		pNext                          = &features12,
-		dynamicRendering               = true,
-		shaderDemoteToHelperInvocation = true,
-	}
-	create_info := vk.DeviceCreateInfo{
-		sType                   = .DEVICE_CREATE_INFO,
-		pNext                   = &features13,
-		queueCreateInfoCount    = queue_count,
-		pQueueCreateInfos       = &queue_infos[0],
-		enabledExtensionCount   = device_extension_count,
-		ppEnabledExtensionNames = &device_extensions[0],
-	}
-	if !check(vk.CreateDevice(r.physical_device, &create_info, nil, &r.device), "vkCreateDevice") {
+	out: Ui_Vk_Device
+	if ui_vk_init(&config, &out) != 0 {
+		log.error("renderer: the UI shim could not create the device")
 		return .Create_Device
 	}
+	r.device = cast(vk.Device) out.device
+	r.graphics_queue = cast(vk.Queue) out.graphics_queue
+	r.present_queue = cast(vk.Queue) out.present_queue
 	vk.load_proc_addresses_device(r.device)
-	vk.GetDeviceQueue(r.device, r.graphics_family, 0, &r.graphics_queue)
-	if r.present_family != r.graphics_family {
-		vk.GetDeviceQueue(r.device, r.present_family, 0, &r.present_queue)
-	} else {
-		r.present_queue = r.graphics_queue
-	}
-
 	return .None
 }

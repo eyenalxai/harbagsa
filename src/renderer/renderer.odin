@@ -49,6 +49,7 @@ Frame :: struct {
 	image_index:    u32,
 	command_buffer: vk.CommandBuffer,
 	capture:        bool,
+	color_slot:     int,
 	// A pick reads a mapped result after submit, so its frame waits too.
 	wait:           bool,
 }
@@ -78,6 +79,9 @@ Renderer :: struct {
 
 	command_pool:    vk.CommandPool,
 	command_buffers: [MAX_FRAMES_IN_FLIGHT]vk.CommandBuffer,
+	finalize_buffers: [MAX_FRAMES_IN_FLIGHT]vk.CommandBuffer,
+	ui_ready:        bool,
+	ui_pointer_down: bool,
 	image_available: [MAX_FRAMES_IN_FLIGHT]vk.Semaphore,
 	in_flight:       [MAX_FRAMES_IN_FLIGHT]vk.Fence,
 	query_pools:     [MAX_FRAMES_IN_FLIGHT]vk.QueryPool,
@@ -149,6 +153,11 @@ init :: proc(config: Config, allocator: mem.Allocator) -> (r: Renderer, err: Err
 		deinit(&r)
 		return
 	}
+	if !ui_attach_target(&r) {
+		deinit(&r)
+		return
+	}
+	r.ui_ready = true
 	if err = init_frame_targets(&r); err != .None {
 		deinit(&r)
 		return
