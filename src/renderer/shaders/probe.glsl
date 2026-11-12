@@ -1,7 +1,7 @@
 #ifndef PROBE_GLSL
 #define PROBE_GLSL
 
-// The probe atlas is a shelf of octahedral tiles, or a 9 x probe count SH9
+// The probe atlas is a shelf of octahedral tiles, or a 27 x probe count SH9
 // image. The state buffer is the packed Probe_State from src/bake/format.odin:
 // valid flags in the low byte of word 0, then three f16 offsets.
 layout(set = 0, binding = 8) uniform sampler2D probe_irradiance_atlas;

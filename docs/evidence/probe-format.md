@@ -7,7 +7,9 @@ The default stays octa with `R11G11B10F` and 8 x 8 moments.
 ## What changed
 
 - `VK_FORMAT_B10G11R11_UFLOAT_PACK32` replaces `RGBA16F` for the octa map. One
-  texel is four bytes instead of eight, and the unused alpha is gone.
+  texel is four bytes instead of eight, and the unused alpha is gone. The default
+  thin-wall scene, octa 8 x 8, old against new format: mean 0.0087, max 1 code
+  value. The quantization is visible only at the last 8-bit step.
 - The gamma-5 storage and gamma-2 blend are unchanged on the default path. A
   `probe_linear` diagnostic view decodes every tap with `2 * pow(encoded, 5)`
   before weighting, so one capture writes the gamma-2 and linear pair from one

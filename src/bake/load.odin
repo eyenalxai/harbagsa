@@ -108,14 +108,12 @@ load :: proc(bytes: []u8) -> (data: Data, err: Error) {
 	   header.probe_spacing <= 0 {
 		return {}, .Layout
 	}
+	if !probe_basis_supported(header.probe_basis) ||
+	   !probe_moments_supported(header.probe_moment_texels) {
+		return {}, .Quality
+	}
 	basis := Probe_Basis(header.probe_basis)
-	if basis != .Octa && basis != .SH9 {
-		return {}, .Quality
-	}
 	moment_texels := u64(header.probe_moment_texels)
-	if moment_texels != PROBE_MOMENT_TEXELS && moment_texels != PROBE_MOMENT_TEXELS_HIGH {
-		return {}, .Quality
-	}
 	if header.probe_atlas_columns == 0 || header.probe_atlas_columns > header.probe_count {
 		return {}, .Layout
 	}

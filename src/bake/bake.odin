@@ -97,6 +97,15 @@ DEFAULT_QUALITY :: Quality {
 
 // The loader and the writer share this rule so a fresh artifact cannot be
 // rejected by the reader that already accepted its own quality block.
+probe_basis_supported :: proc(value: u32) -> bool {
+	basis := Probe_Basis(value)
+	return basis == .Octa || basis == .SH9
+}
+
+probe_moments_supported :: proc(value: u32) -> bool {
+	return value == PROBE_MOMENT_TEXELS || value == PROBE_MOMENT_TEXELS_HIGH
+}
+
 quality_supported :: proc(quality: Quality) -> bool {
 	if quality.atlas_size == 0 || quality.atlas_size > MAX_ATLAS_DIM {
 		return false
@@ -113,12 +122,8 @@ quality_supported :: proc(quality: Quality) -> bool {
 	if quality.probe_texels != PROBE_TEXELS {
 		return false
 	}
-	if quality.probe_moment_texels != PROBE_MOMENT_TEXELS &&
-	   quality.probe_moment_texels != PROBE_MOMENT_TEXELS_HIGH {
-		return false
-	}
-	if quality.probe_basis != u32(Probe_Basis.Octa) &&
-	   quality.probe_basis != u32(Probe_Basis.SH9) {
+	if !probe_moments_supported(quality.probe_moment_texels) ||
+	   !probe_basis_supported(quality.probe_basis) {
 		return false
 	}
 	return quality.probe_spacing == PROBE_SPACING ||

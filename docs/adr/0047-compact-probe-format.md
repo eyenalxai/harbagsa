@@ -59,8 +59,9 @@ selectable bake options for later A/B work.
 - **Keep `RGBA16F`.** Rejected. The alpha channel is unused and the packed
   unsigned format is enough for non-negative octa irradiance.
 - **Use `RGB9E5`.** Not needed. `R11G11B10F` has a per-channel exponent and does
-  not suffer the shared-exponent clamp; the A/B shows no green tint on the
-  neutral crate faces.
+  not suffer the shared-exponent clamp. The A/B scenes show no visible green
+  tint, but they use a warm lamp; a dedicated neutral-gray capture is a
+  follow-up.
 - **Store SH9 with an unsigned packed format.** Impossible, because SH
   coefficients are signed.
 
