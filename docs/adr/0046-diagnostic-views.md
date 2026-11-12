@@ -37,7 +37,8 @@ the beauty frame instead of resetting it.
   `raw` views are command errors; use `scene_color` for linear analysis.
   `probe_linear` is the probe term with each octa tap decoded before weighting,
   so the `probe` and `probe_linear` entries of one frame are the gamma-2 versus
-  linear pair from the same baked data.
+  linear pair from the same baked data. Under the SH9 basis there is no octa tap
+  to decode, so `probe_linear` matches `probe`.
 - **Beauty is untouched.** A capture without `views` renders, resolves, and
   writes exactly as before. The composed pixel is the original expression in the
   original shader, and a beauty capture in a `views` list is the same image as a

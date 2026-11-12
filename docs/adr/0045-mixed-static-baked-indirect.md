@@ -47,7 +47,7 @@ free number.
   chart is one planar face, so the kernel cannot bleed across a surface. The
   texel seed follows `(source, id, face, x, y)`, not the atlas position, so a
   static edit that only moves charts leaves their noise field alone.
-  `TOOL_VERSION` is 2.
+  `TOOL_VERSION` is 3.
 - **Probes.** A static 1 m grid covers the playable volume; 2 m is the quality
   fallback. Each probe stores an 8 x 8 octahedral `R11G11B10F` irradiance block
   and 8 x 8 depth moments. SH9 irradiance and 16 x 16 moments are selectable
@@ -105,9 +105,9 @@ free number.
   until the next publish. A dynamic lamp or crate move reports `current`.
 - A bake is deterministic for the same static input, quality, and tool version.
   The measured wall time travels in a `.time` sidecar, not in the artifact bytes.
-- The lightmap is denoised per chart, so an artifact built by tool version 1 is
-  `stale` and must be rebuilt. A static edit that only moves charts leaves their
-  noise field byte-identical.
+- The lightmap is denoised per chart, so an artifact built by an older tool
+  version is `stale` and must be rebuilt; the current tool version is 3. A
+  static edit that only moves charts leaves their noise field byte-identical.
 - The default bake is about 5 s at 16 threads, not the 2 s target. The 2 m probe
   fallback reduces probe work. Quality and performance measurement stay in the
   follow-up ticket.

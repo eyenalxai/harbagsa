@@ -55,13 +55,13 @@ probe_bake :: proc(
 	result: Probe_Result,
 	err: Build_Error,
 ) {
-	basis := Probe_Basis(quality.probe_basis)
-	moment_texels := int(quality.probe_moment_texels)
 	if quality.probe_texels != PROBE_TEXELS ||
-	   (basis != .Octa && basis != .SH9) ||
-	   (moment_texels != PROBE_MOMENT_TEXELS && moment_texels != PROBE_MOMENT_TEXELS_HIGH) {
+	   !probe_basis_supported(quality.probe_basis) ||
+	   !probe_moments_supported(quality.probe_moment_texels) {
 		return {}, .Probe_Count
 	}
+	basis := Probe_Basis(quality.probe_basis)
+	moment_texels := int(quality.probe_moment_texels)
 	min, counts := probe_grid(quality.probe_spacing)
 	count := int(counts.x) * int(counts.y) * int(counts.z)
 	if count <= 0 {

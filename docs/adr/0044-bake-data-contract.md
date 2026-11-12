@@ -26,7 +26,8 @@ never a fill value.
 
 - **Version first.** Every file starts with `HBAK`, a `u16` format version, a
   `u16` header size, a tool version, flags, the bake key, and an FNV-1a payload
-  hash. Version 1 is the only accepted version. An unknown magic, version,
+  hash. Version 2 is the only accepted version; version 1 artifacts are
+  rejected and must be rebuilt with `make bake`. An unknown magic, version,
   atlas format, or section layout is an error; the runtime reports `failed` and
   creates no bake resources.
 - **Header and section table.** The header names the atlas size, face, slot, and

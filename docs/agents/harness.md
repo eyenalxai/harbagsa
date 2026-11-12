@@ -315,7 +315,7 @@ mutually exclusive, and per-view output options apply to every view.
 | `direct` | shadowed direct light times albedo |
 | `lightmap` | the weighted baked lightmap term times albedo |
 | `probe` | the weighted static probe term times albedo |
-| `probe_linear` | the same probe term with every octa tap decoded before weighting |
+| `probe_linear` | the same probe term with every octa tap decoded before weighting; under SH9 it matches `probe` |
 | `emissive` | the emission term times albedo |
 | `shadow` | shadow visibility as a grey ramp: shadowed direct over open direct |
 | `lightmap_grid` | atlas texel checker plus a red chart-edge line; magenta with no tile |
@@ -335,7 +335,7 @@ identical to the same capture before views existed.
 `scenarios/capture-views.json` captures all nine views in one frame and then a
 plain color capture to prove the history survived. `probe_linear` renders the
 same baked data as `probe`, so the pair is the gamma-2 versus linear capture at
-one camera and one frame. `scenarios/probe-bright-emitter.json` writes the pair
+one camera and one frame. Under SH9 the pair is identical. `scenarios/probe-bright-emitter.json` writes the pair
 as part of the probe A/B.
 
 A named capture exposes its own renderer state through `get`, for example
