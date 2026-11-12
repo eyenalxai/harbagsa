@@ -78,12 +78,13 @@ free number.
   static fixtures, the quality, and the tool version. The renderer recomputes it
   from the current static input. A missing artifact is `missing`; a parse failure
   is `failed`; a key mismatch is `stale`; a match is `current`. The slot key
-  hashes the source, id, and transform, so a moved static box does not keep its
-  old chart: the lookup misses and the box falls back to direct light.
-- **Publish.** A static fixture or static geometry edit changes the key and marks
-  the bake stale. Direct light updates immediately; the old indirect remains
-  bound and visible, except for a box whose transform changed. That box's slot
-  key no longer matches, so it falls back to direct light instead of carrying a
+  hashes the source, id, and transform, so an authored mismatch does not keep
+  its old chart: the lookup misses and the box falls back to direct light. The
+  runtime editor refuses bake-input edits; see ADR 0048.
+- **Publish.** An authoring change to a static fixture or static geometry changes
+  the key and marks the bake stale. Direct light updates immediately; the old
+  indirect remains bound and visible, except for a box whose transform changed.
+  That box's slot key no longer matches, so it falls back to direct light instead of carrying a
   chart baked for its previous position. An explicit `bake` command rebuilds
   from the current static input and publishes the new artifact. A failed publish
   leaves the old artifact bound and reports `failed`; it never falls back to

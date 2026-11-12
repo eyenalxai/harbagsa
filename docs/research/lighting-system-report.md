@@ -168,14 +168,14 @@ invisible to every shadow ray. A non-lamp emissive prop casts no shadow, a lamp
 housing never occludes another lamp, and emission is conflated with opacity. Use an
 explicit lamp flag or a per-light self-instance test.
 
-### A stale bake after a static transform is a texture-space error
+### A static transform is an authoring change
 
-The bake key hashes the transform, but the runtime slot key is `(source, id)`. The
-old artifact still has a chart for that key, so the box samples the old lightmap
-in its new position. The UV is local, so the old lighting travels with the box.
-Invalidate the slot on a transform change, store the transform in the slot key, or
-rebake the moved charts incrementally. Add a moved static box to the stale-state
-scenario.
+The bake key and the runtime slot key both hash the box transform. A mismatch
+between an authored box and the loaded artifact misses the chart and falls back
+to direct light, so the box never samples a lightmap baked for another position.
+The runtime editor refuses a bake-input edit; a transform change is authored in
+the scene source or through `scene`/`place`, then rebaked. See ADR 0048 and
+`docs/evidence/bake-atlas.md`.
 
 ### Scale notes
 

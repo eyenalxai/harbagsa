@@ -3,8 +3,9 @@
 The lightmap atlas now uses a 1-texel gutter and a 4-texel minimum chart, the
 shelf packer sorts charts by allocation height, the bake report carries
 allocated texels and occupancy, and a static box slot key includes the box
-transform. The 2x linear arena fits the 1024² atlas. A moved static box reports
-stale and falls back to direct light instead of sampling its old chart.
+transform. The 2x linear arena fits the 1024² atlas. The runtime editor refuses
+a bake-input move; an authored replacement reports stale and has no chart until
+the bake is republished.
 
 These measurements were taken with tool 4, before the two-bounce default. Tool 5
 changes the default to two bounces and the bake key, not the atlas layout or the
@@ -87,26 +88,28 @@ texels, so it fits without lowering the 4-texels/m density. The same build with
 the height sort removed fails with `the lightmap atlas is full`
 (`runs/after/bake-2x-unsorted.txt`); the packer is what puts it under the limit.
 
-## Moved static box
+## Re-authored static box
 
 `scenarios/bake-static-move.json` places a static crate at `[0, 0.5, 9.5]`,
-bakes, picks the top face, moves the crate to `[2, 0.5, 9.5]`, and picks the
-same face again. The camera keeps the same relative view.
+bakes, picks the top face, removes it, places a replacement at `[2, 0.5, 9.5]`,
+picks the new face, then publishes again and picks it once more. The runtime
+editor refuses the move; the authoring path is remove, place, and bake.
 
-| | baked | after the move |
-| --- | --- | --- |
-| `state.bake.status` | current | stale |
-| `state.bake.key` | 17145427004284724291 | 12683803151893692035 |
-| `state.bake.artifact_key` | 17145427004284724291 | 17145427004284724291 |
-| pick `lightmap.rect` | 0.171387, 0.239746, 0.174316, 0.242676 | 0, 0, 0, 0 |
-| pick `lightmap.texel` | 178, 246 | −1, −1 |
-| pick `terms.lightmap` | 0.006515, 0.019307, 0.013562 | 0, 0, 0 |
+| | baked | after re-author, before publish | after publish |
+| --- | --- | --- | --- |
+| `state.bake.status` | current | stale | current |
+| `state.bake.key` | 3678099570907245953 | 12409575029299782498 | 12409575029299782498 |
+| `state.bake.artifact_key` | 3678099570907245953 | 3678099570907245953 | 12409575029299782498 |
+| pick `lightmap.rect` | 0.171387, 0.239746, 0.174316, 0.242676 | 0, 0, 0, 0 | 0.171387, 0.239746, 0.174316, 0.242676 |
+| pick `lightmap.texel` | 178, 246 | −1, −1 | 178, 246 |
+| pick `terms.lightmap` | 0.009799, 0.026875, 0.018665 | 0, 0, 0 | 0.010595, 0.031937, 0.024560 |
 
-The before capture reports `current`; the after capture reports `stale` with
-the same artifact key. The moved box keeps its direct term and loses its
-lightmap term. The captures are `baked-beauty.png`, `baked-lightmap.png`,
-`moved-beauty.png`, and `moved-lightmap.png` under
-`runs/after/bake-static-move/frames/`.
+The re-authored box has no chart in the old artifact, so it keeps only its
+direct term until the publish. The new artifact gives it a tile in the same
+chart slot; the key tracks the new static input. The captures are
+`baked-beauty.png`, `baked-lightmap.png`, `stale-beauty.png`,
+`stale-lightmap.png`, `republished-beauty.png`, and
+`republished-lightmap.png` under `runs/static-author/frames/`.
 
 ## Seam and leak comparison
 
@@ -152,8 +155,8 @@ the different wall times, not the artifact.
   `runs/after/arena-repro.hbake`.
 - `runs/before/lighting-quality`, `runs/before/lighting-seam`,
   `runs/before/lighting-wall` and the matching `runs/after/` directories.
-- `runs/after/bake-static-move`, `runs/after/bake-atlas-2x` (and its
-  `runs/bake-atlas-2x/arena-2x.hbake`), `runs/after/old-artifact`,
+- `runs/static-author` (the re-authored static box), `runs/after/bake-atlas-2x`
+  (and its `runs/bake-atlas-2x/arena-2x.hbake`), `runs/after/old-artifact`,
   `runs/after/new-artifact`, and `runs/after/compare-*.json`.
 
 Images stay in the run directories; none are committed.

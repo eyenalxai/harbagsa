@@ -56,6 +56,12 @@ editor_placement_geometry :: proc(
 }
 
 @(private)
+editor_spawn_bake_input :: proc(body_mode: Body_Mode, light: Light_Settings) -> bool {
+	return body_mode == .Static ||
+	       (light.active && light.kind == .Static_Fixture)
+}
+
+@(private)
 editor_placement_arm :: proc(
 	editor: ^Editor,
 	sim: ^Simulation,
@@ -72,6 +78,10 @@ editor_placement_arm :: proc(
 			body_mode = palette.body_mode
 			light = palette_light(palette)
 		}
+	}
+
+	if editor_spawn_bake_input(body_mode, light) {
+		return edit_fail(.Bake_Input_Immutable)
 	}
 
 	placement := Placement {
@@ -149,6 +159,9 @@ editor_place_spawn :: proc(
 	sim: ^Simulation,
 	spawn: Object_Spawn,
 ) -> Edit_Result {
+	if editor_spawn_bake_input(spawn.body_mode, spawn.light) {
+		return edit_fail(.Bake_Input_Immutable)
+	}
 	result, id := object_history_apply(editor_history(editor), sim, History_Place{spawn = spawn})
 	if !result.applied {
 		return result

@@ -497,18 +497,19 @@ publish or the loaded sidecar.
 {"cmd":"bake","out":"build/bake/arena.hbake"}
 ```
 
-A static fixture or static geometry edit changes the key and sets the status to
+A static fixture or static geometry change made through the authoring path
+(`scene`, `place`, or the scene source) changes the key and sets the status to
 `stale` immediately, even before the next frame. Direct light updates at once;
 the old indirect stays bound and visible until the publish. A dynamic lamp or
-crate move leaves the key unchanged and the status `current`. A moved static box
-is the exception: its slot key includes the transform, so the old chart no
-longer matches and that box falls back to direct light instead of carrying its
-previous lightmap to the new position. `scenarios/bake-static-move.json` places a
-static box, bakes, moves it, and picks the moved face; the second pick reports a
-zero rect and `texel: [-1, -1]`. A publish failure leaves the old artifact bound
-and reports `failed`; it never falls back to black or to another bake. Removing
-every static fixture and publishing a fresh bake yields zero indirect, and a
-lamp-free view stays black.
+crate move through the editor leaves the key unchanged and the status `current`.
+The runtime editor refuses a move, rotate, delete, duplicate, body flip,
+lamp-kind flip, or static placement of a bake input; the error is `bake inputs
+are authored, not edited at runtime`. The slot key still includes the transform,
+so a mismatch between an authored box and the loaded artifact falls back to
+direct light instead of carrying a previous lightmap to the new position. A
+publish failure leaves the old artifact bound and reports `failed`; it never
+falls back to black or to another bake. Removing every static fixture and
+publishing a fresh bake yields zero indirect, and a lamp-free view stays black.
 
 `scenarios/bake-atlas-2x.json` publishes a bake of the static geometry scaled 2x
 linearly; `state.bake.allocated_texels` and `occupancy` report the capacity. The
@@ -532,7 +533,8 @@ The artifact format is documented in
 `docs/adr/0044-bake-data-contract.md`; the mixed-lighting decision is
 `docs/adr/0045-mixed-static-baked-indirect.md`. `scenarios/bake-lifecycle.json`
 exercises the current, stale, and dynamic-move states;
-`scenarios/bake-static-move.json` exercises the moved-static-box slot;
+`scenarios/bake-static-move.json` exercises a static box authored at a new
+position and the resulting slot key;
 `scenarios/bake-atlas-2x.json` exercises the 2x atlas capacity;
 `scenarios/bake-empty.json` removes every static fixture and captures the
 lamp-free result; `scenarios/bake-hud.json` captures the lamp kind and bake
@@ -541,7 +543,7 @@ status in the debug HUD.
 The measurement pass has its own scenarios. `scenarios/lighting-quality.json`
 pairs the baked bounce with the direct-only view, then moves a crate, moves a
 dynamic lamp, and removes a static fixture. `scenarios/lighting-wall.json` seals
-a fixture inside a four-wall cell and moves it out of range.
+a fixture inside a four-wall cell, authors it out of range, and republishes.
 `scenarios/lighting-seam.json` looks at lightmap chart borders with the term on
 and off. `scenarios/lighting-noise.json` measures the baked indirect's texel
 noise on an unlit wall, with a clean window and the term off as the control.

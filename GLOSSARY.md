@@ -218,12 +218,16 @@ _Avoid_: Ambient, global illumination cache
 The explicit CPU pass that traces the static indirect and writes the versioned artifact. Its inputs are the static boxes, active static fixtures, static emissive boxes, and quality. The frame never runs it.
 _Avoid_: GI pass, probe pass
 
+**Bake input**:
+Arena boxes, placed static bodies, and static fixtures are the bake inputs. A bake input is authored in the scene source or through the harness `scene`/`place` command and is immutable at runtime; changing it requires a bake. Dynamic bodies and dynamic lamps are not bake inputs.
+_Avoid_: Baked object, static object
+
 **Bake key**:
 The FNV hash of the canonical static boxes, active static fixtures, quality, and tool version. The renderer recomputes it from the current static input; a mismatch is `stale`.
 _Avoid_: Scene hash, light hash
 
 **Bake slot key**:
-The FNV hash of a static box's source, id, and transform. The artifact stores one slot key per static box; the frame recomputes it. A moved static box misses its old slot and falls back to direct light, so it never samples a chart baked for its previous position.
+The FNV hash of a static box's source, id, and transform. The artifact stores one slot key per static box; the frame recomputes it. A mismatch, such as an authored transform published before the bake, misses the old slot and falls back to direct light, so the box never samples a chart baked for a previous position.
 _Avoid_: Box id, chart key
 
 **Bake status**:
@@ -308,10 +312,11 @@ mode, an optional base pitch, and an optional point light. The ramp carries a
 _Avoid_: Template, class, prototype
 
 **Body mode**:
-Static or dynamic. A static placed object collides and never moves. A dynamic
-placed object uses the prefab density and can be pushed. A lamp body follows its
-kind: a static fixture is static, a dynamic lamp is dynamic. A body request that
-would contradict the kind is refused.
+Static or dynamic. A static placed object collides and never moves; it is a bake
+input, so the runtime editor refuses its move, rotate, delete, duplicate, body
+flip, and light edits. A dynamic placed object uses the prefab density and can
+be pushed. A lamp body follows its kind: a static fixture is static, a dynamic
+lamp is dynamic. A body request that would contradict the kind is refused.
 _Avoid_: Body type
 
 **Object id**:
@@ -513,9 +518,10 @@ _Avoid_: Command list
 
 **Static box**:
 An immutable box in the arena: the floor, a wall, the ceiling, or a prop. It is
-not a placed object and it does not enter the simulation digest. It receives
-direct light, hard shadows, and a lightmap tile. `static_boxes` reports every
-static box; `harbagsa-agent boxes` prints the same list without a renderer.
+a bake input and it is not a placed object; it does not enter the simulation
+digest. It receives direct light, hard shadows, and a lightmap tile.
+`static_boxes` reports every static box; `harbagsa-agent boxes` prints the same
+list without a renderer.
 _Avoid_: Arena mesh, level mesh
 
 **Shot**:
@@ -796,9 +802,10 @@ The `F3` control that enables or disables temporal anti-aliasing.
 _Avoid_: AA switch
 
 **Debug mode**:
-The `F2` mode where the player becomes a free-fly camera and can edit placed
-objects and lights. It owns the active flag, the camera, and the saved player;
-the editor owns the editing state.
+The `F2` mode where the player becomes a free-fly camera and can edit dynamic
+placed objects and dynamic lamps. Bake inputs are read-only here; authoring one
+is a separate scene edit followed by a bake. It owns the active flag, the camera,
+and the saved player; the editor owns the editing state.
 _Avoid_: Edit mode, sandbox
 
 **Free-fly camera**:

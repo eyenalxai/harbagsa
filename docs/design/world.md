@@ -96,14 +96,15 @@ probe from the nearest valid probe when the virtual offset cannot repair it, so
 the copied depth moments keep their origin.
 
 The bake key covers the static boxes, the active static fixtures, the quality,
-and the tool version. A static fixture or static geometry edit marks the bake
-stale: direct light and shadows update immediately, while the old indirect stays
-bound until an explicit bake publishes the new artifact. A moved static box is
-the exception: its slot key includes the transform, so the old chart no longer
-matches and the box falls back to direct light instead of carrying its previous
-lightmap. A dynamic lamp or crate move does not change the key. `state.bake`
-reports `missing`, `stale`, `current`, or `failed`; a missing or failed artifact
-never falls back to black or to another bake.
+and the tool version. An authoring change to a static fixture or static geometry
+marks the bake stale: direct light and shadows update immediately, while the old
+indirect stays bound until an explicit bake publishes the new artifact. The
+runtime editor refuses a move, rotate, delete, duplicate, body flip, lamp-kind
+flip, or static placement of a bake input. A mismatch between an authored box
+and the loaded artifact still misses its slot and falls back to direct light
+instead of carrying a previous lightmap. A dynamic lamp or crate move does not
+change the key. `state.bake` reports `missing`, `stale`, `current`, or `failed`;
+a missing or failed artifact never falls back to black or to another bake.
 
 The `lightmap` and `probe` renderer overrides, both default true, exist for paired
 captures and performance runs. They are not per-lamp or per-room controls. A

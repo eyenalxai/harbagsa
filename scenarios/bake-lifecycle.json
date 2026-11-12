@@ -1,5 +1,5 @@
 {
-  "note": "Current bake, stale after a static fixture move, current after publish, and current after a dynamic crate move.",
+  "note": "Current bake, stale after a static fixture re-author, current after publish, and current after a dynamic crate move.",
   "size": "1280x720",
   "view": {"hud": false, "debug": false, "hint": false},
   "commands": [
@@ -7,8 +7,10 @@
     {"cmd": "bake"},
     {"cmd": "settle", "frames": 10},
     {"cmd": "capture", "name": "current", "format": "stats", "png": true},
-    {"cmd": "editor", "select_object": "initial-lamp"},
-    {"cmd": "editor", "move": [-5.0, 1.2, 6.0]},
+    {"cmd": "remove", "name": "initial-lamp"},
+    {"cmd": "place", "prefab": "Lamp", "position": [-5.0, 1.2, 6.0], "body": "static",
+     "name": "initial-lamp",
+     "light": {"kind": "static", "color": "warm", "intensity": 1.5, "range": 8}},
     {"cmd": "settle", "frames": 10},
     {"cmd": "capture", "name": "stale", "format": "stats", "png": true},
     {"cmd": "bake"},

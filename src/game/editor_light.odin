@@ -78,6 +78,15 @@ editor_light_edit :: proc(
 	if !target.ok {
 		return edit_fail(.No_Lamp)
 	}
+	if target.kind == .Object {
+		object, found := simulation_object_find(sim, target.id)
+		if !found {
+			return edit_fail(.No_Lamp)
+		}
+		if object_is_bake_input(object) {
+			return edit_fail(.Bake_Input_Immutable)
+		}
+	}
 	next := target.settings
 	switch value in edit {
 	case Light_Edit_Adjust:
@@ -96,6 +105,9 @@ editor_light_edit :: proc(
 			kind = .Static_Fixture
 		}
 		next = light_with_kind(target.settings, kind)
+	}
+	if next.kind == .Static_Fixture && target.settings.kind != .Static_Fixture {
+		return edit_fail(.Bake_Input_Immutable)
 	}
 	return editor_light_apply(editor, sim, target, next)
 }
