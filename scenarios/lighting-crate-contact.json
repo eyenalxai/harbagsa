@@ -1,0 +1,22 @@
+{
+  "note": "Movable-crate contact: a dynamic crate on the static floor beside a static fixture. The crate samples the probe term and the floor samples the lightmap term; picks on the crate face and on the floor at the contact compare the two fields. The default is two bounces; --param bounces=1 repeats the pair against the one-bounce lightmap.",
+  "size": "1280x720",
+  "requires": {"renderer_debug": true},
+  "parameters": {"bounces": 2},
+  "view": {"hud": false, "debug": false, "hint": false, "perf": false},
+  "commands": [
+    {"cmd": "renderer_debug", "taa": false, "jitter": false},
+    {"cmd": "place", "prefab": "Lamp", "position": [-4.2, 1.6, 8.0], "name": "contact-lamp", "light": {"kind": "static", "color": "warm", "intensity": 3.0, "range": 5}},
+    {"cmd": "settle", "frames": 30},
+    {"cmd": "bake", "bounces": "${bounces}"},
+    {"cmd": "camera", "position": [-3.0, 1.3, 10.0], "look_at": [-3.0, 0.45, 6.0], "fov_deg": 50},
+    {"cmd": "settle", "frames": 12},
+    {"cmd": "capture", "name": "crate-contact", "views": ["beauty", "direct", "lightmap", "probe"], "format": "stats", "png": true, "region": {"x": 440, "y": 300, "w": 400, "h": 300}, "note": "The crate face and the floor at the contact."},
+    {"cmd": "pick", "at": [640, 400]},
+    {"cmd": "pick", "at": [640, 560]},
+    {"cmd": "pick", "at": [640, 600]},
+    {"cmd": "pick", "at": [640, 640]},
+    {"cmd": "pick", "at": [480, 600]},
+    {"cmd": "pick", "at": [800, 600]}
+  ]
+}

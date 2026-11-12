@@ -58,6 +58,7 @@ run path. `--out DIR` chooses the whole run directory.
 | measure 96 lights at 1080p | `scenarios/perf-mixed.json` |
 | review the mixed-lighting evidence | `docs/evidence/mixed-lighting.md` |
 | review the bake atlas evidence | `docs/evidence/bake-atlas.md` |
+| review the second-bounce and contact evidence | `docs/evidence/bounce-and-contact.md` |
 | measure performance | **Performance** |
 | reproduce a live view | **Live repro** |
 | understand a design choice | `docs/adr/0045-mixed-static-baked-indirect.md` |
@@ -153,8 +154,8 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `place`: `prefab`, `position`, optional `yaw_deg`, `body`, `name`, and `light`.
 - `remove`: object `id` or `name`.
 - `bake`: rebuild and publish the static indirect; optional `probe_spacing`,
-  `probe_basis` (`octa` or `sh9`), `probe_moments` (8 or 16), `scale` (0, 8],
-  `threads`, and `out`.
+  `probe_basis` (`octa` or `sh9`), `probe_moments` (8 or 16), `bounces` (1 or
+  2), `scale` (0, 8], `threads`, and `out`.
 - `pick`: resolve one pixel with `at`; see **Pick**.
 - `get`: one state or capture `field`.
 - `quit`: stop the session.
@@ -394,9 +395,9 @@ same report inside the renderer block. Both report the status (`missing`,
 `stale`, `current`, or `failed`), the current key, the artifact key, format and
 tool versions, the measured bake time, atlas and probe counts, allocated texels
 and occupancy, probe spacing, the probe basis and moment resolution, the
-invalid-probe count before dilation, the dynamic boxes whose centre is
-outside the probe volume (`probe_missing`), artifact and GPU bytes, and the load
-or publish error. `allocated_texels` is the sum of the chart rectangles plus
+bounce count, the invalid-probe count before dilation, the dynamic boxes whose
+centre is outside the probe volume (`probe_missing`), artifact and GPU bytes, and
+the load or publish error. `allocated_texels` is the sum of the chart rectangles plus
 their gutters; `occupancy` is that sum divided by the atlas texel count. Neither
 is the valid-texel or baked-texel count. `state.render_digest` covers target extent, camera, boxes, box
 slots, emissive strengths, point lights, jitter, atlas weight, clip height,
@@ -436,16 +437,18 @@ sample position, so the copied moments keep their origin.
 
 The `bake` command rebuilds from the current static input and publishes the new
 artifact without restarting the renderer. It accepts optional `probe_spacing`
-(1 or 2), `probe_basis` (`octa` or `sh9`), `probe_moments` (8 or 16), `scale`
-(0, 8], `threads` (1 to 256), and `out` (write the artifact to this path). The
-command requires a renderer. `scale` multiplies the static box centres, half
-extents, and light positions for an atlas capacity run; the published artifact
-is stale against the unscaled scene because its key covers the scaled boxes. The
-default build uses 1 m probes, 128 lightmap rays, 1024 probe rays, and one
-bounce; it takes about 5 s at 16 threads. Use `probe_spacing: 2` for the
-measured fallback when probe work or memory is the limit. The A/B result and
-the reasons the defaults stay octa with 8 x 8 moments are in
-`docs/evidence/probe-format.md`. `make bake` writes `<artifact>.time` beside the artifact; the renderer
+(1 or 2), `probe_basis` (`octa` or `sh9`), `probe_moments` (8 or 16), `bounces`
+(1 or 2), `scale` (0, 8], `threads` (1 to 256), and `out` (write the artifact to
+this path). The command requires a renderer. `scale` multiplies the static box
+centres, half extents, and light positions for an atlas capacity run; the
+published artifact is stale against the unscaled scene because its key covers
+the scaled boxes. The default build uses 1 m probes, 128 lightmap rays, 1024
+probe rays, and two bounces; it takes about 7.5 s at 16 threads, or about 5.3 s
+with `bounces: 1`. The second gather re-traces the same per-texel ray set and
+samples the denoised first-bounce lightmap at each hit, so it adds no stochastic
+noise. Use `probe_spacing: 2` for the measured fallback when probe work or
+memory is the limit. The A/B result and the reasons the defaults stay octa with
+8 x 8 moments are in `docs/evidence/probe-format.md`. `make bake` writes `<artifact>.time` beside the artifact; the renderer
 reads that sidecar so a loaded bake reports its measured time without changing
 the artifact bytes. `state.bake.bake_ms` is the measured wall time of the last
 publish or the loaded sidecar.
@@ -482,6 +485,9 @@ Use `--bake PATH` on `run` or `session` to load another artifact:
 A version or layout mismatch sets `status` to `failed` and records the loader
 error. A tool 3 artifact has the previous 4-texel gutter and 8-texel minimum
 chart; the loader rejects that quality block, so the artifact must be rebuilt.
+A tool 4 artifact has the accepted layout but a key from tool 4, so it loads and
+reports `stale`; rebuild it with `make bake` to get the tool 5 two-bounce
+default.
 The artifact format is documented in
 `docs/adr/0044-bake-data-contract.md`; the mixed-lighting decision is
 `docs/adr/0045-mixed-static-baked-indirect.md`. `scenarios/bake-lifecycle.json`
@@ -505,6 +511,18 @@ accepted limits are in `docs/evidence/mixed-lighting.md`.
 `scenarios/probe-thin-wall.json` and `scenarios/probe-bright-emitter.json` run
 the probe basis and moment A/B; `docs/evidence/probe-format.md` records the
 result and the default choice.
+
+The second-bounce and contact evidence has its own scenarios.
+`scenarios/lighting-bounce.json` is the corner A/B; run it with
+`--param bounces=1` and `--param bounces=2` and compare the two run
+directories. `scenarios/lighting-crate-contact.json` compares the dynamic
+crate's probe term with the static floor's lightmap term. The colour-bleed,
+coplanar-seam, and thin-wall runs are
+`scenarios/lighting-colour-bleed.json`,
+`scenarios/lighting-coplanar-seam.json`, and
+`scenarios/lighting-thin-wall-leak.json`; the last removes the 0.5 m wall and
+republishes to measure the far side. `docs/evidence/bounce-and-contact.md`
+records the numbers and the default decision.
 
 ## Renderer debug overrides
 

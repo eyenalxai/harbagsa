@@ -107,8 +107,8 @@ never falls back to black or to another bake.
 
 The `lightmap` and `probe` renderer overrides, both default true, exist for paired
 captures and performance runs. They are not per-lamp or per-room controls. A
-denser grid, more rays, and more than one bounce are new decisions, not hidden
-shader options.
+denser grid and more rays are new decisions, not hidden shader options. The bake
+traces two diffuse bounces by default; `bounces: 1` is the one-bounce option.
 
 A lamp carries a kind. A static fixture uses a static body, and its light
 position comes from that body. A dynamic lamp uses a dynamic body and contributes
