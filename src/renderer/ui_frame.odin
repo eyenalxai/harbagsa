@@ -19,7 +19,6 @@ UI_Action_Kind :: enum(u32) {
 	Lamp_Kind        = 13,
 	Lamp_Color       = 14,
 	Toggle_Inspector = 15,
-	Open_Menu         = 16,
 }
 
 UI_Settings_Id :: enum(u32) {

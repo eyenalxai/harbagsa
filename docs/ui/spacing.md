@@ -51,7 +51,8 @@ lifts to the raised surface; it does not get a border.
 - The HUD opacity slider is the 480 point body width: a 16 point label/value line
   above a 24 point track hit area with a 4 point track and a 14 point knob.
 - The Controls section is two lines of three `Keybind` pairs.
-- The footer is right-aligned with a 36 point Resume button and a top hairline.
+- The footer is right-aligned with a 28 point (`ControlSize::Large`) Resume button
+  and a top hairline.
 
 ## Object palette
 

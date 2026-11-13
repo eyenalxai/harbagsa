@@ -219,10 +219,6 @@ run :: proc() -> bool {
 			if result.window_changed {
 				apply_window_settings(&loop, &window, previous_window)
 			}
-			if result.opened_menu {
-				loop.accumulator = game.SIMULATION_STEP
-				input.clear_latches(&loop.resolver)
-			}
 			if result.closed_menu {
 				loop.accumulator = 0
 			}

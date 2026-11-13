@@ -2,7 +2,7 @@ use rune::{Cx, Color, El, col, effect, el, row, spacer};
 use rune_kit::Kit;
 
 use crate::abi::{
-    ACTION_OPEN_MENU, ACTION_PALETTE_CLOSE, ACTION_PALETTE_SELECT, ACTION_TOGGLE_DEBUG, UiAction,
+    ACTION_CLOSE_MENU, ACTION_PALETTE_CLOSE, ACTION_PALETTE_SELECT, ACTION_TOGGLE_DEBUG, UiAction,
 };
 use crate::components;
 use crate::settings;
@@ -44,7 +44,7 @@ fn hud_view(state: &UiState) -> El {
         panel = match entry.kind {
             5 => panel.child(components::hairline(kit)),
             6 => panel.child(text::weighted(&entry.label, state.weight, false).color(tertiary)),
-            0..=4 => {
+            0..=3 => {
                 let label = if entry.kind == 3 { tertiary } else { kit.c.text_muted };
                 let value = if entry.flags & ROW_BLOCKED != 0 {
                     kit.c.text_muted
@@ -95,10 +95,10 @@ fn hud_view(state: &UiState) -> El {
         text::weighted(&state.panel.notice, state.weight, false).color(kit.c.text_base)
     };
 
-    let settings = button(kit, "Settings", state.weight, true)
-        .key("action:settings")
+    let close = button(kit, "Close", state.weight, true)
+        .key("action:1")
         .on_press(|state: &mut UiState| {
-            state.actions.push(UiAction::new(ACTION_OPEN_MENU));
+            state.actions.push(UiAction::new(ACTION_CLOSE_MENU));
         });
     let debug = button(kit, "Debug", state.weight, false)
         .key("action:2")
@@ -125,7 +125,7 @@ fn hud_view(state: &UiState) -> El {
                 if state.fx {
                     actions = actions.child(glow.absolute(0.0, 0.0).w_full().h_full());
                 }
-                actions.child(settings).child(debug)
+                actions.child(close).child(debug)
             }),
     );
     root
@@ -165,7 +165,6 @@ fn palette_view(state: &UiState) -> El {
                 flags: 0,
                 label: item.short.clone(),
                 value: item.name.clone(),
-                ratio: 0.0,
             })
             .collect(),
         selected: palette.selected,
@@ -235,14 +234,6 @@ fn menu_panel(menu: &MenuPanel, kit: &Kit, weight: f32, key_prefix: Option<&str>
                 });
         }
         panel = panel.child(line);
-        if entry.kind == 4 {
-            let track = el()
-                .w_full()
-                .h(4.0)
-                .fill(kit.light(0.20))
-                .child(el().w_frac(entry.ratio).h_full().fill(kit.c.bg_accent));
-            panel = panel.child(track);
-        }
     }
 
     let note = if menu.note.is_empty() {

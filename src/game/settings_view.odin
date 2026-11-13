@@ -31,9 +31,13 @@ settings_view :: proc(settings: ^Settings) -> ui.Settings {
 	for index in 0 ..< view.resolution_count {
 		settings_option_mode(&view.resolution_names[index], info.modes[index])
 	}
-	current := settings.window.mode == .Borderless ? info.desktop : settings.window.resolution
+	current := settings_resolution_current(settings)
+	if info.mode_count > 0 {
+		settings_option_mode(&view.resolution_current, current)
+	}
 	index := display.find_mode(info, current)
-	view.resolution = max(index, 0)
+	view.resolution_missing = info.mode_count > 0 && index < 0
+	view.resolution = index
 	return view
 }
 

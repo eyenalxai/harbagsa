@@ -59,8 +59,6 @@ Ui_Row :: struct {
 	label_len: u32,
 	value:     [^]u8,
 	value_len: u32,
-	ratio:     f32,
-	ticks:     u32,
 }
 
 Ui_Hint :: struct {
@@ -88,7 +86,7 @@ Ui_Option :: struct {
 Ui_Settings :: struct {
 	window_mode:       u32,
 	display:           u32,
-	resolution:        u32,
+	resolution:        i32,
 	sprint_mode:       u32,
 	hud_opacity:       f32,
 	reduce_motion:     u32,
@@ -96,10 +94,12 @@ Ui_Settings :: struct {
 	window_mode_count: u32,
 	displays:          [^]Ui_Option,
 	display_count:     u32,
-	resolutions:       [^]Ui_Option,
-	resolution_count:  u32,
-	sprint_modes:      [^]Ui_Option,
-	sprint_mode_count: u32,
+	resolutions:        [^]Ui_Option,
+	resolution_count:   u32,
+	resolution_current: Ui_Option,
+	resolution_missing: u32,
+	sprint_modes:       [^]Ui_Option,
+	sprint_mode_count:  u32,
 }
 
 Ui_Palette_Item :: struct {
@@ -225,8 +225,6 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 			label_len = u32(len(row.label)),
 			value     = raw_data(row.value),
 			value_len = u32(len(row.value)),
-			ratio     = row.ratio,
-			ticks     = u32(row.ticks),
 		}
 	}
 	panel := Ui_Panel {

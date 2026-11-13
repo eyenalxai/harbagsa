@@ -22,9 +22,8 @@ Row_Kind :: enum {
 	Action,
 	Metric,
 	Detail,
-	Slider,
-	Divider,
-	Header,
+	Divider = 5,
+	Header  = 6,
 }
 
 Row_Align :: enum {
@@ -38,8 +37,6 @@ Row :: struct {
 	value:   string,
 	numeric: bool,
 	blocked: bool,
-	ratio:   f32,
-	ticks:   int,
 }
 
 Hint_Cell :: struct {
@@ -66,10 +63,12 @@ Settings :: struct {
 	display_names:    [SETTINGS_MAX_DISPLAYS]Settings_Option,
 	display:          int,
 	display_count:    int,
-	resolution_names: [SETTINGS_MAX_MODES]Settings_Option,
-	resolution:       int,
-	resolution_count: int,
-	sprint_modes:     [2]Settings_Option,
+	resolution_names:   [SETTINGS_MAX_MODES]Settings_Option,
+	resolution:         int,
+	resolution_count:   int,
+	resolution_current: Settings_Option,
+	resolution_missing: bool,
+	sprint_modes:       [2]Settings_Option,
 	sprint_mode:      int,
 	hud_opacity:      f32,
 	reduce_motion:    bool,

@@ -143,8 +143,10 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
   demo over the status action row; it is off by default.
 - `debug_mode`: `active` boolean.
 - `editor`: palette, placement, object, light, camera, pointer, and history fields.
-- `menu`: `open`, `item`, `activate`, `direction`, `opacity`, and
-  `reduce_motion`. `opacity` is a percentage in [70, 100].
+- `menu`: `open`, `item`, `activate`, `direction`, `opacity`, `reduce_motion`,
+  and `allow_blocked`. `opacity` is a percentage in [70, 100]. A setting change
+  that does not change the value fails the command; `allow_blocked` accepts an
+  expected blocked result.
 - `ui`: click the Rune view by element `key`, or at `x` and `y` in points. The
   run fails when the click produces no action; the action is applied before the
   command returns.
@@ -199,7 +201,7 @@ batch per frame. A harness click uses the same Rune hit path as a live click.
 `scenarios/rune-menu.json` opens the settings dialog, track-clicks HUD opacity,
 steps it through the shared settings path, toggles reduce motion, and closes with
 both Resume and the header control. `scenarios/rune-menu-800.json` repeats it at
-800x600. `scenarios/rune-ui.json` opens Settings from the status action row.
+800x600. `scenarios/rune-ui.json` activates the status panel Close action by key.
 `scenarios/rune-fx.json` sets `view.fx` and shows the status action row with its
 rune-fx glow.
 

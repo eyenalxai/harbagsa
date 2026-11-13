@@ -14,7 +14,6 @@ pub struct PanelRow {
     pub flags: u32,
     pub label: String,
     pub value: String,
-    pub ratio: f32,
 }
 
 #[derive(Default)]
@@ -77,6 +76,8 @@ pub struct SettingsState {
     pub displays: Vec<String>,
     pub resolution: usize,
     pub resolutions: Vec<String>,
+    pub resolution_current: String,
+    pub resolution_missing: bool,
     pub sprint_mode: usize,
     pub sprint_modes: Vec<String>,
     pub hud_opacity: f32,
@@ -87,13 +88,15 @@ impl Default for SettingsState {
     fn default() -> Self {
         Self {
             window_mode: 0,
-            window_modes: vec!["Borderless".into(), "Windowed".into()],
+            window_modes: Vec::new(),
             display: 0,
             displays: Vec::new(),
             resolution: 0,
             resolutions: Vec::new(),
+            resolution_current: String::new(),
+            resolution_missing: false,
             sprint_mode: 0,
-            sprint_modes: vec!["Hold".into(), "Toggle".into()],
+            sprint_modes: Vec::new(),
             hud_opacity: HUD_OPACITY_DEFAULT,
             reduce_motion: false,
         }

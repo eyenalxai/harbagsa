@@ -28,7 +28,7 @@ ui_settings_frame :: proc(source: ^ui.Settings, options: ^Ui_Settings_Options) -
 	return {
 		window_mode = u32(source.window_mode),
 		display = u32(source.display),
-		resolution = u32(source.resolution),
+		resolution = i32(source.resolution),
 		sprint_mode = u32(source.sprint_mode),
 		hud_opacity = source.hud_opacity,
 		reduce_motion = u32(source.reduce_motion),
@@ -38,6 +38,8 @@ ui_settings_frame :: proc(source: ^ui.Settings, options: ^Ui_Settings_Options) -
 		display_count = u32(display_count),
 		resolutions = raw_data(options.resolutions[:resolution_count]),
 		resolution_count = u32(resolution_count),
+		resolution_current = ui_option(&source.resolution_current),
+		resolution_missing = u32(source.resolution_missing),
 		sprint_modes = raw_data(options.sprint_modes[:]),
 		sprint_mode_count = u32(len(options.sprint_modes)),
 	}

@@ -44,11 +44,16 @@ pub fn dialog(state: &UiState, layers: &mut Vec<El>) {
 fn body(state: &UiState, select_layers: &mut Vec<El>) -> El {
     let k = &state.kit;
     let bound = opacity_bound(state);
+    let resolution_note = if state.settings.resolution_missing {
+        "Resolution unavailable"
+    } else {
+        ""
+    };
     col()
         .w_full()
         .padding(20.0)
         .gap(4.0)
-        .child(section(k, "Display", ""))
+        .child(section(k, "Display", resolution_note))
         .child(control_row(k, "Window mode", window_mode(state)))
         .child(control_row(k, "Display", display_select(state, select_layers)))
         .child(control_row(k, "Resolution", resolution_select(state, select_layers)))
@@ -67,7 +72,6 @@ fn section(k: &Kit, label: &str, note: &str) -> El {
         text::styled(
             &label.to_uppercase(),
             TextStyle {
-                size: 11.0,
                 line_height: 16.0,
                 tracking: 0.44,
                 ..k.ty.small_medium
@@ -167,10 +171,16 @@ fn select_control(
         }
         SelectKind::Resolution => {
             let options = &state.settings.resolutions;
+            let missing = state.settings.resolution_missing;
+            let current = if missing {
+                Some(state.settings.resolution_current.as_str())
+            } else {
+                options.get(state.settings.resolution).map(String::as_str)
+            };
             (
                 options,
-                options.get(state.settings.resolution).map(String::as_str),
-                state.settings.resolution,
+                current,
+                if missing { usize::MAX } else { state.settings.resolution },
                 options.is_empty()
                     || (state.settings.window_mode == 1 && options.len() == 1),
                 "No modes",

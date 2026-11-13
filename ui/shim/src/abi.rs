@@ -25,7 +25,6 @@ pub const ACTION_LAMP_SET: u32 = 12;
 pub const ACTION_LAMP_KIND: u32 = 13;
 pub const ACTION_LAMP_COLOR: u32 = 14;
 pub const ACTION_TOGGLE_INSPECTOR: u32 = 15;
-pub const ACTION_OPEN_MENU: u32 = 16;
 
 pub const SETTING_WINDOW_MODE: u32 = 0;
 pub const SETTING_DISPLAY: u32 = 1;
@@ -67,8 +66,6 @@ pub struct UiRow {
     pub label_len: u32,
     pub value: *const u8,
     pub value_len: u32,
-    pub ratio: f32,
-    pub ticks: u32,
 }
 
 #[repr(C)]
@@ -100,7 +97,7 @@ pub struct UiOption {
 pub struct UiSettings {
     pub window_mode: u32,
     pub display: u32,
-    pub resolution: u32,
+    pub resolution: i32,
     pub sprint_mode: u32,
     pub hud_opacity: f32,
     pub reduce_motion: u32,
@@ -110,6 +107,8 @@ pub struct UiSettings {
     pub display_count: u32,
     pub resolutions: *const UiOption,
     pub resolution_count: u32,
+    pub resolution_current: UiOption,
+    pub resolution_missing: u32,
     pub sprint_modes: *const UiOption,
     pub sprint_mode_count: u32,
 }
@@ -234,7 +233,6 @@ unsafe fn rows(rows: *const UiRow, count: u32) -> Vec<PanelRow> {
                 flags: row.flags,
                 label: unsafe { text_bytes(row.label, row.label_len) },
                 value: unsafe { text_bytes(row.value, row.value_len) },
-                ratio: row.ratio,
             }
         })
         .collect()
@@ -281,8 +279,12 @@ pub unsafe fn settings_state(settings: *const UiSettings) -> Option<SettingsStat
         window_modes: options(settings.window_modes, settings.window_mode_count),
         display: settings.display as usize,
         displays: options(settings.displays, settings.display_count),
-        resolution: settings.resolution as usize,
+        resolution: settings.resolution.max(0) as usize,
         resolutions: options(settings.resolutions, settings.resolution_count),
+        resolution_current: unsafe {
+            text_bytes(settings.resolution_current.text, settings.resolution_current.text_len)
+        },
+        resolution_missing: settings.resolution_missing != 0,
         sprint_mode: settings.sprint_mode as usize,
         sprint_modes: options(settings.sprint_modes, settings.sprint_mode_count),
         hud_opacity: settings.hud_opacity,

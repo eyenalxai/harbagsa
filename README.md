@@ -88,12 +88,12 @@ launch-time display list. HUD opacity runs from 70 to 100 percent in one-point
 steps and promotes tertiary HUD text to secondary below 94 percent. Reduce motion
 stops kit transitions. The Controls section is a compact reference; the full
 keyboard list is under Debug mode below. `Esc`, the header close control, and
-`Resume` close the dialog. The `Settings` button in the status action row opens
-it; `Debug` toggles
-debug mode. The row is keyboard-reachable with Tab, Enter, or Space. Pointer
-clicks reach it only while the cursor is free; during play the pointer is
-captured and drives the camera. Type weight remains a stored setting but is not
-part of Settings.
+`Resume` close the dialog. The status action row still carries the merged
+`Close` and `Debug`; `Close` is inert while the dialog is closed, and `Debug`
+toggles debug mode. The row is not part of this dialog's redesign. Pointer
+control starts when the cursor is free; while it is captured, the pointer
+belongs to the camera. Type weight remains a stored setting but is not part of
+Settings.
 
 Window mode is Borderless or Windowed. Borderless uses the selected display's
 desktop size. Windowed uses the chosen resolution and a normal title bar. The

@@ -16,7 +16,6 @@ Context :: struct {
 Result :: struct {
 	handled:        bool,
 	applied:        bool,
-	opened_menu:    bool,
 	closed_menu:    bool,
 	window_changed: bool,
 	reason:         game.Edit_Reason,
@@ -27,18 +26,12 @@ Result :: struct {
 apply :: proc(ctx: Context, action: renderer.Ui_Action) -> Result {
 	#partial switch renderer.UI_Action_Kind(action.kind) {
 	case .Close_Menu:
-		if !ctx.menu.open {
-			return {handled = true}
-		}
-		game.menu_close(ctx.menu)
-		return {handled = true, applied = true, closed_menu = true}
-	case .Open_Menu:
 		if ctx.menu.open {
-			return {handled = true}
+			game.menu_close(ctx.menu)
+			return {handled = true, applied = true, closed_menu = true}
 		}
-		game.menu_open(ctx.menu)
-		game.debug_mode_cancel_editing(ctx.debug)
-		return {handled = true, applied = true, opened_menu = true}
+		// The status row's inert Close is a handled no-op, as merged.
+		return {handled = true, applied = true}
 	case .Toggle_Debug:
 		game.debug_mode_toggle(ctx.debug, ctx.sim)
 		return {handled = true, applied = true}

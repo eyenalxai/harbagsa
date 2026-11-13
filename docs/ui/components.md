@@ -14,15 +14,13 @@ The row kinds map to Rune elements:
 
 - `Divider`: a 1 point full-width line.
 - `Header`: tertiary text.
-- `Setting`, `Action`, `Metric`, `Detail`, `Slider`: a label row with a spacer and
-  a value. A slider also draws the track.
+- `Setting`, `Action`, `Metric`, `Detail`: a label row with a spacer and a value.
 
-The action row has two buttons: `Settings` returns `Open_Menu` and opens the
-dialog, and `Debug` returns `Toggle_Debug` and toggles debug mode. The dialog
-closes with `Esc`, its close control, or `Resume`. The buttons are focusable:
-Tab reaches them and Enter or Space activates them. The live pointer reaches the
-row only when the cursor is free; while the pointer is captured, it belongs to
-the camera.
+The action row has two buttons: `Close` returns `Close_Menu`, which is a handled
+no-op while the dialog is closed, and `Debug` returns `Toggle_Debug` and toggles
+debug mode. The dialog closes with `Esc`, its close control, or `Resume`. The row
+is drawn while the pointer is captured; live pointer events reach it only when
+the cursor is free. The action-row redesign is separate.
 
 Incorrect: measuring a row in Odin and sizing a rectangle from it. Rune measures
 the text.
@@ -35,7 +33,9 @@ Interface, and Controls. Window mode and Sprint mode are `SegmentedControl`s;
 Display and Resolution use the kit Select field over a menu list whose items keep
 their own indices, so duplicate or truncated names still choose the right row;
 HUD opacity is the local Slider;
-Reduce motion is a `Switch`; Resume is a footer `Button`. `Esc`, the header close
+Reduce motion is a `Switch`; Resume is a footer `Button`. If the current
+resolution is not in the display's mode list, the field keeps it and the Display
+header says `Resolution unavailable`. `Esc`, the header close
 control, and Resume dismiss it.
 
 The HUD opacity Slider runs from 70 to 100 percent in one-point steps. Only the
@@ -89,7 +89,7 @@ Incorrect: centring it over the spider. It sits on the bottom margin.
 
 ## Rune fx demo
 
-`view.fx` asks the shim to put a rune-fx glow over the `Settings`/`Debug` action row.
+`view.fx` asks the shim to put a rune-fx glow over the `Close`/`Debug` action row.
 It is a demonstration of the effect layer, not a notification and not a state
 signal. It is off by default and no scenario may assume it. The glow uses
 `#7C5CFF` with a `#F4F0FF` core and a 12 point radius.

@@ -22,10 +22,12 @@ Menu_Command :: struct {
 	has_opacity:       bool,
 	reduce_motion:     bool,
 	has_reduce_motion: bool,
+	allow_blocked:     bool,
+	has_allow_blocked: bool,
 }
 
 parse_menu :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "open", "item", "activate", "direction", "opacity", "reduce_motion"}); unknown {
+	if key, unknown := json_unknown_key(object, {"cmd", "open", "item", "activate", "direction", "opacity", "reduce_motion", "allow_blocked"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 
@@ -72,6 +74,9 @@ parse_menu :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, 
 		command.menu.has_opacity = true
 	}
 	if field_error := json_optional_bool(object, "reduce_motion", &command.menu.reduce_motion, &command.menu.has_reduce_motion); field_error != "" {
+		return {}, field_error
+	}
+	if field_error := json_optional_bool(object, "allow_blocked", &command.menu.allow_blocked, &command.menu.has_allow_blocked); field_error != "" {
 		return {}, field_error
 	}
 	if !command.menu.has_open &&

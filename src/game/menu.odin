@@ -13,6 +13,7 @@ MENU_SUMMARY :: "Window, interface, and controls"
 MENU_STATUS_ONE_DISPLAY :: "One display · nothing to change"
 MENU_STATUS_NO_MODES :: "No modes · nothing to change"
 MENU_STATUS_ONE_MODE :: "One mode · nothing to change"
+MENU_STATUS_MODE_MISSING :: "Current mode is not listed · nothing to change"
 MENU_STATUS_MIN_OPACITY :: "Minimum opacity · nothing to change"
 MENU_STATUS_MAX_OPACITY :: "Maximum opacity · nothing to change"
 MENU_WINDOW_APPLY_FAILED :: "Window change failed · %s"
@@ -120,14 +121,21 @@ menu_change_setting :: proc(
 		settings_set(settings, .Display, next, 0)
 	case .Resolution:
 		info := display.info_at(&settings.display, settings.window.display)
-		if settings_resolution_blocked(settings) {
-			status := info.mode_count == 0 ? MENU_STATUS_NO_MODES : MENU_STATUS_ONE_MODE
-			menu_set_status(menu, status)
+		if settings.display.count == 0 || info.mode_count == 0 {
+			menu_set_status(menu, MENU_STATUS_NO_MODES)
 			return .Blocked
 		}
-		current := settings.window.mode == .Borderless ? info.desktop : settings.window.resolution
+		if settings_resolution_missing(settings) {
+			menu_set_status(menu, MENU_STATUS_MODE_MISSING)
+			return .Blocked
+		}
+		if settings.window.mode == .Windowed && info.mode_count == 1 {
+			menu_set_status(menu, MENU_STATUS_ONE_MODE)
+			return .Blocked
+		}
+		current := settings_resolution_current(settings)
 		index := display.find_mode(info, current)
-		index = index < 0 ? 0 : (index + direction + info.mode_count) % info.mode_count
+		index = (index + direction + info.mode_count) % info.mode_count
 		settings_set(settings, .Resolution, index, 0)
 	case .Hud_Opacity:
 		next := clamp(

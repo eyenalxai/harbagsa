@@ -150,10 +150,27 @@ settings_display_blocked :: proc(settings: ^Settings) -> bool {
 	return settings.display.count <= 1
 }
 
+settings_resolution_current :: proc(settings: ^Settings) -> display.Mode {
+	info := display.info_at(&settings.display, settings.window.display)
+	if settings.window.mode == .Borderless {
+		return info.desktop
+	}
+	return settings.window.resolution
+}
+
+settings_resolution_missing :: proc(settings: ^Settings) -> bool {
+	info := display.info_at(&settings.display, settings.window.display)
+	if info.mode_count == 0 {
+		return false
+	}
+	return display.find_mode(info, settings_resolution_current(settings)) < 0
+}
+
 settings_resolution_blocked :: proc(settings: ^Settings) -> bool {
 	info := display.info_at(&settings.display, settings.window.display)
 	return settings.display.count == 0 ||
 		info.mode_count == 0 ||
+		settings_resolution_missing(settings) ||
 		(settings.window.mode == .Windowed && info.mode_count == 1)
 }
 
