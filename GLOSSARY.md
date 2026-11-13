@@ -429,7 +429,7 @@ edge latches.
 _Avoid_: Input state, input command
 
 **Settings**:
-The runtime window and input choices: window mode, display, resolution, type weight, and the sprint input mode. A new simulation starts Borderless on display 0; the stored Windowed size is 1280x720, with sprint Hold. A player reset keeps the current settings.
+The runtime window and input choices: window mode, display, resolution, and the sprint input mode. The stored type weight also lives in `Settings`, but the inspector edits it. A new simulation starts Borderless on display 0; the stored Windowed size is 1280x720, with sprint Hold. A player reset keeps the current settings.
 _Avoid_: Options, preferences
 
 **Window mode**:
