@@ -1,28 +1,31 @@
 # Colour
 
-The Rune view owns its colour. The values are RGBA float literals in
-`ui/shim/src/lib.rs`; Rune premultiplies and composites them. There is no theme
-file and no sRGB-to-linear conversion in Odin. The world palette is separate and
-stays linear.
+The Rune view owns its colour. `ui/shim/src/theme.rs` holds every token as an
+sRGB hex string and builds the rune-kit `Kit` from the dark/amber seed, pinning
+the measured overlay tokens. The module converts each hex through Rune's colour
+path, so a captured pixel matches the table. Rune premultiplies and composites
+the result. The world palette is separate and stays linear.
 
 ## The view palette
 
-| Token | RGBA in the shim | Hex reference | Role |
-| --- | --- | --- | --- |
-| Status surface | `0.06, 0.08, 0.10, 0.94` | `#0F141A` at 94% | the top-left status panel |
-| Menu surface | `0.08, 0.10, 0.13, 1` | `#141A21` | the settings menu and palette panel |
-| Raised surface | `0.15, 0.19, 0.24, 1` | `#26303D` | the selected row |
-| Primary text | `0.93, 0.95, 0.97, 1` | `#EDF2F7` | values, title, selected label |
-| Secondary text | `0.65, 0.70, 0.75, 1` | `#A6B2BF` | labels, blocked values |
-| Tertiary text | `0.50, 0.55, 0.60, 1` | `#808C99` | notes, headers, key hints |
-| Accent | `0.90, 0.69, 0.23, 1` | `#E6B03B` | selected-row bar, filled slider track, and `Close` button |
-| Hairline | `0.35, 0.38, 0.42, 0.25` | `#59616B` at 25% | menu separator |
-| Slider track | `1, 1, 1, 0.20` | white at 20% | the unfilled slider track |
-| Scrim | `0, 0, 0, 0.62` | black at 62% | behind the settings menu |
+| Token | Hex | Role |
+| --- | --- | --- |
+| Status surface | `#0F141A` at 94% | the top-left status panel |
+| Menu surface | `#141A21` | the settings menu and palette panel |
+| Raised surface | `#26303D` | the selected row |
+| Primary text | `#EDF2F7` | values, title, selected label |
+| Secondary text | `#A6B2BF` | labels, blocked values |
+| Tertiary text | `#808C99` | notes, headers, key hints |
+| Accent | `#E6B03B` | selected-row bar, filled slider track, primary action |
+| Hairline | `#59616B` at 25% | menu separator |
+| Slider track | white at 20% | the unfilled slider track |
+| Scrim | black at 62% | behind the settings menu and palette |
 
-The action buttons use the accent for `Close` and `0.16, 0.19, 0.24` for
-`Debug`. The rune-fx demo asks for `#7C5CFF` with a `#F4F0FF` core; it is not part
-of the default interface.
+The kit derives the remaining states, text and surfaces from
+`Kit::from_palette_focus` with `PaletteFocus::Accent`. The pins above override the
+measured overlay roles. The primary action reads `bg_accent` and `text_inverse`;
+the neutral action reads `bg_button_neutral` and `text_base`. The rune-fx demo
+asks for `#7C5CFF` with a `#F4F0FF` core; it is not part of the default interface.
 
 Object colours in the palette are content from `src/game/prefabs.odin`; they do
 not come from this table.
@@ -48,12 +51,14 @@ row; selection must move it to secondary or primary.
 - A value, a title, or a selected label: primary.
 - A label or a blocked value: secondary.
 - A note, a header, or a key hint: tertiary.
-- The selected-row bar, the filled slider track, and the `Close` button: accent.
+- The selected-row bar, the filled slider track, and the primary action: accent.
 - A separator: hairline. A slider track: the white 20% token.
+- A kit surface: the matching `Kit` token. The status panel: `hud_surface()`.
 
 ## Bans
 
-- No colour literal outside `ui/shim/src/lib.rs` and the game's content data.
+- No colour literal outside `ui/shim/src/theme.rs` and the game's content data.
+- No hex or RGB literal in a view or component.
 - No third hue in the view. The scene has its own palette; do not copy a world
   colour into the view and do not copy the accent into the world.
 - No colour-only signal. Selection keeps both the raised surface and the accent

@@ -29,7 +29,7 @@ repeats a label.
 
 ## Flag on sight
 
-- A colour literal outside `ui/shim/src/lib.rs` or the game's content data.
+- A colour literal outside `ui/shim/src/theme.rs` or the game's content data.
 - A type size, font file, atlas, or layout pass in the Odin tree.
 - A vertex buffer, shader, or draw call added for the 2D layer.
 - `accent` on anything but the selected-row bar, the focus ring, and the primary action.
@@ -59,8 +59,9 @@ The order is the triage order. A broken interaction outranks a weak colour.
 4. **Fixed fields.** Every number that changes during play is in a fixed-width
    field. The panel text must not move on a selection or a value change.
 5. **One owner of the view.** A UI change touches `src/game` data and
-   `ui/shim/src/lib.rs`. A change that adds layout, colour, or text rendering to
-   `src/ui`, `src/frame`, or `src/renderer` is in the wrong layer.
+   `ui/shim/src` (the theme and view modules). A change that adds layout,
+   colour, or text rendering to `src/ui`, `src/frame`, or `src/renderer` is in
+   the wrong layer.
 6. **One of the documented components.** A new panel is the status panel, the
    settings menu, or the palette. Otherwise read
    [README.md](../ui/README.md#adding-a-surface) first.
