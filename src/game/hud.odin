@@ -17,15 +17,16 @@ Bake_View :: struct {
 }
 
 HUD_State :: struct {
-	view:         ui.Hud,
-	settings:     ui.Settings,
-	inspector:    ui.Inspector,
-	rows:         [HUD_MAX_ROWS]ui.Row,
-	storage:      Line_Buffer,
-	capture_hint: string,
-	captured:     bool,
-	notice:       Notice_State,
-	menu:         Menu_State,
+	view:              ui.Hud,
+	settings:          ui.Settings,
+	inspector:         ui.Inspector,
+	rows:              [HUD_MAX_ROWS]ui.Row,
+	storage:           Line_Buffer,
+	inspector_storage: Line_Buffer,
+	capture_hint:      string,
+	captured:          bool,
+	notice:            Notice_State,
+	menu:              Menu_State,
 }
 
 hud_state_update :: proc(
@@ -44,8 +45,8 @@ hud_state_update :: proc(
 	hud.settings = settings_view(&sim.settings)
 	if debug.active {
 		view := editor_view(&debug.editor, sim, debug.active, debug.camera)
-		if debug.editor.inspector_open {
-			hud.inspector = inspector_view(debug, sim, view)
+		if editor_inspector_open(&debug.editor, debug.active) {
+			hud.inspector = inspector_view(&hud.inspector_storage, debug, sim, view)
 			hud_player_state_update(hud, snapshot)
 		} else {
 			hud.inspector = {}

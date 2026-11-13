@@ -58,16 +58,17 @@ rules.
 ## Controls
 
 - `WASD`: move relative to the camera. The spider turns toward the movement.
-- Mouse: orbit the camera. The cursor is captured unless the settings dialog or the object palette is open.
+- Mouse: orbit the camera. The cursor is captured unless the settings dialog, the object palette, or the debug inspector is open.
 - `Left Shift`: sprint. The settings dialog switches Hold and Toggle.
 - `Space`: jump.
 - `R`: return the player to spawn.
 - `Shift+R`: reset placed objects and the player.
 - `F1`: toggle physics debug draw.
 - `F2`: toggle debug mode.
+- `I`: open the debug inspector in debug mode.
 - `F3`: toggle temporal anti-aliasing (TAA).
 - `F5`: write a repro scenario to `runs/repro/`.
-- `Esc`: open or close the settings dialog.
+- `Esc`: close the debug inspector, cancel placement, or open or close the settings dialog.
 
 Movement follows the walkable ground plane. A straight climb keeps the gait
 speed along the slope, so horizontal speed drops by the slope cosine. The camera
@@ -88,12 +89,11 @@ launch-time display list. HUD opacity runs from 70 to 100 percent in one-point
 steps and promotes tertiary HUD text to secondary below 94 percent. Reduce motion
 stops kit transitions. The Controls section is a compact reference; the full
 keyboard list is under Debug mode below. `Esc`, the header close control, and
-`Resume` close the dialog. The status action row still carries the merged
-`Close` and `Debug`; `Close` is inert while the dialog is closed, and `Debug`
-toggles debug mode. The row is not part of this dialog's redesign. Pointer
-control starts when the cursor is free; while it is captured, the pointer
-belongs to the camera. Type weight remains a stored setting but is not part of
-Settings.
+`Resume` close the dialog. The status action row carries `Debug`, which enters
+debug mode and opens the debug inspector; it no longer carries the inert
+`Close`. Pointer control starts when the cursor is free; while it is captured,
+the pointer belongs to the camera. Type weight is in the inspector's Debug
+section, not in Settings.
 
 Window mode is Borderless or Windowed. Borderless uses the selected display's
 desktop size. Windowed uses the chosen resolution and a normal title bar. The
@@ -108,6 +108,8 @@ the current run.
 - `Space` / `Ctrl`: fly up / down.
 - `Tab`: open or close the object palette. Tab is refused while placement is
   armed; press `Esc` to cancel placement first.
+- `I`: open or close the debug inspector. `Esc` closes it before it cancels
+  placement or opens Settings.
 - Left click: select and drag an object, or place the armed prefab.
 - Wheel: raise or lower the ghost or selected object.
 - `Q` / `E`: rotate in 15 degree steps. Hold `Shift` for 45 degree steps.

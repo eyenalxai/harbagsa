@@ -10,7 +10,7 @@ use crate::abi::{
     OBJECT_FIELD_YAW, UiAction,
 };
 use crate::components;
-use crate::slider;
+use crate::slider::{self, SliderCommit};
 use crate::state::UiState;
 use crate::text;
 
@@ -82,9 +82,7 @@ fn header(state: &UiState) -> El {
                 .variant(IconButtonVariant::Ghost)
                 .control_size(ControlSize::Small)
                 .label("Close inspector")
-                .on_press(|state: &mut UiState| {
-                    state.actions.push(UiAction::new(ACTION_TOGGLE_INSPECTOR));
-                })
+                .on_press(close)
                 .build(kit)
                 .key("inspector.close"),
         )
@@ -93,18 +91,13 @@ fn header(state: &UiState) -> El {
 fn object_section(state: &UiState) -> El {
     let kit = &state.kit;
     let inspector = &state.inspector;
-    let selection = if inspector.has_selection {
-        format!("{}  # {:03}", inspector.prefab, inspector.object_id)
-    } else {
-        "None".to_string()
-    };
     let heading = row()
         .w_full()
         .h(18.0)
         .items_center()
         .child(section(kit, "Object"))
         .child(spacer())
-        .child(text::styled(&selection, kit.ty.small).color(kit.c.text_muted));
+        .child(text::styled(&inspector.selection, kit.ty.small).color(kit.c.text_muted));
     if !inspector.has_selection {
         return col()
             .w_full()
@@ -147,7 +140,7 @@ fn object_section(state: &UiState) -> El {
         kit,
         "inspector.yaw",
         "Yaw",
-        &format!("{yaw_value:.0}°"),
+        &inspector.yaw_text,
         yaw_value,
         0.0,
         360.0,
@@ -160,7 +153,9 @@ fn object_section(state: &UiState) -> El {
                 .unwrap_or(state.inspector.yaw_degrees)
         },
         |state: &mut UiState, next| {
-            state.inspector_preview.yaw = Some(next);
+            state.inspector_preview.yaw = Some(normalize_yaw(next));
+        },
+        |state: &mut UiState, next| {
             state.actions.push(UiAction {
                 kind: ACTION_OBJECT_SET,
                 id: state.inspector.object_id,
@@ -168,6 +163,7 @@ fn object_section(state: &UiState) -> El {
                 scalar: next,
             });
         },
+        SliderCommit::OnRelease,
     );
     let actions = row()
         .w_full()
@@ -214,11 +210,6 @@ fn object_section(state: &UiState) -> El {
 fn placement_section(state: &UiState) -> El {
     let kit = &state.kit;
     let inspector = &state.inspector;
-    let snap = if inspector.placement_snap {
-        "0.25 m"
-    } else {
-        "off"
-    };
     col()
         .w_full()
         .gap(4.0)
@@ -229,7 +220,7 @@ fn placement_section(state: &UiState) -> El {
                 .w_full()
                 .child(
                     text::styled(
-                        &format!("H {:.2} m", inspector.placement_height),
+                        &format!("H {}", inspector.placement_height_text),
                         kit.ty.mono,
                     )
                     .color(kit.c.text_muted),
@@ -238,8 +229,8 @@ fn placement_section(state: &UiState) -> El {
                 .child(
                     text::styled(
                         &format!(
-                            "Yaw {:.0}° · Snap {snap}",
-                            inspector.placement_yaw_degrees
+                            "Yaw {} · Snap {}",
+                            inspector.placement_yaw_text, inspector.placement_snap_text
                         ),
                         kit.ty.mono,
                     )
@@ -312,7 +303,7 @@ fn lamp_section(state: &UiState) -> El {
         kit,
         "inspector.intensity",
         "Intensity",
-        &format!("{intensity_value:.1}"),
+        &inspector.lamp_intensity_text,
         intensity_value,
         0.2,
         4.0,
@@ -326,6 +317,8 @@ fn lamp_section(state: &UiState) -> El {
         },
         |state: &mut UiState, next| {
             state.inspector_preview.intensity = Some(next);
+        },
+        |state: &mut UiState, next| {
             state.actions.push(UiAction {
                 kind: ACTION_LAMP_SET,
                 id: state.inspector.object_id,
@@ -333,6 +326,7 @@ fn lamp_section(state: &UiState) -> El {
                 scalar: next,
             });
         },
+        SliderCommit::OnRelease,
     );
     let range_value = state
         .inspector_preview
@@ -342,7 +336,7 @@ fn lamp_section(state: &UiState) -> El {
         kit,
         "inspector.range",
         "Range",
-        &format!("{range_value:.0} m"),
+        &inspector.lamp_range_text,
         range_value,
         2.0,
         20.0,
@@ -356,6 +350,8 @@ fn lamp_section(state: &UiState) -> El {
         },
         |state: &mut UiState, next| {
             state.inspector_preview.range = Some(next);
+        },
+        |state: &mut UiState, next| {
             state.actions.push(UiAction {
                 kind: ACTION_LAMP_SET,
                 id: state.inspector.object_id,
@@ -363,6 +359,7 @@ fn lamp_section(state: &UiState) -> El {
                 scalar: next,
             });
         },
+        SliderCommit::OnRelease,
     );
     col()
         .w_full()
@@ -376,6 +373,7 @@ fn lamp_section(state: &UiState) -> El {
 
 fn debug_section(state: &UiState) -> El {
     let kit = &state.kit;
+    let inspector = &state.inspector;
     let weight_value = state
         .inspector_preview
         .weight
@@ -384,7 +382,7 @@ fn debug_section(state: &UiState) -> El {
         kit,
         "inspector.weight",
         "Type weight",
-        &format!("{weight_value:.0}"),
+        &inspector.type_weight_text,
         weight_value,
         100.0,
         900.0,
@@ -398,6 +396,8 @@ fn debug_section(state: &UiState) -> El {
         },
         |state: &mut UiState, next| {
             state.inspector_preview.weight = Some(next);
+        },
+        |state: &mut UiState, next| {
             state.actions.push(UiAction {
                 kind: ACTION_TYPE_WEIGHT_SET,
                 id: 0,
@@ -405,6 +405,7 @@ fn debug_section(state: &UiState) -> El {
                 scalar: next,
             });
         },
+        SliderCommit::OnRelease,
     );
     let physics = row()
         .w_full()
@@ -434,6 +435,14 @@ fn debug_section(state: &UiState) -> El {
         .child(section(kit, "Debug"))
         .child(weight)
         .child(physics)
+}
+
+fn close(state: &mut UiState) {
+    state.actions.push(UiAction::new(ACTION_TOGGLE_INSPECTOR));
+}
+
+fn normalize_yaw(value: f32) -> f32 {
+    value - 360.0 * (value / 360.0).floor()
 }
 
 fn section(kit: &Kit, label: &str) -> El {

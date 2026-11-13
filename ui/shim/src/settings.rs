@@ -9,7 +9,7 @@ use crate::abi::{
     SETTING_REDUCE_MOTION, SETTING_RESOLUTION, SETTING_SPRINT_MODE, SETTING_WINDOW_MODE, UiAction,
 };
 use crate::components;
-use crate::slider;
+use crate::slider::{self, SliderCommit};
 use crate::state::{
     HUD_OPACITY_MAX, HUD_OPACITY_MIN, SelectKind, UiState,
 };
@@ -267,18 +267,21 @@ fn opacity(state: &UiState) -> El {
                 * 100.0
         },
         |state: &mut UiState, next| {
+            state.opacity_preview = Some(next.round().clamp(HUD_PERCENT_MIN, HUD_PERCENT_MAX) / 100.0);
+        },
+        |state: &mut UiState, next| {
             let next = next.round().clamp(HUD_PERCENT_MIN, HUD_PERCENT_MAX);
             let previous = state
-                .opacity_preview
-                .unwrap_or(state.settings.hud_opacity)
+                .settings
+                .hud_opacity
                 .clamp(HUD_OPACITY_MIN, HUD_OPACITY_MAX)
                 * 100.0;
             if (next - previous).abs() < 0.5 {
                 return;
             }
-            state.opacity_preview = Some(next / 100.0);
             push_setting(state, SETTING_HUD_OPACITY, next as i32, next / 100.0);
         },
+        SliderCommit::Live,
     )
 }
 

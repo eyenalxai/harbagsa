@@ -205,8 +205,9 @@ reduce motion, and closes with both Resume and the header control.
 `scenarios/rune-menu-800.json` repeats it at 800x600. `scenarios/rune-ui.json`
 activates the status panel Debug action by key and opens the inspector.
 `scenarios/rune-inspector.json` opens the inspector, selects a crate, changes its
-body and absolute yaw, selects a lamp, changes its kind, colour, and intensity,
-changes the type weight, turns on the physics debug draw, and closes the rail.
+body and absolute yaw, duplicates and deletes it, selects a lamp, changes its
+kind, colour, and intensity, changes the type weight, turns on the physics debug
+draw, and closes the rail.
 `scenarios/rune-inspector-800.json` repeats the object and lamp edits at 800x600.
 `scenarios/rune-fx.json` sets `view.fx` and shows the status action row with its
 rune-fx glow.

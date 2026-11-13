@@ -57,8 +57,6 @@ apply :: proc(ctx: Context, action: renderer.Ui_Action) -> Result {
 		return apply_physics_debug(ctx, action)
 	case .Object_Set:
 		return apply_object_set(ctx, action)
-	case .Object_Toggle:
-		return apply_object_toggle(ctx, action)
 	case .Object_Duplicate:
 		if _, ok := selected_object(ctx, action.id); !ok {
 			return edit_result(game.edit_fail(.No_Selection))
@@ -137,25 +135,12 @@ apply_object_set :: proc(ctx: Context, action: renderer.Ui_Action) -> Result {
 }
 
 @(private)
-apply_object_toggle :: proc(ctx: Context, action: renderer.Ui_Action) -> Result {
-	if _, ok := selected_object(ctx, action.id); !ok {
-		return edit_result(game.edit_fail(.No_Selection))
-	}
-	if renderer.UI_Object_Field(action.value) == .Body {
-		return apply_edit(ctx, game.Flip_Body{})
-	}
-	return {}
-}
-
-@(private)
 apply_lamp_set :: proc(ctx: Context, action: renderer.Ui_Action) -> Result {
 	switch renderer.UI_Lamp_Field(action.value) {
 	case .Intensity:
 		return apply_lamp_edit(ctx, action, game.Light_Set_Intensity{intensity = action.scalar})
 	case .Range:
 		return apply_lamp_edit(ctx, action, game.Light_Set_Range{range = action.scalar})
-	case .Kind, .Color:
-		return {}
 	}
 	return {}
 }

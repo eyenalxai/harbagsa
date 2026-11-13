@@ -7,8 +7,14 @@ const TRACK: f32 = 4.0;
 const KNOB: f32 = 14.0;
 const HEIGHT: f32 = 24.0;
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum SliderCommit {
+    Live,
+    OnRelease,
+}
+
 /// The kit has no Slider. This one owns the drag, the track press, the keyboard
-/// step, and the cancel restore; the caller owns the value.
+/// step, and the cancel restore; the caller owns the value and the commit.
 pub fn slider<S: 'static>(
     k: &Kit,
     key: &str,
@@ -20,7 +26,9 @@ pub fn slider<S: 'static>(
     step: f32,
     width: f32,
     value_of: impl Fn(&S) -> f32 + Clone + 'static,
-    on_change: impl Fn(&mut S, f32) + Clone + 'static,
+    on_preview: impl Fn(&mut S, f32) + Clone + 'static,
+    on_commit: impl Fn(&mut S, f32) + Clone + 'static,
+    commit: SliderCommit,
 ) -> El {
     let span = (max - min).max(step);
     let travel = (width - KNOB).max(1.0);
@@ -32,10 +40,13 @@ pub fn slider<S: 'static>(
     let snap = move |v: f32| ((v / step).round() * step).clamp(min, max);
 
     let step_value = value_of.clone();
-    let step_change = on_change.clone();
-    let limit_change = on_change.clone();
+    let step_preview = on_preview.clone();
+    let step_commit = on_commit.clone();
+    let limit_preview = on_preview.clone();
+    let limit_commit = on_commit.clone();
     let drag_value = value_of;
-    let drag_change = on_change;
+    let drag_preview = on_preview;
+    let drag_commit = on_commit;
 
     col()
         .w(width)
@@ -63,11 +74,14 @@ pub fn slider<S: 'static>(
                 .a11y_value(value_text.to_owned())
                 .on_step(move |state: &mut S, steps: i32, tx: &mut Tx| {
                     let next = snap(step_value(state) + steps as f32 * step);
-                    step_change(state, next);
+                    step_preview(state, next);
+                    step_commit(state, next);
                     tx.instant();
                 })
                 .on_step_limit(move |state: &mut S, maximum: bool, tx: &mut Tx| {
-                    limit_change(state, if maximum { max } else { min });
+                    let next = if maximum { max } else { min };
+                    limit_preview(state, next);
+                    limit_commit(state, next);
                     tx.instant();
                 })
                 .on_drag(move |state: &mut S, drag: &mut Drag, tx: &mut Tx| {
@@ -77,7 +91,11 @@ pub fn slider<S: 'static>(
                             drag.data = drag_value(state);
                             let knob = KNOB / 2.0 + ratio(drag.data) * travel;
                             if (drag.x - knob).abs() > KNOB / 2.0 + 2.0 {
-                                drag_change(state, snap(to_value(drag.x, drag.w)));
+                                let next = snap(to_value(drag.x, drag.w));
+                                drag_preview(state, next);
+                                if commit == SliderCommit::Live {
+                                    drag_commit(state, next);
+                                }
                                 tx.instant();
                             }
                         }
@@ -90,13 +108,21 @@ pub fn slider<S: 'static>(
                             };
                             let next = snap(to_value(drag.x - grab, drag.w));
                             if next != drag_value(state) {
-                                drag_change(state, next);
+                                drag_preview(state, next);
+                                if commit == SliderCommit::Live {
+                                    drag_commit(state, next);
+                                }
                             }
                             tx.instant();
                         }
                         Phase::Up => {
                             if drag.cancelled() {
-                                drag_change(state, drag.data);
+                                drag_preview(state, drag.data);
+                            } else if commit == SliderCommit::OnRelease {
+                                let next = drag_value(state);
+                                if next != drag.data {
+                                    drag_commit(state, next);
+                                }
                             }
                         }
                     }

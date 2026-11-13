@@ -111,6 +111,10 @@ editor_set_inspector :: proc(editor: ^Editor, open: bool) -> Edit_Result {
 	return edit_ok()
 }
 
+editor_inspector_open :: proc(editor: ^Editor, active: bool) -> bool {
+	return active && editor.inspector_open
+}
+
 editor_end_drag :: proc(editor: ^Editor) {
 	editor.drag = Drag_None{}
 }

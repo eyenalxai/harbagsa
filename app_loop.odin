@@ -36,9 +36,7 @@ apply_frame_input :: proc(
 			game.menu_close(&loop.runtime.hud.menu)
 			loop.accumulator = 0
 		} else {
-			game.menu_open(&loop.runtime.hud.menu)
-			game.debug_mode_cancel_editing(&loop.runtime.debug)
-			_ = game.editor_set_inspector(&loop.runtime.debug.editor, false)
+			game.debug_mode_open_menu(&loop.runtime.debug, &loop.runtime.hud.menu)
 			loop.accumulator = game.SIMULATION_STEP
 			input.clear_latches(&loop.resolver)
 			game.menu_view(&loop.runtime.hud.menu, loop.runtime.debug.active, 0)

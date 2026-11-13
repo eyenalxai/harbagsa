@@ -95,14 +95,15 @@ and base pitch. All eleven prefabs fit in the grid at 1280×720 and 800×600.
 
 ## The debug inspector
 
-The interactive debug inspector is a 320-point right rail, inset 12 from the top
-and right. `I` opens it and frees the pointer; `Esc` closes it and restores
-capture. It is hidden while Settings or the palette is open, and it is mutually
-exclusive with the palette and placement: opening it cancels the active tool or
-drag. The rail has Object, Placement, Lamp, and Debug sections. Object edits use
-the editor action vocabulary, including an absolute yaw setter. Lamp edits use
-the fixed light colour set. The Debug section carries the type weight and the
-physics debug switch.
+The interactive debug inspector is a 320-point-wide right rail, inset 12 from
+the top and right, with a maximum height that leaves the bottom action row
+clear; it scrolls only when the sections overflow. `I` opens it and frees the pointer;
+`Esc` closes it and restores capture. It is hidden while Settings or the palette
+is open, and it is mutually exclusive with the palette and placement: opening it
+cancels the active tool or drag. The rail has Object, Placement, Lamp, and Debug
+sections. Object edits use the editor action vocabulary, including an absolute
+yaw setter. Lamp edits use the fixed light colour set. The Debug section carries
+the type weight and the physics debug switch.
 
 The old top-left debug rows remain the keyboard-only readout while the rail is
 closed. Every changing number keeps a fixed field, so the panel text does not

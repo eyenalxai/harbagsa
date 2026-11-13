@@ -815,9 +815,9 @@ _Avoid_: Focus, target
 The 320-point debug rail on the right, inset 12 from the top and right. It opens
 with `I` and closes with `Esc`, frees the pointer while open, and is hidden while
 Settings or the palette is open. Its Object, Placement, Lamp, and Debug sections
-edit the selected object, the next placement, the selected lamp, the type weight,
-and the physics debug draw. The top-left debug rows remain the keyboard-only
-readout while the rail is closed.
+cover the selected object, the next placement, the selected lamp, the type
+weight, and the physics debug draw. The top-left debug rows remain the
+keyboard-only readout while the rail is closed.
 _Avoid_: Edit panel, properties
 
 **Undo history**:

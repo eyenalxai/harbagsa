@@ -94,6 +94,12 @@ debug_mode_cancel_editing :: proc(dm: ^Debug_Mode) {
 	editor_cancel_editing(&dm.editor)
 }
 
+debug_mode_open_menu :: proc(dm: ^Debug_Mode, menu: ^Menu_State) {
+	menu_open(menu)
+	debug_mode_cancel_editing(dm)
+	_ = editor_set_inspector(&dm.editor, false)
+}
+
 @(private)
 debug_mode_enter :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	dm.active = true

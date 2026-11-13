@@ -16,7 +16,6 @@ pub const ACTION_SETTINGS_SET: u32 = 5;
 pub const ACTION_TYPE_WEIGHT_SET: u32 = 6;
 pub const ACTION_PALETTE_PICK: u32 = 7;
 pub const ACTION_OBJECT_SET: u32 = 8;
-pub const ACTION_OBJECT_TOGGLE: u32 = 9;
 pub const ACTION_OBJECT_DUPLICATE: u32 = 10;
 pub const ACTION_OBJECT_DELETE: u32 = 11;
 pub const ACTION_LAMP_SET: u32 = 12;
@@ -35,10 +34,8 @@ pub const SETTING_REDUCE_MOTION: u32 = 5;
 pub const OBJECT_FIELD_BODY: u32 = 0;
 pub const OBJECT_FIELD_YAW: u32 = 1;
 
-pub const LAMP_FIELD_KIND: u32 = 0;
-pub const LAMP_FIELD_COLOR: u32 = 1;
-pub const LAMP_FIELD_INTENSITY: u32 = 2;
-pub const LAMP_FIELD_RANGE: u32 = 3;
+pub const LAMP_FIELD_INTENSITY: u32 = 0;
+pub const LAMP_FIELD_RANGE: u32 = 1;
 
 #[repr(C)]
 pub struct UiVkConfig {
@@ -161,22 +158,33 @@ pub struct UiInspector {
     pub open: u32,
     pub has_selection: u32,
     pub object_id: u32,
-    pub prefab: *const u8,
-    pub prefab_len: u32,
+    pub selection: *const u8,
+    pub selection_len: u32,
     pub body: u32,
     pub yaw_degrees: f32,
+    pub yaw_text: *const u8,
+    pub yaw_text_len: u32,
     pub placement_prefab: *const u8,
     pub placement_prefab_len: u32,
-    pub placement_height: f32,
-    pub placement_yaw_degrees: f32,
-    pub placement_snap: u32,
+    pub placement_height_text: *const u8,
+    pub placement_height_len: u32,
+    pub placement_yaw_text: *const u8,
+    pub placement_yaw_len: u32,
+    pub placement_snap_text: *const u8,
+    pub placement_snap_len: u32,
     pub has_lamp: u32,
     pub lamp_kind: u32,
     pub lamp_color: u32,
     pub lamp_intensity: f32,
     pub lamp_range: f32,
+    pub lamp_intensity_text: *const u8,
+    pub lamp_intensity_len: u32,
+    pub lamp_range_text: *const u8,
+    pub lamp_range_len: u32,
     pub lamp_colors: [[f32; 4]; 5],
     pub type_weight: f32,
+    pub type_weight_text: *const u8,
+    pub type_weight_len: u32,
     pub physics_debug: u32,
 }
 
@@ -333,22 +341,38 @@ pub unsafe fn inspector_state(inspector: *const UiInspector) -> Option<Inspector
         open: inspector.open != 0,
         has_selection: inspector.has_selection != 0,
         object_id: inspector.object_id,
-        prefab: unsafe { text_bytes(inspector.prefab, inspector.prefab_len) },
+        selection: unsafe { text_bytes(inspector.selection, inspector.selection_len) },
         body: inspector.body as usize,
         yaw_degrees: inspector.yaw_degrees,
+        yaw_text: unsafe { text_bytes(inspector.yaw_text, inspector.yaw_text_len) },
         placement_prefab: unsafe {
             text_bytes(inspector.placement_prefab, inspector.placement_prefab_len)
         },
-        placement_height: inspector.placement_height,
-        placement_yaw_degrees: inspector.placement_yaw_degrees,
-        placement_snap: inspector.placement_snap != 0,
+        placement_height_text: unsafe {
+            text_bytes(inspector.placement_height_text, inspector.placement_height_len)
+        },
+        placement_yaw_text: unsafe {
+            text_bytes(inspector.placement_yaw_text, inspector.placement_yaw_len)
+        },
+        placement_snap_text: unsafe {
+            text_bytes(inspector.placement_snap_text, inspector.placement_snap_len)
+        },
         has_lamp: inspector.has_lamp != 0,
         lamp_kind: inspector.lamp_kind as usize,
         lamp_color: inspector.lamp_color as usize,
         lamp_intensity: inspector.lamp_intensity,
         lamp_range: inspector.lamp_range,
+        lamp_intensity_text: unsafe {
+            text_bytes(inspector.lamp_intensity_text, inspector.lamp_intensity_len)
+        },
+        lamp_range_text: unsafe {
+            text_bytes(inspector.lamp_range_text, inspector.lamp_range_len)
+        },
         lamp_colors: inspector.lamp_colors,
         type_weight: inspector.type_weight,
+        type_weight_text: unsafe {
+            text_bytes(inspector.type_weight_text, inspector.type_weight_len)
+        },
         physics_debug: inspector.physics_debug != 0,
     })
 }

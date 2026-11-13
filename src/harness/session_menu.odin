@@ -20,9 +20,7 @@ session_menu :: proc(session: ^Session, command: Menu_Command) -> string {
 
 	if command.has_open {
 		if command.open {
-			game.menu_open(&session.runtime.hud.menu)
-			game.debug_mode_cancel_editing(&session.runtime.debug)
-			_ = game.editor_set_inspector(&session.runtime.debug.editor, false)
+			game.debug_mode_open_menu(&session.runtime.debug, &session.runtime.hud.menu)
 		} else {
 			game.menu_close(&session.runtime.hud.menu)
 		}

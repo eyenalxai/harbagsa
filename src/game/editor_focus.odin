@@ -13,7 +13,7 @@ Editor_Focus :: struct {
 
 editor_focus :: proc(editor: ^Editor, active: bool) -> Editor_Focus {
 	tool := tool_kind(editor.tool)
-	inspector := active && editor.inspector_open
+	inspector := editor_inspector_open(editor, active)
 	return {
 		active = active,
 		tool = tool,

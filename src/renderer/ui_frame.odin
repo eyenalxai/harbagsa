@@ -12,7 +12,6 @@ UI_Action_Kind :: enum(u32) {
 	Type_Weight_Set  = 6,
 	Palette_Pick     = 7,
 	Object_Set       = 8,
-	Object_Toggle    = 9,
 	Object_Duplicate = 10,
 	Object_Delete    = 11,
 	Lamp_Set         = 12,
@@ -37,8 +36,6 @@ UI_Object_Field :: enum(u32) {
 }
 
 UI_Lamp_Field :: enum(u32) {
-	Kind,
-	Color,
 	Intensity,
 	Range,
 }

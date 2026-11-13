@@ -4,8 +4,6 @@ package renderer
 
 import "core:log"
 
-import "src:ui"
-
 // The Rust UI shim owns the Vulkan device the game renders on and the Rune
 // runtime that draws the overlay.
 
@@ -136,29 +134,6 @@ Ui_Palette :: struct {
 	size_len:   u32,
 	hints:      [^]Ui_Hint,
 	hint_count: u32,
-}
-
-Ui_Inspector :: struct {
-	open:                  u32,
-	has_selection:         u32,
-	object_id:             u32,
-	prefab:                [^]u8,
-	prefab_len:            u32,
-	body:                  u32,
-	yaw_degrees:           f32,
-	placement_prefab:      [^]u8,
-	placement_prefab_len:  u32,
-	placement_height:      f32,
-	placement_yaw_degrees: f32,
-	placement_snap:        u32,
-	has_lamp:              u32,
-	lamp_kind:             u32,
-	lamp_color:            u32,
-	lamp_intensity:        f32,
-	lamp_range:            f32,
-	lamp_colors:           [ui.INSPECTOR_LAMP_COLORS][4]f32,
-	type_weight:           f32,
-	physics_debug:         u32,
 }
 
 Ui_Panel :: struct {
@@ -335,22 +310,33 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 		open                  = u32(inspector_source.open),
 		has_selection         = u32(inspector_source.has_selection),
 		object_id             = inspector_source.object_id,
-		prefab                = raw_data(inspector_source.prefab),
-		prefab_len            = u32(len(inspector_source.prefab)),
+		selection             = raw_data(inspector_source.selection),
+		selection_len         = u32(len(inspector_source.selection)),
 		body                  = u32(inspector_source.body),
 		yaw_degrees           = inspector_source.yaw_degrees,
+		yaw_text              = raw_data(inspector_source.yaw_text),
+		yaw_text_len          = u32(len(inspector_source.yaw_text)),
 		placement_prefab      = raw_data(inspector_source.placement_prefab),
 		placement_prefab_len  = u32(len(inspector_source.placement_prefab)),
-		placement_height      = inspector_source.placement_height,
-		placement_yaw_degrees = inspector_source.placement_yaw_degrees,
-		placement_snap        = u32(inspector_source.placement_snap),
+		placement_height_text = raw_data(inspector_source.placement_height_text),
+		placement_height_len  = u32(len(inspector_source.placement_height_text)),
+		placement_yaw_text    = raw_data(inspector_source.placement_yaw_text),
+		placement_yaw_len     = u32(len(inspector_source.placement_yaw_text)),
+		placement_snap_text   = raw_data(inspector_source.placement_snap_text),
+		placement_snap_len    = u32(len(inspector_source.placement_snap_text)),
 		has_lamp              = u32(inspector_source.has_lamp),
 		lamp_kind             = u32(inspector_source.lamp_kind),
 		lamp_color            = u32(inspector_source.lamp_color),
 		lamp_intensity        = inspector_source.lamp_intensity,
 		lamp_range            = inspector_source.lamp_range,
+		lamp_intensity_text   = raw_data(inspector_source.lamp_intensity_text),
+		lamp_intensity_len    = u32(len(inspector_source.lamp_intensity_text)),
+		lamp_range_text       = raw_data(inspector_source.lamp_range_text),
+		lamp_range_len        = u32(len(inspector_source.lamp_range_text)),
 		lamp_colors           = inspector_source.lamp_colors,
 		type_weight           = inspector_source.type_weight,
+		type_weight_text      = raw_data(inspector_source.type_weight_text),
+		type_weight_len       = u32(len(inspector_source.type_weight_text)),
 		physics_debug         = u32(inspector_source.physics_debug),
 	}
 	if ui_frame(frame.dt, &snapshot, &panel, &menu, &settings, &palette_c, &inspector, raw_data(events[:count]), u32(count)) != 0 {

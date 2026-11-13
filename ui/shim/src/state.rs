@@ -64,20 +64,24 @@ pub struct InspectorState {
     pub open: bool,
     pub has_selection: bool,
     pub object_id: u32,
-    pub prefab: String,
+    pub selection: String,
     pub body: usize,
     pub yaw_degrees: f32,
+    pub yaw_text: String,
     pub placement_prefab: String,
-    pub placement_height: f32,
-    pub placement_yaw_degrees: f32,
-    pub placement_snap: bool,
+    pub placement_height_text: String,
+    pub placement_yaw_text: String,
+    pub placement_snap_text: String,
     pub has_lamp: bool,
     pub lamp_kind: usize,
     pub lamp_color: usize,
     pub lamp_intensity: f32,
     pub lamp_range: f32,
+    pub lamp_intensity_text: String,
+    pub lamp_range_text: String,
     pub lamp_colors: [[f32; 4]; 5],
     pub type_weight: f32,
+    pub type_weight_text: String,
     pub physics_debug: bool,
 }
 
@@ -181,11 +185,13 @@ impl UiState {
     pub fn clear_inspector_previews(&mut self) {
         let inspector = &self.inspector;
         let preview = &mut self.inspector_preview;
-        if preview
-            .yaw
-            .is_some_and(|value| (value - inspector.yaw_degrees).abs() < 0.05)
-        {
-            preview.yaw = None;
+        if let Some(value) = preview.yaw {
+            let normalized = normalize_degrees(value);
+            preview.yaw = if (normalized - inspector.yaw_degrees).abs() < 0.05 {
+                None
+            } else {
+                Some(normalized)
+            };
         }
         if preview
             .intensity
@@ -217,6 +223,10 @@ impl UiState {
             preview.range = None;
         }
     }
+}
+
+fn normalize_degrees(value: f32) -> f32 {
+    value - 360.0 * (value / 360.0).floor()
 }
 
 pub fn frame(
