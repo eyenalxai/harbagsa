@@ -55,18 +55,21 @@ editor_view :: proc(
 	active: bool,
 	camera: Debug_Camera,
 ) -> Editor_View {
-	default_prefab := prefab(.Crate)
+	default_prefab := prefab(editor.placement_defaults.prefab)
 	view := Editor_View {
 		active = active,
 		tool = tool_kind(editor.tool),
 		palette = {
-			prefab = .Crate,
+			prefab = editor.placement_defaults.prefab,
 			body_mode = default_prefab.body_mode,
 		},
 		placement = {
-			prefab = .Crate,
+			prefab = editor.placement_defaults.prefab,
+			height = editor.placement_defaults.height,
+			yaw_degrees = editor.placement_defaults.yaw_degrees,
+			snap = editor.placement_defaults.snap,
 			body_mode = default_prefab.body_mode,
-			light = prefab_light(.Crate),
+			light = prefab_light(editor.placement_defaults.prefab),
 		},
 		history = {
 			depth = editor_history_depth(editor),
@@ -108,12 +111,13 @@ editor_view :: proc(
 
 	if id, ok := editor_selected_object_id(editor, sim); ok {
 		if object, found := simulation_object_find(sim, id); found {
+			yaw := simulation_object_yaw(sim, id) * 180.0 / math.PI
 			view.selection = Editor_Selection_View {
 				id = id,
 				prefab = object.prefab,
 				body_mode = object.body_mode,
 				box = simulation_object_box(sim, id),
-				yaw_degrees = simulation_object_yaw(sim, id) * 180.0 / math.PI,
+				yaw_degrees = yaw_degrees_normalized(yaw),
 				light = object.light,
 			}
 		}

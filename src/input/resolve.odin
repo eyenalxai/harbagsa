@@ -35,6 +35,7 @@ resolve :: proc(
 	// Enter, and Esc), so the pointer route tracks it as the keys apply.
 	state := Key_State {
 		pointer_tool = focus.game.editor.tool,
+		inspector = focus.game.editor.inspector,
 	}
 	for index in 0 ..< events.key_count {
 		apply_key(r, &out, &state, events.keys[index], focus)
@@ -48,6 +49,10 @@ resolve :: proc(
 		captured     = focus.captured,
 	}
 
+	if state.inspector {
+		out.motion = {}
+		return out
+	}
 	if focus.game.editor.active {
 		apply_debug_pointer(&out, events, focus, &state)
 		return out
@@ -67,6 +72,7 @@ resolve :: proc(
 @(private)
 Key_State :: struct {
 	pointer_tool: game.Tool_Kind,
+	inspector:    bool,
 }
 
 @(private)
@@ -77,6 +83,20 @@ apply_key :: proc(
 	edge: platform.Key_Edge,
 	focus: Focus,
 ) {
+	// The inspector owns the frame while it is open: only its own toggle keys
+	// apply, and the pointer route stays out of the world.
+	if state.inspector {
+		#partial switch edge.key {
+		case .Escape:
+			add_action(out, game.Inspector_Close{})
+			state.inspector = false
+		case .I:
+			add_action(out, game.Inspector_Toggle{})
+			state.inspector = false
+		}
+		return
+	}
+
 	// The old handlers ran the palette block before the light keys, then the
 	// world keys. Tab, Esc, M, and G ran before that gate.
 	editing := state.pointer_tool != .Palette
@@ -86,6 +106,11 @@ apply_key :: proc(
 			add_action(out, game.Cancel{})
 		} else {
 			out.view.menu_toggle = true
+		}
+	case .I:
+		if focus.game.editor.active {
+			add_action(out, game.Inspector_Toggle{})
+			state.inspector = true
 		}
 	case .Tab:
 		if focus.game.editor.active {

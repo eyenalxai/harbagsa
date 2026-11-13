@@ -48,6 +48,7 @@ palette_light :: proc(palette: Palette) -> Light_Settings {
 
 @(private)
 editor_palette_open :: proc(editor: ^Editor) -> Edit_Result {
+	editor.inspector_open = false
 	if _, armed := editor.tool.(Placement); armed {
 		return edit_fail(.Placement_Armed)
 	}
@@ -55,7 +56,7 @@ editor_palette_open :: proc(editor: ^Editor) -> Edit_Result {
 		return edit_ok()
 	}
 	editor_end_drag(editor)
-	editor.tool = palette_create(.Crate)
+	editor.tool = palette_create(editor.placement_defaults.prefab)
 	return edit_ok()
 }
 

@@ -190,7 +190,7 @@ run :: proc() -> bool {
 			frame.Options {
 				alpha = alpha,
 				delta_seconds = delta,
-				debug_view = loop.debug_view,
+				debug_view = loop.runtime.debug.physics_debug,
 				captured = events.captured,
 				hud = true,
 				bake = renderer.bake_report(&state),

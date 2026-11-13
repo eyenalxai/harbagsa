@@ -25,6 +25,10 @@ Edit_Action :: union #no_nil {
 	Duplicate_Selected,
 	Undo,
 	Redo,
+	Inspector_Open,
+	Inspector_Close,
+	Inspector_Toggle,
+	Set_Selected_Yaw,
 	Primary_Press,
 	Primary_Release,
 	Secondary_Press,
@@ -80,6 +84,12 @@ Delete_Selected :: struct {}
 Duplicate_Selected :: struct {}
 Undo :: struct {}
 Redo :: struct {}
+Inspector_Open :: struct {}
+Inspector_Close :: struct {}
+Inspector_Toggle :: struct {}
+Set_Selected_Yaw :: struct {
+	degrees: f32,
+}
 Primary_Press :: struct {}
 Primary_Release :: struct {}
 Secondary_Press :: struct {}

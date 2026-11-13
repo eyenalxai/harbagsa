@@ -79,6 +79,7 @@ editor_placement_arm :: proc(
 		body_mode = body_mode,
 		light = light,
 	}
+	editor.inspector_open = false
 	// Re-arming the same placement keeps its height, yaw, and snap; arming from
 	// the palette uses the last cancelled placement settings.
 	if current, armed := editor.tool.(Placement); armed {
@@ -99,6 +100,7 @@ editor_placement_arm :: proc(
 editor_tool_cancel :: proc(editor: ^Editor) {
 	if placement, armed := editor.tool.(Placement); armed {
 		editor.placement_defaults = {
+			prefab = placement.prefab,
 			height = placement.height,
 			yaw_degrees = placement.yaw_degrees,
 			snap = placement.snap,
@@ -195,7 +197,7 @@ editor_placement_set_yaw :: proc(editor: ^Editor, degrees: f32) -> Edit_Result {
 	if !armed {
 		return edit_fail(.Not_Armed)
 	}
-	placement.yaw_degrees = degrees - 360.0 * math.floor(degrees / 360.0)
+	placement.yaw_degrees = yaw_degrees_normalized(degrees)
 	editor.tool = placement
 	return edit_ok()
 }

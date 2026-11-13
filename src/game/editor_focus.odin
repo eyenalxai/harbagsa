@@ -7,16 +7,19 @@ Editor_Focus :: struct {
 	active:       bool,
 	tool:         Tool_Kind,
 	dragging:     bool,
+	inspector:    bool,
 	pointer_free: bool,
 }
 
 editor_focus :: proc(editor: ^Editor, active: bool) -> Editor_Focus {
 	tool := tool_kind(editor.tool)
+	inspector := editor_inspector_open(editor, active)
 	return {
 		active = active,
 		tool = tool,
 		dragging = editor_dragging(editor),
-		pointer_free = tool == .Palette,
+		inspector = inspector,
+		pointer_free = tool == .Palette || inspector,
 	}
 }
 
@@ -24,15 +27,17 @@ editor_focus :: proc(editor: ^Editor, active: bool) -> Editor_Focus {
 // platform's captured fact; this value says which part of the game owns the
 // frame.
 Focus :: struct {
-	menu_open:   bool,
-	editor:      Editor_Focus,
-	pointer_free: bool,
+	menu_open:      bool,
+	inspector_open: bool,
+	editor:         Editor_Focus,
+	pointer_free:   bool,
 }
 
 focus :: proc(dm: ^Debug_Mode, menu: ^Menu_State) -> Focus {
 	editor := editor_focus(&dm.editor, dm.active)
 	return {
 		menu_open = menu.open,
+		inspector_open = editor.inspector,
 		editor = editor,
 		pointer_free = menu.open || editor.pointer_free,
 	}

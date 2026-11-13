@@ -190,6 +190,7 @@ build :: proc(
 				menu            = hud.menu.view,
 				settings        = hud.settings,
 				palette         = palette,
+				inspector       = hud.inspector,
 			},
 		}
 	}

@@ -16,14 +16,14 @@ the result. The world palette is separate and stays linear.
 | Primary text | `#EDF2F7` | values, title, selected label |
 | Secondary text | `#A6B2BF` | labels, blocked values, key hints and badges |
 | Tertiary text | `#808C99` | notes, headers |
-| Accent | `#E6B03B` | selection bar, filled slider track, primary action |
+| Accent | `#E6B03B` | selection bar, selected swatch ring, filled slider track, primary action |
 | Hairline | `#59616B` at 25% | menu separator |
 | Slider track | white at 20% | the unfilled slider track |
 | Scrim | black at 62% | behind the settings dialog and palette |
 
 The kit derives the remaining states, text and surfaces from
 `Kit::from_palette_focus` with `PaletteFocus::Accent`. The pins above override the
-measured overlay roles. The status action row's primary `Close` button reads
+measured overlay roles. The status action row's primary `Debug` button reads
 `bg_accent` and `text_inverse`; the dialog's `Resume` uses the kit Submit tokens
 `bg_icon_button_contrast`, `submit_fg`, and `submit_icon`. The neutral action
 reads `bg_button_neutral` and `text_base`. The rune-fx demo asks for `#7C5CFF`

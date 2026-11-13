@@ -14,15 +14,15 @@ HUD_SNAP_GRID :: "0.25 m"
 hud_debug_state_update :: proc(
 	hud: ^HUD_State,
 	sim: ^Simulation,
-	debug: ^Debug_Mode,
+	view: Editor_View,
+	camera: Debug_Camera,
 	bake: Bake_View,
 ) {
-	view := editor_view(&debug.editor, sim, debug.active, debug.camera)
 	if view.tool == .Placement {
 		hud_placement_state_update(hud, sim, view, bake)
 		return
 	}
-	hud_inspector_state_update(hud, sim, view, debug.camera, bake)
+	hud_inspector_state_update(hud, sim, view, camera, bake)
 }
 
 @(private)

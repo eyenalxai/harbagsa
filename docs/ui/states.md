@@ -76,15 +76,22 @@ the hold; a successful change clears it.
 ## Actions
 
 The shim returns a flat queue. The full vocabulary is `UI_Action_Kind` in
-`src/renderer/ui_frame.odin`; the Settings dialog uses:
+`src/renderer/ui_frame.odin`. The settings and inspector surfaces use:
 
 | Kind | Action | Applied by |
 | --- | --- | --- |
-| 1 | `Close_Menu` | close the settings dialog when it is open; the status row's `Close` is a handled no-op while it is closed |
-| 2 | `Toggle_Debug` | toggle the debug camera |
+| 1 | `Close_Menu` | close the settings dialog when it is open |
+| 2 | `Debug_Inspector` | enter debug mode when needed and open the inspector |
 | 3 | `Palette_Select` | select and preview the palette item at `value` |
 | 5 | `Settings_Set` | `settings_set` with a setting id, an option index or boolean, and an opacity scalar |
+| 6 | `Type_Weight_Set` | `settings.type_weight` with the slider scalar |
 | 7 | `Palette_Pick` | arm the placement from the selected palette item |
+| 8 | `Object_Set` | `Set_Body` or the absolute `Set_Selected_Yaw` for the selected object |
+| 10, 11 | `Object_Duplicate`, `Object_Delete` | the selected object's history action |
+| 12 | `Lamp_Set` | the selected lamp's intensity or range |
+| 13, 14 | `Lamp_Kind`, `Lamp_Color` | the selected lamp's kind or fixed colour |
+| 15 | `Toggle_Inspector` | open or close the inspector rail |
+| 16 | `Physics_Debug` | the physics debug draw switch, independent of debug mode |
 
 A changed window mode, display, or resolution also calls
 `apply_window_settings`; the other actions do not touch the window.
@@ -103,3 +110,9 @@ opens Settings when nothing owns the keyboard. The pointer may click a palette
 card, the Place button, or any dialog control while the cursor is free; while it
 is captured, the pointer belongs to the camera. Drag and key repeat are part of
 the Slider, not a separate input mode.
+
+The resolver order is Settings, inspector, palette, placement, then world. `I`
+toggles the inspector in debug mode and `Esc` closes it before it opens Settings.
+While the inspector owns the frame, its pointer stays free and the world pointer
+path does not run. Opening the inspector cancels an armed placement or a world
+drag; opening the palette, arming a placement, or opening Settings closes it.

@@ -14,7 +14,7 @@ foreign ui_lib {
 	ui_vk_init :: proc(config: ^Ui_Vk_Config, out: ^Ui_Vk_Device) -> i32 ---
 	ui_attach :: proc(target: ^Ui_Target) -> i32 ---
 	ui_draw :: proc(image_index: u32) -> i32 ---
-	ui_frame :: proc(dt: f64, snapshot: ^Ui_Snapshot, panel: ^Ui_Panel, menu: ^Ui_Menu, settings: ^Ui_Settings, palette: ^Ui_Palette, events: [^]Ui_Event, count: u32) -> i32 ---
+	ui_frame :: proc(dt: f64, snapshot: ^Ui_Snapshot, panel: ^Ui_Panel, menu: ^Ui_Menu, settings: ^Ui_Settings, palette: ^Ui_Palette, inspector: ^Ui_Inspector, events: [^]Ui_Event, count: u32) -> i32 ---
 	ui_click_point :: proc(x, y: f32) -> i32 ---
 	ui_click_element :: proc(pointer: [^]u8, len: u32) -> i32 ---
 	ui_actions :: proc(count: ^u32) -> [^]Ui_Action ---
@@ -44,12 +44,14 @@ Ui_Target :: struct {
 }
 
 Ui_Snapshot :: struct {
-	speed:        f32,
-	grounded:     u32,
-	menu_open:    u32,
-	palette_open: u32,
-	fx:           u32,
-	weight:       f32,
+	speed:           f32,
+	grounded:        u32,
+	menu_open:       u32,
+	palette_open:    u32,
+	fx:              u32,
+	weight:          f32,
+	viewport_width:  f32,
+	viewport_height: f32,
 }
 
 Ui_Row :: struct {
@@ -206,6 +208,8 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 
 	snapshot := frame.snapshot
 	snapshot.weight = hud.weight
+	snapshot.viewport_width = f32(width) / scale
+	snapshot.viewport_height = f32(height) / scale
 	rows: [64]Ui_Row
 	row_count := min(len(frame.panel_rows), len(rows))
 	for row, index in frame.panel_rows[:row_count] {
@@ -301,7 +305,37 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 	}
 	settings_options: Ui_Settings_Options
 	settings := ui_settings_frame(&frame.settings, &settings_options)
-	if ui_frame(frame.dt, &snapshot, &panel, &menu, &settings, &palette_c, raw_data(events[:count]), u32(count)) != 0 {
+	inspector_source := frame.inspector
+	inspector := Ui_Inspector {
+		open                  = u32(inspector_source.open),
+		has_selection         = u32(inspector_source.has_selection),
+		object_id             = inspector_source.object_id,
+		selection             = raw_data(inspector_source.selection),
+		selection_len         = u32(len(inspector_source.selection)),
+		body                  = u32(inspector_source.body),
+		yaw_degrees           = inspector_source.yaw_degrees,
+		yaw_text              = raw_data(inspector_source.yaw_text),
+		yaw_text_len          = u32(len(inspector_source.yaw_text)),
+		placement_prefab      = raw_data(inspector_source.placement_prefab),
+		placement_prefab_len  = u32(len(inspector_source.placement_prefab)),
+		placement_text        = raw_data(inspector_source.placement_text),
+		placement_text_len    = u32(len(inspector_source.placement_text)),
+		has_lamp              = u32(inspector_source.has_lamp),
+		lamp_kind             = u32(inspector_source.lamp_kind),
+		lamp_color            = u32(inspector_source.lamp_color),
+		lamp_intensity        = inspector_source.lamp_intensity,
+		lamp_range            = inspector_source.lamp_range,
+		lamp_intensity_text   = raw_data(inspector_source.lamp_intensity_text),
+		lamp_intensity_len    = u32(len(inspector_source.lamp_intensity_text)),
+		lamp_range_text       = raw_data(inspector_source.lamp_range_text),
+		lamp_range_len        = u32(len(inspector_source.lamp_range_text)),
+		lamp_colors           = inspector_source.lamp_colors,
+		type_weight           = inspector_source.type_weight,
+		type_weight_text      = raw_data(inspector_source.type_weight_text),
+		type_weight_len       = u32(len(inspector_source.type_weight_text)),
+		physics_debug         = u32(inspector_source.physics_debug),
+	}
+	if ui_frame(frame.dt, &snapshot, &panel, &menu, &settings, &palette_c, &inspector, raw_data(events[:count]), u32(count)) != 0 {
 		log.error("renderer: the UI shim could not step")
 	}
 }

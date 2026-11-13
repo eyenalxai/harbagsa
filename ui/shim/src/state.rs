@@ -1,6 +1,8 @@
 use rune_kit::Kit;
 
-use crate::abi::{self, UiAction, UiEvent, UiMenu, UiPalette, UiPanel, UiSettings, UiSnapshot};
+use crate::abi::{
+    self, UiAction, UiEvent, UiInspector, UiMenu, UiPalette, UiPanel, UiSettings, UiSnapshot,
+};
 use crate::{host::Host, input, theme};
 
 pub const HUD_OPACITY_MIN: f32 = 0.70;
@@ -57,6 +59,38 @@ pub struct PanelState {
     pub palette_open: bool,
 }
 
+#[derive(Default)]
+pub struct InspectorState {
+    pub open: bool,
+    pub has_selection: bool,
+    pub object_id: u32,
+    pub selection: String,
+    pub body: usize,
+    pub yaw_degrees: f32,
+    pub yaw_text: String,
+    pub placement_prefab: String,
+    pub placement_text: String,
+    pub has_lamp: bool,
+    pub lamp_kind: usize,
+    pub lamp_color: usize,
+    pub lamp_intensity: f32,
+    pub lamp_range: f32,
+    pub lamp_intensity_text: String,
+    pub lamp_range_text: String,
+    pub lamp_colors: [[f32; 4]; 5],
+    pub type_weight: f32,
+    pub type_weight_text: String,
+    pub physics_debug: bool,
+}
+
+#[derive(Default)]
+pub struct InspectorPreview {
+    pub yaw: Option<f32>,
+    pub intensity: Option<f32>,
+    pub range: Option<f32>,
+    pub weight: Option<f32>,
+}
+
 pub struct SettingsState {
     pub window_mode: usize,
     pub window_modes: Vec<String>,
@@ -103,6 +137,7 @@ pub struct UiState {
     pub menu_open: bool,
     pub fx: bool,
     pub weight: f32,
+    pub viewport: (f32, f32),
     pub kit: Kit,
     pub actions: Vec<UiAction>,
     pub panel: PanelState,
@@ -111,6 +146,8 @@ pub struct UiState {
     pub settings_select: Option<SelectKind>,
     pub opacity_preview: Option<f32>,
     pub palette: PaletteState,
+    pub inspector: InspectorState,
+    pub inspector_preview: InspectorPreview,
 }
 
 impl UiState {
@@ -121,6 +158,7 @@ impl UiState {
             menu_open: false,
             fx: false,
             weight: theme::DEFAULT_WEIGHT,
+            viewport: (0.0, 0.0),
             kit: theme::kit(theme::DEFAULT_WEIGHT),
             actions: Vec::new(),
             panel: PanelState::default(),
@@ -129,6 +167,8 @@ impl UiState {
             settings_select: None,
             opacity_preview: None,
             palette: PaletteState::default(),
+            inspector: InspectorState::default(),
+            inspector_preview: InspectorPreview::default(),
         }
     }
 
@@ -137,6 +177,46 @@ impl UiState {
         if weight != self.weight {
             self.weight = weight;
             self.kit = theme::kit(weight);
+        }
+    }
+
+    pub fn clear_inspector_previews(&mut self) {
+        let inspector = &self.inspector;
+        let preview = &mut self.inspector_preview;
+        if preview
+            .yaw
+            .is_some_and(|value| (value - inspector.yaw_degrees).abs() < 0.05)
+        {
+            preview.yaw = None;
+        }
+        if preview
+            .intensity
+            .is_some_and(|value| (value - inspector.lamp_intensity).abs() < 0.0005)
+        {
+            preview.intensity = None;
+        }
+        if preview
+            .range
+            .is_some_and(|value| (value - inspector.lamp_range).abs() < 0.05)
+        {
+            preview.range = None;
+        }
+        if preview
+            .weight
+            .is_some_and(|value| (value - inspector.type_weight).abs() < 0.5)
+        {
+            preview.weight = None;
+        }
+        if !inspector.open {
+            *preview = InspectorPreview::default();
+            return;
+        }
+        if !inspector.has_selection {
+            preview.yaw = None;
+        }
+        if !inspector.has_lamp {
+            preview.intensity = None;
+            preview.range = None;
         }
     }
 }
@@ -149,6 +229,7 @@ pub fn frame(
     menu: *const UiMenu,
     settings: *const UiSettings,
     palette: *const UiPalette,
+    inspector: *const UiInspector,
     events: *const UiEvent,
     count: u32,
 ) -> i32 {
@@ -163,6 +244,7 @@ pub fn frame(
     runtime.state.grounded = snapshot.grounded != 0;
     runtime.state.menu_open = snapshot.menu_open != 0;
     runtime.state.fx = snapshot.fx != 0;
+    runtime.state.viewport = (snapshot.viewport_width, snapshot.viewport_height);
     runtime.state.set_weight(snapshot.weight);
 
     if let Some(panel) = unsafe { abi::panel_state(panel) } {
@@ -194,6 +276,10 @@ pub fn frame(
     if let Some(palette) = unsafe { abi::palette_state(palette) } {
         runtime.state.palette = palette;
     }
+    if let Some(inspector) = unsafe { abi::inspector_state(inspector) } {
+        runtime.state.inspector = inspector;
+    }
+    runtime.state.clear_inspector_previews();
 
     input::dispatch(runtime, events, count);
 

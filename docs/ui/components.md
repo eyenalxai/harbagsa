@@ -1,9 +1,10 @@
 # Components
 
-Six surfaces live in one Rune view. Each exists for a reason; if a new one is not
-one of these, read [README.md](README.md#adding-a-surface) first. The view is
+Seven surfaces live in one Rune view. Each exists for a reason; if a new one is
+not one of these, read [README.md](README.md#adding-a-surface) first. The view is
 built in `ui/shim/src/views.rs`, the palette grid and preview in
-`ui/shim/src/palette.rs`, and the data is in `src/ui/ui.odin`.
+`ui/shim/src/palette.rs`, the debug rail in `ui/shim/src/inspector.rs`, and the
+data is in `src/ui/ui.odin`.
 
 ## Status panel
 
@@ -17,11 +18,11 @@ The row kinds map to Rune elements:
 - `Header`: tertiary text.
 - `Setting`, `Action`, `Metric`, `Detail`: a label row with a spacer and a value.
 
-The action row has two buttons: `Close` returns `Close_Menu`, which is a handled
-no-op while the dialog is closed, and `Debug` returns `Toggle_Debug` and toggles
-debug mode. The dialog closes with `Esc`, its close control, or `Resume`. The row
-is drawn while the pointer is captured; live pointer events reach it only when
-the cursor is free. The action-row redesign is separate.
+The action row has one primary button: `Debug` returns `Debug_Inspector`, which
+enters debug mode when needed and opens the inspector rail. A short `F2 · I`
+hint names the keyboard path because the row is drawn while the pointer is
+captured; live pointer events reach it only when the cursor is free. The
+settings dialog closes with `Esc`, its close control, or `Resume`.
 
 Incorrect: measuring a row in Odin and sizing a rectangle from it. Rune measures
 the text.
@@ -57,6 +58,22 @@ list stays in `README.md`.
 Incorrect: measuring a row in Odin and sizing a rectangle from it. Rune measures
 the text. Incorrect: a second window-apply path; a changed display, mode, or
 resolution goes through `apply_window_settings`.
+
+## Debug inspector
+
+Use in debug mode for object and lamp edits. The shim builds a 320-point rail at
+the top-right, inset 12, with a 1-point hairline and the HUD surface at 96%. It
+has Object, Placement, Lamp, and Debug sections. Object carries the selected
+prefab and id, the body control, the absolute yaw slider, Duplicate, and Delete.
+Placement is the next placement's prefab, height, yaw, and snap. Lamp carries the
+kind segmented control, the fixed colour swatches, the intensity slider, and the
+range slider; the body row says it follows the kind. Debug carries the type
+weight slider and the physics debug switch. The rail scrolls only if its sections
+overflow; the close control returns `Toggle_Inspector`.
+
+Incorrect: a colour picker. The light colours are the game's fixed set. Incorrect:
+a relative yaw action; the rail sends an absolute yaw. Incorrect: showing the rail
+while Settings or the palette is open.
 
 ## Object palette
 
@@ -97,7 +114,7 @@ Incorrect: centring it over the spider. It sits on the bottom margin.
 
 ## Rune fx demo
 
-`view.fx` asks the shim to put a rune-fx glow over the `Close`/`Debug` action row.
+`view.fx` asks the shim to put a rune-fx glow over the `Debug` action row.
 It is a demonstration of the effect layer, not a notification and not a state
 signal. It is off by default and no scenario may assume it. The glow uses
 `#7C5CFF` with a `#F4F0FF` core and a 12 point radius.

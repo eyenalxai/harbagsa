@@ -1,7 +1,8 @@
 use rune::{Cx, El, col, effect, el, row, spacer};
 
-use crate::abi::{ACTION_CLOSE_MENU, ACTION_TOGGLE_DEBUG, UiAction};
+use crate::abi::{ACTION_DEBUG_INSPECTOR, UiAction};
 use crate::components;
+use crate::inspector;
 use crate::palette;
 use crate::settings;
 use crate::state::{HUD_OPACITY_PROMOTE, UiState};
@@ -20,6 +21,7 @@ pub fn view(state: &UiState, cx: &mut Cx<UiState>) -> El {
     } else {
         hud_view(state)
     };
+    inspector::view(state, state.viewport.1, &mut overlays);
     settings::dialog(state, &mut overlays);
     rune_kit::root(base, overlays)
 }
@@ -80,6 +82,7 @@ fn hud_view(state: &UiState) -> El {
     let hint = if state.panel.capture_hint.is_empty()
         || state.panel.captured
         || state.panel.palette_open
+        || state.inspector.open
     {
         col()
     } else {
@@ -91,16 +94,12 @@ fn hud_view(state: &UiState) -> El {
         text::weighted(&state.panel.notice, state.weight, false).color(kit.c.text_base)
     };
 
-    let close = components::action_button(kit, "Close", state.weight, true)
-        .key("action:1")
-        .on_press(|state: &mut UiState| {
-            state.actions.push(UiAction::new(ACTION_CLOSE_MENU));
-        });
-    let debug = components::action_button(kit, "Debug", state.weight, false)
+    let debug = components::action_button(kit, "Debug", state.weight, true)
         .key("action:2")
         .on_press(|state: &mut UiState| {
-            state.actions.push(UiAction::new(ACTION_TOGGLE_DEBUG));
+            state.actions.push(UiAction::new(ACTION_DEBUG_INSPECTOR));
         });
+    let key_hint = text::weighted("F2 · I", state.weight, false).color(kit.c.text_muted);
 
     let glow = effect(crate::fx::GLOW)
         .effect_data([0.9, 0.0, 0.0, 0.0])
@@ -121,7 +120,7 @@ fn hud_view(state: &UiState) -> El {
                 if state.fx {
                     actions = actions.child(glow.absolute(0.0, 0.0).w_full().h_full());
                 }
-                actions.child(close).child(debug)
+                actions.child(key_hint).child(debug)
             }),
     );
     root

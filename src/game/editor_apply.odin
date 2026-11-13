@@ -48,6 +48,14 @@ editor_apply :: proc(
 		return editor_undo(editor, sim)
 	case Redo:
 		return editor_redo(editor, sim)
+	case Inspector_Open:
+		return editor_set_inspector(editor, true)
+	case Inspector_Close:
+		return editor_set_inspector(editor, false)
+	case Inspector_Toggle:
+		return editor_set_inspector(editor, !editor.inspector_open)
+	case Set_Selected_Yaw:
+		return editor_set_yaw(editor, sim, value.degrees)
 	case Primary_Press:
 		return editor_primary_press(editor, sim, ctx)
 	case Primary_Release:

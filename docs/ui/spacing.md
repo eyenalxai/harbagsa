@@ -35,6 +35,9 @@ addition.
 - Padding 12, row gap 6.
 - The bottom action row is a separate full-width column: `justify_end`,
   `items_center`, padding 16, gap 8.
+- The inspector rail is 320 points wide, inset 12 from the top and right. Its
+  content is capped below the bottom action row and scrolls only when the
+  sections overflow.
 
 The status panel is translucent. The dialog surface is opaque. A selected row
 or card lifts to the raised surface; it does not get a border.

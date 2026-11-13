@@ -16,9 +16,9 @@ Point the review at `runs/design-review`. Do not commit the PNG. The repository
 bans images, and a run directory is reproducible from its scenario.
 
 For a UI change, start with `scenarios/rune-ui.json`, `rune-menu.json`,
-`rune-palette.json`, and `rune-fx.json`. If the change needs a view that no
-scenario covers, add the scenario in the same change. The harness is part of the
-feature.
+`rune-palette.json`, `rune-inspector.json`, `rune-inspector-800.json`, and
+`rune-fx.json`. If the change needs a view that no scenario covers, add the
+scenario in the same change. The harness is part of the feature.
 
 ## Subtract first
 
@@ -32,8 +32,8 @@ repeats a label.
 - A colour literal outside `ui/shim/src/theme.rs` or the game's content data.
 - A type size, font file, atlas, or layout pass in the Odin tree.
 - A vertex buffer, shader, or draw call added for the 2D layer.
-- `accent` on anything but the selected row or card bar, the filled slider track, the focus
-  ring, and the primary action.
+- `accent` on anything but the selected row or card bar, the selected swatch ring,
+  the filled slider track, the focus ring, and the primary action.
 - `text_tertiary` as the label or value of a selectable row or card.
 - A fade, slide, or scale that ignores reduce motion. Kit motion is allowed when
   the reduce-motion setting lands it; the status HUD does not animate. The
@@ -61,14 +61,17 @@ The order is the triage order. A broken interaction outranks a weak colour.
 3. **Contrast on the brightest frame.** Read the text over the brightest lamp
    field the renderer can produce, not over a dim scene. The floors are in
    [colour.md](../ui/colour.md).
-4. **Fixed fields.** Every number that changes during play is in a fixed-width
-   field. The panel text must not move on a selection or a value change.
+4. **Fixed fields.** Every number that changes during play is formatted in
+   `src/game` into a fixed-width string and drawn by the shim. The shim may keep
+   the numeric value for a control position, but it never formats the value for
+   display. The panel and rail text must not move on a selection or a value
+   change.
 5. **One owner of the view.** A UI change touches `src/game` data and
    `ui/shim/src` (the theme and view modules). A change that adds layout,
    colour, or text rendering to `src/ui`, `src/frame`, or `src/renderer` is in
    the wrong layer.
 6. **One of the documented components.** A new panel is the status panel, the
-   settings dialog, or the palette. Otherwise read
+   settings dialog, the palette, or the debug inspector. Otherwise read
    [README.md](../ui/README.md#adding-a-surface) first.
 7. **No new row kind without both sides.** The kind set is closed. A new kind
    must update the game producer and the shim's Rune view in the same change.

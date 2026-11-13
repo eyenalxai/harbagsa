@@ -273,7 +273,7 @@ A prefab with an active point light and an emissive box. The catalog has the Lam
 _Avoid_: Light object, bulb
 
 **Light budget**:
-The set of active point lights. Every object with an active light is in the budget; the renderer no longer keeps a nearest subset. The inspector shows the active light count against the placed lamp-prefab count, which includes lamp prefabs whose light is off.
+The set of active point lights. Every object with an active light is in the budget; the renderer no longer keeps a nearest subset. The keyboard-only debug rows show the active light count against the placed lamp-prefab count, which includes lamp prefabs whose light is off.
 _Avoid_: Light cap, light count (that is the reported number)
 
 **Emissive box**:
@@ -429,7 +429,7 @@ edge latches.
 _Avoid_: Input state, input command
 
 **Settings**:
-The runtime window and input choices: window mode, display, resolution, type weight, and the sprint input mode. A new simulation starts Borderless on display 0; the stored Windowed size is 1280x720, with sprint Hold. A player reset keeps the current settings.
+The runtime window and input choices: window mode, display, resolution, and the sprint input mode. The stored type weight also lives in `Settings`, but the inspector edits it. A new simulation starts Borderless on display 0; the stored Windowed size is 1280x720, with sprint Hold. A player reset keeps the current settings.
 _Avoid_: Options, preferences
 
 **Window mode**:
@@ -602,17 +602,17 @@ for the depth prepass and one for the lit pass.
 _Avoid_: Render pass (that word belongs to the Vulkan object)
 
 **HUD**:
-The Rune status panel: the player or debug rows, the notice, the capture hint, and the `Close`/`Debug` action row. It is one Rune view, not an Odin draw pass.
+The Rune status panel: the player or debug rows, the notice, the capture hint, and the `Debug` action row. It is one Rune view, not an Odin draw pass.
 _Avoid_: UI, overlay draw
 
 **Settings menu**:
 The paused Rune view opened with `Esc`. It lists the active control set and changes
-the window mode, display, resolution, type weight, and sprint input mode. The harness opens
+the window mode, display, resolution, and sprint input mode. The harness opens
 it with the `menu` command and reports `settings.*` and `menu.*` in the state.
 _Avoid_: Options screen, pause menu
 
 **Rune UI**:
-The Rust view in `ui/shim` that draws the status panel, settings menu, palette, notice, and capture hint. Rune owns layout, type, colour, hit testing, and the wgpu overlay pass.
+The Rust view in `ui/shim` that draws the status panel, settings menu, palette, debug inspector, notice, and capture hint. Rune owns layout, type, colour, hit testing, and the wgpu overlay pass.
 _Avoid_: Odin HUD, ImGui
 
 **UI shim**:
@@ -620,15 +620,15 @@ The static Rust library built from `ui/shim`. It adopts the game's Vulkan instan
 _Avoid_: UI backend, renderer plugin
 
 **UI snapshot**:
-The flat data the game sends through `src/renderer/ui_bridge.odin`: player speed and grounded state, type weight, menu and palette flags, pointer events, menu keys, panel rows, notice, capture hint, menu, and palette. Strings stay owned by Odin for the duration of one call.
+The flat data the game sends through `src/renderer/ui_bridge.odin`: player speed and grounded state, type weight, viewport size, menu and palette flags, pointer events, menu keys, panel rows, notice, capture hint, menu, palette, and inspector. Strings stay owned by Odin for the duration of one call.
 _Avoid_: UI frame (the Odin wrapper is `UI_Frame`), scene graph
 
 **UI action**:
-One flat intent returned by the shim: `Close_Menu`, `Toggle_Debug`, or `Palette_Select`. The game applies the queue after `ui_draw`. `Close_Menu` only acts while the settings menu is open; the status view's `Close` button is inert because that view is shown with the menu closed.
+One flat intent returned by the shim, such as `Close_Menu`, `Debug_Inspector`, `Palette_Select`, `Settings_Set`, `Object_Set`, `Lamp_Set`, `Type_Weight_Set`, or `Physics_Debug`. The game applies the queue after `ui_draw`. The action kind set lives in `UI_Action_Kind` in `src/renderer/ui_frame.odin`.
 _Avoid_: Callback, event
 
 **Type weight**:
-The settings value from 100 to 900 that the settings menu edits in steps of 5. It is stored in `Settings.type_weight`, reported by the harness, and applied to every Rune text node as a span weight. The shim draws with Geist Variable and Geist Mono Variable from `ui/shim/assets/`; the `wght` axis is continuous, so 565 is valid. A weight of 400 is the old default; zero leaves the default text style untouched.
+The debug value from 100 to 900 that the inspector's Debug section edits. It is stored in `Settings.type_weight`, reported by the harness, and applied to every Rune text node as a span weight. The shim draws with Geist Variable and Geist Mono Variable from `ui/shim/assets/`; the `wght` axis is continuous, so 565 is valid. A weight of 400 is the default; zero leaves the default text style untouched.
 _Avoid_: Font weight, boldness
 
 **View scale**:
@@ -648,8 +648,8 @@ _Avoid_: Line, item, entry
 **Blocked row**:
 A settings row that cannot change in the current state. It stays selectable and
 keeps its selected surface and accent bar; only its value moves to secondary text.
-Display and Resolution can be blocked. The Type weight row is not blocked at an
-axis end, because one direction still moves.
+Display and Resolution can be blocked. A blocked row is not a disabled control:
+the row stays selectable and the reason sits in the settings note.
 _Avoid_: Disabled row, greyed row
 
 **Status note**:
@@ -812,9 +812,12 @@ it.
 _Avoid_: Focus, target
 
 **Object inspector**:
-The debug HUD block that shows the selected object's prefab and id, the object
-count and capacity, and the body, size, position, yaw, and snap state. Every
-changing value uses a fixed field.
+The 320-point debug rail on the right, inset 12 from the top and right. It opens
+with `I` and closes with `Esc`, frees the pointer while open, and is hidden while
+Settings or the palette is open. Its Object, Placement, Lamp, and Debug sections
+cover the selected object, the next placement, the selected lamp, the type
+weight, and the physics debug draw. The top-left debug rows remain the
+keyboard-only readout while the rail is closed.
 _Avoid_: Edit panel, properties
 
 **Undo history**:

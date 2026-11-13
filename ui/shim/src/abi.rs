@@ -4,23 +4,25 @@
 
 use std::ffi::c_void;
 
-use crate::state::{MenuState, PaletteItem, PaletteState, PanelRow, PanelState, SettingsState};
+use crate::state::{
+    InspectorState, MenuState, PaletteItem, PaletteState, PanelRow, PanelState, SettingsState,
+};
 
 pub const ACTION_CLOSE_MENU: u32 = 1;
-pub const ACTION_TOGGLE_DEBUG: u32 = 2;
+pub const ACTION_DEBUG_INSPECTOR: u32 = 2;
 pub const ACTION_PALETTE_SELECT: u32 = 3;
 pub const ACTION_PALETTE_CLOSE: u32 = 4;
 pub const ACTION_SETTINGS_SET: u32 = 5;
 pub const ACTION_TYPE_WEIGHT_SET: u32 = 6;
 pub const ACTION_PALETTE_PICK: u32 = 7;
 pub const ACTION_OBJECT_SET: u32 = 8;
-pub const ACTION_OBJECT_TOGGLE: u32 = 9;
 pub const ACTION_OBJECT_DUPLICATE: u32 = 10;
 pub const ACTION_OBJECT_DELETE: u32 = 11;
 pub const ACTION_LAMP_SET: u32 = 12;
 pub const ACTION_LAMP_KIND: u32 = 13;
 pub const ACTION_LAMP_COLOR: u32 = 14;
 pub const ACTION_TOGGLE_INSPECTOR: u32 = 15;
+pub const ACTION_PHYSICS_DEBUG: u32 = 16;
 
 pub const SETTING_WINDOW_MODE: u32 = 0;
 pub const SETTING_DISPLAY: u32 = 1;
@@ -28,6 +30,12 @@ pub const SETTING_RESOLUTION: u32 = 2;
 pub const SETTING_SPRINT_MODE: u32 = 3;
 pub const SETTING_HUD_OPACITY: u32 = 4;
 pub const SETTING_REDUCE_MOTION: u32 = 5;
+
+pub const OBJECT_FIELD_BODY: u32 = 0;
+pub const OBJECT_FIELD_YAW: u32 = 1;
+
+pub const LAMP_FIELD_INTENSITY: u32 = 0;
+pub const LAMP_FIELD_RANGE: u32 = 1;
 
 #[repr(C)]
 pub struct UiVkConfig {
@@ -52,6 +60,8 @@ pub struct UiSnapshot {
     pub palette_open: u32,
     pub fx: u32,
     pub weight: f32,
+    pub viewport_width: f32,
+    pub viewport_height: f32,
 }
 
 #[repr(C)]
@@ -141,6 +151,37 @@ pub struct UiPalette {
     pub size_len: u32,
     pub hints: *const UiHint,
     pub hint_count: u32,
+}
+
+#[repr(C)]
+pub struct UiInspector {
+    pub open: u32,
+    pub has_selection: u32,
+    pub object_id: u32,
+    pub selection: *const u8,
+    pub selection_len: u32,
+    pub body: u32,
+    pub yaw_degrees: f32,
+    pub yaw_text: *const u8,
+    pub yaw_text_len: u32,
+    pub placement_prefab: *const u8,
+    pub placement_prefab_len: u32,
+    pub placement_text: *const u8,
+    pub placement_text_len: u32,
+    pub has_lamp: u32,
+    pub lamp_kind: u32,
+    pub lamp_color: u32,
+    pub lamp_intensity: f32,
+    pub lamp_range: f32,
+    pub lamp_intensity_text: *const u8,
+    pub lamp_intensity_len: u32,
+    pub lamp_range_text: *const u8,
+    pub lamp_range_len: u32,
+    pub lamp_colors: [[f32; 4]; 5],
+    pub type_weight: f32,
+    pub type_weight_text: *const u8,
+    pub type_weight_len: u32,
+    pub physics_debug: u32,
 }
 
 #[repr(C)]
@@ -283,6 +324,46 @@ pub unsafe fn settings_state(settings: *const UiSettings) -> Option<SettingsStat
         sprint_modes: options(settings.sprint_modes, settings.sprint_mode_count),
         hud_opacity: settings.hud_opacity,
         reduce_motion: settings.reduce_motion != 0,
+    })
+}
+
+/// # Safety
+///
+/// `inspector` must point to a valid `UiInspector` whose pointers are readable
+/// for their lengths or null, or be null.
+pub unsafe fn inspector_state(inspector: *const UiInspector) -> Option<InspectorState> {
+    let inspector = unsafe { inspector.as_ref() }?;
+    Some(InspectorState {
+        open: inspector.open != 0,
+        has_selection: inspector.has_selection != 0,
+        object_id: inspector.object_id,
+        selection: unsafe { text_bytes(inspector.selection, inspector.selection_len) },
+        body: inspector.body as usize,
+        yaw_degrees: inspector.yaw_degrees,
+        yaw_text: unsafe { text_bytes(inspector.yaw_text, inspector.yaw_text_len) },
+        placement_prefab: unsafe {
+            text_bytes(inspector.placement_prefab, inspector.placement_prefab_len)
+        },
+        placement_text: unsafe {
+            text_bytes(inspector.placement_text, inspector.placement_text_len)
+        },
+        has_lamp: inspector.has_lamp != 0,
+        lamp_kind: inspector.lamp_kind as usize,
+        lamp_color: inspector.lamp_color as usize,
+        lamp_intensity: inspector.lamp_intensity,
+        lamp_range: inspector.lamp_range,
+        lamp_intensity_text: unsafe {
+            text_bytes(inspector.lamp_intensity_text, inspector.lamp_intensity_len)
+        },
+        lamp_range_text: unsafe {
+            text_bytes(inspector.lamp_range_text, inspector.lamp_range_len)
+        },
+        lamp_colors: inspector.lamp_colors,
+        type_weight: inspector.type_weight,
+        type_weight_text: unsafe {
+            text_bytes(inspector.type_weight_text, inspector.type_weight_len)
+        },
+        physics_debug: inspector.physics_debug != 0,
     })
 }
 

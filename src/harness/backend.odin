@@ -202,7 +202,7 @@ backend_scene :: proc(data: ^Backend_Data, session: ^Session, alpha: f32) -> ren
 	options := frame.Options {
 		alpha         = alpha,
 		delta_seconds = game.SIMULATION_STEP,
-		debug_view    = session.view.debug,
+		debug_view    = session_debug_view(session),
 		fx_view       = session.view.fx,
 		captured      = !session.view.hint,
 		hud           = session.view.hud,

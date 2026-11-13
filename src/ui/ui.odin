@@ -78,6 +78,8 @@ PALETTE_MAX_ITEMS :: 12
 PALETTE_MAX_HINTS :: 8
 PALETTE_TEXT_BYTES :: 40
 
+INSPECTOR_LAMP_COLORS :: 5
+
 Palette_Item :: struct {
 	name:         string,
 	short_name:   string,
@@ -104,6 +106,32 @@ Palette :: struct {
 	size_length:  int,
 	hints:        [PALETTE_MAX_HINTS]Hint_Cell,
 	hint_count:   int,
+}
+
+// The inspector is the right rail's data. The shim owns the layout; this value
+// names the selection, the next placement, the selected lamp, and the debug
+// switches the rail can change.
+Inspector :: struct {
+	open:                  bool,
+	has_selection:         bool,
+	object_id:             u32,
+	selection:             string,
+	body:                  int,
+	yaw_degrees:           f32,
+	yaw_text:              string,
+	placement_prefab:      string,
+	placement_text:        string,
+	has_lamp:              bool,
+	lamp_kind:             int,
+	lamp_color:            int,
+	lamp_intensity:        f32,
+	lamp_range:            f32,
+	lamp_intensity_text:   string,
+	lamp_range_text:       string,
+	lamp_colors:           [INSPECTOR_LAMP_COLORS][4]f32,
+	type_weight:           f32,
+	type_weight_text:      string,
+	physics_debug:         bool,
 }
 
 // A notice is one line about an action whose result is not on screen. It is not
