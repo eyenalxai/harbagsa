@@ -19,7 +19,10 @@ rune-fx glow is a demo and is off by default.
 | `src/ui` | the flat snapshot vocabulary: `Row`, `Menu`, `Palette`, `Hud`, and the constants | import a project package |
 | `src/frame` | assembling one `HUD_Frame` from the simulation and input | draw or lay out |
 | `src/renderer/ui_bridge.odin` | the C ABI to the shim, snapshot marshalling, action queue | invent content |
-| `ui/shim/src/lib.rs` | the Rune view, its tokens, rune-fx, the wgpu overlay | read game state directly |
+| `ui/shim/src/views.rs` | the HUD and menu view | read game state directly |
+| `ui/shim/src/palette.rs` | the palette grid, preview, and isometric shape | read game state directly |
+| `ui/shim/src/theme.rs` | the view tokens and kit | read game state directly |
+| `ui/shim/src/lib.rs` | the ABI entry points, host, paint, and rune-fx | read game state directly |
 
 The frame protocol calls `ui_frame` before the scene is recorded and `ui_draw`
 after the scene is submitted. The shim draws onto the same target image, so a
@@ -64,7 +67,8 @@ helpers that measured and painted them) is gone; do not bring that layer back.
 3. Extend the flat `UI_Frame` payload and the matching C ABI in
    `src/renderer/ui_bridge.odin`. `HUD_Frame` only carries `enabled` plus that
    frame, and the Rune shim must consume the new field.
-4. Draw it in `ui/shim/src/lib.rs` as a Rune element tree.
+4. Draw it in `ui/shim/src/views.rs` as a Rune element tree; the palette grid
+   and preview live in `ui/shim/src/palette.rs`.
 5. Add a scenario under `scenarios/rune-*.json` when the surface is visual.
 
 Do not add a vertex buffer, a shader, a layout module, or a font asset to Odin.
@@ -97,7 +101,8 @@ change width.
 ## Rules that are easy to break
 
 - The Odin side sends data, never draw commands.
-- A UI colour or a panel size lives in `ui/shim/src/lib.rs`, not in `src/ui` or
+- A UI colour lives in `ui/shim/src/theme.rs`; a panel size lives with its view
+  in `ui/shim/src/views.rs` or `ui/shim/src/palette.rs`, not in `src/ui` or
   `src/frame`.
 - A row is a `ui.Row`; a new kind must be understood by both the game and the
   shim.

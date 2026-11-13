@@ -1,5 +1,4 @@
 use rune::{Cx, El, col, effect, el, row, spacer};
-use rune_kit::Kit;
 
 use crate::abi::{ACTION_CLOSE_MENU, ACTION_TOGGLE_DEBUG, UiAction};
 use crate::components;

@@ -1,9 +1,10 @@
 # Spacing and surfaces
 
 Rune lays out the view. The numbers below are Rune points in
-`ui/shim/src/lib.rs`, not pixels computed in Odin. Rune scales the view by
-`scale = clamp(target_height / 720, 1, 2)` and passes it to `Env::new`; a 720p
-target gets 1, a 1080p target 1.5, a 1440p target 2.
+`ui/shim/src/views.rs` and `ui/shim/src/palette.rs`, not pixels computed in
+Odin. Rune scales the view by `scale = clamp(target_height / 720, 1, 2)` and
+passes it to `Env::new`; a 720p target gets 1, a 1080p target 1.5, a 1440p target
+2.
 
 ## The scale
 

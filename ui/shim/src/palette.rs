@@ -9,7 +9,6 @@ const WIDTH: f32 = 640.0;
 const CARD_W: f32 = 120.0;
 const CARD_H: f32 = 92.0;
 const GRID_GAP: f32 = 8.0;
-const GRID_H: f32 = CARD_H * 4.0 + GRID_GAP * 3.0;
 const PREVIEW_W: f32 = 220.0;
 const PREVIEW_ART_H: f32 = 168.0;
 const ISO_X: f32 = 0.866_025_4;
@@ -19,6 +18,8 @@ pub fn view(state: &UiState) -> El {
     let kit = &state.kit;
     let palette = &state.palette;
     let grid_w = CARD_W * 3.0 + GRID_GAP * 2.0;
+    let rows = palette.items.len().div_ceil(3).max(1);
+    let grid_h = rows as f32 * CARD_H + (rows.saturating_sub(1)) as f32 * GRID_GAP;
 
     let mut grid = col().w(grid_w).equal_columns(3).gap(GRID_GAP);
     for (index, item) in palette.items.iter().enumerate() {
@@ -42,7 +43,7 @@ pub fn view(state: &UiState) -> El {
         hints = hints.child(
             row()
                 .gap(4.0)
-                .child(text(keys, kit.ty.small_medium, kit.c.text_base))
+                .child(text(keys, kit.ty.small_medium, kit.c.text_muted))
                 .child(text(action, kit.ty.small, kit.c.text_muted)),
         );
     }
@@ -73,7 +74,7 @@ pub fn view(state: &UiState) -> El {
                 .w_full()
                 .gap(12.0)
                 .child(grid)
-                .child(preview(kit, palette)),
+                .child(preview(kit, palette, grid_h)),
         )
         .child(
             row()
@@ -151,10 +152,10 @@ fn card(kit: &Kit, item: &PaletteItem, index: usize, selected: bool) -> El {
         })
 }
 
-fn preview(kit: &Kit, palette: &PaletteState) -> El {
+fn preview(kit: &Kit, palette: &PaletteState, grid_h: f32) -> El {
     let panel = col()
         .w(PREVIEW_W)
-        .h(GRID_H)
+        .h(grid_h)
         .radius(kit.radius.md)
         .fill(kit.c.layer_02)
         .padding(12.0)
@@ -194,7 +195,15 @@ fn preview(kit: &Kit, palette: &PaletteState) -> El {
                 )
                 .child(text(&item.name, kit.ty.ui_medium, kit.c.text_base))
                 .child(spacer())
-                .child(text(&item.key, kit.ty.small_medium, kit.c.text_faint)),
+                .child(text(
+                    if item.key.is_empty() {
+                        "—"
+                    } else {
+                        &item.key
+                    },
+                    kit.ty.small_medium,
+                    kit.c.text_muted,
+                )),
         )
         .child(canvas(iso_shape(kit, item)).size(PREVIEW_W - 24.0, PREVIEW_ART_H))
         .child(spacer())
