@@ -43,7 +43,7 @@ draws in Geist Mono. Below 94 percent the status HUD's tertiary text promotes to
 secondary, keeping the text floor on the translucent surface.
 
 The dialog owns its keyboard path: Rune traps focus, draws the focus ring, and
-routes arrows and Enter to the focused control. `src/game/settings_view.odin`
+routes arrows, Enter, and Space to the focused control. `src/game/settings_view.odin`
 names every option and index; the shim never derives a display or mode name.
 
 Incorrect: measuring a row in Odin and sizing a rectangle from it. Rune measures

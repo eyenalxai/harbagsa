@@ -24,8 +24,8 @@ draws in Geist Mono; its label stays in Geist. The palette rows are not numeric.
 ## The settings dialog
 
 Settings is a kit `Dialog`; its labels use the kit styles and inherit the type
-weight. The HUD opacity value draws in Geist Mono. Type weight is not part of
-Settings; it is a debug control and the debug inspector owns it.
+weight. The HUD opacity value draws in Geist Mono. Type weight remains a stored setting but is not part of
+Settings.
 
 The game sends the weight in the UI snapshot and the shim rebuilds the kit when
 it changes, so every kit control and every local text node follows. Geist

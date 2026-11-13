@@ -88,7 +88,7 @@ launch-time display list. HUD opacity runs from 70 to 100 percent in one-point
 steps and promotes tertiary HUD text to secondary below 94 percent. Reduce motion
 stops kit transitions. `Esc`, the header close control, and `Resume` close the
 dialog. The `Settings` button in the status action row opens it; `Debug` toggles
-debug mode. Type weight is a debug control and is not part of Settings.
+debug mode. Type weight remains a stored setting but is not part of Settings.
 
 Window mode is Borderless or Windowed. Borderless uses the selected display's
 desktop size. Windowed uses the chosen resolution and a normal title bar. The
