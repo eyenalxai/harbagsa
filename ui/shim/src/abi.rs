@@ -1,9 +1,5 @@
-// The action vocabulary and palette payload land here so the surface tickets
-// share one ABI; some values wait for their consumers.
-#![allow(dead_code)]
-
-//! The flat C ABI. The full action vocabulary and palette payload land here
-//! before the surface tickets consume them.
+//! The flat C ABI. A few payload fields exist for the game snapshot and have no
+//! view consumer yet.
 #![allow(dead_code)]
 
 use std::ffi::c_void;
@@ -143,8 +139,6 @@ pub struct UiPalette {
     pub body_len: u32,
     pub size: *const u8,
     pub size_len: u32,
-    pub count: *const u8,
-    pub count_len: u32,
     pub hints: *const UiHint,
     pub hint_count: u32,
 }
@@ -351,7 +345,6 @@ pub unsafe fn palette_state(palette: *const UiPalette) -> Option<PaletteState> {
         selected: palette.selected as usize,
         body: unsafe { text_bytes(palette.body, palette.body_len) },
         size: unsafe { text_bytes(palette.size, palette.size_len) },
-        count: unsafe { text_bytes(palette.count, palette.count_len) },
         hints: unsafe { hints(palette.hints, palette.hint_count) },
     })
 }

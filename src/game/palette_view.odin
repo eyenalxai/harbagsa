@@ -11,9 +11,8 @@ PALETTE_KEY_COUNT :: 9
 
 PALETTE_KEYS := [PALETTE_KEY_COUNT]string{"1", "2", "3", "4", "5", "6", "7", "8", "9"}
 
-PALETTE_HINTS := [5]ui.Hint_Cell {
-	{keys = "1-9", action = "select"},
-	{keys = "Arrows", action = "move"},
+PALETTE_HINTS := [4]ui.Hint_Cell {
+	{keys = "1-9 / arrows", action = "select"},
 	{keys = "Enter", action = "pick"},
 	{keys = "M", action = "body"},
 	{keys = "Esc", action = "close"},
@@ -21,7 +20,7 @@ PALETTE_HINTS := [5]ui.Hint_Cell {
 
 PALETTE_LIGHT_HINT :: ui.Hint_Cell{keys = "C [ ] , . K", action = "light / kind"}
 
-editor_palette_view :: proc(sim: ^Simulation, editor: ^Editor, active: bool) -> ui.Palette {
+editor_palette_view :: proc(editor: ^Editor, active: bool) -> ui.Palette {
 	palette: ui.Palette
 	if !active {
 		return palette
@@ -77,12 +76,6 @@ editor_palette_view :: proc(sim: ^Simulation, editor: ^Editor, active: bool) -> 
 		)
 		palette.size_length = len(size)
 	}
-	count_text := fmt.bprintf(
-		palette.count[:],
-		"%d",
-		simulation_object_count(sim),
-	)
-	palette.count_length = len(count_text)
 
 	hint_count := len(PALETTE_HINTS)
 	for hint, index in PALETTE_HINTS {

@@ -37,6 +37,8 @@ apply :: proc(ctx: Context, action: renderer.Ui_Action) -> Result {
 		return {handled = true, applied = true}
 	case .Palette_Select:
 		return apply_edit(ctx, game.Palette_Select{index = int(action.value)})
+	case .Palette_Pick:
+		return apply_edit(ctx, game.Palette_Pick{})
 	case .Palette_Close:
 		return apply_edit(ctx, game.Palette_Close{})
 	case .Settings_Set:

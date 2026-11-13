@@ -7,7 +7,7 @@ view reads. There is no second UI renderer in Odin.
 
 The view is a technical readout: a status panel in the top-left, a bottom action
 row with `Close` and `Debug`, a settings dialog over a scrim, and the object
-palette as a Rune list. A notice and the capture hint sit above the
+palette as a grid over a scrim. A notice and the capture hint sit above the
 action row. Rune kit motion follows the reduce-motion setting. The optional
 rune-fx glow is a demo and is off by default.
 
@@ -19,15 +19,18 @@ rune-fx glow is a demo and is off by default.
 | `src/ui` | the flat snapshot vocabulary: `Row`, `Menu`, `Palette`, `Hud`, and the constants | import a project package |
 | `src/frame` | assembling one `HUD_Frame` from the simulation and input | draw or lay out |
 | `src/renderer/ui_bridge.odin` | the C ABI to the shim, snapshot marshalling, action queue | invent content |
-| `ui/shim/src/lib.rs` | the Rune view, its tokens, rune-fx, the wgpu overlay | read game state directly |
+| `ui/shim/src/views.rs` | the HUD and menu view | read game state directly |
+| `ui/shim/src/palette.rs` | the palette grid, preview, and isometric shape | read game state directly |
+| `ui/shim/src/theme.rs` | the view tokens and kit | read game state directly |
+| `ui/shim/src/lib.rs` | the ABI entry points, host, paint, and rune-fx | read game state directly |
 
 The frame protocol calls `ui_frame` before the scene is recorded and `ui_draw`
 after the scene is submitted. The shim draws onto the same target image, so a
 capture includes the UI. When the frame's `hud` flag is false, `HUD_Frame.enabled`
 is false: `ui_step` does not rebuild the view and the frame protocol does not
 call `ui_draw`, so a `hud:false` capture has no overlay. The game applies the
-action queue after the draw: `Close_Menu`, `Toggle_Debug`, `Settings_Set`, and
-`Palette_Select`.
+action queue after the draw: `Close_Menu`, `Toggle_Debug`, `Palette_Select`,
+`Palette_Pick`, and `Settings_Set`.
 
 ## Snapshot
 
@@ -64,7 +67,8 @@ helpers that measured and painted them) is gone; do not bring that layer back.
 3. Extend the flat `UI_Frame` payload and the matching C ABI in
    `src/renderer/ui_bridge.odin`. `HUD_Frame` only carries `enabled` plus that
    frame, and the Rune shim must consume the new field.
-4. Draw it in `ui/shim/src/lib.rs` as a Rune element tree.
+4. Draw it in `ui/shim/src/views.rs` as a Rune element tree; the palette grid
+   and preview live in `ui/shim/src/palette.rs`.
 5. Add a scenario under `scenarios/rune-*.json` when the surface is visual.
 
 Do not add a vertex buffer, a shader, a layout module, or a font asset to Odin.
@@ -72,11 +76,18 @@ The shim draws every 2D pixel.
 
 ## The object palette
 
-The debug object palette is a Rune list, not a bottom dock. The shim turns each
-`ui.Palette` item into a row with the short name and the full name, marks the
-selected row, and shows the body note and the key hints below it. Clicking a row
-returns `Palette_Select` with the row index. The preview is text, not an
-isometric drawing.
+The debug object palette is a 640-point dialog over the scrim: a 3×4 grid of
+120×92 cards on the left and a 220-point preview on the right. Each card shows
+the prefab colour, short name, full name, and key badge. Number keys 1-9 select
+the first nine cards; the last two show a dash badge and are reached with the
+arrow keys. The selected card lifts to the raised surface with a 2-point accent
+bar; hover adds a fill overlay, and focus adds a 2-point ring.
+
+Clicking a card returns `Palette_Select` with the item index and previews it.
+`Place` or `Enter` returns `Palette_Pick`; the game arms the placement with the
+selected prefab, body, and light. The preview shows the prefab colour,
+dimensions, body, light line, and an isometric box drawn from the half extents
+and base pitch. All eleven prefabs fit in the grid at 1280×720 and 800×600.
 
 ## The debug inspector
 
@@ -90,7 +101,8 @@ change width.
 ## Rules that are easy to break
 
 - The Odin side sends data, never draw commands.
-- A UI colour or a panel size lives in `ui/shim/src/lib.rs`, not in `src/ui` or
+- A UI colour lives in `ui/shim/src/theme.rs`; a panel size lives with its view
+  in `ui/shim/src/views.rs` or `ui/shim/src/palette.rs`, not in `src/ui` or
   `src/frame`.
 - A row is a `ui.Row`; a new kind must be understood by both the game and the
   shim.

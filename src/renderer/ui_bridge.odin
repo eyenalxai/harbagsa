@@ -130,8 +130,6 @@ Ui_Palette :: struct {
 	body_len:   u32,
 	size:       [^]u8,
 	size_len:   u32,
-	count:      [^]u8,
-	count_len:  u32,
 	hints:      [^]Ui_Hint,
 	hint_count: u32,
 }
@@ -258,7 +256,7 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 	}
 	palette_source := frame.palette
 	palette_items: [12]Ui_Palette_Item
-	palette_item_count := min(len(palette_source.items), len(palette_items))
+	palette_item_count := min(palette_source.item_count, len(palette_items))
 	for &item, index in palette_source.items[:palette_item_count] {
 		palette_items[index] = {
 			name           = raw_data(item.name),
@@ -278,7 +276,7 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 		}
 	}
 	palette_hints: [8]Ui_Hint
-	palette_hint_count := min(len(palette_source.hints), len(palette_hints))
+	palette_hint_count := min(palette_source.hint_count, len(palette_hints))
 	for hint, index in palette_source.hints[:palette_hint_count] {
 		palette_hints[index] = {
 			keys       = raw_data(hint.keys),
@@ -298,8 +296,6 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 		body_len   = u32(len(palette_source.body)),
 		size       = raw_data(palette_source.size[:palette_source.size_length]),
 		size_len   = u32(palette_source.size_length),
-		count      = raw_data(palette_source.count[:palette_source.count_length]),
-		count_len  = u32(palette_source.count_length),
 		hints      = raw_data(palette_hints[:palette_hint_count]),
 		hint_count = u32(palette_hint_count),
 	}

@@ -162,7 +162,7 @@ build :: proc(
 			options.delta_seconds,
 			{status = options.bake.status, key = options.bake.key},
 		)
-		palette := game.editor_palette_view(sim, &debug.editor, debug.active)
+		palette := game.editor_palette_view(&debug.editor, debug.active)
 		if hud.menu.open {
 			palette.open = false
 		}

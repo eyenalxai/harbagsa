@@ -32,9 +32,9 @@ repeats a label.
 - A colour literal outside `ui/shim/src/theme.rs` or the game's content data.
 - A type size, font file, atlas, or layout pass in the Odin tree.
 - A vertex buffer, shader, or draw call added for the 2D layer.
-- `accent` on anything but the selected-row bar, the filled slider track, the focus
+- `accent` on anything but the selected row or card bar, the filled slider track, the focus
   ring, and the primary action.
-- `text_tertiary` as the label or value of a selectable row.
+- `text_tertiary` as the label or value of a selectable row or card.
 - A fade, slide, or scale that ignores reduce motion. Kit motion is allowed when
   the reduce-motion setting lands it; the status HUD does not animate. The
   rune-fx glow is opt-in and static.
@@ -52,9 +52,10 @@ repeats a label.
 The order is the triage order. A broken interaction outranks a weak colour.
 
 1. **Keyboard only.** Every action is reachable from the keyboard. The pointer is
-   an addition: it can click a palette row or a dialog control when the cursor is
-   free, and no action hides behind a hover. The Settings dialog controls take
-   the keyboard. The HUD opacity slider takes Left and Right.
+   an addition: it can click a palette card, the Place button, or a dialog
+   control when the cursor is free, and no action hides behind a hover. The
+   Settings dialog controls take the keyboard. The HUD opacity slider takes
+   Left and Right.
 2. **Fits at 800x600.** The settings dialog and every panel are fully visible at
    the smallest supported window. Rune scales the view; nothing clips.
 3. **Contrast on the brightest frame.** Read the text over the brightest lamp

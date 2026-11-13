@@ -24,17 +24,7 @@ pub struct MenuState {
     pub hints: Vec<(String, String)>,
 }
 
-pub struct MenuPanel {
-    pub title: String,
-    pub rows: Vec<PanelRow>,
-    pub selected: usize,
-    pub note: String,
-    pub hints: Vec<(String, String)>,
-}
-
-/// The palette payload travels whole; the grid and preview read the extra
-/// fields when their ticket lands.
-#[allow(dead_code)]
+#[derive(Default)]
 pub struct PaletteItem {
     pub name: String,
     pub short: String,
@@ -47,7 +37,6 @@ pub struct PaletteItem {
     pub emissive: bool,
 }
 
-#[allow(dead_code)]
 #[derive(Default)]
 pub struct PaletteState {
     pub open: bool,
@@ -56,7 +45,6 @@ pub struct PaletteState {
     pub selected: usize,
     pub body: String,
     pub size: String,
-    pub count: String,
     pub hints: Vec<(String, String)>,
 }
 

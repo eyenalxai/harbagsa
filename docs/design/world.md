@@ -9,8 +9,8 @@ lightmap and a static probe field.
 ## The palette
 
 Colours are authored as linear RGBA floats, because the renderer shades in linear
-space. The Rune view authors its own RGBA floats in `ui/shim/src/lib.rs`; a value
-does not move between the two tables. See [colour.md](../ui/colour.md).
+space. The Rune view authors its own RGBA floats in `ui/shim/src/theme.rs`; a
+value does not move between the two tables. See [colour.md](../ui/colour.md).
 
 | Surface | Linear RGBA | Source |
 | --- | --- | --- |

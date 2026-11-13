@@ -4,6 +4,7 @@ mod fx;
 mod host;
 mod input;
 mod paint;
+mod palette;
 mod settings;
 mod slider;
 mod state;

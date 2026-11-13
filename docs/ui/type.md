@@ -6,10 +6,11 @@ type tokens. The shim ships Geist Variable and Geist Mono Variable in
 and `Geist Mono` families with Rune. Rune falls back to the system faces for
 characters the subsets do not cover.
 
-The shim does not set a size or tracking for the HUD; it uses Rune's default text
-style, except for weight, which follows the Type weight setting, and the numeric
-family. The kit surfaces use the kit's type scale. Change a text style in
-`ui/shim/src` and let Rune lay it out.
+Most text uses Rune's default style. The HUD does not set a size or tracking;
+the kit surfaces use the kit's type scale. The palette uses the kit's type
+styles and one view-local 18/24 title style in `ui/shim/src/palette.rs`. Weight
+follows the Type weight setting, and numeric values use the Geist Mono family.
+Change a text style in `ui/shim/src` and let Rune lay it out.
 
 ## The status panel
 
@@ -19,7 +20,8 @@ right-aligned value. The value is the string the game already formatted, so a
 number does not change the shape of the panel.
 
 `ui.Row.numeric` reaches the shim as `flags` bit 0. The value of a numeric row
-draws in Geist Mono; its label stays in Geist. The palette rows are not numeric.
+draws in Geist Mono; its label stays in Geist. The palette cards are not
+numeric.
 
 ## The settings dialog
 
