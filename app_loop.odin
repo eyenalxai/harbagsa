@@ -18,7 +18,6 @@ Loop :: struct {
 	resolver:       input.Resolver,
 	accumulator:    f32,
 	last_alpha:     f32, // the last built frame; the repro path runs before this frame's alpha
-	debug_view:     bool,
 	displays:       platform.Displays,
 	repro_dir:      string,
 }
@@ -39,6 +38,7 @@ apply_frame_input :: proc(
 		} else {
 			game.menu_open(&loop.runtime.hud.menu)
 			game.debug_mode_cancel_editing(&loop.runtime.debug)
+			_ = game.editor_set_inspector(&loop.runtime.debug.editor, false)
 			loop.accumulator = game.SIMULATION_STEP
 			input.clear_latches(&loop.resolver)
 			game.menu_view(&loop.runtime.hud.menu, loop.runtime.debug.active, 0)
@@ -47,7 +47,7 @@ apply_frame_input :: proc(
 
 	if !loop.runtime.hud.menu.open {
 		if intent.view.debug_view {
-			loop.debug_view = !loop.debug_view
+			loop.runtime.debug.physics_debug = !loop.runtime.debug.physics_debug
 		}
 		if intent.view.debug_mode {
 			game.debug_mode_toggle(&loop.runtime.debug, &loop.runtime.sim)
@@ -64,7 +64,7 @@ apply_frame_input :: proc(
 				&loop.runtime.hud,
 				frame.Options {
 					alpha = loop.last_alpha,
-					debug_view = loop.debug_view,
+					debug_view = loop.runtime.debug.physics_debug,
 					captured = events.captured,
 					hud = true,
 				},

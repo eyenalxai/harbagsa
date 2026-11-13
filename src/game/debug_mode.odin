@@ -25,10 +25,11 @@ Saved_Player :: struct {
 // Debug mode is the F2 camera mode: the active flag, the free-fly camera, and the
 // saved player. The editor owns the editing state and survives a mode toggle.
 Debug_Mode :: struct {
-	active:       bool,
-	camera:       Debug_Camera,
-	saved_player: Saved_Player,
-	editor:       Editor,
+	active:        bool,
+	physics_debug: bool,
+	camera:        Debug_Camera,
+	saved_player:  Saved_Player,
+	editor:        Editor,
 }
 
 Debug_Motion :: struct {
@@ -96,6 +97,7 @@ debug_mode_cancel_editing :: proc(dm: ^Debug_Mode) {
 @(private)
 debug_mode_enter :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	dm.active = true
+	dm.editor.inspector_open = false
 	editor_clear_selection(&dm.editor)
 	save_player_and_sync_camera(dm, sim)
 }
@@ -103,6 +105,7 @@ debug_mode_enter :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 @(private)
 debug_mode_exit :: proc(dm: ^Debug_Mode, sim: ^Simulation) {
 	dm.active = false
+	dm.editor.inspector_open = false
 	editor_clear_selection(&dm.editor)
 	debug_mode_cancel_editing(dm)
 

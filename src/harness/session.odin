@@ -100,6 +100,12 @@ session_override_camera :: proc(session: ^Session) -> ^renderer.Camera {
 	return nil
 }
 
+// The harness view flag is a run-level override; the inspector's physics switch
+// writes the runtime flag. Either one asks for the physics draw.
+session_debug_view :: proc(session: ^Session) -> bool {
+	return session.view.debug || session.runtime.debug.physics_debug
+}
+
 // The state names the frame the renderer last built. A step with no draw falls
 // back to the default alpha instead of pairing a new player with an old frame.
 session_view_alpha :: proc(session: ^Session) -> f32 {

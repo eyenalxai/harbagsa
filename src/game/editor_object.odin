@@ -1,6 +1,8 @@
 #+vet explicit-allocators
 package game
 
+import "core:math"
+
 import b3 "libs:box3d"
 
 @(private)
@@ -141,6 +143,26 @@ editor_rotate_selected :: proc(
 		return result
 	}
 	return edit_ok()
+}
+
+@(private)
+editor_set_yaw :: proc(editor: ^Editor, sim: ^Simulation, degrees: f32) -> Edit_Result {
+	if reason := editor_tool_block_reason(editor); reason != .None {
+		return edit_fail(reason)
+	}
+	object, ok := editor_selected_object(editor, sim)
+	if !ok {
+		return edit_fail(.No_Selection)
+	}
+	target := degrees - 360.0 * math.floor(degrees / 360.0)
+	current := simulation_object_yaw(sim, object.id) * 180.0 / math.PI
+	delta := target - current
+	if delta > 180.0 {
+		delta -= 360.0
+	} else if delta < -180.0 {
+		delta += 360.0
+	}
+	return editor_rotate_selected(editor, sim, delta)
 }
 
 @(private)

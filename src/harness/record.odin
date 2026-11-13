@@ -27,7 +27,7 @@ session_record_start :: proc(session: ^Session, path: string, include_scene := t
 		options := frame.Options {
 			alpha      = session_view_alpha(session),
 			hud        = session.view.hud,
-			debug_view = session.view.debug,
+			debug_view = session_debug_view(session),
 			fx_view    = session.view.fx,
 			captured   = !session.view.hint,
 		}

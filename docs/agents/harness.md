@@ -203,7 +203,11 @@ repeats it at 800x600. `scenarios/rune-menu.json` opens the settings dialog,
 track-clicks HUD opacity, steps it through the shared settings path, toggles
 reduce motion, and closes with both Resume and the header control.
 `scenarios/rune-menu-800.json` repeats it at 800x600. `scenarios/rune-ui.json`
-activates the status panel Close action by key.
+activates the status panel Debug action by key and opens the inspector.
+`scenarios/rune-inspector.json` opens the inspector, selects a crate, changes its
+body and absolute yaw, selects a lamp, changes its kind, colour, and intensity,
+changes the type weight, turns on the physics debug draw, and closes the rail.
+`scenarios/rune-inspector-800.json` repeats the object and lamp edits at 800x600.
 `scenarios/rune-fx.json` sets `view.fx` and shows the status action row with its
 rune-fx glow.
 
@@ -279,12 +283,14 @@ actions. Fields cover:
 - `undo` and `redo` for history.
 - `camera` for the free-fly camera.
 
-`state.editor` reports the same view the HUD draws: `active`, `focus`, `tool`
-(`none`, `palette`, or `placement`), the `palette` and `placement` payloads, the
-resolved `selection`, `history.depth` and `history.redo`, and the light budget
-as `lights.active` (active lights) and `lights.lamps` (placed lamp prefabs).
-`focus` carries `pointer_free`, which is true while the
-menu or the object palette is open and false otherwise. `placement` carries `armed`,
+`state.editor` reports the same view the HUD draws: `active`, `physics_debug`,
+`focus`, `tool` (`none`, `palette`, or `placement`), the `palette` and
+`placement` payloads, the resolved `selection`, `history.depth` and
+`history.redo`, and the light budget as `lights.active` (active lights) and
+`lights.lamps` (placed lamp prefabs). `focus` carries `pointer_free`, which is
+true while the menu, the object palette, or the inspector is open, and
+`inspector` names the rail's open state. `physics_debug` is the physics draw
+switch, separate from debug mode. `placement` carries `armed`,
 `prefab`, `position`, `height`, `yaw_deg`, `snap`, `body`, and `light`; while the
 palette is open it names the next placement. `selection.present` is false when
 no object is selected; otherwise it carries `id`, `prefab`, `body`, `size`,

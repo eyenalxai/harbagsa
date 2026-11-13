@@ -79,6 +79,7 @@ editor_placement_arm :: proc(
 		body_mode = body_mode,
 		light = light,
 	}
+	editor.inspector_open = false
 	// Re-arming the same placement keeps its height, yaw, and snap; arming from
 	// the palette uses the last cancelled placement settings.
 	if current, armed := editor.tool.(Placement); armed {

@@ -20,6 +20,7 @@ Editor :: struct {
 	selection:          Selection,
 	drag:               Drag,
 	placement_defaults: Placement_Defaults,
+	inspector_open:     bool,
 	history:            ^Object_History,
 	history_allocator:  mem.Allocator,
 }
@@ -100,6 +101,14 @@ editor_reset :: proc(editor: ^Editor) {
 editor_cancel_editing :: proc(editor: ^Editor) {
 	editor_end_drag(editor)
 	editor_tool_cancel(editor)
+}
+
+editor_set_inspector :: proc(editor: ^Editor, open: bool) -> Edit_Result {
+	if open {
+		editor_cancel_editing(editor)
+	}
+	editor.inspector_open = open
+	return edit_ok()
 }
 
 editor_end_drag :: proc(editor: ^Editor) {

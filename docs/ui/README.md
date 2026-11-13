@@ -6,10 +6,10 @@ swapchain or offscreen image. Odin owns the simulation and the flat data the
 view reads. There is no second UI renderer in Odin.
 
 The view is a technical readout: a status panel in the top-left, a bottom action
-row with `Close` and `Debug`, a settings dialog over a scrim, and the object
-palette as a grid over a scrim. A notice and the capture hint sit above the
-action row. Rune kit motion follows the reduce-motion setting. The optional
-rune-fx glow is a demo and is off by default.
+row with `Debug`, a settings dialog over a scrim, the object palette as a grid
+over a scrim, and the debug inspector as a right rail. A notice and the capture
+hint sit above the action row. Rune kit motion follows the reduce-motion setting.
+The optional rune-fx glow is a demo and is off by default.
 
 ## The layer rule
 
@@ -21,6 +21,7 @@ rune-fx glow is a demo and is off by default.
 | `src/renderer/ui_bridge.odin` | the C ABI to the shim, snapshot marshalling, action queue | invent content |
 | `ui/shim/src/views.rs` | the HUD and menu view | read game state directly |
 | `ui/shim/src/palette.rs` | the palette grid, preview, and isometric shape | read game state directly |
+| `ui/shim/src/inspector.rs` | the debug inspector rail | read game state directly |
 | `ui/shim/src/theme.rs` | the view tokens and kit | read game state directly |
 | `ui/shim/src/lib.rs` | the ABI entry points, host, paint, and rune-fx | read game state directly |
 
@@ -29,13 +30,16 @@ after the scene is submitted. The shim draws onto the same target image, so a
 capture includes the UI. When the frame's `hud` flag is false, `HUD_Frame.enabled`
 is false: `ui_step` does not rebuild the view and the frame protocol does not
 call `ui_draw`, so a `hud:false` capture has no overlay. The game applies the
-action queue after the draw: `Close_Menu`, `Toggle_Debug`, `Palette_Select`,
-`Palette_Pick`, and `Settings_Set`.
+action queue after the draw: `Close_Menu`, `Debug_Inspector`, `Palette_Select`,
+`Palette_Pick`, `Settings_Set`, `Type_Weight_Set`, `Object_Set`,
+`Object_Duplicate`, `Object_Delete`, `Lamp_Set`, `Lamp_Kind`, `Lamp_Color`,
+`Toggle_Inspector`, and `Physics_Debug`.
 
 ## Snapshot
 
 `src/ui/ui.odin` is data only. `src/game/hud.odin` fills the player rows,
-`src/game/hud_debug.odin` fills the debug inspector or placement rows,
+`src/game/hud_debug.odin` fills the keyboard-only debug or placement rows,
+`src/game/inspector_view.odin` fills the inspector rail,
 `src/game/settings_view.odin` and `src/game/menu.odin` fill the settings dialog,
 and `src/game/palette_view.odin` fills the object palette. `src/frame/frame.odin` copies those values into the
 `UI_Frame` struct in `src/renderer/ui_frame.odin`. The shim copies every string
@@ -91,11 +95,17 @@ and base pitch. All eleven prefabs fit in the grid at 1280×720 and 800×600.
 
 ## The debug inspector
 
-The debug inspector is the same top-left status panel with object rows. It shows
-the selection as `prefab # id`, the object count, the body, the size, position,
-yaw, snap, light kind and values, the active light count against the lamp count,
-and the bake status. The placement rows replace it while the placement tool is
-armed. Every changing number keeps a fixed field, so the panel text does not
+The interactive debug inspector is a 320-point right rail, inset 12 from the top
+and right. `I` opens it and frees the pointer; `Esc` closes it and restores
+capture. It is hidden while Settings or the palette is open, and it is mutually
+exclusive with the palette and placement: opening it cancels the active tool or
+drag. The rail has Object, Placement, Lamp, and Debug sections. Object edits use
+the editor action vocabulary, including an absolute yaw setter. Lamp edits use
+the fixed light colour set. The Debug section carries the type weight and the
+physics debug switch.
+
+The old top-left debug rows remain the keyboard-only readout while the rail is
+closed. Every changing number keeps a fixed field, so the panel text does not
 change width.
 
 ## Rules that are easy to break

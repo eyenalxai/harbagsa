@@ -151,6 +151,7 @@ build_state_editor :: proc(state: ^State, ctx: ^State_Context) {
 	state.editor = editor_state_build(
 		game.editor_view(&ctx.debug.editor, ctx.sim, ctx.debug.active, ctx.debug.camera),
 		game.focus(ctx.debug, &ctx.hud.menu),
+		ctx.debug.physics_debug,
 	)
 }
 

@@ -5,7 +5,7 @@ import "src:ui"
 
 UI_Action_Kind :: enum(u32) {
 	Close_Menu       = 1,
-	Toggle_Debug     = 2,
+	Debug_Inspector  = 2,
 	Palette_Select   = 3,
 	Palette_Close    = 4,
 	Settings_Set     = 5,
@@ -19,6 +19,7 @@ UI_Action_Kind :: enum(u32) {
 	Lamp_Kind        = 13,
 	Lamp_Color       = 14,
 	Toggle_Inspector = 15,
+	Physics_Debug    = 16,
 }
 
 UI_Settings_Id :: enum(u32) {
@@ -88,6 +89,7 @@ UI_Frame :: struct {
 	menu:         ui.Menu,
 	settings:     ui.Settings,
 	palette:      ui.Palette,
+	inspector:    ui.Inspector,
 }
 
 HUD_Frame :: struct {

@@ -3,6 +3,7 @@ mod components;
 mod fx;
 mod host;
 mod input;
+mod inspector;
 mod paint;
 mod palette;
 mod settings;
@@ -15,8 +16,8 @@ mod views;
 use std::ffi::c_char;
 
 use abi::{
-    UiAction, UiEvent, UiMenu, UiPalette, UiPanel, UiSettings, UiSnapshot, UiTarget, UiVkConfig,
-    UiVkDevice,
+    UiAction, UiEvent, UiInspector, UiMenu, UiPalette, UiPanel, UiSettings, UiSnapshot, UiTarget,
+    UiVkConfig, UiVkDevice,
 };
 
 #[unsafe(no_mangle)]
@@ -57,11 +58,14 @@ pub extern "C" fn ui_frame(
     menu: *const UiMenu,
     settings: *const UiSettings,
     palette: *const UiPalette,
+    inspector: *const UiInspector,
     events: *const UiEvent,
     count: u32,
 ) -> i32 {
     let Some(host) = host::host() else { return 1 };
-    state::frame(host, dt, snapshot, panel, menu, settings, palette, events, count)
+    state::frame(
+        host, dt, snapshot, panel, menu, settings, palette, inspector, events, count,
+    )
 }
 
 #[unsafe(no_mangle)]

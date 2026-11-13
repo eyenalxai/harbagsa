@@ -65,6 +65,9 @@ editor_view :: proc(
 		},
 		placement = {
 			prefab = .Crate,
+			height = editor.placement_defaults.height,
+			yaw_degrees = editor.placement_defaults.yaw_degrees,
+			snap = editor.placement_defaults.snap,
 			body_mode = default_prefab.body_mode,
 			light = prefab_light(.Crate),
 		},
@@ -108,12 +111,13 @@ editor_view :: proc(
 
 	if id, ok := editor_selected_object_id(editor, sim); ok {
 		if object, found := simulation_object_find(sim, id); found {
+			yaw := simulation_object_yaw(sim, id) * 180.0 / math.PI
 			view.selection = Editor_Selection_View {
 				id = id,
 				prefab = object.prefab,
 				body_mode = object.body_mode,
 				box = simulation_object_box(sim, id),
-				yaw_degrees = simulation_object_yaw(sim, id) * 180.0 / math.PI,
+				yaw_degrees = yaw - 360.0 * math.floor(yaw / 360.0),
 				light = object.light,
 			}
 		}

@@ -23,7 +23,7 @@ the result. The world palette is separate and stays linear.
 
 The kit derives the remaining states, text and surfaces from
 `Kit::from_palette_focus` with `PaletteFocus::Accent`. The pins above override the
-measured overlay roles. The status action row's primary `Close` button reads
+measured overlay roles. The status action row's primary `Debug` button reads
 `bg_accent` and `text_inverse`; the dialog's `Resume` uses the kit Submit tokens
 `bg_icon_button_contrast`, `submit_fg`, and `submit_icon`. The neutral action
 reads `bg_button_neutral` and `text_base`. The rune-fx demo asks for `#7C5CFF`
