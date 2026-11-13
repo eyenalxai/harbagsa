@@ -139,8 +139,6 @@ pub struct UiPalette {
     pub body_len: u32,
     pub size: *const u8,
     pub size_len: u32,
-    pub count: *const u8,
-    pub count_len: u32,
     pub hints: *const UiHint,
     pub hint_count: u32,
 }
@@ -332,6 +330,7 @@ pub unsafe fn palette_state(palette: *const UiPalette) -> Option<PaletteState> {
                 short: unsafe { text_bytes(item.short, item.short_len) },
                 half_extents: item.half_extents,
                 color: item.color,
+                base_pitch: item.base_pitch,
                 body: unsafe { text_bytes(item.body, item.body_len) },
                 key: unsafe { text_bytes(item.key, item.key_len) },
                 light_line: unsafe { text_bytes(item.light_line, item.light_line_len) },
@@ -345,6 +344,7 @@ pub unsafe fn palette_state(palette: *const UiPalette) -> Option<PaletteState> {
         items,
         selected: palette.selected as usize,
         body: unsafe { text_bytes(palette.body, palette.body_len) },
+        size: unsafe { text_bytes(palette.size, palette.size_len) },
         hints: unsafe { hints(palette.hints, palette.hint_count) },
     })
 }

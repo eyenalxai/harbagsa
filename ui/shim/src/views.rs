@@ -1,4 +1,4 @@
-use rune::{Cx, Color, El, col, effect, el, row, spacer};
+use rune::{Cx, El, col, effect, el, row, spacer};
 use rune_kit::Kit;
 
 use crate::abi::{ACTION_CLOSE_MENU, ACTION_TOGGLE_DEBUG, UiAction};
@@ -10,8 +10,6 @@ use crate::text;
 
 const ROW_NUMERIC: u32 = 1;
 const ROW_BLOCKED: u32 = 2;
-const MENU_WIDTH: f32 = 430.0;
-
 pub fn view(state: &UiState, cx: &mut Cx<UiState>) -> El {
     cx.reduced_motion(state.settings.reduce_motion);
     // Return presses a focused Button and Switch as a web form does; Space
@@ -94,12 +92,12 @@ fn hud_view(state: &UiState) -> El {
         text::weighted(&state.panel.notice, state.weight, false).color(kit.c.text_base)
     };
 
-    let close = button(kit, "Close", state.weight, true)
+    let close = components::action_button(kit, "Close", state.weight, true)
         .key("action:1")
         .on_press(|state: &mut UiState| {
             state.actions.push(UiAction::new(ACTION_CLOSE_MENU));
         });
-    let debug = button(kit, "Debug", state.weight, false)
+    let debug = components::action_button(kit, "Debug", state.weight, false)
         .key("action:2")
         .on_press(|state: &mut UiState| {
             state.actions.push(UiAction::new(ACTION_TOGGLE_DEBUG));

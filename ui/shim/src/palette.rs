@@ -89,11 +89,7 @@ pub fn view(state: &UiState) -> El {
 }
 
 fn card(kit: &Kit, item: &PaletteItem, index: usize, selected: bool) -> El {
-    let fill = if selected {
-        kit.c.surface_raised
-    } else {
-        kit.c.layer_02
-    };
+    let (fill, bar) = components::selection(kit, selected, CARD_H, kit.c.layer_02);
     let short = if selected {
         kit.c.text_base
     } else {
@@ -102,21 +98,20 @@ fn card(kit: &Kit, item: &PaletteItem, index: usize, selected: bool) -> El {
     // The second line is a card label, so it stays at the 4.5:1 text floor on
     // both the resting and the raised surface.
     let name = kit.c.text_muted;
-    let bar = if selected {
-        el().w(2.0).h_full().fill(kit.c.bg_accent)
-    } else {
-        el().w(2.0).h_full()
-    };
-    let badge = if item.key.is_empty() {
-        el().size(16.0, 16.0)
-    } else {
-        el()
-            .size(16.0, 16.0)
-            .radius(kit.radius.xs)
-            .fill(kit.c.layer_01)
-            .center()
-            .child(text(&item.key, kit.ty.small_medium, kit.c.text_muted))
-    };
+    let badge = el()
+        .size(16.0, 16.0)
+        .radius(kit.radius.xs)
+        .fill(kit.c.layer_01)
+        .center()
+        .child(text(
+            if item.key.is_empty() {
+                "—"
+            } else {
+                &item.key
+            },
+            kit.ty.small_medium,
+            kit.c.text_muted,
+        ));
     let content = col()
         .grow(1.0)
         .padding(10.0)
@@ -126,8 +121,7 @@ fn card(kit: &Kit, item: &PaletteItem, index: usize, selected: bool) -> El {
                 .w_full()
                 .items_center()
                 .child(
-                    el()
-                        .size(32.0, 24.0)
+                    el().size(32.0, 24.0)
                         .radius(kit.radius.xs)
                         .fill(item_color(item)),
                 )
@@ -181,12 +175,11 @@ fn preview(kit: &Kit, palette: &PaletteState) -> El {
     } else {
         "No light"
     };
-    let size = format!(
-        "{:.1} × {:.1} × {:.1} m",
-        item.half_extents[0] * 2.0,
-        item.half_extents[1] * 2.0,
-        item.half_extents[2] * 2.0,
-    );
+    let size = if palette.size.is_empty() {
+        "—"
+    } else {
+        palette.size.as_str()
+    };
 
     panel
         .child(
@@ -195,8 +188,7 @@ fn preview(kit: &Kit, palette: &PaletteState) -> El {
                 .items_center()
                 .gap(8.0)
                 .child(
-                    el()
-                        .size(24.0, 18.0)
+                    el().size(24.0, 18.0)
                         .radius(kit.radius.xs)
                         .fill(item_color(item)),
                 )
@@ -206,7 +198,7 @@ fn preview(kit: &Kit, palette: &PaletteState) -> El {
         )
         .child(canvas(iso_shape(kit, item)).size(PREVIEW_W - 24.0, PREVIEW_ART_H))
         .child(spacer())
-        .child(value_row(kit, "Size", &size, true))
+        .child(value_row(kit, "Size", size, true))
         .child(value_row(kit, "Body", body, false))
         .child(text("Light", kit.ty.small, kit.c.text_faint))
         .child(text(light, kit.ty.small, kit.c.text_muted))
@@ -238,7 +230,12 @@ fn iso_shape(kit: &Kit, item: &PaletteItem) -> Shape {
     let hx = item.half_extents[0].max(0.05);
     let hy = item.half_extents[1].max(0.05);
     let hz = item.half_extents[2].max(0.05);
-    let top = hy * 2.0;
+    let pitch = if item.base_pitch.is_finite() {
+        item.base_pitch
+    } else {
+        0.0
+    };
+    let (sin_pitch, cos_pitch) = pitch.sin_cos();
     let project = |point: [f32; 3]| {
         [
             (point[0] - point[2]) * ISO_X,
@@ -246,20 +243,35 @@ fn iso_shape(kit: &Kit, item: &PaletteItem) -> Shape {
         ]
     };
     let points = [
-        [-hx, 0.0, -hz],
-        [hx, 0.0, -hz],
-        [hx, top, -hz],
-        [-hx, top, -hz],
-        [-hx, 0.0, hz],
-        [hx, 0.0, hz],
-        [hx, top, hz],
-        [-hx, top, hz],
+        [-hx, -hy, -hz],
+        [hx, -hy, -hz],
+        [hx, hy, -hz],
+        [-hx, hy, -hz],
+        [-hx, -hy, hz],
+        [hx, -hy, hz],
+        [hx, hy, hz],
+        [-hx, hy, hz],
     ];
+    let rotated = points.map(|point| {
+        [
+            point[0],
+            point[1] * cos_pitch - point[2] * sin_pitch,
+            point[1] * sin_pitch + point[2] * cos_pitch,
+        ]
+    });
+    let floor = rotated.iter().map(|p| p[1]).fold(f32::INFINITY, f32::min);
+    let points = rotated.map(|point| [point[0], point[1] - floor, point[2]]);
     let projected = points.map(project);
     let min_x = projected.iter().map(|p| p[0]).fold(f32::INFINITY, f32::min);
-    let max_x = projected.iter().map(|p| p[0]).fold(f32::NEG_INFINITY, f32::max);
+    let max_x = projected
+        .iter()
+        .map(|p| p[0])
+        .fold(f32::NEG_INFINITY, f32::max);
     let min_y = projected.iter().map(|p| p[1]).fold(f32::INFINITY, f32::min);
-    let max_y = projected.iter().map(|p| p[1]).fold(f32::NEG_INFINITY, f32::max);
+    let max_y = projected
+        .iter()
+        .map(|p| p[1])
+        .fold(f32::NEG_INFINITY, f32::max);
     let art_w = PREVIEW_W - 24.0;
     let scale = ((art_w / (max_x - min_x)).min(PREVIEW_ART_H / (max_y - min_y))).max(0.01);
     let offset_x = (art_w - (max_x - min_x) * scale) * 0.5 - min_x * scale;
@@ -273,14 +285,26 @@ fn iso_shape(kit: &Kit, item: &PaletteItem) -> Shape {
 
     let color = item_color(item);
     let edge = kit.c.layer_01.alpha(0.8);
-    let top_face = vec![place(3), place(7), place(6), place(2)];
-    let right_face = vec![place(1), place(5), place(6), place(2)];
-    let front_face = vec![place(4), place(5), place(6), place(7)];
-    Shape::new()
-        .fill(top_face.clone(), color.mix(kit.c.white, 0.22))
-        .fill(right_face.clone(), color.mix(kit.c.black, 0.10))
-        .fill(front_face.clone(), color.mix(kit.c.black, 0.24))
-        .stroke_with(top_face, true, 1.0, LineCap::Round, edge)
-        .stroke_with(right_face, true, 1.0, LineCap::Round, edge)
-        .stroke_with(front_face, true, 1.0, LineCap::Round, edge)
+    let faces = [
+        (
+            vec![place(3), place(7), place(6), place(2)],
+            color.mix(kit.c.white, 0.22),
+        ),
+        (
+            vec![place(1), place(5), place(6), place(2)],
+            color.mix(kit.c.black, 0.10),
+        ),
+        (
+            vec![place(4), place(5), place(6), place(7)],
+            color.mix(kit.c.black, 0.24),
+        ),
+    ];
+    let mut shape = Shape::new();
+    for (points, fill) in faces {
+        shape =
+            shape
+                .fill(points.clone(), fill)
+                .stroke_with(points, true, 1.0, LineCap::Round, edge);
+    }
+    shape
 }

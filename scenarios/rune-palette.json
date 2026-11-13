@@ -1,5 +1,5 @@
 {
-  "note": "The palette grid previews card 5; Place arms its placement and the primary press places it.",
+  "note": "Expected: card 5 previews Platform; Place arms Platform with objects.count 6; the primary press places it, objects.count becomes 7, and Platform is selected.",
   "view": {"hud": true, "debug": false, "hint": false},
   "commands": [
     {"cmd": "debug_mode", "active": true},
@@ -10,9 +10,15 @@
     {"cmd": "capture", "name": "palette-selected", "format": "png"},
     {"cmd": "ui", "key": "palette:place"},
     {"cmd": "settle", "frames": 1},
+    {"cmd": "get", "field": "editor.placement.armed"},
+    {"cmd": "get", "field": "editor.placement.prefab"},
+    {"cmd": "get", "field": "objects.count"},
     {"cmd": "capture", "name": "palette-armed", "format": "png"},
     {"cmd": "editor", "primary": true},
     {"cmd": "settle", "frames": 1},
+    {"cmd": "get", "field": "objects.count"},
+    {"cmd": "get", "field": "editor.selection.prefab"},
+    {"cmd": "state"},
     {"cmd": "capture", "name": "palette-placed", "format": "png"}
   ]
 }

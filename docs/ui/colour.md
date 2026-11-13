@@ -12,10 +12,10 @@ the result. The world palette is separate and stays linear.
 | --- | --- | --- |
 | Status surface | `#0F141A` at 70-100% | the top-left status panel |
 | Dialog surface | `#141A21` | the settings dialog and palette panel |
-| Raised surface | `#26303D` | the selected row |
+| Raised surface | `#26303D` | the selected row or card |
 | Primary text | `#EDF2F7` | values, title, selected label |
 | Secondary text | `#A6B2BF` | labels, blocked values |
-| Tertiary text | `#808C99` | notes, headers, key hints |
+| Tertiary text | `#808C99` | notes, headers |
 | Accent | `#E6B03B` | selection bar, filled slider track, primary action |
 | Hairline | `#59616B` at 25% | menu separator |
 | Slider track | white at 20% | the unfilled slider track |
@@ -54,7 +54,7 @@ capture because the surface is translucent.
 
 - A value, a title, or a selected label: primary.
 - A label or a blocked value: secondary.
-- A note, a header, or a key hint: tertiary.
+- A note or a header: tertiary. A key hint: primary keys and secondary actions.
 - The selection bar, the filled slider track, and the primary action: accent.
 - A separator: hairline. A slider track: the white 20% token.
 - A kit surface: the matching `Kit` token. The status panel: `hud_surface()`.

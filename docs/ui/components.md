@@ -62,18 +62,21 @@ resolution goes through `apply_window_settings`.
 
 Use only in debug mode. The shim builds a 640-point dialog with a 3×4 grid of
 120×92 cards and a 220-point preview beside it. Each card draws the prefab colour
-chip, short name, full name, and key badge. The selected card lifts to the raised
-surface with a 2-point accent bar, hover adds a fill overlay, and focus adds a
-2-point accent ring. The Place button sits in the footer with the key hints.
+chip, short name, full name, and key badge. Number keys 1-9 select the first nine
+cards; the last two carry a dash badge and are reached with the arrow keys. The
+selected card lifts to the raised surface with a 2-point accent bar, hover adds a
+fill overlay, and focus adds a 2-point accent ring. The Place button sits in the
+footer with the key hints.
 
 A click on a card returns `Palette_Select` with the item index and updates the
 preview; it does not arm the placement. The Place button, or Enter on the game
 keyboard path, returns `Palette_Pick`; the game arms the placement from the
 selected prefab. The preview shows the colour, dimensions, body, light line, and
-an isometric box built from the half extents.
+an isometric box built from the half extents and base pitch.
 
 Incorrect: drawing the card or preview in Odin. The shim owns the view; the
-palette carries the half extents, body, light line, colour, and key it reads.
+palette carries the half extents, base pitch, body, light line, colour, and key
+it reads.
 
 ## Notice
 

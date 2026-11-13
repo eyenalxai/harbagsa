@@ -102,8 +102,6 @@ Palette :: struct {
 	body:         string,
 	size:         [PALETTE_TEXT_BYTES]u8,
 	size_length:  int,
-	count:        [PALETTE_TEXT_BYTES]u8,
-	count_length: int,
 	hints:        [PALETTE_MAX_HINTS]Hint_Cell,
 	hint_count:   int,
 }

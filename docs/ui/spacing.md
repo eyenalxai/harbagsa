@@ -9,7 +9,7 @@ target gets 1, a 1080p target 1.5, a 1440p target 2.
 
 | Value | Use |
 | --- | --- |
-| 2 | the selected-row accent bar width |
+| 2 | the selection bar width |
 | 4 | menu row padding |
 | 6 | status panel gap between rows |
 | 8 | status action gap, menu gap, button padding |
@@ -36,7 +36,7 @@ addition.
   `items_center`, padding 16, gap 8.
 
 The status panel is translucent. The dialog surface is opaque. A selected row
-lifts to the raised surface; it does not get a border.
+or card lifts to the raised surface; it does not get a border.
 
 ## Settings dialog
 
@@ -79,8 +79,9 @@ points wide and the preview adds 220 with a 12-point gap, so the inner width is
 | Notice and capture hint | no box of their own | text on the action column |
 
 Kit surfaces use the kit radius, elevation, and motion; the status panel keeps
-its square translucent fill. The palette and cards use the kit radius and no
-gradient. Motion follows the reduce-motion setting.
+its square translucent fill. Panels use the kit's 6-point radius and overlay
+elevation; cards use the same radius and are flat. Motion follows the
+reduce-motion setting. There is no gradient.
 
 ## Bans
 

@@ -74,15 +74,16 @@ The shim draws every 2D pixel.
 
 The debug object palette is a 640-point dialog over the scrim: a 3×4 grid of
 120×92 cards on the left and a 220-point preview on the right. Each card shows
-the prefab colour, short name, full name, and key badge. The selected card lifts
-to the raised surface with a 2-point accent bar; hover adds a fill overlay, and
-focus adds a 2-point ring.
+the prefab colour, short name, full name, and key badge. Number keys 1-9 select
+the first nine cards; the last two show a dash badge and are reached with the
+arrow keys. The selected card lifts to the raised surface with a 2-point accent
+bar; hover adds a fill overlay, and focus adds a 2-point ring.
 
 Clicking a card returns `Palette_Select` with the item index and previews it.
 `Place` or `Enter` returns `Palette_Pick`; the game arms the placement with the
 selected prefab, body, and light. The preview shows the prefab colour,
-dimensions, body, light line, and an isometric box drawn from the half extents.
-All eleven prefabs fit in the grid at 1280×720 and 800×600.
+dimensions, body, light line, and an isometric box drawn from the half extents
+and base pitch. All eleven prefabs fit in the grid at 1280×720 and 800×600.
 
 ## The debug inspector
 
