@@ -6,9 +6,10 @@ type tokens. The shim ships Geist Variable and Geist Mono Variable in
 and `Geist Mono` families with Rune. Rune falls back to the system faces for
 characters the subsets do not cover.
 
-The shim does not set a size or tracking; it uses Rune's default text style,
-except for weight, which follows the Type weight setting, and the numeric family.
-Change a text style in `ui/shim/src/lib.rs` and let Rune lay it out.
+The shim does not set a size or tracking for the HUD; it uses Rune's default text
+style, except for weight, which follows the Type weight setting, and the numeric
+family. The kit surfaces use the kit's type scale. Change a text style in
+`ui/shim/src` and let Rune lay it out.
 
 ## The status panel
 
@@ -20,23 +21,19 @@ number does not change the shape of the panel.
 `ui.Row.numeric` reaches the shim as `flags` bit 0. The value of a numeric row
 draws in Geist Mono; its label stays in Geist. The palette rows are not numeric.
 
-## The settings menu
+## The settings dialog
 
-The menu title is the first row, followed by a separator. A `Setting` row shows a
-label and a value; the selected row adds the raised surface and the accent bar. A
-`Slider` row adds a 4 point filled track below the label and value; the filled
-width follows `ui.Row.ratio`. It is a row list, not a knob slider, and `ticks` is
-unused.
+Settings is a kit `Dialog`; its labels use the kit styles and inherit the type
+weight. The HUD opacity value draws in Geist Mono. Type weight is not part of
+Settings; it is a debug control and the debug inspector owns it.
 
-The Type weight row edits `Settings.type_weight` from 100 to 900 in steps of 5.
-The game sends the value in the UI snapshot and the shim applies it to every
-text node through `weighted_text`, a span over the whole string. The status
-panel, the menu title and rows, the hints, and the palette all get it. Geist
+The game sends the weight in the UI snapshot and the shim rebuilds the kit when
+it changes, so every kit control and every local text node follows. Geist
 Variable and Geist Mono Variable carry a continuous `wght` axis, so an odd value
 such as 565 interpolates instead of snapping to a named instance. A weight of
 400 is the old default; a zero or absent weight leaves the default text style
 untouched. `scenarios/rune-weight.json` captures the status panel at 400, 565,
-and 900, plus the menu at 565 with its numeric value in Geist Mono.
+and 900, plus the settings dialog at 565.
 
 ## Numbers
 
@@ -68,4 +65,4 @@ Geist Mono for the value. Use the space flag in Odin's `fmt` (`"% 4.1f"`, not
 - No type size or colour literal in `src/ui`, `src/frame`, or `src/renderer`.
   Rune view code is the one place those values live.
 - No truncation. A row that does not fit is a layout bug, not an ellipsis.
-- No animation on text. The menu swaps in one frame.
+- No animation on text. Kit motion belongs to the surrounding control.

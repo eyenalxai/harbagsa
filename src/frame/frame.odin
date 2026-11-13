@@ -188,6 +188,7 @@ build :: proc(
 				captured        = hud.captured,
 				palette_open    = palette.open,
 				menu            = hud.menu.view,
+				settings        = hud.settings,
 				palette         = palette,
 			},
 		}

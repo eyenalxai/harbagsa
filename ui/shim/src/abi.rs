@@ -8,7 +8,7 @@
 
 use std::ffi::c_void;
 
-use crate::state::{MenuState, PaletteItem, PaletteState, PanelRow, PanelState};
+use crate::state::{MenuState, PaletteItem, PaletteState, PanelRow, PanelState, SettingsState};
 
 pub const ACTION_CLOSE_MENU: u32 = 1;
 pub const ACTION_TOGGLE_DEBUG: u32 = 2;
@@ -25,6 +25,13 @@ pub const ACTION_LAMP_SET: u32 = 12;
 pub const ACTION_LAMP_KIND: u32 = 13;
 pub const ACTION_LAMP_COLOR: u32 = 14;
 pub const ACTION_TOGGLE_INSPECTOR: u32 = 15;
+
+pub const SETTING_WINDOW_MODE: u32 = 0;
+pub const SETTING_DISPLAY: u32 = 1;
+pub const SETTING_RESOLUTION: u32 = 2;
+pub const SETTING_SPRINT_MODE: u32 = 3;
+pub const SETTING_HUD_OPACITY: u32 = 4;
+pub const SETTING_REDUCE_MOTION: u32 = 5;
 
 #[repr(C)]
 pub struct UiVkConfig {
@@ -84,6 +91,30 @@ pub struct UiMenu {
     pub hints: *const UiHint,
     pub hint_count: u32,
     pub hint_columns: u32,
+}
+
+#[repr(C)]
+pub struct UiOption {
+    pub text: *const u8,
+    pub text_len: u32,
+}
+
+#[repr(C)]
+pub struct UiSettings {
+    pub window_mode: u32,
+    pub display: u32,
+    pub resolution: u32,
+    pub sprint_mode: u32,
+    pub hud_opacity: f32,
+    pub reduce_motion: u32,
+    pub window_modes: *const UiOption,
+    pub window_mode_count: u32,
+    pub displays: *const UiOption,
+    pub display_count: u32,
+    pub resolutions: *const UiOption,
+    pub resolution_count: u32,
+    pub sprint_modes: *const UiOption,
+    pub sprint_mode_count: u32,
 }
 
 #[repr(C)]
@@ -229,6 +260,37 @@ unsafe fn hints(hints: *const UiHint, count: u32) -> Vec<(String, String)> {
             )
         })
         .collect()
+}
+
+/// # Safety
+///
+/// `settings` must point to a valid `UiSettings` whose option pointers are
+/// readable for their lengths or null, or be null.
+pub unsafe fn settings_state(settings: *const UiSettings) -> Option<SettingsState> {
+    let settings = unsafe { settings.as_ref() }?;
+    let options = |ptr: *const UiOption, count: u32| -> Vec<String> {
+        if ptr.is_null() {
+            return Vec::new();
+        }
+        (0..count as usize)
+            .map(|index| {
+                let option = unsafe { &*ptr.add(index) };
+                unsafe { text_bytes(option.text, option.text_len) }
+            })
+            .collect()
+    };
+    Some(SettingsState {
+        window_mode: settings.window_mode as usize,
+        window_modes: options(settings.window_modes, settings.window_mode_count),
+        display: settings.display as usize,
+        displays: options(settings.displays, settings.display_count),
+        resolution: settings.resolution as usize,
+        resolutions: options(settings.resolutions, settings.resolution_count),
+        sprint_mode: settings.sprint_mode as usize,
+        sprint_modes: options(settings.sprint_modes, settings.sprint_mode_count),
+        hud_opacity: settings.hud_opacity,
+        reduce_motion: settings.reduce_motion != 0,
+    })
 }
 
 /// # Safety

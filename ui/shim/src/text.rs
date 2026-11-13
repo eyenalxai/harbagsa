@@ -1,4 +1,4 @@
-use rune::{El, Span, text};
+use rune::{El, Span, TextStyle, text};
 
 pub fn weighted(content: &str, weight: f32, mono: bool) -> El {
     let element = text(content);
@@ -10,4 +10,8 @@ pub fn weighted(content: &str, weight: f32, mono: bool) -> El {
         span = span.mono();
     }
     element.spans(vec![span])
+}
+
+pub fn styled(content: &str, style: TextStyle) -> El {
+    text(content).font(style)
 }

@@ -141,6 +141,8 @@ build_state_settings :: proc(state: ^State, ctx: ^State_Context) {
 		),
 		sprint_mode = game.input_mode_name(settings.sprint_mode),
 		type_weight = settings.type_weight,
+		hud_opacity = settings.hud_opacity,
+		reduce_motion = settings.reduce_motion,
 	}
 }
 
@@ -160,7 +162,7 @@ build_state_menu :: proc(state: ^State, ctx: ^State_Context) {
 		selected = int(menu.selected),
 		item = game.menu_selected_name(menu),
 		status = menu.status,
-		blocked = menu_selected_blocked(menu),
+		blocked = menu_selected_blocked(menu, &ctx.sim.settings),
 	}
 }
 

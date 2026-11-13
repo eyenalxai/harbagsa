@@ -1,9 +1,12 @@
 use rune_kit::Kit;
 
-use crate::abi::{
-    self, UiAction, UiEvent, UiMenu, UiPalette, UiPanel, UiSnapshot,
-};
+use crate::abi::{self, UiAction, UiEvent, UiMenu, UiPalette, UiPanel, UiSettings, UiSnapshot};
 use crate::{host::Host, input, theme};
+
+pub const HUD_OPACITY_MIN: f32 = 0.70;
+pub const HUD_OPACITY_MAX: f32 = 1.00;
+pub const HUD_OPACITY_DEFAULT: f32 = 0.94;
+pub const HUD_OPACITY_PROMOTE: f32 = 0.94;
 
 #[derive(Default)]
 pub struct PanelRow {
@@ -27,9 +30,6 @@ pub struct MenuState {
 /// The palette payload travels whole; the grid and preview read the extra
 /// fields when their ticket lands.
 #[allow(dead_code)]
-/// The full palette payload lands with this ticket; the grid and preview
-/// tickets read the extra fields.
-#[allow(dead_code)]
 pub struct PaletteItem {
     pub name: String,
     pub short: String,
@@ -44,7 +44,6 @@ pub struct PaletteItem {
 
 #[allow(dead_code)]
 #[derive(Default)]
-#[allow(dead_code)]
 pub struct PaletteState {
     pub open: bool,
     pub title: String,
@@ -65,6 +64,42 @@ pub struct PanelState {
     pub palette_open: bool,
 }
 
+pub struct SettingsState {
+    pub window_mode: usize,
+    pub window_modes: Vec<String>,
+    pub display: usize,
+    pub displays: Vec<String>,
+    pub resolution: usize,
+    pub resolutions: Vec<String>,
+    pub sprint_mode: usize,
+    pub sprint_modes: Vec<String>,
+    pub hud_opacity: f32,
+    pub reduce_motion: bool,
+}
+
+impl Default for SettingsState {
+    fn default() -> Self {
+        Self {
+            window_mode: 0,
+            window_modes: vec!["Borderless".into(), "Windowed".into()],
+            display: 0,
+            displays: Vec::new(),
+            resolution: 0,
+            resolutions: Vec::new(),
+            sprint_mode: 0,
+            sprint_modes: vec!["Hold".into(), "Toggle".into()],
+            hud_opacity: HUD_OPACITY_DEFAULT,
+            reduce_motion: false,
+        }
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum SelectKind {
+    Display,
+    Resolution,
+}
+
 pub struct UiState {
     pub speed: f32,
     pub grounded: bool,
@@ -75,6 +110,9 @@ pub struct UiState {
     pub actions: Vec<UiAction>,
     pub panel: PanelState,
     pub menu: MenuState,
+    pub settings: SettingsState,
+    pub settings_select: Option<SelectKind>,
+    pub opacity_preview: Option<f32>,
     pub palette: PaletteState,
 }
 
@@ -90,6 +128,9 @@ impl UiState {
             actions: Vec::new(),
             panel: PanelState::default(),
             menu: MenuState::default(),
+            settings: SettingsState::default(),
+            settings_select: None,
+            opacity_preview: None,
             palette: PaletteState::default(),
         }
     }
@@ -109,6 +150,7 @@ pub fn frame(
     snapshot: *const UiSnapshot,
     panel: *const UiPanel,
     menu: *const UiMenu,
+    settings: *const UiSettings,
     palette: *const UiPalette,
     events: *const UiEvent,
     count: u32,
@@ -132,6 +174,27 @@ pub fn frame(
     if let Some(menu) = unsafe { abi::menu_state(menu) } {
         runtime.state.menu = menu;
     }
+    runtime.state.menu.open = runtime.state.menu_open;
+    if let Some(settings) = unsafe { abi::settings_state(settings) } {
+        let opacity = if settings.hud_opacity > 0.0 {
+            settings.hud_opacity.clamp(HUD_OPACITY_MIN, HUD_OPACITY_MAX)
+        } else {
+            HUD_OPACITY_DEFAULT
+        };
+        runtime.state.settings = settings;
+        runtime.state.settings.hud_opacity = opacity;
+        if runtime
+            .state
+            .opacity_preview
+            .is_some_and(|preview| (preview - opacity).abs() < 0.0005)
+        {
+            runtime.state.opacity_preview = None;
+        }
+    }
+    if !runtime.state.menu_open {
+        runtime.state.settings_select = None;
+        runtime.state.opacity_preview = None;
+    }
     if let Some(palette) = unsafe { abi::palette_state(palette) } {
         runtime.state.palette = palette;
     }
@@ -140,8 +203,5 @@ pub fn frame(
 
     runtime.invalidate();
     runtime.frame(dt);
-    // The overlay does not animate yet. Land mount and exit transitions in the
-    // frame that builds them so a capture sees the settled surface.
-    runtime.settle_all();
     0
 }

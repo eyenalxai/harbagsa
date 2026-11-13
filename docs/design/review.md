@@ -50,7 +50,8 @@ The order is the triage order. A broken interaction outranks a weak colour.
 
 1. **Keyboard only.** Every action is reachable from the keyboard. The pointer is
    an addition: it can click a palette row or an action button, and no action
-   hides behind a hover. The Type weight slider takes Left and Right.
+   hides behind a hover. The Settings dialog controls take the keyboard. The HUD opacity slider takes
+   Left and Right.
 2. **Fits at 800x600.** The menu and every panel are fully visible at the
    smallest supported window. Rune scales the view; nothing clips.
 3. **Contrast on the brightest frame.** Read the text over the brightest lamp
@@ -63,11 +64,12 @@ The order is the triage order. A broken interaction outranks a weak colour.
    colour, or text rendering to `src/ui`, `src/frame`, or `src/renderer` is in
    the wrong layer.
 6. **One of the documented components.** A new panel is the status panel, the
-   settings menu, or the palette. Otherwise read
+   settings dialog, or the palette. Otherwise read
    [README.md](../ui/README.md#adding-a-surface) first.
 7. **No new row kind without both sides.** The kind set is closed. A new kind
    must update the game producer and the shim's Rune view in the same change.
-8. **No motion.** The overlay does not animate. See [motion.md](motion.md).
+8. **Reduced motion.** Kit motion follows the reduce-motion setting; see
+   [motion.md](motion.md).
 9. **Copy rules.** Sentence case in the source, `·` between peers, `×` for
    dimensions, `…` for an ellipsis.
 10. **Evidence matches the claim.** The capture shows the thing the change says it

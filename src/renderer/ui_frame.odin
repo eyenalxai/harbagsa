@@ -85,6 +85,7 @@ UI_Frame :: struct {
 	captured:     bool,
 	palette_open: bool,
 	menu:         ui.Menu,
+	settings:     ui.Settings,
 	palette:      ui.Palette,
 }
 

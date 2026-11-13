@@ -14,7 +14,7 @@ foreign ui_lib {
 	ui_vk_init :: proc(config: ^Ui_Vk_Config, out: ^Ui_Vk_Device) -> i32 ---
 	ui_attach :: proc(target: ^Ui_Target) -> i32 ---
 	ui_draw :: proc(image_index: u32) -> i32 ---
-	ui_frame :: proc(dt: f64, snapshot: ^Ui_Snapshot, panel: ^Ui_Panel, menu: ^Ui_Menu, palette: ^Ui_Palette, events: [^]Ui_Event, count: u32) -> i32 ---
+	ui_frame :: proc(dt: f64, snapshot: ^Ui_Snapshot, panel: ^Ui_Panel, menu: ^Ui_Menu, settings: ^Ui_Settings, palette: ^Ui_Palette, events: [^]Ui_Event, count: u32) -> i32 ---
 	ui_click_point :: proc(x, y: f32) -> i32 ---
 	ui_click_element :: proc(pointer: [^]u8, len: u32) -> i32 ---
 	ui_actions :: proc(count: ^u32) -> [^]Ui_Action ---
@@ -82,6 +82,28 @@ Ui_Menu :: struct {
 	hints:        [^]Ui_Hint,
 	hint_count:   u32,
 	hint_columns: u32,
+}
+
+Ui_Option :: struct {
+	text:   [^]u8,
+	length: u32,
+}
+
+Ui_Settings :: struct {
+	window_mode:       u32,
+	display:           u32,
+	resolution:        u32,
+	sprint_mode:       u32,
+	hud_opacity:       f32,
+	reduce_motion:     u32,
+	window_modes:      [^]Ui_Option,
+	window_mode_count: u32,
+	displays:          [^]Ui_Option,
+	display_count:     u32,
+	resolutions:       [^]Ui_Option,
+	resolution_count:  u32,
+	sprint_modes:      [^]Ui_Option,
+	sprint_mode_count: u32,
 }
 
 Ui_Palette_Item :: struct {
@@ -312,7 +334,9 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 		hints      = raw_data(palette_hints[:palette_hint_count]),
 		hint_count = u32(palette_hint_count),
 	}
-	if ui_frame(frame.dt, &snapshot, &panel, &menu, &palette_c, raw_data(events[:count]), u32(count)) != 0 {
+	settings_options: Ui_Settings_Options
+	settings := ui_settings_frame(&frame.settings, &settings_options)
+	if ui_frame(frame.dt, &snapshot, &panel, &menu, &settings, &palette_c, raw_data(events[:count]), u32(count)) != 0 {
 		log.error("renderer: the UI shim could not step")
 	}
 }

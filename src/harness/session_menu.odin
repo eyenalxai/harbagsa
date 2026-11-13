@@ -14,7 +14,7 @@ session_menu :: proc(session: ^Session, command: Menu_Command) -> string {
 	if command.has_activate && !will_open {
 		return format_error("%s", "menu must be open to activate a row")
 	}
-	if command.has_set && !will_open {
+	if (command.has_opacity || command.has_reduce_motion) && !will_open {
 		return format_error("%s", "menu must be open to set a value")
 	}
 
@@ -36,12 +36,17 @@ session_menu :: proc(session: ^Session, command: Menu_Command) -> string {
 		}
 		_ = game.menu_activate(&session.runtime.hud.menu, &session.runtime.sim.settings, direction)
 	}
-	if command.has_set {
-		_ = game.menu_set_type_weight(
-			&session.runtime.hud.menu,
+	if command.has_opacity {
+		_ = game.settings_set(
 			&session.runtime.sim.settings,
-			f32(command.set),
+			.Hud_Opacity,
+			0,
+			f32(command.opacity) / 100.0,
 		)
+	}
+	if command.has_reduce_motion {
+		value := command.reduce_motion ? 1 : 0
+		_ = game.settings_set(&session.runtime.sim.settings, .Reduce_Motion, value, 0)
 	}
 	return ""
 }

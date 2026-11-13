@@ -13,6 +13,16 @@ session_settle :: proc(session: ^Session, command: Settle_Command) -> string {
 	session.settle.converged = false
 	session.render.every_step = true
 	defer session.render.every_step = false
+	// A dialog owns the accumulator while it is open, but its kit motion still
+	// needs render frames. Step is rejected there, so draw the settle instead.
+	if session.runtime.hud.menu.open {
+		for _ in 0 ..< command.frames {
+			if draw_error := session_draw_group(session, nil); draw_error != "" {
+				return draw_error
+			}
+		}
+		return ""
+	}
 	return session_step(session, command.frames)
 }
 

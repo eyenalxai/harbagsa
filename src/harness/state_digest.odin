@@ -9,7 +9,9 @@ import "base:runtime"
 import b3 "libs:box3d"
 
 import "src:digest"
+import "src:display"
 import "src:game"
+import "src:ui"
 
 // The State struct is the schema. The digest walks the same fields the JSON
 // writer emits and skips the fields tagged `digest:"-"`.
@@ -94,10 +96,21 @@ color_state :: proc(value: [4]f32) -> Color_State {
 }
 
 @(private)
-menu_selected_blocked :: proc(menu: ^game.Menu_State) -> bool {
+menu_selected_blocked :: proc(menu: ^game.Menu_State, settings: ^game.Settings) -> bool {
 	if !menu.open {
 		return false
 	}
-	row := game.MENU_ITEM_ROWS[int(menu.selected)]
-	return menu.rows[row].blocked
+	#partial switch menu.selected {
+	case .Display:
+		return settings.display.count <= 1
+	case .Resolution:
+		info := display.info_at(&settings.display, settings.window.display)
+		return settings.display.count == 0 ||
+			info.mode_count == 0 ||
+			(settings.window.mode == .Windowed && info.mode_count == 1)
+	case .Hud_Opacity:
+		return settings.hud_opacity <= ui.HUD_OPACITY_MIN ||
+			settings.hud_opacity >= ui.HUD_OPACITY_MAX
+	}
+	return false
 }

@@ -24,8 +24,8 @@ pub fn normalize_weight(weight: f32) -> f32 {
     if weight > 0.0 { weight.clamp(100.0, 900.0) } else { DEFAULT_WEIGHT }
 }
 
-pub fn hud_surface() -> Color {
-    token(BG).alpha(0.94)
+pub fn hud_surface(opacity: f32) -> Color {
+    token(BG).alpha(opacity.clamp(0.70, 1.0))
 }
 
 pub fn kit(weight: f32) -> Kit {
@@ -52,6 +52,12 @@ pub fn kit(weight: f32) -> Kit {
     kit.c.text_accent = accent;
     kit.c.icon_accent = accent;
     kit.c.border_focus = accent;
+    kit.c.bg_icon_button_contrast = accent;
+    kit.c.submit_fg = token(BG);
+    kit.c.submit_icon = token(BG);
+    kit.c.bg_contrast = accent;
+    kit.c.text_contrast = token(BG);
+    kit.c.icon_contrast = token(BG);
 
     apply_weight(&mut kit.ty, weight);
     kit
