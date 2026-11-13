@@ -6,7 +6,7 @@ use crate::abi::{
 };
 use crate::components;
 use crate::settings;
-use crate::state::{HUD_OPACITY_PROMOTE, MenuState, PanelRow, UiState};
+use crate::state::{HUD_OPACITY_PROMOTE, MenuPanel, PanelRow, UiState};
 use crate::text;
 
 const ROW_NUMERIC: u32 = 1;
@@ -155,8 +155,7 @@ fn button(kit: &Kit, label: &str, weight: f32, accent: bool) -> El {
 
 fn palette_view(state: &UiState) -> El {
     let palette = &state.palette;
-    let menu = MenuState {
-        open: true,
+    let menu = MenuPanel {
         title: palette.title.clone(),
         rows: palette
             .items
@@ -180,7 +179,7 @@ fn palette_view(state: &UiState) -> El {
     )
 }
 
-fn menu_panel(menu: &MenuState, kit: &Kit, weight: f32, key_prefix: Option<&str>) -> El {
+fn menu_panel(menu: &MenuPanel, kit: &Kit, weight: f32, key_prefix: Option<&str>) -> El {
     let mut panel = components::dialog_panel(kit)
         .w(MENU_WIDTH)
         .padding(16.0)

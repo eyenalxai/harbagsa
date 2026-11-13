@@ -41,8 +41,6 @@ settings_default :: proc() -> Settings {
 	return DEFAULT_SETTINGS
 }
 
-// settings_set is the one mutation path for the settings dialog, the harness,
-// and the remaining menu navigation. It reports whether a value changed.
 settings_set :: proc(settings: ^Settings, id: Settings_Id, value: int, scalar: f32) -> bool {
 	#partial switch id {
 	case .Window_Mode:
@@ -146,6 +144,17 @@ window_mode_parse :: proc(name: string) -> (display.Window_Mode, bool) {
 
 toggle_window_mode :: proc(mode: display.Window_Mode) -> display.Window_Mode {
 	return mode == .Borderless ? .Windowed : .Borderless
+}
+
+settings_display_blocked :: proc(settings: ^Settings) -> bool {
+	return settings.display.count <= 1
+}
+
+settings_resolution_blocked :: proc(settings: ^Settings) -> bool {
+	info := display.info_at(&settings.display, settings.window.display)
+	return settings.display.count == 0 ||
+		info.mode_count == 0 ||
+		(settings.window.mode == .Windowed && info.mode_count == 1)
 }
 
 settings_display_name :: proc(settings: ^Settings) -> string {

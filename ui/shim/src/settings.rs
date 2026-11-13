@@ -20,6 +20,8 @@ const BODY_WIDTH: f32 = DIALOG_WIDTH - 40.0;
 const LABEL_WIDTH: f32 = 160.0;
 const CONTROL_WIDTH: f32 = 240.0;
 const ROW_HEIGHT: f32 = 40.0;
+const HUD_PERCENT_MIN: f32 = HUD_OPACITY_MIN * 100.0;
+const HUD_PERCENT_MAX: f32 = HUD_OPACITY_MAX * 100.0;
 
 pub fn dialog(state: &UiState, layers: &mut Vec<El>) {
     if !state.menu.open {
@@ -41,26 +43,27 @@ pub fn dialog(state: &UiState, layers: &mut Vec<El>) {
 
 fn body(state: &UiState, select_layers: &mut Vec<El>) -> El {
     let k = &state.kit;
+    let bound = opacity_bound(state);
     col()
         .w_full()
         .padding(20.0)
         .gap(4.0)
-        .child(section(k, "Display"))
+        .child(section(k, "Display", ""))
         .child(control_row(k, "Window mode", window_mode(state)))
         .child(control_row(k, "Display", display_select(state, select_layers)))
         .child(control_row(k, "Resolution", resolution_select(state, select_layers)))
-        .child(section(k, "Interface"))
+        .child(section(k, "Interface", bound))
         .child(opacity(state))
         .child(control_row(k, "Sprint mode", sprint_mode(state)))
         .child(control_row(k, "Reduce motion", reduce_motion(state)))
-        .child(section(k, "Controls"))
+        .child(section(k, "Controls", ""))
         .child(hints(state))
         .child(components::hairline(k))
         .child(footer(k))
 }
 
-fn section(k: &Kit, label: &str) -> El {
-    row().w_full().h(32.0).items_end().child(
+fn section(k: &Kit, label: &str, note: &str) -> El {
+    let mut header = row().w_full().h(32.0).items_end().child(
         text::styled(
             &label.to_uppercase(),
             TextStyle {
@@ -70,8 +73,14 @@ fn section(k: &Kit, label: &str) -> El {
                 ..k.ty.small_medium
             },
         )
-        .color(k.c.text_muted),
-    )
+        .color(k.c.text_faint),
+    );
+    if !note.is_empty() {
+        header = header
+            .child(spacer())
+            .child(text::styled(note, k.ty.small).color(k.c.text_faint));
+    }
+    header
 }
 
 fn control_row(k: &Kit, label: &str, control: El) -> El {
@@ -116,63 +125,58 @@ fn sprint_mode(state: &UiState) -> El {
 }
 
 fn display_select(state: &UiState, layers: &mut Vec<El>) -> El {
-    let current = state
-        .settings
-        .displays
-        .get(state.settings.display)
-        .map(String::as_str);
     select_control(
         state,
         layers,
         SelectKind::Display,
         "settings.display",
         "Display",
-        &state.settings.displays,
-        current,
-        state.settings.display,
         SETTING_DISPLAY,
-        state.settings.displays.len() <= 1,
-        "No display",
     )
 }
 
 fn resolution_select(state: &UiState, layers: &mut Vec<El>) -> El {
-    let current = state
-        .settings
-        .resolutions
-        .get(state.settings.resolution)
-        .map(String::as_str);
-    let disabled = state.settings.resolutions.is_empty()
-        || (state.settings.window_mode == 1 && state.settings.resolutions.len() == 1);
     select_control(
         state,
         layers,
         SelectKind::Resolution,
         "settings.resolution",
         "Resolution",
-        &state.settings.resolutions,
-        current,
-        state.settings.resolution,
         SETTING_RESOLUTION,
-        disabled,
-        "No modes",
     )
 }
 
-#[allow(clippy::too_many_arguments)]
 fn select_control(
     state: &UiState,
     layers: &mut Vec<El>,
     kind: SelectKind,
     key: &str,
     label: &str,
-    options: &[String],
-    current: Option<&str>,
-    current_index: usize,
     id: u32,
-    disabled: bool,
-    empty: &str,
 ) -> El {
+    let (options, current, current_index, disabled, empty) = match kind {
+        SelectKind::Display => {
+            let options = &state.settings.displays;
+            (
+                options,
+                options.get(state.settings.display).map(String::as_str),
+                state.settings.display,
+                options.len() <= 1,
+                "No display",
+            )
+        }
+        SelectKind::Resolution => {
+            let options = &state.settings.resolutions;
+            (
+                options,
+                options.get(state.settings.resolution).map(String::as_str),
+                state.settings.resolution,
+                options.is_empty()
+                    || (state.settings.window_mode == 1 && options.len() == 1),
+                "No modes",
+            )
+        }
+    };
     let open = !disabled && state.settings_select == Some(kind);
     let mut select = Select::new(key, options)
         .appearance(SelectAppearance::Field)
@@ -214,6 +218,20 @@ fn select_control(
     items.build(&state.kit, layers)
 }
 
+fn opacity_bound(state: &UiState) -> &'static str {
+    let value = state
+        .opacity_preview
+        .unwrap_or(state.settings.hud_opacity)
+        .clamp(HUD_OPACITY_MIN, HUD_OPACITY_MAX);
+    if value <= HUD_OPACITY_MIN {
+        "Minimum"
+    } else if value >= HUD_OPACITY_MAX {
+        "Maximum"
+    } else {
+        ""
+    }
+}
+
 fn opacity(state: &UiState) -> El {
     let value = state
         .opacity_preview
@@ -227,8 +245,8 @@ fn opacity(state: &UiState) -> El {
         "HUD opacity",
         &value_text,
         percent,
-        HUD_OPACITY_MIN * 100.0,
-        HUD_OPACITY_MAX * 100.0,
+        HUD_PERCENT_MIN,
+        HUD_PERCENT_MAX,
         1.0,
         BODY_WIDTH,
         |state: &UiState| {
@@ -239,7 +257,7 @@ fn opacity(state: &UiState) -> El {
                 * 100.0
         },
         |state: &mut UiState, next| {
-            let next = next.round().clamp(HUD_OPACITY_MIN * 100.0, HUD_OPACITY_MAX * 100.0);
+            let next = next.round().clamp(HUD_PERCENT_MIN, HUD_PERCENT_MAX);
             let previous = state
                 .opacity_preview
                 .unwrap_or(state.settings.hud_opacity)
@@ -273,7 +291,7 @@ fn hints(state: &UiState) -> El {
         for (keys, action) in chunk {
             line = line
                 .child(Keybind::new(&[keys.as_str()]).build(&state.kit))
-                .child(text::styled(action, state.kit.ty.small).color(state.kit.c.text_muted));
+                .child(text::styled(action, state.kit.ty.small).color(state.kit.c.text_faint));
         }
         grid = grid.child(line);
     }

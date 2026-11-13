@@ -23,9 +23,11 @@ the result. The world palette is separate and stays linear.
 
 The kit derives the remaining states, text and surfaces from
 `Kit::from_palette_focus` with `PaletteFocus::Accent`. The pins above override the
-measured overlay roles. The primary action reads `bg_accent` and `text_inverse`;
-the neutral action reads `bg_button_neutral` and `text_base`. The rune-fx demo
-asks for `#7C5CFF` with a `#F4F0FF` core; it is not part of the default interface.
+measured overlay roles. The status action row's primary `Settings` button reads
+`bg_accent` and `text_inverse`; the dialog's `Resume` uses the kit Submit tokens
+`bg_icon_button_contrast`, `submit_fg`, and `submit_icon`. The neutral action
+reads `bg_button_neutral` and `text_base`. The rune-fx demo asks for `#7C5CFF`
+with a `#F4F0FF` core; it is not part of the default interface.
 
 Object colours in the palette are content from `src/game/prefabs.odin`; they do
 not come from this table.

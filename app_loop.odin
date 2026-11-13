@@ -84,8 +84,6 @@ apply_frame_input :: proc(
 	}
 }
 
-// apply_window_settings is the one path from a changed display, mode, or
-// resolution to the SDL window.
 @(private)
 apply_window_settings :: proc(
 	loop: ^Loop,

@@ -6,7 +6,6 @@ import "src:display"
 import "src:ui"
 
 MENU_ITEM_COUNT :: 7
-MENU_HINT_COLUMNS :: 3
 MENU_HINT_COUNT :: ui.SETTINGS_HINT_COUNT
 
 MENU_TITLE :: "Settings"
@@ -112,7 +111,7 @@ menu_change_setting :: proc(
 	case .Window_Mode:
 		settings_set(settings, .Window_Mode, int(toggle_window_mode(settings.window.mode)), 0)
 	case .Display:
-		if settings.display.count <= 1 {
+		if settings_display_blocked(settings) {
 			menu_set_status(menu, MENU_STATUS_ONE_DISPLAY)
 			return .Blocked
 		}
@@ -121,12 +120,9 @@ menu_change_setting :: proc(
 		settings_set(settings, .Display, next, 0)
 	case .Resolution:
 		info := display.info_at(&settings.display, settings.window.display)
-		if settings.display.count == 0 || info.mode_count == 0 {
-			menu_set_status(menu, MENU_STATUS_NO_MODES)
-			return .Blocked
-		}
-		if settings.window.mode == .Windowed && info.mode_count == 1 {
-			menu_set_status(menu, MENU_STATUS_ONE_MODE)
+		if settings_resolution_blocked(settings) {
+			status := info.mode_count == 0 ? MENU_STATUS_NO_MODES : MENU_STATUS_ONE_MODE
+			menu_set_status(menu, status)
 			return .Blocked
 		}
 		current := settings.window.mode == .Borderless ? info.desktop : settings.window.resolution
@@ -207,10 +203,8 @@ menu_view :: proc(menu: ^Menu_State, debug_active: bool, delta_seconds: f32) {
 	}
 
 	menu.view = {
-		title        = MENU_TITLE,
-		selected     = 0,
-		hints        = menu.hints[:MENU_HINT_COUNT],
-		hint_columns = MENU_HINT_COLUMNS,
-		note         = note,
+		title = MENU_TITLE,
+		hints = menu.hints[:MENU_HINT_COUNT],
+		note  = note,
 	}
 }

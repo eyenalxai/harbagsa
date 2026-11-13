@@ -48,12 +48,9 @@ Hint_Cell :: struct {
 }
 
 Menu :: struct {
-	title:    string,
-	rows:     []Row,
-	selected: int,
-	hints:        []Hint_Cell,
-	hint_columns: int,
-	note:         string,
+	title: string,
+	hints: []Hint_Cell,
+	note:  string,
 }
 
 Settings_Option :: struct {

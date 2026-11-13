@@ -71,17 +71,13 @@ Ui_Hint :: struct {
 }
 
 Ui_Menu :: struct {
-	open:         u32,
-	title:        [^]u8,
-	title_len:    u32,
-	rows:         [^]Ui_Row,
-	row_count:    u32,
-	selected:     u32,
-	note:         [^]u8,
-	note_len:     u32,
-	hints:        [^]Ui_Hint,
-	hint_count:   u32,
-	hint_columns: u32,
+	open:       u32,
+	title:      [^]u8,
+	title_len:  u32,
+	note:       [^]u8,
+	note_len:   u32,
+	hints:      [^]Ui_Hint,
+	hint_count: u32,
 }
 
 Ui_Option :: struct {
@@ -243,27 +239,6 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 		captured         = u32(frame.captured),
 		palette_open     = u32(frame.palette_open),
 	}
-	menu_rows: [16]Ui_Row
-	menu_row_count := min(len(frame.menu.rows), len(menu_rows))
-	for row, index in frame.menu.rows[:menu_row_count] {
-		flags: u32
-		if row.numeric {
-			flags |= 1
-		}
-		if row.blocked {
-			flags |= 2
-		}
-		menu_rows[index] = {
-			kind      = u32(row.kind),
-			flags     = flags,
-			label     = raw_data(row.label),
-			label_len = u32(len(row.label)),
-			value     = raw_data(row.value),
-			value_len = u32(len(row.value)),
-			ratio     = row.ratio,
-			ticks     = u32(row.ticks),
-		}
-	}
 	hints: [16]Ui_Hint
 	hint_count := min(len(frame.menu.hints), len(hints))
 	for hint, index in frame.menu.hints[:hint_count] {
@@ -275,17 +250,13 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 		}
 	}
 	menu := Ui_Menu {
-		open         = frame.snapshot.menu_open,
-		title        = raw_data(frame.menu.title),
-		title_len    = u32(len(frame.menu.title)),
-		rows         = raw_data(menu_rows[:menu_row_count]),
-		row_count    = u32(menu_row_count),
-		selected     = u32(frame.menu.selected),
-		note         = raw_data(frame.menu.note),
-		note_len     = u32(len(frame.menu.note)),
-		hints        = raw_data(hints[:hint_count]),
-		hint_count   = u32(hint_count),
-		hint_columns = u32(frame.menu.hint_columns),
+		open       = frame.snapshot.menu_open,
+		title      = raw_data(frame.menu.title),
+		title_len  = u32(len(frame.menu.title)),
+		note       = raw_data(frame.menu.note),
+		note_len   = u32(len(frame.menu.note)),
+		hints      = raw_data(hints[:hint_count]),
+		hint_count = u32(hint_count),
 	}
 	palette_source := frame.palette
 	palette_items: [12]Ui_Palette_Item

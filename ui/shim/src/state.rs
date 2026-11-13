@@ -21,6 +21,12 @@ pub struct PanelRow {
 pub struct MenuState {
     pub open: bool,
     pub title: String,
+    pub note: String,
+    pub hints: Vec<(String, String)>,
+}
+
+pub struct MenuPanel {
+    pub title: String,
     pub rows: Vec<PanelRow>,
     pub selected: usize,
     pub note: String,

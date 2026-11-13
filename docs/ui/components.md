@@ -19,7 +19,10 @@ The row kinds map to Rune elements:
 
 The action row has two buttons: `Settings` returns `Open_Menu` and opens the
 dialog, and `Debug` returns `Toggle_Debug` and toggles debug mode. The dialog
-closes with `Esc`, its close control, or `Resume`.
+closes with `Esc`, its close control, or `Resume`. The buttons are focusable:
+Tab reaches them and Enter or Space activates them. The live pointer reaches the
+row only when the cursor is free; while the pointer is captured, it belongs to
+the camera.
 
 Incorrect: measuring a row in Odin and sizing a rectangle from it. Rune measures
 the text.
@@ -39,12 +42,16 @@ The HUD opacity Slider runs from 70 to 100 percent in one-point steps. Only the
 track is the hit area: it drags from the thumb, jumps on a track press, steps
 with Left and Right, repeats while held, and restores the pre-drag value when Esc
 cancels the drag. The label and percentage row never changes the value. Its value
-draws in Geist Mono. Below 94 percent the status HUD's tertiary text promotes to
-secondary, keeping the text floor on the translucent surface.
+draws in Geist Mono. At 70 and 100 percent the Interface header shows `Minimum`
+or `Maximum`, so the blocked end is visible. Below 94 percent the status HUD's
+tertiary text promotes to secondary, keeping the text floor on the translucent
+surface.
 
 The dialog owns its keyboard path: Rune traps focus, draws the focus ring, and
 routes arrows, Enter, and Space to the focused control. `src/game/settings_view.odin`
-names every option and index; the shim never derives a display or mode name.
+names every option and index; the shim never derives a display or mode name. The
+Controls section is a compact reference, not the full shortcut list; the full
+list stays in `README.md`.
 
 Incorrect: measuring a row in Odin and sizing a rectangle from it. Rune measures
 the text. Incorrect: a second window-apply path; a changed display, mode, or

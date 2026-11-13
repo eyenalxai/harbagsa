@@ -84,14 +84,10 @@ pub struct UiMenu {
     pub open: u32,
     pub title: *const u8,
     pub title_len: u32,
-    pub rows: *const UiRow,
-    pub row_count: u32,
-    pub selected: u32,
     pub note: *const u8,
     pub note_len: u32,
     pub hints: *const UiHint,
     pub hint_count: u32,
-    pub hint_columns: u32,
 }
 
 #[repr(C)]
@@ -318,8 +314,6 @@ pub unsafe fn menu_state(menu: *const UiMenu) -> Option<MenuState> {
     Some(MenuState {
         open: menu.open != 0,
         title: unsafe { text_bytes(menu.title, menu.title_len) },
-        rows: unsafe { rows(menu.rows, menu.row_count) },
-        selected: menu.selected as usize,
         note: unsafe { text_bytes(menu.note, menu.note_len) },
         hints: unsafe { hints(menu.hints, menu.hint_count) },
     })

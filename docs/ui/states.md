@@ -32,7 +32,8 @@ Only `Setting`, `Action`, and `Slider` rows are selectable. `Header`, `Divider`,
 
 A blocked value draws in secondary text. Display is blocked with one display;
 Resolution is blocked with no modes or with one mode while Windowed. HUD opacity
-is blocked at 70 and 100 percent; the status note is the signal there.
+is blocked at 70 and 100 percent; the Interface header shows `Minimum` or
+`Maximum` there and the step key is a no-op.
 
 ## Slider
 
@@ -94,7 +95,8 @@ click.
 The Settings dialog owns its keyboard path through Rune: Tab traps focus inside
 the modal and reaches the switch and Resume, arrows step the focused control or
 slider, Enter or Space activates the control, and Esc dismisses the open Select
-before the dialog. Enter presses a focused button or switch like a web form. Esc opens Settings when
-nothing owns the keyboard. The pointer may click any control; every pointer
-action keeps a keyboard path. Drag and key repeat are part of the Slider, not a
-separate input mode.
+before the dialog. Enter presses a focused button or switch like a web form. Esc
+opens Settings when nothing owns the keyboard. The status action row is also
+keyboard-reachable with Tab, Enter, or Space. The pointer may click any control
+while the cursor is free; while it is captured, the pointer belongs to the
+camera. Drag and key repeat are part of the Slider, not a separate input mode.

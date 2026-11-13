@@ -86,9 +86,14 @@ simulation. The dialog groups Display, Interface, and Controls. Window mode and
 Sprint mode are segmented controls. Display and Resolution are selects over the
 launch-time display list. HUD opacity runs from 70 to 100 percent in one-point
 steps and promotes tertiary HUD text to secondary below 94 percent. Reduce motion
-stops kit transitions. `Esc`, the header close control, and `Resume` close the
-dialog. The `Settings` button in the status action row opens it; `Debug` toggles
-debug mode. Type weight remains a stored setting but is not part of Settings.
+stops kit transitions. The Controls section is a compact reference; the full
+keyboard list is under Debug mode below. `Esc`, the header close control, and
+`Resume` close the dialog. The `Settings` button in the status action row opens
+it; `Debug` toggles
+debug mode. The row is keyboard-reachable with Tab, Enter, or Space. Pointer
+clicks reach it only while the cursor is free; during play the pointer is
+captured and drives the camera. Type weight remains a stored setting but is not
+part of Settings.
 
 Window mode is Borderless or Windowed. Borderless uses the selected display's
 desktop size. Windowed uses the chosen resolution and a normal title bar. The

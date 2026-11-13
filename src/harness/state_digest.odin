@@ -9,7 +9,6 @@ import "base:runtime"
 import b3 "libs:box3d"
 
 import "src:digest"
-import "src:display"
 import "src:game"
 import "src:ui"
 
@@ -102,12 +101,9 @@ menu_selected_blocked :: proc(menu: ^game.Menu_State, settings: ^game.Settings) 
 	}
 	#partial switch menu.selected {
 	case .Display:
-		return settings.display.count <= 1
+		return game.settings_display_blocked(settings)
 	case .Resolution:
-		info := display.info_at(&settings.display, settings.window.display)
-		return settings.display.count == 0 ||
-			info.mode_count == 0 ||
-			(settings.window.mode == .Windowed && info.mode_count == 1)
+		return game.settings_resolution_blocked(settings)
 	case .Hud_Opacity:
 		return settings.hud_opacity <= ui.HUD_OPACITY_MIN ||
 			settings.hud_opacity >= ui.HUD_OPACITY_MAX

@@ -110,7 +110,7 @@ Rules:
 - `settle` renders without writing a capture. Under `--no-render` it is a plain
   step while the menu is closed. While the menu is open the simulation is paused;
   with a renderer it draws the dialog frames without stepping, and under
-  `--no-render` it has no frames to draw and does nothing.
+  `--no-render` it is an error. `until: converged` follows the same rule.
 - `size` pins the extent. A scenario `size` and `--size` together are an error.
 - `extends` merges a base scenario and lets the child win.
 - `parameters` substitutes `${name}` in command values. `--param` overrides it;
@@ -131,7 +131,8 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `face`: direct camera `yaw_deg` and `pitch_deg`. The body keeps its heading.
 - `input`: persistent `forward`, `right`, and `sprint`; `jump` is a one-step edge.
 - `step`: `frames` in the allowed fixed-step range.
-- `settle`: `frames`, or `until: converged`.
+- `settle`: `frames`, or `until: converged`; while the menu is open it requires a
+  renderer and draws frames without stepping.
 - `state`: full current state.
 - `capture`: one output with `name`, optional `frame`, `alpha`, `note`, target,
   format, capture options, and an optional `views` list.
@@ -169,8 +170,9 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `quit`: stop the session.
 
 Unknown keys, wrong types, and out-of-range values are command errors. A live
-session remains usable. `step` is an error while the menu is open; `settle`
-renders the paused dialog without stepping when a renderer is attached.
+session remains usable. `step` is an error while the menu is open; `settle` and
+`settle until: converged` render the paused dialog without stepping when a
+renderer is attached, and are errors under `--no-render`.
 
 A `shot` is scenario-only shorthand. It expands to an optional camera, a settle,
 and one capture. It is not a live-session command.
