@@ -120,6 +120,9 @@ pub fn slider<S: 'static>(
                         Phase::Up => {
                             if drag.cancelled() {
                                 drag_preview(state, drag.data);
+                                if commit == SliderCommit::Live {
+                                    drag_commit(state, drag.data);
+                                }
                             } else if commit == SliderCommit::OnRelease {
                                 let next = drag_value(state);
                                 if next != drag.data {

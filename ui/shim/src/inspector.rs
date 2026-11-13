@@ -132,39 +132,17 @@ fn object_section(state: &UiState) -> El {
             .build(kit)
             .key("inspector.body")
     };
-    let yaw_value = state
-        .inspector_preview
-        .yaw
-        .unwrap_or(inspector.yaw_degrees);
-    let yaw = slider::slider(
-        kit,
+    let yaw = inspector_slider(
+        state,
         "inspector.yaw",
         "Yaw",
         &inspector.yaw_text,
-        state.inspector_preview.yaw.is_none(),
-        yaw_value,
+        inspector.yaw_degrees,
+        PreviewField::Yaw,
+        SliderAction::ObjectYaw,
         0.0,
         359.0,
         1.0,
-        CONTENT_WIDTH,
-        |state: &UiState| {
-            state
-                .inspector_preview
-                .yaw
-                .unwrap_or(state.inspector.yaw_degrees)
-        },
-        |state: &mut UiState, next| {
-            state.inspector_preview.yaw = Some(next);
-        },
-        |state: &mut UiState, next| {
-            state.actions.push(UiAction {
-                kind: ACTION_OBJECT_SET,
-                id: state.inspector.object_id,
-                value: OBJECT_FIELD_YAW as i32,
-                scalar: next,
-            });
-        },
-        SliderCommit::OnRelease,
     );
     let actions = row()
         .w_full()
@@ -277,73 +255,29 @@ fn lamp_section(state: &UiState) -> El {
         }
         swatches = swatches.child(swatch);
     }
-    let intensity_value = state
-        .inspector_preview
-        .intensity
-        .unwrap_or(inspector.lamp_intensity);
-    let intensity = slider::slider(
-        kit,
+    let intensity = inspector_slider(
+        state,
         "inspector.intensity",
         "Intensity",
         &inspector.lamp_intensity_text,
-        state.inspector_preview.intensity.is_none(),
-        intensity_value,
+        inspector.lamp_intensity,
+        PreviewField::Intensity,
+        SliderAction::LampIntensity,
         0.2,
         4.0,
         0.1,
-        CONTENT_WIDTH,
-        |state: &UiState| {
-            state
-                .inspector_preview
-                .intensity
-                .unwrap_or(state.inspector.lamp_intensity)
-        },
-        |state: &mut UiState, next| {
-            state.inspector_preview.intensity = Some(next);
-        },
-        |state: &mut UiState, next| {
-            state.actions.push(UiAction {
-                kind: ACTION_LAMP_SET,
-                id: state.inspector.object_id,
-                value: LAMP_FIELD_INTENSITY as i32,
-                scalar: next,
-            });
-        },
-        SliderCommit::OnRelease,
     );
-    let range_value = state
-        .inspector_preview
-        .range
-        .unwrap_or(inspector.lamp_range);
-    let range = slider::slider(
-        kit,
+    let range = inspector_slider(
+        state,
         "inspector.range",
         "Range",
         &inspector.lamp_range_text,
-        state.inspector_preview.range.is_none(),
-        range_value,
+        inspector.lamp_range,
+        PreviewField::Range,
+        SliderAction::LampRange,
         2.0,
         20.0,
         1.0,
-        CONTENT_WIDTH,
-        |state: &UiState| {
-            state
-                .inspector_preview
-                .range
-                .unwrap_or(state.inspector.lamp_range)
-        },
-        |state: &mut UiState, next| {
-            state.inspector_preview.range = Some(next);
-        },
-        |state: &mut UiState, next| {
-            state.actions.push(UiAction {
-                kind: ACTION_LAMP_SET,
-                id: state.inspector.object_id,
-                value: LAMP_FIELD_RANGE as i32,
-                scalar: next,
-            });
-        },
-        SliderCommit::OnRelease,
     );
     col()
         .w_full()
@@ -358,39 +292,17 @@ fn lamp_section(state: &UiState) -> El {
 fn debug_section(state: &UiState) -> El {
     let kit = &state.kit;
     let inspector = &state.inspector;
-    let weight_value = state
-        .inspector_preview
-        .weight
-        .unwrap_or(state.inspector.type_weight);
-    let weight = slider::slider(
-        kit,
+    let weight = inspector_slider(
+        state,
         "inspector.weight",
         "Type weight",
         &inspector.type_weight_text,
-        state.inspector_preview.weight.is_none(),
-        weight_value,
+        inspector.type_weight,
+        PreviewField::Weight,
+        SliderAction::TypeWeight,
         100.0,
         900.0,
         25.0,
-        CONTENT_WIDTH,
-        |state: &UiState| {
-            state
-                .inspector_preview
-                .weight
-                .unwrap_or(state.inspector.type_weight)
-        },
-        |state: &mut UiState, next| {
-            state.inspector_preview.weight = Some(next);
-        },
-        |state: &mut UiState, next| {
-            state.actions.push(UiAction {
-                kind: ACTION_TYPE_WEIGHT_SET,
-                id: 0,
-                value: 0,
-                scalar: next,
-            });
-        },
-        SliderCommit::OnRelease,
     );
     let physics = row()
         .w_full()
@@ -444,4 +356,100 @@ fn value_row(kit: &Kit, label: &str, value: &str) -> El {
         .child(text::styled(label, kit.ty.ui).color(kit.c.text_muted))
         .child(spacer())
         .child(text::styled(value, kit.ty.mono).color(kit.c.text_base))
+}
+
+#[derive(Clone, Copy)]
+enum PreviewField {
+    Yaw,
+    Intensity,
+    Range,
+    Weight,
+}
+
+#[derive(Clone, Copy)]
+enum SliderAction {
+    ObjectYaw,
+    LampIntensity,
+    LampRange,
+    TypeWeight,
+}
+
+fn inspector_slider(
+    state: &UiState,
+    key: &str,
+    label: &str,
+    value_text: &str,
+    value: f32,
+    field: PreviewField,
+    action: SliderAction,
+    min: f32,
+    max: f32,
+    step: f32,
+) -> El {
+    slider::slider(
+        &state.kit,
+        key,
+        label,
+        value_text,
+        true,
+        preview_value(state, field).unwrap_or(value),
+        min,
+        max,
+        step,
+        CONTENT_WIDTH,
+        move |state: &UiState| preview_value(state, field).unwrap_or(value),
+        move |state: &mut UiState, next| set_preview(state, field, next),
+        move |state: &mut UiState, next| {
+            let action = slider_action(action, state, next);
+            state.actions.push(action);
+        },
+        SliderCommit::OnRelease,
+    )
+}
+
+fn preview_value(state: &UiState, field: PreviewField) -> Option<f32> {
+    match field {
+        PreviewField::Yaw => state.inspector_preview.yaw,
+        PreviewField::Intensity => state.inspector_preview.intensity,
+        PreviewField::Range => state.inspector_preview.range,
+        PreviewField::Weight => state.inspector_preview.weight,
+    }
+}
+
+fn set_preview(state: &mut UiState, field: PreviewField, next: f32) {
+    match field {
+        PreviewField::Yaw => state.inspector_preview.yaw = Some(next),
+        PreviewField::Intensity => state.inspector_preview.intensity = Some(next),
+        PreviewField::Range => state.inspector_preview.range = Some(next),
+        PreviewField::Weight => state.inspector_preview.weight = Some(next),
+    }
+}
+
+fn slider_action(kind: SliderAction, state: &UiState, next: f32) -> UiAction {
+    match kind {
+        SliderAction::ObjectYaw => UiAction {
+            kind: ACTION_OBJECT_SET,
+            id: state.inspector.object_id,
+            value: OBJECT_FIELD_YAW as i32,
+            scalar: next,
+        },
+        SliderAction::LampIntensity => UiAction {
+            kind: ACTION_LAMP_SET,
+            id: state.inspector.object_id,
+            value: LAMP_FIELD_INTENSITY as i32,
+            scalar: next,
+        },
+        SliderAction::LampRange => UiAction {
+            kind: ACTION_LAMP_SET,
+            id: state.inspector.object_id,
+            value: LAMP_FIELD_RANGE as i32,
+            scalar: next,
+        },
+        SliderAction::TypeWeight => UiAction {
+            kind: ACTION_TYPE_WEIGHT_SET,
+            id: 0,
+            value: 0,
+            scalar: next,
+        },
+    }
 }

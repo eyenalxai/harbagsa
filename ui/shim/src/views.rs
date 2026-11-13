@@ -99,7 +99,7 @@ fn hud_view(state: &UiState) -> El {
         .on_press(|state: &mut UiState| {
             state.actions.push(UiAction::new(ACTION_DEBUG_INSPECTOR));
         });
-    let key_hint = text::weighted("F2 · I", state.weight, false).color(kit.c.text_faint);
+    let key_hint = text::weighted("F2 · I", state.weight, false).color(kit.c.text_muted);
 
     let glow = effect(crate::fx::GLOW)
         .effect_data([0.9, 0.0, 0.0, 0.0])
