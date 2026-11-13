@@ -32,8 +32,8 @@ repeats a label.
 - A colour literal outside `ui/shim/src/theme.rs` or the game's content data.
 - A type size, font file, atlas, or layout pass in the Odin tree.
 - A vertex buffer, shader, or draw call added for the 2D layer.
-- `accent` on anything but the selected row or card bar, the filled slider track, the focus
-  ring, and the primary action.
+- `accent` on anything but the selected row or card bar, the selected swatch ring,
+  the filled slider track, the focus ring, and the primary action.
 - `text_tertiary` as the label or value of a selectable row or card.
 - A fade, slide, or scale that ignores reduce motion. Kit motion is allowed when
   the reduce-motion setting lands it; the status HUD does not animate. The

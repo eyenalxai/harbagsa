@@ -20,6 +20,7 @@ pub fn slider<S: 'static>(
     key: &str,
     label: &str,
     value_text: &str,
+    show_value: bool,
     value: f32,
     min: f32,
     max: f32,
@@ -48,18 +49,19 @@ pub fn slider<S: 'static>(
     let drag_preview = on_preview;
     let drag_commit = on_commit;
 
+    let mut heading = row()
+        .w_full()
+        .h(16.0)
+        .center_y()
+        .child(text::styled(label, k.ty.ui).color(k.c.text_muted).a11y_hidden())
+        .child(spacer());
+    if show_value {
+        heading = heading.child(text::styled(value_text, k.ty.mono).color(k.c.text_base).a11y_hidden());
+    }
     col()
         .w(width)
         .gap(4.0)
-        .child(
-            row()
-                .w_full()
-                .h(16.0)
-                .center_y()
-                .child(text::styled(label, k.ty.ui).color(k.c.text_muted).a11y_hidden())
-                .child(spacer())
-                .child(text::styled(value_text, k.ty.mono).color(k.c.text_base).a11y_hidden()),
-        )
+        .child(heading)
         .child(
             el()
                 .key(key)

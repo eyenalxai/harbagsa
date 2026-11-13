@@ -56,7 +56,7 @@ editor_palette_open :: proc(editor: ^Editor) -> Edit_Result {
 		return edit_ok()
 	}
 	editor_end_drag(editor)
-	editor.tool = palette_create(.Crate)
+	editor.tool = palette_create(editor.placement_defaults.prefab)
 	return edit_ok()
 }
 

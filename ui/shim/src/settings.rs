@@ -254,6 +254,7 @@ fn opacity(state: &UiState) -> El {
         "settings.opacity",
         "HUD opacity",
         &value_text,
+        true,
         percent,
         HUD_PERCENT_MIN,
         HUD_PERCENT_MAX,

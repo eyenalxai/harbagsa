@@ -50,6 +50,7 @@ resolve :: proc(
 	}
 
 	if state.inspector {
+		out.motion = {}
 		return out
 	}
 	if focus.game.editor.active {

@@ -69,9 +69,7 @@ pub struct InspectorState {
     pub yaw_degrees: f32,
     pub yaw_text: String,
     pub placement_prefab: String,
-    pub placement_height_text: String,
-    pub placement_yaw_text: String,
-    pub placement_snap_text: String,
+    pub placement_text: String,
     pub has_lamp: bool,
     pub lamp_kind: usize,
     pub lamp_color: usize,
@@ -185,13 +183,11 @@ impl UiState {
     pub fn clear_inspector_previews(&mut self) {
         let inspector = &self.inspector;
         let preview = &mut self.inspector_preview;
-        if let Some(value) = preview.yaw {
-            let normalized = normalize_degrees(value);
-            preview.yaw = if (normalized - inspector.yaw_degrees).abs() < 0.05 {
-                None
-            } else {
-                Some(normalized)
-            };
+        if preview
+            .yaw
+            .is_some_and(|value| (value - inspector.yaw_degrees).abs() < 0.05)
+        {
+            preview.yaw = None;
         }
         if preview
             .intensity
@@ -223,10 +219,6 @@ impl UiState {
             preview.range = None;
         }
     }
-}
-
-fn normalize_degrees(value: f32) -> f32 {
-    value - 360.0 * (value / 360.0).floor()
 }
 
 pub fn frame(

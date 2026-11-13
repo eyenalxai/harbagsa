@@ -113,8 +113,8 @@ change width.
 
 - The Odin side sends data, never draw commands.
 - A UI colour lives in `ui/shim/src/theme.rs`; a panel size lives with its view
-  in `ui/shim/src/views.rs` or `ui/shim/src/palette.rs`, not in `src/ui` or
-  `src/frame`.
+  in `ui/shim/src/views.rs`, `ui/shim/src/palette.rs`, or
+  `ui/shim/src/inspector.rs`, not in `src/ui` or `src/frame`.
 - A row is a `ui.Row`; a new kind must be understood by both the game and the
   shim.
 - Kit motion follows `Settings.reduce_motion`; the rune-fx demo is opt-in and

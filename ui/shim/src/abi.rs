@@ -166,12 +166,8 @@ pub struct UiInspector {
     pub yaw_text_len: u32,
     pub placement_prefab: *const u8,
     pub placement_prefab_len: u32,
-    pub placement_height_text: *const u8,
-    pub placement_height_len: u32,
-    pub placement_yaw_text: *const u8,
-    pub placement_yaw_len: u32,
-    pub placement_snap_text: *const u8,
-    pub placement_snap_len: u32,
+    pub placement_text: *const u8,
+    pub placement_text_len: u32,
     pub has_lamp: u32,
     pub lamp_kind: u32,
     pub lamp_color: u32,
@@ -348,14 +344,8 @@ pub unsafe fn inspector_state(inspector: *const UiInspector) -> Option<Inspector
         placement_prefab: unsafe {
             text_bytes(inspector.placement_prefab, inspector.placement_prefab_len)
         },
-        placement_height_text: unsafe {
-            text_bytes(inspector.placement_height_text, inspector.placement_height_len)
-        },
-        placement_yaw_text: unsafe {
-            text_bytes(inspector.placement_yaw_text, inspector.placement_yaw_len)
-        },
-        placement_snap_text: unsafe {
-            text_bytes(inspector.placement_snap_text, inspector.placement_snap_len)
+        placement_text: unsafe {
+            text_bytes(inspector.placement_text, inspector.placement_text_len)
         },
         has_lamp: inspector.has_lamp != 0,
         lamp_kind: inspector.lamp_kind as usize,

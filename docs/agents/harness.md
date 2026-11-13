@@ -268,9 +268,10 @@ Enter debug mode before `editor`. The keyboard and harness build the same edit
 actions. Fields cover:
 
 - `open`, `select`, `palette_step`, and `palette_number` for the catalog. The
-  palette must be open before a catalog action; opening it starts at Crate, and
-  closing it discards the tuned card. A palette action while placement is armed
-  is refused; send `cancel` first.
+  palette must be open before a catalog action; opening it starts at the next
+  prefab default (Crate until a placement is cancelled), and closing it discards
+  the tuned card. A palette action while placement is armed is refused; send
+  `cancel` first.
 - `pick` arms the placement from the open palette. `height`, `yaw_deg`, `snap`,
   and `cancel` apply to the armed placement.
 - `place` for an exact transform without a placement ray.

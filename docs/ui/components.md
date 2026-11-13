@@ -19,9 +19,10 @@ The row kinds map to Rune elements:
 - `Setting`, `Action`, `Metric`, `Detail`: a label row with a spacer and a value.
 
 The action row has one primary button: `Debug` returns `Debug_Inspector`, which
-enters debug mode when needed and opens the inspector rail. The settings dialog
-closes with `Esc`, its close control, or `Resume`. The row is drawn while the
-pointer is captured; live pointer events reach it only when the cursor is free.
+enters debug mode when needed and opens the inspector rail. A short `F2 · I`
+hint names the keyboard path because the row is drawn while the pointer is
+captured; live pointer events reach it only when the cursor is free. The
+settings dialog closes with `Esc`, its close control, or `Resume`.
 
 Incorrect: measuring a row in Odin and sizing a rectangle from it. Rune measures
 the text.

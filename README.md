@@ -92,8 +92,9 @@ keyboard list is under Debug mode below. `Esc`, the header close control, and
 `Resume` close the dialog. The status action row carries `Debug`, which enters
 debug mode and opens the debug inspector; it no longer carries the inert
 `Close`. Pointer control starts when the cursor is free; while it is captured,
-the pointer belongs to the camera. Type weight is in the inspector's Debug
-section, not in Settings.
+the pointer belongs to the camera, so the Debug button is not pointer-reachable
+during play. Press `F2` and then `I` for the keyboard path. Type weight is in
+the inspector's Debug section, not in Settings.
 
 Window mode is Borderless or Windowed. Borderless uses the selected display's
 desktop size. Windowed uses the chosen resolution and a normal title bar. The

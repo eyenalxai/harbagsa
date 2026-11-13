@@ -602,12 +602,12 @@ for the depth prepass and one for the lit pass.
 _Avoid_: Render pass (that word belongs to the Vulkan object)
 
 **HUD**:
-The Rune status panel: the player or debug rows, the notice, the capture hint, and the `Close`/`Debug` action row. It is one Rune view, not an Odin draw pass.
+The Rune status panel: the player or debug rows, the notice, the capture hint, and the `Debug` action row. It is one Rune view, not an Odin draw pass.
 _Avoid_: UI, overlay draw
 
 **Settings menu**:
 The paused Rune view opened with `Esc`. It lists the active control set and changes
-the window mode, display, resolution, type weight, and sprint input mode. The harness opens
+the window mode, display, resolution, and sprint input mode. The harness opens
 it with the `menu` command and reports `settings.*` and `menu.*` in the state.
 _Avoid_: Options screen, pause menu
 
@@ -648,8 +648,8 @@ _Avoid_: Line, item, entry
 **Blocked row**:
 A settings row that cannot change in the current state. It stays selectable and
 keeps its selected surface and accent bar; only its value moves to secondary text.
-Display and Resolution can be blocked. The Type weight row is not blocked at an
-axis end, because one direction still moves.
+Display and Resolution can be blocked. A blocked row is not a disabled control:
+the row stays selectable and the reason sits in the settings note.
 _Avoid_: Disabled row, greyed row
 
 **Status note**:

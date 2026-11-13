@@ -154,7 +154,7 @@ editor_set_yaw :: proc(editor: ^Editor, sim: ^Simulation, degrees: f32) -> Edit_
 	if !ok {
 		return edit_fail(.No_Selection)
 	}
-	target := degrees - 360.0 * math.floor(degrees / 360.0)
+	target := yaw_degrees_normalized(degrees)
 	current := simulation_object_yaw(sim, object.id) * 180.0 / math.PI
 	delta := target - current
 	if delta > 180.0 {

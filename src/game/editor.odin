@@ -8,6 +8,7 @@ import b3 "libs:box3d"
 // The placement settings survive a cancel, so the next arm starts where the last
 // placement stopped.
 Placement_Defaults :: struct {
+	prefab:      Prefab_Id,
 	height:      f32,
 	yaw_degrees: f32,
 	snap:        bool,

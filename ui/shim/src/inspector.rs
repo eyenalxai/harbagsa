@@ -141,9 +141,10 @@ fn object_section(state: &UiState) -> El {
         "inspector.yaw",
         "Yaw",
         &inspector.yaw_text,
+        state.inspector_preview.yaw.is_none(),
         yaw_value,
         0.0,
-        360.0,
+        359.0,
         1.0,
         CONTENT_WIDTH,
         |state: &UiState| {
@@ -153,7 +154,7 @@ fn object_section(state: &UiState) -> El {
                 .unwrap_or(state.inspector.yaw_degrees)
         },
         |state: &mut UiState, next| {
-            state.inspector_preview.yaw = Some(normalize_yaw(next));
+            state.inspector_preview.yaw = Some(next);
         },
         |state: &mut UiState, next| {
             state.actions.push(UiAction {
@@ -184,7 +185,7 @@ fn object_section(state: &UiState) -> El {
         )
         .child(
             Button::new("Delete")
-                .variant(ButtonVariant::Danger)
+                .variant(ButtonVariant::Outline)
                 .control_size(ControlSize::Small)
                 .on_press(|state: &mut UiState| {
                     state.actions.push(UiAction {
@@ -214,28 +215,9 @@ fn placement_section(state: &UiState) -> El {
         .w_full()
         .gap(4.0)
         .child(section(kit, "Placement"))
-        .child(value_row(kit, "Prefab", &inspector.placement_prefab))
+        .child(value_row(kit, "Next prefab", &inspector.placement_prefab))
         .child(
-            row()
-                .w_full()
-                .child(
-                    text::styled(
-                        &format!("H {}", inspector.placement_height_text),
-                        kit.ty.mono,
-                    )
-                    .color(kit.c.text_muted),
-                )
-                .child(spacer())
-                .child(
-                    text::styled(
-                        &format!(
-                            "Yaw {} · Snap {}",
-                            inspector.placement_yaw_text, inspector.placement_snap_text
-                        ),
-                        kit.ty.mono,
-                    )
-                    .color(kit.c.text_muted),
-                ),
+            text::styled(&inspector.placement_text, kit.ty.mono).color(kit.c.text_muted),
         )
 }
 
@@ -304,6 +286,7 @@ fn lamp_section(state: &UiState) -> El {
         "inspector.intensity",
         "Intensity",
         &inspector.lamp_intensity_text,
+        state.inspector_preview.intensity.is_none(),
         intensity_value,
         0.2,
         4.0,
@@ -337,6 +320,7 @@ fn lamp_section(state: &UiState) -> El {
         "inspector.range",
         "Range",
         &inspector.lamp_range_text,
+        state.inspector_preview.range.is_none(),
         range_value,
         2.0,
         20.0,
@@ -383,6 +367,7 @@ fn debug_section(state: &UiState) -> El {
         "inspector.weight",
         "Type weight",
         &inspector.type_weight_text,
+        state.inspector_preview.weight.is_none(),
         weight_value,
         100.0,
         900.0,
@@ -439,10 +424,6 @@ fn debug_section(state: &UiState) -> El {
 
 fn close(state: &mut UiState) {
     state.actions.push(UiAction::new(ACTION_TOGGLE_INSPECTOR));
-}
-
-fn normalize_yaw(value: f32) -> f32 {
-    value - 360.0 * (value / 360.0).floor()
 }
 
 fn section(kit: &Kit, label: &str) -> El {
