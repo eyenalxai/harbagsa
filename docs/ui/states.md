@@ -51,8 +51,8 @@ not on the authored hex alone.
 
 `menu_change_setting` is the harness's direct path and returns `Change_Result`:
 
-- `Not_A_Setting`: the menu is closed, `Resume` is selected, or the direction is
-  zero.
+- `Not_A_Setting`: the settings dialog is closed, `Resume` is selected, or the
+  direction is zero.
 - `Changed`: the setting changed through `settings_set`.
 - `Blocked`: the value cannot change. The call sets `Menu_State.status`.
 
@@ -78,8 +78,9 @@ The shim returns a flat queue. The full vocabulary is `UI_Action_Kind` in
 
 | Kind | Action | Applied by |
 | --- | --- | --- |
-| 1 | `Close_Menu` | close the settings dialog when it is open |
+| 1 | `Close_Menu` | close the settings dialog when it is open; a closed dialog makes the action a no-op |
 | 5 | `Settings_Set` | `settings_set` with a setting id, an option index or boolean, and an opacity scalar |
+| 16 | `Open_Menu` | open the settings dialog from the status action row |
 
 A changed window mode, display, or resolution also calls
 `apply_window_settings`; the other actions do not touch the window.
@@ -91,8 +92,9 @@ click.
 ## Input
 
 The Settings dialog owns its keyboard path through Rune: Tab traps focus inside
-the modal, arrows step the focused control or slider, Enter or Space activates
-it, and Esc dismisses the open Select before the dialog. Esc opens Settings when
+the modal and reaches the switch and Resume, arrows step the focused control or
+slider, Enter or Space activates the control, and Esc dismisses the open Select
+before the dialog. Enter presses a focused button or switch like a web form. Esc opens Settings when
 nothing owns the keyboard. The pointer may click any control; every pointer
 action keeps a keyboard path. Drag and key repeat are part of the Slider, not a
 separate input mode.

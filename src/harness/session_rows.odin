@@ -17,8 +17,7 @@ Row_State :: struct {
 }
 
 Rows_State :: struct {
-	hud:  []Row_State `json:"hud"`,
-	menu: []Row_State `json:"menu"`,
+	hud: []Row_State `json:"hud"`,
 }
 
 // The rows are the layer the renderer draws, so a scenario can assert a label,
@@ -26,13 +25,11 @@ Rows_State :: struct {
 rows_state_build :: proc(hud: ^game.HUD_State, allocator: mem.Allocator) -> Rows_State {
 	return {
 		hud = rows_build(hud.view.rows, allocator),
-		menu = rows_build(hud.menu.view.rows, allocator),
 	}
 }
 
 rows_state_destroy :: proc(state: ^Rows_State, allocator: mem.Allocator) {
 	rows_destroy(state.hud, allocator)
-	rows_destroy(state.menu, allocator)
 	state^ = {}
 }
 

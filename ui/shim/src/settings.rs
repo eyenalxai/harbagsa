@@ -1,7 +1,7 @@
 use rune::{El, TextStyle, col, row, spacer};
 use rune_kit::{
-    Button, ButtonVariant, ControlSize, Dialog, Keybind, Kit, SegmentedControl, Select,
-    SelectAppearance, Switch,
+    Button, ButtonVariant, ControlSize, Dialog, Keybind, Kit, Menu, MenuItem, Placement,
+    SegmentedControl, Select, SelectAppearance, Switch,
 };
 
 use crate::abi::{
@@ -129,6 +129,7 @@ fn display_select(state: &UiState, layers: &mut Vec<El>) -> El {
         "Display",
         &state.settings.displays,
         current,
+        state.settings.display,
         SETTING_DISPLAY,
         state.settings.displays.len() <= 1,
         "No display",
@@ -151,6 +152,7 @@ fn resolution_select(state: &UiState, layers: &mut Vec<El>) -> El {
         "Resolution",
         &state.settings.resolutions,
         current,
+        state.settings.resolution,
         SETTING_RESOLUTION,
         disabled,
         "No modes",
@@ -166,37 +168,50 @@ fn select_control(
     label: &str,
     options: &[String],
     current: Option<&str>,
+    current_index: usize,
     id: u32,
     disabled: bool,
     empty: &str,
 ) -> El {
-    let names = options.to_vec();
+    let open = !disabled && state.settings_select == Some(kind);
     let mut select = Select::new(key, options)
         .appearance(SelectAppearance::Field)
         .width(CONTROL_WIDTH)
         .label(label)
         .current(current)
         .placeholder(empty)
-        .open(state.settings_select == Some(kind))
+        .open(open)
         .on_toggle(move |state: &mut UiState| {
             state.settings_select = if state.settings_select == Some(kind) {
                 None
             } else {
                 Some(kind)
             };
-        })
-        .on_close(|state: &mut UiState| state.settings_select = None)
-        .on_choose(move |state: &mut UiState, value, tx| {
-            if let Some(index) = names.iter().position(|name| name == value) {
-                push_setting(state, id, index as i32, 0.0);
-            }
-            state.settings_select = None;
-            tx.instant();
         });
     if disabled {
         select = select.disabled(true);
     }
-    select.build(&state.kit, layers)
+    // The kit Select reports the chosen label, not its index. A menu item keeps
+    // its own index, so duplicate or truncated display names still select the
+    // row the user pressed.
+    let mut items = Menu::new(format!("{key}-menu"))
+        .trigger(select.trigger(&state.kit))
+        .open(open)
+        .placement(Placement::BottomEnd)
+        .gutter(2.0)
+        .min_width(CONTROL_WIDTH)
+        .on_close(|state: &mut UiState| state.settings_select = None);
+    for (index, name) in options.iter().enumerate() {
+        items = items.item(
+            MenuItem::new(name.clone())
+                .checked(index == current_index)
+                .on_select(move |state: &mut UiState| {
+                    push_setting(state, id, index as i32, 0.0);
+                    state.settings_select = None;
+                }),
+        );
+    }
+    items.build(&state.kit, layers)
 }
 
 fn opacity(state: &UiState) -> El {

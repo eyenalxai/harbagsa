@@ -40,9 +40,7 @@ hud_state_update :: proc(
 	hud.capture_hint = HUD_CAPTURE_HINT
 	hud.view.notice = {text = hud_notice_text(hud)}
 	menu_view(&hud.menu, debug.active, delta_seconds)
-	if hud.menu.open {
-		hud.settings = settings_view(&sim.settings)
-	}
+	hud.settings = settings_view(&sim.settings)
 	if debug.active {
 		hud_debug_state_update(hud, sim, debug, bake)
 	} else {

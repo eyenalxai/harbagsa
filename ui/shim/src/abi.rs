@@ -25,6 +25,7 @@ pub const ACTION_LAMP_SET: u32 = 12;
 pub const ACTION_LAMP_KIND: u32 = 13;
 pub const ACTION_LAMP_COLOR: u32 = 14;
 pub const ACTION_TOGGLE_INSPECTOR: u32 = 15;
+pub const ACTION_OPEN_MENU: u32 = 16;
 
 pub const SETTING_WINDOW_MODE: u32 = 0;
 pub const SETTING_DISPLAY: u32 = 1;

@@ -176,17 +176,16 @@ pub fn frame(
     }
     runtime.state.menu.open = runtime.state.menu_open;
     if let Some(settings) = unsafe { abi::settings_state(settings) } {
-        let opacity = if settings.hud_opacity > 0.0 {
-            settings.hud_opacity.clamp(HUD_OPACITY_MIN, HUD_OPACITY_MAX)
-        } else {
-            HUD_OPACITY_DEFAULT
-        };
         runtime.state.settings = settings;
-        runtime.state.settings.hud_opacity = opacity;
+        runtime.state.settings.hud_opacity = runtime
+            .state
+            .settings
+            .hud_opacity
+            .clamp(HUD_OPACITY_MIN, HUD_OPACITY_MAX);
         if runtime
             .state
             .opacity_preview
-            .is_some_and(|preview| (preview - opacity).abs() < 0.0005)
+            .is_some_and(|preview| (preview - runtime.state.settings.hud_opacity).abs() < 0.0005)
         {
             runtime.state.opacity_preview = None;
         }

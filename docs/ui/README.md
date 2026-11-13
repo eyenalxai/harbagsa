@@ -6,8 +6,8 @@ swapchain or offscreen image. Odin owns the simulation and the flat data the
 view reads. There is no second UI renderer in Odin.
 
 The view is a technical readout: a status panel in the top-left, a bottom action
-row with `Debug` and a demo `Close`, a settings dialog over a scrim, and the
-object palette as a Rune list. A notice and the capture hint sit above the
+row with `Settings` and `Debug`, a settings dialog over a scrim, and the object
+palette as a Rune list. A notice and the capture hint sit above the
 action row. Rune kit motion follows the reduce-motion setting. The optional
 rune-fx glow is a demo and is off by default.
 
@@ -26,8 +26,8 @@ after the scene is submitted. The shim draws onto the same target image, so a
 capture includes the UI. When the frame's `hud` flag is false, `HUD_Frame.enabled`
 is false: `ui_step` does not rebuild the view and the frame protocol does not
 call `ui_draw`, so a `hud:false` capture has no overlay. The game applies the
-action queue after the draw: `Close_Menu`, `Toggle_Debug`, `Settings_Set`, and
-`Palette_Select`.
+action queue after the draw: `Open_Menu`, `Close_Menu`, `Toggle_Debug`,
+`Settings_Set`, and `Palette_Select`.
 
 ## Snapshot
 

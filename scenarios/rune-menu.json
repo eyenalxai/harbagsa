@@ -1,5 +1,5 @@
 {
-  "note": "Settings is a Rune kit dialog. The HUD stays at 94%, then at 70% with tertiary text promoted to secondary.",
+  "note": "Settings is a Rune kit dialog. The HUD stays at 94%, then at 70% with tertiary text promoted to secondary. The dialog proves a track click, the shared settings step path, reduce motion, Resume, and the close control.",
   "size": "1280x720",
   "view": {"hud": true, "debug": false, "hint": false},
   "commands": [
@@ -13,6 +13,25 @@
     {"cmd": "capture", "name": "settings-70", "format": "png"},
     {"cmd": "menu", "open": false},
     {"cmd": "settle", "frames": 30},
-    {"cmd": "capture", "name": "hud-70", "format": "png"}
+    {"cmd": "capture", "name": "hud-70", "format": "png"},
+    {"cmd": "menu", "open": true},
+    {"cmd": "settle", "frames": 30},
+    {"cmd": "ui", "key": "settings.opacity"},
+    {"cmd": "settle", "frames": 2},
+    {"cmd": "capture", "name": "settings-track-click", "format": "png"},
+    {"cmd": "menu", "item": "HUD opacity", "activate": true, "direction": 1},
+    {"cmd": "settle", "frames": 2},
+    {"cmd": "capture", "name": "settings-key-step", "format": "png"},
+    {"cmd": "menu", "reduce_motion": true},
+    {"cmd": "settle", "frames": 2},
+    {"cmd": "capture", "name": "settings-reduce-motion", "format": "png"},
+    {"cmd": "ui", "key": "settings.resume"},
+    {"cmd": "settle", "frames": 30},
+    {"cmd": "capture", "name": "hud-resumed", "format": "png"},
+    {"cmd": "menu", "open": true},
+    {"cmd": "settle", "frames": 30},
+    {"cmd": "ui", "key": "close"},
+    {"cmd": "settle", "frames": 30},
+    {"cmd": "capture", "name": "hud-closed", "format": "png"}
   ]
 }

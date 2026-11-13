@@ -2,7 +2,7 @@ use rune::{Cx, Color, El, col, effect, el, row, spacer};
 use rune_kit::Kit;
 
 use crate::abi::{
-    ACTION_CLOSE_MENU, ACTION_PALETTE_CLOSE, ACTION_PALETTE_SELECT, ACTION_TOGGLE_DEBUG, UiAction,
+    ACTION_OPEN_MENU, ACTION_PALETTE_CLOSE, ACTION_PALETTE_SELECT, ACTION_TOGGLE_DEBUG, UiAction,
 };
 use crate::components;
 use crate::settings;
@@ -15,6 +15,9 @@ const MENU_WIDTH: f32 = 430.0;
 
 pub fn view(state: &UiState, cx: &mut Cx<UiState>) -> El {
     cx.reduced_motion(state.settings.reduce_motion);
+    // Return presses a focused Button and Switch as a web form does; Space
+    // already presses any focused control.
+    cx.web_focus();
     let mut overlays = Vec::new();
     let base = if state.palette.open {
         palette_view(state)
@@ -92,10 +95,10 @@ fn hud_view(state: &UiState) -> El {
         text::weighted(&state.panel.notice, state.weight, false).color(kit.c.text_base)
     };
 
-    let close = button(kit, "Close", state.weight, true)
-        .key("action:1")
+    let settings = button(kit, "Settings", state.weight, true)
+        .key("action:settings")
         .on_press(|state: &mut UiState| {
-            state.actions.push(UiAction::new(ACTION_CLOSE_MENU));
+            state.actions.push(UiAction::new(ACTION_OPEN_MENU));
         });
     let debug = button(kit, "Debug", state.weight, false)
         .key("action:2")
@@ -122,7 +125,7 @@ fn hud_view(state: &UiState) -> El {
                 if state.fx {
                     actions = actions.child(glow.absolute(0.0, 0.0).w_full().h_full());
                 }
-                actions.child(close).child(debug)
+                actions.child(settings).child(debug)
             }),
     );
     root

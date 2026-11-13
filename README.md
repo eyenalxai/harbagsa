@@ -58,8 +58,8 @@ rules.
 ## Controls
 
 - `WASD`: move relative to the camera. The spider turns toward the movement.
-- Mouse: orbit the camera. The cursor is captured unless the settings menu or the object palette is open.
-- `Left Shift`: sprint. The settings menu switches Hold and Toggle.
+- Mouse: orbit the camera. The cursor is captured unless the settings dialog or the object palette is open.
+- `Left Shift`: sprint. The settings dialog switches Hold and Toggle.
 - `Space`: jump.
 - `R`: return the player to spawn.
 - `Shift+R`: reset placed objects and the player.
@@ -67,7 +67,7 @@ rules.
 - `F2`: toggle debug mode.
 - `F3`: toggle temporal anti-aliasing (TAA).
 - `F5`: write a repro scenario to `runs/repro/`.
-- `Esc`: open or close the settings menu.
+- `Esc`: open or close the settings dialog.
 
 Movement follows the walkable ground plane. A straight climb keeps the gait
 speed along the slope, so horizontal speed drops by the slope cosine. The camera
@@ -79,18 +79,16 @@ A planted foot stays in the world; a leg swings to a new ground point when its
 foot drifts past the step trigger. Even legs and odd legs step in turns, and
 the eight feet tuck under the body in the air.
 
-### Settings menu
+### Settings dialog
 
-The menu pauses the simulation and releases the cursor. It changes window mode,
-display, resolution, type weight, and the sprint input mode.
-`Up` and `Down` select a row. `Left`, `Right`, and `Enter` change it. `Resume`
-closes the menu. The menu is keyboard-driven. `Debug` in the status action row
-toggles debug mode; `Close` returns `Close_Menu`, but the game ignores it while
-the menu is closed. The Type weight setting applies to every Rune text node: the
-status panel, the menu, and the palette. The shim embeds Geist Variable and Geist
-Mono Variable from `ui/shim/assets/`; the weight axis is continuous from 100 to
-900, so 565 works. A weight of 400 is the old default; 900 is the heaviest.
-Numeric values draw in Geist Mono.
+`Esc` opens the Settings dialog and releases the cursor; it pauses the
+simulation. The dialog groups Display, Interface, and Controls. Window mode and
+Sprint mode are segmented controls. Display and Resolution are selects over the
+launch-time display list. HUD opacity runs from 70 to 100 percent in one-point
+steps and promotes tertiary HUD text to secondary below 94 percent. Reduce motion
+stops kit transitions. `Esc`, the header close control, and `Resume` close the
+dialog. The `Settings` button in the status action row opens it; `Debug` toggles
+debug mode. Type weight is a debug control and is not part of Settings.
 
 Window mode is Borderless or Windowed. Borderless uses the selected display's
 desktop size. Windowed uses the chosen resolution and a normal title bar. The
@@ -203,7 +201,7 @@ degrees and ends in `_deg`. Positions and ranges are metres. One `step` or
 - `view`: set the HUD, debug draw, capture hint, and opt-in rune-fx flags.
 - `debug_mode`: enter or leave debug mode.
 - `editor`: drive the palette, placement, object edits, light settings, and history. `state.editor` reports the active tool, the resolved selection, the placement, the history, and the light budget.
-- `menu`: drive the settings menu.
+- `menu`: drive the settings dialog and its values.
 - `ui`: click a Rune element by `key`, or the view at `x` and `y` in points.
 - `record`: start or stop a recording.
 - `replay`: reset and run a recorded scenario.
@@ -211,7 +209,7 @@ degrees and ends in `_deg`. Positions and ranges are metres. One `step` or
 - `perf`: measure frames and optional traces.
 - `renderer_debug`: change gated renderer inputs. A field set to `null` resets it.
 - `displays`: replace or clear the scripted display list.
-- `rows`: dump HUD and menu rows.
+- `rows`: dump HUD rows.
 - `scene`: apply exact camera, objects, settings, view, displays, and renderer debug blocks.
 - `place`: create one object without entering debug mode.
 - `remove`: delete one object by id or name.

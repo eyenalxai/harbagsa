@@ -72,6 +72,7 @@ fn key_from_code(code: i32) -> Option<Key> {
         5 => Key::Enter,
         6 => Key::Escape,
         7 => Key::Tab,
+        8 => Key::Text(" ".into()),
         _ => return None,
     })
 }

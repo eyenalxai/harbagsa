@@ -108,8 +108,9 @@ Rules:
 - Capture frame numbers are zero-based. A past frame is an error; a future frame
   queues.
 - `settle` renders without writing a capture. Under `--no-render` it is a plain
-  step while the menu is closed. While the menu is open the simulation is paused,
-  so it draws the dialog frames without stepping.
+  step while the menu is closed. While the menu is open the simulation is paused;
+  with a renderer it draws the dialog frames without stepping, and under
+  `--no-render` it has no frames to draw and does nothing.
 - `size` pins the extent. A scenario `size` and `--size` together are an error.
 - `extends` merges a base scenario and lets the child win.
 - `parameters` substitutes `${name}` in command values. `--param` overrides it;
@@ -153,7 +154,7 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
   `baseline`, `discard`, and optional `trace`.
 - `renderer_debug`: gated fields or `clear`. A field set to `null` resets it.
 - `displays`: `set` a scripted list or `clear` it.
-- `rows`: HUD and menu rows.
+- `rows`: HUD rows.
 - `scene`: exact `camera`, `objects`, `settings`, `view`, `displays`, and
   `renderer_debug` blocks. Every block is optional; at least one is required.
   Object ids must be nonzero and unique. A scene that breaks either rule is
@@ -169,7 +170,7 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 
 Unknown keys, wrong types, and out-of-range values are command errors. A live
 session remains usable. `step` is an error while the menu is open; `settle`
-renders the paused dialog without stepping.
+renders the paused dialog without stepping when a renderer is attached.
 
 A `shot` is scenario-only shorthand. It expands to an optional camera, a settle,
 and one capture. It is not a live-session command.
@@ -193,9 +194,10 @@ and `ui_draw` is not called, so the capture has no overlay.
 Pointer, wheel, key-down, key-up, key-repeat, and focus events reach Rune in one
 batch per frame. A harness click uses the same Rune hit path as a live click.
 `scenarios/rune-palette.json` opens the palette and selects a row by key.
-`scenarios/rune-menu.json` opens the settings dialog and sets HUD opacity.
-`scenarios/rune-menu-800.json` repeats it at 800x600.
-`scenarios/rune-ui.json` activates the status panel action by key.
+`scenarios/rune-menu.json` opens the settings dialog, track-clicks HUD opacity,
+steps it through the shared settings path, toggles reduce motion, and closes with
+both Resume and the header control. `scenarios/rune-menu-800.json` repeats it at
+800x600. `scenarios/rune-ui.json` opens Settings from the status action row.
 `scenarios/rune-fx.json` sets `view.fx` and shows the status action row with its
 rune-fx glow.
 

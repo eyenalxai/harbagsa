@@ -17,10 +17,9 @@ The row kinds map to Rune elements:
 - `Setting`, `Action`, `Metric`, `Detail`, `Slider`: a label row with a spacer and
   a value. A slider also draws the track.
 
-The action row has two buttons: `Debug` returns `Toggle_Debug` and toggles debug
-mode. `Close` returns `Close_Menu`, but the status view is shown only while the
-settings dialog is closed, so the game ignores it there. The dialog closes with
-`Esc`, its close control, or `Resume`.
+The action row has two buttons: `Settings` returns `Open_Menu` and opens the
+dialog, and `Debug` returns `Toggle_Debug` and toggles debug mode. The dialog
+closes with `Esc`, its close control, or `Resume`.
 
 Incorrect: measuring a row in Odin and sizing a rectangle from it. Rune measures
 the text.
@@ -30,14 +29,17 @@ the text.
 Use for a paused decision. Settings is a `rune-kit::Dialog` over a scrim. The
 dialog width is 520 points and the body holds three sections: Display,
 Interface, and Controls. Window mode and Sprint mode are `SegmentedControl`s;
-Display and Resolution are field `Select`s; HUD opacity is the local Slider;
+Display and Resolution use the kit Select field over a menu list whose items keep
+their own indices, so duplicate or truncated names still choose the right row;
+HUD opacity is the local Slider;
 Reduce motion is a `Switch`; Resume is a footer `Button`. `Esc`, the header close
 control, and Resume dismiss it.
 
-The HUD opacity Slider runs from 70 to 100 percent in one-point steps. It drags
-from the thumb, jumps on a track press, steps with Left and Right, repeats while
-held, and restores the pre-drag value when Esc cancels the drag. Its value draws
-in Geist Mono. Below 94 percent the status HUD's tertiary text promotes to
+The HUD opacity Slider runs from 70 to 100 percent in one-point steps. Only the
+track is the hit area: it drags from the thumb, jumps on a track press, steps
+with Left and Right, repeats while held, and restores the pre-drag value when Esc
+cancels the drag. The label and percentage row never changes the value. Its value
+draws in Geist Mono. Below 94 percent the status HUD's tertiary text promotes to
 secondary, keeping the text floor on the translucent surface.
 
 The dialog owns its keyboard path: Rune traps focus, draws the focus ring, and
@@ -80,7 +82,7 @@ Incorrect: centring it over the spider. It sits on the bottom margin.
 
 ## Rune fx demo
 
-`view.fx` asks the shim to put a rune-fx glow over the `Close`/`Debug` action row.
+`view.fx` asks the shim to put a rune-fx glow over the `Settings`/`Debug` action row.
 It is a demonstration of the effect layer, not a notification and not a state
 signal. It is off by default and no scenario may assume it. The glow uses
 `#7C5CFF` with a `#F4F0FF` core and a 12 point radius.

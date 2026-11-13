@@ -19,6 +19,7 @@ UI_Action_Kind :: enum(u32) {
 	Lamp_Kind        = 13,
 	Lamp_Color       = 14,
 	Toggle_Inspector = 15,
+	Open_Menu         = 16,
 }
 
 UI_Settings_Id :: enum(u32) {
@@ -60,6 +61,7 @@ UI_KEY_RIGHT :: i32(4)
 UI_KEY_ENTER :: i32(5)
 UI_KEY_ESCAPE :: i32(6)
 UI_KEY_TAB :: i32(7)
+UI_KEY_SPACE :: i32(8)
 
 // One Rune input event. Pointer coordinates are normalized to the target and
 // converted to points in ui_step; key and focus events ignore them.

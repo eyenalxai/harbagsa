@@ -3,8 +3,8 @@ package harness
 
 import "src:renderer"
 
-// Settle renders every step without writing a screenshot, so a scenario can
-// reach a steady temporal state before it starts capturing.
+// Settle reaches a steady render state without writing a screenshot, so a
+// scenario can capture after kit motion lands.
 session_settle :: proc(session: ^Session, command: Settle_Command) -> string {
 	if command.converged {
 		return session_settle_converged(session)
@@ -16,6 +16,10 @@ session_settle :: proc(session: ^Session, command: Settle_Command) -> string {
 	// A dialog owns the accumulator while it is open, but its kit motion still
 	// needs render frames. Step is rejected there, so draw the settle instead.
 	if session.runtime.hud.menu.open {
+		if session.render.backend == nil || !session.render.backend.ready {
+			session.settle.frames = 0
+			return ""
+		}
 		for _ in 0 ..< command.frames {
 			if draw_error := session_draw_group(session, nil); draw_error != "" {
 				return draw_error
