@@ -19,7 +19,8 @@ right-aligned value. The value is the string the game already formatted, so a
 number does not change the shape of the panel.
 
 `ui.Row.numeric` reaches the shim as `flags` bit 0. The value of a numeric row
-draws in Geist Mono; its label stays in Geist. The palette rows are not numeric.
+draws in Geist Mono; its label stays in Geist. The palette cards are not
+numeric.
 
 ## The settings dialog
 

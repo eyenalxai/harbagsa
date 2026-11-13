@@ -16,7 +16,7 @@ the result. The world palette is separate and stays linear.
 | Primary text | `#EDF2F7` | values, title, selected label |
 | Secondary text | `#A6B2BF` | labels, blocked values |
 | Tertiary text | `#808C99` | notes, headers, key hints |
-| Accent | `#E6B03B` | selected-row bar, filled slider track, primary action |
+| Accent | `#E6B03B` | selection bar, filled slider track, primary action |
 | Hairline | `#59616B` at 25% | menu separator |
 | Slider track | white at 20% | the unfilled slider track |
 | Scrim | black at 62% | behind the settings dialog and palette |
@@ -46,16 +46,16 @@ reference only.
 
 The floor is 4.5:1 for text and 3:1 for a non-text element such as the accent
 bar. Tertiary text is not allowed to become the label or value of a selectable
-row; selection must move it to secondary or primary. The HUD promotes tertiary
-text to secondary below 94% opacity, and the floor is checked on the capture
-because the surface is translucent.
+row or card; selection must move it to secondary or primary. The HUD promotes
+tertiary text to secondary below 94% opacity, and the floor is checked on the
+capture because the surface is translucent.
 
 ## Choosing a colour
 
 - A value, a title, or a selected label: primary.
 - A label or a blocked value: secondary.
 - A note, a header, or a key hint: tertiary.
-- The selected-row bar, the filled slider track, and the primary action: accent.
+- The selection bar, the filled slider track, and the primary action: accent.
 - A separator: hairline. A slider track: the white 20% token.
 - A kit surface: the matching `Kit` token. The status panel: `hud_surface()`.
 

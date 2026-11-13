@@ -19,9 +19,9 @@ Every row carries `flags bit 0 = numeric` and `flags bit 1 = blocked`.
 
 ## Selection
 
-Selection takes two signals: the row lifts to the raised surface, and a 2 point
-accent bar fills its leading edge. The label becomes primary; the value keeps its
-own colour. Neither signal alone is selection.
+Selection takes two signals: the row or palette card lifts to the raised
+surface, and a 2 point accent bar fills its leading edge. The label becomes
+primary; the value keeps its own colour. Neither signal alone is selection.
 
 Only `Setting` and `Action` rows are selectable. `Header`, `Divider`, `Metric`,
 and `Detail` never take the band.
@@ -81,7 +81,10 @@ The shim returns a flat queue. The full vocabulary is `UI_Action_Kind` in
 | Kind | Action | Applied by |
 | --- | --- | --- |
 | 1 | `Close_Menu` | close the settings dialog when it is open; the status row's `Close` is a handled no-op while it is closed |
+| 2 | `Toggle_Debug` | toggle the debug camera |
+| 3 | `Palette_Select` | select and preview the palette item at `value` |
 | 5 | `Settings_Set` | `settings_set` with a setting id, an option index or boolean, and an opacity scalar |
+| 7 | `Palette_Pick` | arm the placement from the selected palette item |
 
 A changed window mode, display, or resolution also calls
 `apply_window_settings`; the other actions do not touch the window.
@@ -96,7 +99,7 @@ The Settings dialog owns its keyboard path through Rune: Tab traps focus inside
 the modal and reaches the switch and Resume, arrows step the focused control or
 slider, Enter or Space activates the control, and Esc dismisses the open Select
 before the dialog. Enter presses a focused button or switch like a web form. Esc
-opens Settings when nothing owns the keyboard. The pointer may click any dialog
-control while the cursor is free; while it is captured, the pointer belongs to
-the camera. Drag and key repeat are part of the Slider, not a separate input
-mode.
+opens Settings when nothing owns the keyboard. The pointer may click a palette
+card, the Place button, or any dialog control while the cursor is free; while it
+is captured, the pointer belongs to the camera. Drag and key repeat are part of
+the Slider, not a separate input mode.

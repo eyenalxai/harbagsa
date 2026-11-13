@@ -1,13 +1,18 @@
 {
-  "note": "The palette draws as a Rune list; selecting a row applies the editor selection.",
-  "size": "1280x720",
+  "note": "The palette grid previews card 5; Place arms its placement and the primary press places it.",
   "view": {"hud": true, "debug": false, "hint": false},
   "commands": [
     {"cmd": "debug_mode", "active": true},
     {"cmd": "editor", "open": true},
     {"cmd": "settle", "frames": 1},
     {"cmd": "ui", "key": "palette:4"},
-    {"cmd": "state"},
-    {"cmd": "capture", "name": "palette", "format": "png"}
+    {"cmd": "settle", "frames": 1},
+    {"cmd": "capture", "name": "palette-selected", "format": "png"},
+    {"cmd": "ui", "key": "palette:place"},
+    {"cmd": "settle", "frames": 1},
+    {"cmd": "capture", "name": "palette-armed", "format": "png"},
+    {"cmd": "editor", "primary": true},
+    {"cmd": "settle", "frames": 1},
+    {"cmd": "capture", "name": "palette-placed", "format": "png"}
   ]
 }

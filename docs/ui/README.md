@@ -7,7 +7,7 @@ view reads. There is no second UI renderer in Odin.
 
 The view is a technical readout: a status panel in the top-left, a bottom action
 row with `Close` and `Debug`, a settings dialog over a scrim, and the object
-palette as a Rune list. A notice and the capture hint sit above the
+palette as a grid over a scrim. A notice and the capture hint sit above the
 action row. Rune kit motion follows the reduce-motion setting. The optional
 rune-fx glow is a demo and is off by default.
 
@@ -26,8 +26,8 @@ after the scene is submitted. The shim draws onto the same target image, so a
 capture includes the UI. When the frame's `hud` flag is false, `HUD_Frame.enabled`
 is false: `ui_step` does not rebuild the view and the frame protocol does not
 call `ui_draw`, so a `hud:false` capture has no overlay. The game applies the
-action queue after the draw: `Close_Menu`, `Toggle_Debug`, `Settings_Set`, and
-`Palette_Select`.
+action queue after the draw: `Close_Menu`, `Toggle_Debug`, `Palette_Select`,
+`Palette_Pick`, and `Settings_Set`.
 
 ## Snapshot
 
@@ -72,11 +72,17 @@ The shim draws every 2D pixel.
 
 ## The object palette
 
-The debug object palette is a Rune list, not a bottom dock. The shim turns each
-`ui.Palette` item into a row with the short name and the full name, marks the
-selected row, and shows the body note and the key hints below it. Clicking a row
-returns `Palette_Select` with the row index. The preview is text, not an
-isometric drawing.
+The debug object palette is a 640-point dialog over the scrim: a 3×4 grid of
+120×92 cards on the left and a 220-point preview on the right. Each card shows
+the prefab colour, short name, full name, and key badge. The selected card lifts
+to the raised surface with a 2-point accent bar; hover adds a fill overlay, and
+focus adds a 2-point ring.
+
+Clicking a card returns `Palette_Select` with the item index and previews it.
+`Place` or `Enter` returns `Palette_Pick`; the game arms the placement with the
+selected prefab, body, and light. The preview shows the prefab colour,
+dimensions, body, light line, and an isometric box drawn from the half extents.
+All eleven prefabs fit in the grid at 1280×720 and 800×600.
 
 ## The debug inspector
 

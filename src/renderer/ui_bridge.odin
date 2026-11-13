@@ -258,7 +258,7 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 	}
 	palette_source := frame.palette
 	palette_items: [12]Ui_Palette_Item
-	palette_item_count := min(len(palette_source.items), len(palette_items))
+	palette_item_count := min(palette_source.item_count, len(palette_items))
 	for &item, index in palette_source.items[:palette_item_count] {
 		palette_items[index] = {
 			name           = raw_data(item.name),
@@ -278,7 +278,7 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 		}
 	}
 	palette_hints: [8]Ui_Hint
-	palette_hint_count := min(len(palette_source.hints), len(palette_hints))
+	palette_hint_count := min(palette_source.hint_count, len(palette_hints))
 	for hint, index in palette_source.hints[:palette_hint_count] {
 		palette_hints[index] = {
 			keys       = raw_data(hint.keys),

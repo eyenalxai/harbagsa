@@ -2,7 +2,8 @@
 
 Six surfaces live in one Rune view. Each exists for a reason; if a new one is not
 one of these, read [README.md](README.md#adding-a-surface) first. The view is
-built in `ui/shim/src`; the data is in `src/ui/ui.odin`.
+built in `ui/shim/src/views.rs`, the palette grid and preview in
+`ui/shim/src/palette.rs`, and the data is in `src/ui/ui.odin`.
 
 ## Status panel
 
@@ -59,16 +60,20 @@ resolution goes through `apply_window_settings`.
 
 ## Object palette
 
-Use only in debug mode. The shim turns every `ui.Palette` item into a row with
-the short name as the label and the full name as the value, marks the selected
-row, and puts the body note and hints below. The panel is the same menu panel.
+Use only in debug mode. The shim builds a 640-point dialog with a 3×4 grid of
+120×92 cards and a 220-point preview beside it. Each card draws the prefab colour
+chip, short name, full name, and key badge. The selected card lifts to the raised
+surface with a 2-point accent bar, hover adds a fill overlay, and focus adds a
+2-point accent ring. The Place button sits in the footer with the key hints.
 
-A click on a row returns `Palette_Select` with the row index. The game arms the
-placement from that index. The palette is a list, not a grid and not an
-isometric preview.
+A click on a card returns `Palette_Select` with the item index and updates the
+preview; it does not arm the placement. The Place button, or Enter on the game
+keyboard path, returns `Palette_Pick`; the game arms the placement from the
+selected prefab. The preview shows the colour, dimensions, body, light line, and
+an isometric box built from the half extents.
 
-Incorrect: adding a card thumbnail in Odin. The shim owns the view and the
-palette carries text only.
+Incorrect: drawing the card or preview in Odin. The shim owns the view; the
+palette carries the half extents, body, light line, colour, and key it reads.
 
 ## Notice
 

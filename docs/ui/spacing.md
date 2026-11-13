@@ -56,9 +56,17 @@ lifts to the raised surface; it does not get a border.
 
 ## Object palette
 
-The palette reuses the menu panel with the same 430 point width, padding, and
-gap. Each item is a row. The selected row uses the same raised surface and accent
-bar. The body note and hints sit below the list.
+- Width 640 points, centred on the target.
+- Panel padding 16, gap 12.
+- Grid 3 columns × 4 rows; card 120×92, gap 8.
+- Preview 220 points wide, the height of the grid.
+- Footer holds the key hints and the `Place` button.
+
+The selected card uses the raised surface and a 2-point accent bar. Hover uses
+the fill overlay; focus uses the 2-point focus ring. The grid is 376
+points wide and the preview adds 220 with a 12-point gap, so the inner width is
+608 and the panel is 640 with its padding. At 800×600 the panel is 640×517 with
+80 points of horizontal margin and 41 points above and below.
 
 ## Surfaces
 
@@ -67,11 +75,12 @@ bar. The body note and hints sit below the list.
 | Status panel | status surface, 70-100% | none |
 | Settings dialog | dialog surface over the scrim | kit elevation |
 | Palette | menu surface over the scrim | 1 point hairline separator |
-| Selected row | raised surface | 2 point accent bar on the leading edge |
+| Selected row or card | raised surface | 2 point accent bar on the leading edge |
 | Notice and capture hint | no box of their own | text on the action column |
 
 Kit surfaces use the kit radius, elevation, and motion; the status panel keeps
-its square translucent fill. Motion follows the reduce-motion setting.
+its square translucent fill. The palette and cards use the kit radius and no
+gradient. Motion follows the reduce-motion setting.
 
 ## Bans
 

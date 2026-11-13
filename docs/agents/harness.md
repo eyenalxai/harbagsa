@@ -197,11 +197,13 @@ and `ui_draw` is not called, so the capture has no overlay.
 
 Pointer, wheel, key-down, key-up, key-repeat, and focus events reach Rune in one
 batch per frame. A harness click uses the same Rune hit path as a live click.
-`scenarios/rune-palette.json` opens the palette and selects a row by key.
-`scenarios/rune-menu.json` opens the settings dialog, track-clicks HUD opacity,
-steps it through the shared settings path, toggles reduce motion, and closes with
-both Resume and the header control. `scenarios/rune-menu-800.json` repeats it at
-800x600. `scenarios/rune-ui.json` activates the status panel Close action by key.
+`scenarios/rune-palette.json` opens the palette, selects a card by key, arms it
+through the Place button, and places its prefab. `scenarios/rune-palette-800.json`
+repeats it at 800x600. `scenarios/rune-menu.json` opens the settings dialog,
+track-clicks HUD opacity, steps it through the shared settings path, toggles
+reduce motion, and closes with both Resume and the header control.
+`scenarios/rune-menu-800.json` repeats it at 800x600. `scenarios/rune-ui.json`
+activates the status panel Close action by key.
 `scenarios/rune-fx.json` sets `view.fx` and shows the status action row with its
 rune-fx glow.
 
