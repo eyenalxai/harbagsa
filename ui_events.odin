@@ -98,6 +98,8 @@ ui_key_code :: proc(key: platform.Key) -> i32 {
 		return renderer.UI_KEY_ESCAPE
 	case .Tab:
 		return renderer.UI_KEY_TAB
+	case .Space:
+		return renderer.UI_KEY_SPACE
 	}
 	return renderer.UI_KEY_NONE
 }

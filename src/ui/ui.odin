@@ -6,14 +6,24 @@ TYPE_WEIGHT_MIN :: f32(100)
 TYPE_WEIGHT_MAX :: f32(900)
 TYPE_WEIGHT_DEFAULT :: f32(400)
 
+HUD_OPACITY_MIN :: f32(0.70)
+HUD_OPACITY_MAX :: f32(1.00)
+HUD_OPACITY_DEFAULT :: f32(0.94)
+// Below this the tertiary ink no longer holds the text floor on the HUD.
+HUD_OPACITY_PROMOTE :: f32(0.94)
+
+SETTINGS_MAX_DISPLAYS :: 8
+SETTINGS_MAX_MODES :: 64
+SETTINGS_OPTION_BYTES :: 32
+SETTINGS_HINT_COUNT :: 6
+
 Row_Kind :: enum {
 	Setting,
 	Action,
 	Metric,
 	Detail,
-	Slider,
-	Divider,
-	Header,
+	Divider = 5,
+	Header  = 6,
 }
 
 Row_Align :: enum {
@@ -27,8 +37,6 @@ Row :: struct {
 	value:   string,
 	numeric: bool,
 	blocked: bool,
-	ratio:   f32,
-	ticks:   int,
 }
 
 Hint_Cell :: struct {
@@ -37,12 +45,33 @@ Hint_Cell :: struct {
 }
 
 Menu :: struct {
-	title:    string,
-	rows:     []Row,
-	selected: int,
-	hints:        []Hint_Cell,
-	hint_columns: int,
-	note:         string,
+	title: string,
+	hints: []Hint_Cell,
+	note:  string,
+}
+
+Settings_Option :: struct {
+	text:   [SETTINGS_OPTION_BYTES]u8,
+	length: int,
+}
+
+// The settings dialog's values and option names. The menu snapshot carries its
+// title, description, and hints; this carries the controls.
+Settings :: struct {
+	window_modes:     [2]Settings_Option,
+	window_mode:      int,
+	display_names:    [SETTINGS_MAX_DISPLAYS]Settings_Option,
+	display:          int,
+	display_count:    int,
+	resolution_names:   [SETTINGS_MAX_MODES]Settings_Option,
+	resolution:         int,
+	resolution_count:   int,
+	resolution_current: Settings_Option,
+	resolution_missing: bool,
+	sprint_modes:       [2]Settings_Option,
+	sprint_mode:      int,
+	hud_opacity:      f32,
+	reduce_motion:    bool,
 }
 
 PALETTE_MAX_ITEMS :: 12

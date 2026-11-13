@@ -14,7 +14,7 @@ foreign ui_lib {
 	ui_vk_init :: proc(config: ^Ui_Vk_Config, out: ^Ui_Vk_Device) -> i32 ---
 	ui_attach :: proc(target: ^Ui_Target) -> i32 ---
 	ui_draw :: proc(image_index: u32) -> i32 ---
-	ui_frame :: proc(dt: f64, snapshot: ^Ui_Snapshot, panel: ^Ui_Panel, menu: ^Ui_Menu, palette: ^Ui_Palette, events: [^]Ui_Event, count: u32) -> i32 ---
+	ui_frame :: proc(dt: f64, snapshot: ^Ui_Snapshot, panel: ^Ui_Panel, menu: ^Ui_Menu, settings: ^Ui_Settings, palette: ^Ui_Palette, events: [^]Ui_Event, count: u32) -> i32 ---
 	ui_click_point :: proc(x, y: f32) -> i32 ---
 	ui_click_element :: proc(pointer: [^]u8, len: u32) -> i32 ---
 	ui_actions :: proc(count: ^u32) -> [^]Ui_Action ---
@@ -59,8 +59,6 @@ Ui_Row :: struct {
 	label_len: u32,
 	value:     [^]u8,
 	value_len: u32,
-	ratio:     f32,
-	ticks:     u32,
 }
 
 Ui_Hint :: struct {
@@ -71,17 +69,37 @@ Ui_Hint :: struct {
 }
 
 Ui_Menu :: struct {
-	open:         u32,
-	title:        [^]u8,
-	title_len:    u32,
-	rows:         [^]Ui_Row,
-	row_count:    u32,
-	selected:     u32,
-	note:         [^]u8,
-	note_len:     u32,
-	hints:        [^]Ui_Hint,
-	hint_count:   u32,
-	hint_columns: u32,
+	open:       u32,
+	title:      [^]u8,
+	title_len:  u32,
+	note:       [^]u8,
+	note_len:   u32,
+	hints:      [^]Ui_Hint,
+	hint_count: u32,
+}
+
+Ui_Option :: struct {
+	text:   [^]u8,
+	length: u32,
+}
+
+Ui_Settings :: struct {
+	window_mode:       u32,
+	display:           u32,
+	resolution:        i32,
+	sprint_mode:       u32,
+	hud_opacity:       f32,
+	reduce_motion:     u32,
+	window_modes:      [^]Ui_Option,
+	window_mode_count: u32,
+	displays:          [^]Ui_Option,
+	display_count:     u32,
+	resolutions:        [^]Ui_Option,
+	resolution_count:   u32,
+	resolution_current: Ui_Option,
+	resolution_missing: u32,
+	sprint_modes:       [^]Ui_Option,
+	sprint_mode_count:  u32,
 }
 
 Ui_Palette_Item :: struct {
@@ -207,8 +225,6 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 			label_len = u32(len(row.label)),
 			value     = raw_data(row.value),
 			value_len = u32(len(row.value)),
-			ratio     = row.ratio,
-			ticks     = u32(row.ticks),
 		}
 	}
 	panel := Ui_Panel {
@@ -221,27 +237,6 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 		captured         = u32(frame.captured),
 		palette_open     = u32(frame.palette_open),
 	}
-	menu_rows: [16]Ui_Row
-	menu_row_count := min(len(frame.menu.rows), len(menu_rows))
-	for row, index in frame.menu.rows[:menu_row_count] {
-		flags: u32
-		if row.numeric {
-			flags |= 1
-		}
-		if row.blocked {
-			flags |= 2
-		}
-		menu_rows[index] = {
-			kind      = u32(row.kind),
-			flags     = flags,
-			label     = raw_data(row.label),
-			label_len = u32(len(row.label)),
-			value     = raw_data(row.value),
-			value_len = u32(len(row.value)),
-			ratio     = row.ratio,
-			ticks     = u32(row.ticks),
-		}
-	}
 	hints: [16]Ui_Hint
 	hint_count := min(len(frame.menu.hints), len(hints))
 	for hint, index in frame.menu.hints[:hint_count] {
@@ -253,17 +248,13 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 		}
 	}
 	menu := Ui_Menu {
-		open         = frame.snapshot.menu_open,
-		title        = raw_data(frame.menu.title),
-		title_len    = u32(len(frame.menu.title)),
-		rows         = raw_data(menu_rows[:menu_row_count]),
-		row_count    = u32(menu_row_count),
-		selected     = u32(frame.menu.selected),
-		note         = raw_data(frame.menu.note),
-		note_len     = u32(len(frame.menu.note)),
-		hints        = raw_data(hints[:hint_count]),
-		hint_count   = u32(hint_count),
-		hint_columns = u32(frame.menu.hint_columns),
+		open       = frame.snapshot.menu_open,
+		title      = raw_data(frame.menu.title),
+		title_len  = u32(len(frame.menu.title)),
+		note       = raw_data(frame.menu.note),
+		note_len   = u32(len(frame.menu.note)),
+		hints      = raw_data(hints[:hint_count]),
+		hint_count = u32(hint_count),
 	}
 	palette_source := frame.palette
 	palette_items: [12]Ui_Palette_Item
@@ -312,7 +303,9 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 		hints      = raw_data(palette_hints[:palette_hint_count]),
 		hint_count = u32(palette_hint_count),
 	}
-	if ui_frame(frame.dt, &snapshot, &panel, &menu, &palette_c, raw_data(events[:count]), u32(count)) != 0 {
+	settings_options: Ui_Settings_Options
+	settings := ui_settings_frame(&frame.settings, &settings_options)
+	if ui_frame(frame.dt, &snapshot, &panel, &menu, &settings, &palette_c, raw_data(events[:count]), u32(count)) != 0 {
 		log.error("renderer: the UI shim could not step")
 	}
 }

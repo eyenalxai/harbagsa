@@ -56,7 +56,7 @@ COMMANDS := [?]Command_Row {
 	{.Perf, "perf", "Measure frame time over a fixed or primed run.", parse_perf, execute_perf, .Skip, destroy_perf, .Required, Perf_Command},
 	{.Renderer_Debug, "renderer_debug", "Apply gated renderer overrides. A field set to null restores its default.", parse_renderer_debug, execute_renderer_debug, .Raw, nil, .Optional, Renderer_Debug_Command},
 	{.Displays, "displays", "Replace the display list.", parse_displays, execute_displays, .Raw, destroy_displays, .None, Displays_Command},
-	{.Rows, "rows", "Dump the HUD and menu rows.", parse_no_fields, execute_rows, .Skip, nil, .None, No_Fields_Command},
+	{.Rows, "rows", "Dump the HUD rows.", parse_no_fields, execute_rows, .Skip, nil, .None, No_Fields_Command},
 	{.Scene, "scene", "Apply an exact scene: camera, objects, settings, view, and displays.", parse_scene, execute_scene, .Raw, destroy_scene, .None, Scene_Command},
 	{.Place, "place", "Create one named object from a prefab without entering debug mode.", parse_place, execute_place, .Raw, nil, .None, Place_Command},
 	{.Remove, "remove", "Delete one object by id or name without entering debug mode.", parse_remove, execute_remove, .Raw, nil, .None, Remove_Command},

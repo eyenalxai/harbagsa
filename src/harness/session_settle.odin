@@ -3,17 +3,53 @@ package harness
 
 import "src:renderer"
 
-// Settle renders every step without writing a screenshot, so a scenario can
-// reach a steady temporal state before it starts capturing.
+// Settle reaches a steady render state without writing a screenshot, so a
+// scenario can capture after kit motion lands.
 session_settle :: proc(session: ^Session, command: Settle_Command) -> string {
 	if command.converged {
+		if session.render.backend == nil || !session.render.backend.ready {
+			return format_error("%s", "settle until converged requires rendering")
+		}
+		if session.runtime.hud.menu.open {
+			return session_settle_converged_paused(session)
+		}
 		return session_settle_converged(session)
 	}
 	session.settle.frames = command.frames
 	session.settle.converged = false
 	session.render.every_step = true
 	defer session.render.every_step = false
+	// A dialog owns the accumulator while it is open, but its kit motion still
+	// needs render frames. Step is rejected there, so draw the settle instead.
+	if session.runtime.hud.menu.open {
+		if session.render.backend == nil || !session.render.backend.ready {
+			return format_error("%s", "settle while the menu is open requires rendering")
+		}
+		for _ in 0 ..< command.frames {
+			if draw_error := session_draw_group(session, nil); draw_error != "" {
+				return draw_error
+			}
+		}
+		return ""
+	}
 	return session_step(session, command.frames)
+}
+
+@(private)
+session_settle_converged_paused :: proc(session: ^Session) -> string {
+	frames := 0
+	for frames < MAX_SETTLE_FRAMES {
+		if draw_error := session_draw_group(session, nil); draw_error != "" {
+			return draw_error
+		}
+		frames += 1
+		if session.render.report.convergence_frames >= renderer.TAA_MAX_SAMPLES {
+			break
+		}
+	}
+	session.settle.frames = frames
+	session.settle.converged = session.render.report.convergence_frames >= renderer.TAA_MAX_SAMPLES
+	return ""
 }
 
 // The convergence cap is fixed, so a waiting settle always ends: either the

@@ -10,8 +10,8 @@ the result. The world palette is separate and stays linear.
 
 | Token | Hex | Role |
 | --- | --- | --- |
-| Status surface | `#0F141A` at 94% | the top-left status panel |
-| Menu surface | `#141A21` | the settings menu and palette panel |
+| Status surface | `#0F141A` at 70-100% | the top-left status panel |
+| Dialog surface | `#141A21` | the settings dialog and palette panel |
 | Raised surface | `#26303D` | the selected row |
 | Primary text | `#EDF2F7` | values, title, selected label |
 | Secondary text | `#A6B2BF` | labels, blocked values |
@@ -19,13 +19,15 @@ the result. The world palette is separate and stays linear.
 | Accent | `#E6B03B` | selected-row bar, filled slider track, primary action |
 | Hairline | `#59616B` at 25% | menu separator |
 | Slider track | white at 20% | the unfilled slider track |
-| Scrim | black at 62% | behind the settings menu and palette |
+| Scrim | black at 62% | behind the settings dialog and palette |
 
 The kit derives the remaining states, text and surfaces from
 `Kit::from_palette_focus` with `PaletteFocus::Accent`. The pins above override the
-measured overlay roles. The primary action reads `bg_accent` and `text_inverse`;
-the neutral action reads `bg_button_neutral` and `text_base`. The rune-fx demo
-asks for `#7C5CFF` with a `#F4F0FF` core; it is not part of the default interface.
+measured overlay roles. The status action row's primary `Close` button reads
+`bg_accent` and `text_inverse`; the dialog's `Resume` uses the kit Submit tokens
+`bg_icon_button_contrast`, `submit_fg`, and `submit_icon`. The neutral action
+reads `bg_button_neutral` and `text_base`. The rune-fx demo asks for `#7C5CFF`
+with a `#F4F0FF` core; it is not part of the default interface.
 
 Object colours in the palette are content from `src/game/prefabs.odin`; they do
 not come from this table.
@@ -44,7 +46,9 @@ reference only.
 
 The floor is 4.5:1 for text and 3:1 for a non-text element such as the accent
 bar. Tertiary text is not allowed to become the label or value of a selectable
-row; selection must move it to secondary or primary.
+row; selection must move it to secondary or primary. The HUD promotes tertiary
+text to secondary below 94% opacity, and the floor is checked on the capture
+because the surface is translucent.
 
 ## Choosing a colour
 

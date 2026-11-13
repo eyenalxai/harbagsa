@@ -26,9 +26,8 @@ resolve :: proc(
 	}
 
 	if focus.game.menu_open {
-		for index in 0 ..< events.key_count {
-			apply_menu_key(&out, events.keys[index])
-		}
+		// Rune owns the settings dialog's keys and focus trap. Esc there
+		// dismisses the open Select first, then the dialog.
 		return out
 	}
 
@@ -187,24 +186,6 @@ apply_key :: proc(
 		out.view.taa = true
 	case .F5:
 		out.view.repro = true
-	}
-}
-
-@(private)
-apply_menu_key :: proc(out: ^Frame_Input, edge: platform.Key_Edge) {
-	#partial switch edge.key {
-	case .Escape:
-		out.view.menu_toggle = true
-	case .Up:
-		out.menu.up = true
-	case .Down:
-		out.menu.down = true
-	case .Left:
-		out.menu.left = true
-	case .Right:
-		out.menu.right = true
-	case .Enter:
-		out.menu.confirm = true
 	}
 }
 

@@ -107,8 +107,10 @@ Rules:
   perf does not create a Vulkan device unless `--present` is set.
 - Capture frame numbers are zero-based. A past frame is an error; a future frame
   queues.
-- `settle` renders without writing a capture. Under `--no-render`, it is a plain
-  step.
+- `settle` renders without writing a capture. Under `--no-render` it is a plain
+  step while the menu is closed. While the menu is open the simulation is paused;
+  with a renderer it draws the dialog frames without stepping, and under
+  `--no-render` it is an error. `until: converged` follows the same rule.
 - `size` pins the extent. A scenario `size` and `--size` together are an error.
 - `extends` merges a base scenario and lets the child win.
 - `parameters` substitutes `${name}` in command values. `--param` overrides it;
@@ -129,7 +131,8 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `face`: direct camera `yaw_deg` and `pitch_deg`. The body keeps its heading.
 - `input`: persistent `forward`, `right`, and `sprint`; `jump` is a one-step edge.
 - `step`: `frames` in the allowed fixed-step range.
-- `settle`: `frames`, or `until: converged`.
+- `settle`: `frames`, or `until: converged`; while the menu is open it requires a
+  renderer and draws frames without stepping.
 - `state`: full current state.
 - `capture`: one output with `name`, optional `frame`, `alpha`, `note`, target,
   format, capture options, and an optional `views` list.
@@ -140,7 +143,10 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
   demo over the status action row; it is off by default.
 - `debug_mode`: `active` boolean.
 - `editor`: palette, placement, object, light, camera, pointer, and history fields.
-- `menu`: `open`, `item`, `activate`, `direction`, and `set`.
+- `menu`: `open`, `item`, `activate`, `direction`, `opacity`, `reduce_motion`,
+  and `allow_blocked`. `opacity` is a percentage in [70, 100]. A setting change
+  that does not change the value fails the command; `allow_blocked` accepts an
+  expected blocked result.
 - `ui`: click the Rune view by element `key`, or at `x` and `y` in points. The
   run fails when the click produces no action; the action is applied before the
   command returns.
@@ -151,7 +157,7 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
   `baseline`, `discard`, and optional `trace`.
 - `renderer_debug`: gated fields or `clear`. A field set to `null` resets it.
 - `displays`: `set` a scripted list or `clear` it.
-- `rows`: HUD and menu rows.
+- `rows`: HUD rows.
 - `scene`: exact `camera`, `objects`, `settings`, `view`, `displays`, and
   `renderer_debug` blocks. Every block is optional; at least one is required.
   Object ids must be nonzero and unique. A scene that breaks either rule is
@@ -166,7 +172,9 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `quit`: stop the session.
 
 Unknown keys, wrong types, and out-of-range values are command errors. A live
-session remains usable. `step` and `settle` are errors while the menu is open.
+session remains usable. `step` is an error while the menu is open; `settle` and
+`settle until: converged` render the paused dialog without stepping when a
+renderer is attached, and are errors under `--no-render`.
 
 A `shot` is scenario-only shorthand. It expands to an optional camera, a settle,
 and one capture. It is not a live-session command.
@@ -178,8 +186,8 @@ so a capture includes it; there is no separate UI target. A frame with
 `hud: false` has `HUD_Frame.enabled` false: `ui_step` does not rebuild the view
 and `ui_draw` is not called, so the capture has no overlay.
 
-- `menu` opens the settings menu and changes a row. Menu keys stay on the game
-  path.
+- `menu` opens the settings dialog and changes a value. The dialog itself owns
+  its keyboard path; the command is the harness's direct settings path.
 - `editor` with `open: true` opens the object palette.
 - `ui` clicks the Rune view by element `key`, or at `x` and `y` in points. It
   fails when the click produces no action, applies the action through the game
@@ -190,8 +198,10 @@ and `ui_draw` is not called, so the capture has no overlay.
 Pointer, wheel, key-down, key-up, key-repeat, and focus events reach Rune in one
 batch per frame. A harness click uses the same Rune hit path as a live click.
 `scenarios/rune-palette.json` opens the palette and selects a row by key.
-`scenarios/rune-menu.json` opens the settings menu and sets the type weight.
-`scenarios/rune-ui.json` activates the status panel action by key.
+`scenarios/rune-menu.json` opens the settings dialog, track-clicks HUD opacity,
+steps it through the shared settings path, toggles reduce motion, and closes with
+both Resume and the header control. `scenarios/rune-menu-800.json` repeats it at
+800x600. `scenarios/rune-ui.json` activates the status panel Close action by key.
 `scenarios/rune-fx.json` sets `view.fx` and shows the status action row with its
 rune-fx glow.
 

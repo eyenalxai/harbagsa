@@ -1,0 +1,5 @@
+{
+  "extends": "rune-menu.json",
+  "note": "The settings dialog and the 70% HUD fit at 800x600.",
+  "size": "800x600"
+}

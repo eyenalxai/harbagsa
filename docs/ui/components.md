@@ -2,46 +2,60 @@
 
 Six surfaces live in one Rune view. Each exists for a reason; if a new one is not
 one of these, read [README.md](README.md#adding-a-surface) first. The view is
-built in `ui/shim/src/lib.rs`; the data is in `src/ui/ui.odin`.
+built in `ui/shim/src`; the data is in `src/ui/ui.odin`.
 
 ## Status panel
 
 Use for the player's live state. It is the persistent top-left surface while the
-menu is closed. It draws `ui.Hud.rows` as a list and appends the notice, the
+settings dialog is closed. It draws `ui.Hud.rows` as a list and appends the notice, the
 capture hint, and the action row below the panel.
 
 The row kinds map to Rune elements:
 
 - `Divider`: a 1 point full-width line.
 - `Header`: tertiary text.
-- `Setting`, `Action`, `Metric`, `Detail`, `Slider`: a label row with a spacer and
-  a value. A slider also draws the track.
+- `Setting`, `Action`, `Metric`, `Detail`: a label row with a spacer and a value.
 
-The action row has two buttons: `Debug` returns `Toggle_Debug` and toggles debug
-mode. `Close` returns `Close_Menu`, but the status view is shown only while the
-menu is closed, so the game ignores it there. The menu closes with `Esc` or
-`Resume`.
+The action row has two buttons: `Close` returns `Close_Menu`, which is a handled
+no-op while the dialog is closed, and `Debug` returns `Toggle_Debug` and toggles
+debug mode. The dialog closes with `Esc`, its close control, or `Resume`. The row
+is drawn while the pointer is captured; live pointer events reach it only when
+the cursor is free. The action-row redesign is separate.
 
 Incorrect: measuring a row in Odin and sizing a rectangle from it. Rune measures
 the text.
 
-## Settings menu
+## Settings dialog
 
-Use for a paused decision. The view returns the menu before the status panel, so
-the status panel is not drawn while the menu is open. Order is fixed: scrim,
-panel, title, separator, rows, note, hints.
+Use for a paused decision. Settings is a `rune-kit::Dialog` over a scrim. The
+dialog width is 520 points and the body holds three sections: Display,
+Interface, and Controls. Window mode and Sprint mode are `SegmentedControl`s;
+Display and Resolution use the kit Select field over a menu list whose items keep
+their own indices, so duplicate or truncated names still choose the right row;
+HUD opacity is the local Slider;
+Reduce motion is a `Switch`; Resume is a footer `Button`. If the current
+resolution is not in the display's mode list, the field keeps it and the Display
+header says `Resolution unavailable`. `Esc`, the header close
+control, and Resume dismiss it.
 
-A `Slider` row is two lines: label and value, then a full-width 4 point track.
-The unfilled track is white at 20%; the filled width is `ratio * 390` points in
-the accent colour. There is no knob and no tick mark. The menu is a row list, not
-a knob control.
+The HUD opacity Slider runs from 70 to 100 percent in one-point steps. Only the
+track is the hit area: it drags from the thumb, jumps on a track press, steps
+with Left and Right, repeats while held, and restores the pre-drag value when Esc
+cancels the drag. The label and percentage row never changes the value. Its value
+draws in Geist Mono. At 70 and 100 percent the Interface header shows `Minimum`
+or `Maximum`, so the blocked end is visible. Below 94 percent the status HUD's
+tertiary text promotes to secondary, keeping the text floor on the translucent
+surface.
 
-The menu title is a text row. The note is tertiary text under the rows. The hint
-grid is three key/action pairs per line.
+The dialog owns its keyboard path: Rune traps focus, draws the focus ring, and
+routes arrows, Enter, and Space to the focused control. `src/game/settings_view.odin`
+names every option and index; the shim never derives a display or mode name. The
+Controls section is a compact reference, not the full shortcut list; the full
+list stays in `README.md`.
 
-The Type weight row edits a stored setting. The Rune view applies it to every
-text node as a span weight; 400 is the old default and Geist's continuous axis
-reaches 565. Numeric values draw in Geist Mono. See [type.md](type.md).
+Incorrect: measuring a row in Odin and sizing a rectangle from it. Rune measures
+the text. Incorrect: a second window-apply path; a changed display, mode, or
+resolution goes through `apply_window_settings`.
 
 ## Object palette
 

@@ -11,14 +11,6 @@ Focus :: struct {
 	captured: bool,
 }
 
-Menu_Input :: struct {
-	up:      bool,
-	down:    bool,
-	left:    bool,
-	right:   bool,
-	confirm: bool,
-}
-
 View_Intents :: struct {
 	debug_view:   bool,
 	debug_mode:   bool,
@@ -37,7 +29,6 @@ Frame_Input :: struct {
 	motion:           game.Debug_Motion,
 	actions:          [game.MAX_EDIT_ACTIONS]game.Edit_Action,
 	action_count:     int,
-	menu:             Menu_Input,
 	view:             View_Intents,
 	pause:            bool,
 }

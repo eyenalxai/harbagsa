@@ -2,51 +2,41 @@
 #+vet !unused-procedures // the agent harness calls the menu reset and selection API
 package game
 
-import "core:math"
-
 import "src:display"
 import "src:ui"
 
-MENU_ITEM_COUNT :: 6
-MENU_ROW_COUNT :: 8
-MENU_ROW_DIVIDER :: 5
-MENU_ROW_RESUME :: 6
-MENU_ROW_HEADER :: 7
-MENU_HINT_COLUMNS :: 3
-MENU_CONTROL_HINT_COUNT :: 12
-MENU_HINT_COUNT :: 22
-TYPE_WEIGHT_STEP :: f32(5)
+MENU_ITEM_COUNT :: 7
+MENU_HINT_COUNT :: ui.SETTINGS_HINT_COUNT
 
 MENU_TITLE :: "Settings"
-MENU_NOTE :: "Up/Down select · Left/Right change · Enter change · Esc close"
+MENU_SUMMARY :: "Window, interface, and controls"
 MENU_STATUS_ONE_DISPLAY :: "One display · nothing to change"
 MENU_STATUS_NO_MODES :: "No modes · nothing to change"
 MENU_STATUS_ONE_MODE :: "One mode · nothing to change"
-MENU_STATUS_MIN_WEIGHT :: "Minimum weight · nothing to change"
-MENU_STATUS_MAX_WEIGHT :: "Maximum weight · nothing to change"
+MENU_STATUS_MODE_MISSING :: "Current mode is not listed · nothing to change"
+MENU_STATUS_MIN_OPACITY :: "Minimum opacity · nothing to change"
+MENU_STATUS_MAX_OPACITY :: "Maximum opacity · nothing to change"
 MENU_WINDOW_APPLY_FAILED :: "Window change failed · %s"
 MENU_WINDOW_RESTORE_FAILED :: "Window change failed · %s · restore failed"
-MENU_LINE_STATUS :: 4
+MENU_LINE_STATUS :: 0
 
 MENU_ITEM_NAMES := [MENU_ITEM_COUNT]string {
 	"Window mode",
 	"Display",
 	"Resolution",
-	"Type weight",
+	"HUD opacity",
 	"Sprint mode",
+	"Reduce motion",
 	"Resume",
 }
-
-// One row per menu item, in item order, so the harness item name and the
-// drawn row index stay independent of where the dividers sit.
-MENU_ITEM_ROWS := [MENU_ITEM_COUNT]int{0, 1, 2, 3, 4, MENU_ROW_RESUME}
 
 Menu_Item :: enum {
 	Window_Mode,
 	Display,
 	Resolution,
-	Type_Weight,
+	Hud_Opacity,
 	Sprint,
+	Reduce_Motion,
 	Resume,
 }
 
@@ -60,10 +50,9 @@ Menu_State :: struct {
 	open:            bool,
 	selected:        Menu_Item,
 	view:            ui.Menu,
-	rows:            [MENU_ROW_COUNT]ui.Row,
 	hints:           [MENU_HINT_COUNT]ui.Hint_Cell,
 	storage:         Line_Buffer,
-	status:           string,
+	status:          string,
 	status_remaining: f32,
 }
 
@@ -108,6 +97,8 @@ menu_item_from_name :: proc(name: string) -> (Menu_Item, bool) {
 	return .Window_Mode, false
 }
 
+// menu_change_setting is the harness's keyboard path. The live dialog sends
+// Settings_Set actions, and both paths mutate through settings_set.
 menu_change_setting :: proc(
 	menu: ^Menu_State,
 	settings: ^Settings,
@@ -119,51 +110,51 @@ menu_change_setting :: proc(
 	menu_clear_status(menu)
 	#partial switch menu.selected {
 	case .Window_Mode:
-		settings.window.mode = toggle_window_mode(settings.window.mode)
+		settings_set(settings, .Window_Mode, int(toggle_window_mode(settings.window.mode)), 0)
 	case .Display:
-		if settings.display.count <= 1 {
+		if settings_display_blocked(settings) {
 			menu_set_status(menu, MENU_STATUS_ONE_DISPLAY)
 			return .Blocked
 		}
-		change_display(menu, settings, direction)
+		current := display.clamp_index(&settings.display, settings.window.display)
+		next := (current + direction + settings.display.count) % settings.display.count
+		settings_set(settings, .Display, next, 0)
 	case .Resolution:
 		info := display.info_at(&settings.display, settings.window.display)
-		if info.mode_count == 0 {
+		if settings.display.count == 0 || info.mode_count == 0 {
 			menu_set_status(menu, MENU_STATUS_NO_MODES)
+			return .Blocked
+		}
+		if settings_resolution_missing(settings) {
+			menu_set_status(menu, MENU_STATUS_MODE_MISSING)
 			return .Blocked
 		}
 		if settings.window.mode == .Windowed && info.mode_count == 1 {
 			menu_set_status(menu, MENU_STATUS_ONE_MODE)
 			return .Blocked
 		}
-		change_resolution(menu, settings, direction)
-	case .Type_Weight:
-		weight := clamp(
-			settings.type_weight + f32(direction) * TYPE_WEIGHT_STEP,
-			ui.TYPE_WEIGHT_MIN,
-			ui.TYPE_WEIGHT_MAX,
+		current := settings_resolution_current(settings)
+		index := display.find_mode(info, current)
+		index = (index + direction + info.mode_count) % info.mode_count
+		settings_set(settings, .Resolution, index, 0)
+	case .Hud_Opacity:
+		next := clamp(
+			settings.hud_opacity + f32(direction) * 0.01,
+			ui.HUD_OPACITY_MIN,
+			ui.HUD_OPACITY_MAX,
 		)
-		if weight == settings.type_weight {
-			menu_set_status(menu, direction > 0 ? MENU_STATUS_MAX_WEIGHT : MENU_STATUS_MIN_WEIGHT)
+		if next == settings.hud_opacity {
+			status := direction > 0 ? MENU_STATUS_MAX_OPACITY : MENU_STATUS_MIN_OPACITY
+			menu_set_status(menu, status)
 			return .Blocked
 		}
-		settings.type_weight = weight
+		settings_set(settings, .Hud_Opacity, 0, next)
 	case .Sprint:
-		settings.sprint_mode = toggle_input_mode(settings.sprint_mode)
+		settings_set(settings, .Sprint_Mode, int(toggle_input_mode(settings.sprint_mode)), 0)
+	case .Reduce_Motion:
+		settings_set(settings, .Reduce_Motion, settings.reduce_motion ? 0 : 1, 0)
 	}
 	return .Changed
-}
-
-menu_set_type_weight :: proc(menu: ^Menu_State, settings: ^Settings, weight: f32) -> bool {
-	if !menu.open {
-		return false
-	}
-	next := clamp(math.round(weight), ui.TYPE_WEIGHT_MIN, ui.TYPE_WEIGHT_MAX)
-	if next != settings.type_weight {
-		settings.type_weight = next
-		menu_clear_status(menu)
-	}
-	return true
 }
 
 menu_activate :: proc(menu: ^Menu_State, settings: ^Settings, direction := 1) -> bool {
@@ -186,7 +177,6 @@ menu_set_status :: proc(menu: ^Menu_State, status: string) {
 	menu.status_remaining = MENU_STATUS_SECONDS
 }
 
-@(private)
 menu_clear_status :: proc(menu: ^Menu_State) {
 	menu.status = ""
 	menu.status_remaining = 0
@@ -197,46 +187,15 @@ menu_window_apply_failed :: proc(menu: ^Menu_State, reason: string, restored: bo
 	menu_set_status(menu, line_format(&menu.storage, MENU_LINE_STATUS, format, reason))
 }
 
-menu_view :: proc(menu: ^Menu_State, settings: ^Settings, debug_active: bool, delta_seconds: f32) {
+menu_view :: proc(menu: ^Menu_State, debug_active: bool, delta_seconds: f32) {
 	if !menu.open {
 		menu.view = {}
 		return
 	}
 
-	resolution := settings_effective_resolution(settings)
-	menu_setting_row(menu, 0, MENU_ITEM_NAMES[0], window_mode_name(settings.window.mode))
-	menu_setting_row(menu, 1, MENU_ITEM_NAMES[1], settings_display_name(settings))
-	menu_setting_row(
-		menu,
-		2,
-		MENU_ITEM_NAMES[2],
-		line_format(&menu.storage, 2, "%d×%d", resolution.width, resolution.height),
-		numeric = true,
-	)
-	menu.rows[3] = {
-		kind    = .Slider,
-		label   = MENU_ITEM_NAMES[3],
-		value   = line_format(&menu.storage, 3, "%d", int(math.round(settings.type_weight))),
-		numeric = true,
-		ratio   = (settings.type_weight - ui.TYPE_WEIGHT_MIN) / (ui.TYPE_WEIGHT_MAX - ui.TYPE_WEIGHT_MIN),
-		ticks   = 9,
-	}
-	menu_setting_row(menu, 4, MENU_ITEM_NAMES[4], input_mode_name(settings.sprint_mode))
-	menu.rows[MENU_ROW_DIVIDER] = {kind = .Divider}
-	menu.rows[MENU_ROW_RESUME] = {kind = .Action, label = MENU_ITEM_NAMES[5]}
-	menu.rows[MENU_ROW_HEADER] = {kind = .Header, label = "Controls"}
-
-	info := display.info_at(&settings.display, settings.window.display)
-	menu.rows[1].blocked = settings.display.count <= 1
-	menu.rows[2].blocked =
-		info.mode_count == 0 ||
-		(settings.window.mode == .Windowed && info.mode_count == 1)
-
 	hints := MENU_CONTROL_HINTS
-	hint_count := MENU_CONTROL_HINT_COUNT
 	if debug_active {
 		hints = MENU_DEBUG_CONTROL_HINTS
-		hint_count = MENU_HINT_COUNT
 	}
 	menu.hints = hints
 
@@ -248,43 +207,12 @@ menu_view :: proc(menu: ^Menu_State, settings: ^Settings, debug_active: bool, de
 	}
 	note := menu.status
 	if note == "" {
-		note = MENU_NOTE
+		note = MENU_SUMMARY
 	}
 
 	menu.view = {
-		title        = MENU_TITLE,
-		rows         = menu.rows[:],
-		selected     = MENU_ITEM_ROWS[menu.selected],
-		hints        = menu.hints[:hint_count],
-		hint_columns = MENU_HINT_COLUMNS,
-		note         = note,
+		title = MENU_TITLE,
+		hints = menu.hints[:MENU_HINT_COUNT],
+		note  = note,
 	}
-}
-
-@(private)
-menu_setting_row :: proc(menu: ^Menu_State, row: int, label, value: string, numeric := false) {
-	menu.rows[row] = {kind = .Setting, label = label, value = value, numeric = numeric}
-}
-
-@(private)
-change_display :: proc(menu: ^Menu_State, settings: ^Settings, direction: int) {
-	current := display.clamp_index(&settings.display, settings.window.display)
-	settings.window.display = (current + direction + settings.display.count) % settings.display.count
-	settings.window.resolution = display.snap_mode(
-		display.info_at(&settings.display, settings.window.display),
-		settings.window.resolution,
-	)
-}
-
-@(private)
-change_resolution :: proc(menu: ^Menu_State, settings: ^Settings, direction: int) {
-	info := display.info_at(&settings.display, settings.window.display)
-	// A desktop-sized borderless window has no smaller alternatives, so choosing
-	// a size always starts a window.
-	if settings.window.mode == .Borderless {
-		settings.window.mode = .Windowed
-		settings.window.resolution = display.cycle_mode(info, info.desktop, direction)
-		return
-	}
-	settings.window.resolution = display.cycle_mode(info, settings.window.resolution, direction)
 }

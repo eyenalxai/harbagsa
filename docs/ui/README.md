@@ -6,9 +6,10 @@ swapchain or offscreen image. Odin owns the simulation and the flat data the
 view reads. There is no second UI renderer in Odin.
 
 The view is a technical readout: a status panel in the top-left, a bottom action
-row with `Debug` and a demo `Close`, a settings menu over a scrim, and the object
-palette as a Rune list. A notice and the capture hint sit above the action row.
-Nothing animates. The optional rune-fx glow is a demo and is off by default.
+row with `Close` and `Debug`, a settings dialog over a scrim, and the object
+palette as a Rune list. A notice and the capture hint sit above the
+action row. Rune kit motion follows the reduce-motion setting. The optional
+rune-fx glow is a demo and is off by default.
 
 ## The layer rule
 
@@ -25,15 +26,15 @@ after the scene is submitted. The shim draws onto the same target image, so a
 capture includes the UI. When the frame's `hud` flag is false, `HUD_Frame.enabled`
 is false: `ui_step` does not rebuild the view and the frame protocol does not
 call `ui_draw`, so a `hud:false` capture has no overlay. The game applies the
-action queue after the draw: `Close_Menu`, `Toggle_Debug`, and
+action queue after the draw: `Close_Menu`, `Toggle_Debug`, `Settings_Set`, and
 `Palette_Select`.
 
 ## Snapshot
 
 `src/ui/ui.odin` is data only. `src/game/hud.odin` fills the player rows,
 `src/game/hud_debug.odin` fills the debug inspector or placement rows,
-`src/game/menu.odin` fills the settings menu, and `src/game/palette_view.odin`
-fills the object palette. `src/frame/frame.odin` copies those values into the
+`src/game/settings_view.odin` and `src/game/menu.odin` fill the settings dialog,
+and `src/game/palette_view.odin` fills the object palette. `src/frame/frame.odin` copies those values into the
 `UI_Frame` struct in `src/renderer/ui_frame.odin`. The shim copies every string
 during the `ui_frame` call; Odin keeps ownership and may reuse the storage on the
 next frame.
@@ -42,7 +43,7 @@ The pointer, wheel, key, and focus events travel in one flat batch. Rune
 hit-tests the view, routes focus and drag, and returns flat actions through
 `ui_actions`.
 
-`Row`, `Menu`, `Palette`, and `Hud` are the wire model: the shim consumes those
+`Row`, `Menu`, `Settings`, `Palette`, and `Hud` are the wire model: the shim consumes those
 flat values, so they stay. The old row vocabulary (the Odin layout and draw
 helpers that measured and painted them) is gone; do not bring that layer back.
 
@@ -93,5 +94,6 @@ change width.
   `src/frame`.
 - A row is a `ui.Row`; a new kind must be understood by both the game and the
   shim.
-- The overlay does not animate. The rune-fx demo is opt-in and starts off.
+- Kit motion follows `Settings.reduce_motion`; the rune-fx demo is opt-in and
+  starts off.
 - No image, font, or shader asset moves from Rune into the Odin tree.

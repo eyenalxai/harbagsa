@@ -203,6 +203,7 @@ run :: proc() -> bool {
 
 		status := frame.draw(&state, scene)
 		for action in renderer.ui_actions_slice() {
+			previous_window := loop.runtime.sim.settings.window
 			result := uiaction.apply(
 				{
 					sim = &loop.runtime.sim,
@@ -214,6 +215,9 @@ run :: proc() -> bool {
 			)
 			if !result.handled {
 				log.warnf("harbagsa: unknown UI action kind %d", action.kind)
+			}
+			if result.window_changed {
+				apply_window_settings(&loop, &window, previous_window)
 			}
 			if result.closed_menu {
 				loop.accumulator = 0

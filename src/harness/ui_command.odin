@@ -104,7 +104,11 @@ execute_ui :: proc(session: ^Session, command: Command, reply: ^Reply) -> string
 		}
 		if !result.applied {
 			renderer.ui_actions_clear()
-			return format_error("%s", game.edit_reason_message(result.reason))
+			message := game.edit_reason_message(result.reason)
+			if message == "" {
+				message = "the UI action made no change"
+			}
+			return format_error("%s", message)
 		}
 	}
 	renderer.ui_actions_clear()

@@ -35,19 +35,24 @@ addition.
 - The bottom action row is a separate full-width column: `justify_end`,
   `items_center`, padding 16, gap 8.
 
-The status panel is translucent. The menu surface is opaque. A selected row
+The status panel is translucent. The dialog surface is opaque. A selected row
 lifts to the raised surface; it does not get a border.
 
-## Settings menu
+## Settings dialog
 
-- Width 430 points, centred on the target.
+- Width 520 points, centred on the target with a 16 point gutter.
 - The scrim covers the whole target.
-- Panel padding 16, row gap 8.
-- A row pads 4 points and gaps label and value by 12.
-- The selected row has a 2 point accent bar and an 18 point label-height band.
-- The slider track is 4 points tall under the value row; the filled width is
-  `ratio * 390`.
-- The hint grid puts three hint pairs on a line.
+- Header: 16 point padding, title 15/20, description 13/20, close control 20.
+- Body padding 20, section gap 4.
+- A section header is 32 points high; a control row is 40 points high with a
+  160 point label column and a 240 point control column.
+- Window mode and Sprint mode are 240 point segmented controls.
+- Display and Resolution are 240 point field selects.
+- The HUD opacity slider is the 480 point body width: a 16 point label/value line
+  above a 24 point track hit area with a 4 point track and a 14 point knob.
+- The Controls section is two lines of three `Keybind` pairs.
+- The footer is right-aligned with a 28 point (`ControlSize::Large`) Resume button
+  and a top hairline.
 
 ## Object palette
 
@@ -59,18 +64,19 @@ bar. The body note and hints sit below the list.
 
 | Surface | Fill | Edge |
 | --- | --- | --- |
-| Status panel | status surface, 94% | none |
-| Menu and palette | menu surface over the scrim | 1 point hairline separator |
+| Status panel | status surface, 70-100% | none |
+| Settings dialog | dialog surface over the scrim | kit elevation |
+| Palette | menu surface over the scrim | 1 point hairline separator |
 | Selected row | raised surface | 2 point accent bar on the leading edge |
 | Notice and capture hint | no box of their own | text on the action column |
 
-No rounded panel, no shadow, no gradient. The action buttons are the only
-rounded edges Rune draws.
+Kit surfaces use the kit radius, elevation, and motion; the status panel keeps
+its square translucent fill. Motion follows the reduce-motion setting.
 
 ## Bans
 
 - No per-row margin. The parent owns the gap.
 - No measured width in Odin. Rune sizes the panel from its content.
-- No clipping. The menu fits at 800x600; Rune scales the whole view, so a larger
-  target keeps the same proportions.
+- No clipping. The settings dialog fits at 800x600; Rune scales the whole view, so
+  a larger target keeps the same proportions.
 - No Odin layout pass and no hit-test rectangle. Rune owns both.

@@ -12,27 +12,22 @@ Row_State :: struct {
 	label:   string  `json:"label"`,
 	value:   string  `json:"value"`,
 	blocked: bool    `json:"blocked"`,
-	ratio:   f32     `json:"ratio"`,
-	ticks:   int     `json:"ticks"`,
 }
 
 Rows_State :: struct {
-	hud:  []Row_State `json:"hud"`,
-	menu: []Row_State `json:"menu"`,
+	hud: []Row_State `json:"hud"`,
 }
 
-// The rows are the layer the renderer draws, so a scenario can assert a label,
-// a blocked row, or a slider ratio without decoding a PNG.
+// The rows are the layer the renderer draws, so a scenario can assert a label
+// or a blocked row without decoding a PNG.
 rows_state_build :: proc(hud: ^game.HUD_State, allocator: mem.Allocator) -> Rows_State {
 	return {
 		hud = rows_build(hud.view.rows, allocator),
-		menu = rows_build(hud.menu.view.rows, allocator),
 	}
 }
 
 rows_state_destroy :: proc(state: ^Rows_State, allocator: mem.Allocator) {
 	rows_destroy(state.hud, allocator)
-	rows_destroy(state.menu, allocator)
 	state^ = {}
 }
 
@@ -60,8 +55,6 @@ rows_build :: proc(rows: []ui.Row, allocator: mem.Allocator) -> []Row_State {
 			label   = strings.clone(row.label, allocator),
 			value   = strings.clone(row.value, allocator),
 			blocked = row.blocked,
-			ratio   = row.ratio,
-			ticks   = row.ticks,
 		}
 	}
 	return result
@@ -94,8 +87,6 @@ row_kind_name :: proc(kind: ui.Row_Kind) -> string {
 		return "metric"
 	case .Detail:
 		return "detail"
-	case .Slider:
-		return "slider"
 	case .Divider:
 		return "divider"
 	case .Header:

@@ -14,10 +14,11 @@ Context :: struct {
 }
 
 Result :: struct {
-	handled:     bool,
-	applied:     bool,
-	closed_menu: bool,
-	reason:      game.Edit_Reason,
+	handled:        bool,
+	applied:        bool,
+	closed_menu:    bool,
+	window_changed: bool,
+	reason:         game.Edit_Reason,
 }
 
 // apply maps one flat Rune action to the game action it names. The main loop
@@ -29,6 +30,7 @@ apply :: proc(ctx: Context, action: renderer.Ui_Action) -> Result {
 			game.menu_close(ctx.menu)
 			return {handled = true, applied = true, closed_menu = true}
 		}
+		// The status row's inert Close is a handled no-op, as merged.
 		return {handled = true, applied = true}
 	case .Toggle_Debug:
 		game.debug_mode_toggle(ctx.debug, ctx.sim)
@@ -37,8 +39,29 @@ apply :: proc(ctx: Context, action: renderer.Ui_Action) -> Result {
 		return apply_edit(ctx, game.Palette_Select{index = int(action.value)})
 	case .Palette_Close:
 		return apply_edit(ctx, game.Palette_Close{})
+	case .Settings_Set:
+		return apply_settings(ctx, action)
 	}
 	return {}
+}
+
+@(private)
+apply_settings :: proc(ctx: Context, action: renderer.Ui_Action) -> Result {
+	id := renderer.UI_Settings_Id(action.id)
+	window_changed := id == .Window_Mode || id == .Display || id == .Resolution
+	game.menu_clear_status(ctx.menu)
+	changed := game.settings_set(
+		&ctx.sim.settings,
+		game.Settings_Id(action.id),
+		int(action.value),
+		action.scalar,
+	)
+	return {
+		handled = true,
+		applied = changed,
+		window_changed = changed && window_changed,
+		reason = changed ? .None : .No_Change,
+	}
 }
 
 @(private)

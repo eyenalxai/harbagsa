@@ -2,39 +2,50 @@ use rune::{Cx, Color, El, col, effect, el, row, spacer};
 use rune_kit::Kit;
 
 use crate::abi::{
-    ACTION_CLOSE_MENU, ACTION_PALETTE_CLOSE, ACTION_PALETTE_SELECT, ACTION_TOGGLE_DEBUG,
-    UiAction,
+    ACTION_CLOSE_MENU, ACTION_PALETTE_CLOSE, ACTION_PALETTE_SELECT, ACTION_TOGGLE_DEBUG, UiAction,
 };
 use crate::components;
-use crate::state::{MenuState, PanelRow, UiState};
+use crate::settings;
+use crate::state::{HUD_OPACITY_PROMOTE, MenuPanel, PanelRow, UiState};
 use crate::text;
 
 const ROW_NUMERIC: u32 = 1;
 const ROW_BLOCKED: u32 = 2;
 const MENU_WIDTH: f32 = 430.0;
 
-pub fn view(state: &UiState, _: &mut Cx<UiState>) -> El {
-    if state.menu_open || state.menu.open {
-        menu_view(state)
-    } else if state.palette.open {
+pub fn view(state: &UiState, cx: &mut Cx<UiState>) -> El {
+    cx.reduced_motion(state.settings.reduce_motion);
+    // Return presses a focused Button and Switch as a web form does; Space
+    // already presses any focused control.
+    cx.web_focus();
+    let mut overlays = Vec::new();
+    let base = if state.palette.open {
         palette_view(state)
     } else {
         hud_view(state)
-    }
+    };
+    settings::dialog(state, &mut overlays);
+    rune_kit::root(base, overlays)
 }
 
 fn hud_view(state: &UiState) -> El {
     let kit = &state.kit;
-    let mut panel = components::hud_panel(kit)
+    let opacity = state.settings.hud_opacity;
+    let tertiary = if opacity < HUD_OPACITY_PROMOTE {
+        kit.c.text_muted
+    } else {
+        kit.c.text_faint
+    };
+    let mut panel = components::hud_panel(kit, opacity)
         .w(380.0)
         .padding(12.0)
         .gap(6.0);
     for entry in &state.panel.rows {
         panel = match entry.kind {
             5 => panel.child(components::hairline(kit)),
-            6 => panel.child(text::weighted(&entry.label, state.weight, false).color(kit.c.text_faint)),
-            0..=4 => {
-                let label = if entry.kind == 3 { kit.c.text_faint } else { kit.c.text_muted };
+            6 => panel.child(text::weighted(&entry.label, state.weight, false).color(tertiary)),
+            0..=3 => {
+                let label = if entry.kind == 3 { tertiary } else { kit.c.text_muted };
                 let value = if entry.flags & ROW_BLOCKED != 0 {
                     kit.c.text_muted
                 } else {
@@ -54,6 +65,20 @@ fn hud_view(state: &UiState) -> El {
             }
             _ => panel,
         };
+    }
+
+    let mut root = col().w_full().h_full().child(
+        el()
+            .absolute(0.0, 0.0)
+            .w_full()
+            .h_full()
+            .items_start()
+            .justify_start()
+            .padding(12.0)
+            .child(panel),
+    );
+    if state.menu_open {
+        return root;
     }
 
     let hint = if state.panel.capture_hint.is_empty()
@@ -85,37 +110,25 @@ fn hud_view(state: &UiState) -> El {
         .effect_data([0.9, 0.0, 0.0, 0.0])
         .effect_bleed(60.0)
         .opacity(0.85);
-    col()
-        .w_full()
-        .h_full()
-        .child(
-            el()
-                .absolute(0.0, 0.0)
-                .w_full()
-                .h_full()
-                .items_start()
-                .justify_start()
-                .padding(12.0)
-                .child(panel),
-        )
-        .child(
-            col()
-                .w_full()
-                .h_full()
-                .justify_end()
-                .items_center()
-                .padding(16.0)
-                .gap(8.0)
-                .child(notice)
-                .child(hint)
-                .child({
-                    let mut actions = row().gap(8.0);
-                    if state.fx {
-                        actions = actions.child(glow.absolute(0.0, 0.0).w_full().h_full());
-                    }
-                    actions.child(close).child(debug)
-                }),
-        )
+    root = root.child(
+        col()
+            .w_full()
+            .h_full()
+            .justify_end()
+            .items_center()
+            .padding(16.0)
+            .gap(8.0)
+            .child(notice)
+            .child(hint)
+            .child({
+                let mut actions = row().gap(8.0);
+                if state.fx {
+                    actions = actions.child(glow.absolute(0.0, 0.0).w_full().h_full());
+                }
+                actions.child(close).child(debug)
+            }),
+    );
+    root
 }
 
 fn button(kit: &Kit, label: &str, weight: f32, accent: bool) -> El {
@@ -140,18 +153,9 @@ fn button(kit: &Kit, label: &str, weight: f32, accent: bool) -> El {
         .child(text::weighted(label, weight, false).color(ink))
 }
 
-fn menu_view(state: &UiState) -> El {
-    components::modal(
-        &state.kit,
-        menu_panel(&state.menu, &state.kit, state.weight, None),
-        ACTION_CLOSE_MENU,
-    )
-}
-
 fn palette_view(state: &UiState) -> El {
     let palette = &state.palette;
-    let menu = MenuState {
-        open: true,
+    let menu = MenuPanel {
         title: palette.title.clone(),
         rows: palette
             .items
@@ -161,7 +165,6 @@ fn palette_view(state: &UiState) -> El {
                 flags: 0,
                 label: item.short.clone(),
                 value: item.name.clone(),
-                ratio: 0.0,
             })
             .collect(),
         selected: palette.selected,
@@ -175,7 +178,7 @@ fn palette_view(state: &UiState) -> El {
     )
 }
 
-fn menu_panel(menu: &MenuState, kit: &Kit, weight: f32, key_prefix: Option<&str>) -> El {
+fn menu_panel(menu: &MenuPanel, kit: &Kit, weight: f32, key_prefix: Option<&str>) -> El {
     let mut panel = components::dialog_panel(kit)
         .w(MENU_WIDTH)
         .padding(16.0)
@@ -231,14 +234,6 @@ fn menu_panel(menu: &MenuState, kit: &Kit, weight: f32, key_prefix: Option<&str>
                 });
         }
         panel = panel.child(line);
-        if entry.kind == 4 {
-            let track = el()
-                .w_full()
-                .h(4.0)
-                .fill(kit.light(0.20))
-                .child(el().w_frac(entry.ratio).h_full().fill(kit.c.bg_accent));
-            panel = panel.child(track);
-        }
     }
 
     let note = if menu.note.is_empty() {

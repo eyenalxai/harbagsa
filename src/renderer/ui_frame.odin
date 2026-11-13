@@ -60,6 +60,7 @@ UI_KEY_RIGHT :: i32(4)
 UI_KEY_ENTER :: i32(5)
 UI_KEY_ESCAPE :: i32(6)
 UI_KEY_TAB :: i32(7)
+UI_KEY_SPACE :: i32(8)
 
 // One Rune input event. Pointer coordinates are normalized to the target and
 // converted to points in ui_step; key and focus events ignore them.
@@ -85,6 +86,7 @@ UI_Frame :: struct {
 	captured:     bool,
 	palette_open: bool,
 	menu:         ui.Menu,
+	settings:     ui.Settings,
 	palette:      ui.Palette,
 }
 

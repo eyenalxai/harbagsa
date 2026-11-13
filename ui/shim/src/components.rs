@@ -4,8 +4,8 @@ use crate::theme;
 
 use crate::abi::UiAction;
 use crate::state::UiState;
-pub fn hud_panel(kit: &Kit) -> El {
-    let panel = col().radius(kit.radius.md).fill(theme::hud_surface());
+pub fn hud_panel(kit: &Kit, opacity: f32) -> El {
+    let panel = col().radius(kit.radius.md).fill(theme::hud_surface(opacity));
     kit.elevate(panel, &kit.elevation.raised)
 }
 

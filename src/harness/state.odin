@@ -81,6 +81,8 @@ Settings_State :: struct {
 	window_resolution: string `json:"window_resolution"`,
 	sprint_mode:       string `json:"sprint_mode"`,
 	type_weight:       f32    `json:"type_weight"`,
+	hud_opacity:       f32    `json:"hud_opacity"`,
+	reduce_motion:     bool   `json:"reduce_motion"`,
 }
 
 Menu_State :: struct {

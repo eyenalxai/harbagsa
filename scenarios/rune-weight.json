@@ -1,19 +1,19 @@
 {
-  "note": "The Type weight setting changes the Rune text: the menu sets 565 and 900 and the status panel redraws at each weight.",
+  "note": "The Type weight setting changes the Rune text: the scene patch sets 565 and 900 and the status panel redraws at each weight.",
   "size": "1280x720",
   "view": {"hud": true, "debug": false, "hint": false},
   "commands": [
     {"cmd": "settle", "frames": 1},
     {"cmd": "capture", "name": "weight-400", "format": "png"},
-    {"cmd": "menu", "open": true, "item": "Type weight", "set": 565},
-    {"cmd": "menu", "open": false},
+    {"cmd": "scene", "settings": {"type_weight": 565}},
     {"cmd": "settle", "frames": 20},
     {"cmd": "capture", "name": "weight-565", "format": "png"},
-    {"cmd": "menu", "open": true, "item": "Type weight", "set": 900},
-    {"cmd": "menu", "open": false},
+    {"cmd": "scene", "settings": {"type_weight": 900}},
     {"cmd": "settle", "frames": 20},
     {"cmd": "capture", "name": "weight-900", "format": "png"},
-    {"cmd": "menu", "open": true, "item": "Type weight", "set": 565},
-    {"cmd": "capture", "name": "weight-565-menu", "format": "png"}
+    {"cmd": "scene", "settings": {"type_weight": 565}},
+    {"cmd": "menu", "open": true},
+    {"cmd": "settle", "frames": 30},
+    {"cmd": "capture", "name": "weight-565-settings", "format": "png"}
   ]
 }

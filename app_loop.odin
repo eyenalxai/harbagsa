@@ -41,7 +41,7 @@ apply_frame_input :: proc(
 			game.debug_mode_cancel_editing(&loop.runtime.debug)
 			loop.accumulator = game.SIMULATION_STEP
 			input.clear_latches(&loop.resolver)
-			game.menu_view(&loop.runtime.hud.menu, &loop.runtime.sim.settings, loop.runtime.debug.active, 0)
+			game.menu_view(&loop.runtime.hud.menu, loop.runtime.debug.active, 0)
 		}
 	}
 
@@ -80,21 +80,6 @@ apply_frame_input :: proc(
 			game.debug_mode_reset_player(&loop.runtime.debug, &loop.runtime.sim)
 			renderer.reset_history(loop.renderer, .Player_Reset)
 			input.clear_latches(&loop.resolver)
-		}
-	}
-
-	if loop.runtime.hud.menu.open {
-		previous_window := loop.runtime.sim.settings.window
-		if apply_menu_input(
-			&loop.runtime.hud.menu,
-			&loop.runtime.sim.settings,
-			intent.menu,
-		) {
-			game.menu_close(&loop.runtime.hud.menu)
-			loop.accumulator = 0
-		}
-		if loop.runtime.sim.settings.window != previous_window {
-			apply_window_settings(loop, window, previous_window)
 		}
 	}
 }

@@ -10,20 +10,24 @@ import "src:game"
 import "src:ui"
 
 Menu_Command :: struct {
-	open:          bool,
-	has_open:      bool,
-	item:          game.Menu_Item,
-	has_item:      bool,
-	activate:      bool,
-	has_activate:  bool,
-	direction:     int,
-	has_direction: bool,
-	set:           f64,
-	has_set:       bool,
+	open:              bool,
+	has_open:          bool,
+	item:              game.Menu_Item,
+	has_item:          bool,
+	activate:          bool,
+	has_activate:      bool,
+	direction:         int,
+	has_direction:     bool,
+	opacity:           f64,
+	has_opacity:       bool,
+	reduce_motion:     bool,
+	has_reduce_motion: bool,
+	allow_blocked:     bool,
+	has_allow_blocked: bool,
 }
 
 parse_menu :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "open", "item", "activate", "direction", "set"}); unknown {
+	if key, unknown := json_unknown_key(object, {"cmd", "open", "item", "activate", "direction", "opacity", "reduce_motion", "allow_blocked"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 
@@ -57,23 +61,30 @@ parse_menu :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, 
 	if command.menu.has_direction && !command.menu.activate {
 		return {}, format_error("%s", "'direction' needs 'activate'")
 	}
-	if value, has := json_get(object, "set"); has {
-		weight, ok := json_number(value)
-		if !ok || weight < f64(ui.TYPE_WEIGHT_MIN) || weight > f64(ui.TYPE_WEIGHT_MAX) {
+	if value, has := json_get(object, "opacity"); has {
+		opacity, ok := json_number(value)
+		if !ok || opacity < f64(ui.HUD_OPACITY_MIN * 100) || opacity > f64(ui.HUD_OPACITY_MAX * 100) {
 			return {}, format_error(
-				"'set' must be a number in [%d, %d]",
-				int(ui.TYPE_WEIGHT_MIN),
-				int(ui.TYPE_WEIGHT_MAX),
+				"'opacity' must be a number in [%d, %d]",
+				int(ui.HUD_OPACITY_MIN * 100),
+				int(ui.HUD_OPACITY_MAX * 100),
 			)
 		}
-		command.menu.set = weight
-		command.menu.has_set = true
+		command.menu.opacity = opacity
+		command.menu.has_opacity = true
+	}
+	if field_error := json_optional_bool(object, "reduce_motion", &command.menu.reduce_motion, &command.menu.has_reduce_motion); field_error != "" {
+		return {}, field_error
+	}
+	if field_error := json_optional_bool(object, "allow_blocked", &command.menu.allow_blocked, &command.menu.has_allow_blocked); field_error != "" {
+		return {}, field_error
 	}
 	if !command.menu.has_open &&
 	   !command.menu.has_item &&
 	   !command.menu.has_activate &&
-	   !command.menu.has_set {
-		return {}, format_error("%s", "menu needs 'open', 'item', 'activate', or 'set'")
+	   !command.menu.has_opacity &&
+	   !command.menu.has_reduce_motion {
+		return {}, format_error("%s", "menu needs 'open', 'item', 'activate', 'opacity', or 'reduce_motion'")
 	}
 	return command, ""
 }
