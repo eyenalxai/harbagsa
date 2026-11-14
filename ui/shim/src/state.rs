@@ -1,3 +1,6 @@
+use std::cell::Cell;
+use std::rc::Rc;
+
 use rune_kit::Kit;
 
 use crate::abi::{
@@ -148,6 +151,9 @@ pub struct UiState {
     pub palette: PaletteState,
     pub inspector: InspectorState,
     pub inspector_preview: InspectorPreview,
+    pub pressed_key: Option<String>,
+    pub inspector_scroll: Rc<Cell<f32>>,
+    pub inspector_scroll_max: Rc<Cell<f32>>,
 }
 
 impl UiState {
@@ -169,6 +175,9 @@ impl UiState {
             palette: PaletteState::default(),
             inspector: InspectorState::default(),
             inspector_preview: InspectorPreview::default(),
+            pressed_key: None,
+            inspector_scroll: Rc::new(Cell::new(0.0)),
+            inspector_scroll_max: Rc::new(Cell::new(0.0)),
         }
     }
 

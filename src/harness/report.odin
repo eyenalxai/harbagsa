@@ -18,6 +18,7 @@ Report :: struct {
 	setup:       Setup_State      `json:"setup"`,
 	captures: []Capture_Result `json:"captures"`,
 	picks:       []Pick_Result    `json:"picks,omitempty"`,
+	ui_tree:     []Ui_Tree_Node   `json:"ui_tree,omitempty"`,
 	failures:    []string         `json:"failures"`,
 	digest:      string           `json:"digest"`,
 	error:       string           `json:"error,omitempty"`,

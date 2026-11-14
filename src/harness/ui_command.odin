@@ -4,10 +4,6 @@ package harness
 import "core:encoding/json"
 import "core:mem"
 
-import "src:game"
-import "src:renderer"
-import "src:uiaction"
-
 UI_KEY_BYTES :: 32
 
 Ui_Key :: struct {
@@ -29,88 +25,158 @@ ui_key_text :: proc(key: ^Ui_Key) -> string {
 	return string(key.bytes[:key.length])
 }
 
-Ui_Command :: struct {
-	x:   f32,
-	y:   f32,
-	key: Ui_Key,
+Ui_Target :: struct {
+	key:   Ui_Key,
+	x:     f32,
+	y:     f32,
+	point: bool,
 }
 
-parse_ui :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "x", "y", "key"}); unknown {
+Ui_Drag :: struct {
+	target: Ui_Target,
+	dx:     f32,
+	dy:     f32,
+	steps:  int,
+	hold:   bool,
+}
+
+Ui_Wheel :: struct {
+	target: Ui_Target,
+	dx:     f32,
+	dy:     f32,
+}
+
+Ui_Expect :: struct {
+	kind:      u32,
+	id:        u32,
+	value:     i32,
+	scalar:    f32,
+	has_id:    bool,
+	has_value: bool,
+	has_scalar: bool,
+}
+
+State_Expect :: struct {
+	path:  string,
+	value: Field_Value,
+}
+
+Ui_Command :: struct {
+	click:        Ui_Target,
+	drag:         Ui_Drag,
+	wheel:        Ui_Wheel,
+	focus:        bool,
+	expect:       Ui_Expect,
+	expect_state: []State_Expect,
+	has_click:    bool,
+	has_drag:     bool,
+	has_wheel:    bool,
+	has_focus:    bool,
+	has_expect:   bool,
+}
+
+parse_ui :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
+	allowed := []string {
+		"cmd",
+		"click",
+		"drag",
+		"wheel",
+		"focus",
+		"expect",
+		"expect_state",
+	}
+	if key, unknown := json_unknown_key(object, allowed); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 	command := Command{kind = .Ui}
-	x_value, has_x := json_get(object, "x")
-	y_value, has_y := json_get(object, "y")
-	value, has_key := json_get(object, "key")
-	if has_key {
-		if has_x || has_y {
-			return {}, format_error("%s", "ui takes 'key' or 'x' and 'y', not both")
+	forms := 0
+	if click_value, has_click := json_get(object, "click"); has_click {
+		target, target_error := parse_ui_target(click_value, "click")
+		if target_error != "" {
+			return {}, target_error
 		}
-		text, ok := json_string(value)
+		command.ui.click = target
+		command.ui.has_click = true
+		forms += 1
+	}
+	if drag_value, has_drag := json_get(object, "drag"); has_drag {
+		drag, drag_error := parse_ui_drag(drag_value)
+		if drag_error != "" {
+			return {}, drag_error
+		}
+		command.ui.drag = drag
+		command.ui.has_drag = true
+		forms += 1
+	}
+	if wheel_value, has_wheel := json_get(object, "wheel"); has_wheel {
+		wheel, wheel_error := parse_ui_wheel(wheel_value)
+		if wheel_error != "" {
+			return {}, wheel_error
+		}
+		command.ui.wheel = wheel
+		command.ui.has_wheel = true
+		forms += 1
+	}
+	if focus_value, has_focus := json_get(object, "focus"); has_focus {
+		focus, ok := json_boolean(focus_value)
 		if !ok {
-			return {}, format_error("%s", "'key' must be a string")
+			return {}, format_error("%s", "'focus' must be a boolean")
 		}
-		key, stored := ui_key_from_text(text)
-		if !stored {
-			return {}, format_error("'key' must be a non-empty string shorter than %d bytes", UI_KEY_BYTES)
+		command.ui.focus = focus
+		command.ui.has_focus = true
+		forms += 1
+	}
+	if forms != 1 {
+		return {}, format_error("%s", "ui needs exactly one of click, drag, wheel, or focus")
+	}
+	if expect_value, has_expect := json_get(object, "expect"); has_expect {
+		expect, expect_error := parse_ui_expect(expect_value)
+		if expect_error != "" {
+			return {}, expect_error
 		}
-		command.ui.key = key
-		return command, ""
+		command.ui.expect = expect
+		command.ui.has_expect = true
 	}
-	if !has_x || !has_y {
-		return {}, format_error("%s", "ui needs 'key' or both 'x' and 'y'")
+	if expect_state_value, has_expect_state := json_get(object, "expect_state"); has_expect_state {
+		expects, expect_error := parse_state_expects(expect_state_value, allocator)
+		if expect_error != "" {
+			return {}, expect_error
+		}
+		command.ui.expect_state = expects
 	}
-	x, x_ok := json_number(x_value)
-	if !x_ok {
-		return {}, format_error("%s", "'x' must be a number")
-	}
-	y, y_ok := json_number(y_value)
-	if !y_ok {
-		return {}, format_error("%s", "'y' must be a number")
-	}
-	command.ui = {x = f32(x), y = f32(y)}
 	return command, ""
 }
 
-execute_ui :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
-	if session.render.backend == nil {
-		return format_error("%s", "ui requires rendering")
-	}
-	ui := command.ui
-	actions: []renderer.Ui_Action
-	if ui.key.length > 0 {
-		key := ui.key
-		actions = renderer.ui_click_key(ui_key_text(&key))
-	} else {
-		actions = renderer.ui_click_at(ui.x, ui.y)
-	}
-	if len(actions) == 0 {
-		return format_error("%s", "the UI click produced no action")
-	}
-	for action in actions {
-		result := uiaction.apply(
-			{
-				sim = &session.runtime.sim,
-				debug = &session.runtime.debug,
-				menu = &session.runtime.hud.menu,
-				captured = false,
-			},
-			action,
-		)
-		if !result.handled {
-			renderer.ui_actions_clear()
-			return format_error("unknown UI action kind %d", action.kind)
+@(private)
+parse_ui_target :: proc(value: json.Value, field: string) -> (Ui_Target, string) {
+	if text, ok := json_string(value); ok {
+		key, stored := ui_key_from_text(text)
+		if !stored {
+			return {}, format_error("'%s' must be a non-empty key shorter than %d bytes", field, UI_KEY_BYTES)
 		}
-		if !result.applied {
-			renderer.ui_actions_clear()
-			message := game.edit_reason_message(result.reason)
-			if message == "" {
-				message = "the UI action made no change"
-			}
-			return format_error("%s", message)
-		}
+		return {key = key}, ""
 	}
-	renderer.ui_actions_clear()
-	return ""
+	if array, ok := json_array(value); ok {
+		if len(array) != 2 {
+			return {}, format_error("'%s' point must be [x, y]", field)
+		}
+		return parse_ui_point_values(array[0], array[1], field)
+	}
+	return {}, format_error("'%s' must be an element key or [x, y]", field)
+}
+
+@(private)
+parse_ui_point_values :: proc(x_value, y_value: json.Value, field: string) -> (Ui_Target, string) {
+	x, x_ok := json_number(x_value)
+	y, y_ok := json_number(y_value)
+	if !x_ok || !y_ok {
+		return {}, format_error("'%s' point must be [x, y]", field)
+	}
+	return {x = f32(x), y = f32(y), point = true}, ""
+}
+
+destroy_ui :: proc(command: ^Command, allocator: mem.Allocator) {
+	state_expects_destroy(command.ui.expect_state, allocator)
+	command.ui.expect_state = nil
+	command^ = {}
 }

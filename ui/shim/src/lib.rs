@@ -4,6 +4,7 @@ mod fx;
 mod host;
 mod input;
 mod inspector;
+mod introspect;
 mod paint;
 mod palette;
 mod settings;
@@ -14,10 +15,11 @@ mod theme;
 mod views;
 
 use std::ffi::c_char;
+use std::sync::{Mutex, OnceLock};
 
 use abi::{
-    UiAction, UiEvent, UiInspector, UiMenu, UiPalette, UiPanel, UiSettings, UiSnapshot, UiTarget,
-    UiVkConfig, UiVkDevice,
+    UiAction, UiEvent, UiInspector, UiInteraction, UiMenu, UiPalette, UiPanel, UiSettings,
+    UiSnapshot, UiTarget, UiVkConfig, UiVkDevice,
 };
 
 #[unsafe(no_mangle)]
@@ -91,13 +93,135 @@ pub extern "C" fn ui_actions_clear() {
 pub extern "C" fn ui_click_point(x: f32, y: f32) -> i32 {
     let Some(host) = host::host() else { return 1 };
     let Some(runtime) = host.runtime.as_mut() else { return 2 };
-    input::click_point(runtime, x, y)
+    input::click_point(runtime, x, y);
+    0
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ui_click_element(pointer: *const u8, len: u32) -> i32 {
+pub extern "C" fn ui_element_center(
+    pointer: *const u8,
+    len: u32,
+    x: *mut f32,
+    y: *mut f32,
+) -> i32 {
+    let Some(host) = host::host() else { return 1 };
+    let Some(runtime) = host.runtime.as_ref() else { return 2 };
+    let key = unsafe { abi::text_bytes(pointer, len) };
+    let Some((center_x, center_y)) = introspect::element_center(runtime, &key) else {
+        return 3;
+    };
+    if !x.is_null() {
+        unsafe { *x = center_x };
+    }
+    if !y.is_null() {
+        unsafe { *y = center_y };
+    }
+    0
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ui_drag_at(
+    x: f32,
+    y: f32,
+    dx: f32,
+    dy: f32,
+    steps: u32,
+    hold: u32,
+) -> i32 {
+    let Some(host) = host::host() else { return 1 };
+    let Some(runtime) = host.runtime.as_mut() else { return 2 };
+    input::drag_point(runtime, x, y, dx, dy, steps, hold != 0);
+    0
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ui_drag_element(
+    pointer: *const u8,
+    len: u32,
+    dx: f32,
+    dy: f32,
+    steps: u32,
+    hold: u32,
+) -> i32 {
     let Some(host) = host::host() else { return 1 };
     let Some(runtime) = host.runtime.as_mut() else { return 2 };
     let key = unsafe { abi::text_bytes(pointer, len) };
-    input::click_element(runtime, &key)
+    input::drag_element(runtime, &key, dx, dy, steps, hold != 0)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ui_wheel_at(x: f32, y: f32, dx: f32, dy: f32) -> i32 {
+    let Some(host) = host::host() else { return 1 };
+    let Some(runtime) = host.runtime.as_mut() else { return 2 };
+    input::wheel_point(runtime, x, y, dx, dy);
+    0
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ui_wheel_element(
+    pointer: *const u8,
+    len: u32,
+    dx: f32,
+    dy: f32,
+) -> i32 {
+    let Some(host) = host::host() else { return 1 };
+    let Some(runtime) = host.runtime.as_mut() else { return 2 };
+    let key = unsafe { abi::text_bytes(pointer, len) };
+    input::wheel_element(runtime, &key, dx, dy)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ui_focus(focused: u32) -> i32 {
+    let Some(host) = host::host() else { return 1 };
+    let Some(runtime) = host.runtime.as_mut() else { return 2 };
+    input::focus(runtime, focused != 0);
+    0
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ui_interaction(out: *mut UiInteraction) -> i32 {
+    if out.is_null() {
+        return 1;
+    }
+    let Some(host) = host::host() else { return 2 };
+    let Some(runtime) = host.runtime.as_mut() else { return 3 };
+    let mut interaction = introspect::Interaction::default();
+    introspect::interaction(runtime, &mut interaction);
+    let out = unsafe { &mut *out };
+    write_key(&mut out.focus, &mut out.focus_len, interaction.focus.as_deref());
+    write_key(&mut out.hover, &mut out.hover_len, interaction.hover.as_deref());
+    write_key(
+        &mut out.pressed,
+        &mut out.pressed_len,
+        interaction.pressed.as_deref(),
+    );
+    out.scroll_offset = interaction.scroll_offset;
+    out.scroll_max = interaction.scroll_max;
+    0
+}
+
+static TREE: OnceLock<Mutex<Vec<u8>>> = OnceLock::new();
+
+#[unsafe(no_mangle)]
+pub extern "C" fn ui_tree_json(len: *mut u32) -> *const u8 {
+    let Some(host) = host::host() else { return std::ptr::null() };
+    let Some(runtime) = host.runtime.as_ref() else { return std::ptr::null() };
+    let text = introspect::tree_json(runtime);
+    let buffer = TREE.get_or_init(|| Mutex::new(Vec::new()));
+    let Ok(mut guard) = buffer.lock() else { return std::ptr::null() };
+    guard.clear();
+    guard.extend_from_slice(text.as_bytes());
+    if !len.is_null() {
+        unsafe { *len = guard.len() as u32 };
+    }
+    guard.as_ptr()
+}
+
+fn write_key(bytes: &mut [u8; abi::INTERACTION_KEY_BYTES], len: &mut u32, value: Option<&str>) {
+    *len = 0;
+    let Some(value) = value else { return };
+    let source = value.as_bytes();
+    let count = source.len().min(bytes.len());
+    bytes[..count].copy_from_slice(&source[..count]);
+    *len = count as u32;
 }

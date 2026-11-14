@@ -22,6 +22,7 @@ State_Context :: struct {
 	hud:           ^game.HUD_State,
 	debug:         ^game.Debug_Mode,
 	render_digest: string,
+	ui:            Ui_Observation,
 	allocator:     mem.Allocator,
 }
 
@@ -34,6 +35,7 @@ STATE_SECTION_ROWS := [?]State_Section_Row {
 	{.Menu, "menu", build_state_menu},
 	{.Notice, "notice", build_state_notice},
 	{.Rows, "rows", build_state_rows},
+	{.Ui, "ui", build_state_ui},
 	{.Render_Digest, "render_digest", build_state_render_digest},
 }
 

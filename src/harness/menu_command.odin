@@ -24,10 +24,11 @@ Menu_Command :: struct {
 	has_reduce_motion: bool,
 	allow_blocked:     bool,
 	has_allow_blocked: bool,
+	expect_state:      []State_Expect,
 }
 
-parse_menu :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "open", "item", "activate", "direction", "opacity", "reduce_motion", "allow_blocked"}); unknown {
+parse_menu :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
+	if key, unknown := json_unknown_key(object, {"cmd", "open", "item", "activate", "direction", "opacity", "reduce_motion", "allow_blocked", "expect_state"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 
@@ -86,7 +87,20 @@ parse_menu :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, 
 	   !command.menu.has_reduce_motion {
 		return {}, format_error("%s", "menu needs 'open', 'item', 'activate', 'opacity', or 'reduce_motion'")
 	}
+	if expect_value, has_expect := json_get(object, "expect_state"); has_expect {
+		expects, expect_error := parse_state_expects(expect_value, allocator)
+		if expect_error != "" {
+			return {}, expect_error
+		}
+		command.menu.expect_state = expects
+	}
 	return command, ""
+}
+
+destroy_menu :: proc(command: ^Command, allocator: mem.Allocator) {
+	state_expects_destroy(command.menu.expect_state, allocator)
+	command.menu.expect_state = nil
+	command^ = {}
 }
 
 @(private)

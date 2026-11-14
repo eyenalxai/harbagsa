@@ -37,6 +37,20 @@ pub const OBJECT_FIELD_YAW: u32 = 1;
 pub const LAMP_FIELD_INTENSITY: u32 = 0;
 pub const LAMP_FIELD_RANGE: u32 = 1;
 
+pub const INTERACTION_KEY_BYTES: usize = 96;
+
+#[repr(C)]
+pub struct UiInteraction {
+    pub focus: [u8; INTERACTION_KEY_BYTES],
+    pub focus_len: u32,
+    pub hover: [u8; INTERACTION_KEY_BYTES],
+    pub hover_len: u32,
+    pub pressed: [u8; INTERACTION_KEY_BYTES],
+    pub pressed_len: u32,
+    pub scroll_offset: f32,
+    pub scroll_max: f32,
+}
+
 #[repr(C)]
 pub struct UiVkConfig {
     pub instance: *mut c_void,

@@ -1,17 +1,17 @@
 {
-  "note": "Evidence: palette-selected previews Platform; palette-armed shows Platform armed with Objects 6; palette-placed and the final state.json show 7 objects with Platform selected. Automatic assertions wait for HARB-367.",
+  "note": "The palette capture shows the Platform preview; Place arms it, and the primary press places it. The selected card, armed placement, and placed object are asserted in game state.",
   "view": {"hud": true, "debug": false, "hint": false},
   "commands": [
     {"cmd": "debug_mode", "active": true},
     {"cmd": "editor", "open": true},
     {"cmd": "settle", "frames": 1},
-    {"cmd": "ui", "key": "palette:4"},
+    {"cmd": "ui", "click": "palette:4", "expect": {"kind": "Palette_Select", "value": 4}, "expect_state": {"editor.palette.selected": 4, "editor.palette.open": true, "ui.surface": "palette", "ui.palette.open": true, "ui.palette.selected": 4}},
     {"cmd": "settle", "frames": 1},
     {"cmd": "capture", "name": "palette-selected", "format": "png"},
-    {"cmd": "ui", "key": "palette:place"},
+    {"cmd": "ui", "click": "palette:place", "expect": {"kind": "Palette_Pick"}, "expect_state": {"editor.placement.armed": true, "editor.placement.prefab": "Platform", "ui.surface": "hud", "ui.palette.open": false}},
     {"cmd": "settle", "frames": 1},
     {"cmd": "capture", "name": "palette-armed", "format": "png"},
-    {"cmd": "editor", "primary": true},
+    {"cmd": "editor", "primary": true, "expect_state": {"objects.count": 7, "editor.selection.present": true, "editor.selection.prefab": "Platform"}},
     {"cmd": "settle", "frames": 1},
     {"cmd": "capture", "name": "palette-placed", "format": "png"}
   ]

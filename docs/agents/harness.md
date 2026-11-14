@@ -68,7 +68,7 @@ run path. `--out DIR` chooses the whole run directory.
 ## What one run writes
 
 - `report.json`: result, final state, setup, captures, picks, failures, digest,
-  error, and named perf reports.
+  error, named perf reports, and the optional Rune element tree.
 - `state.json`: final state alone.
 - `frames/`: PNG, float, or raw captures.
 - `trace.jsonl`: opt-in perf samples.
@@ -142,14 +142,17 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `view`: `hud`, `debug`, `hint`, and `fx` flags. `fx` turns on the rune-fx
   demo over the status action row; it is off by default.
 - `debug_mode`: `active` boolean.
-- `editor`: palette, placement, object, light, camera, pointer, and history fields.
+- `editor`: palette, placement, object, light, camera, pointer, and history
+  fields. `expect_state` checks state paths after the edit.
 - `menu`: `open`, `item`, `activate`, `direction`, `opacity`, `reduce_motion`,
   and `allow_blocked`. `opacity` is a percentage in [70, 100]. A setting change
   that does not change the value fails the command; `allow_blocked` accepts an
-  expected blocked result.
-- `ui`: click the Rune view by element `key`, or at `x` and `y` in points. The
-  run fails when the click produces no action; the action is applied before the
-  command returns.
+  expected blocked result. `expect_state` checks state paths after the change.
+- `ui`: click an element key or an `[x, y]` point, or use `drag`, `wheel`, and
+  `focus`. The run fails when a click produces no action; the action is applied
+  before the command returns.
+- `ui_tree`: write the Rune element tree to `report.ui_tree`; optional
+  `expect_state` checks state after the dump.
 - `record`: start with `path` and optional `actions`; stop with no path.
 - `replay`: `path` to a recorded scenario.
 - `repro`: `path` for a live scene snapshot.
@@ -189,25 +192,98 @@ and `ui_draw` is not called, so the capture has no overlay.
 - `menu` opens the settings dialog and changes a value. The dialog itself owns
   its keyboard path; the command is the harness's direct settings path.
 - `editor` with `open: true` opens the object palette.
-- `ui` clicks the Rune view by element `key`, or at `x` and `y` in points. It
-  fails when the click produces no action, applies the action through the game
-  path, and clears the queue before returning. Rune hit-tests the element targets
-  it laid out.
+- `ui` drives the Rune view. `click` takes an element key or an `[x, y]` point;
+  `drag`, `wheel`, and `focus` are the other forms. Every form may carry
+  `expect` and `expect_state`. See **Driving the view**.
+- `ui_tree` writes the laid-out Rune element tree to `report.ui_tree`; it may
+  carry `expect_state` to assert state after the dump. It requires a renderer.
+  Each node carries `path`, `key`, `role`, `label`, `text`, `focused`,
+  `focus_visible`, `selected`, `hover`, `press`, `opacity`, `rect`, and
+  `parent`. `key`, `label`, and `text` may be absent; `parent` is an index into
+  the same array, or -1 for the root.
 - `capture` writes the frame with the UI.
 
+### Driving the view
+
+```json
+{"cmd":"ui","click":"palette:4",
+ "expect":{"kind":"Palette_Select","value":4},
+ "expect_state":{"editor.palette.selected":4}}
+{"cmd":"ui","drag":{"from":"settings.opacity","dx":-120,"dy":0,"steps":6}}
+{"cmd":"ui","drag":{"from":"inspector.yaw","dx":32,"dy":0,"steps":4,"hold":true}}
+{"cmd":"ui","wheel":{"at":"inspector.scroll","dy":-1}}
+{"cmd":"ui","focus":false}
+```
+
+- `click`: a string is an element key; `[x, y]` is a point in view points.
+- `drag`: `from` is a key or point. `dx`/`dy` are the pointer travel, and
+  `steps` is the number of move frames in [1, 64]. A drag spans frames: the
+  press and every move gets its own Rune frame before the release. `hold: true`
+  stops after the last move, leaving the press held. A held drag reports the
+  pressed and hovered control in `state.ui`; focus loss cancels it, and an
+  OnRelease slider restores its pre-drag value.
+- `wheel`: `at` is a key or point, and `dx`/`dy` are Rune scroll points
+  (positive `dy` moves content down). The live platform path converts one SDL
+  wheel notch to 40 points and negates its vertical sign before dispatch; the
+  harness value already is the Rune delta.
+- `focus`: `true` or `false` sends the window focus event.
+- `expect` checks one emitted `{kind, id, value, scalar}` action. `id`,
+  `value`, and `scalar` are optional. The command fails when no emitted action
+  matches.
+- `expect_state` checks state paths after the action queue is applied. Values
+  are numbers, booleans, or strings; numbers compare within 0.05. A missing
+  path or a different value fails the run.
+
+`state.ui` reports the current surface and the interaction state:
+
+```json
+{"surface": "inspector", "focus": "inspector.yaw", "hover": "inspector.yaw",
+ "pressed": "inspector.yaw", "pointer_free": true,
+ "actions": [{"kind": "Object_Set", "id": 7, "value": 1, "scalar": 180}],
+ "menu": {"open": false, "item": "Window mode"},
+ "palette": {"open": false, "selected": 0},
+ "inspector": {"open": true, "selected_id": 7, "section": "object",
+               "scroll_offset": 0, "scroll_max": 0}}
+```
+
+`surface` is `settings`, `inspector`, `palette`, or `hud`; the first open
+surface in that order wins. `focus`, `hover`, and `pressed` are element keys and
+are empty when nothing holds that state. `pointer_free` is the game focus rule.
+`actions` is the action list from the most recent `ui` command. Read-only
+commands such as `ui_tree`, `state`, and `get` keep it; `reset` clears it.
+`section` is `object` or `lamp` for a selection, otherwise `placement`.
+`scroll_offset` and `scroll_max` are the inspector rail's scroll position and
+limit in points.
+The semantic fields exist without a renderer; the interaction keys and scroll
+position need one.
+
 Pointer, wheel, key-down, key-up, key-repeat, and focus events reach Rune in one
-batch per frame. A harness click uses the same Rune hit path as a live click.
-`scenarios/rune-palette.json` opens the palette, selects a card by key, arms it
-through the Place button, and places its prefab. `scenarios/rune-palette-800.json`
-repeats it at 800x600. `scenarios/rune-menu.json` opens the settings dialog,
-track-clicks HUD opacity, steps it through the shared settings path, toggles
-reduce motion, and closes with both Resume and the header control.
-`scenarios/rune-menu-800.json` repeats it at 800x600. `scenarios/rune-ui.json`
-activates the status panel Debug action by key and opens the inspector.
-`scenarios/rune-inspector.json` opens the inspector, selects a crate, changes its
-body and absolute yaw, duplicates and deletes it, selects a lamp, changes its
-kind, colour, and intensity, changes the type weight, turns on the physics debug
-draw, and closes the rail.
+batch per frame. A harness click and drag use the same Rune hit path as a live
+click.
+`scenarios/rune-palette.json` opens the palette, selects a card by key, captures
+the preview, arms it through the Place button, places its prefab, and asserts
+the new object. `scenarios/rune-palette-800.json` repeats it at 800x600.
+`scenarios/rune-menu.json` opens the settings dialog, track-clicks HUD opacity,
+steps it through the shared settings path, toggles reduce motion, and closes
+with both Resume and the header control. `scenarios/rune-menu-800.json` repeats
+it at 800x600. `scenarios/rune-settings.json` drags the HUD opacity slider to
+70%, toggles reduce motion, and closes; `scenarios/rune-settings-800.json`
+repeats it at 800x600. `scenarios/rune-slider-drag.json` drags the inspector
+yaw to the cap and back to 180 degrees, cancels a held drag from 180 with focus
+loss, and drags the lamp intensity, range, and type weight to their floors.
+`scenarios/rune-slider-drag-800.json` repeats it at 800x600.
+`scenarios/rune-inspector-scroll.json` runs at 800x400, where the rail overflows
+naturally; it wheels one point down and back up, then clamps at the rail limit
+and asserts both the offset and the limit.
+`scenarios/rune-focus-loss.json` reports a held drag, loses focus, and asserts
+the drag was cancelled and the game value did not change;
+`scenarios/rune-focus-loss-800.json` repeats it at 800x600.
+`scenarios/rune-ui.json` activates the status panel Debug action by key, opens
+the inspector, and writes `report.ui_tree`; `scenarios/rune-ui-800.json` repeats
+it at 800x600. `scenarios/rune-inspector.json` opens the inspector, selects a
+crate, changes its body and absolute yaw, duplicates and deletes it, selects a
+lamp, changes its kind, colour, intensity, and range, changes the type weight,
+turns on the physics debug draw, and closes the rail.
 `scenarios/rune-inspector-800.json` repeats the object and lamp edits at 800x600.
 `scenarios/rune-fx.json` sets `view.fx` and shows the status action row with its
 rune-fx glow.

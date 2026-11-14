@@ -1,0 +1,4 @@
+{
+  "extends": "rune-slider-drag.json",
+  "size": "800x600"
+}

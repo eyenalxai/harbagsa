@@ -1,0 +1,19 @@
+{
+  "note": "At 800x400 the inspector rail overflows naturally. The wheel scrolls one point down and back up, then clamps at the rail limit; the report carries both captures and the state.ui scroll offset and limit.",
+  "size": "800x400",
+  "view": {"hud": true, "debug": false, "hint": false},
+  "commands": [
+    {"cmd": "place", "prefab": "Crate", "position": [4, 1, 4], "name": "inspector-crate"},
+    {"cmd": "place", "prefab": "Lamp", "position": [6, 2, 4], "name": "inspector-lamp"},
+    {"cmd": "ui", "click": "action:2", "expect": {"kind": "Debug_Inspector"}, "expect_state": {"ui.surface": "inspector", "ui.inspector.open": true}},
+    {"cmd": "editor", "select_object": "inspector-lamp"},
+    {"cmd": "settle", "frames": 30},
+    {"cmd": "capture", "name": "rail-top", "format": "png"},
+    {"cmd": "ui", "wheel": {"at": "inspector.scroll", "dy": -1}, "expect_state": {"ui.inspector.scroll_offset": 1, "ui.inspector.scroll_max": 128}},
+    {"cmd": "ui", "wheel": {"at": "inspector.scroll", "dy": 1}, "expect_state": {"ui.inspector.scroll_offset": 0}},
+    {"cmd": "ui", "wheel": {"at": "inspector.scroll", "dy": -1000}, "expect_state": {"ui.inspector.scroll_offset": 128, "ui.inspector.scroll_max": 128}},
+    {"cmd": "settle", "frames": 1},
+    {"cmd": "capture", "name": "rail-clamped", "format": "png"},
+    {"cmd": "ui", "wheel": {"at": "inspector.scroll", "dy": 1000}, "expect_state": {"ui.inspector.scroll_offset": 0}}
+  ]
+}

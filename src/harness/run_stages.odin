@@ -218,12 +218,19 @@ run_collect :: proc(state: ^Run_State) -> Stage_Result {
 			fail_stage(state, &result, trace_error)
 		}
 	}
-	state.state = session_state(&state.session)
-	state_path := join_path({state.staging, "state.json"}, context.allocator)
-	defer delete(state_path, context.allocator)
-	if write_error := write_json_file(state_path, state.state); write_error != "" {
-		result.exit_code = EXIT_RENDER
-		fail_stage(state, &result, write_error)
+	observed, observe_error := session_state(&state.session)
+	if observe_error != "" {
+		result.exit_code = EXIT_CHECK
+		session_failure(&state.session, observe_error)
+		fail_stage(state, &result, observe_error)
+	} else {
+		state.state = observed
+		state_path := join_path({state.staging, "state.json"}, context.allocator)
+		defer delete(state_path, context.allocator)
+		if write_error := write_json_file(state_path, state.state); write_error != "" {
+			result.exit_code = EXIT_RENDER
+			fail_stage(state, &result, write_error)
+		}
 	}
 
 	rewrite_capture_paths(&state.session, state.run_dir)
@@ -257,6 +264,9 @@ run_publish :: proc(state: ^Run_State, results: []Stage_Result) -> Stage_Result 
 	}
 	if len(state.session.perf.reports) > 0 {
 		report.perf = state.session.perf.reports[:]
+	}
+	if state.session.has_ui_tree {
+		report.ui_tree = state.session.ui_tree
 	}
 	if state.session.perf.has_trace && !state.trace_failed {
 		state.trace_path = perf_trace_path(

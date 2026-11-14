@@ -1,4 +1,4 @@
-use rune::{El, ScrollSpec, TextStyle, col, el, row, spacer};
+use rune::{El, ScrollSpec, TextStyle, Transition, col, el, row, spacer};
 use rune_kit::{
     Button, ButtonVariant, ControlSize, IconButton, IconButtonVariant, Kit, SegmentedControl, Switch,
 };
@@ -22,22 +22,44 @@ const LABEL_WIDTH: f32 = 76.0;
 
 pub fn view(state: &UiState, height: f32, layers: &mut Vec<El>) {
     if !state.inspector.open || state.menu.open || state.palette.open {
+        state.inspector_scroll.set(0.0);
+        state.inspector_scroll_max.set(0.0);
         return;
     }
     let kit = &state.kit;
     let max_height = (height - INSET * 2.0 - BOTTOM_RESERVE).max(240.0);
+    // The viewport keeps its scroll position across selection changes, so the
+    // body identity names the selected object and its shape. Without that, the
+    // scroll content reuses the old Object/Placement/Lamp rows.
+    let body_key = format!(
+        "inspector.body:{}:{}:{}",
+        state.inspector.object_id,
+        state.inspector.has_selection as u8,
+        state.inspector.has_lamp as u8,
+    );
     let body = col()
         .w_full()
         .gap(4.0)
+        .key(body_key)
+        .transition(Transition::none())
         .child(object_section(state))
         .child(placement_section(state))
         .child(lamp_section(state))
         .child(debug_section(state));
+    let scroll = state.inspector_scroll.clone();
+    let scroll_max = state.inspector_scroll_max.clone();
     let viewport = col()
         .w_full()
         .max_h(max_height)
         .min_h(0.0)
         .scroll(ScrollSpec { stick_bottom: false })
+        .key("inspector.scroll")
+        .instant_changes()
+        .child_exit(Transition::none())
+        .on_scroll_offset(move |at| {
+            scroll.set(at.offset[1]);
+            scroll_max.set(at.max[1]);
+        })
         .child(body);
     let panel = components::hud_panel(kit, 0.96)
         .w(WIDTH)

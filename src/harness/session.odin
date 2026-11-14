@@ -33,6 +33,10 @@ Session :: struct {
 	settle:   Settle,
 	render:   Render_State,
 
+	ui_actions: [dynamic]renderer.Ui_Action,
+	ui_tree:    []Ui_Tree_Node,
+	has_ui_tree: bool,
+
 	failures: [dynamic]string,
 
 	quit: bool,
@@ -63,6 +67,7 @@ session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 	session.recorder = recorder_create(allocator)
 	session.perf = perf_run_create(allocator)
 	session.failures = make([dynamic]string, 0, 8, allocator)
+	session.ui_actions = make([dynamic]renderer.Ui_Action, 0, 8, allocator)
 	return session, ""
 }
 
@@ -85,6 +90,7 @@ session_destroy :: proc(session: ^Session) {
 	recorder_destroy(&session.recorder, session.allocator)
 	perf_run_destroy(&session.perf, session.allocator)
 	render_state_destroy(&session.render, session.allocator)
+	ui_run_destroy(session, session.allocator)
 	session^ = {}
 }
 
@@ -126,6 +132,7 @@ session_reset :: proc(session: ^Session) -> string {
 	session.drawn_frame = session.frame
 	session.settle.frames = 0
 	session.settle.converged = false
+	ui_run_reset(session, session.allocator)
 	return ""
 }
 

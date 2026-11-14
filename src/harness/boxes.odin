@@ -42,6 +42,7 @@ cli_boxes :: proc(args: []string) -> int {
 		{},
 		"",
 		{},
+		{},
 		{.Static_Boxes},
 		context.allocator,
 	)
