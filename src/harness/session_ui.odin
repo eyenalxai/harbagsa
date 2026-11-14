@@ -2,7 +2,6 @@
 package harness
 
 import "core:mem"
-import "core:strings"
 
 import "src:renderer"
 
@@ -34,28 +33,24 @@ ui_run_destroy :: proc(session: ^Session, allocator: mem.Allocator) {
 	session.ui_actions = nil
 }
 
-session_ui_set_actions :: proc(session: ^Session, actions: []renderer.Ui_Action) {
-	clear(&session.ui_actions)
-	append(&session.ui_actions, ..actions)
-}
-
 session_ui_set_tree :: proc(session: ^Session, tree: []Ui_Tree_Node) {
 	ui_tree_destroy(session, session.allocator)
 	session.ui_tree = tree
 	session.has_ui_tree = tree != nil
 }
 
-session_ui_observation :: proc(session: ^Session) -> Ui_Observation {
+session_ui_observation :: proc(session: ^Session) -> (Ui_Observation, string) {
 	observation := Ui_Observation{actions = session.ui_actions[:]}
 	if session.render.backend == nil {
-		return observation
+		return observation, ""
 	}
 	interaction, ok := renderer.ui_query_interaction()
-	if ok {
-		observation.interaction = interaction
-		observation.has_interaction = true
+	if !ok {
+		return observation, format_error("%s", "the UI shim did not report its interaction state")
 	}
-	return observation
+	observation.interaction = interaction
+	observation.has_interaction = true
+	return observation, ""
 }
 
 @(private)
@@ -83,11 +78,4 @@ free_owned_string :: proc(text: ^string, allocator: mem.Allocator) {
 		delete(text^, allocator)
 		text^ = ""
 	}
-}
-
-clone_tree_text :: proc(text: string, allocator: mem.Allocator) -> string {
-	if text == "" {
-		return ""
-	}
-	return strings.clone(text, allocator)
 }

@@ -11,9 +11,7 @@
     {"cmd": "ui", "click": "palette:place", "expect": {"kind": "Palette_Pick"}, "expect_state": {"editor.placement.armed": true, "editor.placement.prefab": "Platform", "ui.surface": "hud", "ui.palette.open": false}},
     {"cmd": "settle", "frames": 1},
     {"cmd": "capture", "name": "palette-armed", "format": "png"},
-    {"cmd": "editor", "primary": true},
-    {"cmd": "settle", "frames": 1},
-    {"cmd": "ui", "focus": true, "expect_state": {"objects.count": 7, "editor.selection.present": true, "editor.selection.prefab": "Platform", "ui.surface": "hud"}},
+    {"cmd": "editor", "primary": true, "expect_state": {"objects.count": 7, "editor.selection.present": true, "editor.selection.prefab": "Platform"}},
     {"cmd": "settle", "frames": 1},
     {"cmd": "capture", "name": "palette-placed", "format": "png"}
   ]

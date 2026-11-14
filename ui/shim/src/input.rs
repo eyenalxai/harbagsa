@@ -16,6 +16,7 @@ pub const FOCUS: u32 = 11;
 
 const FRAME_DT: f64 = 1.0 / 60.0;
 const MAX_DRAG_STEPS: u32 = 64;
+const LIVE_WHEEL_POINTS: f32 = 40.0;
 
 pub fn dispatch(runtime: &mut Runtime<UiState>, events: *const UiEvent, count: u32) {
     if events.is_null() {
@@ -36,7 +37,7 @@ pub fn dispatch(runtime: &mut Runtime<UiState>, events: *const UiEvent, count: u
             }
             WHEEL => {
                 runtime.pointer_move(event.x, event.y);
-                runtime.wheel(event.x, event.y, -event.dy * 40.0);
+                runtime.wheel(event.x, event.y, -event.dy * LIVE_WHEEL_POINTS);
             }
             KEY_DOWN => {
                 if let Some(key) = key_from_code(event.key) {
@@ -64,11 +65,9 @@ pub fn dispatch(runtime: &mut Runtime<UiState>, events: *const UiEvent, count: u
     }
 }
 
-pub fn click_point(runtime: &mut Runtime<UiState>, x: f32, y: f32, key: Option<&str>) {
+pub fn click_point(runtime: &mut Runtime<UiState>, x: f32, y: f32) {
     runtime.pointer_move(x, y);
     runtime.pointer_down(x, y);
-    runtime.state.pressed_key =
-        key.map(str::to_string).or_else(|| introspect::key_at(runtime, x, y));
     advance(runtime);
     runtime.pointer_up(x, y);
     runtime.state.pressed_key = None;

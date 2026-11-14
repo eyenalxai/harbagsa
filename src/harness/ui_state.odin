@@ -18,9 +18,11 @@ Ui_Palette_State :: struct {
 }
 
 Ui_Inspector_State :: struct {
-	open:        bool   `json:"open"`,
-	selected_id: u32    `json:"selected_id"`,
-	section:     string `json:"section"`,
+	open:          bool   `json:"open"`,
+	selected_id:   u32    `json:"selected_id"`,
+	section:       string `json:"section"`,
+	scroll_offset: f32    `json:"scroll_offset"`,
+	scroll_max:    f32    `json:"scroll_max"`,
 }
 
 Ui_Action_State :: struct {
@@ -105,7 +107,7 @@ build_state_ui :: proc(state: ^State, ctx: ^State_Context) {
 		section = selection.light.active ? "lamp" : "object"
 	}
 	state.ui = {
-		surface      = ui_surface(focus.menu_open, view.palette.open, inspector_open),
+		surface      = ui_surface(focus.menu_open, inspector_open, view.palette.open),
 		pointer_free = focus.pointer_free,
 		menu = {open = focus.menu_open, item = game.menu_selected_name(&ctx.hud.menu)},
 		palette = {open = view.palette.open, selected = int(view.palette.prefab)},
@@ -120,6 +122,8 @@ build_state_ui :: proc(state: ^State, ctx: ^State_Context) {
 		state.ui.focus = clone_interaction_key(interaction.focus[:], interaction.focus_len, ctx.allocator)
 		state.ui.hover = clone_interaction_key(interaction.hover[:], interaction.hover_len, ctx.allocator)
 		state.ui.pressed = clone_interaction_key(interaction.pressed[:], interaction.pressed_len, ctx.allocator)
+		state.ui.inspector.scroll_offset = interaction.scroll_offset
+		state.ui.inspector.scroll_max = interaction.scroll_max
 	}
 	if len(ctx.ui.actions) > 0 {
 		state.ui.actions = make([]Ui_Action_State, len(ctx.ui.actions), ctx.allocator)
@@ -154,15 +158,15 @@ clone_interaction_key :: proc(bytes: []u8, length: u32, allocator: mem.Allocator
 }
 
 @(private)
-ui_surface :: proc(menu_open, palette_open, inspector_open: bool) -> string {
+ui_surface :: proc(menu_open, inspector_open, palette_open: bool) -> string {
 	if menu_open {
 		return "settings"
 	}
-	if palette_open {
-		return "palette"
-	}
 	if inspector_open {
 		return "inspector"
+	}
+	if palette_open {
+		return "palette"
 	}
 	return "hud"
 }

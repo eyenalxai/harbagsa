@@ -142,7 +142,8 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `view`: `hud`, `debug`, `hint`, and `fx` flags. `fx` turns on the rune-fx
   demo over the status action row; it is off by default.
 - `debug_mode`: `active` boolean.
-- `editor`: palette, placement, object, light, camera, pointer, and history fields.
+- `editor`: palette, placement, object, light, camera, pointer, and history
+  fields. `expect_state` checks state paths after the edit.
 - `menu`: `open`, `item`, `activate`, `direction`, `opacity`, `reduce_motion`,
   and `allow_blocked`. `opacity` is a percentage in [70, 100]. A setting change
   that does not change the value fails the command; `allow_blocked` accepts an
@@ -205,7 +206,7 @@ and `ui_draw` is not called, so the capture has no overlay.
  "expect_state":{"editor.palette.selected":4}}
 {"cmd":"ui","drag":{"from":"settings.opacity","dx":-120,"dy":0,"steps":6}}
 {"cmd":"ui","drag":{"from":"inspector.yaw","dx":32,"dy":0,"steps":4,"hold":true}}
-{"cmd":"ui","wheel":{"at":"inspector.yaw","dy":-240}}
+{"cmd":"ui","wheel":{"at":"inspector.scroll","dy":-1}}
 {"cmd":"ui","focus":false}
 ```
 
@@ -214,11 +215,15 @@ and `ui_draw` is not called, so the capture has no overlay.
 - `drag`: `from` is a key or point. `dx`/`dy` are the pointer travel, and
   `steps` is the number of move frames in [1, 64]. A drag spans frames: the
   press and every move gets its own Rune frame before the release. `hold: true`
-  stops after the last move, leaving the press held; `cancel: true` ends with a
-  focus-loss instead of a release. A held drag reports the pressed and hovered
-  control in `state.ui`; focus loss cancels it, and an OnRelease slider restores
-  its pre-drag value.
-- `wheel`: `at` is a key or point, and `dx`/`dy` are the wheel delta in points.
+  stops after the last move, leaving the press held; `cancel: true` takes the
+  focus-loss path instead of a release, and the shim restores focus before the
+  command returns. A held drag reports the pressed and hovered control in
+  `state.ui`; focus loss cancels it, and an OnRelease slider restores its
+  pre-drag value.
+- `wheel`: `at` is a key or point, and `dx`/`dy` are Rune scroll points
+  (positive `dy` moves content down). The live platform path converts one SDL
+  wheel notch to 40 points and negates its vertical sign before dispatch; the
+  harness value already is the Rune delta.
 - `focus`: `true` or `false` sends the window focus event.
 - `expect` checks one emitted `{kind, id, value, scalar}` action. `id`,
   `value`, and `scalar` are optional. The command fails when no emitted action
@@ -235,15 +240,19 @@ and `ui_draw` is not called, so the capture has no overlay.
  "actions": [{"kind": "Object_Set", "id": 7, "value": 1, "scalar": 180}],
  "menu": {"open": false, "item": "Window mode"},
  "palette": {"open": false, "selected": 0},
- "inspector": {"open": true, "selected_id": 7, "section": "object"}}
+ "inspector": {"open": true, "selected_id": 7, "section": "object",
+               "scroll_offset": 0, "scroll_max": 24}}
 ```
 
-`surface` is `settings`, `palette`, `inspector`, or `hud`; the topmost open
-surface wins. `focus`, `hover`, and `pressed` are element keys and are empty
-when nothing holds that state. `pointer_free` is the game focus rule. `actions`
-is the action list from the last `ui` command. `section` is `object` or `lamp`
-for a selection, otherwise `placement`. The semantic fields exist without a
-renderer; the interaction keys need one.
+`surface` is `settings`, `inspector`, `palette`, or `hud`; the first open
+surface in that order wins. `focus`, `hover`, and `pressed` are element keys and
+are empty when nothing holds that state. `pointer_free` is the game focus rule.
+`actions` is the action list from the most recent `ui` command; `ui_tree` clears
+it because the tree starts a new UI read, and `reset` clears it too. `section`
+is `object` or `lamp` for a selection, otherwise `placement`. `scroll_offset`
+and `scroll_max` are the inspector rail's scroll position and limit in points.
+The semantic fields exist without a renderer; the interaction keys and scroll
+position need one.
 
 Pointer, wheel, key-down, key-up, key-repeat, and focus events reach Rune in one
 batch per frame. A harness click and drag use the same Rune hit path as a live
@@ -257,8 +266,10 @@ with both Resume and the header control. `scenarios/rune-menu-800.json` repeats
 it at 800x600. `scenarios/rune-settings.json` drags the HUD opacity slider to
 70%, toggles reduce motion, and closes; `scenarios/rune-settings-800.json`
 repeats it at 800x600. `scenarios/rune-slider-drag.json` drags the inspector
-yaw, lamp intensity, lamp range, and type weight, and cancels a held yaw drag
-with focus loss; `scenarios/rune-slider-drag-800.json` repeats it at 800x600.
+yaw to the cap and back to 180 degrees, cancels a held drag from 180 with focus
+loss, and drags the lamp intensity, range, and type weight to their floors.
+Both inspector scenarios wheel the keyed rail scroll viewport and assert the
+offset changes. `scenarios/rune-slider-drag-800.json` repeats it at 800x600.
 `scenarios/rune-focus-loss.json` reports a held drag, loses focus, and asserts
 the drag was cancelled and the game value did not change;
 `scenarios/rune-focus-loss-800.json` repeats it at 800x600.

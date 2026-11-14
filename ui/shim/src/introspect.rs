@@ -36,6 +36,8 @@ pub fn interaction(runtime: &mut Runtime<UiState>, out: &mut Interaction) {
     } else {
         None
     };
+    out.scroll_offset = runtime.state.inspector_scroll.get();
+    out.scroll_max = runtime.state.inspector_scroll_max.get();
 }
 
 pub fn element_center(runtime: &Runtime<UiState>, key: &str) -> Option<(f32, f32)> {
@@ -132,6 +134,8 @@ pub struct Interaction {
     pub focus: Option<String>,
     pub hover: Option<String>,
     pub pressed: Option<String>,
+    pub scroll_offset: f32,
+    pub scroll_max: f32,
 }
 
 fn focused_key(elements: &[ElementInfo]) -> Option<String> {

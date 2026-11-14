@@ -40,6 +40,7 @@ EDITOR_KEYS := [?]string {
 	"secondary",
 	"drag_move",
 	"drag_release",
+	"expect_state",
 }
 
 Editor_Camera :: struct {
@@ -74,12 +75,13 @@ Editor_Command :: struct {
 	has_camera: bool,
 	place:      Editor_Place,
 	has_place:  bool,
-	object:     Editor_Object,
-	light:      Editor_Light,
-	input:      Editor_Input,
+	object:       Editor_Object,
+	light:        Editor_Light,
+	input:        Editor_Input,
+	expect_state: []State_Expect,
 }
 
-parse_editor :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
+parse_editor :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(object, EDITOR_KEYS[:]); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
@@ -163,8 +165,16 @@ parse_editor :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command
 		return {}, input_error
 	}
 	command.editor.input = editor_input
+	if expect_value, has_expect := json_get(object, "expect_state"); has_expect {
+		expects, expect_error := parse_state_expects(expect_value, allocator)
+		if expect_error != "" {
+			return {}, expect_error
+		}
+		command.editor.expect_state = expects
+	}
 
 	if !editor_command_has_action(object) {
+		state_expects_destroy(command.editor.expect_state, allocator)
 		return {}, format_error("%s", "editor needs at least one field")
 	}
 	return command, ""
@@ -230,9 +240,18 @@ parse_body_mode :: proc(value: json.Value, label: string) -> (game.Body_Mode, st
 @(private)
 editor_command_has_action :: proc(object: json.Object) -> bool {
 	for key in EDITOR_KEYS[1:] {
+		if key == "expect_state" {
+			continue
+		}
 		if _, present := json_get(object, key); present {
 			return true
 		}
 	}
 	return false
+}
+
+destroy_editor :: proc(command: ^Command, allocator: mem.Allocator) {
+	state_expects_destroy(command.editor.expect_state, allocator)
+	command.editor.expect_state = nil
+	command^ = {}
 }

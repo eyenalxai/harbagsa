@@ -33,7 +33,10 @@ destroy_get :: proc(command: ^Command, allocator: mem.Allocator) {
 }
 
 session_get :: proc(session: ^Session, command: Get_Command, reply: ^Reply) -> string {
-	state := session_observe(session, state_section_for_field(command.field))
+	state, state_error := session_observe(session, state_section_for_field(command.field))
+	if state_error != "" {
+		return state_error
+	}
 	defer state_destroy(&state, session.allocator)
 	value, field_error := field_value(state, session.capture.captures[:], command.field)
 	if field_error != "" {

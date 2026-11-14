@@ -93,7 +93,7 @@ pub extern "C" fn ui_actions_clear() {
 pub extern "C" fn ui_click_point(x: f32, y: f32) -> i32 {
     let Some(host) = host::host() else { return 1 };
     let Some(runtime) = host.runtime.as_mut() else { return 2 };
-    input::click_point(runtime, x, y, None);
+    input::click_point(runtime, x, y);
     0
 }
 
@@ -197,6 +197,8 @@ pub extern "C" fn ui_interaction(out: *mut UiInteraction) -> i32 {
         &mut out.pressed_len,
         interaction.pressed.as_deref(),
     );
+    out.scroll_offset = interaction.scroll_offset;
+    out.scroll_max = interaction.scroll_max;
     0
 }
 

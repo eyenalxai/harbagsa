@@ -42,10 +42,14 @@ session_refresh_renderer :: proc(session: ^Session) {
 
 // One observation refreshes every derived owner before the build, so a section
 // cannot pair a fresh value with a stale HUD.
-session_observe :: proc(session: ^Session, sections: State_Sections) -> State {
+session_observe :: proc(session: ^Session, sections: State_Sections) -> (State, string) {
 	session_refresh_bake(session)
 	session_refresh_renderer(session)
 	session_refresh_hud(session)
+	observation, observation_error := session_ui_observation(session)
+	if observation_error != "" {
+		return {}, observation_error
+	}
 	return state_build_sections(
 		&session.runtime.sim,
 		session.frame,
@@ -55,13 +59,13 @@ session_observe :: proc(session: ^Session, sections: State_Sections) -> State {
 		session.render.report,
 		session.render.digest_text,
 		{frames = session.settle.frames, converged = session.settle.converged},
-		session_ui_observation(session),
+		observation,
 		sections,
 		session.allocator,
-	)
+	), ""
 }
 
-session_state :: proc(session: ^Session) -> State {
+session_state :: proc(session: ^Session) -> (State, string) {
 	return session_observe(session, state_all_sections())
 }
 

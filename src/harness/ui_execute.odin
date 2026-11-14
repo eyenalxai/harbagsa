@@ -31,12 +31,13 @@ execute_ui :: proc(session: ^Session, command: Command, reply: ^Reply) -> string
 			return error
 		}
 	} else if ui.has_focus {
-		if !renderer.ui_set_focus(ui.focus) {
+		if renderer.ui_focus(u32(ui.focus)) != 0 {
 			return format_error("%s", "the UI focus change failed")
 		}
 	}
 	actions := renderer.ui_actions_slice()
-	session_ui_set_actions(session, actions)
+	clear(&session.ui_actions)
+	append(&session.ui_actions, ..actions)
 	renderer.ui_actions_clear()
 	for action in session.ui_actions {
 		result := uiaction.apply(
@@ -74,7 +75,7 @@ execute_ui :: proc(session: ^Session, command: Command, reply: ^Reply) -> string
 			)
 		}
 	}
-	return ui_check_state(session, ui.expect_state)
+	return check_state_expects(session, ui.expect_state)
 }
 
 @(private)
@@ -154,11 +155,18 @@ ui_action_matches :: proc(expect: Ui_Expect, action: renderer.Ui_Action) -> bool
 }
 
 @(private)
-ui_check_state :: proc(session: ^Session, expects: []Ui_State_Expect) -> string {
+check_state_expects :: proc(session: ^Session, expects: []State_Expect) -> string {
 	if len(expects) == 0 {
 		return ""
 	}
-	state := session_observe(session, state_all_sections())
+	sections: State_Sections
+	for expect in expects {
+		sections |= state_section_for_field(expect.path)
+	}
+	state, state_error := session_observe(session, sections)
+	if state_error != "" {
+		return state_error
+	}
 	defer state_destroy(&state, session.allocator)
 	for expect in expects {
 		value, field_error := field_value(state, session.capture.captures[:], expect.path)

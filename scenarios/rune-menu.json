@@ -16,7 +16,7 @@
     {"cmd": "capture", "name": "hud-70", "format": "png"},
     {"cmd": "menu", "open": true},
     {"cmd": "settle", "frames": 30},
-    {"cmd": "ui", "click": "settings.opacity", "expect": {"kind": "Settings_Set", "id": 4}, "expect_state": {"ui.surface": "settings", "ui.menu.open": true}},
+    {"cmd": "ui", "click": "settings.opacity", "expect": {"kind": "Settings_Set", "id": 4}, "expect_state": {"ui.surface": "settings", "ui.menu.open": true, "settings.hud_opacity": 0.85}},
     {"cmd": "settle", "frames": 2},
     {"cmd": "capture", "name": "settings-track-click", "format": "png"},
     {"cmd": "menu", "item": "HUD opacity", "activate": true, "direction": 1},

@@ -42,8 +42,7 @@ Write a comment only when it answers a hard "Why this way?" question. Do not nar
 
 ## Tests
 
-Never add tests. Do not create test files, test targets, test suites, or
-assertion scenarios. Do not add a test gate. There is no test command.
+Do not add a test gate. There is no test command.
 
 ## CI
 

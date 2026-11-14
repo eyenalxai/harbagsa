@@ -19,13 +19,18 @@ const INSET: f32 = 12.0;
 const CONTENT_WIDTH: f32 = WIDTH - 24.0;
 const BOTTOM_RESERVE: f32 = 60.0;
 const LABEL_WIDTH: f32 = 76.0;
+const MAX_VIEWPORT_HEIGHT: f32 = 420.0;
 
 pub fn view(state: &UiState, height: f32, layers: &mut Vec<El>) {
     if !state.inspector.open || state.menu.open || state.palette.open {
+        state.inspector_scroll.set(0.0);
+        state.inspector_scroll_max.set(0.0);
         return;
     }
     let kit = &state.kit;
-    let max_height = (height - INSET * 2.0 - BOTTOM_RESERVE).max(240.0);
+    let max_height = (height - INSET * 2.0 - BOTTOM_RESERVE)
+        .min(MAX_VIEWPORT_HEIGHT)
+        .max(240.0);
     let body = col()
         .w_full()
         .gap(4.0)
@@ -33,11 +38,18 @@ pub fn view(state: &UiState, height: f32, layers: &mut Vec<El>) {
         .child(placement_section(state))
         .child(lamp_section(state))
         .child(debug_section(state));
+    let scroll = state.inspector_scroll.clone();
+    let scroll_max = state.inspector_scroll_max.clone();
     let viewport = col()
         .w_full()
         .max_h(max_height)
         .min_h(0.0)
         .scroll(ScrollSpec { stick_bottom: false })
+        .key("inspector.scroll")
+        .on_scroll_offset(move |at| {
+            scroll.set(at.offset[1]);
+            scroll_max.set(at.max[1]);
+        })
         .child(body);
     let panel = components::hud_panel(kit, 0.96)
         .w(WIDTH)

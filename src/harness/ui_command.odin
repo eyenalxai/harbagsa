@@ -57,7 +57,7 @@ Ui_Expect :: struct {
 	has_scalar: bool,
 }
 
-Ui_State_Expect :: struct {
+State_Expect :: struct {
 	path:  string,
 	value: Field_Value,
 }
@@ -68,7 +68,7 @@ Ui_Command :: struct {
 	wheel:        Ui_Wheel,
 	focus:        bool,
 	expect:       Ui_Expect,
-	expect_state: []Ui_State_Expect,
+	expect_state: []State_Expect,
 	has_click:    bool,
 	has_drag:     bool,
 	has_wheel:    bool,
@@ -157,7 +157,7 @@ parse_ui :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, str
 		command.ui.has_expect = true
 	}
 	if expect_state_value, has_expect_state := json_get(object, "expect_state"); has_expect_state {
-		expects, expect_error := parse_ui_expect_state(expect_state_value, allocator)
+		expects, expect_error := parse_state_expects(expect_state_value, allocator)
 		if expect_error != "" {
 			return {}, expect_error
 		}
@@ -178,28 +178,23 @@ parse_legacy_click :: proc(object: json.Object) -> (target: Ui_Target, has: bool
 		if has_x || has_y {
 			return {}, false, format_error("%s", "ui takes 'key' or 'x' and 'y', not both")
 		}
-		text, ok := json_string(key_value)
-		if !ok {
+		parsed, target_error := parse_ui_target(key_value, "key")
+		if target_error != "" {
+			return {}, false, target_error
+		}
+		if parsed.point {
 			return {}, false, format_error("%s", "'key' must be a string")
 		}
-		key, stored := ui_key_from_text(text)
-		if !stored {
-			return {}, false, format_error("'key' must be a non-empty string shorter than %d bytes", UI_KEY_BYTES)
-		}
-		return {key = key}, true, ""
+		return parsed, true, ""
 	}
 	if !has_x || !has_y {
 		return {}, false, format_error("%s", "ui needs 'key' or both 'x' and 'y'")
 	}
-	x, x_ok := json_number(x_value)
-	if !x_ok {
-		return {}, false, format_error("%s", "'x' must be a number")
+	point, target_error := parse_ui_point_values(x_value, y_value, "x and y")
+	if target_error != "" {
+		return {}, false, target_error
 	}
-	y, y_ok := json_number(y_value)
-	if !y_ok {
-		return {}, false, format_error("%s", "'y' must be a number")
-	}
-	return {x = f32(x), y = f32(y), point = true}, true, ""
+	return point, true, ""
 }
 
 @(private)
@@ -215,26 +210,23 @@ parse_ui_target :: proc(value: json.Value, field: string) -> (Ui_Target, string)
 		if len(array) != 2 {
 			return {}, format_error("'%s' point must be [x, y]", field)
 		}
-		x, x_ok := json_number(array[0])
-		y, y_ok := json_number(array[1])
-		if !x_ok || !y_ok {
-			return {}, format_error("'%s' point must be [x, y]", field)
-		}
-		return {x = f32(x), y = f32(y), point = true}, ""
+		return parse_ui_point_values(array[0], array[1], field)
 	}
 	return {}, format_error("'%s' must be an element key or [x, y]", field)
 }
 
+@(private)
+parse_ui_point_values :: proc(x_value, y_value: json.Value, field: string) -> (Ui_Target, string) {
+	x, x_ok := json_number(x_value)
+	y, y_ok := json_number(y_value)
+	if !x_ok || !y_ok {
+		return {}, format_error("'%s' point must be [x, y]", field)
+	}
+	return {x = f32(x), y = f32(y), point = true}, ""
+}
+
 destroy_ui :: proc(command: ^Command, allocator: mem.Allocator) {
-	for &expect in command.ui.expect_state {
-		delete(expect.path, allocator)
-		if expect.value.kind == .String {
-			delete(expect.value.text, allocator)
-		}
-	}
-	if command.ui.expect_state != nil {
-		delete(command.ui.expect_state, allocator)
-	}
+	state_expects_destroy(command.ui.expect_state, allocator)
 	command.ui.expect_state = nil
 	command^ = {}
 }

@@ -47,6 +47,8 @@ pub struct UiInteraction {
     pub hover_len: u32,
     pub pressed: [u8; INTERACTION_KEY_BYTES],
     pub pressed_len: u32,
+    pub scroll_offset: f32,
+    pub scroll_max: f32,
 }
 
 #[repr(C)]

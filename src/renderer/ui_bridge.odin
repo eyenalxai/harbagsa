@@ -31,12 +31,14 @@ foreign ui_lib {
 UI_INTERACTION_KEY_BYTES :: 96
 
 Ui_Interaction :: struct {
-	focus:      [UI_INTERACTION_KEY_BYTES]u8,
-	focus_len:  u32,
-	hover:      [UI_INTERACTION_KEY_BYTES]u8,
-	hover_len:  u32,
-	pressed:    [UI_INTERACTION_KEY_BYTES]u8,
+	focus:       [UI_INTERACTION_KEY_BYTES]u8,
+	focus_len:   u32,
+	hover:       [UI_INTERACTION_KEY_BYTES]u8,
+	hover_len:   u32,
+	pressed:     [UI_INTERACTION_KEY_BYTES]u8,
 	pressed_len: u32,
+	scroll_offset: f32,
+	scroll_max:    f32,
 }
 
 Ui_Vk_Config :: struct {
@@ -244,10 +246,6 @@ ui_wheel_point :: proc(x, y, dx, dy: f32) -> bool {
 
 ui_wheel_key :: proc(key: string, dx, dy: f32) -> bool {
 	return ui_wheel_element(raw_data(key), u32(len(key)), dx, dy) == 0
-}
-
-ui_set_focus :: proc(focused: bool) -> bool {
-	return ui_focus(u32(focused)) == 0
 }
 
 ui_query_interaction :: proc() -> (Ui_Interaction, bool) {

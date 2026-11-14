@@ -43,8 +43,12 @@ execute_settle :: proc(session: ^Session, command: Command, reply: ^Reply) -> st
 
 @(private)
 execute_state :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
+	state, state_error := session_state(session)
+	if state_error != "" {
+		return state_error
+	}
 	reply.state = new(State, session.allocator)
-	reply.state^ = session_state(session)
+	reply.state^ = state
 	return ""
 }
 
@@ -148,7 +152,10 @@ execute_debug_mode :: proc(session: ^Session, command: Command, reply: ^Reply) -
 
 @(private)
 execute_editor :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
-	return session_editor(session, command.editor)
+	if failure := session_editor(session, command.editor); failure != "" {
+		return failure
+	}
+	return check_state_expects(session, command.editor.expect_state)
 }
 
 @(private)
@@ -209,7 +216,10 @@ execute_displays :: proc(session: ^Session, command: Command, reply: ^Reply) -> 
 
 @(private)
 execute_rows :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
-	state := session_observe(session, {.Rows})
+	state, state_error := session_observe(session, {.Rows})
+	if state_error != "" {
+		return state_error
+	}
 	defer state_destroy(&state, session.allocator)
 	reply.rows = new(Rows_State, session.allocator)
 	reply.rows^ = state.rows

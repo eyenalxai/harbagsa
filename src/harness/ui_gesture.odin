@@ -144,17 +144,17 @@ parse_ui_expect :: proc(raw: json.Value) -> (expect: Ui_Expect, error: string) {
 }
 
 @(private)
-parse_ui_expect_state :: proc(
+parse_state_expects :: proc(
 	value: json.Value,
 	allocator: mem.Allocator,
-) -> ([]Ui_State_Expect, string) {
+) -> ([]State_Expect, string) {
 	object, ok := json_object(value)
 	if !ok {
 		return nil, format_error("%s", "'expect_state' must be an object")
 	}
-	expects := make([dynamic]Ui_State_Expect, 0, len(object), allocator)
+	expects := make([dynamic]State_Expect, 0, len(object), allocator)
 	for path, expected in object {
-		expect: Ui_State_Expect
+		expect: State_Expect
 		expect.path = strings.clone(path, allocator)
 		#partial switch checked in expected {
 		case json.Integer:
@@ -179,5 +179,17 @@ parse_ui_expect_state :: proc(
 		append(&expects, expect)
 	}
 	return expects[:], ""
+}
+
+state_expects_destroy :: proc(expects: []State_Expect, allocator: mem.Allocator) {
+	for &expect in expects {
+		delete(expect.path, allocator)
+		if expect.value.kind == .String {
+			delete(expect.value.text, allocator)
+		}
+	}
+	if expects != nil {
+		delete(expects, allocator)
+	}
 }
 
