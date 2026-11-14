@@ -50,25 +50,27 @@ The first build compiles the vendored Box3D library and the Rust UI shim and
 takes a few minutes. Later builds reuse them. SPIR-V lives in `build/shaders/`
 and is embedded into the binary.
 
-The overlay is a Rune view drawn by the Rust shim in `ui/shim`. It is the only
-UI path: Odin fills flat rows and sends them over `src/renderer/ui_bridge.odin`,
-and the shim draws onto the same target image. See `docs/ui/` for the layer
-rules.
+The overlay is a Rune kit view drawn by the Rust shim in `ui/shim`. It is the
+only UI path: Odin fills a flat snapshot and sends it over
+`src/renderer/ui_bridge.odin`, and the shim draws the status panel, settings
+dialog, object palette grid, inspector rail, notice, and capture hint onto the
+same target image. Rune owns hover, press, focus, drag, and scroll; Odin owns
+the values and applies every action. See `docs/ui/` for the layer rules.
 
 ## Controls
 
 - `WASD`: move relative to the camera. The spider turns toward the movement.
-- Mouse: orbit the camera. The cursor is captured unless the settings dialog, the object palette, or the debug inspector is open.
+- Mouse: orbit the camera. The cursor is captured unless the settings dialog, the object palette, or the inspector rail is open.
 - `Left Shift`: sprint. The settings dialog switches Hold and Toggle.
 - `Space`: jump.
 - `R`: return the player to spawn.
 - `Shift+R`: reset placed objects and the player.
 - `F1`: toggle physics debug draw.
 - `F2`: toggle debug mode.
-- `I`: open the debug inspector in debug mode.
+- `I`: open the inspector rail in debug mode.
 - `F3`: toggle temporal anti-aliasing (TAA).
 - `F5`: write a repro scenario to `runs/repro/`.
-- `Esc`: close the debug inspector, cancel placement, or open or close the settings dialog.
+- `Esc`: close the inspector rail, cancel placement, or open or close the settings dialog.
 
 Movement follows the walkable ground plane. A straight climb keeps the gait
 speed along the slope, so horizontal speed drops by the slope cosine. The camera
@@ -83,18 +85,18 @@ the eight feet tuck under the body in the air.
 ### Settings dialog
 
 `Esc` opens the Settings dialog and releases the cursor; it pauses the
-simulation. The dialog groups Display, Interface, and Controls. Window mode and
-Sprint mode are segmented controls. Display and Resolution are selects over the
-launch-time display list. HUD opacity runs from 70 to 100 percent in one-point
-steps and promotes tertiary HUD text to secondary below 94 percent. Reduce motion
-stops kit transitions. The Controls section is a compact reference; the full
-keyboard list is under Debug mode below. `Esc`, the header close control, and
-`Resume` close the dialog. The status action row carries `Debug`, which enters
-debug mode and opens the debug inspector; it no longer carries the inert
-`Close`. Pointer control starts when the cursor is free; while it is captured,
-the pointer belongs to the camera, so the Debug button is not pointer-reachable
-during play. Press `F2` and then `I` for the keyboard path. Type weight is in
-the inspector's Debug section, not in Settings.
+simulation. The dialog is a `rune-kit::Dialog` over a scrim with Display,
+Interface, and Controls sections. Window mode and Sprint mode are segmented
+controls. Display and Resolution are selects over the launch-time display list.
+HUD opacity runs from 70 to 100 percent in one-point steps and promotes tertiary
+HUD text to secondary below 94 percent. Reduce motion lands kit transitions in
+one frame and keeps only a short opacity change. The dialog and its controls use
+kit hover, press, and focus states. The Controls section is a compact reference;
+the full keyboard list is under Debug mode below. `Esc`, the header close
+control, and `Resume` close the dialog. The status action row carries `Debug`,
+which enters debug mode and opens the inspector rail. Press `F2` and then `I`
+for the keyboard path. Type weight is in the inspector's Debug section, not in
+Settings.
 
 Window mode is Borderless or Windowed. Borderless uses the selected display's
 desktop size. Windowed uses the chosen resolution and a normal title bar. The
@@ -109,7 +111,7 @@ the current run.
 - `Space` / `Ctrl`: fly up / down.
 - `Tab`: open or close the object palette. Tab is refused while placement is
   armed; press `Esc` to cancel placement first.
-- `I`: open or close the debug inspector. `Esc` closes it before it cancels
+- `I`: open or close the debug inspector rail. `Esc` closes it before it cancels
   placement or opens Settings.
 - Left click: select and drag an object, or place the armed prefab.
 - Wheel: raise or lower the ghost or selected object.
@@ -129,14 +131,21 @@ the current run.
 - `F5`: write a scene snapshot.
 - `F2`: leave debug mode.
 
-The palette shows eleven box prefabs. Lamp, Light panel, and Beacon carry point
-lights and a lamp kind. The preview and inspector show the kind, colour,
-intensity, and range. Every active lamp enters the light budget. The starting
-arena holds one of each lamp prefab as a static fixture, so its first view shows
-warm, cool, and red pools on the closed shell and a baked bounce in the corners.
-Newly placed lamps default to dynamic. Closing the palette discards its selected
-card and tuned body and light; arming placement copies them into the placement
-tool.
+The object palette is a three-column palette grid with an isometric preview. It
+shows eleven box prefabs; each card carries the colour chip, short and full name,
+and key badge. The preview shows the size, body, light line, and an isometric
+box. Lamp, Light panel, and Beacon carry point lights and a lamp kind. The
+preview and inspector show the kind, colour, intensity, and range. Every active
+lamp enters the light budget. The starting arena holds one of each lamp prefab as
+a static fixture, so its first view shows warm, cool, and red pools on the closed
+shell and a baked bounce in the corners. Newly placed lamps default to dynamic.
+Closing the palette discards its selected card and tuned body and light; arming
+placement copies them into the placement tool.
+
+The inspector rail is a 320-point right rail with Object, Placement, Lamp, and
+Debug sections. Its sliders preview while dragging and commit on release; the
+type weight slider and the physics debug switch sit in the Debug section. While
+the rail is closed, the status panel keeps the keyboard-only debug readout.
 
 ## Agent harness
 

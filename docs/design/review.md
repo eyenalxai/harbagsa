@@ -16,9 +16,10 @@ Point the review at `runs/design-review`. Do not commit the PNG. The repository
 bans images, and a run directory is reproducible from its scenario.
 
 For a UI change, start with `scenarios/rune-ui.json`, `rune-menu.json`,
-`rune-palette.json`, `rune-inspector.json`, `rune-inspector-800.json`, and
-`rune-fx.json`. If the change needs a view that no scenario covers, add the
-scenario in the same change. The harness is part of the feature.
+`rune-palette.json`, `rune-inspector.json`, `rune-inspector-800.json`,
+`rune-weight.json`, and `rune-fx.json`. If the change needs a view that no
+scenario covers, add the scenario in the same change. The harness is part of the
+feature.
 
 ## Subtract first
 
@@ -32,9 +33,12 @@ repeats a label.
 - A colour literal outside `ui/shim/src/theme.rs` or the game's content data.
 - A type size, font file, atlas, or layout pass in the Odin tree.
 - A vertex buffer, shader, or draw call added for the 2D layer.
-- `accent` on anything but the selected row or card bar, the selected swatch ring,
-  the filled slider track, the focus ring, and the primary action.
-- `text_tertiary` as the label or value of a selectable row or card.
+- A rounded, bevelled, or non-box world surface. Kit corners belong to the
+  overlay only.
+- `accent` on anything but the selected card bar, the selected kit control, the
+  selected swatch ring, the filled slider track, the focus ring, and the primary
+  action.
+- `text_tertiary` as the label or value of a selectable control or palette card.
 - A fade, slide, or scale that ignores reduce motion. Kit motion is allowed when
   the reduce-motion setting lands it; the status HUD does not animate. The
   rune-fx glow is opt-in and static.
@@ -54,13 +58,14 @@ The order is the triage order. A broken interaction outranks a weak colour.
 1. **Keyboard only.** Every action is reachable from the keyboard. The pointer is
    an addition: it can click a palette card, the Place button, or a dialog
    control when the cursor is free, and no action hides behind a hover. The
-   Settings dialog controls take the keyboard. The HUD opacity slider takes
-   Left and Right.
+   Settings dialog controls take the keyboard. The HUD opacity slider and the
+   inspector sliders drag, take Left and Right, and repeat while held.
 2. **Fits at 800x600.** The settings dialog and every panel are fully visible at
    the smallest supported window. Rune scales the view; nothing clips.
 3. **Contrast on the brightest frame.** Read the text over the brightest lamp
    field the renderer can produce, not over a dim scene. The floors are in
-   [colour.md](../ui/colour.md).
+   [colour.md](../ui/colour.md). HUD opacity below 94 percent promotes tertiary
+   text to secondary; check the capture, not the authored hex.
 4. **Fixed fields.** Every number that changes during play is formatted in
    `src/game` into a fixed-width string and drawn by the shim. The shim may keep
    the numeric value for a control position, but it never formats the value for
@@ -71,12 +76,12 @@ The order is the triage order. A broken interaction outranks a weak colour.
    colour, or text rendering to `src/ui`, `src/frame`, or `src/renderer` is in
    the wrong layer.
 6. **One of the documented components.** A new panel is the status panel, the
-   settings dialog, the palette, or the debug inspector. Otherwise read
+   settings dialog, the palette grid, or the inspector rail. Otherwise read
    [README.md](../ui/README.md#adding-a-surface) first.
 7. **No new row kind without both sides.** The kind set is closed. A new kind
    must update the game producer and the shim's Rune view in the same change.
-8. **Reduced motion.** Kit motion follows the reduce-motion setting; see
-   [motion.md](motion.md).
+8. **Reduced motion.** Kit motion follows the reduce-motion setting; the status
+   HUD does not animate. See [motion.md](motion.md).
 9. **Copy rules.** Sentence case in the source, `·` between peers, `×` for
    dimensions, `…` for an ellipsis.
 10. **Evidence matches the claim.** The capture shows the thing the change says it

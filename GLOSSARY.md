@@ -123,7 +123,7 @@ _Avoid_: Run mode
 
 **Input mode**:
 The way a key engages a setting: Hold while the key is down, or Toggle on each
-press. The settings menu changes the sprint input mode.
+press. The settings dialog changes the sprint input mode.
 _Avoid_: Key mode
 
 **Sprint**:
@@ -351,9 +351,25 @@ _Avoid_: Input state, mode
 **Object palette**:
 The debug-mode prefab chooser. It is the palette variant of the active tool: the
 selected catalog index and the body and light settings for the next placement.
-Closing the palette discards those settings. The Rune view draws it as a list of
-short name and full name, with the body note and key hints.
+Closing the palette discards those settings. The Rune view draws it as a
+three-column card grid with a 220-point isometric preview; see **Palette grid**
+and **Palette preview**.
 _Avoid_: Toolbar, inventory
+
+**Palette grid**:
+The three-column card grid inside the object palette. Eleven prefabs fill four
+rows. Each 120×92 card carries the prefab colour chip, short name, full name, and
+key badge. The selected card uses the raised surface and a 2-point accent bar;
+hover adds the kit fill overlay, press uses the pressed fill, and focus draws the
+2-point ring. Number keys 1-9 select the first nine cards; the last two carry a
+dash badge and are reached with the arrow keys.
+_Avoid_: Prefab list, picker
+
+**Palette preview**:
+The 220-point column beside the palette grid. It shows the selected prefab's
+colour, name, size, body, light line, and a three-face isometric box built from
+the half extents and base pitch. The box is a Rune `Shape`, not a 3D thumbnail.
+_Avoid_: Thumbnail, icon
 
 **Placement**:
 The armed debug tool state: the prefab, the height offset, the yaw, the grid snap
@@ -429,17 +445,22 @@ edge latches.
 _Avoid_: Input state, input command
 
 **Settings**:
-The runtime window and input choices: window mode, display, resolution, and the sprint input mode. The stored type weight also lives in `Settings`, but the inspector edits it. A new simulation starts Borderless on display 0; the stored Windowed size is 1280x720, with sprint Hold. A player reset keeps the current settings.
+The runtime window, interface, and input choices: window mode, display,
+resolution, sprint input mode, HUD opacity, and reduce motion. The stored type
+weight also lives in `Settings`, but the inspector edits it. A new simulation
+starts Borderless on display 0; the stored Windowed size is 1280x720, with sprint
+Hold, HUD opacity 94 percent, and reduce motion off. A player reset keeps the
+current settings.
 _Avoid_: Options, preferences
 
 **Window mode**:
 Borderless fills the selected display at its desktop size. Windowed requests a
-fixed-size window at the selected resolution. The settings menu changes it. A
+fixed-size window at the selected resolution. The settings dialog changes it. A
 new simulation starts Borderless.
 _Avoid_: Fullscreen mode, display mode
 
 **Display**:
-A connected output that shows the game. The settings menu chooses the display;
+A connected output that shows the game. The settings dialog chooses the display;
 the game starts on the display where the window opened. Borderless fills it and
 uses its desktop size. Windowed uses its resolution list, but on Wayland the
 compositor decides where the window sits.
@@ -556,8 +577,9 @@ _Avoid_: Window target
 
 **Cursor capture**:
 The state where the mouse controls the camera and the pointer is hidden. The
-settings menu and the object palette release the capture while they are open;
-the loop derives the capture from the frame focus every frame.
+settings dialog, the object palette, and the inspector rail release the capture
+while they are open; the loop derives the capture from the frame focus every
+frame.
 _Avoid_: Mouse lock
 
 **Debug draw**:
@@ -602,17 +624,29 @@ for the depth prepass and one for the lit pass.
 _Avoid_: Render pass (that word belongs to the Vulkan object)
 
 **HUD**:
-The Rune status panel: the player or debug rows, the notice, the capture hint, and the `Debug` action row. It is one Rune view, not an Odin draw pass.
+The Rune status panel: the player or debug rows, the notice, the capture hint, and the `Debug` action row. It is one Rune view, not an Odin draw pass. The status panel is a local kit-styled surface with the kit medium radius, raised elevation, and a translucent fill.
 _Avoid_: UI, overlay draw
 
-**Settings menu**:
-The paused Rune view opened with `Esc`. It lists the active control set and changes
-the window mode, display, resolution, and sprint input mode. The harness opens
-it with the `menu` command and reports `settings.*` and `menu.*` in the state.
-_Avoid_: Options screen, pause menu
+**Settings dialog**:
+The paused Rune view opened with `Esc`. It is a kit `Dialog` over a scrim and
+changes the window mode, display, resolution, sprint input mode, HUD opacity, and
+reduce motion. The harness opens it with the `menu` command and reports
+`settings.*` and `menu.*` in the state. The wire type is `Menu` and the close
+action is `Close_Menu`.
+_Avoid_: Options screen, pause menu, settings menu
+
+**Kit surface**:
+A panel or control drawn with the rune-kit tokens: fill, radius, elevation and,
+for an interactive control, focus, hover, press, and motion. The settings dialog,
+palette shell, palette cards, inspector rail, and status panel are kit surfaces;
+the world is not. The shim seeds the kit from the overlay palette and pins the
+measured token values in `ui/shim/src/theme.rs`.
+_Avoid_: Card, material, style sheet
 
 **Rune UI**:
-The Rust view in `ui/shim` that draws the status panel, settings menu, palette, debug inspector, notice, and capture hint. Rune owns layout, type, colour, hit testing, and the wgpu overlay pass.
+The Rust view in `ui/shim` that draws the status panel, settings dialog, palette
+grid, inspector rail, notice, and capture hint. Rune owns layout, type, colour,
+hit testing, and the wgpu overlay pass.
 _Avoid_: Odin HUD, ImGui
 
 **UI shim**:
@@ -620,16 +654,46 @@ The static Rust library built from `ui/shim`. It adopts the game's Vulkan instan
 _Avoid_: UI backend, renderer plugin
 
 **UI snapshot**:
-The flat data the game sends through `src/renderer/ui_bridge.odin`: player speed and grounded state, type weight, viewport size, menu and palette flags, pointer events, menu keys, panel rows, notice, capture hint, menu, palette, and inspector. Strings stay owned by Odin for the duration of one call.
+The flat data the game sends through `src/renderer/ui_bridge.odin`: player speed
+and grounded state, type weight, viewport size, menu and palette flags, panel
+rows, notice, capture hint, menu, settings, palette, and inspector. Strings stay
+owned by Odin for the duration of one call. Pointer, wheel, key-down, key-up,
+key-repeat, and focus events travel beside it in one event batch.
 _Avoid_: UI frame (the Odin wrapper is `UI_Frame`), scene graph
 
 **UI action**:
-One flat intent returned by the shim, such as `Close_Menu`, `Debug_Inspector`, `Palette_Select`, `Settings_Set`, `Object_Set`, `Lamp_Set`, `Type_Weight_Set`, or `Physics_Debug`. The game applies the queue after `ui_draw`. The action kind set lives in `UI_Action_Kind` in `src/renderer/ui_frame.odin`.
+One flat intent returned by the shim, such as `Close_Menu`, `Debug_Inspector`,
+`Palette_Select`, `Palette_Close`, `Palette_Pick`, `Settings_Set`, `Object_Set`,
+`Object_Duplicate`, `Object_Delete`, `Lamp_Set`, `Lamp_Kind`, `Lamp_Color`,
+`Type_Weight_Set`, `Toggle_Inspector`, or `Physics_Debug`. The game applies the
+queue after `ui_draw`. The action kind set lives in `UI_Action_Kind` in
+`src/renderer/ui_frame.odin`.
 _Avoid_: Callback, event
 
 **Type weight**:
-The debug value from 100 to 900 that the inspector's Debug section edits. It is stored in `Settings.type_weight`, reported by the harness, and applied to every Rune text node as a span weight. The shim draws with Geist Variable and Geist Mono Variable from `ui/shim/assets/`; the `wght` axis is continuous, so 565 is valid. A weight of 400 is the default; zero leaves the default text style untouched.
+The debug value from 100 to 900 that the inspector's Debug section edits in
+25-point steps. It is stored in `Settings.type_weight`, reported by the harness,
+and applied to the Rune view: the shim rebuilds the kit's 12 text styles from the
+weight and the HUD's local text carries a span weight. The shim draws with Geist
+Variable and Geist Mono Variable from `ui/shim/assets/`; the `wght` axis is
+continuous, so 565 is valid. A weight of 400 is the default; zero leaves the
+default text style untouched.
 _Avoid_: Font weight, boldness
+
+**HUD opacity**:
+The status panel's fill alpha, from 70 to 100 percent, default 94. The settings
+dialog's Interface slider edits it live in one-point steps; at the ends the
+header shows `Minimum` or `Maximum`. Below 94 percent tertiary HUD text promotes
+to secondary. It changes the fill and that promotion, not the panel radius or
+elevation.
+_Avoid_: HUD alpha, transparency
+
+**Reduce motion**:
+The settings dialog switch that sets `Cx::reduced_motion` for the Rune view. Kit
+transitions and slides land without travel and keep only a short opacity change;
+the status panel itself does not animate. The setting applies live and affects
+the Rune view, not the player, leg, or camera motion.
+_Avoid_: Motion toggle, animation off
 
 **View scale**:
 The Rune scale factor `clamp(target height / 720, 1, 2)`. It scales the whole view, not individual tokens in Odin.
@@ -641,21 +705,26 @@ _Avoid_: Contrast score
 
 **Row**:
 One line of the Rune view: a kind, a label, a value, and whether the value is
-numeric. The game fills rows; the shim draws them. The kind set is closed:
-setting, action, metric, detail, slider, header, divider.
+numeric or blocked. The game fills rows; the shim draws them as read-only text.
+The kind set is closed: setting, action, metric, detail, header, divider.
+`Setting` and `Action` stay in the enum but no surface emits them today; the
+status and debug readouts use `Header`, `Metric`, `Detail`, and `Divider`.
 _Avoid_: Line, item, entry
 
-**Blocked row**:
-A settings row that cannot change in the current state. It stays selectable and
-keeps its selected surface and accent bar; only its value moves to secondary text.
-Display and Resolution can be blocked. A blocked row is not a disabled control:
-the row stays selectable and the reason sits in the settings note.
-_Avoid_: Disabled row, greyed row
+**Disabled control**:
+A kit control that cannot change in the current state. It stays in place and
+dims through the kit layer opacity. Display can be disabled with zero or one
+display; Resolution with no modes or one mode while Windowed. The HUD opacity
+slider stops at 70 and 100 percent and the Interface header says `Minimum` or
+`Maximum`. The harness's direct `menu_change_setting` path reports the same case
+as `Blocked` and sets the settings note.
+_Avoid_: Blocked row, greyed row
 
 **Status note**:
-The one-line reason under the settings panel after a blocked change. It holds
-for two seconds of frame time, then the default note returns. A new blocked
-press restarts the hold; a successful change clears it.
+The one-line note under the Settings dialog title after a blocked change or a
+failed window apply. It holds for two seconds of frame time, then the default
+summary returns. A new blocked press restarts the hold; a successful change
+clears it.
 _Avoid_: Error message, toast, tooltip
 
 **Notice**:
@@ -666,18 +735,19 @@ panel.
 _Avoid_: Toast, popup, tooltip
 
 **Hint legend**:
-The control list inside the settings menu and the palette, drawn as key/action
+The control list inside the settings dialog and the palette, drawn as key/action
 pairs. The shim puts three pairs on a line. It is documentation, so it must not
 look selectable.
 _Avoid_: Control list, key list
 
-**Selected row**:
-The two signals that mark the active menu or palette row: the raised surface and
-the 2 point accent bar on the leading edge. Neither alone is enough.
+**Selected card**:
+The two signals that mark the chosen palette card: the raised surface and the
+2-point accent bar on the leading edge. Hover is a separate, transient fill.
+Neither selection signal alone is enough.
 _Avoid_: Highlight, hover, cursor
 
 **Pause**:
-The state while the settings menu is open. The simulation and debug camera do
+The state while the settings dialog is open. The simulation and debug camera do
 not update.
 _Avoid_: Freeze
 
@@ -811,14 +881,15 @@ or one live object id; deleting the object clears it, and undo or redo repairs
 it.
 _Avoid_: Focus, target
 
-**Object inspector**:
-The 320-point debug rail on the right, inset 12 from the top and right. It opens
-with `I` and closes with `Esc`, frees the pointer while open, and is hidden while
-Settings or the palette is open. Its Object, Placement, Lamp, and Debug sections
-cover the selected object, the next placement, the selected lamp, the type
-weight, and the physics debug draw. The top-left debug rows remain the
-keyboard-only readout while the rail is closed.
-_Avoid_: Edit panel, properties
+**Inspector rail**:
+The 320-point debug rail on the right, inset 12 from the top and right, with the
+kit medium radius, raised elevation, and a 1-point hairline. It opens with `I`
+and closes with `Esc`, frees the pointer while open, and is hidden while Settings
+or the palette is open. Its Object, Placement, Lamp, and Debug sections cover the
+selected object, the next placement, the selected lamp, the type weight, and the
+physics debug draw. The rail scrolls when the sections overflow. The status
+panel's debug rows remain the keyboard-only readout while the rail is closed.
+_Avoid_: Edit panel, properties, object inspector
 
 **Undo history**:
 The editor's 64-entry stack of placed-object snapshots that undo and redo

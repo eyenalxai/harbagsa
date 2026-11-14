@@ -3,8 +3,8 @@
 One shader over one mesh. `src/renderer/shaders/box.frag` shades a unit cube,
 and every object in the scene is that cube, scaled and rotated. There is no
 surface or material texture, normal map, fog, bloom, or tone map. Point lights
-supply direct light; static fixtures also bake one diffuse bounce into a
-lightmap and a static probe field.
+supply direct light; static fixtures also bake the static indirect: two diffuse
+bounces into a lightmap by default and a one-bounce probe field.
 
 ## The palette
 
@@ -80,9 +80,9 @@ soft shadow is a new decision, not a hidden shader option.
 
 ## Indirect light
 
-Static fixtures bake one diffuse bounce. The bake writes one `1024²` lightmap
-atlas for static boxes and a static probe field for dynamic boxes. Static boxes
-read their face tile from the lightmap. A lightmap denoise pass filters each
+Static fixtures bake two diffuse bounces by default. The bake writes one `1024²`
+lightmap atlas for static boxes and a static probe field for dynamic boxes.
+Static boxes read their face tile from the lightmap. A lightmap denoise pass filters each
 chart before the gutter, and a texel's ray rotation follows its surface rather
 than its atlas position. Dynamic boxes sample the four probes of
 the containing tetrahedron, with normal bias, a facing weight, and the baked
