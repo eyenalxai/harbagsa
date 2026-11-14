@@ -218,7 +218,7 @@ degrees and ends in `_deg`. Positions and ranges are metres. One `step` or
 - `debug_mode`: enter or leave debug mode.
 - `editor`: drive the palette, placement, object edits, light settings, and history. `state.editor` reports the active tool, the resolved selection, the placement, the history, and the light budget.
 - `menu`: drive the settings dialog and its values.
-- `ui`: drive the Rune view with `click`, `drag`, `wheel`, or `focus`.
+- `ui`: click by element key or by point, drag, wheel, or focus.
 - `record`: start or stop a recording.
 - `replay`: reset and run a recorded scenario.
 - `repro`: write the live view as a scene snapshot.
