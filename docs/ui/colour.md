@@ -67,7 +67,9 @@ floor is checked on the capture because the surface is translucent.
 - No colour literal outside `ui/shim/src/theme.rs` and the game's content data.
 - No hex or RGB literal in a view or component.
 - No third hue in the view. The scene has its own palette; do not copy a world
-  colour into the view and do not copy the accent into the world.
+  colour into the view and do not copy the accent into the world. Game content
+  data is the exception: the palette colour chip and preview show the prefab
+  colour from `src/game/prefabs.odin`.
 - No colour-only signal. Selection keeps both the raised surface and the accent
   bar.
 - No dark-mode variant. There is one view and the scene is its backdrop.

@@ -1,8 +1,8 @@
 # Motion
 
 World motion belongs to the player. The Rune overlay uses kit motion for its
-controls and dialogs; reduce motion lands that motion in one frame and keeps only
-a short opacity change. The camera has no idle motion. The rune-fx glow is
+controls and dialogs; reduce motion snaps their geometry and keeps a short
+opacity fade. The camera has no idle motion. The rune-fx glow is
 opt-in, static, and off by default.
 
 ## The frequency rule
@@ -11,8 +11,9 @@ Ask how often the player sees the motion, then decide once.
 
 - The overlay is acted on. Kit controls use their own hover, press, focus, and
   dialog transitions; they are feedback for an action, not ambient decoration.
-  The reduce-motion setting lands them in one frame. The opt-in `view.fx` demo is
-  a static glow over the action row, not a pulse or a transition.
+  The reduce-motion setting snaps the geometry and keeps the opacity fade. The
+  opt-in `view.fx` demo is a static glow over the action row, not a pulse or a
+  transition.
 - The world moves only when the player moves. No sway, no breathing, no idle
   camera work, no idle leg tap. The spider's legs are still when the player is
   still.
@@ -109,8 +110,7 @@ also needs a settings toggle, because some players cannot use it.
 ## Reduce motion
 
 Settings has a Reduce motion switch. It sets `Cx::reduced_motion` for the Rune
-view, which lands kit transitions and slides without travel and keeps only a
-short opacity change. The status HUD has no motion to remove. The setting is
-applied live; a capture with it on proves the dialog is settled on the first
-frame. It affects the Rune view only, not the player, leg, or camera motion
-above.
+view, which snaps kit geometry and keeps a short opacity fade. The status HUD has
+no motion to remove. The setting is applied live; a capture with it on proves the
+dialog is settled on the first frame. It affects the Rune view only, not the
+player, leg, or camera motion above.

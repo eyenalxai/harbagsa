@@ -89,14 +89,13 @@ simulation. The dialog is a `rune-kit::Dialog` over a scrim with Display,
 Interface, and Controls sections. Window mode and Sprint mode are segmented
 controls. Display and Resolution are selects over the launch-time display list.
 HUD opacity runs from 70 to 100 percent in one-point steps and promotes tertiary
-HUD text to secondary below 94 percent. Reduce motion lands kit transitions in
-one frame and keeps only a short opacity change. The dialog and its controls use
-kit hover, press, and focus states. The Controls section is a compact reference;
-the full keyboard list is under Debug mode below. `Esc`, the header close
-control, and `Resume` close the dialog. The status action row carries `Debug`,
-which enters debug mode and opens the inspector rail. Press `F2` and then `I`
-for the keyboard path. Type weight is in the inspector's Debug section, not in
-Settings.
+HUD text to secondary below 94 percent. Reduce motion snaps kit geometry and
+keeps a short opacity fade. The dialog and its controls use kit hover, press, and
+focus states. The Controls section is a compact reference; the full keyboard
+list is under Debug mode below. `Esc`, the header close control, and `Resume`
+close the dialog. The status action row carries `Debug`, which enters debug mode
+and opens the inspector rail. Press `F2` and then `I` for the keyboard path. Type
+weight is in the inspector's Debug section, not in Settings.
 
 Window mode is Borderless or Windowed. Borderless uses the selected display's
 desktop size. Windowed uses the chosen resolution and a normal title bar. The

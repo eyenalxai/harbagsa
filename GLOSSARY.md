@@ -690,9 +690,9 @@ _Avoid_: HUD alpha, transparency
 
 **Reduce motion**:
 The settings dialog switch that sets `Cx::reduced_motion` for the Rune view. Kit
-transitions and slides land without travel and keep only a short opacity change;
-the status panel itself does not animate. The setting applies live and affects
-the Rune view, not the player, leg, or camera motion.
+geometry snaps and the opacity fades; the status panel itself does not animate.
+The setting applies live and affects the Rune view, not the player, leg, or
+camera motion.
 _Avoid_: Motion toggle, animation off
 
 **View scale**:
@@ -736,8 +736,8 @@ _Avoid_: Toast, popup, tooltip
 
 **Hint legend**:
 The control list inside the settings dialog and the palette, drawn as key/action
-pairs. The shim puts three pairs on a line. It is documentation, so it must not
-look selectable.
+pairs. Settings puts three pairs on a line; the palette puts every hint in one
+row. It is documentation, so it must not look selectable.
 _Avoid_: Control list, key list
 
 **Selected card**:

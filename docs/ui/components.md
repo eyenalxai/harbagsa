@@ -12,10 +12,11 @@ the data in `src/ui/ui.odin`.
 ## Status panel
 
 Use for the player's live state. It is the persistent top-left surface while the
-settings dialog is closed. It draws `ui.Hud.rows` as read-only rows. The same
-HUD root lays out the bottom action column with the notice, the capture hint, an
-`F2 · I` hint, and the `Debug` button; that column is absent while Settings is
-open. The panel is a local kit-styled surface: 380 points wide, the kit medium
+settings dialog and the object palette are closed. It draws `ui.Hud.rows` as
+read-only rows. The same HUD root lays out the bottom action column with the
+notice, the capture hint, an `F2 · I` hint, and the `Debug` button; that column is
+absent while Settings or the palette is open. The panel is a local kit-styled
+surface: 380 points wide, the kit medium
 radius, raised elevation, and a translucent `hud_surface()` fill. It is not a
 kit `Card` or `List`.
 
@@ -56,8 +57,8 @@ drag. It commits live. Its value draws in Geist Mono. At 70 and 100 percent the
 Interface header shows `Minimum` or `Maximum`, so the blocked end is visible.
 Below 94 percent the status HUD's tertiary text promotes to secondary, keeping
 the text floor on the translucent surface. Reduce motion is a `Switch` that
-lands kit transitions in one frame and keeps only a short opacity change; the
-status panel itself does not animate.
+snaps kit geometry and keeps a short opacity fade; the status panel itself does
+not animate.
 
 The dialog owns its keyboard path: Rune traps focus, draws the focus ring, and
 routes arrows, Enter, and Space to the focused control. `Esc` dismisses an open

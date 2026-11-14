@@ -9,9 +9,10 @@ A flat-shaded box world with direct coloured light, a baked static indirect, and
 Rune overlay drawn by the Rust shim. The player is an eight-legged box spider
 with planted feet; its eyes and two abdomen marks are the only self-lit surfaces
 that are not lamps. The world is not textured, rounded, blurred, or glossy. The
-Rune kit surfaces are the only rounded and elevated edges on screen, and the
-only place kit motion lives: the status panel, the settings dialog, the palette
-grid, the inspector rail, and the action buttons.
+Rune kit surfaces are the only rounded edges on screen. The status panel,
+settings dialog, palette shell, and inspector rail carry the kit elevation; the
+palette cards and action buttons are rounded but flat. Kit motion lives in the
+interactive controls and the settings dialog; the status panel does not animate.
 Every world surface is a box. Colour says what a thing does; it never decorates.
 The overlay is a compact readout, not a poster.
 

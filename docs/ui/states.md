@@ -63,8 +63,8 @@ the surface opacity follows the setting, and the text floor is checked on the
 capture, not on the authored hex alone.
 
 Reduce motion is a `Switch`. It sets `Cx::reduced_motion` for the Rune view:
-kit transitions land without travel and keep only a short opacity change. The
-status panel itself does not animate. The setting applies live.
+kit geometry snaps and opacity fades. The status panel itself does not animate.
+The setting applies live.
 
 Resume is a footer Submit `Button`. `Esc`, the header close control, and Resume
 dismiss the dialog. Rune traps Tab focus inside the modal, arrows step the

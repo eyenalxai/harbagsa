@@ -139,8 +139,8 @@ normal play. Plan-view and inspection captures can still expose it.
 ## Geometry
 
 - Every shape is a box. A ramp is a thin box rotated about X.
-- No rounded, bevelled, or non-box primitive. A curve in the world would be the
-  only curve on screen.
+- No rounded, bevelled, or non-box world surface. Kit corners belong to the
+  overlay only.
 - The arena is 40 m square with 5.5 m walls and a solid ceiling. The floor is 1 m
   thick, the walls and ceiling 0.5 m, and a crate 1 m. The ceiling spans the
   outer wall faces, so the shell has no gap.

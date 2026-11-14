@@ -40,8 +40,8 @@ repeats a label.
   action.
 - `text_tertiary` as the label or value of a selectable control or palette card.
 - A fade, slide, or scale that ignores reduce motion. Kit motion is allowed when
-  the reduce-motion setting lands it; the status HUD does not animate. The
-  rune-fx glow is opt-in and static.
+  the reduce-motion setting snaps its geometry and keeps only the opacity fade;
+  the status HUD does not animate. The rune-fx glow is opt-in and static.
 - A new `Row_Kind` without updating both the game and the shim.
 - A third hue.
 - A player light, or an emissive spider part that is not an eye or one of the two
