@@ -1,0 +1,4 @@
+{
+  "extends": "rune-focus-loss.json",
+  "size": "800x600"
+}

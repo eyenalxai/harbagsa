@@ -148,6 +148,7 @@ pub struct UiState {
     pub palette: PaletteState,
     pub inspector: InspectorState,
     pub inspector_preview: InspectorPreview,
+    pub pressed_key: Option<String>,
 }
 
 impl UiState {
@@ -169,6 +170,7 @@ impl UiState {
             palette: PaletteState::default(),
             inspector: InspectorState::default(),
             inspector_preview: InspectorPreview::default(),
+            pressed_key: None,
         }
     }
 

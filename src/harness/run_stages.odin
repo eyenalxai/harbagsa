@@ -258,6 +258,9 @@ run_publish :: proc(state: ^Run_State, results: []Stage_Result) -> Stage_Result 
 	if len(state.session.perf.reports) > 0 {
 		report.perf = state.session.perf.reports[:]
 	}
+	if state.session.has_ui_tree {
+		report.ui_tree = state.session.ui_tree
+	}
 	if state.session.perf.has_trace && !state.trace_failed {
 		state.trace_path = perf_trace_path(
 			state.session.perf.trace_name,

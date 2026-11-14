@@ -23,6 +23,7 @@ Command_Kind :: enum {
 	Editor,
 	Menu,
 	Ui,
+	Ui_Tree,
 	Record,
 	Replay,
 	Repro,

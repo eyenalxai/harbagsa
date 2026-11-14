@@ -1,5 +1,4 @@
 {
-  "note": "800x600 evidence: the palette grid previews Platform, Place arms it, and the primary press places it. Captures and the final state.json are the evidence; automatic assertions wait for HARB-367.",
   "extends": "rune-palette.json",
   "size": "800x600"
 }

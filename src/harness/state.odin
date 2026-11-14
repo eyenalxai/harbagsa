@@ -113,6 +113,7 @@ State :: struct {
 	menu:          Menu_State     `json:"menu"`,
 	notice:        Notice_State   `json:"notice" digest:"-"`,
 	rows:          Rows_State     `json:"rows" digest:"-"`,
+	ui:            Ui_State       `json:"ui" digest:"-"`,
 	settle:        Settle_State   `json:"settle" digest:"-"`,
 	bake:          renderer.Bake_Report `json:"bake" digest:"-"`,
 	renderer:      renderer.Renderer_Report `json:"renderer" digest:"-"`,
@@ -129,6 +130,7 @@ State_Section :: enum {
 	Menu,
 	Notice,
 	Rows,
+	Ui,
 	Render_Digest,
 }
 
@@ -146,6 +148,7 @@ state_build_sections :: proc(
 	renderer_state: renderer.Renderer_Report,
 	render_digest: string,
 	settle: Settle_State,
+	ui: Ui_Observation,
 	sections: State_Sections,
 	allocator: mem.Allocator,
 ) -> State {
@@ -161,6 +164,7 @@ state_build_sections :: proc(
 		hud = hud,
 		debug = debug,
 		render_digest = render_digest,
+		ui = ui,
 		allocator = allocator,
 	}
 	for row in STATE_SECTION_ROWS {
@@ -184,17 +188,10 @@ state_destroy :: proc(state: ^State, allocator: mem.Allocator) {
 		state.static_boxes = nil
 	}
 	rows_state_destroy(&state.rows, allocator)
-	free_string(&state.settings.display, allocator)
-	free_string(&state.settings.resolution, allocator)
-	free_string(&state.settings.window_resolution, allocator)
-	free_string(&state.render_digest, allocator)
-	free_string(&state.digest, allocator)
-}
-
-@(private)
-free_string :: proc(text: ^string, allocator: mem.Allocator) {
-	if text^ != "" {
-		delete(text^, allocator)
-		text^ = ""
-	}
+	ui_state_destroy(&state.ui, allocator)
+	free_owned_string(&state.settings.display, allocator)
+	free_owned_string(&state.settings.resolution, allocator)
+	free_owned_string(&state.settings.window_resolution, allocator)
+	free_owned_string(&state.render_digest, allocator)
+	free_owned_string(&state.digest, allocator)
 }

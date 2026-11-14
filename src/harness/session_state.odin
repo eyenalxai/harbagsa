@@ -55,6 +55,7 @@ session_observe :: proc(session: ^Session, sections: State_Sections) -> State {
 		session.render.report,
 		session.render.digest_text,
 		{frames = session.settle.frames, converged = session.settle.converged},
+		session_ui_observation(session),
 		sections,
 		session.allocator,
 	)

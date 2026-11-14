@@ -16,7 +16,7 @@
     {"cmd": "capture", "name": "hud-70", "format": "png"},
     {"cmd": "menu", "open": true},
     {"cmd": "settle", "frames": 30},
-    {"cmd": "ui", "key": "settings.opacity"},
+    {"cmd": "ui", "click": "settings.opacity", "expect": {"kind": "Settings_Set", "id": 4}, "expect_state": {"ui.surface": "settings", "ui.menu.open": true}},
     {"cmd": "settle", "frames": 2},
     {"cmd": "capture", "name": "settings-track-click", "format": "png"},
     {"cmd": "menu", "item": "HUD opacity", "activate": true, "direction": 1},
@@ -25,12 +25,12 @@
     {"cmd": "menu", "reduce_motion": true},
     {"cmd": "settle", "frames": 2},
     {"cmd": "capture", "name": "settings-reduce-motion", "format": "png"},
-    {"cmd": "ui", "key": "settings.resume"},
+    {"cmd": "ui", "click": "settings.resume", "expect": {"kind": "Close_Menu"}, "expect_state": {"menu.open": false, "ui.surface": "hud", "ui.pointer_free": false}},
     {"cmd": "settle", "frames": 30},
     {"cmd": "capture", "name": "hud-resumed", "format": "png"},
     {"cmd": "menu", "open": true},
     {"cmd": "settle", "frames": 30},
-    {"cmd": "ui", "key": "close"},
+    {"cmd": "ui", "click": "close", "expect": {"kind": "Close_Menu"}, "expect_state": {"menu.open": false, "ui.surface": "hud"}},
     {"cmd": "settle", "frames": 30},
     {"cmd": "capture", "name": "hud-closed", "format": "png"}
   ]

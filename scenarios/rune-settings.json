@@ -1,0 +1,21 @@
+{
+  "note": "Settings is a Rune kit dialog. A HUD-opacity drag lands at the 70% floor, the reduce-motion switch applies, and Resume closes the dialog. Every UI command asserts the applied game state.",
+  "size": "1280x720",
+  "view": {"hud": true, "debug": false, "hint": false},
+  "commands": [
+    {"cmd": "settle", "frames": 1},
+    {"cmd": "capture", "name": "hud-94", "format": "png"},
+    {"cmd": "menu", "open": true},
+    {"cmd": "settle", "frames": 30},
+    {"cmd": "capture", "name": "settings", "format": "png"},
+    {"cmd": "ui", "drag": {"from": "settings.opacity", "dx": -400, "dy": 0, "steps": 8}, "expect": {"kind": "Settings_Set", "id": 4}, "expect_state": {"settings.hud_opacity": 0.7, "ui.surface": "settings", "ui.menu.open": true, "ui.pointer_free": true}},
+    {"cmd": "settle", "frames": 2},
+    {"cmd": "capture", "name": "settings-opacity-70", "format": "png"},
+    {"cmd": "ui", "click": "settings.reduce-motion", "expect": {"kind": "Settings_Set", "id": 5}, "expect_state": {"settings.reduce_motion": true, "settings.hud_opacity": 0.7}},
+    {"cmd": "settle", "frames": 2},
+    {"cmd": "capture", "name": "settings-reduce-motion", "format": "png"},
+    {"cmd": "ui", "click": "settings.resume", "expect": {"kind": "Close_Menu"}, "expect_state": {"menu.open": false, "ui.surface": "hud", "ui.pointer_free": false}},
+    {"cmd": "settle", "frames": 30},
+    {"cmd": "capture", "name": "hud-70-resumed", "format": "png"}
+  ]
+}
