@@ -260,7 +260,7 @@ position need one.
 Pointer, wheel, key-down, key-up, key-repeat, and focus events reach Rune in one
 batch per frame. A harness click and drag use the same Rune hit path as a live
 click.
-`scenarios/rune-palette.json` opens the palette, selects a card by key, asserts
+`scenarios/rune-palette.json` opens the palette, selects a card by key, captures
 the preview, arms it through the Place button, places its prefab, and asserts
 the new object. `scenarios/rune-palette-800.json` repeats it at 800x600.
 `scenarios/rune-menu.json` opens the settings dialog, track-clicks HUD opacity,
