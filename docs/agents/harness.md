@@ -148,10 +148,11 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
   and `allow_blocked`. `opacity` is a percentage in [70, 100]. A setting change
   that does not change the value fails the command; `allow_blocked` accepts an
   expected blocked result. `expect_state` checks state paths after the change.
-- `ui`: click the Rune view by element `key`, or at `x` and `y` in points. The
-  run fails when the click produces no action; the action is applied before the
-  command returns.
-- `ui_tree`: write the Rune element tree to `report.ui_tree`.
+- `ui`: click an element key or an `[x, y]` point, or use `drag`, `wheel`, and
+  `focus`. The run fails when a click produces no action; the action is applied
+  before the command returns.
+- `ui_tree`: write the Rune element tree to `report.ui_tree`; optional
+  `expect_state` checks state after the dump.
 - `record`: start with `path` and optional `actions`; stop with no path.
 - `replay`: `path` to a recorded scenario.
 - `repro`: `path` for a live scene snapshot.
@@ -194,11 +195,12 @@ and `ui_draw` is not called, so the capture has no overlay.
 - `ui` drives the Rune view. `click` takes an element key or an `[x, y]` point;
   `drag`, `wheel`, and `focus` are the other forms. Every form may carry
   `expect` and `expect_state`. See **Driving the view**.
-- `ui_tree` writes the laid-out Rune element tree to `report.ui_tree`. It
-  requires a renderer. Each node carries `path`, `key`, `role`, `label`, `text`,
-  `focused`, `focus_visible`, `selected`, `hover`, `press`, `opacity`, `rect`,
-  and `parent`. `key`, `label`, and `text` may be absent; `parent` is an index
-  into the same array, or -1 for the root.
+- `ui_tree` writes the laid-out Rune element tree to `report.ui_tree`; it may
+  carry `expect_state` to assert state after the dump. It requires a renderer.
+  Each node carries `path`, `key`, `role`, `label`, `text`, `focused`,
+  `focus_visible`, `selected`, `hover`, `press`, `opacity`, `rect`, and
+  `parent`. `key`, `label`, and `text` may be absent; `parent` is an index into
+  the same array, or -1 for the root.
 - `capture` writes the frame with the UI.
 
 ### Driving the view
@@ -247,10 +249,11 @@ and `ui_draw` is not called, so the capture has no overlay.
 `surface` is `settings`, `inspector`, `palette`, or `hud`; the first open
 surface in that order wins. `focus`, `hover`, and `pressed` are element keys and
 are empty when nothing holds that state. `pointer_free` is the game focus rule.
-`actions` is the action list from the most recent `ui` command; `ui_tree` clears
-it because the tree starts a new UI read, and `reset` clears it too. `section`
-is `object` or `lamp` for a selection, otherwise `placement`. `scroll_offset`
-and `scroll_max` are the inspector rail's scroll position and limit in points.
+`actions` is the action list from the most recent `ui` command. Read-only
+commands such as `ui_tree`, `state`, and `get` keep it; `reset` clears it.
+`section` is `object` or `lamp` for a selection, otherwise `placement`.
+`scroll_offset` and `scroll_max` are the inspector rail's scroll position and
+limit in points.
 The semantic fields exist without a renderer; the interaction keys and scroll
 position need one.
 

@@ -50,7 +50,7 @@ COMMANDS := [?]Command_Row {
 	{.Editor, "editor", "Drive the object palette, placement, edits, and history.", parse_editor, execute_editor, .Raw, destroy_editor, .None, Editor_Command},
 	{.Menu, "menu", "Open, close, select, and change the settings menu.", parse_menu, execute_menu, .Raw, destroy_menu, .None, Menu_Command},
 	{.Ui, "ui", "Drive the Rune view by element key or point, with drag, wheel, focus, and assertions.", parse_ui, execute_ui, .Raw, destroy_ui, .Required, Ui_Command},
-	{.Ui_Tree, "ui_tree", "Write the Rune element tree to report.json.", parse_no_fields, execute_ui_tree, .Skip, nil, .Required, No_Fields_Command},
+	{.Ui_Tree, "ui_tree", "Write the Rune element tree to report.json.", parse_ui_tree, execute_ui_tree, .Skip, destroy_ui_tree, .Required, Ui_Tree_Command},
 	{.Record, "record", "Start or stop recording a live session into a scenario.", parse_record, execute_record, .Skip, destroy_record, .None, Record_Command},
 	{.Replay, "replay", "Replay a recorded scenario inside the live session.", parse_replay, execute_replay, .Skip, destroy_replay, .Optional, Replay_Command},
 	{.Repro, "repro", "Write the live view as a scene scenario and show the notice.", parse_repro, execute_repro, .Skip, destroy_repro, .None, Repro_Command},

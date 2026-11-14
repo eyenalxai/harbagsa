@@ -5,8 +5,8 @@
   "commands": [
     {"cmd": "settle", "frames": 1},
     {"cmd": "ui", "click": "action:2", "expect": {"kind": "Debug_Inspector"}, "expect_state": {"ui.surface": "inspector", "ui.inspector.open": true, "ui.pointer_free": true}},
-    {"cmd": "settle", "frames": 1},
-    {"cmd": "ui_tree"},
+    {"cmd": "settle", "frames": 30},
+    {"cmd": "ui_tree", "expect_state": {"ui.actions.0.kind": "Debug_Inspector", "ui.actions.0.id": 0}},
     {"cmd": "capture", "name": "ui", "format": "png"}
   ]
 }

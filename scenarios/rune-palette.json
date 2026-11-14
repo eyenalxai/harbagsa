@@ -1,5 +1,5 @@
 {
-  "note": "The palette previews Platform, Place arms it, and the primary press places it. The selection, preview, armed placement, and placed object are asserted in game state.",
+  "note": "The palette capture shows the Platform preview; Place arms it, and the primary press places it. The selected card, armed placement, and placed object are asserted in game state.",
   "view": {"hud": true, "debug": false, "hint": false},
   "commands": [
     {"cmd": "debug_mode", "active": true},

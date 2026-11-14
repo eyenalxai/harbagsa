@@ -176,6 +176,7 @@ Command :: struct {
 	editor:         Editor_Command,
 	menu:           Menu_Command,
 	ui:             Ui_Command,
+	ui_tree:        Ui_Tree_Command,
 	record:         Record_Command,
 	replay:         Replay_Command,
 	repro:          Repro_Command,

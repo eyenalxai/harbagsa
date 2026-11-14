@@ -6,7 +6,7 @@
     {"cmd": "place", "prefab": "Crate", "position": [4, 1, 4], "name": "inspector-crate"},
     {"cmd": "ui", "click": "action:2", "expect": {"kind": "Debug_Inspector"}, "expect_state": {"ui.surface": "inspector", "ui.pointer_free": true}},
     {"cmd": "editor", "select_object": "inspector-crate"},
-    {"cmd": "settle", "frames": 2},
+    {"cmd": "settle", "frames": 30},
     {"cmd": "ui", "drag": {"from": "inspector.yaw", "dx": 40, "dy": 0, "steps": 4, "hold": true}, "expect_state": {"ui.pressed": "inspector.yaw", "ui.hover": "inspector.yaw", "editor.selection.yaw_deg": 0, "editor.history.depth": 0}},
     {"cmd": "capture", "name": "drag-held", "format": "png"},
     {"cmd": "ui", "focus": false, "expect_state": {"ui.pressed": "", "ui.hover": "", "editor.selection.yaw_deg": 0, "editor.history.depth": 0, "ui.surface": "inspector"}},

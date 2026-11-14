@@ -7,11 +7,35 @@ import "core:strings"
 
 import "src:renderer"
 
+Ui_Tree_Command :: struct {
+	expect_state: []State_Expect,
+}
+
+parse_ui_tree :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
+	if key, unknown := json_unknown_key(object, {"cmd", "expect_state"}); unknown {
+		return {}, format_error("unknown key %q", key)
+	}
+	command := Command{kind = .Ui_Tree}
+	if value, has := json_get(object, "expect_state"); has {
+		expects, expect_error := parse_state_expects(value, allocator)
+		if expect_error != "" {
+			return {}, expect_error
+		}
+		command.ui_tree.expect_state = expects
+	}
+	return command, ""
+}
+
+destroy_ui_tree :: proc(command: ^Command, allocator: mem.Allocator) {
+	state_expects_destroy(command.ui_tree.expect_state, allocator)
+	command.ui_tree.expect_state = nil
+	command^ = {}
+}
+
 execute_ui_tree :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	if session.render.backend == nil {
 		return format_error("%s", "ui_tree requires rendering")
 	}
-	clear(&session.ui_actions)
 	count: u32
 	pointer := renderer.ui_tree_json(&count)
 	if pointer == nil || count == 0 {
@@ -36,7 +60,7 @@ execute_ui_tree :: proc(session: ^Session, command: Command, reply: ^Reply) -> s
 		nodes[index] = node
 	}
 	session_ui_set_tree(session, nodes)
-	return ""
+	return check_state_expects(session, command.ui_tree.expect_state)
 }
 
 @(private)

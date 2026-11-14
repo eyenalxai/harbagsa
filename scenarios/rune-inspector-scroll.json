@@ -7,7 +7,7 @@
     {"cmd": "place", "prefab": "Lamp", "position": [6, 2, 4], "name": "inspector-lamp"},
     {"cmd": "ui", "click": "action:2", "expect": {"kind": "Debug_Inspector"}, "expect_state": {"ui.surface": "inspector", "ui.inspector.open": true}},
     {"cmd": "editor", "select_object": "inspector-lamp"},
-    {"cmd": "settle", "frames": 2},
+    {"cmd": "settle", "frames": 30},
     {"cmd": "capture", "name": "rail-top", "format": "png"},
     {"cmd": "ui", "wheel": {"at": "inspector.scroll", "dy": -1}, "expect_state": {"ui.inspector.scroll_offset": 1, "ui.inspector.scroll_max": 128}},
     {"cmd": "ui", "wheel": {"at": "inspector.scroll", "dy": 1}, "expect_state": {"ui.inspector.scroll_offset": 0}},
