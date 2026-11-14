@@ -17,8 +17,8 @@ foreign ui_lib {
 	ui_frame :: proc(dt: f64, snapshot: ^Ui_Snapshot, panel: ^Ui_Panel, menu: ^Ui_Menu, settings: ^Ui_Settings, palette: ^Ui_Palette, inspector: ^Ui_Inspector, events: [^]Ui_Event, count: u32) -> i32 ---
 	ui_click_point :: proc(x, y: f32) -> i32 ---
 	ui_element_center :: proc(pointer: [^]u8, len: u32, x: ^f32, y: ^f32) -> i32 ---
-	ui_drag_at :: proc(x, y, dx, dy: f32, steps: u32, hold: u32, cancel: u32) -> i32 ---
-	ui_drag_element :: proc(pointer: [^]u8, len: u32, dx, dy: f32, steps: u32, hold: u32, cancel: u32) -> i32 ---
+	ui_drag_at :: proc(x, y, dx, dy: f32, steps: u32, hold: u32) -> i32 ---
+	ui_drag_element :: proc(pointer: [^]u8, len: u32, dx, dy: f32, steps: u32, hold: u32) -> i32 ---
 	ui_wheel_at :: proc(x, y, dx, dy: f32) -> i32 ---
 	ui_wheel_element :: proc(pointer: [^]u8, len: u32, dx, dy: f32) -> i32 ---
 	ui_focus :: proc(focused: u32) -> i32 ---
@@ -204,61 +204,6 @@ ui_attach_target :: proc(r: ^Renderer) -> bool {
 ui_actions_slice :: proc() -> []Ui_Action {
 	count: u32
 	pointer := ui_actions(&count)
-	if pointer == nil || count == 0 {
-		return nil
-	}
-	return pointer[:count]
-}
-
-ui_click_at :: proc(x, y: f32) -> []Ui_Action {
-	if ui_click_point(x, y) != 0 {
-		return nil
-	}
-	return ui_actions_slice()
-}
-
-ui_find_element :: proc(key: string) -> (x, y: f32, ok: bool) {
-	if ui_element_center(raw_data(key), u32(len(key)), &x, &y) != 0 {
-		return 0, 0, false
-	}
-	return x, y, true
-}
-
-ui_drag_point :: proc(x, y, dx, dy: f32, steps: int, hold, cancel: bool) -> bool {
-	return ui_drag_at(x, y, dx, dy, u32(steps), u32(hold), u32(cancel)) == 0
-}
-
-ui_drag_key :: proc(key: string, dx, dy: f32, steps: int, hold, cancel: bool) -> bool {
-	return ui_drag_element(
-		raw_data(key),
-		u32(len(key)),
-		dx,
-		dy,
-		u32(steps),
-		u32(hold),
-		u32(cancel),
-	) == 0
-}
-
-ui_wheel_point :: proc(x, y, dx, dy: f32) -> bool {
-	return ui_wheel_at(x, y, dx, dy) == 0
-}
-
-ui_wheel_key :: proc(key: string, dx, dy: f32) -> bool {
-	return ui_wheel_element(raw_data(key), u32(len(key)), dx, dy) == 0
-}
-
-ui_query_interaction :: proc() -> (Ui_Interaction, bool) {
-	interaction: Ui_Interaction
-	if ui_interaction(&interaction) != 0 {
-		return {}, false
-	}
-	return interaction, true
-}
-
-ui_tree_bytes :: proc() -> []u8 {
-	count: u32
-	pointer := ui_tree_json(&count)
 	if pointer == nil || count == 0 {
 		return nil
 	}

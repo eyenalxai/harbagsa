@@ -127,11 +127,10 @@ pub extern "C" fn ui_drag_at(
     dy: f32,
     steps: u32,
     hold: u32,
-    cancel: u32,
 ) -> i32 {
     let Some(host) = host::host() else { return 1 };
     let Some(runtime) = host.runtime.as_mut() else { return 2 };
-    input::drag_point(runtime, x, y, dx, dy, steps, hold != 0, cancel != 0, None);
+    input::drag_point(runtime, x, y, dx, dy, steps, hold != 0);
     0
 }
 
@@ -143,12 +142,11 @@ pub extern "C" fn ui_drag_element(
     dy: f32,
     steps: u32,
     hold: u32,
-    cancel: u32,
 ) -> i32 {
     let Some(host) = host::host() else { return 1 };
     let Some(runtime) = host.runtime.as_mut() else { return 2 };
     let key = unsafe { abi::text_bytes(pointer, len) };
-    input::drag_element(runtime, &key, dx, dy, steps, hold != 0, cancel != 0)
+    input::drag_element(runtime, &key, dx, dy, steps, hold != 0)
 }
 
 #[unsafe(no_mangle)]

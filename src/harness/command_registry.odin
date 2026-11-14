@@ -48,7 +48,7 @@ COMMANDS := [?]Command_Row {
 	{.View, "view", "Toggle the HUD, debug draw, capture hint, and perf overlay.", parse_view, execute_view, .Raw, nil, .None, View_Command},
 	{.Debug_Mode, "debug_mode", "Enter or leave the debug mode.", parse_debug_mode, execute_debug_mode, .Raw, nil, .None, Debug_Mode_Command},
 	{.Editor, "editor", "Drive the object palette, placement, edits, and history.", parse_editor, execute_editor, .Raw, destroy_editor, .None, Editor_Command},
-	{.Menu, "menu", "Open, close, select, and change the settings menu.", parse_menu, execute_menu, .Raw, nil, .None, Menu_Command},
+	{.Menu, "menu", "Open, close, select, and change the settings menu.", parse_menu, execute_menu, .Raw, destroy_menu, .None, Menu_Command},
 	{.Ui, "ui", "Drive the Rune view by element key or point, with drag, wheel, focus, and assertions.", parse_ui, execute_ui, .Raw, destroy_ui, .Required, Ui_Command},
 	{.Ui_Tree, "ui_tree", "Write the Rune element tree to report.json.", parse_no_fields, execute_ui_tree, .Skip, nil, .Required, No_Fields_Command},
 	{.Record, "record", "Start or stop recording a live session into a scenario.", parse_record, execute_record, .Skip, destroy_record, .None, Record_Command},

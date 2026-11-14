@@ -23,7 +23,7 @@ execute_ui :: proc(session: ^Session, command: Command, reply: ^Reply) -> string
 		if error := ui_drag(ui.drag); error != "" {
 			return error
 		}
-		if len(renderer.ui_actions_slice()) == 0 && !ui.drag.hold && !ui.drag.cancel {
+		if len(renderer.ui_actions_slice()) == 0 && !ui.drag.hold {
 			return format_error("%s", "the UI drag produced no action")
 		}
 	} else if ui.has_wheel {
@@ -85,13 +85,15 @@ ui_click :: proc(target: Ui_Target) -> string {
 		x, y = target.x, target.y
 	} else {
 		key := target.key
-		found_x, found_y, ok := renderer.ui_find_element(ui_key_text(&key))
-		if !ok {
-			return format_error("the UI element %q was not found", ui_key_text(&key))
+		text := ui_key_text(&key)
+		if renderer.ui_element_center(raw_data(text), u32(len(text)), &x, &y) != 0 {
+			return format_error("the UI element %q was not found", text)
 		}
-		x, y = found_x, found_y
 	}
-	if len(renderer.ui_click_at(x, y)) == 0 {
+	if renderer.ui_click_point(x, y) != 0 {
+		return format_error("%s", "the UI click failed")
+	}
+	if len(renderer.ui_actions_slice()) == 0 {
 		return format_error("%s", "the UI click produced no action")
 	}
 	return ""
@@ -100,22 +102,28 @@ ui_click :: proc(target: Ui_Target) -> string {
 @(private)
 ui_drag :: proc(drag: Ui_Drag) -> string {
 	if drag.target.point {
-		if !renderer.ui_drag_point(
+		if renderer.ui_drag_at(
 			drag.target.x,
 			drag.target.y,
 			drag.dx,
 			drag.dy,
-			drag.steps,
-			drag.hold,
-			drag.cancel,
-		) {
+			u32(drag.steps),
+			u32(drag.hold),
+		) != 0 {
 			return format_error("%s", "the UI drag failed")
 		}
 		return ""
 	}
 	key := drag.target.key
 	text := ui_key_text(&key)
-	if !renderer.ui_drag_key(text, drag.dx, drag.dy, drag.steps, drag.hold, drag.cancel) {
+	if renderer.ui_drag_element(
+		raw_data(text),
+		u32(len(text)),
+		drag.dx,
+		drag.dy,
+		u32(drag.steps),
+		u32(drag.hold),
+	) != 0 {
 		return format_error("the UI element %q was not found", text)
 	}
 	return ""
@@ -124,14 +132,14 @@ ui_drag :: proc(drag: Ui_Drag) -> string {
 @(private)
 ui_wheel :: proc(wheel: Ui_Wheel) -> string {
 	if wheel.target.point {
-		if !renderer.ui_wheel_point(wheel.target.x, wheel.target.y, wheel.dx, wheel.dy) {
+		if renderer.ui_wheel_at(wheel.target.x, wheel.target.y, wheel.dx, wheel.dy) != 0 {
 			return format_error("%s", "the UI wheel failed")
 		}
 		return ""
 	}
 	key := wheel.target.key
 	text := ui_key_text(&key)
-	if !renderer.ui_wheel_key(text, wheel.dx, wheel.dy) {
+	if renderer.ui_wheel_element(raw_data(text), u32(len(text)), wheel.dx, wheel.dy) != 0 {
 		return format_error("the UI element %q was not found", text)
 	}
 	return ""

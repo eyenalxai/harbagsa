@@ -113,10 +113,6 @@ pub fn tree_json(runtime: &Runtime<UiState>) -> String {
         out.push(':');
         push_rect(&mut out, element.rect);
         out.push(',');
-        push_value(&mut out, "target");
-        out.push(':');
-        push_rect(&mut out, element.target);
-        out.push(',');
         push_value(&mut out, "parent");
         out.push(':');
         match element.parent {

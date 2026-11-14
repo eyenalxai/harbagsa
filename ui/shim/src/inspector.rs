@@ -19,7 +19,6 @@ const INSET: f32 = 12.0;
 const CONTENT_WIDTH: f32 = WIDTH - 24.0;
 const BOTTOM_RESERVE: f32 = 60.0;
 const LABEL_WIDTH: f32 = 76.0;
-const MAX_VIEWPORT_HEIGHT: f32 = 420.0;
 
 pub fn view(state: &UiState, height: f32, layers: &mut Vec<El>) {
     if !state.inspector.open || state.menu.open || state.palette.open {
@@ -28,9 +27,7 @@ pub fn view(state: &UiState, height: f32, layers: &mut Vec<El>) {
         return;
     }
     let kit = &state.kit;
-    let max_height = (height - INSET * 2.0 - BOTTOM_RESERVE)
-        .min(MAX_VIEWPORT_HEIGHT)
-        .max(240.0);
+    let max_height = (height - INSET * 2.0 - BOTTOM_RESERVE).max(240.0);
     let body = col()
         .w_full()
         .gap(4.0)

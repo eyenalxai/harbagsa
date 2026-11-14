@@ -38,7 +38,6 @@ Ui_Drag :: struct {
 	dy:     f32,
 	steps:  int,
 	hold:   bool,
-	cancel: bool,
 }
 
 Ui_Wheel :: struct {
@@ -80,9 +79,6 @@ parse_ui :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, str
 	allowed := []string {
 		"cmd",
 		"click",
-		"key",
-		"x",
-		"y",
 		"drag",
 		"wheel",
 		"focus",
@@ -95,26 +91,11 @@ parse_ui :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, str
 	command := Command{kind = .Ui}
 	forms := 0
 	if click_value, has_click := json_get(object, "click"); has_click {
-		if _, has_key := json_get(object, "key"); has_key {
-			return {}, format_error("%s", "ui takes 'click' or 'key', not both")
-		}
-		if _, has_x := json_get(object, "x"); has_x {
-			return {}, format_error("%s", "ui takes 'click' or 'x' and 'y', not both")
-		}
-		if _, has_y := json_get(object, "y"); has_y {
-			return {}, format_error("%s", "ui takes 'click' or 'x' and 'y', not both")
-		}
 		target, target_error := parse_ui_target(click_value, "click")
 		if target_error != "" {
 			return {}, target_error
 		}
 		command.ui.click = target
-		command.ui.has_click = true
-		forms += 1
-	} else if legacy_target, has_legacy, legacy_error := parse_legacy_click(object); legacy_error != "" {
-		return {}, legacy_error
-	} else if has_legacy {
-		command.ui.click = legacy_target
 		command.ui.has_click = true
 		forms += 1
 	}
@@ -164,37 +145,6 @@ parse_ui :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, str
 		command.ui.expect_state = expects
 	}
 	return command, ""
-}
-
-@(private)
-parse_legacy_click :: proc(object: json.Object) -> (target: Ui_Target, has: bool, error: string) {
-	key_value, has_key := json_get(object, "key")
-	x_value, has_x := json_get(object, "x")
-	y_value, has_y := json_get(object, "y")
-	if !has_key && !has_x && !has_y {
-		return {}, false, ""
-	}
-	if has_key {
-		if has_x || has_y {
-			return {}, false, format_error("%s", "ui takes 'key' or 'x' and 'y', not both")
-		}
-		parsed, target_error := parse_ui_target(key_value, "key")
-		if target_error != "" {
-			return {}, false, target_error
-		}
-		if parsed.point {
-			return {}, false, format_error("%s", "'key' must be a string")
-		}
-		return parsed, true, ""
-	}
-	if !has_x || !has_y {
-		return {}, false, format_error("%s", "ui needs 'key' or both 'x' and 'y'")
-	}
-	point, target_error := parse_ui_point_values(x_value, y_value, "x and y")
-	if target_error != "" {
-		return {}, false, target_error
-	}
-	return point, true, ""
 }
 
 @(private)

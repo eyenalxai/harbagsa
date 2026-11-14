@@ -83,14 +83,12 @@ pub fn drag_point(
     dy: f32,
     steps: u32,
     hold: bool,
-    cancel: bool,
-    key: Option<&str>,
 ) {
     let steps = steps.clamp(1, MAX_DRAG_STEPS);
     runtime.pointer_move(x, y);
     runtime.pointer_down(x, y);
-    runtime.state.pressed_key =
-        key.map(str::to_string).or_else(|| introspect::key_at(runtime, x, y));
+    let key = introspect::key_at(runtime, x, y);
+    runtime.state.pressed_key = key;
     advance(runtime);
     for step in 1..=steps {
         let fraction = step as f32 / steps as f32;
@@ -101,17 +99,9 @@ pub fn drag_point(
         settle(runtime);
         return;
     }
-    if cancel {
-        runtime.window_focus(false);
-        runtime.state.pressed_key = None;
-        advance(runtime);
-        runtime.window_focus(true);
-        advance(runtime);
-    } else {
-        runtime.pointer_up(x + dx, y + dy);
-        runtime.state.pressed_key = None;
-        advance(runtime);
-    }
+    runtime.pointer_up(x + dx, y + dy);
+    runtime.state.pressed_key = None;
+    advance(runtime);
     settle(runtime);
 }
 
@@ -122,12 +112,11 @@ pub fn drag_element(
     dy: f32,
     steps: u32,
     hold: bool,
-    cancel: bool,
 ) -> i32 {
     let Some((x, y)) = introspect::element_center(runtime, key) else {
         return 3;
     };
-    drag_point(runtime, x, y, dx, dy, steps, hold, cancel, Some(key));
+    drag_point(runtime, x, y, dx, dy, steps, hold);
     0
 }
 

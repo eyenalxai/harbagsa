@@ -13,7 +13,7 @@ parse_ui_drag :: proc(raw: json.Value) -> (drag: Ui_Drag, error: string) {
 	}
 	if key, unknown := json_unknown_key(
 		object,
-		{"from", "dx", "dy", "steps", "hold", "cancel"},
+		{"from", "dx", "dy", "steps", "hold"},
 	); unknown {
 		return {}, format_error("unknown drag key %q", key)
 	}
@@ -50,12 +50,6 @@ parse_ui_drag :: proc(raw: json.Value) -> (drag: Ui_Drag, error: string) {
 	}
 	if field_error := json_bool(object, "hold", &drag.hold); field_error != "" {
 		return {}, field_error
-	}
-	if field_error := json_bool(object, "cancel", &drag.cancel); field_error != "" {
-		return {}, field_error
-	}
-	if drag.hold && drag.cancel {
-		return {}, format_error("%s", "drag cannot both hold and cancel")
 	}
 	return drag, ""
 }

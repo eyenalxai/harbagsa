@@ -147,7 +147,7 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `menu`: `open`, `item`, `activate`, `direction`, `opacity`, `reduce_motion`,
   and `allow_blocked`. `opacity` is a percentage in [70, 100]. A setting change
   that does not change the value fails the command; `allow_blocked` accepts an
-  expected blocked result.
+  expected blocked result. `expect_state` checks state paths after the change.
 - `ui`: click the Rune view by element `key`, or at `x` and `y` in points. The
   run fails when the click produces no action; the action is applied before the
   command returns.
@@ -195,7 +195,10 @@ and `ui_draw` is not called, so the capture has no overlay.
   `drag`, `wheel`, and `focus` are the other forms. Every form may carry
   `expect` and `expect_state`. See **Driving the view**.
 - `ui_tree` writes the laid-out Rune element tree to `report.ui_tree`. It
-  requires a renderer.
+  requires a renderer. Each node carries `path`, `key`, `role`, `label`, `text`,
+  `focused`, `focus_visible`, `selected`, `hover`, `press`, `opacity`, `rect`,
+  and `parent`. `key`, `label`, and `text` may be absent; `parent` is an index
+  into the same array, or -1 for the root.
 - `capture` writes the frame with the UI.
 
 ### Driving the view
@@ -210,16 +213,13 @@ and `ui_draw` is not called, so the capture has no overlay.
 {"cmd":"ui","focus":false}
 ```
 
-- `click`: a string is an element key; `[x, y]` is a point in view points. The
-  old `key` and `x`/`y` spellings still name the same click.
+- `click`: a string is an element key; `[x, y]` is a point in view points.
 - `drag`: `from` is a key or point. `dx`/`dy` are the pointer travel, and
   `steps` is the number of move frames in [1, 64]. A drag spans frames: the
   press and every move gets its own Rune frame before the release. `hold: true`
-  stops after the last move, leaving the press held; `cancel: true` takes the
-  focus-loss path instead of a release, and the shim restores focus before the
-  command returns. A held drag reports the pressed and hovered control in
-  `state.ui`; focus loss cancels it, and an OnRelease slider restores its
-  pre-drag value.
+  stops after the last move, leaving the press held. A held drag reports the
+  pressed and hovered control in `state.ui`; focus loss cancels it, and an
+  OnRelease slider restores its pre-drag value.
 - `wheel`: `at` is a key or point, and `dx`/`dy` are Rune scroll points
   (positive `dy` moves content down). The live platform path converts one SDL
   wheel notch to 40 points and negates its vertical sign before dispatch; the
@@ -268,8 +268,10 @@ it at 800x600. `scenarios/rune-settings.json` drags the HUD opacity slider to
 repeats it at 800x600. `scenarios/rune-slider-drag.json` drags the inspector
 yaw to the cap and back to 180 degrees, cancels a held drag from 180 with focus
 loss, and drags the lamp intensity, range, and type weight to their floors.
-Both inspector scenarios wheel the keyed rail scroll viewport and assert the
-offset changes. `scenarios/rune-slider-drag-800.json` repeats it at 800x600.
+`scenarios/rune-slider-drag-800.json` repeats it at 800x600.
+`scenarios/rune-inspector-scroll.json` runs at 800x400, where the rail overflows
+naturally; it wheels one point down and back up, then clamps at the rail limit
+and asserts both the offset and the limit.
 `scenarios/rune-focus-loss.json` reports a held drag, loses focus, and asserts
 the drag was cancelled and the game value did not change;
 `scenarios/rune-focus-loss-800.json` repeats it at 800x600.

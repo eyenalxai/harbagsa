@@ -12,11 +12,12 @@ execute_ui_tree :: proc(session: ^Session, command: Command, reply: ^Reply) -> s
 		return format_error("%s", "ui_tree requires rendering")
 	}
 	clear(&session.ui_actions)
-	bytes := renderer.ui_tree_bytes()
-	if len(bytes) == 0 {
+	count: u32
+	pointer := renderer.ui_tree_json(&count)
+	if pointer == nil || count == 0 {
 		return format_error("%s", "the UI shim returned no tree")
 	}
-	value, parse_error := json.parse_string(string(bytes), .JSON, true, session.allocator)
+	value, parse_error := json.parse_string(string(pointer[:count]), .JSON, true, session.allocator)
 	if parse_error != .None {
 		return format_error("the UI tree is not valid JSON: %v", parse_error)
 	}
@@ -44,64 +45,109 @@ parse_ui_tree_node :: proc(value: json.Value, allocator: mem.Allocator) -> (Ui_T
 	if !ok {
 		return {}, format_error("%s", "a UI tree element is not an object")
 	}
-	path, field_error := tree_required_string(object, "path")
-	if field_error != "" {
-		return {}, field_error
+	path_value, path_field_error := tree_field(object, "path")
+	if path_field_error != "" {
+		return {}, path_field_error
 	}
-	role, role_error := tree_required_string(object, "role")
-	if role_error != "" {
-		return {}, role_error
-	}
-	key, key_error := tree_optional_string(object, "key")
-	if key_error != "" {
-		return {}, key_error
-	}
-	label, label_error := tree_optional_string(object, "label")
-	if label_error != "" {
-		return {}, label_error
-	}
-	text, text_error := tree_optional_string(object, "text")
-	if text_error != "" {
-		return {}, text_error
-	}
-	focused, focused_error := tree_bool(object, "focused")
-	if focused_error != "" {
-		return {}, focused_error
-	}
-	focus_visible, visible_error := tree_bool(object, "focus_visible")
-	if visible_error != "" {
-		return {}, visible_error
-	}
-	selected, selected_error := tree_bool(object, "selected")
-	if selected_error != "" {
-		return {}, selected_error
-	}
-	hover, hover_error := tree_number(object, "hover")
-	if hover_error != "" {
-		return {}, hover_error
-	}
-	press, press_error := tree_number(object, "press")
-	if press_error != "" {
-		return {}, press_error
-	}
-	opacity, opacity_error := tree_number(object, "opacity")
-	if opacity_error != "" {
-		return {}, opacity_error
-	}
-	rect, rect_error := tree_vec4(object, "rect")
-	if rect_error != "" {
-		return {}, rect_error
-	}
-	target, target_error := tree_vec4(object, "target")
-	if target_error != "" {
-		return {}, target_error
-	}
-	parent, parent_error := tree_int(object, "parent")
-	if parent_error != "" {
-		return {}, parent_error
+	path, path_ok := json_string(path_value)
+	if !path_ok {
+		return {}, tree_type_error("path", "a string")
 	}
 	if path == "" {
 		return {}, format_error("%s", "a UI tree element has no path")
+	}
+	role_value, role_field_error := tree_field(object, "role")
+	if role_field_error != "" {
+		return {}, role_field_error
+	}
+	role, role_ok := json_string(role_value)
+	if !role_ok {
+		return {}, tree_type_error("role", "a string")
+	}
+	key := ""
+	if key_value, has := json_get(object, "key"); has && !json_is_null(key_value) {
+		key, ok = json_string(key_value)
+		if !ok {
+			return {}, tree_type_error("key", "a string or null")
+		}
+	}
+	label := ""
+	if label_value, has := json_get(object, "label"); has && !json_is_null(label_value) {
+		label, ok = json_string(label_value)
+		if !ok {
+			return {}, tree_type_error("label", "a string or null")
+		}
+	}
+	text := ""
+	if text_value, has := json_get(object, "text"); has && !json_is_null(text_value) {
+		text, ok = json_string(text_value)
+		if !ok {
+			return {}, tree_type_error("text", "a string or null")
+		}
+	}
+	focused_value, focused_field_error := tree_field(object, "focused")
+	if focused_field_error != "" {
+		return {}, focused_field_error
+	}
+	focused, focused_ok := json_boolean(focused_value)
+	if !focused_ok {
+		return {}, tree_type_error("focused", "a boolean")
+	}
+	visible_value, visible_field_error := tree_field(object, "focus_visible")
+	if visible_field_error != "" {
+		return {}, visible_field_error
+	}
+	visible, visible_ok := json_boolean(visible_value)
+	if !visible_ok {
+		return {}, tree_type_error("focus_visible", "a boolean")
+	}
+	selected_value, selected_field_error := tree_field(object, "selected")
+	if selected_field_error != "" {
+		return {}, selected_field_error
+	}
+	selected, selected_ok := json_boolean(selected_value)
+	if !selected_ok {
+		return {}, tree_type_error("selected", "a boolean")
+	}
+	hover_value, hover_field_error := tree_field(object, "hover")
+	if hover_field_error != "" {
+		return {}, hover_field_error
+	}
+	hover, hover_ok := json_number(hover_value)
+	if !hover_ok {
+		return {}, tree_type_error("hover", "a number")
+	}
+	press_value, press_field_error := tree_field(object, "press")
+	if press_field_error != "" {
+		return {}, press_field_error
+	}
+	press, press_ok := json_number(press_value)
+	if !press_ok {
+		return {}, tree_type_error("press", "a number")
+	}
+	opacity_value, opacity_field_error := tree_field(object, "opacity")
+	if opacity_field_error != "" {
+		return {}, opacity_field_error
+	}
+	opacity, opacity_ok := json_number(opacity_value)
+	if !opacity_ok {
+		return {}, tree_type_error("opacity", "a number")
+	}
+	rect_value, rect_field_error := tree_field(object, "rect")
+	if rect_field_error != "" {
+		return {}, rect_field_error
+	}
+	rect, rect_error := tree_vec4_value(rect_value, "rect")
+	if rect_error != "" {
+		return {}, rect_error
+	}
+	parent_value, parent_field_error := tree_field(object, "parent")
+	if parent_field_error != "" {
+		return {}, parent_field_error
+	}
+	parent, parent_ok := json_integer(parent_value)
+	if !parent_ok {
+		return {}, tree_type_error("parent", "an integer")
 	}
 	return {
 		path          = strings.clone(path, allocator),
@@ -110,97 +156,41 @@ parse_ui_tree_node :: proc(value: json.Value, allocator: mem.Allocator) -> (Ui_T
 		label         = label == "" ? "" : strings.clone(label, allocator),
 		text          = text == "" ? "" : strings.clone(text, allocator),
 		focused       = focused,
-		focus_visible = focus_visible,
+		focus_visible = visible,
 		selected      = selected,
-		hover         = hover,
-		press         = press,
-		opacity       = opacity,
+		hover         = f32(hover),
+		press         = f32(press),
+		opacity       = f32(opacity),
 		rect          = rect,
-		target        = target,
 		parent        = parent,
 	}, ""
 }
 
 @(private)
-tree_required_string :: proc(object: json.Object, name: string) -> (string, string) {
-	value, has := json_get(object, name)
-	if !has {
-		return "", format_error("UI tree field %q is missing", name)
-	}
-	text, ok := json_string(value)
-	if !ok {
-		return "", format_error("UI tree field %q must be a string", name)
-	}
-	return text, ""
-}
-
-@(private)
-tree_optional_string :: proc(object: json.Object, name: string) -> (string, string) {
-	value, has := json_get(object, name)
-	if !has || json_is_null(value) {
-		return "", ""
-	}
-	text, ok := json_string(value)
-	if !ok {
-		return "", format_error("UI tree field %q must be a string or null", name)
-	}
-	return text, ""
-}
-
-@(private)
-tree_bool :: proc(object: json.Object, name: string) -> (bool, string) {
-	value, has := json_get(object, name)
-	if !has {
-		return false, format_error("UI tree field %q is missing", name)
-	}
-	flag, ok := json_boolean(value)
-	if !ok {
-		return false, format_error("UI tree field %q must be a boolean", name)
-	}
-	return flag, ""
-}
-
-@(private)
-tree_number :: proc(object: json.Object, name: string) -> (f32, string) {
-	value, has := json_get(object, name)
-	if !has {
-		return 0, format_error("UI tree field %q is missing", name)
-	}
-	number, ok := json_number(value)
-	if !ok {
-		return 0, format_error("UI tree field %q must be a number", name)
-	}
-	return f32(number), ""
-}
-
-@(private)
-tree_int :: proc(object: json.Object, name: string) -> (int, string) {
-	value, has := json_get(object, name)
-	if !has {
-		return 0, format_error("UI tree field %q is missing", name)
-	}
-	number, ok := json_integer(value)
-	if !ok {
-		return 0, format_error("UI tree field %q must be an integer", name)
-	}
-	return number, ""
-}
-
-@(private)
-tree_vec4 :: proc(object: json.Object, name: string) -> ([4]f32, string) {
+tree_field :: proc(object: json.Object, name: string) -> (json.Value, string) {
 	value, has := json_get(object, name)
 	if !has {
 		return {}, format_error("UI tree field %q is missing", name)
 	}
+	return value, ""
+}
+
+@(private)
+tree_type_error :: proc(name, expected: string) -> string {
+	return format_error("UI tree field %q must be %s", name, expected)
+}
+
+@(private)
+tree_vec4_value :: proc(value: json.Value, name: string) -> ([4]f32, string) {
 	array, ok := json_array(value)
 	if !ok || len(array) != 4 {
-		return {}, format_error("UI tree field %q must be four numbers", name)
+		return {}, tree_type_error(name, "four numbers")
 	}
 	result: [4]f32
 	for element, index in array {
 		number, number_ok := json_number(element)
 		if !number_ok {
-			return {}, format_error("UI tree field %q must be four numbers", name)
+			return {}, tree_type_error(name, "four numbers")
 		}
 		result[index] = f32(number)
 	}

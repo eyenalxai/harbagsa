@@ -18,7 +18,6 @@ Ui_Tree_Node :: struct {
 	press:         f32    `json:"press"`,
 	opacity:       f32    `json:"opacity"`,
 	rect:          [4]f32 `json:"rect"`,
-	target:        [4]f32 `json:"target"`,
 	parent:        int    `json:"parent"`,
 }
 
@@ -44,11 +43,9 @@ session_ui_observation :: proc(session: ^Session) -> (Ui_Observation, string) {
 	if session.render.backend == nil {
 		return observation, ""
 	}
-	interaction, ok := renderer.ui_query_interaction()
-	if !ok {
+	if renderer.ui_interaction(&observation.interaction) != 0 {
 		return observation, format_error("%s", "the UI shim did not report its interaction state")
 	}
-	observation.interaction = interaction
 	observation.has_interaction = true
 	return observation, ""
 }

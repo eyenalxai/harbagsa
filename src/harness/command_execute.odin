@@ -160,7 +160,10 @@ execute_editor :: proc(session: ^Session, command: Command, reply: ^Reply) -> st
 
 @(private)
 execute_menu :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
-	return session_menu(session, command.menu)
+	if failure := session_menu(session, command.menu); failure != "" {
+		return failure
+	}
+	return check_state_expects(session, command.menu.expect_state)
 }
 
 @(private)
