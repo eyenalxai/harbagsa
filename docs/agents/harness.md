@@ -241,7 +241,7 @@ and `ui_draw` is not called, so the capture has no overlay.
  "menu": {"open": false, "item": "Window mode"},
  "palette": {"open": false, "selected": 0},
  "inspector": {"open": true, "selected_id": 7, "section": "object",
-               "scroll_offset": 0, "scroll_max": 24}}
+               "scroll_offset": 0, "scroll_max": 0}}
 ```
 
 `surface` is `settings`, `inspector`, `palette`, or `hud`; the first open
