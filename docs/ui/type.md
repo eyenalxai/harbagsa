@@ -7,10 +7,11 @@ and `Geist Mono` families with Rune. Rune falls back to the system faces for
 characters the subsets do not cover.
 
 Most text uses Rune's default style. The HUD does not set a size or tracking;
-the kit surfaces use the kit's type scale. The palette uses the kit's type
-styles and one view-local 18/24 title style in `ui/shim/src/palette.rs`. Weight
-follows the Type weight setting, and numeric values use the Geist Mono family.
-Change a text style in `ui/shim/src` and let Rune lay it out.
+the kit surfaces use the kit's type scale. The palette title is a view-local
+18/24 style in `ui/shim/src/palette.rs`; the settings and inspector section
+headers use a 16-point line height with 0.44 tracking, and the inspector header
+is 13/18. Weight follows the Type weight setting, and numeric values use the
+Geist Mono family. Change a text style in `ui/shim/src` and let Rune lay it out.
 
 ## The status panel
 
@@ -26,16 +27,17 @@ numeric.
 ## The settings dialog
 
 Settings is a kit `Dialog`; its labels use the kit styles and inherit the type
-weight. The HUD opacity value draws in Geist Mono. Type weight remains a stored setting but is not part of
-Settings.
+weight. The HUD opacity value draws in Geist Mono. Type weight remains a stored
+setting but is not part of Settings; the inspector's Debug section edits it.
 
 The game sends the weight in the UI snapshot and the shim rebuilds the kit when
-it changes, so every kit control and every local text node follows. Geist
-Variable and Geist Mono Variable carry a continuous `wght` axis, so an odd value
-such as 565 interpolates instead of snapping to a named instance. A weight of
-400 is the old default; a zero or absent weight leaves the default text style
-untouched. `scenarios/rune-weight.json` captures the status panel at 400, 565,
-and 900, plus the settings dialog at 565.
+it changes. The kit shifts its 12 text styles by `weight - 400`; the HUD's local
+text carries a span weight. Geist Variable and Geist Mono Variable carry a
+continuous `wght` axis, so an odd value such as 565 interpolates instead of
+snapping to a named instance. A weight of 400 is the default; a zero or absent
+weight leaves the default text style untouched.
+`scenarios/rune-weight.json` captures the status panel at 400, 565, and 900,
+plus the settings dialog at 565.
 
 ## Numbers
 

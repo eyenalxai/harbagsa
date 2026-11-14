@@ -1,7 +1,13 @@
 # Porting Rune's UI ideas into the Odin overlay
 
 Date: 2026-11-10
-Status: answered. Three ideas transfer; one is worth doing now
+Status: superseded. Rune is the UI layer; this note records the rejected porting
+route.
+
+**Superseded:** HARB-342 chose to run Rune in-process as the UI layer, and the
+shim in `ui/shim` implements it. This note predates that decision. It is kept as
+a record of the porting analysis, not as guidance; use
+`docs/research/rune-integration-plan.md` and `docs/ui/README.md` instead.
 
 Source read: Rune checkout at `~/Projects/other/rune`, commit `f18ead8`
 (2026-11-10), crate `rune 0.0.1`. Rune is pre-release; a later commit may move
