@@ -218,7 +218,7 @@ degrees and ends in `_deg`. Positions and ranges are metres. One `step` or
 - `debug_mode`: enter or leave debug mode.
 - `editor`: drive the palette, placement, object edits, light settings, and history. `state.editor` reports the active tool, the resolved selection, the placement, the history, and the light budget.
 - `menu`: drive the settings dialog and its values.
-- `ui`: click a Rune element by `key`, or the view at `x` and `y` in points.
+- `ui`: drive the Rune view with `click`, `drag`, `wheel`, or `focus`.
 - `record`: start or stop a recording.
 - `replay`: reset and run a recorded scenario.
 - `repro`: write the live view as a scene snapshot.
@@ -236,6 +236,10 @@ degrees and ends in `_deg`. Positions and ranges are metres. One `step` or
 
 Use `./bin/harbagsa-agent help <command>` for fields. The live session accepts
 one JSON command per line on standard input or a Unix socket.
+
+Every `ui` form can carry `expect` for one emitted action and `expect_state` for
+a state path. `state.ui` reports the current surface and interaction state, and
+`ui_tree` writes the laid-out Rune element tree to `report.ui_tree`.
 
 ### Captures
 

@@ -42,6 +42,8 @@ repeats a label.
 - A fade, slide, or scale that ignores reduce motion. Kit motion is allowed when
   the reduce-motion setting snaps its geometry and keeps only the opacity fade;
   the status HUD does not animate. The rune-fx glow is opt-in and static.
+- A held drag that does not report its pressed or hovered control.
+- A focus loss that does not cancel a held drag, press, or hover.
 - A new `Row_Kind` without updating both the game and the shim.
 - A third hue.
 - A player light, or an emissive spider part that is not an eye or one of the two

@@ -20,7 +20,8 @@ setting. The optional rune-fx glow is a demo and is off by default.
 | `src/game` | which rows exist, their labels and values, menu state, settings and palette state, inspector state | know about Rune, pixels, or colours |
 | `src/ui` | the flat snapshot vocabulary: `Row`, `Menu`, `Settings`, `Palette`, `Inspector`, `Hud`, and the constants | import a project package |
 | `src/frame` | assembling one `HUD_Frame` from the simulation and input | draw or lay out |
-| `src/renderer/ui_bridge.odin` | the C ABI to the shim, snapshot marshalling, action queue | invent content |
+| `src/renderer/ui_step.odin` | snapshot marshalling into the shim call, and the frame step | invent content |
+| `src/renderer/ui_bridge.odin` | the C ABI to the shim, the action queue, and the harness interaction entry points | invent content |
 | `ui/shim/src/views.rs` | the HUD root, the bottom action column, and overlay composition | read game state directly |
 | `ui/shim/src/settings.rs` | the settings dialog and its controls | read game state directly |
 | `ui/shim/src/palette.rs` | the palette grid, preview, and isometric shape | read game state directly |
@@ -86,9 +87,11 @@ bring that layer back.
 1. Add the data to `src/ui`: a row kind if one is missing, or a new field on
    `Hud`, `Menu`, `Settings`, `Palette`, or `Inspector`.
 2. Fill it in `src/game`. Format every changing number into a fixed field.
-3. Extend the flat `UI_Frame` payload and the matching C ABI in
-   `src/renderer/ui_bridge.odin`. `HUD_Frame` only carries `enabled` plus that
-   frame, and the Rune shim must consume the new field.
+3. Extend the flat `UI_Frame` payload and the matching C ABI.
+   `src/renderer/ui_step.odin` marshals it into the shim call; the foreign
+   declarations and action queue live in `src/renderer/ui_bridge.odin`.
+   `HUD_Frame` only carries `enabled` plus that frame, and the Rune shim must
+   consume the new field.
 4. Draw it in `ui/shim/src/views.rs` as a Rune element tree. The settings
    dialog lives in `settings.rs`, the palette grid and preview in `palette.rs`,
    and the inspector rail in `inspector.rs`.
