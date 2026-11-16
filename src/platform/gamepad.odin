@@ -2,6 +2,7 @@
 package platform
 
 import "core:c"
+import "core:log"
 import "core:math"
 import "vendor:sdl3"
 
@@ -40,8 +41,9 @@ Gamepad_State :: struct {
 // Gamepad_Device is the open handle and the previous held set. Hot-plug is not
 // handled: the first gamepad present at startup is the one the session uses.
 Gamepad_Device :: struct {
-	handle: ^sdl3.Gamepad,
-	held:   Gamepad_Buttons,
+	handle:    ^sdl3.Gamepad,
+	held:      Gamepad_Buttons,
+	connected: bool,
 }
 
 gamepad_open :: proc(device: ^Gamepad_Device) {
@@ -51,6 +53,9 @@ gamepad_open :: proc(device: ^Gamepad_Device) {
 		return
 	}
 	device.handle = sdl3.OpenGamepad(ids[0])
+	if device.handle == nil {
+		log.warnf("platform: SDL_OpenGamepad failed: %v", sdl3.GetError())
+	}
 }
 
 gamepad_close :: proc(device: ^Gamepad_Device) {
@@ -63,8 +68,22 @@ gamepad_close :: proc(device: ^Gamepad_Device) {
 gamepad_read :: proc(device: ^Gamepad_Device, state: ^Gamepad_State) {
 	state^ = {}
 	if device.handle == nil {
+		if device.connected {
+			log.warn("platform: the gamepad disconnected")
+			device.connected = false
+			device.held = {}
+		}
 		return
 	}
+	if !sdl3.GamepadConnected(device.handle) {
+		if device.connected {
+			log.warn("platform: the gamepad disconnected")
+		}
+		device.connected = false
+		device.held = {}
+		return
+	}
+	device.connected = true
 	held := Gamepad_Buttons{}
 	for button in Gamepad_Button {
 		if sdl3.GetGamepadButton(device.handle, sdl_button(button)) {

@@ -15,13 +15,27 @@ path.
 - The owners are World, Menu, Inspector, Palette, and Placement. Menu sends keys
   and pointer to Rune; the world and placement send both to the game; the
   palette sends keys to the engine navigator and pointer to Rune; the inspector
-  sends widget keys to Rune but keeps `Escape` and `I` in the engine.
-- A press and its release stay in the same sink, so a key the engine consumed
-  keeps its up and repeat.
+  sends widget keys to Rune but keeps `Escape` and `I` in the engine. Tab moves
+  focus in the inspector; the palette toggle is available while the rail is
+  closed.
+- Every input source holds the key it pressed. A repeat or release follows the
+  press to the same sink even after the owner changes, and an unpaired release
+  is dropped rather than routed by the current owner.
+- Sources that press the same key share one sink edge. Releasing one source does
+  not clear a key another source still holds, and two sources pressing `Escape`
+  do not produce two Rune presses.
 - Rune keeps focus, tab order, modal traps, sliders, and text semantics for the
   events it receives. It is not given an event that the game owns.
 - Gamepad buttons and sticks are read by the engine and mapped to the same game
-  intents and normalized key codes. No gamepad type crosses the UI ABI.
+  intents and normalized key codes. No gamepad type crosses the UI ABI. The
+  left stick and d-pad navigate the palette.
+- Only the first gamepad is opened. An unplug is detected, releases its held
+  keys to their sinks, and leaves input on the keyboard. Hot-plug is not
+  supported.
+- The held state is cleared on window blur and on a dropped raw event. A full
+  key or UI queue reports a warning.
+- Cursor capture follows the end-of-frame focus, so opening or closing a surface
+  takes effect before the next poll.
 - The palette cards are not focusable. `Palette_Step`, `Palette_Select`, and
   `Palette_Pick` are the only palette navigator.
 
@@ -41,5 +55,6 @@ path.
   Rune.
 - A new keyed Rune surface must join the owner table or its keys fall to the
   game.
-- The harness still drives the shim directly. The shared raw-event harness
-  frame is a separate change.
+- The harness still drives the shim directly and does not exercise the live
+  route. The shared raw-event harness frame and its proof are a separate change
+  (HARB-375).

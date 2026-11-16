@@ -169,10 +169,6 @@ run :: proc() -> bool {
 		if !loop.runtime.debug.active && steps > 0 {
 			input.clear_latches(&loop.resolver)
 		}
-		// The route owns the pointer state for this frame. A surface change
-		// applies to the cursor on the next frame, so this sync cannot disagree
-		// with the owner that routed these events.
-		sync_cursor(&window, routed.pointer_free, events.captured)
 
 		alpha := clamp(loop.accumulator / game.SIMULATION_STEP, 0, 1)
 		loop.last_alpha = alpha
@@ -221,6 +217,10 @@ run :: proc() -> bool {
 			}
 		}
 		renderer.ui_actions_clear()
+		// Capture follows the surface that is open after this frame's actions, so
+		// an opening or closing surface takes effect before the next poll.
+		end_focus := game.focus(&loop.runtime.debug, &loop.runtime.hud.menu)
+		sync_cursor(&window, end_focus.pointer_free, events.captured)
 		switch status {
 		case .Ok:
 			perf.mark(&perf_state, .Present)

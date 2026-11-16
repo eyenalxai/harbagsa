@@ -344,8 +344,9 @@ state, and whether the palette has freed the pointer. The menu sits beside it.
 _Avoid_: Focus (that word belongs to Selection), cursor state
 
 **Frame focus**:
-The whole ownership of one frame: the menu open flag and the editor focus, plus
-the pointer-free answer the cursor sync reads.
+The surface state one frame starts from: the menu open flag and the editor focus,
+plus the pointer-free answer. `src/input/route.odin` derives the input owner
+from it; the cursor sync reads the same focus after the frame's actions.
 _Avoid_: Input state, mode
 
 **Object palette**:
@@ -441,14 +442,17 @@ _Avoid_: Input state, controls
 The resolved game intent of one frame: the Input snapshot, the Editing actions,
 the menu intents, and the view intents. `src/input/route.odin` turns one
 `platform.Events` value into one `Routed_Frame`; the game intent and the UI
-batch are its two sinks. The resolver holds only the edge latches and the sink
-each held key was pressed into.
+batch are its two sinks. The resolver holds the edge latches, the source that
+pressed each held key, and the repeated edges shared by sources on the same key.
+A repeat or release follows the press to the same sink even after the owner
+changes.
 _Avoid_: Input state, input command
 
 **Input owner**:
 The one surface that owns one frame's input: World, Menu, Inspector, Palette, or
-Placement. Each raw event has one owner and is copied to exactly one sink, the
-game intent or the UI batch. A press and its release stay in the same sink.
+Placement. Every raw event is copied to exactly one sink, the game intent or the
+UI batch. Sources that press the same key share one sink edge, so releasing one
+source does not clear another.
 _Avoid_: Input mode, input focus
 
 **Settings**:

@@ -259,7 +259,9 @@ position need one.
 
 Live, `src/input` routes each raw platform event to one owner and one sink, and
 only the UI-owned batch reaches Rune. The harness `ui` command still drives the
-Rune hit path directly; it does not exercise the live route.
+Rune hit path directly; it does not exercise the live route. The shared
+raw-event harness frame and its proof are pending in HARB-375; the existing
+Rune scenarios do not prove the route.
 The element tree and interaction fields still describe the Rune state the
 commands produced.
 `scenarios/rune-palette.json` opens the palette, selects a card by key, captures

@@ -66,8 +66,8 @@ routes focus and drag for the events it owns, and returns flat actions through
 
 ### Input ownership
 
-`src/input/route.odin` derives one owner from the frame focus and applies one
-table.
+`src/input/route.odin` derives one owner from the frame focus and decides one
+sink per event.
 
 | Owner | Keys | Pointer and wheel |
 | --- | --- | --- |
@@ -77,11 +77,21 @@ table.
 | Palette | game (the one navigator) | Rune |
 | Placement | game | game |
 
-A press and its release stay in the same sink. Gamepad buttons map to the same
-keys in the engine, and the sticks map to movement and look in game surfaces
-and to arrow keys in Rune surfaces. No gamepad type crosses the ABI. The palette
-cards are not focusable: the arrows, `Enter`, and the number keys are the only
-palette navigator.
+Every input source holds the key it pressed, so a repeat or release follows its
+press to the same sink even after the owner changes. Sources that press the
+same key share one Rune or game edge, so releasing one does not clear another.
+In the inspector, Tab moves Rune focus; the palette toggle is only available
+while the rail is closed. Gamepad buttons map to the same keys in the engine,
+and the sticks map to movement and look in game surfaces and to arrow keys in
+Rune surfaces. The d-pad and left stick move the palette selection. No gamepad
+type crosses the ABI. The palette cards are not focusable: the arrows, `Enter`,
+and the number keys are the only palette navigator.
+
+Only the first gamepad is opened. An unplug releases its held keys and leaves
+input on the keyboard; hot-plug is not supported. A full key or UI queue is
+reported as a warning and clears the held state. Cursor capture follows the
+focus at the end of the frame, so opening or closing a surface takes effect
+before the next poll.
 
 Rune owns interaction state: hover, press, focus, drag capture, scroll offset,
 and the preview value of a slider being dragged. Odin owns semantic state: the

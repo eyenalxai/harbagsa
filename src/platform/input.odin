@@ -5,10 +5,11 @@ import "core:c"
 import "core:log"
 import "vendor:sdl3"
 
-MAX_KEY_EDGES :: 16
+MAX_KEY_EVENTS :: 32
 MAX_INPUT_EVENTS :: 64
 
-Key_Edge :: struct {
+Key_Event :: struct {
+	kind: Input_Kind,
 	key:  Key,
 	mods: Modifiers,
 }

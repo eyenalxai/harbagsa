@@ -13,8 +13,9 @@ import "src:platform"
 resolve :: proc(
 	r: ^Resolver,
 	events: platform.Events,
-	keys: []platform.Key_Edge,
+	keys: []platform.Key_Event,
 	focus: game.Focus,
+	owner: Owner,
 	captured: bool,
 ) -> Frame_Input {
 	out := Frame_Input{}
@@ -29,10 +30,11 @@ resolve :: proc(
 	// Enter, and Esc), so the pointer route tracks it as the keys apply.
 	state := Key_State {
 		pointer_tool = focus.editor.tool,
-		inspector = focus.inspector_open,
 	}
 	for edge in keys {
-		apply_key(r, &out, &state, edge, focus, captured)
+		if edge.kind == .Key_Down {
+			apply_key(r, &out, &state, edge, focus, owner, captured)
+		}
 	}
 
 	out.motion = {
@@ -43,7 +45,7 @@ resolve :: proc(
 		captured     = captured,
 	}
 
-	if state.inspector {
+	if owner == .Inspector {
 		out.motion = {}
 		return out
 	}
@@ -66,7 +68,6 @@ resolve :: proc(
 @(private)
 Key_State :: struct {
 	pointer_tool: game.Tool_Kind,
-	inspector:    bool,
 }
 
 @(private)
@@ -74,20 +75,17 @@ apply_key :: proc(
 	r: ^Resolver,
 	out: ^Frame_Input,
 	state: ^Key_State,
-	edge: platform.Key_Edge,
+	edge: platform.Key_Event,
 	focus: game.Focus,
+	owner: Owner,
 	captured: bool,
 ) {
-	// The inspector owns the frame while it is open: only its own toggle keys
-	// apply, and the pointer route stays out of the world.
-	if state.inspector {
+	if owner == .Inspector {
 		#partial switch edge.key {
 		case .Escape:
 			add_action(out, game.Inspector_Close{})
-			state.inspector = false
 		case .I:
 			add_action(out, game.Inspector_Toggle{})
-			state.inspector = false
 		}
 		return
 	}
@@ -105,7 +103,6 @@ apply_key :: proc(
 	case .I:
 		if focus.editor.active {
 			add_action(out, game.Inspector_Toggle{})
-			state.inspector = true
 		}
 	case .Tab:
 		if focus.editor.active {
@@ -213,7 +210,7 @@ apply_key :: proc(
 apply_palette_navigation :: proc(
 	out: ^Frame_Input,
 	state: ^Key_State,
-	edge: platform.Key_Edge,
+	edge: platform.Key_Event,
 ) {
 	#partial switch edge.key {
 	case .Up, .Left:
@@ -233,15 +230,8 @@ apply_debug_pointer :: proc(
 	focus: game.Focus,
 	state: ^Key_State,
 ) {
-	if state.pointer_tool == .Palette {
-		// Rune owns the pointer while the palette is open; the row press returns
-		// a flat action and the game applies it after the draw.
-		return
-	}
-	switch state.pointer_tool {
-	case .Placement, .None:
+	if state.pointer_tool != .Palette {
 		apply_world_pointer(out, events, focus)
-	case .Palette:
 	}
 }
 
