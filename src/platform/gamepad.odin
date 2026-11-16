@@ -27,9 +27,9 @@ Gamepad_Button :: enum(u8) {
 
 Gamepad_Buttons :: bit_set[Gamepad_Button]
 
-// Gamepad_State is one frame of the first gamepad: the held buttons, the edges
-// since the last frame, and the two sticks. Button edges are the only events;
-// the sticks are held state like the keyboard movement axes.
+// Gamepad_State is one frame of the first gamepad: the button edges from the
+// event queue and the two sticks. The edges are event-driven, so a tap between
+// polls is not lost.
 Gamepad_State :: struct {
 	connected: bool,
 	pressed:   Gamepad_Buttons,
@@ -66,7 +66,6 @@ gamepad_close :: proc(device: ^Gamepad_Device) {
 }
 
 gamepad_read :: proc(device: ^Gamepad_Device, state: ^Gamepad_State) {
-	state^ = {}
 	if device.handle == nil {
 		if device.connected {
 			log.warn("platform: the gamepad disconnected")
@@ -83,16 +82,7 @@ gamepad_read :: proc(device: ^Gamepad_Device, state: ^Gamepad_State) {
 		device.held = {}
 		return
 	}
-	device.connected = true
-	held := Gamepad_Buttons{}
-	for button in Gamepad_Button {
-		if sdl3.GetGamepadButton(device.handle, sdl_button(button)) {
-			held += {button}
-		}
-	}
 	state.connected = true
-	state.pressed = held &~ device.held
-	state.released = device.held &~ held
 	state.left = {
 		stick_axis(sdl3.GetGamepadAxis(device.handle, .LEFTX)),
 		stick_axis(sdl3.GetGamepadAxis(device.handle, .LEFTY)),
@@ -101,7 +91,25 @@ gamepad_read :: proc(device: ^Gamepad_Device, state: ^Gamepad_State) {
 		stick_axis(sdl3.GetGamepadAxis(device.handle, .RIGHTX)),
 		stick_axis(sdl3.GetGamepadAxis(device.handle, .RIGHTY)),
 	}
-	device.held = held
+}
+
+// gamepad_button_event keeps the press and release edges from SDL's event
+// queue, so a tap between polls is not lost.
+gamepad_button_event :: proc(
+	device: ^Gamepad_Device,
+	state: ^Gamepad_State,
+	button: Gamepad_Button,
+	down: bool,
+) {
+	if down {
+		if button not_in device.held {
+			device.held += {button}
+			state.pressed += {button}
+		}
+	} else if button in device.held {
+		device.held -= {button}
+		state.released += {button}
+	}
 }
 
 @(private)
@@ -115,36 +123,36 @@ stick_axis :: proc(raw: i16) -> f32 {
 }
 
 @(private)
-sdl_button :: proc(button: Gamepad_Button) -> sdl3.GamepadButton {
-	switch button {
-	case .South:
-		return .SOUTH
-	case .East:
-		return .EAST
-	case .West:
-		return .WEST
-	case .North:
-		return .NORTH
-	case .Back:
-		return .BACK
-	case .Start:
-		return .START
-	case .Left_Stick:
-		return .LEFT_STICK
-	case .Right_Stick:
-		return .RIGHT_STICK
-	case .Left_Shoulder:
-		return .LEFT_SHOULDER
-	case .Right_Shoulder:
-		return .RIGHT_SHOULDER
-	case .Dpad_Up:
-		return .DPAD_UP
-	case .Dpad_Down:
-		return .DPAD_DOWN
-	case .Dpad_Left:
-		return .DPAD_LEFT
-	case .Dpad_Right:
-		return .DPAD_RIGHT
+gamepad_button_from_sdl :: proc(button: sdl3.GamepadButton) -> (Gamepad_Button, bool) {
+	#partial switch button {
+	case .SOUTH:
+		return .South, true
+	case .EAST:
+		return .East, true
+	case .WEST:
+		return .West, true
+	case .NORTH:
+		return .North, true
+	case .BACK:
+		return .Back, true
+	case .START:
+		return .Start, true
+	case .LEFT_STICK:
+		return .Left_Stick, true
+	case .RIGHT_STICK:
+		return .Right_Stick, true
+	case .LEFT_SHOULDER:
+		return .Left_Shoulder, true
+	case .RIGHT_SHOULDER:
+		return .Right_Shoulder, true
+	case .DPAD_UP:
+		return .Dpad_Up, true
+	case .DPAD_DOWN:
+		return .Dpad_Down, true
+	case .DPAD_LEFT:
+		return .Dpad_Left, true
+	case .DPAD_RIGHT:
+		return .Dpad_Right, true
 	}
-	return .INVALID
+	return .South, false
 }

@@ -118,7 +118,7 @@ run :: proc() -> bool {
 		focus := game.focus(&loop.runtime.debug, &loop.runtime.hud.menu)
 		routed := input.route(&loop.resolver, events, focus, events.captured)
 
-		apply_frame_input(&loop, &window, &events, routed.game)
+		apply_frame_input(&loop, &events, routed.game)
 		perf.mark(&perf_state, .Events)
 
 		width, height := platform.pixel_size(&window)

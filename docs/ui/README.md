@@ -8,9 +8,10 @@ every raw event has one owner and one sink, and Rune receives pointer, wheel,
 key, and focus events only for the surface that owns the frame.
 
 The view is a technical readout built from Rune kit surfaces: a status panel in
-the top-left, a bottom action column with `Debug`, a settings dialog over a
-scrim, the object palette as a card grid over a scrim, and the inspector rail on
-the right. A notice and the capture hint sit above the action row. Rune owns
+the top-left, a bottom action column with the `F2 · I` debug hint, a settings
+dialog over a scrim, the object palette as a card grid over a scrim, and the
+inspector rail on the right. A notice and the capture hint sit above the action
+row. Rune owns
 transient pointer, focus, drag, and scroll state for the events it is given;
 Odin owns the semantic state and applies every action. Kit motion follows the
 reduce-motion setting. The optional rune-fx glow is a demo and is off by
@@ -42,8 +43,8 @@ after the scene is submitted. The shim draws onto the same target image, so a
 capture includes the UI. When the frame's `hud` flag is false, `HUD_Frame.enabled`
 is false: `ui_step` does not rebuild the view and the frame protocol does not
 call `ui_draw`, so a `hud:false` capture has no overlay. The game applies the
-action queue after the draw: `Close_Menu`, `Debug_Inspector`, `Palette_Select`,
-`Palette_Close`, `Palette_Pick`, `Settings_Set`, `Type_Weight_Set`, `Object_Set`,
+action queue after the draw: `Close_Menu`, `Palette_Select`, `Palette_Close`,
+`Palette_Pick`, `Settings_Set`, `Type_Weight_Set`, `Object_Set`,
 `Object_Duplicate`, `Object_Delete`, `Lamp_Set`, `Lamp_Kind`, `Lamp_Color`,
 `Toggle_Inspector`, and `Physics_Debug`.
 
@@ -88,10 +89,11 @@ type crosses the ABI. The palette cards are not focusable: the arrows, `Enter`,
 and the number keys are the only palette navigator.
 
 Only the first gamepad is opened. An unplug releases its held keys and leaves
-input on the keyboard; hot-plug is not supported. A full key or UI queue is
-reported as a warning and clears the held state. Cursor capture follows the
-focus at the end of the frame, so opening or closing a surface takes effect
-before the next poll.
+input on the keyboard; hot-plug is not supported. Button edges come from SDL's
+event queue, so a tap between polls is retained. A full raw platform queue
+clears the held state; a full route key or UI queue reports a warning. Cursor
+capture follows the focus at the end of the frame, so opening or closing a
+surface takes effect before the next poll.
 
 Rune owns interaction state: hover, press, focus, drag capture, scroll offset,
 and the preview value of a slider being dragged. Odin owns semantic state: the

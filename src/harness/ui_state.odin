@@ -54,8 +54,6 @@ ui_action_kind_name :: proc(kind: u32) -> string {
 	#partial switch renderer.UI_Action_Kind(kind) {
 	case .Close_Menu:
 		return "Close_Menu"
-	case .Debug_Inspector:
-		return "Debug_Inspector"
 	case .Palette_Select:
 		return "Palette_Select"
 	case .Palette_Close:

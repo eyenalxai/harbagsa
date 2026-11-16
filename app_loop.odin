@@ -25,7 +25,6 @@ Loop :: struct {
 @(private)
 apply_frame_input :: proc(
 	loop: ^Loop,
-	window: ^platform.Window,
 	events: ^platform.Events,
 	intent: input.Frame_Input,
 ) {

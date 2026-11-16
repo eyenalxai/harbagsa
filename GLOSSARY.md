@@ -635,7 +635,7 @@ for the depth prepass and one for the lit pass.
 _Avoid_: Render pass (that word belongs to the Vulkan object)
 
 **HUD**:
-The Rune status panel: the player or debug rows, the notice, the capture hint, and the `Debug` action row. It is one Rune view, not an Odin draw pass. The status panel is a local kit-styled surface with the kit medium radius, raised elevation, and a translucent fill.
+The Rune status panel: the player or debug rows, the notice, the capture hint, and the `F2 · I` debug hint. It is one Rune view, not an Odin draw pass. The status panel is a local kit-styled surface with the kit medium radius, raised elevation, and a translucent fill.
 _Avoid_: UI, overlay draw
 
 **Settings dialog**:
@@ -673,8 +673,8 @@ key-repeat, and focus events travel beside it in one event batch.
 _Avoid_: UI frame (the Odin wrapper is `UI_Frame`), scene graph
 
 **UI action**:
-One flat intent returned by the shim, such as `Close_Menu`, `Debug_Inspector`,
-`Palette_Select`, `Palette_Close`, `Palette_Pick`, `Settings_Set`, `Object_Set`,
+One flat intent returned by the shim, such as `Close_Menu`, `Palette_Select`,
+`Palette_Close`, `Palette_Pick`, `Settings_Set`, `Object_Set`,
 `Object_Duplicate`, `Object_Delete`, `Lamp_Set`, `Lamp_Kind`, `Lamp_Color`,
 `Type_Weight_Set`, `Toggle_Inspector`, or `Physics_Debug`. The game applies the
 queue after `ui_draw`. The action kind set lives in `UI_Action_Kind` in

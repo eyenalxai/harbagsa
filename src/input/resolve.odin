@@ -26,14 +26,16 @@ resolve :: proc(
 		clear_latches(r)
 	}
 
-	// The tool that owns this frame's pointer can change during the frame (Tab,
-	// Enter, and Esc), so the pointer route tracks it as the keys apply.
+	// The owner and the tool that owns this frame's pointer can change during
+	// the frame (I, Tab, Enter, and Esc), so the key route tracks them as keys
+	// apply.
 	state := Key_State {
 		pointer_tool = focus.editor.tool,
+		owner        = owner,
 	}
 	for edge in keys {
 		if edge.kind == .Key_Down {
-			apply_key(r, &out, &state, edge, focus, owner, captured)
+			apply_key(r, &out, &state, edge, focus, captured)
 		}
 	}
 
@@ -45,7 +47,7 @@ resolve :: proc(
 		captured     = captured,
 	}
 
-	if owner == .Inspector {
+	if state.owner == .Inspector {
 		out.motion = {}
 		return out
 	}
@@ -68,6 +70,12 @@ resolve :: proc(
 @(private)
 Key_State :: struct {
 	pointer_tool: game.Tool_Kind,
+	owner:        Owner,
+}
+
+@(private)
+editor_owner :: proc(focus: game.Focus) -> Owner {
+	return focus.editor.active ? .Placement : .World
 }
 
 @(private)
@@ -77,41 +85,50 @@ apply_key :: proc(
 	state: ^Key_State,
 	edge: platform.Key_Event,
 	focus: game.Focus,
-	owner: Owner,
 	captured: bool,
 ) {
-	if owner == .Inspector {
+	if state.owner == .Inspector {
 		#partial switch edge.key {
 		case .Escape:
 			add_action(out, game.Inspector_Close{})
+			state.owner = editor_owner(focus)
 		case .I:
 			add_action(out, game.Inspector_Toggle{})
+			state.owner = editor_owner(focus)
 		}
 		return
 	}
+	if state.owner == .Menu {
+		return
+	}
 
-	// The old handlers ran the palette block before the light keys, then the
-	// world keys. Tab, Esc, M, and G ran before that gate.
 	editing := state.pointer_tool != .Palette
 	#partial switch edge.key {
 	case .Escape:
-		if focus.editor.active && focus.editor.tool != .None {
+		if focus.editor.active && state.pointer_tool != .None {
 			add_action(out, game.Cancel{})
+			state.pointer_tool = .None
+			state.owner = .Placement
 		} else {
 			out.view.menu_toggle = true
+			state.owner = .Menu
 		}
 	case .I:
 		if focus.editor.active {
 			add_action(out, game.Inspector_Toggle{})
+			state.pointer_tool = .None
+			state.owner = .Inspector
 		}
 	case .Tab:
 		if focus.editor.active {
 			if state.pointer_tool == .Palette {
 				add_action(out, game.Palette_Close{})
 				state.pointer_tool = .None
+				state.owner = .Placement
 			} else if state.pointer_tool != .Placement {
 				add_action(out, game.Palette_Open{})
 				state.pointer_tool = .Palette
+				state.owner = .Palette
 			}
 		}
 	case .Up, .Down, .Left, .Right, .Enter:
@@ -220,6 +237,7 @@ apply_palette_navigation :: proc(
 	case .Enter:
 		add_action(out, game.Palette_Pick{})
 		state.pointer_tool = .None
+		state.owner = .Placement
 	}
 }
 

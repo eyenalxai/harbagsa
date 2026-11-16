@@ -5,7 +5,6 @@ import "src:ui"
 
 UI_Action_Kind :: enum(u32) {
 	Close_Menu       = 1,
-	Debug_Inspector  = 2,
 	Palette_Select   = 3,
 	Palette_Close    = 4,
 	Settings_Set     = 5,

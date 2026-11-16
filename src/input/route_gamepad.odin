@@ -19,9 +19,14 @@ route_gamepad :: proc(
 	key_count: ^int,
 ) -> (
 	primary_pressed: bool,
+	primary_released: bool,
 	menu_toggle: bool,
 ) {
 	if !pad.connected {
+		if r.pad_primary {
+			r.pad_primary = false
+			primary_released = true
+		}
 		release_gamepad(r, out, keys, key_count)
 		return
 	}
@@ -30,7 +35,12 @@ route_gamepad :: proc(
 	route_gamepad_stick(r, out, pad.left, out.owner, keys, key_count)
 
 	if out.owner == .Placement && .South in pad.pressed {
+		r.pad_primary = true
 		primary_pressed = true
+	}
+	if .South in pad.released && r.pad_primary {
+		r.pad_primary = false
+		primary_released = true
 	}
 	if out.owner != .Menu && .Start in pad.pressed {
 		menu_toggle = true
@@ -47,7 +57,6 @@ route_gamepad_buttons :: proc(
 	key_count: ^int,
 ) {
 	for button in platform.Gamepad_Button {
-		held := r.buttons[button]
 		if button in pad.pressed {
 			key, mods, mapped := gamepad_key(out.owner, button)
 			if mapped {
@@ -61,6 +70,7 @@ route_gamepad_buttons :: proc(
 			}
 		}
 		if button in pad.released {
+			held := r.buttons[button]
 			if held.key != .None && held.sink != .None && release_key(r, held.sink, held.key) {
 				route_event(out, held.sink, .Key_Up, held.key, {}, keys, key_count)
 			}

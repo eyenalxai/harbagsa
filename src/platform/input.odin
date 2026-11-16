@@ -89,8 +89,8 @@ drain_events :: proc(window: ^Window, first: ^sdl3.Event) -> (events: Events) {
 		apply_event(&events, &event, window)
 	}
 
-	// Movement and the pad are polled with the cursor free too, so the debug
-	// camera can fly while the palette holds the pointer.
+	// Movement is polled with the cursor free too, so the debug camera can fly
+	// with the keyboard while the palette holds the pointer.
 	read_movement(&events)
 	gamepad_read(&window.gamepad, &events.gamepad)
 	return
@@ -178,6 +178,18 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 			key = key,
 			mods = modifiers_from_sdl(event.key.mod),
 		})
+	case .GAMEPAD_BUTTON_DOWN, .GAMEPAD_BUTTON_UP:
+		if window.gamepad.handle == nil {
+			return
+		}
+		if event.gbutton.which != sdl3.GetGamepadID(window.gamepad.handle) {
+			return
+		}
+		button, ok := gamepad_button_from_sdl(sdl3.GamepadButton(event.gbutton.button))
+		if !ok {
+			return
+		}
+		gamepad_button_event(&window.gamepad, &events.gamepad, button, event.gbutton.down)
 	case .WINDOW_FOCUS_GAINED:
 		push_input(events, {kind = .Focus_Gained})
 	case .WINDOW_FOCUS_LOST:

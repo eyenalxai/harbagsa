@@ -128,10 +128,11 @@ control returns `Toggle_Inspector`.
 The shim returns a flat queue. The full vocabulary is `UI_Action_Kind` in
 `src/renderer/ui_frame.odin`:
 
+Kind 2 is retired with the removed HUD Debug button and is not reused.
+
 | Kind | Action | Applied by |
 | --- | --- | --- |
 | 1 | `Close_Menu` | close the settings dialog when it is open |
-| 2 | `Debug_Inspector` | enter debug mode when needed and open the inspector |
 | 3 | `Palette_Select` | select and preview the palette item at `value` |
 | 4 | `Palette_Close` | close the palette |
 | 5 | `Settings_Set` | `settings_set` with a setting id, an option index or boolean, and an opacity scalar |
@@ -189,5 +190,5 @@ While the inspector owns the frame, its pointer stays free and the world pointer
 path does not run. Opening the inspector cancels an armed placement or a world
 drag; opening the palette, arming a placement, or opening Settings closes it.
 
-The status action row's `Debug` button is pointer-reachable only when the cursor
-is free. Press `F2` and then `I` for the keyboard path.
+The status action row's `F2 · I` hint names the keyboard path. Press `F2` and
+then `I` to enter debug mode and open the inspector.

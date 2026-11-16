@@ -27,6 +27,15 @@ session_editor :: proc(session: ^Session, command: Editor_Command) -> string {
 			return failure
 		}
 	}
+	if command.has_inspector {
+		action: game.Edit_Action = game.Inspector_Close{}
+		if command.inspector {
+			action = game.Inspector_Open{}
+		}
+		if failure := apply_editor_action(session, action); failure != "" {
+			return failure
+		}
+	}
 	if command.has_select {
 		if failure := apply_editor_action(
 			session,

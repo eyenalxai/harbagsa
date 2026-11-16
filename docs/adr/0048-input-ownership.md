@@ -29,7 +29,8 @@ path.
 - Gamepad buttons and sticks are read by the engine and mapped to the same game
   intents and normalized key codes. No gamepad type crosses the UI ABI. The
   left stick and d-pad navigate the palette.
-- Only the first gamepad is opened. An unplug is detected, releases its held
+- Only the first gamepad is opened. Button edges come from SDL's event queue,
+  so a tap between polls is retained. An unplug is detected, releases its held
   keys to their sinks, and leaves input on the keyboard. Hot-plug is not
   supported.
 - The held state is cleared on window blur and on a dropped raw event. A full

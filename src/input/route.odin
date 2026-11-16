@@ -17,15 +17,13 @@ route :: proc(
 	captured: bool,
 ) -> Routed_Frame {
 	out := Routed_Frame {
-		owner        = owner_for(focus),
-		pointer_free = focus.pointer_free,
-		overflow     = events.overflow,
+		owner    = owner_for(focus),
+		overflow = events.overflow,
 	}
+	primary_release := false
 	if events.overflow {
+		primary_release = r.pad_primary
 		clear_held(r)
-	}
-	if focus.menu_open || !captured || focus.editor.active {
-		clear_latches(r)
 	}
 
 	keys: [platform.MAX_KEY_EVENTS]platform.Key_Event
@@ -44,13 +42,14 @@ route :: proc(
 		case .Pointer_Leave, .Focus_Gained:
 			push_ui(&out, event)
 		case .Focus_Lost:
+			primary_release = primary_release || r.pad_primary
 			clear_held(r)
 			clear_latches(r)
 			push_ui(&out, event)
 		}
 	}
 
-	pad_primary, pad_menu := route_gamepad(r, &out, events.gamepad, &keys, &key_count)
+	pad_primary, pad_release, pad_menu := route_gamepad(r, &out, events.gamepad, &keys, &key_count)
 
 	pad := events.gamepad
 	game_events := events
@@ -67,6 +66,7 @@ route :: proc(
 	game_events.look_delta.x += pad.right.x * GAMEPAD_LOOK_PER_FRAME
 	game_events.look_delta.y += pad.right.y * GAMEPAD_LOOK_PER_FRAME
 	game_events.primary_pressed = game_events.primary_pressed || pad_primary
+	game_events.primary_released = game_events.primary_released || pad_release || primary_release
 
 	out.game = resolve(r, game_events, keys[:key_count], focus, out.owner, captured)
 	out.game.view.menu_toggle = out.game.view.menu_toggle || pad_menu

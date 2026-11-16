@@ -1,11 +1,12 @@
 {
-  "note": "The inspector opens from the Debug action, selects a crate, drags its yaw, sets the body from the rail, duplicates and deletes it, then selects a lamp and changes its kind, colour, intensity, and range. The Debug section drags the type weight and turns on the physics draw. Every rail action asserts the applied game state; the separate scroll scenario proves the wheel on a naturally overflowing rail.",
+  "note": "The inspector opens through the editor command, selects a crate, drags its yaw, sets the body from the rail, duplicates and deletes it, then selects a lamp and changes its kind, colour, intensity, and range. The Debug section drags the type weight and turns on the physics draw. Every rail action asserts the applied game state; the separate scroll scenario proves the wheel on a naturally overflowing rail.",
   "size": "1280x720",
   "view": {"hud": true, "debug": false, "hint": false},
   "commands": [
     {"cmd": "place", "prefab": "Crate", "position": [4, 1, 4], "name": "inspector-crate"},
     {"cmd": "place", "prefab": "Lamp", "position": [6, 2, 4], "name": "inspector-lamp"},
-    {"cmd": "ui", "click": "action:2", "expect": {"kind": "Debug_Inspector"}, "expect_state": {"ui.surface": "inspector", "ui.inspector.open": true, "ui.pointer_free": true}},
+    {"cmd": "debug_mode", "active": true},
+    {"cmd": "editor", "inspector": true, "expect_state": {"ui.surface": "inspector", "ui.inspector.open": true, "ui.pointer_free": true}},
     {"cmd": "settle", "frames": 30},
     {"cmd": "capture", "name": "inspector-open", "format": "png"},
     {"cmd": "editor", "select_object": "inspector-crate"},

@@ -9,7 +9,6 @@ use crate::state::{
 };
 
 pub const ACTION_CLOSE_MENU: u32 = 1;
-pub const ACTION_DEBUG_INSPECTOR: u32 = 2;
 pub const ACTION_PALETTE_SELECT: u32 = 3;
 pub const ACTION_PALETTE_CLOSE: u32 = 4;
 pub const ACTION_SETTINGS_SET: u32 = 5;

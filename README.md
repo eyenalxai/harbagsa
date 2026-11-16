@@ -93,9 +93,8 @@ HUD text to secondary below 94 percent. Reduce motion snaps kit geometry and
 keeps a short opacity fade. The dialog and its controls use kit hover, press, and
 focus states. The Controls section is a compact reference; the full keyboard
 list is under Debug mode below. `Esc`, the header close control, and `Resume`
-close the dialog. The status action row carries `Debug`, which enters debug mode
-and opens the inspector rail. Press `F2` and then `I` for the keyboard path. Type
-weight is in the inspector's Debug section, not in Settings.
+close the dialog. Press `F2` and then `I` to enter debug mode and open the
+inspector rail. Type weight is in the inspector's Debug section, not in Settings.
 
 Window mode is Borderless or Windowed. Borderless uses the selected display's
 desktop size. Windowed uses the chosen resolution and a normal title bar. The

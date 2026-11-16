@@ -51,13 +51,12 @@ Held_Key :: struct {
 }
 
 // Routed_Frame is the one output of the routing pass: the game intent, the UI
-// batch, the owner, the pointer state, and any dropped event.
+// batch, the owner, and any dropped event.
 Routed_Frame :: struct {
 	owner:          Owner,
 	game:           Frame_Input,
 	ui_events:      [platform.MAX_INPUT_EVENTS]platform.Input_Event,
 	ui_event_count: int,
-	pointer_free:   bool,
 	overflow:       bool,
 }
 
@@ -73,6 +72,7 @@ Resolver :: struct {
 	stick_y:     Held_Key,
 	stick_x_dir: i8,
 	stick_y_dir: i8,
+	pad_primary: bool,
 	counts:      [len(Sink)][len(platform.Key)]u16,
 }
 
@@ -88,6 +88,7 @@ clear_held :: proc(r: ^Resolver) {
 	r.stick_y = {}
 	r.stick_x_dir = 0
 	r.stick_y_dir = 0
+	r.pad_primary = false
 	r.counts = {}
 }
 
