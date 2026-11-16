@@ -302,7 +302,8 @@ pub fn attach(target: *const UiTarget) -> i32 {
         }
     }
 
-    let fresh_renderer = host.renderer.is_none();
+    // The renderer outlives the runtime, so a reattach keeps the atlas it fills;
+    // only the target format can differ.
     if let Some(renderer) = host.renderer.as_mut() {
         renderer.set_format(&host.device, format);
     } else {
@@ -319,12 +320,6 @@ pub fn attach(target: *const UiTarget) -> i32 {
     if let Some(runtime) = host.runtime.as_mut() {
         // The target can be recreated on a resize; keep the view model, focus,
         // and text atlas instead of rebuilding the whole runtime.
-        if fresh_renderer {
-            // A new GPU atlas starts empty while the CPU atlas has no dirty rows
-            // left to send; invalidate it, and the images, with the new owner.
-            runtime.text.atlas.invalidate();
-            runtime.images.invalidate();
-        }
         runtime.set_viewport(viewport, scale);
     } else {
         let text_system = TextSystem::new(&[GEIST, GEIST_MONO], ("Geist", "Geist Mono"));

@@ -1,7 +1,7 @@
 # Why live HUD text is lost across a target re-attach
 
 Date: 2026-11-14
-Status: conflict
+Status: answered
 Scope: repository at ddf6585; vendored Rune at that commit; parley 0.12.0 (Cargo.lock).
 
 ## Answer
@@ -97,11 +97,14 @@ survived, the new atlas received no rasterization, and the loss was permanent
 rather than one frame.
 
 Both causes are fixed together: `attach` reuses the renderer and calls
-`set_format` when the format changed, and a renderer created while a runtime is
-live invalidates the text and image atlases. The viewport scale now lives only
-in `Runtime::env.scale`, which the draw reads. Live same-scale check: at
-1280x720 → 1024x600 the status panel keeps its text; before the fix both
-captures have none.
+`set_format` when the format changed, so the GPU atlas outlives the resize, and
+the viewport scale lives only in `Runtime::env.scale`, which the draw reads.
+
+Live check sequence: the window starts borderless at 2560x1440 (scale 2.0), then
+resizes to 1280x720 (scale 1.0, the same 1280x720 viewport in points), then to
+1024x600 (scale 1.0, same-scale). Before the fix the panel text is already gone
+at 1280x720 and stays gone through the same-scale step. After the fix it
+survives both steps.
 
 ## References
 
