@@ -39,8 +39,9 @@ layer opacity. Do not paint a second state palette in the Odin tree.
 
 The palette uses the local selection helper instead of the kit control states:
 the selected card lifts to the raised surface and carries a 2-point accent bar.
-Hover adds the fill overlay, press uses the pressed fill, and focus draws the
-2-point ring. Selection is persistent; hover is transient.
+Hover adds the fill overlay and press uses the pressed fill. Selection is
+persistent; hover is transient. A card is not focusable, so the engine's
+palette navigator is the only keyboard path.
 
 ## Settings dialog
 

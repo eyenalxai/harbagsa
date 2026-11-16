@@ -99,9 +99,10 @@ of 120×92 cards on the left and a 220-point preview on the right. Eleven prefab
 fill four rows. Each card draws the prefab colour chip, short name, full name,
 and key badge. Number keys 1-9 select the first nine cards; the last two carry a
 dash badge and are reached with the arrow keys. The selected card lifts to the
-raised surface with a 2-point accent bar, hover adds the kit hover fill, press
-uses the kit pressed fill, and focus adds a 2-point accent ring. The Place
-button sits in the footer with the key hints.
+raised surface with a 2-point accent bar, hover adds the kit hover fill, and
+press uses the kit pressed fill. The Place button sits in the footer with the
+key hints. Cards are not focusable; the engine's arrows, Enter, and number keys
+are the only palette navigator.
 
 A click on a card returns `Palette_Select` with the item index and updates the
 preview; it does not arm the placement. The Place button, or Enter on the game

@@ -8,37 +8,31 @@ import "core:math"
 import "src:game"
 import "src:platform"
 
-// resolve turns one raw platform frame into one intent. The order is the rule:
-// menu, then tool, then world. Nothing in here allocates.
+// resolve turns one routed key list into one game intent. The order is the
+// rule: inspector, then tool, then world. Nothing in here allocates.
 resolve :: proc(
 	r: ^Resolver,
 	events: platform.Events,
-	focus: Focus,
+	keys: []platform.Key_Edge,
+	focus: game.Focus,
+	captured: bool,
 ) -> Frame_Input {
-	out := Frame_Input {
-		pause = focus.game.menu_open,
-	}
+	out := Frame_Input{}
 
 	// A pause or a free cursor drops every latch, so a press never queues
 	// through the menu or a released pointer.
-	if focus.game.menu_open || !focus.captured || focus.game.editor.active {
+	if focus.menu_open || !captured || focus.editor.active {
 		clear_latches(r)
-	}
-
-	if focus.game.menu_open {
-		// Rune owns the settings dialog's keys and focus trap. Esc there
-		// dismisses the open Select first, then the dialog.
-		return out
 	}
 
 	// The tool that owns this frame's pointer can change during the frame (Tab,
 	// Enter, and Esc), so the pointer route tracks it as the keys apply.
 	state := Key_State {
-		pointer_tool = focus.game.editor.tool,
-		inspector = focus.game.editor.inspector,
+		pointer_tool = focus.editor.tool,
+		inspector = focus.inspector_open,
 	}
-	for index in 0 ..< events.key_count {
-		apply_key(r, &out, &state, events.keys[index], focus)
+	for edge in keys {
+		apply_key(r, &out, &state, edge, focus, captured)
 	}
 
 	out.motion = {
@@ -46,23 +40,23 @@ resolve :: proc(
 		move_right   = events.move_right,
 		move_up      = (events.fly_up ? 1.0 : 0.0) - (events.fly_down ? 1.0 : 0.0),
 		look_delta   = events.look_delta,
-		captured     = focus.captured,
+		captured     = captured,
 	}
 
 	if state.inspector {
 		out.motion = {}
 		return out
 	}
-	if focus.game.editor.active {
+	if focus.editor.active {
 		apply_debug_pointer(&out, events, focus, &state)
 		return out
 	}
 
-	out.look_delta = focus.captured ? events.look_delta : {}
+	out.look_delta = captured ? events.look_delta : {}
 	out.snapshot = {
-		move_forward   = focus.captured ? events.move_forward : 0,
-		move_right     = focus.captured ? events.move_right : 0,
-		sprint_held    = focus.captured && events.sprint_held,
+		move_forward   = captured ? events.move_forward : 0,
+		move_right     = captured ? events.move_right : 0,
+		sprint_held    = captured && events.sprint_held,
 		sprint_pressed = r.sprint,
 		jump_pressed   = r.jump,
 	}
@@ -81,7 +75,8 @@ apply_key :: proc(
 	out: ^Frame_Input,
 	state: ^Key_State,
 	edge: platform.Key_Edge,
-	focus: Focus,
+	focus: game.Focus,
+	captured: bool,
 ) {
 	// The inspector owns the frame while it is open: only its own toggle keys
 	// apply, and the pointer route stays out of the world.
@@ -102,18 +97,18 @@ apply_key :: proc(
 	editing := state.pointer_tool != .Palette
 	#partial switch edge.key {
 	case .Escape:
-		if focus.game.editor.active && focus.game.editor.tool != .None {
+		if focus.editor.active && focus.editor.tool != .None {
 			add_action(out, game.Cancel{})
 		} else {
 			out.view.menu_toggle = true
 		}
 	case .I:
-		if focus.game.editor.active {
+		if focus.editor.active {
 			add_action(out, game.Inspector_Toggle{})
 			state.inspector = true
 		}
 	case .Tab:
-		if focus.game.editor.active {
+		if focus.editor.active {
 			if state.pointer_tool == .Palette {
 				add_action(out, game.Palette_Close{})
 				state.pointer_tool = .None
@@ -127,60 +122,60 @@ apply_key :: proc(
 			apply_palette_navigation(out, state, edge)
 		}
 	case .Digit_1, .Digit_2, .Digit_3, .Digit_4, .Digit_5, .Digit_6, .Digit_7, .Digit_8, .Digit_9:
-		if focus.game.editor.active && state.pointer_tool == .Palette {
+		if focus.editor.active && state.pointer_tool == .Palette {
 			index := int(edge.key) - int(platform.Key.Digit_1)
 			add_action(out, game.Palette_Select{index = index})
 		}
 	case .M:
-		if focus.game.editor.active {
+		if focus.editor.active {
 			add_action(out, game.Flip_Body{})
 		}
 	case .G:
-		if focus.game.editor.active {
+		if focus.editor.active {
 			add_action(out, game.Placement_Toggle_Snap{})
 		}
 	case .Q:
-		if focus.game.editor.active && editing {
+		if focus.editor.active && editing {
 			add_action(out, game.Turn{steps = -1, large = .Shift in edge.mods})
 		}
 	case .E:
-		if focus.game.editor.active && editing {
+		if focus.editor.active && editing {
 			add_action(out, game.Turn{steps = 1, large = .Shift in edge.mods})
 		}
 	case .C:
-		if focus.game.editor.active {
+		if focus.editor.active {
 			add_action(out, game.Light_Adjust{change = .Color})
 		}
 	case .K:
-		if focus.game.editor.active {
+		if focus.editor.active {
 			add_action(out, game.Light_Toggle_Kind{})
 		}
 	case .Left_Bracket:
-		if focus.game.editor.active {
+		if focus.editor.active {
 			add_action(out, game.Light_Adjust{change = .Intensity_Down})
 		}
 	case .Right_Bracket:
-		if focus.game.editor.active {
+		if focus.editor.active {
 			add_action(out, game.Light_Adjust{change = .Intensity_Up})
 		}
 	case .Comma:
-		if focus.game.editor.active {
+		if focus.editor.active {
 			add_action(out, game.Light_Adjust{change = .Range_Down})
 		}
 	case .Period:
-		if focus.game.editor.active {
+		if focus.editor.active {
 			add_action(out, game.Light_Adjust{change = .Range_Up})
 		}
 	case .Delete, .X:
-		if focus.game.editor.active && editing {
+		if focus.editor.active && editing {
 			add_action(out, game.Delete_Selected{})
 		}
 	case .D:
-		if focus.game.editor.active && editing && .Ctrl in edge.mods {
+		if focus.editor.active && editing && .Ctrl in edge.mods {
 			add_action(out, game.Duplicate_Selected{})
 		}
 	case .Z:
-		if focus.game.editor.active {
+		if focus.editor.active {
 			if editing && .Ctrl in edge.mods {
 				if .Shift in edge.mods {
 					add_action(out, game.Redo{})
@@ -190,11 +185,11 @@ apply_key :: proc(
 			}
 		}
 	case .Space:
-		if !focus.game.editor.active && focus.captured {
+		if !focus.editor.active && captured {
 			r.jump = true
 		}
 	case .LShift:
-		if !focus.game.editor.active && focus.captured {
+		if !focus.editor.active && captured {
 			r.sprint = true
 		}
 	case .R:
@@ -235,7 +230,7 @@ apply_palette_navigation :: proc(
 apply_debug_pointer :: proc(
 	out: ^Frame_Input,
 	events: platform.Events,
-	focus: Focus,
+	focus: game.Focus,
 	state: ^Key_State,
 ) {
 	if state.pointer_tool == .Palette {
@@ -251,7 +246,7 @@ apply_debug_pointer :: proc(
 }
 
 @(private)
-apply_world_pointer :: proc(out: ^Frame_Input, events: platform.Events, focus: Focus) {
+apply_world_pointer :: proc(out: ^Frame_Input, events: platform.Events, focus: game.Focus) {
 	if events.primary_pressed {
 		add_action(out, game.Primary_Press{})
 	}
@@ -270,7 +265,7 @@ apply_world_pointer :: proc(out: ^Frame_Input, events: platform.Events, focus: F
 			},
 		)
 	}
-	if focus.game.editor.dragging {
+	if focus.editor.dragging {
 		add_action(out, game.Drag_Move{look_delta = events.look_delta})
 	}
 }
@@ -278,6 +273,7 @@ apply_world_pointer :: proc(out: ^Frame_Input, events: platform.Events, focus: F
 @(private)
 add_action :: proc(out: ^Frame_Input, action: game.Edit_Action) {
 	if out.action_count >= game.MAX_EDIT_ACTIONS {
+		out.overflow = true
 		log.warn("input: the frame action buffer is full")
 		return
 	}

@@ -3,15 +3,18 @@
 The overlay is a Rune view drawn by the Rust shim in `ui/shim`. Rune owns the
 layout, type, colour, hit testing, and the wgpu pass that draws onto the game's
 swapchain or offscreen image. Odin owns the simulation and the flat data the
-view reads. There is no second UI renderer in Odin.
+view reads. The engine also owns the input source and the one routing pass:
+every raw event has one owner and one sink, and Rune receives pointer, wheel,
+key, and focus events only for the surface that owns the frame.
 
 The view is a technical readout built from Rune kit surfaces: a status panel in
 the top-left, a bottom action column with `Debug`, a settings dialog over a
 scrim, the object palette as a card grid over a scrim, and the inspector rail on
-the right. A notice and the capture hint sit above the action row. Rune
-owns transient pointer, keyboard, focus, drag, and scroll state; Odin owns the
-semantic state and applies every action. Kit motion follows the reduce-motion
-setting. The optional rune-fx glow is a demo and is off by default.
+the right. A notice and the capture hint sit above the action row. Rune owns
+transient pointer, focus, drag, and scroll state for the events it is given;
+Odin owns the semantic state and applies every action. Kit motion follows the
+reduce-motion setting. The optional rune-fx glow is a demo and is off by
+default.
 
 ## The layer rule
 
@@ -19,6 +22,7 @@ setting. The optional rune-fx glow is a demo and is off by default.
 | --- | --- | --- |
 | `src/game` | which rows exist, their labels and values, menu state, settings and palette state, inspector state | know about Rune, pixels, or colours |
 | `src/ui` | the flat snapshot vocabulary: `Row`, `Menu`, `Settings`, `Palette`, `Inspector`, `Hud`, and the constants | import a project package |
+| `src/input` | the owner and sink of every raw input event, the game intent, and the UI batch | read Rune state or send one event to two sinks |
 | `src/frame` | assembling one `HUD_Frame` from the simulation and input | draw or lay out |
 | `src/renderer/ui_step.odin` | snapshot marshalling into the shim call, and the frame step | invent content |
 | `src/renderer/ui_bridge.odin` | the C ABI to the shim, the action queue, and the harness interaction entry points | invent content |
@@ -54,9 +58,30 @@ copies those values into the `UI_Frame` struct in `src/renderer/ui_frame.odin`.
 The shim copies every string during the `ui_frame` call; Odin keeps ownership
 and may reuse the storage on the next frame.
 
-The pointer, wheel, key, and focus events travel in one flat batch. Rune
-hit-tests the view, routes focus and drag, and returns flat actions through
+The pointer, wheel, key, and focus events cross as one flat batch, but only
+after `src/input` has routed the raw platform frame. Each event is copied to
+exactly one sink: the game intent or the UI batch. Rune hit-tests the view,
+routes focus and drag for the events it owns, and returns flat actions through
 `ui_actions`.
+
+### Input ownership
+
+`src/input/route.odin` derives one owner from the frame focus and applies one
+table.
+
+| Owner | Keys | Pointer and wheel |
+| --- | --- | --- |
+| World | game | game |
+| Menu | Rune | Rune |
+| Inspector | Rune, except `Escape` and `I` | Rune |
+| Palette | game (the one navigator) | Rune |
+| Placement | game | game |
+
+A press and its release stay in the same sink. Gamepad buttons map to the same
+keys in the engine, and the sticks map to movement and look in game surfaces
+and to arrow keys in Rune surfaces. No gamepad type crosses the ABI. The palette
+cards are not focusable: the arrows, `Enter`, and the number keys are the only
+palette navigator.
 
 Rune owns interaction state: hover, press, focus, drag capture, scroll offset,
 and the preview value of a slider being dragged. Odin owns semantic state: the
@@ -96,6 +121,8 @@ bring that layer back.
    dialog lives in `settings.rs`, the palette grid and preview in `palette.rs`,
    and the inspector rail in `inspector.rs`.
 5. Add a scenario under `scenarios/rune-*.json` when the surface is visual.
+6. If the surface owns keys, add it to the owner table in
+   `src/input/route.odin`; otherwise its keys fall to the game.
 
 Do not add a vertex buffer, a shader, a layout module, or a font asset to Odin.
 The shim draws every 2D pixel.
@@ -107,8 +134,8 @@ grid of 120×92 cards on the left and a 220-point preview on the right. Eleven
 prefabs fill four rows. Each card shows the prefab colour chip, short name, full
 name, and key badge. Number keys 1-9 select the first nine cards; the last two
 show a dash badge and are reached with the arrow keys. The selected card lifts
-to the raised surface with a 2-point accent bar; hover adds a fill overlay,
-press uses the kit pressed fill, and focus adds a 2-point ring.
+to the raised surface with a 2-point accent bar; hover adds a fill overlay and
+press uses the kit pressed fill.
 
 Clicking a card returns `Palette_Select` with the item index and previews it.
 `Place` or `Enter` returns `Palette_Pick`; the game arms the placement with the
@@ -137,6 +164,9 @@ change width.
 
 - Rune owns interaction state; Odin owns semantic state. A handler returns an
   action; it never reaches into the simulation.
+- The engine owns which surface receives an event. Rune owns focus and tab
+  order for the events it receives; the game never acts on an event that Rune
+  owns.
 - The Odin side sends data, never draw commands.
 - A UI colour lives in `ui/shim/src/theme.rs`; a panel size lives with its view
   in `ui/shim/src/views.rs`, `ui/shim/src/settings.rs`,

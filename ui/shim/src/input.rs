@@ -14,6 +14,9 @@ pub const KEY_UP: u32 = 9;
 pub const KEY_REPEAT: u32 = 10;
 pub const FOCUS: u32 = 11;
 
+pub const MOD_SHIFT: u32 = 1;
+pub const MOD_CTRL: u32 = 2;
+
 const FRAME_DT: f64 = 1.0 / 60.0;
 const MAX_DRAG_STEPS: u32 = 64;
 const LIVE_WHEEL_POINTS: f32 = 40.0;
@@ -24,6 +27,12 @@ pub fn dispatch(runtime: &mut Runtime<UiState>, events: *const UiEvent, count: u
     }
     for index in 0..count as usize {
         let event = unsafe { &*events.add(index) };
+        let mods = Mods {
+            shift: event.mods & MOD_SHIFT != 0,
+            ctrl: event.mods & MOD_CTRL != 0,
+            cmd: event.mods & MOD_CTRL != 0,
+            ..Mods::default()
+        };
         match event.kind {
             POINTER_MOVE => runtime.pointer_move(event.x, event.y),
             POINTER_DOWN => runtime.pointer_down(event.x, event.y),
@@ -41,17 +50,17 @@ pub fn dispatch(runtime: &mut Runtime<UiState>, events: *const UiEvent, count: u
             }
             KEY_DOWN => {
                 if let Some(key) = key_from_code(event.key) {
-                    runtime.key(KeyEvent { key, mods: Mods::default() });
+                    runtime.key(KeyEvent { key, mods });
                 }
             }
             KEY_UP => {
                 if let Some(key) = key_from_code(event.key) {
-                    runtime.key_up(KeyEvent { key, mods: Mods::default() });
+                    runtime.key_up(KeyEvent { key, mods });
                 }
             }
             KEY_REPEAT => {
                 if let Some(key) = key_from_code(event.key) {
-                    runtime.repeat_key(KeyEvent { key, mods: Mods::default() });
+                    runtime.repeat_key(KeyEvent { key, mods });
                 }
             }
             FOCUS => {

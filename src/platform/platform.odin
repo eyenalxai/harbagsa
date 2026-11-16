@@ -17,12 +17,19 @@ Error :: enum {
 Window :: struct {
 	handle:           ^sdl3.Window,
 	capture_on_click: bool,
+	gamepad:          Gamepad_Device,
 }
 
 init :: proc(title: cstring, width, height: i32, fullscreen := false) -> (window: Window, err: Error) {
 	if !sdl3.Init({.VIDEO}) {
 		log.errorf("platform: SDL_Init failed: %v", sdl3.GetError())
 		return {}, .SDL_Init
+	}
+	if !sdl3.Init({.GAMEPAD}) {
+		log.warnf(
+			"platform: gamepad init failed (%v); starting without gamepad input",
+			sdl3.GetError(),
+		)
 	}
 
 	flags := sdl3.WindowFlags{.VULKAN, .RESIZABLE}
@@ -40,11 +47,13 @@ init :: proc(title: cstring, width, height: i32, fullscreen := false) -> (window
 		return {}, .Create_Window
 	}
 	window.capture_on_click = true
+	gamepad_open(&window.gamepad)
 
 	return window, .None
 }
 
 deinit :: proc(window: ^Window) {
+	gamepad_close(&window.gamepad)
 	if window.handle != nil {
 		sdl3.DestroyWindow(window.handle)
 		window.handle = nil

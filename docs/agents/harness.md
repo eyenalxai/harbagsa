@@ -257,9 +257,11 @@ limit in points.
 The semantic fields exist without a renderer; the interaction keys and scroll
 position need one.
 
-Pointer, wheel, key-down, key-up, key-repeat, and focus events reach Rune in one
-batch per frame. A harness click and drag use the same Rune hit path as a live
-click.
+Live, `src/input` routes each raw platform event to one owner and one sink, and
+only the UI-owned batch reaches Rune. The harness `ui` command still drives the
+Rune hit path directly; it does not exercise the live route.
+The element tree and interaction fields still describe the Rune state the
+commands produced.
 `scenarios/rune-palette.json` opens the palette, selects a card by key, captures
 the preview, arms it through the Place button, places its prefab, and asserts
 the new object. `scenarios/rune-palette-800.json` repeats it at 800x600.

@@ -219,6 +219,7 @@ pub struct UiEvent {
     pub dx: f32,
     pub dy: f32,
     pub key: i32,
+    pub mods: u32,
 }
 
 #[repr(C)]

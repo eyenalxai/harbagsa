@@ -115,13 +115,10 @@ run :: proc() -> bool {
 			renderer.notify_resize(&state)
 		}
 
-		focus := input.Focus {
-			game = game.focus(&loop.runtime.debug, &loop.runtime.hud.menu),
-			captured = events.captured,
-		}
-		intent := input.resolve(&loop.resolver, events, focus)
+		focus := game.focus(&loop.runtime.debug, &loop.runtime.hud.menu)
+		routed := input.route(&loop.resolver, events, focus, events.captured)
 
-		apply_frame_input(&loop, &window, &events, intent)
+		apply_frame_input(&loop, &window, &events, routed.game)
 		perf.mark(&perf_state, .Events)
 
 		width, height := platform.pixel_size(&window)
@@ -148,7 +145,7 @@ run :: proc() -> bool {
 		// Look is per frame. Action edges are latched so a press survives a frame
 		// with no step.
 		if !loop.runtime.hud.menu.open && !loop.runtime.debug.active {
-			game.simulation_look(&loop.runtime.sim, intent.look_delta)
+			game.simulation_look(&loop.runtime.sim, routed.game.look_delta)
 		}
 		steps := 0
 		if !loop.runtime.hud.menu.open {
@@ -165,17 +162,17 @@ run :: proc() -> bool {
 		frame.runtime_step(&loop.runtime, frame.Frame_Step {
 			fixed_steps = steps,
 			delta = delta,
-			snapshot = intent.snapshot,
-			motion = intent.motion,
-			actions = intent.actions[:intent.action_count],
+			snapshot = routed.game.snapshot,
+			motion = routed.game.motion,
+			actions = routed.game.actions[:routed.game.action_count],
 		})
 		if !loop.runtime.debug.active && steps > 0 {
 			input.clear_latches(&loop.resolver)
 		}
-		// The edit actions above can open or close the palette, so the cursor
-		// sync runs after them and sees the tool the frame applied.
-		ui_focus := game.focus(&loop.runtime.debug, &loop.runtime.hud.menu)
-		sync_cursor(&window, ui_focus, events.captured)
+		// The route owns the pointer state for this frame. A surface change
+		// applies to the cursor on the next frame, so this sync cannot disagree
+		// with the owner that routed these events.
+		sync_cursor(&window, routed.pointer_free, events.captured)
 
 		alpha := clamp(loop.accumulator / game.SIMULATION_STEP, 0, 1)
 		loop.last_alpha = alpha
@@ -194,7 +191,7 @@ run :: proc() -> bool {
 				captured = events.captured,
 				hud = true,
 				bake = renderer.bake_report(&state),
-				ui_events = build_ui_events(events, &ui_event_buffer, ui_focus.pointer_free),
+				ui_events = build_ui_events(routed.ui_events[:routed.ui_event_count], &ui_event_buffer),
 			},
 			nil,
 			static,

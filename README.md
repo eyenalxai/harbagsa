@@ -130,6 +130,16 @@ the current run.
 - `F5`: write a scene snapshot.
 - `F2`: leave debug mode.
 
+### Gamepad
+
+The engine opens the first gamepad at startup. The left stick moves and the
+right stick looks. In the world, `A` jumps and `Start` opens Settings. In debug
+mode, `A` picks in the palette and places when placement is armed, `B` cancels
+or closes the palette, and `Start` opens Settings. The shoulder buttons send
+`Tab`. In the dialog and inspector the d-pad and left stick move focus, `A`
+activates, and `B` cancels. The engine maps the pad to the same keys and intents
+as the keyboard; no gamepad event reaches Rune.
+
 The object palette is a three-column palette grid with an isometric preview. It
 shows eleven box prefabs; each card carries the colour chip, short and full name,
 and key badge. The preview shows the size, body, light line, and an isometric

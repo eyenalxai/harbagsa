@@ -25,6 +25,7 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 			dx    = event.dx,
 			dy    = event.dy,
 			key   = event.key,
+			mods  = event.mods,
 		}
 	}
 

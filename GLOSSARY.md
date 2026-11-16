@@ -438,11 +438,18 @@ separate frame call.
 _Avoid_: Input state, controls
 
 **Frame input**:
-The resolved intent of one frame: the Input snapshot, the Editing actions, the
-menu intents, the view intents, and the pause and cursor state. `src/input` turns
-one `platform.Events` value into one `Frame_Input`. The resolver holds only the
-edge latches.
+The resolved game intent of one frame: the Input snapshot, the Editing actions,
+the menu intents, and the view intents. `src/input/route.odin` turns one
+`platform.Events` value into one `Routed_Frame`; the game intent and the UI
+batch are its two sinks. The resolver holds only the edge latches and the sink
+each held key was pressed into.
 _Avoid_: Input state, input command
+
+**Input owner**:
+The one surface that owns one frame's input: World, Menu, Inspector, Palette, or
+Placement. Each raw event has one owner and is copied to exactly one sink, the
+game intent or the UI batch. A press and its release stay in the same sink.
+_Avoid_: Input mode, input focus
 
 **Settings**:
 The runtime window, interface, and input choices: window mode, display,

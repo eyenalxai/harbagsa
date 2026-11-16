@@ -60,8 +60,12 @@ UI_KEY_ESCAPE :: i32(6)
 UI_KEY_TAB :: i32(7)
 UI_KEY_SPACE :: i32(8)
 
+UI_MOD_SHIFT :: u32(1)
+UI_MOD_CTRL :: u32(2)
+
 // One Rune input event. Pointer coordinates are normalized to the target and
-// converted to points in ui_step; key and focus events ignore them.
+// converted to points in ui_step; key and focus events ignore them. `mods` uses
+// UI_MOD_SHIFT and UI_MOD_CTRL.
 UI_Event :: struct {
 	kind:  u32,
 	flags: u32,
@@ -70,6 +74,7 @@ UI_Event :: struct {
 	dx:    f32,
 	dy:    f32,
 	key:   i32,
+	mods:  u32,
 }
 
 // One flat frame for the Rust shim. The shim copies it into its own Rune state,
