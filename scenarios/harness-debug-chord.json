@@ -1,5 +1,5 @@
 {
-  "note": "The diagnostic function keys do nothing alone or with one modifier. Ctrl+Shift with F1, F2, F3, or F5 fires the control.",
+  "note": "F2 proves the plain, one-modifier, and chord cases. F1, F3, and F5 prove the plain key does nothing and the chord fires. Ctrl+Shift with F1, F2, F3, or F5 fires the control.",
   "size": "1280x720",
   "view": {
     "hud": true,
@@ -176,8 +176,14 @@
       "state": "down",
       "mods": ["Ctrl", "Shift"],
       "expect_state": {
-        "input.view.repro": true
+        "input.view.repro": true,
+        "input.overflow": false
       }
+    },
+    {
+      "cmd": "event",
+      "key": "F5",
+      "state": "up"
     }
   ]
 }

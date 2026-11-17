@@ -117,7 +117,7 @@ it reads. Incorrect: rendering a 3D thumbnail; the preview is an isometric
 
 ## Notice
 
-Use after an action whose result is not on screen, such as the `F5` scene
+Use after an action whose result is not on screen, such as the `Ctrl+Shift+F5` scene
 snapshot write. It is one line in the bottom action column, above the capture
 hint. The text is primary. A failed write says `failed` in the same colour; the
 word carries the result.

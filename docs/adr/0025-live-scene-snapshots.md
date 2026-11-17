@@ -3,7 +3,7 @@
 > Superseded in part by ADR 0043: the scene player block reports body and camera
 > yaw plus planted feet, not a stance, eye height, or step smoothing.
 
-`F5` in the game writes a normal scenario with one `scene` command. The command
+`Ctrl+Shift+F5` in the game writes a normal scenario with one `scene` command. The command
 carries the exact camera, placed objects, settings, display list, and view
 flags. `record` starts with the same command, so a recording and a keyed repro
 share one writer and one load path.
@@ -29,7 +29,7 @@ share one writer and one load path.
 - **The serializer lives below both binaries.** `src/frame/scene.odin` owns the
   scene type, the live capture, the JSON text, and the destroy path. The game
   and the harness call it. There is no second schema.
-- **The key writes a file.** `F5` writes `runs/repro/repro-<unix>.json` and logs
+- **The key writes a file.** `Ctrl+Shift+F5` writes `runs/repro/repro-<unix>.json` and logs
   the absolute path. The file is a scenario; the next step is `run`.
 - **The load is a state load, not an edit intent.** Objects go through
   `simulation_apply_snapshot`, the same path as undo and redo. The scene does not

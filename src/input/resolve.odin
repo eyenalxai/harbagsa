@@ -212,27 +212,24 @@ apply_key :: proc(
 		} else {
 			out.view.reset_player = true
 		}
-	case .F1:
-		if diagnostic_chord(edge) {
-			out.view.debug_view = true
-		}
-	case .F2:
-		if diagnostic_chord(edge) {
-			out.view.debug_mode = true
-		}
-	case .F3:
-		if diagnostic_chord(edge) {
-			out.view.taa = true
-		}
-	case .F5:
-		if diagnostic_chord(edge) {
-			out.view.repro = true
+	case .F1, .F2, .F3, .F5:
+		if function_key_chord(edge) {
+			#partial switch edge.key {
+			case .F1:
+				out.view.debug_view = true
+			case .F2:
+				out.view.debug_mode = true
+			case .F3:
+				out.view.taa = true
+			case .F5:
+				out.view.repro = true
+			}
 		}
 	}
 }
 
 @(private)
-diagnostic_chord :: proc(edge: platform.Key_Event) -> bool {
+function_key_chord :: proc(edge: platform.Key_Event) -> bool {
 	return .Ctrl in edge.mods && .Shift in edge.mods && card(edge.mods) == 2
 }
 
