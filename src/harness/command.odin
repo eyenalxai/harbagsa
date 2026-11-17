@@ -74,7 +74,8 @@ Capture_Command :: struct {
 	alpha:     f32,
 	has_alpha: bool,
 	// The entries are named `<name>-<view>`, which the field name does not say.
-	views:     []renderer.Capture_View,
+	views:        []renderer.Capture_View,
+	expect_state: []State_Expect,
 }
 
 // `at` is a pixel in the capture extent with the origin at the top left.

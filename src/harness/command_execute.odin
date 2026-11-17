@@ -55,10 +55,13 @@ execute_state :: proc(session: ^Session, command: Command, reply: ^Reply) -> str
 @(private)
 execute_capture :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	immediate, capture_error := session_queue_capture(session, command.capture)
-	if capture_error == "" && immediate && len(session.capture.captures) > 0 {
+	if capture_error != "" {
+		return capture_error
+	}
+	if immediate && len(session.capture.captures) > 0 {
 		reply.capture = &session.capture.captures[len(session.capture.captures) - 1]
 	}
-	return capture_error
+	return check_state_expects(session, command.capture.expect_state)
 }
 
 @(private)

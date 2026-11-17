@@ -22,7 +22,8 @@
         "input.events.0.key": "Tab",
         "input.events.0.sink": "game",
         "menu.open": false,
-        "ui.surface": "hud"
+        "ui.surface": "hud",
+        "input.overflow": false
       }
     },
     {
@@ -57,7 +58,8 @@
         "input.events.0.sink": "game",
         "input.captured": true,
         "input.snapshot.jump_pressed": true,
-        "input.motion.captured": true
+        "input.motion.captured": true,
+        "input.overflow": false
       }
     },
     {

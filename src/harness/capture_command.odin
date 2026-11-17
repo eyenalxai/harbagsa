@@ -12,7 +12,7 @@ import "src:renderer"
 parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(
 		object,
-		{"cmd", "name", "note", "frame", "alpha", "target", "views", "format", "png", "region", "rect", "profile", "crop", "histogram", "steps", "color_key", "coverage", "require"},
+		{"cmd", "name", "note", "frame", "alpha", "target", "views", "format", "png", "region", "rect", "profile", "crop", "histogram", "steps", "color_key", "coverage", "require", "expect_state"},
 	); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
@@ -190,6 +190,13 @@ parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command
 	}
 	if has_capture_name {
 		command.capture.name = strings.clone(capture_name, allocator)
+	}
+	if expect_state_value, has_expect_state := json_get(object, "expect_state"); has_expect_state {
+		expects, expect_error := parse_state_expects(expect_state_value, allocator)
+		if expect_error != "" {
+			return {}, expect_error
+		}
+		command.capture.expect_state = expects
 	}
 	return command, ""
 }

@@ -53,8 +53,6 @@ Input_Gamepad_State :: struct {
 	right:     Input_Vec2_State `json:"right"`,
 }
 
-// Input_State is the resolved intent of the last frame and the route that
-// produced it. A scenario asserts the sink of a raw event here.
 Input_State :: struct {
 	owner:    string              `json:"owner"`,
 	captured: bool                `json:"captured"`,

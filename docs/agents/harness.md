@@ -130,13 +130,17 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `reset`: fresh simulation, settings, menu, and editor state.
 - `look`: `dx`, `dy` through game sensitivity.
 - `face`: direct camera `yaw_deg` and `pitch_deg`. The body keeps its heading.
-- `input`: persistent `forward`, `right`, and `sprint`; `jump` is a one-step edge.
+- `input`: sets the held `forward`, `right`, and `sprint` axes and queues one
+  Space or Shift press for the next frame, so jump and sprint follow the same
+  route a key does.
 - `step`: `frames` in the allowed fixed-step range.
 - `settle`: `frames`, or `until: converged`; while the menu is open it requires a
   renderer and draws frames without stepping.
 - `state`: full current state.
 - `capture`: one output with `name`, optional `frame`, `alpha`, `note`, target,
-  format, capture options, and an optional `views` list.
+  format, capture options, and an optional `views` list. `expect_state` checks
+  state after the capture; `state.camera` resolves at the alpha the capture
+  drew.
 - `captures`: up to eight outputs from one frame.
 - `camera`: `position` plus `look_at` or `yaw_deg`/`pitch_deg`, optional
   `fov_deg`; `clear: true` removes the override.
@@ -281,9 +285,11 @@ and scroll position need one.
 The `ui` command sends `event` frames: a click is one frame with the pointer
 move and the press, one with the move and the release, and one settle frame; a
 drag is a press frame, one move frame per step, an optional release frame, and a
-settle frame; a wheel or a focus change is one frame and a settle frame. Every
-one of those frames runs the live route, so a scenario asserts the same path the
-window runs.
+settle frame; a wheel is a pointer frame, a wheel frame, and a settle frame; a
+focus change is one frame and a settle frame. Every one of those frames runs the
+live route, so a scenario asserts the same path the window runs. The settle
+frame carries a flag the shared frame passes to the shim, so running UI tracks
+land before the next command; the harness never calls the shim itself.
 The element tree and interaction fields still describe the Rune state the
 frames produced.
 `scenarios/rune-palette.json` opens the palette, selects a card by key, captures
@@ -326,7 +332,8 @@ palette state still open without a renderer, but there is no frame to click.
 {"cmd":"event","key":"Escape","state":"down"}
 {"cmd":"event","key":"Tab","state":"down","mods":["Shift"]}
 {"cmd":"event","pointer":[640,360],"state":"down"}
-{"cmd":"event","wheel":-0.025,"pointer":[640,360]}
+{"cmd":"event","pointer":[640,360],"look":[100,0]}
+{"cmd":"event","wheel":-0.025}
 {"cmd":"event","focus":false}
 {"cmd":"event","gamepad":{"connected":true}}
 {"cmd":"event","gamepad":{"button":"South","state":"down"}}
@@ -336,9 +343,13 @@ palette state still open without a renderer, but there is no frame to click.
 - `key`: a `platform.Key` name. `state` is `down` (default), `up`, or `repeat`.
   `mods` holds `Shift` and `Ctrl` names.
 - `pointer`: `[x, y]` in view points. `state` is `move` (default), `down`, or
-  `up`; `button` is `left` (default) or `right`.
-- `wheel`: vertical SDL notches (positive is up). Optional `pointer` moves the
-  cursor first.
+  `up`; `button` is `left` (default) or `right`. Optional `look` is the same
+  frame's relative `[dx, dy]` motion, applied when the pointer is captured,
+  like a window's mouse motion. It turns the camera on that frame even at zero
+  fixed steps.
+- `wheel`: vertical SDL notches (positive is up) at the last pointer position.
+  A wheel frame does not carry its own pointer; send a `pointer` frame first to
+  move the cursor.
 - `focus`: `true` or `false`; optional `captured` overrides the frame's capture
   fact.
 - `gamepad`: `connected`, a `button` with `state`, and the `left` and `right`
@@ -377,6 +388,12 @@ through Rune, the left stick becomes forward movement, and South jumps;
 `scenarios/harness-resize.json` captures a HUD text region at 1280x720,
 resizes to 1200x700 and 800x600 and back, and fails when the region's
 `lit_fraction` falls below the requirement.
+`scenarios/harness-alpha.json` sprints ten steps, captures at alpha 0.25 and
+1.0, and asserts `state.camera` resolves at the alpha each capture drew;
+`scenarios/harness-alpha-800.json` repeats it at 800x600.
+`scenarios/harness-look.json` turns the camera with a pointer frame's look
+delta at zero fixed steps and asserts the yaw survived the next step;
+`scenarios/harness-look-800.json` repeats it at 800x600.
 
 ## Compare panel text
 
@@ -866,9 +883,10 @@ The offscreen target submits one frame at a time because it owns one colour
 image and one readback buffer. TAA history affects exact pixels, so before and
 after runs must use the same command sequence and history. Term views do not
 advance or reset that history, so a capture with views and a capture without
-them agree on every later frame. Every harness frame draws, including the
-zero-step frames `event`, `ui`, and `resize` run, so a scenario's history
-depends on its full command sequence, not only its steps.
+them agree on every later frame. Every harness frame draws: `step` no longer
+skips the draw, and the zero-step frames `event`, `ui`, and `resize` run draw
+too, so a scenario's history depends on its full command sequence, not only its
+steps.
 
 Run the same scenario for before and after evidence:
 

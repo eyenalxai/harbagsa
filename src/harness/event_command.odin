@@ -31,8 +31,7 @@ Event_Button :: enum {
 	Right,
 }
 
-// Event_Command is one raw frame. The form names the platform source; the
-// engine route decides the sink, so the command never names one.
+// One raw frame; the engine route decides the sink.
 Event_Command :: struct {
 	form:          Event_Form,
 	key:           platform.Key,
@@ -40,6 +39,8 @@ Event_Command :: struct {
 	mods:          platform.Modifiers,
 	pointer:       [2]f32,
 	has_pointer:   bool,
+	look:          [2]f32,
+	has_look:      bool,
 	pointer_state: Event_Pointer_State,
 	button:        Event_Button,
 	wheel:         f32,
@@ -68,6 +69,7 @@ parse_event :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 		"state",
 		"mods",
 		"pointer",
+		"look",
 		"button",
 		"wheel",
 		"focus",
@@ -100,7 +102,7 @@ parse_event :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 	if has_pad {
 		forms += 1
 	}
-	if has_pointer && !has_wheel {
+	if has_pointer {
 		forms += 1
 	}
 	if forms != 1 {
@@ -136,6 +138,11 @@ parse_event :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 	}
 	if form != .Focus {
 		if field_error := reject_event_keys(object, {"captured"}); field_error != "" {
+			return {}, field_error
+		}
+	}
+	if form != .Pointer {
+		if field_error := reject_event_keys(object, {"look"}); field_error != "" {
 			return {}, field_error
 		}
 	}
@@ -179,6 +186,10 @@ parse_event :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 					return {}, format_error("%s", "'state' must be move, down, or up")
 				}
 				command.event.pointer_state = state
+			}
+			if look, has_look := vec2_field(object, "look"); has_look {
+				command.event.look = look
+				command.event.has_look = true
 			}
 			command.event.button = .Left
 			if button_name, has_button := string_field(object, "button"); has_button {
@@ -380,10 +391,4 @@ parse_event_gamepad :: proc(object: json.Object) -> (Gamepad_Command, string) {
 		)
 	}
 	return pad, ""
-}
-
-destroy_event :: proc(command: ^Command, allocator: mem.Allocator) {
-	state_expects_destroy(command.event.expect_state, allocator)
-	command.event.expect_state = nil
-	command^ = {}
 }

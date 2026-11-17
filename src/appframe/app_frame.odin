@@ -24,32 +24,31 @@ Hooks :: struct {
 	write_repro:  proc(app: ^State, user: rawptr),
 }
 
-// State is the frame state the window loop and the harness share: the
-// simulation runtime, the input resolver, the pacing accumulator, and the last
-// routed frame.
+// The window loop and the harness share this frame state.
 State :: struct {
-	runtime:     frame.Runtime,
-	renderer:    ^rnd.Renderer,
-	resolver:    input.Resolver,
-	accumulator: f32,
-	last_alpha:  f32,
-	captured:    bool,
-	ui_events:   UI_Event_Buffer,
-	routed:      input.Routed_Frame,
-	has_routed:  bool,
-	actions:     [MAX_FRAME_ACTIONS]rnd.Ui_Action,
-	action_count: int,
+	runtime:        frame.Runtime,
+	renderer:       ^rnd.Renderer,
+	resolver:       input.Resolver,
+	accumulator:    f32,
+	last_alpha:     f32,
+	captured:       bool,
+	ui_events:      UI_Event_Buffer,
+	routed:         input.Routed_Frame,
+	has_routed:     bool,
+	actions:        [MAX_FRAME_ACTIONS]rnd.Ui_Action,
+	action_applied: [MAX_FRAME_ACTIONS]bool,
+	action_reason:  [MAX_FRAME_ACTIONS]game.Edit_Reason,
+	action_count:   int,
 }
 
-// Input is one raw frame: the platform events and the fixed steps the caller
-// resolved. The resolved intent comes from the route, never from the caller.
+// The resolved intent comes from the route, never from the caller.
 Input :: struct {
 	events: platform.Events,
 	delta:  f32,
 	steps:  int,
 }
 
-// Options are the draw inputs that are not input events.
+// The draw inputs that are not input events.
 Options :: struct {
 	alpha:      f32,
 	debug_view: bool,
@@ -57,6 +56,9 @@ Options :: struct {
 	hud:        bool,
 	capture:    rnd.Frame_Capture,
 	perf:       ^perf.State,
+	// Land running UI tracks on this frame. The harness sets it for the last
+	// frame of a recipe; the live loop never does.
+	settle_ui: bool,
 }
 
 // pace adds one frame's delta and resolves the fixed steps that are due. A menu
@@ -99,9 +101,9 @@ run :: proc(app: ^State, frame_input: Input, options: Options, hooks: Hooks) -> 
 		perf.mark(options.perf, .Events)
 	}
 
-	// Look is per frame. Action edges are latched so a press survives a frame
-	// with no step.
-	if !app.runtime.hud.menu.open && !app.runtime.debug.active && frame_input.steps > 0 {
+	// Look is per frame and does not need a fixed step. Action edges are latched
+	// so a press survives a frame with no step.
+	if !app.runtime.hud.menu.open && !app.runtime.debug.active {
 		game.simulation_look(&app.runtime.sim, app.routed.game.look_delta)
 	}
 	frame.runtime_step(&app.runtime, frame.Frame_Step {
@@ -128,6 +130,9 @@ run :: proc(app: ^State, frame_input: Input, options: Options, hooks: Hooks) -> 
 	if options.perf != nil {
 		perf.mark(options.perf, .Build)
 	}
+	if options.settle_ui {
+		rnd.ui_settle()
+	}
 	result := rnd.render_frame(app.renderer, scene, options.capture)
 	apply_ui_actions(app, hooks)
 	rnd.ui_actions_clear()
@@ -135,7 +140,9 @@ run :: proc(app: ^State, frame_input: Input, options: Options, hooks: Hooks) -> 
 	// Capture follows the surface that is open after this frame's actions, so an
 	// opening or closing surface takes effect before the next frame.
 	end_focus := game.focus(&app.runtime.debug, &app.runtime.hud.menu)
-	call_hook_sync_cursor(hooks, end_focus.pointer_free, app.captured)
+	if hooks.sync_cursor != nil {
+		hooks.sync_cursor(hooks.user, end_focus.pointer_free, app.captured)
+	}
 	return result
 }
 
@@ -226,14 +233,17 @@ apply_ui_actions :: proc(app: ^State, hooks: Hooks) {
 		captured = app.captured,
 	}
 	for action in rnd.ui_actions_slice() {
-		if app.action_count < len(app.actions) {
-			app.actions[app.action_count] = action
-			app.action_count += 1
-		}
 		previous_window := app.runtime.sim.settings.window
 		applied := uiaction.apply(ui_context, action)
 		if !applied.handled {
 			log.warnf("appframe: unknown UI action kind %d", action.kind)
+		}
+		if app.action_count < len(app.actions) {
+			index := app.action_count
+			app.actions[index] = action
+			app.action_applied[index] = applied.applied
+			app.action_reason[index] = applied.reason
+			app.action_count += 1
 		}
 		if applied.window_changed && hooks.apply_window != nil {
 			hooks.apply_window(hooks.user, previous_window)
@@ -241,12 +251,5 @@ apply_ui_actions :: proc(app: ^State, hooks: Hooks) {
 		if applied.closed_menu {
 			app.accumulator = 0
 		}
-	}
-}
-
-@(private)
-call_hook_sync_cursor :: proc(hooks: Hooks, pointer_free: bool, captured: bool) {
-	if hooks.sync_cursor != nil {
-		hooks.sync_cursor(hooks.user, pointer_free, captured)
 	}
 }

@@ -293,8 +293,6 @@ session_perf_frame :: proc(session: ^Session) -> string {
 	}
 	perf.begin_frame(&session.perf.state)
 	events := session_frame_events(session)
-	session.input.jump_pressed = false
-	session.input.sprint_pressed = false
 	session.frame += 1
 	if frame_error := session_frame(session, events, 1, session.default_alpha, nil); frame_error != "" {
 		return frame_error

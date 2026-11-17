@@ -69,7 +69,7 @@ ui_click_recipe :: proc(session: ^Session, target: Ui_Target) -> string {
 	); event_error != "" {
 		return event_error
 	}
-	return ui_settle_frame(session)
+	return session_settle_frame(session)
 }
 
 @(private)
@@ -96,7 +96,7 @@ ui_drag_recipe :: proc(session: ^Session, drag: Ui_Drag) -> string {
 		}
 	}
 	if drag.hold {
-		return ui_settle_frame(session)
+		return session_settle_frame(session)
 	}
 	end := point + {drag.dx, drag.dy}
 	if event_error := session_event(
@@ -105,7 +105,7 @@ ui_drag_recipe :: proc(session: ^Session, drag: Ui_Drag) -> string {
 	); event_error != "" {
 		return event_error
 	}
-	return ui_settle_frame(session)
+	return session_settle_frame(session)
 }
 
 @(private)
@@ -117,16 +117,22 @@ ui_wheel_recipe :: proc(session: ^Session, wheel: Ui_Wheel) -> string {
 	if wheel.dx != 0 {
 		return format_error("%s", "the live wheel path carries a vertical notch only")
 	}
+	if event_error := session_event(
+		session,
+		{form = .Pointer, pointer = point, has_pointer = true, pointer_state = .Move},
+	); event_error != "" {
+		return event_error
+	}
 	// The platform reports SDL notches; the UI step negates and scales them to
 	// Rune points, so a command in points converts back.
 	notches := -wheel.dy / LIVE_WHEEL_POINTS
 	if event_error := session_event(
 		session,
-		{form = .Wheel, pointer = point, has_pointer = true, wheel = notches},
+		{form = .Wheel, wheel = notches},
 	); event_error != "" {
 		return event_error
 	}
-	return ui_settle_frame(session)
+	return session_settle_frame(session)
 }
 
 @(private)
@@ -137,7 +143,7 @@ ui_focus_recipe :: proc(session: ^Session, focused: bool) -> string {
 	); event_error != "" {
 		return event_error
 	}
-	return ui_settle_frame(session)
+	return session_settle_frame(session)
 }
 
 @(private)
@@ -152,16 +158,6 @@ ui_target_point :: proc(session: ^Session, target: Ui_Target) -> ([2]f32, string
 		return {}, format_error("the UI element %q was not found", text)
 	}
 	return {x, y}, ""
-}
-
-// The shim lands every running track on the next frame, the same one-frame
-// settle the old direct path did after its own frames.
-@(private)
-ui_settle_frame :: proc(session: ^Session) -> string {
-	if renderer.ui_settle() != 0 {
-		return format_error("%s", "the UI shim could not settle")
-	}
-	return session_draw_group(session, nil)
 }
 
 @(private)

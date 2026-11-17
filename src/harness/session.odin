@@ -9,21 +9,28 @@ import "core:time"
 import "src:appframe"
 import "src:display"
 import "src:frame"
-import "src:game"
 import "src:platform"
 import "src:renderer"
 
+Held_Input :: struct {
+	move_forward: f32,
+	move_right:   f32,
+	sprint_held:  bool,
+}
+
 Session :: struct {
-	allocator:     mem.Allocator,
-	app:           appframe.State,
-	input:         game.Input_Snapshot,
-	view:          View,
-	captured:      bool,
-	pointer:       [2]f32,
-	pad:           platform.Gamepad_State,
-	default_alpha: f32,
-	drawn_alpha:   f32,
-	drawn_frame:   int,
+	allocator:      mem.Allocator,
+	app:            appframe.State,
+	held:           Held_Input,
+	pending_jump:   bool,
+	pending_sprint: bool,
+	view:           View,
+	captured:       bool,
+	pointer:        [2]f32,
+	pad:            platform.Gamepad_State,
+	default_alpha:  f32,
+	drawn_alpha:    f32,
+	drawn_frame:    int,
 
 	camera_override:     renderer.Camera,
 	has_camera_override: bool,
@@ -136,7 +143,9 @@ session_reset :: proc(session: ^Session) -> string {
 	if !frame.runtime_reset(&session.app.runtime) {
 		return format_error("%s", "simulation init failed")
 	}
-	session.input = {}
+	session.held = {}
+	session.pending_jump = false
+	session.pending_sprint = false
 	session.captured = !session.view.hint
 	session.pointer = {}
 	session.pad = {}
@@ -188,19 +197,24 @@ session_check_timeout :: proc(session: ^Session) -> string {
 		allocator = context.allocator,
 	)
 }
+
+// The axes are the held state the platform polls; jump and sprint queue one
+// Space or Shift press so they take the same route a key does.
 session_apply_input :: proc(session: ^Session, command: Input_Command) {
 	if command.has_forward {
-		session.input.move_forward = command.forward
+		session.held.move_forward = command.forward
 	}
 	if command.has_right {
-		session.input.move_right = command.right
+		session.held.move_right = command.right
 	}
-	if command.has_jump {
-		session.input.jump_pressed = command.jump
+	if command.has_jump && command.jump {
+		session.pending_jump = true
 	}
 	if command.has_sprint {
-		session.input.sprint_held = command.sprint
-		session.input.sprint_pressed = command.sprint
+		session.held.sprint_held = command.sprint
+		if command.sprint {
+			session.pending_sprint = true
+		}
 	}
 }
 session_step :: proc(session: ^Session, frames: int) -> string {
@@ -223,8 +237,6 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 			return timeout
 		}
 		events := session_frame_events(session)
-		session.input.jump_pressed = false
-		session.input.sprint_pressed = false
 		session.frame += 1
 		clear(&due)
 		clear(&requests)

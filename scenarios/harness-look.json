@@ -1,0 +1,15 @@
+{
+  "note": "A captured pointer frame carries its own look delta. The camera turns on that frame even though the frame runs at zero fixed steps, so look no longer waits for a simulation step.",
+  "size": "1280x720",
+  "view": {"hud": true, "debug": false, "hint": false},
+  "commands": [
+    {"cmd": "settle", "frames": 2},
+    {"cmd": "event", "pointer": [640, 360], "look": [100, 0], "expect_no_action": true,
+     "expect_state": {"input.look.x": 100, "input.owner": "world",
+                      "input.events.0.sink": "game",
+                      "player.camera_yaw_deg": -12.605072}},
+    {"cmd": "step", "frames": 1},
+    {"cmd": "event", "pointer": [640, 360], "look": [0, 0], "expect_no_action": true,
+     "expect_state": {"input.look.x": 0, "player.camera_yaw_deg": -12.605072}}
+  ]
+}

@@ -8,32 +8,32 @@ import "src:game"
 import "src:platform"
 import "src:renderer"
 
-// session_frame_events is the raw frame the session holds between commands: the
-// axes from the `input` command, the capture fact, and the held gamepad state.
 session_frame_events :: proc(session: ^Session) -> platform.Events {
-	if session.input.jump_pressed {
-		session.app.resolver.jump = true
-	}
-	if session.input.sprint_pressed {
-		session.app.resolver.sprint = true
-	}
-	return {
-		move_forward = session.input.move_forward,
-		move_right   = session.input.move_right,
-		sprint_held  = session.input.sprint_held,
+	events := platform.Events {
+		move_forward = session.held.move_forward,
+		move_right   = session.held.move_right,
+		sprint_held  = session.held.sprint_held,
 		captured     = session.captured,
 		gamepad      = session.pad,
 	}
+	if session.pending_jump {
+		push_session_event(&events, {kind = .Key_Down, key = .Space})
+		session.pending_jump = false
+	}
+	if session.pending_sprint {
+		push_session_event(&events, {kind = .Key_Down, key = .LShift})
+		session.pending_sprint = false
+	}
+	return events
 }
 
-// session_frame is the harness's one frame: it injects the raw events, runs the
-// shared app frame, and reads back any capture the frame drew.
 session_frame :: proc(
 	session: ^Session,
 	events: platform.Events,
 	steps: int,
 	alpha: f32,
 	requests: []Capture_Request,
+	settle_ui := false,
 ) -> string {
 	frame_events := events
 	if session.render.present && session.render.backend != nil {
@@ -54,6 +54,7 @@ session_frame :: proc(
 		hud        = session.view.hud,
 		capture    = capture,
 		perf       = &session.perf.state,
+		settle_ui  = settle_ui,
 	}
 	result := appframe.run(
 		&session.app,
@@ -68,8 +69,25 @@ session_frame :: proc(
 	case .Fatal:
 		return format_error("%s", "render failed")
 	}
+	if session.app.renderer != nil {
+		session.drawn_alpha = alpha
+		session.drawn_frame = session.frame
+	}
 	if session.collect_actions {
 		append(&session.ui_actions, ..session.app.actions[:session.app.action_count])
+		if session.app.routed.overflow {
+			return format_error("%s", "the input route dropped an event; a queue is full")
+		}
+		for index in 0 ..< session.app.action_count {
+			if session.app.action_applied[index] {
+				continue
+			}
+			message := game.edit_reason_message(session.app.action_reason[index])
+			if message == "" {
+				message = "the UI action made no change"
+			}
+			return format_error("%s", message)
+		}
 	}
 	session_refresh_renderer(session)
 	if len(requests) > 0 {
@@ -78,13 +96,23 @@ session_frame :: proc(
 	return ""
 }
 
-// session_draw_group composes and draws one frame with no fixed step.
 session_draw_group :: proc(session: ^Session, requests: []Capture_Request) -> string {
 	alpha := session.default_alpha
 	if len(requests) > 0 {
 		alpha = requests[0].alpha
 	}
 	return session_frame(session, session_frame_events(session), 0, alpha, requests)
+}
+
+session_settle_frame :: proc(session: ^Session) -> string {
+	return session_frame(
+		session,
+		session_frame_events(session),
+		0,
+		session.default_alpha,
+		nil,
+		true,
+	)
 }
 
 @(private)

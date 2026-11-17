@@ -46,6 +46,9 @@ session_event :: proc(session: ^Session, event: Event_Command) -> string {
 		point := session_pointer_normalized(session, session.pointer)
 		push_session_event(&events, {kind = .Pointer_Move, pointer = point})
 		events.pointer = point
+		if event.has_look && session.captured {
+			events.look_delta += event.look
+		}
 		switch event.pointer_state {
 		case .Move:
 		case .Down:
@@ -62,9 +65,6 @@ session_event :: proc(session: ^Session, event: Event_Command) -> string {
 			}
 		}
 	case .Wheel:
-		if event.has_pointer {
-			session.pointer = event.pointer
-		}
 		point := session_pointer_normalized(session, session.pointer)
 		push_session_event(&events, {kind = .Wheel, pointer = point, wheel = event.wheel})
 		events.pointer = point

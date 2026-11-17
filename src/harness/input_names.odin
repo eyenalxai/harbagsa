@@ -25,11 +25,6 @@ key_from_name :: proc(name: string) -> (platform.Key, bool) {
 	return .None, false
 }
 
-modifier_name :: proc(modifier: platform.Modifier) -> string {
-	name, _ := reflect.enum_name_from_value(modifier)
-	return name
-}
-
 modifier_from_name :: proc(name: string) -> (platform.Modifier, bool) {
 	for candidate in platform.Modifier {
 		candidate_name, _ := reflect.enum_name_from_value(candidate)

@@ -104,6 +104,8 @@ destroy_capture :: proc(command: ^Command, allocator: mem.Allocator) {
 	if command.capture.views != nil {
 		delete(command.capture.views, allocator)
 	}
+	state_expects_destroy(command.capture.expect_state, allocator)
+	command.capture.expect_state = nil
 	command^ = {}
 }
 
@@ -117,8 +119,17 @@ destroy_captures :: proc(command: ^Command, allocator: mem.Allocator) {
 		if output.views != nil {
 			delete(output.views, allocator)
 		}
+		state_expects_destroy(output.expect_state, allocator)
+		output.expect_state = nil
 	}
 	delete(command.captures.outputs, allocator)
+	command^ = {}
+}
+
+@(private)
+destroy_event :: proc(command: ^Command, allocator: mem.Allocator) {
+	state_expects_destroy(command.event.expect_state, allocator)
+	command.event.expect_state = nil
 	command^ = {}
 }
 

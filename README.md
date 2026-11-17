@@ -216,7 +216,7 @@ degrees and ends in `_deg`. Positions and ranges are metres. One `step` or
 - `reset`: restore the simulation.
 - `look`: apply a pixel look delta.
 - `face`: set the camera yaw and pitch.
-- `input`: set persistent movement input.
+- `input`: set held movement axes and queue a jump or sprint press.
 - `step`: advance fixed frames.
 - `settle`: render fixed frames without a capture, or wait for convergence.
 - `state`: report current state.
