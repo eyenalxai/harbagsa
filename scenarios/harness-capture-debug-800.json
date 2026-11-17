@@ -1,0 +1,43 @@
+{
+  "note": "In debug mode with the forward axis held, two captures queued for frame 8 must draw the camera the step left; a query draw does not advance the debug fly. At 800x600.",
+  "size": "800x600",
+  "view": {
+    "hud": true,
+    "debug": false,
+    "hint": false
+  },
+  "commands": [
+    {
+      "cmd": "debug_mode",
+      "active": true
+    },
+    {
+      "cmd": "settle",
+      "frames": 5
+    },
+    {
+      "cmd": "input",
+      "forward": 1
+    },
+    {
+      "cmd": "capture",
+      "name": "first",
+      "frame": 8,
+      "expect_state": {
+        "camera.position.z": 17.750074
+      }
+    },
+    {
+      "cmd": "capture",
+      "name": "second",
+      "frame": 8,
+      "expect_state": {
+        "camera.position.z": 17.750074
+      }
+    },
+    {
+      "cmd": "step",
+      "frames": 3
+    }
+  ]
+}

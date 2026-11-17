@@ -16,6 +16,10 @@ parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command
 		return {}, format_error("unknown key %q", key)
 	}
 	command := Command{kind = .Capture}
+	parsed := false
+	defer if !parsed {
+		destroy_capture(&command, allocator)
+	}
 	capture_name: string
 	has_capture_name := false
 	if value, has := json_get(object, "name"); has {
@@ -197,5 +201,6 @@ parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command
 		}
 		command.capture.expect_state = expects
 	}
+	parsed = true
 	return command, ""
 }

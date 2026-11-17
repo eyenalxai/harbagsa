@@ -143,7 +143,8 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
   format, capture options, and an optional `views` list. `expect_state` checks
   state after the capture; `state.camera` resolves at the alpha the capture
   drew. A capture queued for a future frame draws as its own group at the
-  command's alpha and asserts after that draw.
+  command's alpha and asserts after that draw; the query draw does not advance
+  the debug camera or any timer.
 - `captures`: up to eight outputs from one frame. Each output accepts the same
   options as `capture` except `expect_state`, which belongs to a single
   capture.
@@ -361,7 +362,9 @@ palette state still open without a renderer, but there is no frame to click.
 - `focus`: `true` or `false`; optional `captured` overrides the frame's capture
   fact.
 - `gamepad`: `connected`, a `button` with `state`, and the `left` and `right`
-  sticks. A pad must be connected before its buttons and sticks route.
+  sticks. `state` is `down` or `up`, needs a `button`, and is validated even
+  when no button is given. A pad must be connected before its buttons and
+  sticks route.
 - `expect`, `expect_no_action`, and `expect_state` assert the frame's UI actions,
   its absence of actions, and the state after the frame. See **Driving the
   view**.
@@ -416,6 +419,9 @@ repeats it at 800x600.
 `scenarios/harness-capture-alpha.json` queues two captures for frame 12 at
 alpha 0.25 and 1.0 and asserts each group's camera at the alpha it drew;
 `scenarios/harness-capture-alpha-800.json` repeats it at 800x600.
+`scenarios/harness-capture-debug.json` holds forward in debug mode and queues
+two frame-8 captures that must both see the camera the step left;
+`scenarios/harness-capture-debug-800.json` repeats it at 800x600.
 `scenarios/harness-pick-batch.json` runs at 800x400, where the inspector rail
 overflows; it scrolls the rail, runs a pick, and asserts the pick did not
 re-dispatch the wheel.

@@ -37,6 +37,7 @@ session_frame :: proc(
 	requests: []Capture_Request,
 	settle_ui := false,
 	skip_draw := false,
+	draw_only := false,
 ) -> string {
 	frame_events := events
 	if session.render.present && session.render.backend != nil {
@@ -59,6 +60,7 @@ session_frame :: proc(
 		perf       = &session.perf.state,
 		settle_ui  = settle_ui,
 		skip_draw  = skip_draw,
+		draw_only  = draw_only,
 	}
 	result := appframe.run(
 		&session.app,
@@ -105,7 +107,14 @@ session_draw_group :: proc(session: ^Session, requests: []Capture_Request) -> st
 	if len(requests) > 0 {
 		alpha = requests[0].alpha
 	}
-	return session_frame(session, session_frame_events(session), 0, alpha, requests)
+	return session_frame(
+		session,
+		session_frame_events(session),
+		0,
+		alpha,
+		requests,
+		draw_only = true,
+	)
 }
 
 session_settle_frame :: proc(session: ^Session) -> string {
@@ -116,6 +125,7 @@ session_settle_frame :: proc(session: ^Session) -> string {
 		session.default_alpha,
 		nil,
 		true,
+		draw_only = true,
 	)
 }
 

@@ -62,6 +62,9 @@ Options :: struct {
 	// Step the simulation without composing or drawing. The harness draws a
 	// due capture as its own group instead.
 	skip_draw: bool,
+	// Compose and draw the state as it stands. A query draw must not advance
+	// the debug update or any timer.
+	draw_only: bool,
 }
 
 // pace adds one frame's delta and resolves the fixed steps that are due. A menu
@@ -104,23 +107,25 @@ run :: proc(app: ^State, frame_input: Input, options: Options, hooks: Hooks) -> 
 		perf.mark(options.perf, .Events)
 	}
 
-	// Look is per frame and does not need a fixed step. Action edges are latched
-	// so a press survives a frame with no step.
-	if !app.runtime.hud.menu.open && !app.runtime.debug.active {
-		game.simulation_look(&app.runtime.sim, app.routed.game.look_delta)
-	}
-	frame.runtime_step(&app.runtime, frame.Frame_Step {
-		fixed_steps = frame_input.steps,
-		delta = frame_input.delta,
-		snapshot = app.routed.game.snapshot,
-		motion = app.routed.game.motion,
-		actions = app.routed.game.actions[:app.routed.game.action_count],
-	})
-	if !app.runtime.debug.active && frame_input.steps > 0 {
-		input.clear_latches(&app.resolver)
-	}
-	if options.perf != nil {
-		perf.mark(options.perf, .Simulation)
+	if !options.draw_only {
+		// Look is per frame and does not need a fixed step. Action edges are
+		// latched so a press survives a frame with no step.
+		if !app.runtime.hud.menu.open && !app.runtime.debug.active {
+			game.simulation_look(&app.runtime.sim, app.routed.game.look_delta)
+		}
+		frame.runtime_step(&app.runtime, frame.Frame_Step {
+			fixed_steps = frame_input.steps,
+			delta = frame_input.delta,
+			snapshot = app.routed.game.snapshot,
+			motion = app.routed.game.motion,
+			actions = app.routed.game.actions[:app.routed.game.action_count],
+		})
+		if !app.runtime.debug.active && frame_input.steps > 0 {
+			input.clear_latches(&app.resolver)
+		}
+		if options.perf != nil {
+			perf.mark(options.perf, .Simulation)
+		}
 	}
 
 	app.last_alpha = options.alpha

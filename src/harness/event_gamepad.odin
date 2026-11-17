@@ -47,6 +47,20 @@ parse_event_gamepad :: proc(object: json.Object) -> (Gamepad_Command, string) {
 	if button_error != "" {
 		return {}, button_error
 	}
+	pad.down = true
+	if has_state {
+		switch state_name {
+		case "down":
+			pad.down = true
+		case "up":
+			pad.down = false
+		case:
+			return {}, format_error("%s", "'gamepad.state' must be down or up")
+		}
+		if !has_button {
+			return {}, format_error("%s", "'gamepad.state' needs 'gamepad.button'")
+		}
+	}
 	if has_button {
 		button, found := gamepad_button_from_name(button_name)
 		if !found {
@@ -54,17 +68,6 @@ parse_event_gamepad :: proc(object: json.Object) -> (Gamepad_Command, string) {
 		}
 		pad.button = button
 		pad.has_button = true
-		pad.down = true
-		if has_state {
-			switch state_name {
-			case "down":
-				pad.down = true
-			case "up":
-				pad.down = false
-			case:
-				return {}, format_error("%s", "'gamepad.state' must be down or up")
-			}
-		}
 	}
 	if _, has_left := json_get(fields, "left"); has_left {
 		left, left_ok := vec2_field(fields, "left")
