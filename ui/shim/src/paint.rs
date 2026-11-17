@@ -32,7 +32,7 @@ pub fn draw(host: &mut Host, image_index: u32) -> i32 {
             &host.queue,
             &rune_fx::FxFrame {
                 viewport: [host.width, host.height],
-                scale: host.scale,
+                scale: runtime.env.scale,
                 layers: &plan.layers,
                 backdrop: None,
                 sources: &[],

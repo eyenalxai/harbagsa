@@ -27,7 +27,6 @@ pub struct Host {
     pub(crate) views: Vec<wgpu::TextureView>,
     pub(crate) width: u32,
     pub(crate) height: u32,
-    pub(crate) scale: f32,
 }
 
 static HOST: OnceLock<usize> = OnceLock::new();
@@ -232,7 +231,6 @@ unsafe fn adopt(config: &UiVkConfig) -> Result<(UiVkDevice, Host), String> {
             views: Vec::new(),
             width: 0,
             height: 0,
-            scale: 1.0,
         },
     ))
 }
@@ -304,20 +302,24 @@ pub fn attach(target: *const UiTarget) -> i32 {
         }
     }
 
+    // The renderer outlives the runtime, so a reattach keeps the atlas it fills;
+    // only the target format can differ.
+    if let Some(renderer) = host.renderer.as_mut() {
+        renderer.set_format(&host.device, format);
+    } else {
+        host.renderer = Some(Renderer::new(&host.device, format));
+    }
     host.format = Some(format);
     host.width = target.width;
     host.height = target.height;
-    host.renderer = Some(Renderer::new(&host.device, format));
     let scale = if target.scale > 0.0 { target.scale } else { 1.0 };
     let mut fx = FxRenderer::new(&host.device, format, FxOptions { dither: true });
     fx.add_format(&host.device, wgpu::TextureFormat::Rgba16Float);
     host.fx = Some(fx);
-    host.scale = scale;
     let viewport = (target.width as f32 / scale, target.height as f32 / scale);
     if let Some(runtime) = host.runtime.as_mut() {
         // The target can be recreated on a resize; keep the view model, focus,
         // and text atlas instead of rebuilding the whole runtime.
-        runtime.env.scale = scale;
         runtime.set_viewport(viewport, scale);
     } else {
         let text_system = TextSystem::new(&[GEIST, GEIST_MONO], ("Geist", "Geist Mono"));
