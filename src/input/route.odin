@@ -21,13 +21,13 @@ route :: proc(
 		overflow = events.overflow,
 	}
 	primary_release := false
-	if events.overflow {
-		primary_release = r.pad_primary
-		clear_held(r)
-	}
-
 	keys: [platform.MAX_KEY_EVENTS]platform.Key_Event
 	key_count := 0
+	if events.overflow {
+		primary_release = r.pad_primary
+		release_all_held(r, &out, &keys, &key_count)
+	}
+
 	pointer_ui := pointer_is_ui(out.owner)
 
 	for index in 0 ..< events.raw_count {

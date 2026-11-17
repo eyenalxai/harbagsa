@@ -28,8 +28,7 @@ Gamepad_Button :: enum(u8) {
 Gamepad_Buttons :: bit_set[Gamepad_Button]
 
 // Gamepad_State is one frame of the first gamepad: the button edges from the
-// event queue and the two sticks. The edges are event-driven, so a tap between
-// polls is not lost.
+// event queue and the two sticks.
 Gamepad_State :: struct {
 	connected: bool,
 	pressed:   Gamepad_Buttons,
@@ -83,6 +82,7 @@ gamepad_read :: proc(device: ^Gamepad_Device, state: ^Gamepad_State) {
 		return
 	}
 	state.connected = true
+	device.connected = true
 	state.left = {
 		stick_axis(sdl3.GetGamepadAxis(device.handle, .LEFTX)),
 		stick_axis(sdl3.GetGamepadAxis(device.handle, .LEFTY)),

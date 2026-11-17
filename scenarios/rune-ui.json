@@ -7,7 +7,7 @@
     {"cmd": "debug_mode", "active": true},
     {"cmd": "editor", "inspector": true, "expect_state": {"ui.surface": "inspector", "ui.inspector.open": true, "ui.pointer_free": true}},
     {"cmd": "settle", "frames": 30},
-    {"cmd": "ui_tree", "expect_state": {"ui.surface": "inspector", "ui.inspector.open": true}},
+    {"cmd": "ui_tree"},
     {"cmd": "capture", "name": "ui", "format": "png"}
   ]
 }

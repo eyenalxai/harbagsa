@@ -70,11 +70,7 @@ route_gamepad_buttons :: proc(
 			}
 		}
 		if button in pad.released {
-			held := r.buttons[button]
-			if held.key != .None && held.sink != .None && release_key(r, held.sink, held.key) {
-				route_event(out, held.sink, .Key_Up, held.key, {}, keys, key_count)
-			}
-			r.buttons[button] = {}
+			release_held(r, out, &r.buttons[button], keys, key_count)
 		}
 	}
 }
@@ -205,12 +201,7 @@ route_stick_axis :: proc(
 	if held.key == key && held.sink == sink {
 		return
 	}
-	if held.key != .None && held.sink != .None {
-		if release_key(r, held.sink, held.key) {
-			route_event(out, held.sink, .Key_Up, held.key, {}, keys, key_count)
-		}
-		held^ = {}
-	}
+	release_held(r, out, held, keys, key_count)
 	if key != .None && sink != .None {
 		held^ = {key = key, sink = sink}
 		if press_key(r, sink, key) {
@@ -234,6 +225,46 @@ stick_direction :: proc(value: f32, previous: i8) -> i8 {
 }
 
 @(private)
+release_all_held :: proc(
+	r: ^Resolver,
+	out: ^Routed_Frame,
+	keys: ^[platform.MAX_KEY_EVENTS]platform.Key_Event,
+	key_count: ^int,
+) {
+	for key in platform.Key {
+		sink := r.keyboard[int(key)]
+		if sink == .None {
+			continue
+		}
+		if release_key(r, sink, key) {
+			route_event(out, sink, .Key_Up, key, {}, keys, key_count)
+		}
+		r.keyboard[int(key)] = .None
+	}
+	for button in platform.Gamepad_Button {
+		release_held(r, out, &r.buttons[button], keys, key_count)
+	}
+	release_held(r, out, &r.stick_x, keys, key_count)
+	release_held(r, out, &r.stick_y, keys, key_count)
+
+	// A source table can be inconsistent after a dropped event. Release any
+	// edge still counted so Rune cannot keep a key pressed.
+	for sink in Sink {
+		if sink == .None {
+			continue
+		}
+		for key in platform.Key {
+			if r.counts[int(sink)][int(key)] == 0 {
+				continue
+			}
+			route_event(out, sink, .Key_Up, key, {}, keys, key_count)
+			r.counts[int(sink)][int(key)] = 0
+		}
+	}
+	clear_held(r)
+}
+
+@(private)
 release_gamepad :: proc(
 	r: ^Resolver,
 	out: ^Routed_Frame,
@@ -241,20 +272,16 @@ release_gamepad :: proc(
 	key_count: ^int,
 ) {
 	for button in platform.Gamepad_Button {
-		held := r.buttons[button]
-		if held.key != .None && held.sink != .None && release_key(r, held.sink, held.key) {
-			route_event(out, held.sink, .Key_Up, held.key, {}, keys, key_count)
-		}
-		r.buttons[button] = {}
+		release_held(r, out, &r.buttons[button], keys, key_count)
 	}
-	release_stick(r, out, &r.stick_x, keys, key_count)
-	release_stick(r, out, &r.stick_y, keys, key_count)
+	release_held(r, out, &r.stick_x, keys, key_count)
+	release_held(r, out, &r.stick_y, keys, key_count)
 	r.stick_x_dir = 0
 	r.stick_y_dir = 0
 }
 
 @(private)
-release_stick :: proc(
+release_held :: proc(
 	r: ^Resolver,
 	out: ^Routed_Frame,
 	held: ^Held_Key,

@@ -55,9 +55,10 @@ presses it (`focus.rs:498-510`). The palette has two navigators
   Rune; the inspector reserves `Escape` and `I` (`resolve.odin:88-98`). Drop
   palette card focus so `Palette_Step` is the only navigator.
 - Gamepad: one intent table. UI open → one of eight UI keys
-  (`src/renderer/ui_frame.odin:53-61`): d-pad/stick = arrows, A = Enter, B =
-  Escape, shoulders = Tab. World → stick move/look, A jump, B cancel, Start
-  menu. No gamepad type crosses the ABI.
+  (`src/renderer/ui_frame.odin:53-61`): d-pad/left stick = arrows, A = Enter,
+  B = Escape, shoulders = Tab. World → left stick move, right stick look, A
+  jump, Start menu. Debug and placement → A primary, B cancel, shoulders Tab.
+  No gamepad type crosses the ABI.
 
 Stays in Rune: focus and tab order, modal trap and Escape, slider steps, group
 arrows, Space/Return, text/IME, hover, drag, scroll. Moves: routing, surface
