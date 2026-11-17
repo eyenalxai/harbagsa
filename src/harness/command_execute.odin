@@ -10,7 +10,10 @@ import "src:game"
 
 @(private)
 execute_reset :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
-	return session_reset(session)
+	if reset_error := session_reset(session); reset_error != "" {
+		return reset_error
+	}
+	return check_state_expects(session, command.reset.expect_state)
 }
 
 @(private)

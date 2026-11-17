@@ -67,12 +67,12 @@ EVENT_SCHEMA_FIELDS := []Schema_Field {
 	{"gamepad", "object", ""},
 	{"expect", "object", ""},
 	{"expect_no_action", "boolean", ""},
-	{"expect_state", "array", ""},
+	{"expect_state", "object", ""},
 }
 
 RESIZE_SCHEMA_FIELDS := []Schema_Field {
 	{"size", "string", ""},
-	{"expect_state", "array", ""},
+	{"expect_state", "object", ""},
 }
 
 SCHEMA_FIELD_OVERRIDES := [?]struct {
@@ -112,7 +112,9 @@ schema_backend_name :: proc(backend: Command_Backend) -> string {
 schema_command_fields :: proc(row: ^Command_Row, allocator: runtime.Allocator) -> []Schema_Field {
 	for override in SCHEMA_FIELD_OVERRIDES {
 		if override.kind == row.kind {
-			return schema_fields_clone(override.fields, allocator)
+			fields := schema_fields_clone(override.fields, allocator)
+			schema_fix_field_types(fields, allocator)
+			return fields
 		}
 	}
 	fields := make([dynamic]Schema_Field, 0, 8, allocator)
@@ -129,6 +131,7 @@ schema_command_fields :: proc(row: ^Command_Row, allocator: runtime.Allocator) -
 		return fields[:]
 	}
 	schema_append_fields(row.value_type, nil, &fields, allocator)
+	schema_fix_field_types(fields[:], allocator)
 	// `variants` is an object keyed by variant name, but the field's Odin type
 	// is a slice, so the reflected type would say array. `prime` is a number or
 	// the string "once", which has no single reflected type either.
@@ -145,6 +148,18 @@ schema_command_fields :: proc(row: ^Command_Row, allocator: runtime.Allocator) -
 		}
 	}
 	return fields[:]
+}
+
+// `expect_state` is a slice in the struct but an object keyed by state path in
+// the parser.
+@(private)
+schema_fix_field_types :: proc(fields: []Schema_Field, allocator: runtime.Allocator) {
+	for &field in fields {
+		if field.name == "expect_state" {
+			delete(field.type, allocator)
+			field.type = strings.clone("object", allocator)
+		}
+	}
 }
 
 @(private)

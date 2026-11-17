@@ -1,0 +1,17 @@
+{
+  "note": "A menu Tab frame leaves one UI event in the last batch. reset replaces the world, so state.ui.events and the routed input are empty and the menu is closed.",
+  "size": "1280x720",
+  "view": {"hud": true, "debug": false, "hint": false},
+  "commands": [
+    {"cmd": "menu", "open": true},
+    {"cmd": "settle", "frames": 10},
+    {"cmd": "event", "key": "Tab", "state": "down", "expect_no_action": true,
+     "expect_state": {"input.owner": "menu", "input.events.0.sink": "ui",
+                      "ui.events.count": 1, "ui.events.0.kind": "key_down",
+                      "ui.events.0.key": "Tab"}},
+    {"cmd": "reset",
+     "expect_state": {"menu.open": false, "input.owner": "world",
+                      "input.events.count": 0, "ui.events.count": 0,
+                      "ui.surface": "hud"}}
+  ]
+}

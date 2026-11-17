@@ -36,6 +36,7 @@ session_frame :: proc(
 	alpha: f32,
 	requests: []Capture_Request,
 	settle_ui := false,
+	skip_draw := false,
 ) -> string {
 	frame_events := events
 	if session.render.present && session.render.backend != nil {
@@ -57,6 +58,7 @@ session_frame :: proc(
 		capture    = capture,
 		perf       = &session.perf.state,
 		settle_ui  = settle_ui,
+		skip_draw  = skip_draw,
 	}
 	result := appframe.run(
 		&session.app,
@@ -71,7 +73,7 @@ session_frame :: proc(
 	case .Fatal:
 		return format_error("%s", "render failed")
 	}
-	if session.app.renderer != nil {
+	if !skip_draw && session.app.renderer != nil {
 		session.drawn_alpha = alpha
 		session.drawn_frame = session.frame
 	}

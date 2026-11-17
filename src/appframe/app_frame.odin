@@ -59,6 +59,9 @@ Options :: struct {
 	// Land running UI tracks on this frame. The harness sets it for the last
 	// frame of a recipe; the live loop never does.
 	settle_ui: bool,
+	// Step the simulation without composing or drawing. The harness draws a
+	// due capture as its own group instead.
+	skip_draw: bool,
 }
 
 // pace adds one frame's delta and resolves the fixed steps that are due. A menu
@@ -122,7 +125,7 @@ run :: proc(app: ^State, frame_input: Input, options: Options, hooks: Hooks) -> 
 
 	app.last_alpha = options.alpha
 	app.action_count = 0
-	if app.renderer == nil {
+	if options.skip_draw || app.renderer == nil {
 		return {status = .Ok, slot = -1}
 	}
 

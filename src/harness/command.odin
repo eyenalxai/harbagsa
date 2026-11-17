@@ -7,6 +7,10 @@ import "src:renderer"
 
 No_Fields_Command :: struct {}
 
+Reset_Command :: struct {
+	expect_state: []State_Expect,
+}
+
 Command_Kind :: enum {
 	Reset,
 	Look,
@@ -167,6 +171,7 @@ Renderer_Debug_Command :: struct {
 
 Command :: struct {
 	kind:           Command_Kind,
+	reset:          Reset_Command,
 	look:           Look_Command,
 	face:           Face_Command,
 	input:          Input_Command,

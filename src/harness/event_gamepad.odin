@@ -39,6 +39,10 @@ parse_event_gamepad :: proc(object: json.Object) -> (Gamepad_Command, string) {
 	); field_error != "" {
 		return {}, field_error
 	}
+	state_name, has_state, state_error := event_string(fields, "state")
+	if state_error != "" {
+		return {}, state_error
+	}
 	button_name, has_button, button_error := event_string(fields, "button")
 	if button_error != "" {
 		return {}, button_error
@@ -50,13 +54,8 @@ parse_event_gamepad :: proc(object: json.Object) -> (Gamepad_Command, string) {
 		}
 		pad.button = button
 		pad.has_button = true
-		state_name, has_state, state_error := event_string(fields, "state")
-		if state_error != "" {
-			return {}, state_error
-		}
-		if !has_state {
-			pad.down = true
-		} else {
+		pad.down = true
+		if has_state {
 			switch state_name {
 			case "down":
 				pad.down = true

@@ -68,12 +68,12 @@ parse_captures :: proc(object: json.Object, allocator: mem.Allocator) -> (Comman
 	ok := false
 	defer if !ok {
 		for &output in outputs {
-			if output.name != "" {
-				delete(output.name, allocator)
+			delete(output.name, allocator)
+			delete(output.note, allocator)
+			if output.views != nil {
+				delete(output.views, allocator)
 			}
-			if output.note != "" {
-				delete(output.note, allocator)
-			}
+			state_expects_destroy(output.expect_state, allocator)
 		}
 		delete(outputs, allocator)
 	}

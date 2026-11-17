@@ -152,7 +152,10 @@ session_reset :: proc(session: ^Session) -> string {
 	session.app.resolver = {}
 	session.app.accumulator = 0
 	session.app.last_alpha = 1.0
+	session.app.routed = {}
 	session.app.has_routed = false
+	session.app.ui_events.count = 0
+	session.app.action_count = 0
 	session.camera_override = {}
 	session.has_camera_override = false
 	session.drawn_alpha = 1.0
@@ -230,8 +233,6 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 	}
 	due := make([dynamic]int, 0, 4, context.temp_allocator)
 	defer delete(due)
-	requests := make([dynamic]Capture_Request, 0, 4, context.temp_allocator)
-	defer delete(requests)
 	for _ in 0 ..< frames {
 		if timeout := session_check_timeout(session); timeout != "" {
 			return timeout
@@ -239,20 +240,44 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 		events := session_frame_events(session)
 		session.frame += 1
 		clear(&due)
-		clear(&requests)
-		session_due_captures(session, &due, &requests)
-		if render_error := session_frame(
-			session,
-			events,
-			1,
-			session.default_alpha,
-			requests[:],
-		); render_error != "" {
-			return render_error
-		}
-		if expect_error := session_check_due_expects(session, due[:]); expect_error != "" {
-			session_release_captures(session, due[:])
-			return expect_error
+		session_due_captures(session, &due)
+		if len(due) == 0 {
+			if render_error := session_frame(
+				session,
+				events,
+				1,
+				session.default_alpha,
+				nil,
+			); render_error != "" {
+				return render_error
+			}
+		} else {
+			// A due capture draws as its own group at its own alpha, so the
+			// step itself does not draw.
+			if render_error := session_frame(
+				session,
+				events,
+				1,
+				session.default_alpha,
+				nil,
+				skip_draw = true,
+			); render_error != "" {
+				return render_error
+			}
+			for index in due {
+				pending := session.capture.pending[index]
+				if draw_error := session_draw_group(session, pending.requests); draw_error != "" {
+					session_release_captures(session, due[:])
+					return draw_error
+				}
+				if expect_error := check_state_expects(
+					session,
+					pending.expect_state,
+				); expect_error != "" {
+					session_release_captures(session, due[:])
+					return expect_error
+				}
+			}
 		}
 		session_release_captures(session, due[:])
 		if session.quit {
@@ -262,34 +287,15 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 	return ""
 }
 
-// session_due_captures collects the captures whose frame has arrived. The
-// pending entries stay until the frame that draws them succeeds.
+// session_due_captures collects the groups whose frame has arrived. The pending
+// entries stay until the frame that draws them succeeds.
 @(private)
-session_due_captures :: proc(
-	session: ^Session,
-	due: ^[dynamic]int,
-	requests: ^[dynamic]Capture_Request,
-) {
+session_due_captures :: proc(session: ^Session, due: ^[dynamic]int) {
 	for pending, index in session.capture.pending {
-		if pending.frame > session.frame {
-			continue
-		}
-		append(due, index)
-		append(requests, ..pending.requests)
-	}
-}
-
-@(private)
-session_check_due_expects :: proc(session: ^Session, due: []int) -> string {
-	for index in due {
-		if expect_error := check_state_expects(
-			session,
-			session.capture.pending[index].expect_state,
-		); expect_error != "" {
-			return expect_error
+		if pending.frame <= session.frame {
+			append(due, index)
 		}
 	}
-	return ""
 }
 
 @(private)

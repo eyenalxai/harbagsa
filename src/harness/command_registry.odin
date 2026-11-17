@@ -35,7 +35,7 @@ Command_Row :: struct {
 }
 
 COMMANDS := [?]Command_Row {
-	{.Reset, "reset", "Return the simulation, settings, menu, and editor state to their defaults.", parse_no_fields, execute_reset, .Raw, nil, .None, No_Fields_Command},
+	{.Reset, "reset", "Return the simulation, settings, menu, and editor state to their defaults.", parse_reset, execute_reset, .Raw, destroy_reset, .None, Reset_Command},
 	{.Look, "look", "Apply one pixel look delta through the game sensitivity.", parse_look, execute_look, .Raw, nil, .None, Look_Command},
 	{.Face, "face", "Set the player view directly. Angles are degrees.", parse_face, execute_face, .Raw, nil, .None, Face_Command},
 	{.Input, "input", "Set persistent movement input until the next input command.", parse_input, execute_input, .Raw, nil, .None, Input_Command},
@@ -123,6 +123,29 @@ destroy_captures :: proc(command: ^Command, allocator: mem.Allocator) {
 		output.expect_state = nil
 	}
 	delete(command.captures.outputs, allocator)
+	command^ = {}
+}
+
+@(private)
+parse_reset :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
+	if key, unknown := json_unknown_key(object, {"cmd", "expect_state"}); unknown {
+		return {}, format_error("unknown key %q", key)
+	}
+	command := Command{kind = .Reset}
+	if expect_value, has_expect := json_get(object, "expect_state"); has_expect {
+		expects, expect_error := parse_state_expects(expect_value, allocator)
+		if expect_error != "" {
+			return {}, expect_error
+		}
+		command.reset.expect_state = expects
+	}
+	return command, ""
+}
+
+@(private)
+destroy_reset :: proc(command: ^Command, allocator: mem.Allocator) {
+	state_expects_destroy(command.reset.expect_state, allocator)
+	command.reset.expect_state = nil
 	command^ = {}
 }
 

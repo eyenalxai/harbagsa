@@ -127,7 +127,9 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 
 ## Commands
 
-- `reset`: fresh simulation, settings, menu, and editor state.
+- `reset`: fresh simulation, settings, menu, and editor state; optional
+  `expect_state`. It clears the last route and UI batch with the world it
+  replaces.
 - `look`: `dx`, `dy` through game sensitivity.
 - `face`: direct camera `yaw_deg` and `pitch_deg`. The body keeps its heading.
 - `input`: sets the held `forward`, `right`, and `sprint` axes and queues one
@@ -140,7 +142,8 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `capture`: one output with `name`, optional `frame`, `alpha`, `note`, target,
   format, capture options, and an optional `views` list. `expect_state` checks
   state after the capture; `state.camera` resolves at the alpha the capture
-  drew. A capture queued for a future frame asserts when that frame draws.
+  drew. A capture queued for a future frame draws as its own group at the
+  command's alpha and asserts after that draw.
 - `captures`: up to eight outputs from one frame. Each output accepts the same
   options as `capture` except `expect_state`, which belongs to a single
   capture.
@@ -407,6 +410,12 @@ delta at zero fixed steps and asserts the yaw survived the next step;
 `scenarios/harness-input-jump.json` jumps with the `input` command, lands, and
 jumps again, so the queued Space press is released after each jump;
 `scenarios/harness-input-jump-800.json` repeats it at 800x600.
+`scenarios/harness-reset.json` leaves a menu Tab in the last UI batch, resets,
+and asserts the batch and route are empty; `scenarios/harness-reset-800.json`
+repeats it at 800x600.
+`scenarios/harness-capture-alpha.json` queues two captures for frame 12 at
+alpha 0.25 and 1.0 and asserts each group's camera at the alpha it drew;
+`scenarios/harness-capture-alpha-800.json` repeats it at 800x600.
 `scenarios/harness-pick-batch.json` runs at 800x400, where the inspector rail
 overflows; it scrolls the rail, runs a pick, and asserts the pick did not
 re-dispatch the wheel.
@@ -905,10 +914,11 @@ The offscreen target submits one frame at a time because it owns one colour
 image and one readback buffer. TAA history affects exact pixels, so before and
 after runs must use the same command sequence and history. Term views do not
 advance or reset that history, so a capture with views and a capture without
-them agree on every later frame. Every harness frame draws: `step` no longer
-skips the draw, and the zero-step frames `event`, `ui`, and `resize` run draw
-too, so a scenario's history depends on its full command sequence, not only its
-steps.
+them agree on every later frame. Every harness frame draws except a step with a
+due capture: that step runs without drawing and each due capture group draws at
+its own alpha, in command order. The zero-step frames `event`, `ui`, and
+`resize` run draw too, so a scenario's history depends on its full command
+sequence, not only its steps.
 
 Run the same scenario for before and after evidence:
 
