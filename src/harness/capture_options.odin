@@ -124,6 +124,42 @@ parse_capture_coverage :: proc(raw: json.Value) -> (Capture_Coverage, string) {
 	return coverage, ""
 }
 
+// A requirement fails the command; a coverage threshold only reports a
+// fraction. The resize proof needs the failure, not another number to read.
+Capture_Require :: struct {
+	lit_fraction_min:  Maybe(f32),
+	zero_fraction_max: Maybe(f32),
+}
+
+parse_capture_require :: proc(value: json.Value) -> (Capture_Require, string) {
+	fields, fields_ok := json_object(value)
+	if !fields_ok {
+		return {}, format_error("%s", "'require' must be an object")
+	}
+	if key, unknown := json_unknown_key(
+		fields,
+		{"lit_fraction_min", "zero_fraction_max"},
+	); unknown {
+		return {}, format_error("unknown require key %q", key)
+	}
+	require: Capture_Require
+	if raw, has := json_get(fields, "lit_fraction_min"); has {
+		minimum, ok := json_number(raw)
+		if !ok || minimum < 0 || minimum > 1 {
+			return {}, format_error("%s", "'require.lit_fraction_min' must be a fraction in [0, 1]")
+		}
+		require.lit_fraction_min = f32(minimum)
+	}
+	if raw, has := json_get(fields, "zero_fraction_max"); has {
+		maximum, ok := json_number(raw)
+		if !ok || maximum < 0 || maximum > 1 {
+			return {}, format_error("%s", "'require.zero_fraction_max' must be a fraction in [0, 1]")
+		}
+		require.zero_fraction_max = f32(maximum)
+	}
+	return require, ""
+}
+
 @(private)
 parse_capture_color_key :: proc(value: json.Value) -> (Capture_Color_Key, string) {
 	fields, fields_ok := json_object(value)

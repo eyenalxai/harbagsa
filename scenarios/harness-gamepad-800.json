@@ -1,0 +1,152 @@
+{
+  "note": "Gamepad buttons and sticks map through the engine: Start opens the menu, East is Rune's Escape and closes it, the left stick becomes forward movement, and South is the world's jump. At 800x600.",
+  "size": "800x600",
+  "view": {
+    "hud": true,
+    "debug": false,
+    "hint": false
+  },
+  "commands": [
+    {
+      "cmd": "settle",
+      "frames": 5
+    },
+    {
+      "cmd": "event",
+      "gamepad": {
+        "connected": true
+      },
+      "expect_state": {
+        "input.gamepad.connected": true,
+        "input.owner": "world"
+      }
+    },
+    {
+      "cmd": "event",
+      "gamepad": {
+        "button": "Start",
+        "state": "down"
+      },
+      "expect_no_action": true,
+      "expect_state": {
+        "menu.open": true,
+        "ui.surface": "settings",
+        "input.owner": "world",
+        "input.view.menu_toggle": true,
+        "input.gamepad.pressed.0": "Start"
+      }
+    },
+    {
+      "cmd": "event",
+      "gamepad": {
+        "button": "Start",
+        "state": "up"
+      },
+      "expect_no_action": true,
+      "expect_state": {
+        "menu.open": true,
+        "input.gamepad.released.0": "Start"
+      }
+    },
+    {
+      "cmd": "settle",
+      "frames": 2
+    },
+    {
+      "cmd": "event",
+      "gamepad": {
+        "button": "East",
+        "state": "down"
+      },
+      "expect": {
+        "kind": "Close_Menu"
+      },
+      "expect_state": {
+        "menu.open": false,
+        "ui.surface": "hud",
+        "input.owner": "menu",
+        "input.gamepad.pressed.0": "East",
+        "ui.actions.0.kind": "Close_Menu"
+      }
+    },
+    {
+      "cmd": "event",
+      "gamepad": {
+        "button": "East",
+        "state": "up"
+      },
+      "expect_no_action": true
+    },
+    {
+      "cmd": "event",
+      "gamepad": {
+        "left": [
+          0,
+          -1
+        ]
+      },
+      "expect_state": {
+        "input.motion.move_forward": 1,
+        "input.snapshot.move_forward": 1,
+        "input.gamepad.left.y": -1
+      }
+    },
+    {
+      "cmd": "step",
+      "frames": 6
+    },
+    {
+      "cmd": "event",
+      "gamepad": {
+        "left": [
+          0,
+          0
+        ]
+      },
+      "expect_state": {
+        "input.motion.move_forward": 0,
+        "player.position.z": 13.666667
+      }
+    },
+    {
+      "cmd": "step",
+      "frames": 1
+    },
+    {
+      "cmd": "event",
+      "gamepad": {
+        "button": "South",
+        "state": "down"
+      },
+      "expect_no_action": true,
+      "expect_state": {
+        "input.snapshot.jump_pressed": true,
+        "input.owner": "world"
+      }
+    },
+    {
+      "cmd": "step",
+      "frames": 1
+    },
+    {
+      "cmd": "event",
+      "gamepad": {
+        "button": "South",
+        "state": "up"
+      },
+      "expect_no_action": true,
+      "expect_state": {
+        "player.grounded": false
+      }
+    },
+    {
+      "cmd": "settle",
+      "frames": 2
+    },
+    {
+      "cmd": "capture",
+      "name": "gamepad-jump",
+      "format": "png"
+    }
+  ]
+}

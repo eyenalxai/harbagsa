@@ -36,8 +36,8 @@ session_record_start :: proc(session: ^Session, path: string, include_scene := t
 			debug = &session.render.debug
 		}
 		scene := frame.scene_capture(
-			&session.runtime.sim,
-			&session.runtime.debug,
+			&session.app.runtime.sim,
+			&session.app.runtime.debug,
 			options,
 			session_override_camera(session),
 			debug,

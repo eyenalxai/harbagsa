@@ -46,9 +46,16 @@ Debug_Lines_Report :: struct {
 	placement: int `json:"placement"`,
 }
 
+Extent_Report :: struct {
+	width:  u32 `json:"width"`,
+	height: u32 `json:"height"`,
+}
+
 Renderer_Report :: struct {
 	active:              bool   `json:"active"`,
 	frame_count:         u32    `json:"frame_count"`,
+	extent:              Extent_Report `json:"extent"`,
+	ui_scale:            f32    `json:"ui_scale"`,
 	taa_enabled:         bool   `json:"taa_enabled"`,
 	jitter_index:        int    `json:"jitter_index"`,
 	history_valid:       bool   `json:"history_valid"`,
@@ -98,6 +105,8 @@ renderer_report :: proc(r: ^Renderer) -> Renderer_Report {
 	report := Renderer_Report {
 		active = r.device != nil,
 		frame_count = r.frame_count,
+		extent = {width = r.target.config.width, height = r.target.config.height},
+		ui_scale = ui_scale(r),
 		taa_enabled = r.taa.enabled,
 		jitter_index = r.taa.applied_jitter_index,
 		history_valid = r.taa.history_valid,

@@ -15,13 +15,13 @@ execute_reset :: proc(session: ^Session, command: Command, reply: ^Reply) -> str
 
 @(private)
 execute_look :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
-	game.simulation_look(&session.runtime.sim, b3.Vec2{command.look.dx, command.look.dy})
+	game.simulation_look(&session.app.runtime.sim, b3.Vec2{command.look.dx, command.look.dy})
 	return ""
 }
 
 @(private)
 execute_face :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
-	game.simulation_face(&session.runtime.sim, command.face.yaw_rad, command.face.pitch_rad)
+	game.simulation_face(&session.app.runtime.sim, command.face.yaw_rad, command.face.pitch_rad)
 	return ""
 }
 
@@ -101,6 +101,7 @@ execute_view :: proc(session: ^Session, command: Command, reply: ^Reply) -> stri
 	}
 	if command.view.has_hint {
 		session.view.hint = command.view.hint
+		session.captured = !command.view.hint
 	}
 	if command.view.has_fx {
 		session.view.fx = command.view.fx
@@ -144,8 +145,8 @@ execute_get :: proc(session: ^Session, command: Command, reply: ^Reply) -> strin
 
 @(private)
 execute_debug_mode :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
-	if session.runtime.debug.active != command.debug_mode.active {
-		game.debug_mode_toggle(&session.runtime.debug, &session.runtime.sim)
+	if session.app.runtime.debug.active != command.debug_mode.active {
+		game.debug_mode_toggle(&session.app.runtime.debug, &session.app.runtime.sim)
 	}
 	return ""
 }
@@ -213,7 +214,7 @@ execute_renderer_debug :: proc(session: ^Session, command: Command, reply: ^Repl
 execute_displays :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	session_displays(session, command.displays)
 	reply.displays = new(Displays_State, session.allocator)
-	reply.displays^ = displays_state_build(&session.runtime.sim.settings.display, session.allocator)
+	reply.displays^ = displays_state_build(&session.app.runtime.sim.settings.display, session.allocator)
 	return ""
 }
 

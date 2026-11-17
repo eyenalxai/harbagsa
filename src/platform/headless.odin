@@ -36,6 +36,13 @@ headless_deinit :: proc(headless: ^Headless) {
 	}
 }
 
+// The offscreen target has no window to ask for its size, so the harness sets
+// it before it marks the frame resized.
+headless_resize :: proc(headless: ^Headless, width, height: u32) {
+	headless.width = width
+	headless.height = height
+}
+
 headless_platform :: proc(headless: ^Headless) -> renderer.Platform {
 	return {
 		user            = headless,

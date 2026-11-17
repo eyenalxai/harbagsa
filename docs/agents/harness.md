@@ -43,6 +43,7 @@ run path. `--out DIR` chooses the whole run directory.
 | place or remove an object | **Place and remove** |
 | drive the editor | **Editor** |
 | drive the Rune UI | **UI** |
+| inject raw input or resize | **Raw input** |
 | build and publish a bake | **Bake lifecycle** |
 | capture the final image | **Capture targets** |
 | capture one lighting term | **Capture targets** and **Diagnostic views** |
@@ -149,10 +150,16 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
   that does not change the value fails the command; `allow_blocked` accepts an
   expected blocked result. `expect_state` checks state paths after the change.
 - `ui`: click an element key or an `[x, y]` point, or use `drag`, `wheel`, and
-  `focus`. The run fails when a click produces no action; the action is applied
-  before the command returns.
+  `focus`. Each form is a recipe over the raw `event` frames below; the run
+  fails when a click or a released drag produces no action. See **Raw input**.
 - `ui_tree`: write the Rune element tree to `report.ui_tree`; optional
   `expect_state` checks state after the dump.
+- `event`: inject one raw keyboard, pointer, wheel, focus, or gamepad frame.
+  `expect`, `expect_no_action`, and `expect_state` assert the frame's result.
+  See **Raw input**.
+- `resize`: recreate the offscreen target at `size: "WIDTHxHEIGHT"` and run the
+  resize frame. Optional `expect_state`; `renderer.extent` and `ui.viewport`
+  report the new size.
 - `record`: start with `path` and optional `actions`; stop with no path.
 - `replay`: `path` to a recorded scenario.
 - `repro`: `path` for a live scene snapshot.
@@ -189,6 +196,14 @@ so a capture includes it; there is no separate UI target. A frame with
 `hud: false` has `HUD_Frame.enabled` false: `ui_step` does not rebuild the view
 and `ui_draw` is not called, so the capture has no overlay.
 
+The live app and the harness run one frame path, `src/appframe/app_frame.odin`:
+drain the raw events, `input.route` to exactly one sink per event, apply the
+game intent, step, compose with the routed UI batch, draw, then apply the
+action queue. The harness supplies `platform.Events` from its commands and the
+live loop supplies them from SDL; neither calls Rune or the menu directly.
+`src/input/route.odin` records one sink per raw event, and `state.input.events`
+reports it.
+
 - `menu` opens the settings dialog and changes a value. The dialog itself owns
   its keyboard path; the command is the harness's direct settings path.
 - `editor` with `open: true` opens the object palette.
@@ -222,11 +237,12 @@ and `ui_draw` is not called, so the capture has no overlay.
   stops after the last move, leaving the press held. A held drag reports the
   pressed and hovered control in `state.ui`; focus loss cancels it, and an
   OnRelease slider restores its pre-drag value.
-- `wheel`: `at` is a key or point, and `dx`/`dy` are Rune scroll points
-  (positive `dy` moves content down). The live platform path converts one SDL
-  wheel notch to 40 points and negates its vertical sign before dispatch; the
-  harness value already is the Rune delta.
-- `focus`: `true` or `false` sends the window focus event.
+- `wheel`: `at` is a key or point, and `dy` is in Rune scroll points (positive
+  `dy` moves content down). The recipe converts the points to SDL notches
+  because the live platform path negates a notch and scales it by 40. A
+  horizontal `dx` is an error: the live wheel carries a vertical notch only.
+- `focus`: `true` or `false` sends the window focus event and sets the frame's
+  capture fact.
 - `expect` checks one emitted `{kind, id, value, scalar}` action. `id`,
   `value`, and `scalar` are optional. The command fails when no emitted action
   matches.
@@ -234,11 +250,14 @@ and `ui_draw` is not called, so the capture has no overlay.
   are numbers, booleans, or strings; numbers compare within 0.05. A missing
   path or a different value fails the run.
 
-`state.ui` reports the current surface and the interaction state:
+`state.ui` reports the current surface, the last frame's viewport and event
+batch, and the interaction state:
 
 ```json
 {"surface": "inspector", "focus": "inspector.yaw", "hover": "inspector.yaw",
  "pressed": "inspector.yaw", "pointer_free": true,
+ "scale": 1, "viewport": {"width": 1280, "height": 720},
+ "events": [{"kind": "pointer_down", "x": 640, "y": 360}],
  "actions": [{"kind": "Object_Set", "id": 7, "value": 1, "scalar": 180}],
  "menu": {"open": false, "item": "Window mode"},
  "palette": {"open": false, "selected": 0},
@@ -249,21 +268,24 @@ and `ui_draw` is not called, so the capture has no overlay.
 `surface` is `settings`, `inspector`, `palette`, or `hud`; the first open
 surface in that order wins. `focus`, `hover`, and `pressed` are element keys and
 are empty when nothing holds that state. `pointer_free` is the game focus rule.
-`actions` is the action list from the most recent `ui` command. Read-only
-commands such as `ui_tree`, `state`, and `get` keep it; `reset` clears it.
+`actions` is the action list from the most recent `ui` or `event` command.
+Read-only commands such as `ui_tree`, `state`, and `get` keep it; `reset` clears
+it. `scale` is the Rune scale and `viewport` is the target extent in points.
+`events` is the UI batch the frame sent to Rune.
 `section` is `object` or `lamp` for a selection, otherwise `placement`.
 `scroll_offset` and `scroll_max` are the inspector rail's scroll position and
 limit in points.
-The semantic fields exist without a renderer; the interaction keys and scroll
-position need one.
+The semantic fields exist without a renderer; the interaction keys, viewport,
+and scroll position need one.
 
-Live, `src/input` routes each raw platform event to one owner and one sink, and
-only the UI-owned batch reaches Rune. The harness `ui` command still drives the
-Rune hit path directly; it does not exercise the live route. The shared
-raw-event harness frame and its proof are pending in HARB-375; the existing
-Rune scenarios do not prove the route.
+The `ui` command sends `event` frames: a click is one frame with the pointer
+move and the press, one with the move and the release, and one settle frame; a
+drag is a press frame, one move frame per step, an optional release frame, and a
+settle frame; a wheel or a focus change is one frame and a settle frame. Every
+one of those frames runs the live route, so a scenario asserts the same path the
+window runs.
 The element tree and interaction fields still describe the Rune state the
-commands produced.
+frames produced.
 `scenarios/rune-palette.json` opens the palette, selects a card by key, captures
 the preview, arms it through the Place button, places its prefab, and asserts
 the new object. `scenarios/rune-palette-800.json` repeats it at 800x600.
@@ -295,6 +317,67 @@ rune-fx glow.
 `ui` needs the renderer, so it is an error with `--no-render`. The menu and
 palette state still open without a renderer, but there is no frame to click.
 
+## Raw input
+
+`event` injects one raw frame and runs the live route. It takes exactly one of
+`key`, `pointer`, `wheel`, `focus`, or `gamepad`.
+
+```json
+{"cmd":"event","key":"Escape","state":"down"}
+{"cmd":"event","key":"Tab","state":"down","mods":["Shift"]}
+{"cmd":"event","pointer":[640,360],"state":"down"}
+{"cmd":"event","wheel":-0.025,"pointer":[640,360]}
+{"cmd":"event","focus":false}
+{"cmd":"event","gamepad":{"connected":true}}
+{"cmd":"event","gamepad":{"button":"South","state":"down"}}
+{"cmd":"event","gamepad":{"left":[0,-1]}}
+```
+
+- `key`: a `platform.Key` name. `state` is `down` (default), `up`, or `repeat`.
+  `mods` holds `Shift` and `Ctrl` names.
+- `pointer`: `[x, y]` in view points. `state` is `move` (default), `down`, or
+  `up`; `button` is `left` (default) or `right`.
+- `wheel`: vertical SDL notches (positive is up). Optional `pointer` moves the
+  cursor first.
+- `focus`: `true` or `false`; optional `captured` overrides the frame's capture
+  fact.
+- `gamepad`: `connected`, a `button` with `state`, and the `left` and `right`
+  sticks. A pad must be connected before its buttons and sticks route.
+- `expect`, `expect_no_action`, and `expect_state` assert the frame's UI actions,
+  its absence of actions, and the state after the frame. See **Driving the
+  view**.
+
+The frame runs at zero fixed steps, so it draws and routes without advancing
+the simulation. The next `step` applies any latch the frame set, which is how
+the Space and gamepad jump scenarios prove the intent.
+
+`resize` recreates the offscreen target:
+
+```json
+{"cmd":"resize","size":"1200x700",
+ "expect_state":{"renderer.extent.width":1200,"ui.scale":1}}
+```
+
+A target recreation keeps the same UI scale while the height stays in one
+`clamp(height / 720, 1, 2)` band, and changes it when the height crosses a band
+edge. The frame runs at zero fixed steps and keeps the live order: `ui_step`
+uses the old extent for that frame, then the target, its attachments, and the
+UI shim are recreated. `resize` needs the offscreen backend.
+
+`scenarios/harness-escape.json` proves one owner for Escape: the first press
+opens the menu and emits no action, the release follows the press to the game,
+the next press reaches Rune and closes the dialog once, and Escape in the
+editor palette cancels the palette as a game action. `scenarios/harness-escape-800.json`
+repeats it at 800x600. `scenarios/harness-tab-space.json` proves Tab and Space
+stay with the world and that Space jumps on the next step;
+`scenarios/harness-tab-space-800.json` repeats it at 800x600.
+`scenarios/harness-gamepad.json` proves Start opens the menu, East closes it
+through Rune, the left stick becomes forward movement, and South jumps;
+`scenarios/harness-gamepad-800.json` repeats it at 800x600.
+`scenarios/harness-resize.json` captures a HUD text region at 1280x720,
+resizes to 1200x700 and 800x600 and back, and fails when the region's
+`lit_fraction` falls below the requirement.
+
 ## Compare panel text
 
 The harness comparison page uses a private 5x7 block font in
@@ -310,6 +393,42 @@ text stack.
 list length. Every non-empty name that `place` accepts works in the name form,
 including `12` and `count`. Every other path segment is a JSON name and every
 other slice segment is an index.
+
+`state.input` reports the last frame's route and resolved intent:
+
+```json
+{"owner": "world", "captured": true, "overflow": false,
+ "snapshot": {"move_forward": 1, "move_right": 0, "sprint_held": false,
+              "sprint_pressed": false, "jump_pressed": false},
+ "look": {"x": 0, "y": 0},
+ "motion": {"move_forward": 1, "move_right": 0, "move_up": 0,
+            "look": {"x": 0, "y": 0}, "captured": true},
+ "view": {"debug_view": false, "debug_mode": false, "taa": false,
+          "repro": false, "reset_player": false, "reset_scene": false,
+          "menu_toggle": false},
+ "actions": ["palette_open"],
+ "events": [{"kind": "key_down", "sink": "game", "key": "Tab"}],
+ "gamepad": {"connected": true, "pressed": ["South"], "released": [],
+             "left": {"x": 0, "y": -1}, "right": {"x": 0, "y": 0}}}
+```
+
+`owner` is `world`, `menu`, `inspector`, `palette`, or `placement`. `events`
+holds one entry per raw event with the sink the route chose (`game`, `ui`, or
+`none`). `actions` names the game actions the resolver produced.
+
+`state.renderer.extent` is the target's pixel size and `state.renderer.ui_scale`
+the Rune scale. `state.ui.viewport` is the same extent in points, and
+`state.ui.events` is the UI batch the frame sent to Rune:
+
+```json
+{"scale": 1, "viewport": {"width": 1280, "height": 720},
+ "events": [{"kind": "key_down", "key": "Escape", "x": 0, "y": 0}]}
+```
+
+`state.ui.actions` reports the actions the most recent `ui` or `event` command
+applied. A `capture` with `format: "stats"` may carry
+`require: {"lit_fraction_min": 0.02, "zero_fraction_max": 0.5}`; a violation
+fails the command, where a `coverage` threshold only reports the fraction.
 
 ## Player state
 
@@ -747,7 +866,9 @@ The offscreen target submits one frame at a time because it owns one colour
 image and one readback buffer. TAA history affects exact pixels, so before and
 after runs must use the same command sequence and history. Term views do not
 advance or reset that history, so a capture with views and a capture without
-them agree on every later frame.
+them agree on every later frame. Every harness frame draws, including the
+zero-step frames `event`, `ui`, and `resize` run, so a scenario's history
+depends on its full command sequence, not only its steps.
 
 Run the same scenario for before and after evidence:
 

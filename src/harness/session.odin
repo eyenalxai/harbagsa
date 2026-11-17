@@ -6,16 +6,21 @@ import "core:mem"
 import "core:strings"
 import "core:time"
 
+import "src:appframe"
 import "src:display"
 import "src:frame"
 import "src:game"
+import "src:platform"
 import "src:renderer"
 
 Session :: struct {
 	allocator:     mem.Allocator,
-	runtime:       frame.Runtime,
+	app:           appframe.State,
 	input:         game.Input_Snapshot,
 	view:          View,
+	captured:      bool,
+	pointer:       [2]f32,
+	pad:           platform.Gamepad_State,
 	default_alpha: f32,
 	drawn_alpha:   f32,
 	drawn_frame:   int,
@@ -33,9 +38,10 @@ Session :: struct {
 	settle:   Settle,
 	render:   Render_State,
 
-	ui_actions: [dynamic]renderer.Ui_Action,
-	ui_tree:    []Ui_Tree_Node,
-	has_ui_tree: bool,
+	ui_actions:      [dynamic]renderer.Ui_Action,
+	collect_actions: bool,
+	ui_tree:         []Ui_Tree_Node,
+	has_ui_tree:     bool,
 
 	failures: [dynamic]string,
 
@@ -52,16 +58,18 @@ Session :: struct {
 session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 	session := Session {
 		allocator     = allocator,
+		captured      = true,
 		default_alpha = 1.0,
 		drawn_alpha   = 1.0,
 		render        = render_state_create(),
 	}
-	session.runtime = frame.runtime_create(allocator)
-	if !frame.runtime_is_valid(&session.runtime) {
-		frame.runtime_destroy(&session.runtime)
+	session.app.last_alpha = 1.0
+	session.app.runtime = frame.runtime_create(allocator)
+	if !frame.runtime_is_valid(&session.app.runtime) {
+		frame.runtime_destroy(&session.app.runtime)
 		return {}, format_error("%s", "simulation init failed")
 	}
-	session.runtime.sim.settings.display = display.fallback_list()
+	session.app.runtime.sim.settings.display = display.fallback_list()
 	session.capture = capture_run_create(allocator)
 	session.picks = make([dynamic]Pick_Result, 0, 8, allocator)
 	session.recorder = recorder_create(allocator)
@@ -80,7 +88,7 @@ session_results_destroy :: proc(session: ^Session) {
 }
 
 session_destroy :: proc(session: ^Session) {
-	frame.runtime_destroy(&session.runtime)
+	frame.runtime_destroy(&session.app.runtime)
 	session_results_destroy(session)
 	capture_run_destroy(&session.capture, session.allocator)
 	for &pick in session.picks {
@@ -97,6 +105,9 @@ session_destroy :: proc(session: ^Session) {
 session_set_backend :: proc(session: ^Session, backend: ^Backend, present: bool) {
 	session.render.backend = backend
 	session.render.present = present
+	if backend.ready && backend.acquire != nil {
+		session.app.renderer = backend.acquire(backend.ctx)
+	}
 }
 
 session_override_camera :: proc(session: ^Session) -> ^renderer.Camera {
@@ -109,7 +120,7 @@ session_override_camera :: proc(session: ^Session) -> ^renderer.Camera {
 // The harness view flag is a run-level override; the inspector's physics switch
 // writes the runtime flag. Either one asks for the physics draw.
 session_debug_view :: proc(session: ^Session) -> bool {
-	return session.view.debug || session.runtime.debug.physics_debug
+	return session.view.debug || session.app.runtime.debug.physics_debug
 }
 
 // The state names the frame the renderer last built. A step with no draw falls
@@ -122,10 +133,17 @@ session_view_alpha :: proc(session: ^Session) -> f32 {
 }
 
 session_reset :: proc(session: ^Session) -> string {
-	if !frame.runtime_reset(&session.runtime) {
+	if !frame.runtime_reset(&session.app.runtime) {
 		return format_error("%s", "simulation init failed")
 	}
 	session.input = {}
+	session.captured = !session.view.hint
+	session.pointer = {}
+	session.pad = {}
+	session.app.resolver = {}
+	session.app.accumulator = 0
+	session.app.last_alpha = 1.0
+	session.app.has_routed = false
 	session.camera_override = {}
 	session.has_camera_override = false
 	session.drawn_alpha = 1.0
@@ -193,29 +211,65 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 			allocator = context.allocator,
 		)
 	}
-	if session.runtime.hud.menu.open {
+	if session.app.runtime.hud.menu.open {
 		return fmt.aprintf("menu is open; close the menu to step", allocator = context.allocator)
 	}
-	for index in 0 ..< frames {
+	due := make([dynamic]int, 0, 4, context.temp_allocator)
+	defer delete(due)
+	requests := make([dynamic]Capture_Request, 0, 4, context.temp_allocator)
+	defer delete(requests)
+	for _ in 0 ..< frames {
 		if timeout := session_check_timeout(session); timeout != "" {
 			return timeout
 		}
-		input := session.input
-		if index > 0 {
-			input.jump_pressed = false
-			input.sprint_pressed = false
-		}
-		frame.runtime_step(&session.runtime, frame.fixed_step(input))
+		events := session_frame_events(session)
 		session.input.jump_pressed = false
+		session.input.sprint_pressed = false
 		session.frame += 1
-		if render_error := session_finish_frame(session); render_error != "" {
+		clear(&due)
+		clear(&requests)
+		session_due_captures(session, &due, &requests)
+		if render_error := session_frame(
+			session,
+			events,
+			1,
+			session.default_alpha,
+			requests[:],
+		); render_error != "" {
 			return render_error
 		}
+		session_release_captures(session, due[:])
 		if session.quit {
 			break
 		}
 	}
 	return ""
+}
+
+// session_due_captures collects the captures whose frame has arrived. The
+// pending entries stay until the frame that draws them succeeds.
+@(private)
+session_due_captures :: proc(
+	session: ^Session,
+	due: ^[dynamic]int,
+	requests: ^[dynamic]Capture_Request,
+) {
+	for pending, index in session.capture.pending {
+		if pending.frame > session.frame {
+			continue
+		}
+		append(due, index)
+		append(requests, ..pending.requests)
+	}
+}
+
+@(private)
+session_release_captures :: proc(session: ^Session, due: []int) {
+	for cursor := len(due) - 1; cursor >= 0; cursor -= 1 {
+		index := due[cursor]
+		pending_capture_destroy(&session.capture.pending[index], session.allocator)
+		ordered_remove(&session.capture.pending, index)
+	}
 }
 
 @(private)

@@ -27,16 +27,6 @@ Frame_Step :: struct {
 	actions:     []game.Edit_Action,
 }
 
-// The harness has no pointer capture; keep the editor drag alive across a step.
-fixed_step :: proc(snapshot: game.Input_Snapshot) -> Frame_Step {
-	return {
-		fixed_steps = 1,
-		delta = game.SIMULATION_STEP,
-		snapshot = snapshot,
-		motion = {captured = true},
-	}
-}
-
 runtime_create :: proc(allocator: mem.Allocator) -> Runtime {
 	// The scratch holds the frame's debug lines, so the session keeps it off the
 	// stack.

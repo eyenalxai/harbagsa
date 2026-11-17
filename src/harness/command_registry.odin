@@ -51,6 +51,8 @@ COMMANDS := [?]Command_Row {
 	{.Menu, "menu", "Open, close, select, and change the settings menu.", parse_menu, execute_menu, .Raw, destroy_menu, .None, Menu_Command},
 	{.Ui, "ui", "Drive the Rune view by element key or point, with drag, wheel, focus, and assertions.", parse_ui, execute_ui, .Raw, destroy_ui, .Required, Ui_Command},
 	{.Ui_Tree, "ui_tree", "Write the Rune element tree to report.json.", parse_ui_tree, execute_ui_tree, .Skip, destroy_ui_tree, .Required, Ui_Tree_Command},
+	{.Event, "event", "Inject one raw key, pointer, wheel, focus, or gamepad frame and run the live route.", parse_event, execute_event, .Raw, destroy_event, .Optional, Event_Command},
+	{.Resize, "resize", "Recreate the offscreen target at a new size and run the resize frame.", parse_resize, execute_resize, .Raw, destroy_resize, .Required, Resize_Command},
 	{.Record, "record", "Start or stop recording a live session into a scenario.", parse_record, execute_record, .Skip, destroy_record, .None, Record_Command},
 	{.Replay, "replay", "Replay a recorded scenario inside the live session.", parse_replay, execute_replay, .Skip, destroy_replay, .Optional, Replay_Command},
 	{.Repro, "repro", "Write the live view as a scene scenario and show the notice.", parse_repro, execute_repro, .Skip, destroy_repro, .None, Repro_Command},

@@ -36,10 +36,10 @@ rows_state_destroy :: proc(state: ^Rows_State, allocator: mem.Allocator) {
 session_refresh_hud :: proc(session: ^Session, delta_seconds: f32 = 0) {
 	bake := session.render.report.bake
 	game.hud_state_update(
-		&session.runtime.hud,
-		&session.runtime.sim,
-		&session.runtime.debug,
-		game.simulation_snapshot(&session.runtime.sim),
+		&session.app.runtime.hud,
+		&session.app.runtime.sim,
+		&session.app.runtime.debug,
+		game.simulation_snapshot(&session.app.runtime.sim),
 		false,
 		delta_seconds,
 		{status = bake.status, key = bake.key},

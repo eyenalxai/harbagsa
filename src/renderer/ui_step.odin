@@ -12,7 +12,7 @@ ui_step :: proc(r: ^Renderer, hud: HUD_Frame) {
 	if width == 0 || height == 0 {
 		return
 	}
-	scale := clamp(f32(height) / 720.0, 1.0, 2.0)
+	scale := ui_scale(r)
 
 	events: [64]Ui_Event
 	count := min(len(frame.events), len(events))

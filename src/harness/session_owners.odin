@@ -144,7 +144,6 @@ Render_State :: struct {
 	provider:    Backend_Provider,
 	enabled:     bool,
 	present:     bool,
-	every_step:  bool,
 	failed:      bool,
 	report:      renderer.Renderer_Report,
 	debug:       renderer.Renderer_Debug,

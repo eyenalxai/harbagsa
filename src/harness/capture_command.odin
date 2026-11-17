@@ -12,7 +12,7 @@ import "src:renderer"
 parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
 	if key, unknown := json_unknown_key(
 		object,
-		{"cmd", "name", "note", "frame", "alpha", "target", "views", "format", "png", "region", "rect", "profile", "crop", "histogram", "steps", "color_key", "coverage"},
+		{"cmd", "name", "note", "frame", "alpha", "target", "views", "format", "png", "region", "rect", "profile", "crop", "histogram", "steps", "color_key", "coverage", "require"},
 	); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
@@ -141,6 +141,13 @@ parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command
 		}
 		command.capture.coverage = coverage
 	}
+	if value, has := json_get(object, "require"); has {
+		require, require_error := parse_capture_require(value)
+		if require_error != "" {
+			return {}, require_error
+		}
+		command.capture.require = require
+	}
 	// A region and a histogram read the statistics path, a crop writes a PNG,
 	// and a profile decodes the color image.
 	_, has_region := command.capture.region.?
@@ -161,6 +168,10 @@ parse_capture :: proc(object: json.Object, allocator: mem.Allocator) -> (Command
 	_, has_coverage := command.capture.coverage.?
 	if has_coverage && command.capture.format != .Stats {
 		return {}, format_error("%s", "'coverage' needs format 'stats'")
+	}
+	_, has_require := command.capture.require.?
+	if has_require && command.capture.format != .Stats {
+		return {}, format_error("%s", "'require' needs format 'stats'")
 	}
 	_, has_crop := command.capture.crop.?
 	if has_crop && command.capture.format != .Png {
@@ -346,6 +357,22 @@ capture_json_fields :: proc(
 				fmt.sbprint(builder, `, `)
 			}
 			fmt.sbprintf(builder, `"lit": %g`, value)
+		}
+		fmt.sbprint(builder, `}`)
+	}
+	if require, has := capture.require.?; has {
+		json_write_separator(builder, has_previous)
+		fmt.sbprint(builder, `"require": {`)
+		first := true
+		if value, has_min := require.lit_fraction_min.?; has_min {
+			fmt.sbprintf(builder, `"lit_fraction_min": %g`, value)
+			first = false
+		}
+		if value, has_max := require.zero_fraction_max.?; has_max {
+			if !first {
+				fmt.sbprint(builder, `, `)
+			}
+			fmt.sbprintf(builder, `"zero_fraction_max": %g`, value)
 		}
 		fmt.sbprint(builder, `}`)
 	}

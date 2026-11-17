@@ -1,0 +1,92 @@
+{
+  "note": "While the world owns the frame, Tab and Space go to the game and never reach Rune. Space latches a jump that the next fixed step applies.",
+  "size": "1280x720",
+  "view": {
+    "hud": true,
+    "debug": false,
+    "hint": false
+  },
+  "commands": [
+    {
+      "cmd": "settle",
+      "frames": 30
+    },
+    {
+      "cmd": "event",
+      "key": "Tab",
+      "state": "down",
+      "expect_no_action": true,
+      "expect_state": {
+        "input.owner": "world",
+        "input.events.0.kind": "key_down",
+        "input.events.0.key": "Tab",
+        "input.events.0.sink": "game",
+        "menu.open": false,
+        "ui.surface": "hud"
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "Tab",
+      "state": "repeat",
+      "expect_no_action": true,
+      "expect_state": {
+        "input.owner": "world",
+        "input.events.0.kind": "key_repeat",
+        "input.events.0.sink": "game"
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "Tab",
+      "state": "up",
+      "expect_no_action": true,
+      "expect_state": {
+        "input.events.0.kind": "key_up",
+        "input.events.0.sink": "game"
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "Space",
+      "state": "down",
+      "expect_no_action": true,
+      "expect_state": {
+        "input.owner": "world",
+        "input.events.0.key": "Space",
+        "input.events.0.sink": "game",
+        "input.captured": true,
+        "input.snapshot.jump_pressed": true,
+        "input.motion.captured": true
+      }
+    },
+    {
+      "cmd": "step",
+      "frames": 1
+    },
+    {
+      "cmd": "event",
+      "key": "Space",
+      "state": "up",
+      "expect_no_action": true,
+      "expect_state": {
+        "player.grounded": false,
+        "input.events.0.sink": "game",
+        "input.snapshot.jump_pressed": false
+      }
+    },
+    {
+      "cmd": "settle",
+      "frames": 2
+    },
+    {
+      "cmd": "capture",
+      "name": "jumping",
+      "format": "png"
+    },
+    {
+      "cmd": "step",
+      "frames": 30
+    }
+  ]
+}

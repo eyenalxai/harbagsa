@@ -57,7 +57,13 @@ Routed_Frame :: struct {
 	game:           Frame_Input,
 	ui_events:      [platform.MAX_INPUT_EVENTS]platform.Input_Event,
 	ui_event_count: int,
-	overflow:       bool,
+	// The raw events and one sink per event, in arrival order, so a frame can
+	// report who acted on each one.
+	events:      [platform.MAX_INPUT_EVENTS]platform.Input_Event,
+	event_sinks: [platform.MAX_INPUT_EVENTS]Sink,
+	event_count: int,
+	gamepad:     platform.Gamepad_State,
+	overflow:    bool,
 }
 
 // Resolver holds the edge latches that must survive a frame with no fixed step,

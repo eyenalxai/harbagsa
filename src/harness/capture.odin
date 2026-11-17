@@ -65,6 +65,7 @@ Capture_Spec :: struct {
 	steps:     Maybe(Capture_Steps_Options),
 	color_key: Maybe(Capture_Color_Key),
 	coverage:  Maybe(Capture_Coverage),
+	require:   Maybe(Capture_Require),
 }
 
 Capture_Request :: struct {

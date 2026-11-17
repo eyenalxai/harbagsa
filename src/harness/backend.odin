@@ -4,9 +4,9 @@ package harness
 import "core:mem"
 import "core:strings"
 
+import "src:appframe"
 import "src:bake"
 import "src:digest"
-import "src:frame"
 import "src:game"
 import "src:perf"
 import "src:platform"
@@ -19,18 +19,22 @@ Backend_Snapshot :: struct {
 }
 
 Backend :: struct {
-	ready:    bool,
-	ctx:      rawptr,
-	render:   proc(
-		ctx: rawptr,
-		session: ^Session,
-		requests: []Capture_Request,
-	) -> ([]Capture_Result, string),
-	pick:     proc(
+	ready:        bool,
+	ctx:          rawptr,
+	acquire:      proc(ctx: rawptr) -> ^renderer.Renderer,
+	pick:         proc(
 		ctx: rawptr,
 		session: ^Session,
 		at: [2]i32,
 	) -> (renderer.Pick_Hit, renderer.Pick_Failure, string),
+	read_capture: proc(
+		ctx: rawptr,
+		session: ^Session,
+		request: Capture_Request,
+		slot: int,
+	) -> (Capture_Result, string),
+	poll:      proc(ctx: rawptr, session: ^Session) -> (platform.Events, bool),
+	resize:    proc(ctx: rawptr, width, height: u32) -> bool,
 	gpu_times: proc(ctx: rawptr) -> perf.Gpu_Times,
 	snapshot:  proc(ctx: rawptr) -> Backend_Snapshot,
 	setup:     proc(ctx: rawptr) -> renderer.Setup_Report,
@@ -118,8 +122,11 @@ backend_create :: proc(
 	return {
 		ready = true,
 		ctx = data,
-		render = backend_render,
+		acquire = backend_acquire,
 		pick = backend_pick,
+		read_capture = backend_capture,
+		poll = backend_poll,
+		resize = backend_resize,
 		gpu_times = backend_gpu_times,
 		snapshot = backend_snapshot,
 		setup = backend_setup,
@@ -130,6 +137,12 @@ backend_create :: proc(
 		refresh_bake = backend_refresh_bake,
 		shutdown = backend_shutdown,
 	}, ""
+}
+
+@(private)
+backend_acquire :: proc(ctx: rawptr) -> ^renderer.Renderer {
+	data := cast(^Backend_Data)ctx
+	return &data.renderer
 }
 
 @(private)
@@ -188,53 +201,32 @@ backend_gpu_times :: proc(ctx: rawptr) -> perf.Gpu_Times {
 	return renderer.gpu_times(&data.renderer)
 }
 
-// The frame input a capture, a settle, and a pick all draw.
+// The offscreen target has no window; the harness sets its extent and marks the
+// next frame resized.
 @(private)
-backend_scene :: proc(data: ^Backend_Data, session: ^Session, alpha: f32) -> renderer.Render_Input {
-	static := game.simulation_bake_input(
-		&session.runtime.sim,
-		&session.runtime.scratch.bake,
-		session.allocator,
-	)
-	renderer.refresh_bake(&data.renderer, static)
-	session.drawn_alpha = alpha
-	session.drawn_frame = session.frame
-	options := frame.Options {
-		alpha         = alpha,
-		delta_seconds = game.SIMULATION_STEP,
-		debug_view    = session_debug_view(session),
-		fx_view       = session.view.fx,
-		captured      = !session.view.hint,
-		hud           = session.view.hud,
-		bake          = renderer.bake_report(&data.renderer),
+backend_resize :: proc(ctx: rawptr, width, height: u32) -> bool {
+	data := cast(^Backend_Data)ctx
+	if data.present || width == 0 || height == 0 {
+		return false
 	}
-	scene := frame.runtime_compose(
-		&session.runtime,
-		options,
-		session_override_camera(session),
-		static,
-	)
-	perf.mark(&session.perf.state, .Build)
-	data.renderer.recorder = &session.perf.state.recorder
-	return scene
+	platform.headless_resize(&data.headless, width, height)
+	return true
 }
 
-// The live window's events still belong to whichever frame runs next, so a
-// pick drains them before it draws. Offscreen sessions own no window.
+// A live window's events still belong to whichever frame runs next, so a
+// present session polls before it draws. An offscreen session owns no window.
 @(private)
-backend_poll :: proc(data: ^Backend_Data, session: ^Session) -> bool {
+backend_poll :: proc(ctx: rawptr, session: ^Session) -> (platform.Events, bool) {
+	data := cast(^Backend_Data)ctx
 	if !data.present {
-		return true
+		return {}, true
 	}
 	events := platform.poll_events(&data.window)
 	if events.quit {
 		session.quit = true
-		return false
+		return {}, false
 	}
-	if events.resized {
-		renderer.notify_resize(&data.renderer)
-	}
-	return true
+	return events, true
 }
 
 @(private)
@@ -248,78 +240,23 @@ backend_pick :: proc(
 	string,
 ) {
 	data := cast(^Backend_Data)ctx
-	if !backend_poll(data, session) {
+	if session.quit {
 		return {}, .Command, format_error("%s", "session is closed")
 	}
-	scene := backend_scene(data, session, session.default_alpha)
+	session.drawn_alpha = session.default_alpha
+	session.drawn_frame = session.frame
+	scene := appframe.compose(
+		&session.app,
+		{
+			alpha = session.default_alpha,
+			debug_view = session_debug_view(session),
+			fx_view = session.view.fx,
+			hud = session.view.hud,
+		},
+		game.SIMULATION_STEP,
+	)
 	scene.pick_at = at
 	return renderer.pick(&data.renderer, scene)
-}
-
-@(private)
-backend_render :: proc(
-	ctx: rawptr,
-	session: ^Session,
-	requests: []Capture_Request,
-) -> (
-	[]Capture_Result,
-	string,
-) {
-	data := cast(^Backend_Data)ctx
-	if !backend_poll(data, session) {
-		return nil, ""
-	}
-
-	alpha := session.default_alpha
-	if len(requests) > 0 {
-		alpha = requests[0].alpha
-	}
-	scene := backend_scene(data, session, alpha)
-	targets: renderer.Capture_Targets
-	views: renderer.Capture_Views
-	for request in requests {
-		if view, has_view := request.view.?; has_view && renderer.capture_view_is_term(view) {
-			views |= {view}
-		} else {
-			targets |= {request.target}
-		}
-	}
-	capture_request := renderer.Frame_Capture{targets = targets, views = views}
-	status := frame.draw(&data.renderer, scene, capture_request)
-	if status != .Ok {
-		if status == .Fatal {
-			return nil, format_error("render failed")
-		}
-		return nil, format_error("frame skipped")
-	}
-	if len(requests) == 0 {
-		return nil, ""
-	}
-
-	results := make([dynamic]Capture_Result, 0, len(requests), context.allocator)
-	for request in requests {
-		slot := renderer.capture_target_slot(capture_request, request.target)
-		if view, has_view := request.view.?; has_view && renderer.capture_view_is_term(view) {
-			slot = renderer.capture_view_slot(capture_request, view)
-		}
-		if slot < 0 {
-			for &written in results {
-				capture_result_destroy(&written, data.allocator)
-			}
-			delete(results)
-			return nil, format_error("capture has no readback slot")
-		}
-		result, error := backend_capture(data, session, request, slot)
-		if error != "" {
-			for &written in results {
-				capture_result_destroy(&written, data.allocator)
-			}
-			delete(results)
-			return nil, error
-		}
-		append(&results, result)
-	}
-	return results[:], ""
 }
 
 @(private)

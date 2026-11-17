@@ -10,14 +10,10 @@ import "src:platform"
 // route is the only pass that turns one raw platform frame into game intent and
 // UI events. The owner comes from the pre-frame focus; each event then has one
 // sink and is copied to exactly one of them.
-route :: proc(
-	r: ^Resolver,
-	events: platform.Events,
-	focus: game.Focus,
-	captured: bool,
-) -> Routed_Frame {
+route :: proc(r: ^Resolver, events: platform.Events, focus: game.Focus) -> Routed_Frame {
 	out := Routed_Frame {
 		owner    = owner_for(focus),
+		gamepad  = events.gamepad,
 		overflow = events.overflow,
 	}
 	primary_release := false
@@ -32,21 +28,30 @@ route :: proc(
 
 	for index in 0 ..< events.raw_count {
 		event := events.raw[index]
+		sink := Sink.None
 		switch event.kind {
 		case .Key_Down, .Key_Repeat, .Key_Up:
-			route_keyboard(r, &out, out.owner, event, &keys, &key_count)
+			sink = route_keyboard(r, &out, out.owner, event, &keys, &key_count)
 		case .Pointer_Move, .Pointer_Down, .Pointer_Up, .Wheel:
 			if pointer_ui {
 				push_ui(&out, event)
+				sink = .UI
+			} else {
+				sink = .Game
 			}
 		case .Pointer_Leave, .Focus_Gained:
 			push_ui(&out, event)
+			sink = .UI
 		case .Focus_Lost:
 			primary_release = primary_release || r.pad_primary
 			clear_held(r)
 			clear_latches(r)
 			push_ui(&out, event)
+			sink = .UI
 		}
+		out.events[out.event_count] = event
+		out.event_sinks[out.event_count] = sink
+		out.event_count += 1
 	}
 
 	pad_primary, pad_release, pad_menu := route_gamepad(r, &out, events.gamepad, &keys, &key_count)
@@ -68,7 +73,7 @@ route :: proc(
 	game_events.primary_pressed = game_events.primary_pressed || pad_primary
 	game_events.primary_released = game_events.primary_released || pad_release || primary_release
 
-	out.game = resolve(r, game_events, keys[:key_count], focus, out.owner, captured)
+	out.game = resolve(r, game_events, keys[:key_count], focus, out.owner)
 	out.game.view.menu_toggle = out.game.view.menu_toggle || pad_menu
 	out.overflow = out.overflow || out.game.overflow
 	report_overflow(&out, events.overflow)
@@ -128,14 +133,14 @@ route_keyboard :: proc(
 	event: platform.Input_Event,
 	keys: ^[platform.MAX_KEY_EVENTS]platform.Key_Event,
 	key_count: ^int,
-) {
+) -> Sink {
 	if event.kind == .Key_Down {
 		sink := key_sink_for(owner, event.key)
 		r.keyboard[int(event.key)] = sink
 		if press_key(r, sink, event.key) {
 			route_event(out, sink, .Key_Down, event.key, event.mods, keys, key_count)
 		}
-		return
+		return sink
 	}
 
 	sink := r.keyboard[int(event.key)]
@@ -144,11 +149,12 @@ route_keyboard :: proc(
 		if release_key(r, sink, event.key) {
 			route_event(out, sink, .Key_Up, event.key, event.mods, keys, key_count)
 		}
-		return
+		return sink
 	}
 	if sink != .None {
 		route_event(out, sink, event.kind, event.key, event.mods, keys, key_count)
 	}
+	return sink
 }
 
 @(private)

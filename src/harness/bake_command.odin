@@ -138,8 +138,8 @@ session_bake :: proc(session: ^Session, command: Bake_Command) -> string {
 	}
 
 	static := game.simulation_bake_input(
-		&session.runtime.sim,
-		&session.runtime.scratch.bake,
+		&session.app.runtime.sim,
+		&session.app.runtime.scratch.bake,
 		session.allocator,
 	)
 	if command.has_scale {

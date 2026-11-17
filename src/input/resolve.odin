@@ -16,9 +16,9 @@ resolve :: proc(
 	keys: []platform.Key_Event,
 	focus: game.Focus,
 	owner: Owner,
-	captured: bool,
 ) -> Frame_Input {
 	out := Frame_Input{}
+	captured := events.captured
 
 	// A pause or a free cursor drops every latch, so a press never queues
 	// through the menu or a released pointer.

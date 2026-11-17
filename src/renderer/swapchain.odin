@@ -175,42 +175,7 @@ recreate_swapchain :: proc(r: ^Renderer) -> Frame_Status {
 	if status := create_swapchain(r); status != .Ok {
 		return status
 	}
-
-	if r.target.config.width != old_extent.width || r.target.config.height != old_extent.height {
-		if !recreate_frame_targets(r) {
-			log.error("renderer: could not recreate the frame targets")
-			return .Fatal
-		}
-		if !create_taa_history(r, .Extent) {
-			log.error("renderer: could not recreate the TAA history")
-			return .Fatal
-		}
-		if !write_taa_descriptors(r) {
-			log.error("renderer: could not rebind the TAA targets")
-			return .Fatal
-		}
-	} else if r.target.config.format != old_format {
-		reset_history(r, .Extent)
-	}
-
-	if r.taa.pipeline_format != r.target.config.format {
-		destroy_taa_pipelines(r)
-		if !create_taa_pipeline(r) {
-			return .Fatal
-		}
-	}
-	if r.overlay.pipeline_format != r.target.config.format {
-		destroy_overlay_pipelines(r)
-		if !create_overlay_pipelines(r) {
-			return .Fatal
-		}
-	}
-	if !ui_attach_target(r) {
-		return .Fatal
-	}
-	r.target.dirty = false
-
-	return .Ok
+	return recreate_attachments(r, old_extent, old_format)
 }
 
 record_present_barrier :: proc(

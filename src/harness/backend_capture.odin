@@ -9,7 +9,7 @@ import vk "vendor:vulkan"
 
 @(private)
 backend_capture :: proc(
-	data: ^Backend_Data,
+	ctx: rawptr,
 	session: ^Session,
 	request: Capture_Request,
 	slot: int,
@@ -17,6 +17,7 @@ backend_capture :: proc(
 	Capture_Result,
 	string,
 ) {
+	data := cast(^Backend_Data)ctx
 	pixels: []u8
 	width, height: u32
 	format: vk.Format
@@ -164,6 +165,11 @@ backend_capture_stats :: proc(
 		request.coverage,
 		data.allocator,
 	)
+	if stats, has_stats := result.stats.?; has_stats {
+		if require_error := capture_require_check(request, stats); require_error != "" {
+			return {}, require_error
+		}
+	}
 	if histogram, has_histogram := request.histogram.?; has_histogram {
 		bounds := Capture_Region{x = 0, y = 0, w = int(width), h = int(height)}
 		if configured, has_region := region.?; has_region {
@@ -194,6 +200,37 @@ backend_capture_stats :: proc(
 		return written, ""
 	}
 	return result, ""
+}
+
+@(private)
+capture_require_check :: proc(request: Capture_Request, stats: Capture_Stats) -> string {
+	require, has := request.require.?
+	if !has {
+		return ""
+	}
+	if minimum, has_min := require.lit_fraction_min.?; has_min {
+		lit, has_lit := stats.coverage.lit_fraction.?
+		if !has_lit {
+			return format_error("%s", "'require.lit_fraction_min' needs 'coverage.lit'")
+		}
+		if lit < minimum {
+			return format_error(
+				"the lit fraction %g is below the required %g",
+				lit,
+				minimum,
+			)
+		}
+	}
+	if maximum, has_max := require.zero_fraction_max.?; has_max {
+		if stats.coverage.zero_fraction > maximum {
+			return format_error(
+				"the zero fraction %g is above the allowed %g",
+				stats.coverage.zero_fraction,
+				maximum,
+			)
+		}
+	}
+	return ""
 }
 
 @(private)

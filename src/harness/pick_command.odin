@@ -66,7 +66,7 @@ session_pick :: proc(session: ^Session, command: Pick_Command) -> string {
 	if !session.render.enabled {
 		return format_error("%s", "pick requires a renderer; rendering is disabled")
 	}
-	if session.runtime.hud.menu.open {
+	if session.app.runtime.hud.menu.open {
 		return format_error("%s", "menu is open; close the menu to pick")
 	}
 	if session.render.backend == nil || session.render.backend.pick == nil {
@@ -84,7 +84,7 @@ session_pick :: proc(session: ^Session, command: Pick_Command) -> string {
 		}
 		return pick_error
 	}
-	append(&session.picks, pick_result_build(&session.runtime.sim, hit, session.allocator))
+	append(&session.picks, pick_result_build(&session.app.runtime.sim, hit, session.allocator))
 	session_refresh_renderer(session)
 	return ""
 }
