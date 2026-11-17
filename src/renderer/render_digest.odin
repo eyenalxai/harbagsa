@@ -15,7 +15,7 @@ Render_Digest_Field :: struct {
 // with the same digest draw the same scene before the resolve. `hud` and
 // `debug_lines` are unhashed on purpose: the Rune UI draws over the target after
 // the scene and the debug line pass records after the resolve. Editor lines
-// follow F2 and the active tool, so `renderer.debug_vertices` is the count to
+// follow debug mode and the active tool, so `renderer.debug_vertices` is the count to
 // check.
 RENDER_DIGEST_FIELDS := [?]Render_Digest_Field {
 	{"width", true, write_width, ""},

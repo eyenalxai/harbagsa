@@ -22,8 +22,7 @@ Saved_Player :: struct {
 	camera_pitch: f32,
 }
 
-// Debug mode is the F2 camera mode: the active flag, the free-fly camera, and the
-// saved player. The editor owns the editing state and survives a mode toggle.
+// The editor owns the editing state and survives a mode toggle.
 Debug_Mode :: struct {
 	active:        bool,
 	physics_debug: bool,

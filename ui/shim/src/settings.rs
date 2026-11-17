@@ -303,8 +303,9 @@ fn hints(state: &UiState) -> El {
     for chunk in state.menu.hints.chunks(3) {
         let mut line = row().gap(16.0);
         for (keys, action) in chunk {
+            let caps: Vec<&str> = keys.split('+').collect();
             line = line
-                .child(Keybind::new(&[keys.as_str()]).build(&state.kit))
+                .child(Keybind::new(&caps).build(&state.kit))
                 .child(text::styled(action, state.kit.ty.small).color(state.kit.c.text_faint));
         }
         grid = grid.child(line);

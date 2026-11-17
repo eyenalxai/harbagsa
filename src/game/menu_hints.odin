@@ -9,7 +9,7 @@ MENU_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {
 	{keys = "Space", action = "jump"},
 	{keys = "Shift", action = "sprint"},
 	{keys = "Esc", action = "settings"},
-	{keys = "F2", action = "debug mode"},
+	{keys = "Ctrl+Shift+F2", action = "debug mode"},
 }
 
 MENU_DEBUG_CONTROL_HINTS := [MENU_HINT_COUNT]ui.Hint_Cell {

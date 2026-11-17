@@ -1,0 +1,219 @@
+{
+  "note": "F2 proves the plain, one-modifier, extra-modifier, and chord cases. F1, F3, and F5 prove the plain key does nothing and the chord fires.",
+  "size": "1280x720",
+  "view": {
+    "hud": true,
+    "debug": false,
+    "hint": false
+  },
+  "commands": [
+    {
+      "cmd": "settle",
+      "frames": 2
+    },
+    {
+      "cmd": "event",
+      "key": "F2",
+      "state": "down",
+      "expect_state": {
+        "input.view.debug_mode": false,
+        "editor.active": false,
+        "input.events.0.sink": "game"
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "F2",
+      "state": "up"
+    },
+    {
+      "cmd": "event",
+      "key": "F2",
+      "state": "down",
+      "mods": ["Ctrl"],
+      "expect_state": {
+        "input.view.debug_mode": false,
+        "editor.active": false
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "F2",
+      "state": "up"
+    },
+    {
+      "cmd": "event",
+      "key": "F2",
+      "state": "down",
+      "mods": ["Shift"],
+      "expect_state": {
+        "input.view.debug_mode": false,
+        "editor.active": false
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "F2",
+      "state": "up"
+    },
+    {
+      "cmd": "event",
+      "key": "F2",
+      "state": "down",
+      "mods": ["Ctrl", "Shift", "Alt"],
+      "expect_state": {
+        "input.view.debug_mode": false,
+        "editor.active": false
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "F2",
+      "state": "up"
+    },
+    {
+      "cmd": "event",
+      "key": "F2",
+      "state": "down",
+      "mods": ["Ctrl", "Shift", "Gui"],
+      "expect_state": {
+        "input.view.debug_mode": false,
+        "editor.active": false
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "F2",
+      "state": "up"
+    },
+    {
+      "cmd": "event",
+      "key": "F2",
+      "state": "down",
+      "mods": ["Ctrl", "Shift"],
+      "expect_state": {
+        "input.view.debug_mode": true,
+        "editor.active": true
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "F2",
+      "state": "up"
+    },
+    {
+      "cmd": "event",
+      "key": "F2",
+      "state": "down",
+      "mods": ["Ctrl", "Shift"],
+      "expect_state": {
+        "input.view.debug_mode": true,
+        "editor.active": false
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "F2",
+      "state": "up"
+    },
+    {
+      "cmd": "event",
+      "key": "F3",
+      "state": "down",
+      "expect_state": {
+        "input.view.taa": false
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "F3",
+      "state": "up"
+    },
+    {
+      "cmd": "event",
+      "key": "F3",
+      "state": "down",
+      "mods": ["Ctrl", "Shift"],
+      "expect_state": {
+        "input.view.taa": true
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "F3",
+      "state": "up"
+    },
+    {
+      "cmd": "event",
+      "key": "F1",
+      "state": "down",
+      "expect_state": {
+        "input.view.debug_view": false,
+        "editor.physics_debug": false
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "F1",
+      "state": "up"
+    },
+    {
+      "cmd": "event",
+      "key": "F1",
+      "state": "down",
+      "mods": ["Ctrl", "Shift"],
+      "expect_state": {
+        "input.view.debug_view": true,
+        "editor.physics_debug": true
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "F1",
+      "state": "up"
+    },
+    {
+      "cmd": "event",
+      "key": "F1",
+      "state": "down",
+      "mods": ["Ctrl", "Shift"],
+      "expect_state": {
+        "input.view.debug_view": true,
+        "editor.physics_debug": false
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "F1",
+      "state": "up"
+    },
+    {
+      "cmd": "event",
+      "key": "F5",
+      "state": "down",
+      "expect_state": {
+        "input.view.repro": false
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "F5",
+      "state": "up"
+    },
+    {
+      "cmd": "event",
+      "key": "F5",
+      "state": "down",
+      "mods": ["Ctrl", "Shift"],
+      "expect_state": {
+        "input.view.repro": true,
+        "input.overflow": false
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "F5",
+      "state": "up"
+    }
+  ]
+}

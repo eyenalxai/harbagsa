@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the F5 key and the harness set a notice
+#+vet !unused-procedures // the Ctrl+Shift+F5 key and the harness set a notice
 package game
 
 import "core:fmt"

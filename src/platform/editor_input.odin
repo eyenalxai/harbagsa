@@ -51,6 +51,8 @@ Key :: enum {
 Modifier :: enum {
 	Shift,
 	Ctrl,
+	Alt,
+	Gui,
 }
 
 Modifiers :: bit_set[Modifier]
@@ -146,6 +148,12 @@ modifiers_from_sdl :: proc(mod: sdl3.Keymod) -> Modifiers {
 	}
 	if .LCTRL in mod || .RCTRL in mod {
 		mods |= {.Ctrl}
+	}
+	if .LALT in mod || .RALT in mod {
+		mods |= {.Alt}
+	}
+	if .LGUI in mod || .RGUI in mod {
+		mods |= {.Gui}
 	}
 	return mods
 }

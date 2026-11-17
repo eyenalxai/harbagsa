@@ -65,11 +65,11 @@ the values and applies every action. See `docs/ui/` for the layer rules.
 - `Space`: jump.
 - `R`: return the player to spawn.
 - `Shift+R`: reset placed objects and the player.
-- `F1`: toggle physics debug draw.
-- `F2`: toggle debug mode.
+- `Ctrl+Shift+F1`: toggle physics debug draw.
+- `Ctrl+Shift+F2`: toggle debug mode.
 - `I`: open the inspector rail in debug mode.
-- `F3`: toggle temporal anti-aliasing (TAA).
-- `F5`: write a repro scenario to `runs/repro/`.
+- `Ctrl+Shift+F3`: toggle temporal anti-aliasing (TAA).
+- `Ctrl+Shift+F5`: write a repro scenario to `runs/repro/`.
 - `Esc`: close the inspector rail, cancel placement, or open or close the settings dialog.
 
 Movement follows the walkable ground plane. A straight climb keeps the gait
@@ -93,8 +93,8 @@ HUD text to secondary below 94 percent. Reduce motion snaps kit geometry and
 keeps a short opacity fade. The dialog and its controls use kit hover, press, and
 focus states. The Controls section is a compact reference; the full keyboard
 list is under Debug mode below. `Esc`, the header close control, and `Resume`
-close the dialog. Press `F2` and then `I` to enter debug mode and open the
-inspector rail. Type weight is in the inspector's Debug section, not in Settings.
+close the dialog. Press `Ctrl+Shift+F2` and then `I` to enter debug mode and open
+the inspector rail. Type weight is in the inspector's Debug section, not in Settings.
 
 Window mode is Borderless or Windowed. Borderless uses the selected display's
 desktop size. Windowed uses the chosen resolution and a normal title bar. The
@@ -103,7 +103,7 @@ the current run.
 
 ### Debug mode
 
-`F2` replaces the player with a free-fly camera and enables scene editing.
+`Ctrl+Shift+F2` replaces the player with a free-fly camera and enables scene editing.
 
 - `WASD`: fly horizontally. Mouse: look.
 - `Space` / `Ctrl`: fly up / down.
@@ -126,8 +126,8 @@ the current run.
 - `,` / `.`: change lamp range from 2 to 20 m.
 - `R`: reset the player and camera.
 - `Shift+R`: reset placed objects and the player.
-- `F5`: write a scene snapshot.
-- `F2`: leave debug mode.
+- `Ctrl+Shift+F5`: write a scene snapshot.
+- `Ctrl+Shift+F2`: leave debug mode.
 
 ### Gamepad
 

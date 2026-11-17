@@ -212,15 +212,25 @@ apply_key :: proc(
 		} else {
 			out.view.reset_player = true
 		}
-	case .F1:
-		out.view.debug_view = true
-	case .F2:
-		out.view.debug_mode = true
-	case .F3:
-		out.view.taa = true
-	case .F5:
-		out.view.repro = true
+	case .F1, .F2, .F3, .F5:
+		if exact_chord(edge.mods) {
+			#partial switch edge.key {
+			case .F1:
+				out.view.debug_view = true
+			case .F2:
+				out.view.debug_mode = true
+			case .F3:
+				out.view.taa = true
+			case .F5:
+				out.view.repro = true
+			}
+		}
 	}
+}
+
+@(private)
+exact_chord :: proc(mods: platform.Modifiers) -> bool {
+	return .Ctrl in mods && .Shift in mods && card(mods) == 2
 }
 
 @(private)
