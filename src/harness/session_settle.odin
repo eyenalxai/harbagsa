@@ -10,18 +10,16 @@ session_settle :: proc(session: ^Session, command: Settle_Command) -> string {
 		if session.render.backend == nil || !session.render.backend.ready {
 			return format_error("%s", "settle until converged requires rendering")
 		}
-		if session.runtime.hud.menu.open {
+		if session.app.runtime.hud.menu.open {
 			return session_settle_converged_paused(session)
 		}
 		return session_settle_converged(session)
 	}
 	session.settle.frames = command.frames
 	session.settle.converged = false
-	session.render.every_step = true
-	defer session.render.every_step = false
 	// A dialog owns the accumulator while it is open, but its kit motion still
 	// needs render frames. Step is rejected there, so draw the settle instead.
-	if session.runtime.hud.menu.open {
+	if session.app.runtime.hud.menu.open {
 		if session.render.backend == nil || !session.render.backend.ready {
 			return format_error("%s", "settle while the menu is open requires rendering")
 		}
@@ -60,8 +58,6 @@ session_settle_converged :: proc(session: ^Session) -> string {
 	if session.render.backend == nil || !session.render.backend.ready {
 		return format_error("%s", "settle until converged requires rendering")
 	}
-	session.render.every_step = true
-	defer session.render.every_step = false
 	frames := 0
 	for frames < MAX_SETTLE_FRAMES {
 		if step_error := session_step(session, 1); step_error != "" {

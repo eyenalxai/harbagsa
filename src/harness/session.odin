@@ -6,19 +6,31 @@ import "core:mem"
 import "core:strings"
 import "core:time"
 
+import "src:appframe"
 import "src:display"
 import "src:frame"
-import "src:game"
+import "src:platform"
 import "src:renderer"
 
+Held_Input :: struct {
+	move_forward: f32,
+	move_right:   f32,
+	sprint_held:  bool,
+}
+
 Session :: struct {
-	allocator:     mem.Allocator,
-	runtime:       frame.Runtime,
-	input:         game.Input_Snapshot,
-	view:          View,
-	default_alpha: f32,
-	drawn_alpha:   f32,
-	drawn_frame:   int,
+	allocator:      mem.Allocator,
+	app:            appframe.State,
+	held:           Held_Input,
+	pending_jump:   bool,
+	pending_sprint: bool,
+	view:           View,
+	captured:       bool,
+	pointer:        [2]f32,
+	pad:            platform.Gamepad_State,
+	default_alpha:  f32,
+	drawn_alpha:    f32,
+	drawn_frame:    int,
 
 	camera_override:     renderer.Camera,
 	has_camera_override: bool,
@@ -33,9 +45,10 @@ Session :: struct {
 	settle:   Settle,
 	render:   Render_State,
 
-	ui_actions: [dynamic]renderer.Ui_Action,
-	ui_tree:    []Ui_Tree_Node,
-	has_ui_tree: bool,
+	ui_actions:      [dynamic]renderer.Ui_Action,
+	collect_actions: bool,
+	ui_tree:         []Ui_Tree_Node,
+	has_ui_tree:     bool,
 
 	failures: [dynamic]string,
 
@@ -52,16 +65,18 @@ Session :: struct {
 session_create :: proc(allocator: mem.Allocator) -> (Session, string) {
 	session := Session {
 		allocator     = allocator,
+		captured      = true,
 		default_alpha = 1.0,
 		drawn_alpha   = 1.0,
 		render        = render_state_create(),
 	}
-	session.runtime = frame.runtime_create(allocator)
-	if !frame.runtime_is_valid(&session.runtime) {
-		frame.runtime_destroy(&session.runtime)
+	session.app.last_alpha = 1.0
+	session.app.runtime = frame.runtime_create(allocator)
+	if !frame.runtime_is_valid(&session.app.runtime) {
+		frame.runtime_destroy(&session.app.runtime)
 		return {}, format_error("%s", "simulation init failed")
 	}
-	session.runtime.sim.settings.display = display.fallback_list()
+	session.app.runtime.sim.settings.display = display.fallback_list()
 	session.capture = capture_run_create(allocator)
 	session.picks = make([dynamic]Pick_Result, 0, 8, allocator)
 	session.recorder = recorder_create(allocator)
@@ -80,7 +95,7 @@ session_results_destroy :: proc(session: ^Session) {
 }
 
 session_destroy :: proc(session: ^Session) {
-	frame.runtime_destroy(&session.runtime)
+	frame.runtime_destroy(&session.app.runtime)
 	session_results_destroy(session)
 	capture_run_destroy(&session.capture, session.allocator)
 	for &pick in session.picks {
@@ -97,6 +112,9 @@ session_destroy :: proc(session: ^Session) {
 session_set_backend :: proc(session: ^Session, backend: ^Backend, present: bool) {
 	session.render.backend = backend
 	session.render.present = present
+	if backend.ready && backend.acquire != nil {
+		session.app.renderer = backend.acquire(backend.ctx)
+	}
 }
 
 session_override_camera :: proc(session: ^Session) -> ^renderer.Camera {
@@ -109,7 +127,7 @@ session_override_camera :: proc(session: ^Session) -> ^renderer.Camera {
 // The harness view flag is a run-level override; the inspector's physics switch
 // writes the runtime flag. Either one asks for the physics draw.
 session_debug_view :: proc(session: ^Session) -> bool {
-	return session.view.debug || session.runtime.debug.physics_debug
+	return session.view.debug || session.app.runtime.debug.physics_debug
 }
 
 // The state names the frame the renderer last built. A step with no draw falls
@@ -122,10 +140,22 @@ session_view_alpha :: proc(session: ^Session) -> f32 {
 }
 
 session_reset :: proc(session: ^Session) -> string {
-	if !frame.runtime_reset(&session.runtime) {
+	if !frame.runtime_reset(&session.app.runtime) {
 		return format_error("%s", "simulation init failed")
 	}
-	session.input = {}
+	session.held = {}
+	session.pending_jump = false
+	session.pending_sprint = false
+	session.captured = !session.view.hint
+	session.pointer = {}
+	session.pad = {}
+	session.app.resolver = {}
+	session.app.accumulator = 0
+	session.app.last_alpha = 1.0
+	session.app.routed = {}
+	session.app.has_routed = false
+	session.app.ui_events.count = 0
+	session.app.action_count = 0
 	session.camera_override = {}
 	session.has_camera_override = false
 	session.drawn_alpha = 1.0
@@ -170,19 +200,24 @@ session_check_timeout :: proc(session: ^Session) -> string {
 		allocator = context.allocator,
 	)
 }
+
+// The axes are the held state the platform polls; jump and sprint queue one
+// Space or Shift press so they take the same route a key does.
 session_apply_input :: proc(session: ^Session, command: Input_Command) {
 	if command.has_forward {
-		session.input.move_forward = command.forward
+		session.held.move_forward = command.forward
 	}
 	if command.has_right {
-		session.input.move_right = command.right
+		session.held.move_right = command.right
 	}
-	if command.has_jump {
-		session.input.jump_pressed = command.jump
+	if command.has_jump && command.jump {
+		session.pending_jump = true
 	}
 	if command.has_sprint {
-		session.input.sprint_held = command.sprint
-		session.input.sprint_pressed = command.sprint
+		session.held.sprint_held = command.sprint
+		if command.sprint {
+			session.pending_sprint = true
+		}
 	}
 }
 session_step :: proc(session: ^Session, frames: int) -> string {
@@ -193,29 +228,83 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 			allocator = context.allocator,
 		)
 	}
-	if session.runtime.hud.menu.open {
+	if session.app.runtime.hud.menu.open {
 		return fmt.aprintf("menu is open; close the menu to step", allocator = context.allocator)
 	}
-	for index in 0 ..< frames {
+	due := make([dynamic]int, 0, 4, context.temp_allocator)
+	defer delete(due)
+	for _ in 0 ..< frames {
 		if timeout := session_check_timeout(session); timeout != "" {
 			return timeout
 		}
-		input := session.input
-		if index > 0 {
-			input.jump_pressed = false
-			input.sprint_pressed = false
-		}
-		frame.runtime_step(&session.runtime, frame.fixed_step(input))
-		session.input.jump_pressed = false
+		events := session_frame_events(session)
 		session.frame += 1
-		if render_error := session_finish_frame(session); render_error != "" {
-			return render_error
+		clear(&due)
+		session_due_captures(session, &due)
+		if len(due) == 0 {
+			if render_error := session_frame(
+				session,
+				events,
+				1,
+				session.default_alpha,
+				nil,
+			); render_error != "" {
+				return render_error
+			}
+		} else {
+			// A due capture draws as its own group at its own alpha, so the
+			// step itself does not draw.
+			if render_error := session_frame(
+				session,
+				events,
+				1,
+				session.default_alpha,
+				nil,
+				skip_draw = true,
+			); render_error != "" {
+				return render_error
+			}
+			for index in due {
+				pending := session.capture.pending[index]
+				if draw_error := session_draw_group(session, pending.requests); draw_error != "" {
+					session_release_captures(session, due[:])
+					return draw_error
+				}
+				if expect_error := check_state_expects(
+					session,
+					pending.expect_state,
+				); expect_error != "" {
+					session_release_captures(session, due[:])
+					return expect_error
+				}
+			}
 		}
+		session_release_captures(session, due[:])
 		if session.quit {
 			break
 		}
 	}
 	return ""
+}
+
+// session_due_captures collects the groups whose frame has arrived. The pending
+// entries stay until the frame that draws them succeeds.
+@(private)
+session_due_captures :: proc(session: ^Session, due: ^[dynamic]int) {
+	for pending, index in session.capture.pending {
+		if pending.frame <= session.frame {
+			append(due, index)
+		}
+	}
+}
+
+@(private)
+session_release_captures :: proc(session: ^Session, due: []int) {
+	for cursor := len(due) - 1; cursor >= 0; cursor -= 1 {
+		index := due[cursor]
+		pending_capture_destroy(&session.capture.pending[index], session.allocator)
+		ordered_remove(&session.capture.pending, index)
+	}
 }
 
 @(private)

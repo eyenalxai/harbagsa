@@ -35,7 +35,7 @@ Command_Row :: struct {
 }
 
 COMMANDS := [?]Command_Row {
-	{.Reset, "reset", "Return the simulation, settings, menu, and editor state to their defaults.", parse_no_fields, execute_reset, .Raw, nil, .None, No_Fields_Command},
+	{.Reset, "reset", "Return the simulation, settings, menu, and editor state to their defaults.", parse_reset, execute_reset, .Raw, destroy_reset, .None, Reset_Command},
 	{.Look, "look", "Apply one pixel look delta through the game sensitivity.", parse_look, execute_look, .Raw, nil, .None, Look_Command},
 	{.Face, "face", "Set the player view directly. Angles are degrees.", parse_face, execute_face, .Raw, nil, .None, Face_Command},
 	{.Input, "input", "Set persistent movement input until the next input command.", parse_input, execute_input, .Raw, nil, .None, Input_Command},
@@ -51,6 +51,8 @@ COMMANDS := [?]Command_Row {
 	{.Menu, "menu", "Open, close, select, and change the settings menu.", parse_menu, execute_menu, .Raw, destroy_menu, .None, Menu_Command},
 	{.Ui, "ui", "Drive the Rune view by element key or point, with drag, wheel, focus, and assertions.", parse_ui, execute_ui, .Raw, destroy_ui, .Required, Ui_Command},
 	{.Ui_Tree, "ui_tree", "Write the Rune element tree to report.json.", parse_ui_tree, execute_ui_tree, .Skip, destroy_ui_tree, .Required, Ui_Tree_Command},
+	{.Event, "event", "Inject one raw key, pointer, wheel, focus, or gamepad frame and run the live route.", parse_event, execute_event, .Raw, destroy_event, .Optional, Event_Command},
+	{.Resize, "resize", "Recreate the offscreen target at a new size and run the resize frame.", parse_resize, execute_resize, .Raw, destroy_resize, .Required, Resize_Command},
 	{.Record, "record", "Start or stop recording a live session into a scenario.", parse_record, execute_record, .Skip, destroy_record, .None, Record_Command},
 	{.Replay, "replay", "Replay a recorded scenario inside the live session.", parse_replay, execute_replay, .Skip, destroy_replay, .Optional, Replay_Command},
 	{.Repro, "repro", "Write the live view as a scene scenario and show the notice.", parse_repro, execute_repro, .Skip, destroy_repro, .None, Repro_Command},
@@ -62,7 +64,7 @@ COMMANDS := [?]Command_Row {
 	{.Place, "place", "Create one named object from a prefab without entering debug mode.", parse_place, execute_place, .Raw, nil, .None, Place_Command},
 	{.Remove, "remove", "Delete one object by id or name without entering debug mode.", parse_remove, execute_remove, .Raw, nil, .None, Remove_Command},
 	{.Bake, "bake", "Build and publish a bake from the current static input.", parse_bake, execute_bake, .Raw, destroy_bake_command, .Required, Bake_Command},
-	{.Pick, "pick", "Resolve one pixel to its object, surface, indirect data, and terms.", parse_pick, execute_pick, .Raw, nil, .Required, Pick_Command},
+	{.Pick, "pick", "Resolve one pixel to its object, surface, indirect data, and terms.", parse_pick, execute_pick, .Raw, destroy_pick, .Required, Pick_Command},
 	{.Get, "get", "Resolve one state or capture field and return its JSON scalar.", parse_get, execute_get, .Raw, destroy_get, .None, Get_Command},
 	{.Quit, "quit", "Close the session.", parse_no_fields, execute_quit, .Skip, nil, .None, No_Fields_Command},
 }
@@ -102,6 +104,8 @@ destroy_capture :: proc(command: ^Command, allocator: mem.Allocator) {
 	if command.capture.views != nil {
 		delete(command.capture.views, allocator)
 	}
+	state_expects_destroy(command.capture.expect_state, allocator)
+	command.capture.expect_state = nil
 	command^ = {}
 }
 
@@ -115,8 +119,47 @@ destroy_captures :: proc(command: ^Command, allocator: mem.Allocator) {
 		if output.views != nil {
 			delete(output.views, allocator)
 		}
+		state_expects_destroy(output.expect_state, allocator)
+		output.expect_state = nil
 	}
 	delete(command.captures.outputs, allocator)
+	command^ = {}
+}
+
+@(private)
+parse_reset :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
+	if key, unknown := json_unknown_key(object, {"cmd", "expect_state"}); unknown {
+		return {}, format_error("unknown key %q", key)
+	}
+	command := Command{kind = .Reset}
+	if expect_value, has_expect := json_get(object, "expect_state"); has_expect {
+		expects, expect_error := parse_state_expects(expect_value, allocator)
+		if expect_error != "" {
+			return {}, expect_error
+		}
+		command.reset.expect_state = expects
+	}
+	return command, ""
+}
+
+@(private)
+destroy_reset :: proc(command: ^Command, allocator: mem.Allocator) {
+	state_expects_destroy(command.reset.expect_state, allocator)
+	command.reset.expect_state = nil
+	command^ = {}
+}
+
+@(private)
+destroy_event :: proc(command: ^Command, allocator: mem.Allocator) {
+	state_expects_destroy(command.event.expect_state, allocator)
+	command.event.expect_state = nil
+	command^ = {}
+}
+
+@(private)
+destroy_pick :: proc(command: ^Command, allocator: mem.Allocator) {
+	state_expects_destroy(command.pick.expect_state, allocator)
+	command.pick.expect_state = nil
 	command^ = {}
 }
 

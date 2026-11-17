@@ -251,9 +251,7 @@ destroy_pipeline_pair :: proc(r: ^Renderer, pipeline: ^vk.Pipeline, layout: ^vk.
 
 // The platform sends this on resize, so the renderer does not compare sizes every frame.
 notify_resize :: proc(r: ^Renderer) {
-	if r.target.kind == .Swapchain {
-		r.target.dirty = true
-	}
+	r.target.dirty = true
 }
 
 check :: proc(result: vk.Result, what: string, loc := #caller_location) -> bool {

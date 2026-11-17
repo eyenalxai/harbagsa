@@ -56,7 +56,7 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 			next_object_id = next_id,
 		}
 		if failure := game.simulation_apply_snapshot(
-			&session.runtime.sim,
+			&session.app.runtime.sim,
 			snapshot,
 		); failure.error != .None {
 			return format_error(
@@ -64,7 +64,7 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 				game.snapshot_apply_error_message(failure),
 			)
 		}
-		game.editor_repair_selection(&session.runtime.debug.editor, &session.runtime.sim)
+		game.editor_repair_selection(&session.app.runtime.debug.editor, &session.app.runtime.sim)
 	}
 
 	if command.has_displays {
@@ -79,7 +79,7 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 			}
 			display.sort_modes(info)
 		}
-		session.runtime.sim.settings.display = list
+		session.app.runtime.sim.settings.display = list
 	}
 
 	if command.has_settings {
@@ -89,26 +89,26 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 			if !mode_ok {
 				return format_error("%s", "scene settings hold an unknown window mode")
 			}
-			session.runtime.sim.settings.window.mode = mode
+			session.app.runtime.sim.settings.window.mode = mode
 		}
 		if index, has := settings.display.?; has {
-			session.runtime.sim.settings.window.display = display.clamp_index(
-				&session.runtime.sim.settings.display,
+			session.app.runtime.sim.settings.window.display = display.clamp_index(
+				&session.app.runtime.sim.settings.display,
 				index,
 			)
 		}
 		if resolution, has := settings.resolution.?; has {
-			session.runtime.sim.settings.window.resolution = {resolution[0], resolution[1]}
+			session.app.runtime.sim.settings.window.resolution = {resolution[0], resolution[1]}
 		}
 		if name, has := settings.sprint_mode.?; has {
 			mode, mode_ok := game.input_mode_parse(name)
 			if !mode_ok {
 				return format_error("%s", "scene settings hold an unknown sprint mode")
 			}
-			session.runtime.sim.settings.sprint_mode = mode
+			session.app.runtime.sim.settings.sprint_mode = mode
 		}
 		if weight, has := settings.type_weight.?; has {
-			session.runtime.sim.settings.type_weight = weight
+			session.app.runtime.sim.settings.type_weight = weight
 		}
 	}
 
@@ -118,40 +118,40 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 		fov := f32(math.to_radians(f64(scene.camera.fov_deg)))
 		switch scene.camera.source {
 		case "debug":
-			if !session.runtime.debug.active {
-				game.debug_mode_toggle(&session.runtime.debug, &session.runtime.sim)
+			if !session.app.runtime.debug.active {
+				game.debug_mode_toggle(&session.app.runtime.debug, &session.app.runtime.sim)
 			}
-			session.runtime.debug.camera = {
+			session.app.runtime.debug.camera = {
 				position = {scene.camera.position[0], scene.camera.position[1], scene.camera.position[2]},
 				yaw = yaw,
 				pitch = pitch,
 			}
 			session.has_camera_override = false
 		case "player", "third_person":
-			if session.runtime.debug.active {
-				game.debug_mode_toggle(&session.runtime.debug, &session.runtime.sim)
+			if session.app.runtime.debug.active {
+				game.debug_mode_toggle(&session.app.runtime.debug, &session.app.runtime.sim)
 			}
 			if player, has_player := scene.camera.player.?; has_player {
 				game.player_place(
-					&session.runtime.sim.player,
+					&session.app.runtime.sim.player,
 					b3.Vec3{player.position[0], player.position[1], player.position[2]},
 					f32(math.to_radians(f64(player.yaw_deg))),
 					0.0,
 				)
-				session.runtime.sim.player.camera_yaw = f32(
+				session.app.runtime.sim.player.camera_yaw = f32(
 					math.to_radians(f64(player.camera_yaw_deg)),
 				)
-				session.runtime.sim.player.camera_pitch = f32(
+				session.app.runtime.sim.player.camera_pitch = f32(
 					math.to_radians(f64(player.camera_pitch_deg)),
 				)
-				session.runtime.sim.player.velocity = {
+				session.app.runtime.sim.player.velocity = {
 					player.velocity[0],
 					player.velocity[1],
 					player.velocity[2],
 				}
-				session.runtime.sim.player.grounded = player.grounded
-				session.runtime.sim.player.grounded_last_step = player.grounded
-				game.spider_plant_legs(&session.runtime.sim)
+				session.app.runtime.sim.player.grounded = player.grounded
+				session.app.runtime.sim.player.grounded_last_step = player.grounded
+				game.spider_plant_legs(&session.app.runtime.sim)
 			}
 			session.has_camera_override = false
 		case "override":
@@ -189,6 +189,6 @@ session_scene :: proc(session: ^Session, command: Scene_Command) -> string {
 			return debug_error
 		}
 	}
-	game.menu_close(&session.runtime.hud.menu)
+	game.menu_close(&session.app.runtime.hud.menu)
 	return ""
 }

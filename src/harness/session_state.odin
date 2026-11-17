@@ -13,8 +13,8 @@ session_refresh_bake :: proc(session: ^Session) {
 		return
 	}
 	static := game.simulation_bake_input(
-		&session.runtime.sim,
-		&session.runtime.scratch.bake,
+		&session.app.runtime.sim,
+		&session.app.runtime.scratch.bake,
 		session.allocator,
 	)
 	session.render.backend.refresh_bake(session.render.backend.ctx, static)
@@ -50,16 +50,24 @@ session_observe :: proc(session: ^Session, sections: State_Sections) -> (State, 
 	if observation_error != "" {
 		return {}, observation_error
 	}
+	input_observation := Input_Observation {
+		routed     = session.app.routed,
+		has_routed = session.app.has_routed,
+		captured   = session.app.captured,
+		ui_events  = session.app.ui_events.items[:session.app.ui_events.count],
+		gamepad    = session.app.has_routed ? session.app.routed.gamepad : session.pad,
+	}
 	return state_build_sections(
-		&session.runtime.sim,
+		&session.app.runtime.sim,
 		session.frame,
-		&session.runtime.hud,
-		&session.runtime.debug,
+		&session.app.runtime.hud,
+		&session.app.runtime.debug,
 		session_camera(session),
 		session.render.report,
 		session.render.digest_text,
 		{frames = session.settle.frames, converged = session.settle.converged},
 		observation,
+		input_observation,
 		sections,
 		session.allocator,
 	), ""
@@ -74,8 +82,8 @@ session_state :: proc(session: ^Session) -> (State, string) {
 @(private)
 session_camera :: proc(session: ^Session) -> Camera_State {
 	view := frame.camera_view(
-		&session.runtime.sim,
-		&session.runtime.debug,
+		&session.app.runtime.sim,
+		&session.app.runtime.debug,
 		session_override_camera(session),
 		session_view_alpha(session),
 	)

@@ -114,6 +114,7 @@ State :: struct {
 	notice:        Notice_State   `json:"notice" digest:"-"`,
 	rows:          Rows_State     `json:"rows" digest:"-"`,
 	ui:            Ui_State       `json:"ui" digest:"-"`,
+	input:         Input_State    `json:"input" digest:"-"`,
 	settle:        Settle_State   `json:"settle" digest:"-"`,
 	bake:          renderer.Bake_Report `json:"bake" digest:"-"`,
 	renderer:      renderer.Renderer_Report `json:"renderer" digest:"-"`,
@@ -131,6 +132,7 @@ State_Section :: enum {
 	Notice,
 	Rows,
 	Ui,
+	Input,
 	Render_Digest,
 }
 
@@ -149,6 +151,7 @@ state_build_sections :: proc(
 	render_digest: string,
 	settle: Settle_State,
 	ui: Ui_Observation,
+	input: Input_Observation,
 	sections: State_Sections,
 	allocator: mem.Allocator,
 ) -> State {
@@ -164,7 +167,9 @@ state_build_sections :: proc(
 		hud = hud,
 		debug = debug,
 		render_digest = render_digest,
+		renderer = renderer_state,
 		ui = ui,
+		input = input,
 		allocator = allocator,
 	}
 	for row in STATE_SECTION_ROWS {
@@ -189,6 +194,7 @@ state_destroy :: proc(state: ^State, allocator: mem.Allocator) {
 	}
 	rows_state_destroy(&state.rows, allocator)
 	ui_state_destroy(&state.ui, allocator)
+	input_state_destroy(&state.input, allocator)
 	free_owned_string(&state.settings.display, allocator)
 	free_owned_string(&state.settings.resolution, allocator)
 	free_owned_string(&state.settings.window_resolution, allocator)

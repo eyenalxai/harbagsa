@@ -32,12 +32,30 @@ Ui_Action_State :: struct {
 	scalar: f32    `json:"scalar"`,
 }
 
+Ui_Viewport_State :: struct {
+	width:  f32 `json:"width"`,
+	height: f32 `json:"height"`,
+}
+
+Ui_Event_State :: struct {
+	kind: string `json:"kind"`,
+	key:  string `json:"key,omitempty"`,
+	x:    f32    `json:"x"`,
+	y:    f32    `json:"y"`,
+	dx:   f32    `json:"dx,omitempty"`,
+	dy:   f32    `json:"dy,omitempty"`,
+	mods: u32    `json:"mods,omitempty"`,
+}
+
 Ui_State :: struct {
 	surface:      string             `json:"surface"`,
 	focus:        string             `json:"focus"`,
 	hover:        string             `json:"hover"`,
 	pressed:      string             `json:"pressed"`,
 	pointer_free: bool               `json:"pointer_free"`,
+	scale:        f32                `json:"scale"`,
+	viewport:     Ui_Viewport_State  `json:"viewport"`,
+	events:       []Ui_Event_State   `json:"events"`,
 	actions:      []Ui_Action_State  `json:"actions"`,
 	menu:         Ui_Menu_State      `json:"menu"`,
 	palette:      Ui_Palette_State   `json:"palette"`,
@@ -115,6 +133,28 @@ build_state_ui :: proc(state: ^State, ctx: ^State_Context) {
 			section = section,
 		},
 	}
+	scale := ctx.renderer.ui_scale
+	if scale > 0 {
+		state.ui.scale = scale
+		state.ui.viewport = {
+			width  = f32(ctx.renderer.extent.width) / scale,
+			height = f32(ctx.renderer.extent.height) / scale,
+		}
+	}
+	if len(ctx.input.ui_events) > 0 {
+		state.ui.events = make([]Ui_Event_State, len(ctx.input.ui_events), ctx.allocator)
+		for event, index in ctx.input.ui_events {
+			state.ui.events[index] = {
+				kind = ui_event_kind_name(event.kind),
+				key  = ui_event_key_name(event.key),
+				x    = event.x,
+				y    = event.y,
+				dx   = event.dx,
+				dy   = event.dy,
+				mods = event.mods,
+			}
+		}
+	}
 	if ctx.ui.has_interaction {
 		interaction := ctx.ui.interaction
 		state.ui.focus = clone_interaction_key(interaction.focus[:], interaction.focus_len, ctx.allocator)
@@ -143,6 +183,9 @@ ui_state_destroy :: proc(state: ^Ui_State, allocator: mem.Allocator) {
 	if state.actions != nil {
 		delete(state.actions, allocator)
 	}
+	if state.events != nil {
+		delete(state.events, allocator)
+	}
 	state^ = {}
 }
 
@@ -167,4 +210,51 @@ ui_surface :: proc(menu_open, inspector_open, palette_open: bool) -> string {
 		return "palette"
 	}
 	return "hud"
+}
+@(private)
+ui_event_kind_name :: proc(kind: u32) -> string {
+	switch kind {
+	case renderer.UI_EVENT_POINTER_MOVE:
+		return "pointer_move"
+	case renderer.UI_EVENT_POINTER_DOWN:
+		return "pointer_down"
+	case renderer.UI_EVENT_POINTER_UP:
+		return "pointer_up"
+	case renderer.UI_EVENT_POINTER_LEAVE:
+		return "pointer_leave"
+	case renderer.UI_EVENT_WHEEL:
+		return "wheel"
+	case renderer.UI_EVENT_KEY_DOWN:
+		return "key_down"
+	case renderer.UI_EVENT_KEY_UP:
+		return "key_up"
+	case renderer.UI_EVENT_KEY_REPEAT:
+		return "key_repeat"
+	case renderer.UI_EVENT_FOCUS:
+		return "focus"
+	}
+	return "unknown"
+}
+
+@(private)
+ui_event_key_name :: proc(key: i32) -> string {
+	switch key {
+	case renderer.UI_KEY_UP:
+		return "Up"
+	case renderer.UI_KEY_DOWN:
+		return "Down"
+	case renderer.UI_KEY_LEFT:
+		return "Left"
+	case renderer.UI_KEY_RIGHT:
+		return "Right"
+	case renderer.UI_KEY_ENTER:
+		return "Enter"
+	case renderer.UI_KEY_ESCAPE:
+		return "Escape"
+	case renderer.UI_KEY_TAB:
+		return "Tab"
+	case renderer.UI_KEY_SPACE:
+		return "Space"
+	}
+	return ""
 }

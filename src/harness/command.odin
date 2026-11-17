@@ -7,6 +7,10 @@ import "src:renderer"
 
 No_Fields_Command :: struct {}
 
+Reset_Command :: struct {
+	expect_state: []State_Expect,
+}
+
 Command_Kind :: enum {
 	Reset,
 	Look,
@@ -24,6 +28,8 @@ Command_Kind :: enum {
 	Menu,
 	Ui,
 	Ui_Tree,
+	Event,
+	Resize,
 	Record,
 	Replay,
 	Repro,
@@ -72,12 +78,14 @@ Capture_Command :: struct {
 	alpha:     f32,
 	has_alpha: bool,
 	// The entries are named `<name>-<view>`, which the field name does not say.
-	views:     []renderer.Capture_View,
+	views:        []renderer.Capture_View,
+	expect_state: []State_Expect,
 }
 
 // `at` is a pixel in the capture extent with the origin at the top left.
 Pick_Command :: struct {
-	at: [2]i32,
+	at:           [2]i32,
+	expect_state: []State_Expect,
 }
 
 Captures_Command :: struct {
@@ -163,6 +171,7 @@ Renderer_Debug_Command :: struct {
 
 Command :: struct {
 	kind:           Command_Kind,
+	reset:          Reset_Command,
 	look:           Look_Command,
 	face:           Face_Command,
 	input:          Input_Command,
@@ -177,6 +186,8 @@ Command :: struct {
 	menu:           Menu_Command,
 	ui:             Ui_Command,
 	ui_tree:        Ui_Tree_Command,
+	event:          Event_Command,
+	resize:         Resize_Command,
 	record:         Record_Command,
 	replay:         Replay_Command,
 	repro:          Repro_Command,

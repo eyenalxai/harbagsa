@@ -36,8 +36,8 @@ session_record_start :: proc(session: ^Session, path: string, include_scene := t
 			debug = &session.render.debug
 		}
 		scene := frame.scene_capture(
-			&session.runtime.sim,
-			&session.runtime.debug,
+			&session.app.runtime.sim,
+			&session.app.runtime.debug,
 			options,
 			session_override_camera(session),
 			debug,
@@ -49,18 +49,15 @@ session_record_start :: proc(session: ^Session, path: string, include_scene := t
 		frame.scene_destroy(&scene, session.allocator)
 		append(&session.recorder.recorded, scene_line)
 	}
-	if session.input.move_forward != 0 ||
-	   session.input.move_right != 0 ||
-	   session.input.jump_pressed ||
-	   session.input.sprint_held {
+	if session.held.move_forward != 0 ||
+	   session.held.move_right != 0 ||
+	   session.held.sprint_held {
 		input := Input_Command {
-			forward     = session.input.move_forward,
-			right       = session.input.move_right,
-			jump        = session.input.jump_pressed,
-			sprint      = session.input.sprint_held,
+			forward     = session.held.move_forward,
+			right       = session.held.move_right,
+			sprint      = session.held.sprint_held,
 			has_forward = true,
 			has_right   = true,
-			has_jump    = true,
 			has_sprint  = true,
 		}
 		append(&session.recorder.recorded, input_command_json(input, session.allocator))

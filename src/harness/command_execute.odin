@@ -10,18 +10,21 @@ import "src:game"
 
 @(private)
 execute_reset :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
-	return session_reset(session)
+	if reset_error := session_reset(session); reset_error != "" {
+		return reset_error
+	}
+	return check_state_expects(session, command.reset.expect_state)
 }
 
 @(private)
 execute_look :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
-	game.simulation_look(&session.runtime.sim, b3.Vec2{command.look.dx, command.look.dy})
+	game.simulation_look(&session.app.runtime.sim, b3.Vec2{command.look.dx, command.look.dy})
 	return ""
 }
 
 @(private)
 execute_face :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
-	game.simulation_face(&session.runtime.sim, command.face.yaw_rad, command.face.pitch_rad)
+	game.simulation_face(&session.app.runtime.sim, command.face.yaw_rad, command.face.pitch_rad)
 	return ""
 }
 
@@ -55,10 +58,17 @@ execute_state :: proc(session: ^Session, command: Command, reply: ^Reply) -> str
 @(private)
 execute_capture :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	immediate, capture_error := session_queue_capture(session, command.capture)
-	if capture_error == "" && immediate && len(session.capture.captures) > 0 {
+	if capture_error != "" {
+		return capture_error
+	}
+	if !immediate {
+		// A future-frame capture asserts when its draw runs.
+		return ""
+	}
+	if len(session.capture.captures) > 0 {
 		reply.capture = &session.capture.captures[len(session.capture.captures) - 1]
 	}
-	return capture_error
+	return check_state_expects(session, command.capture.expect_state)
 }
 
 @(private)
@@ -101,6 +111,7 @@ execute_view :: proc(session: ^Session, command: Command, reply: ^Reply) -> stri
 	}
 	if command.view.has_hint {
 		session.view.hint = command.view.hint
+		session.captured = !command.view.hint
 	}
 	if command.view.has_fx {
 		session.view.fx = command.view.fx
@@ -131,10 +142,13 @@ execute_bake :: proc(session: ^Session, command: Command, reply: ^Reply) -> stri
 @(private)
 execute_pick :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	pick_error := session_pick(session, command.pick)
-	if pick_error == "" && len(session.picks) > 0 {
+	if pick_error != "" {
+		return pick_error
+	}
+	if len(session.picks) > 0 {
 		reply.pick = &session.picks[len(session.picks) - 1]
 	}
-	return pick_error
+	return check_state_expects(session, command.pick.expect_state)
 }
 
 @(private)
@@ -144,8 +158,8 @@ execute_get :: proc(session: ^Session, command: Command, reply: ^Reply) -> strin
 
 @(private)
 execute_debug_mode :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
-	if session.runtime.debug.active != command.debug_mode.active {
-		game.debug_mode_toggle(&session.runtime.debug, &session.runtime.sim)
+	if session.app.runtime.debug.active != command.debug_mode.active {
+		game.debug_mode_toggle(&session.app.runtime.debug, &session.app.runtime.sim)
 	}
 	return ""
 }
@@ -213,7 +227,7 @@ execute_renderer_debug :: proc(session: ^Session, command: Command, reply: ^Repl
 execute_displays :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	session_displays(session, command.displays)
 	reply.displays = new(Displays_State, session.allocator)
-	reply.displays^ = displays_state_build(&session.runtime.sim.settings.display, session.allocator)
+	reply.displays^ = displays_state_build(&session.app.runtime.sim.settings.display, session.allocator)
 	return ""
 }
 

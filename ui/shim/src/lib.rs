@@ -90,14 +90,6 @@ pub extern "C" fn ui_actions_clear() {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ui_click_point(x: f32, y: f32) -> i32 {
-    let Some(host) = host::host() else { return 1 };
-    let Some(runtime) = host.runtime.as_mut() else { return 2 };
-    input::click_point(runtime, x, y);
-    0
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn ui_element_center(
     pointer: *const u8,
     len: u32,
@@ -120,61 +112,10 @@ pub extern "C" fn ui_element_center(
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn ui_drag_at(
-    x: f32,
-    y: f32,
-    dx: f32,
-    dy: f32,
-    steps: u32,
-    hold: u32,
-) -> i32 {
+pub extern "C" fn ui_settle() -> i32 {
     let Some(host) = host::host() else { return 1 };
     let Some(runtime) = host.runtime.as_mut() else { return 2 };
-    input::drag_point(runtime, x, y, dx, dy, steps, hold != 0);
-    0
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ui_drag_element(
-    pointer: *const u8,
-    len: u32,
-    dx: f32,
-    dy: f32,
-    steps: u32,
-    hold: u32,
-) -> i32 {
-    let Some(host) = host::host() else { return 1 };
-    let Some(runtime) = host.runtime.as_mut() else { return 2 };
-    let key = unsafe { abi::text_bytes(pointer, len) };
-    input::drag_element(runtime, &key, dx, dy, steps, hold != 0)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ui_wheel_at(x: f32, y: f32, dx: f32, dy: f32) -> i32 {
-    let Some(host) = host::host() else { return 1 };
-    let Some(runtime) = host.runtime.as_mut() else { return 2 };
-    input::wheel_point(runtime, x, y, dx, dy);
-    0
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ui_wheel_element(
-    pointer: *const u8,
-    len: u32,
-    dx: f32,
-    dy: f32,
-) -> i32 {
-    let Some(host) = host::host() else { return 1 };
-    let Some(runtime) = host.runtime.as_mut() else { return 2 };
-    let key = unsafe { abi::text_bytes(pointer, len) };
-    input::wheel_element(runtime, &key, dx, dy)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn ui_focus(focused: u32) -> i32 {
-    let Some(host) = host::host() else { return 1 };
-    let Some(runtime) = host.runtime.as_mut() else { return 2 };
-    input::focus(runtime, focused != 0);
+    runtime.settle_all();
     0
 }
 

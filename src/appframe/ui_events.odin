@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-package main
+package appframe
 
 import "src:platform"
 import "src:renderer"

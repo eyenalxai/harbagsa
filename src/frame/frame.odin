@@ -197,11 +197,3 @@ build :: proc(
 
 	return scene
 }
-
-draw :: proc(
-	state: ^renderer.Renderer,
-	scene: renderer.Render_Input,
-	capture := renderer.Frame_Capture{},
-) -> renderer.Frame_Status {
-	return renderer.render_frame(state, scene, capture).status
-}

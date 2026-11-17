@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the harness clicks the view; the game binary does not
+#+vet !unused-procedures // the harness reads the view; the game binary does not
 package renderer
 
 import "core:log"
@@ -15,13 +15,8 @@ foreign ui_lib {
 	ui_attach :: proc(target: ^Ui_Target) -> i32 ---
 	ui_draw :: proc(image_index: u32) -> i32 ---
 	ui_frame :: proc(dt: f64, snapshot: ^Ui_Snapshot, panel: ^Ui_Panel, menu: ^Ui_Menu, settings: ^Ui_Settings, palette: ^Ui_Palette, inspector: ^Ui_Inspector, events: [^]Ui_Event, count: u32) -> i32 ---
-	ui_click_point :: proc(x, y: f32) -> i32 ---
+	ui_settle :: proc() -> i32 ---
 	ui_element_center :: proc(pointer: [^]u8, len: u32, x: ^f32, y: ^f32) -> i32 ---
-	ui_drag_at :: proc(x, y, dx, dy: f32, steps: u32, hold: u32) -> i32 ---
-	ui_drag_element :: proc(pointer: [^]u8, len: u32, dx, dy: f32, steps: u32, hold: u32) -> i32 ---
-	ui_wheel_at :: proc(x, y, dx, dy: f32) -> i32 ---
-	ui_wheel_element :: proc(pointer: [^]u8, len: u32, dx, dy: f32) -> i32 ---
-	ui_focus :: proc(focused: u32) -> i32 ---
 	ui_interaction :: proc(out: ^Ui_Interaction) -> i32 ---
 	ui_tree_json :: proc(len: ^u32) -> [^]u8 ---
 	ui_actions :: proc(count: ^u32) -> [^]Ui_Action ---
@@ -176,11 +171,17 @@ Ui_Action :: struct {
 	scalar: f32,
 }
 
+// The UI works in points while the target is in pixels. One scale keeps the
+// attach target, the event mapping, and the reported viewport in agreement.
+ui_scale :: proc(r: ^Renderer) -> f32 {
+	return clamp(f32(r.target.config.height) / 720.0, 1.0, 2.0)
+}
+
 ui_attach_target :: proc(r: ^Renderer) -> bool {
 	if len(r.target.images) == 0 {
 		return false
 	}
-	scale := clamp(f32(r.target.config.height) / 720.0, 1.0, 2.0)
+	scale := ui_scale(r)
 	images := make([]u64, len(r.target.images), r.allocator)
 	defer delete(images, r.allocator)
 	for image, index in r.target.images {

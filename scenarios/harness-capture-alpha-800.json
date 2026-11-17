@@ -1,0 +1,42 @@
+{
+  "note": "Two captures queued for frame 12 draw as separate groups at their own alpha. Each asserts the camera at the alpha it drew, and both land at frame 12. At 800x600.",
+  "size": "800x600",
+  "view": {
+    "hud": false,
+    "debug": false,
+    "hint": false
+  },
+  "commands": [
+    {
+      "cmd": "input",
+      "forward": 1,
+      "sprint": true
+    },
+    {
+      "cmd": "step",
+      "frames": 10
+    },
+    {
+      "cmd": "capture",
+      "name": "future-quarter",
+      "frame": 12,
+      "alpha": 0.25,
+      "expect_state": {
+        "camera.position.z": 17.21674
+      }
+    },
+    {
+      "cmd": "capture",
+      "name": "future-full",
+      "frame": 12,
+      "alpha": 1,
+      "expect_state": {
+        "camera.position.z": 17.116741
+      }
+    },
+    {
+      "cmd": "step",
+      "frames": 2
+    }
+  ]
+}

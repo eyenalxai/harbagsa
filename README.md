@@ -216,7 +216,7 @@ degrees and ends in `_deg`. Positions and ranges are metres. One `step` or
 - `reset`: restore the simulation.
 - `look`: apply a pixel look delta.
 - `face`: set the camera yaw and pitch.
-- `input`: set persistent movement input.
+- `input`: set held movement axes and queue a jump or sprint press.
 - `step`: advance fixed frames.
 - `settle`: render fixed frames without a capture, or wait for convergence.
 - `state`: report current state.
@@ -227,7 +227,9 @@ degrees and ends in `_deg`. Positions and ranges are metres. One `step` or
 - `debug_mode`: enter or leave debug mode.
 - `editor`: drive the palette, placement, object edits, light settings, and history. `state.editor` reports the active tool, the resolved selection, the placement, the history, and the light budget.
 - `menu`: drive the settings dialog and its values.
-- `ui`: click by element key or by point, drag, wheel, or focus.
+- `ui`: click by element key or by point, drag, wheel, or focus. Each form is a recipe over the raw event frames.
+- `event`: inject one raw keyboard, pointer, wheel, focus, or gamepad frame and run the live input route.
+- `resize`: recreate the offscreen target at a new `WIDTHxHEIGHT`.
 - `record`: start or stop a recording.
 - `replay`: reset and run a recorded scenario.
 - `repro`: write the live view as a scene snapshot.

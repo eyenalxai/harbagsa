@@ -5,16 +5,15 @@ import "core:log"
 import "core:os"
 import "core:time"
 
+import "src:appframe"
 import "src:frame"
 import "src:game"
-import "src:input"
 import "src:perf"
 import "src:platform"
 import "src:renderer"
-import "src:uiaction"
 
 MAX_FRAME_DELTA :: f32(0.1)
-MAX_STEPS_PER_FRAME :: 8
+
 main :: proc() {
 	logger := log.create_console_logger(lowest = .Info, allocator = context.allocator)
 	context.logger = logger
@@ -69,41 +68,41 @@ run :: proc() -> bool {
 	defer renderer.deinit(&state)
 
 	loop: Loop
-	loop.last_alpha = 1.0
-	loop.runtime = frame.runtime_create(context.allocator)
-	defer frame.runtime_destroy(&loop.runtime)
-	if !frame.runtime_is_valid(&loop.runtime) {
+	loop.window = &window
+	loop.repro_dir = repro_dir
+	loop.app.last_alpha = 1.0
+	loop.app.runtime = frame.runtime_create(context.allocator)
+	defer frame.runtime_destroy(&loop.app.runtime)
+	if !frame.runtime_is_valid(&loop.app.runtime) {
 		log.error("harbagsa: simulation init failed")
 		return false
 	}
-	loop.renderer = &state
-	loop.repro_dir = repro_dir
+	loop.app.renderer = &state
 	loop.displays = platform.query_displays()
 	if loop.displays.list.count == 0 {
 		log.warn("harbagsa: SDL reported no displays; keeping the created window")
 	}
-	loop.runtime.sim.settings.display = loop.displays.list
+	loop.app.runtime.sim.settings.display = loop.displays.list
 	initial_display := platform.display_index_for_window(&window, &loop.displays)
 	if initial_display >= 0 {
-		loop.runtime.sim.settings.window.display = initial_display
+		loop.app.runtime.sim.settings.window.display = initial_display
 		result := platform.apply_window_state(
 			&window,
 			&loop.displays,
-			loop.runtime.sim.settings.window,
+			loop.app.runtime.sim.settings.window,
 		)
 		if result != .Applied {
 			log.warnf(
 				"harbagsa: the initial window settings were not applied: %s",
 				platform.window_apply_name(result),
 			)
-			game.hud_notice_window_failed(&loop.runtime.hud, platform.window_apply_name(result))
+			game.hud_notice_window_failed(&loop.app.runtime.hud, platform.window_apply_name(result))
 		}
 	} else {
 		log.warn("harbagsa: the launch display is not in the display list")
 	}
 	renderer.notify_resize(&state)
 	last_time := time.now()
-	ui_event_buffer: UI_Event_Buffer
 
 	for {
 		perf.begin_frame(&perf_state)
@@ -111,15 +110,6 @@ run :: proc() -> bool {
 		if events.quit {
 			return true
 		}
-		if events.resized {
-			renderer.notify_resize(&state)
-		}
-
-		focus := game.focus(&loop.runtime.debug, &loop.runtime.hud.menu)
-		routed := input.route(&loop.resolver, events, focus, events.captured)
-
-		apply_frame_input(&loop, &events, routed.game)
-		perf.mark(&perf_state, .Events)
 
 		width, height := platform.pixel_size(&window)
 		if platform.is_minimized(&window) || width == 0 || height == 0 {
@@ -142,86 +132,20 @@ run :: proc() -> bool {
 		last_time = now
 		delta = clamp(delta, 0, MAX_FRAME_DELTA)
 
-		// Look is per frame. Action edges are latched so a press survives a frame
-		// with no step.
-		if !loop.runtime.hud.menu.open && !loop.runtime.debug.active {
-			game.simulation_look(&loop.runtime.sim, routed.game.look_delta)
-		}
-		steps := 0
-		if !loop.runtime.hud.menu.open {
-			loop.accumulator += delta
-			for loop.accumulator >= game.SIMULATION_STEP && steps < MAX_STEPS_PER_FRAME {
-				loop.accumulator -= game.SIMULATION_STEP
-				steps += 1
-			}
-			if steps == MAX_STEPS_PER_FRAME && loop.accumulator >= game.SIMULATION_STEP {
-				// Drop a backlog that cannot drain.
-				loop.accumulator = 0
-			}
-		}
-		frame.runtime_step(&loop.runtime, frame.Frame_Step {
-			fixed_steps = steps,
-			delta = delta,
-			snapshot = routed.game.snapshot,
-			motion = routed.game.motion,
-			actions = routed.game.actions[:routed.game.action_count],
-		})
-		if !loop.runtime.debug.active && steps > 0 {
-			input.clear_latches(&loop.resolver)
-		}
-
-		alpha := clamp(loop.accumulator / game.SIMULATION_STEP, 0, 1)
-		loop.last_alpha = alpha
-		static := game.simulation_bake_input(
-			&loop.runtime.sim,
-			&loop.runtime.scratch.bake,
-			context.allocator,
-		)
-		renderer.refresh_bake(&state, static)
-		scene := frame.runtime_compose(
-			&loop.runtime,
-			frame.Options {
+		steps := appframe.pace(&loop.app, delta)
+		alpha := appframe.alpha(&loop.app)
+		result := appframe.run(
+			&loop.app,
+			appframe.Input{events = events, delta = delta, steps = steps},
+			appframe.Options {
 				alpha = alpha,
-				delta_seconds = delta,
-				debug_view = loop.runtime.debug.physics_debug,
-				captured = events.captured,
 				hud = true,
-				bake = renderer.bake_report(&state),
-				ui_events = build_ui_events(routed.ui_events[:routed.ui_event_count], &ui_event_buffer),
+				debug_view = loop.app.runtime.debug.physics_debug,
+				perf = &perf_state,
 			},
-			nil,
-			static,
+			loop_hooks(&loop),
 		)
-		perf.mark(&perf_state, .Build)
-
-		status := frame.draw(&state, scene)
-		for action in renderer.ui_actions_slice() {
-			previous_window := loop.runtime.sim.settings.window
-			result := uiaction.apply(
-				{
-					sim = &loop.runtime.sim,
-					debug = &loop.runtime.debug,
-					menu = &loop.runtime.hud.menu,
-					captured = events.captured,
-				},
-				action,
-			)
-			if !result.handled {
-				log.warnf("harbagsa: unknown UI action kind %d", action.kind)
-			}
-			if result.window_changed {
-				apply_window_settings(&loop, &window, previous_window)
-			}
-			if result.closed_menu {
-				loop.accumulator = 0
-			}
-		}
-		renderer.ui_actions_clear()
-		// Capture follows the surface that is open after this frame's actions, so
-		// an opening or closing surface takes effect before the next poll.
-		end_focus := game.focus(&loop.runtime.debug, &loop.runtime.hud.menu)
-		sync_cursor(&window, end_focus.pointer_free, events.captured)
-		switch status {
+		switch result.status {
 		case .Ok:
 			perf.mark(&perf_state, .Present)
 			perf.set_gpu(&perf_state, renderer.gpu_times(&state))

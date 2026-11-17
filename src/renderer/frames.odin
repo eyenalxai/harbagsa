@@ -109,7 +109,7 @@ begin_frame :: proc(
 	}
 
 	if r.target.dirty {
-		status = recreate_swapchain(r)
+		status = recreate_target(r)
 		if status != .Ok {
 			return {}, status
 		}

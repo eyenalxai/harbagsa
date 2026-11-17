@@ -34,7 +34,7 @@ path.
   keys to their sinks, and leaves input on the keyboard. Hot-plug is not
   supported.
 - The held state is cleared on window blur and on a dropped raw event. A full
-  key or UI queue reports a warning.
+  key or UI queue warns in the route and fails a harness frame.
 - Cursor capture follows the end-of-frame focus, so opening or closing a surface
   takes effect before the next poll.
 - The palette cards are not focusable. `Palette_Step`, `Palette_Select`, and
@@ -56,6 +56,7 @@ path.
   Rune.
 - A new keyed Rune surface must join the owner table or its keys fall to the
   game.
-- The harness still drives the shim directly and does not exercise the live
-  route. The shared raw-event harness frame and its proof are a separate change
-  (HARB-375).
+- The harness exercises the same route. It injects raw platform events, and its
+  frames apply the action queue; the harness `ui` commands are recipes over
+  those events. The harness reads element positions, interaction state, and the
+  element tree through the shim's read queries only.

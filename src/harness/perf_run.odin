@@ -5,7 +5,6 @@ import "core:fmt"
 import "core:strings"
 import "core:time"
 
-import "src:frame"
 import "src:perf"
 import "src:renderer"
 
@@ -13,7 +12,7 @@ import "src:renderer"
 // clipped. Prime and warmup frames fill the swapchain, the timestamp slots, and
 // the device clocks before the measured window starts.
 session_perf :: proc(session: ^Session, command: Perf_Command) -> string {
-	if session.runtime.hud.menu.open {
+	if session.app.runtime.hud.menu.open {
 		return format_error("menu is open; close the menu to run perf")
 	}
 	// One trace per run keeps the trace file and the report aligned. A second
@@ -293,19 +292,15 @@ session_perf_frame :: proc(session: ^Session) -> string {
 		return timeout
 	}
 	perf.begin_frame(&session.perf.state)
-	perf.mark(&session.perf.state, .Events)
-	input := session.input
-	frame.runtime_step(&session.runtime, frame.fixed_step(input))
-	session.input.jump_pressed = false
-	session.input.sprint_pressed = false
+	events := session_frame_events(session)
 	session.frame += 1
-	perf.mark(&session.perf.state, .Simulation)
+	if frame_error := session_frame(session, events, 1, session.default_alpha, nil); frame_error != "" {
+		return frame_error
+	}
 	if session.render.backend != nil {
-		if draw_error := session_draw_group(session, nil); draw_error != "" {
-			return draw_error
-		}
 		perf.set_gpu(&session.perf.state, session.render.backend.gpu_times(session.render.backend.ctx))
 	} else {
+		// A no-render frame has no compose or record pass to time.
 		perf.mark(&session.perf.state, .Build)
 		perf.mark(&session.perf.state, .Record)
 	}

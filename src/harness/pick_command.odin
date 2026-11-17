@@ -51,22 +51,30 @@ Pick_Result :: struct {
 }
 
 @(private)
-parse_pick :: proc(object: json.Object, _allocator: mem.Allocator) -> (Command, string) {
-	if key, unknown := json_unknown_key(object, {"cmd", "at"}); unknown {
+parse_pick :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
+	if key, unknown := json_unknown_key(object, {"cmd", "at", "expect_state"}); unknown {
 		return {}, format_error("unknown key %q", key)
 	}
 	at, ok := vec2_int_field(object, "at")
 	if !ok || at.x < 0 || at.y < 0 {
 		return {}, format_error("%s", "'at' must be [x, y] pixels from the top left")
 	}
-	return {kind = .Pick, pick = {at = at}}, ""
+	command := Command{kind = .Pick, pick = {at = at}}
+	if expect_value, has_expect := json_get(object, "expect_state"); has_expect {
+		expects, expect_error := parse_state_expects(expect_value, allocator)
+		if expect_error != "" {
+			return {}, expect_error
+		}
+		command.pick.expect_state = expects
+	}
+	return command, ""
 }
 
 session_pick :: proc(session: ^Session, command: Pick_Command) -> string {
 	if !session.render.enabled {
 		return format_error("%s", "pick requires a renderer; rendering is disabled")
 	}
-	if session.runtime.hud.menu.open {
+	if session.app.runtime.hud.menu.open {
 		return format_error("%s", "menu is open; close the menu to pick")
 	}
 	if session.render.backend == nil || session.render.backend.pick == nil {
@@ -84,7 +92,7 @@ session_pick :: proc(session: ^Session, command: Pick_Command) -> string {
 		}
 		return pick_error
 	}
-	append(&session.picks, pick_result_build(&session.runtime.sim, hit, session.allocator))
+	append(&session.picks, pick_result_build(&session.app.runtime.sim, hit, session.allocator))
 	session_refresh_renderer(session)
 	return ""
 }

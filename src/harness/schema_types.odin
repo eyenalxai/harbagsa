@@ -52,6 +52,37 @@ SCENARIO_KEYS := []string {
 CAPTURE_TARGETS := []string{"color", "velocity", "history", "depth", "scene_color"}
 CAPTURE_FORMATS := []string{"png", "float", "raw", "stats", "profile"}
 
+// Two commands read fields by form, not by struct, so their reflected fields
+// would name parser internals. The schema lists the keys the parser accepts.
+EVENT_SCHEMA_FIELDS := []Schema_Field {
+	{"key", "string", ""},
+	{"state", "string", ""},
+	{"mods", "array", ""},
+	{"pointer", "[2]number", ""},
+	{"look", "[2]number", ""},
+	{"button", "string", ""},
+	{"wheel", "number", ""},
+	{"focus", "boolean", ""},
+	{"captured", "boolean", ""},
+	{"gamepad", "object", ""},
+	{"expect", "object", ""},
+	{"expect_no_action", "boolean", ""},
+	{"expect_state", "object", ""},
+}
+
+RESIZE_SCHEMA_FIELDS := []Schema_Field {
+	{"size", "string", ""},
+	{"expect_state", "object", ""},
+}
+
+SCHEMA_FIELD_OVERRIDES := [?]struct {
+	kind:   Command_Kind,
+	fields: []Schema_Field,
+} {
+	{.Event, EVENT_SCHEMA_FIELDS},
+	{.Resize, RESIZE_SCHEMA_FIELDS},
+}
+
 SCHEMA_UNITS := [?]Schema_Unit {
 	{"_deg", "degrees"},
 	{"_px", "pixels"},
@@ -79,6 +110,13 @@ schema_backend_name :: proc(backend: Command_Backend) -> string {
 }
 
 schema_command_fields :: proc(row: ^Command_Row, allocator: runtime.Allocator) -> []Schema_Field {
+	for override in SCHEMA_FIELD_OVERRIDES {
+		if override.kind == row.kind {
+			fields := schema_fields_clone(override.fields, allocator)
+			schema_fix_field_types(fields, allocator)
+			return fields
+		}
+	}
 	fields := make([dynamic]Schema_Field, 0, 8, allocator)
 	// A scene command spreads its blocks at the top level, not under a
 	// "scene" key, so the schema follows the parser rather than the struct.
@@ -93,6 +131,7 @@ schema_command_fields :: proc(row: ^Command_Row, allocator: runtime.Allocator) -
 		return fields[:]
 	}
 	schema_append_fields(row.value_type, nil, &fields, allocator)
+	schema_fix_field_types(fields[:], allocator)
 	// `variants` is an object keyed by variant name, but the field's Odin type
 	// is a slice, so the reflected type would say array. `prime` is a number or
 	// the string "once", which has no single reflected type either.
@@ -109,6 +148,31 @@ schema_command_fields :: proc(row: ^Command_Row, allocator: runtime.Allocator) -
 		}
 	}
 	return fields[:]
+}
+
+// `expect_state` is a slice in the struct but an object keyed by state path in
+// the parser.
+@(private)
+schema_fix_field_types :: proc(fields: []Schema_Field, allocator: runtime.Allocator) {
+	for &field in fields {
+		if field.name == "expect_state" {
+			delete(field.type, allocator)
+			field.type = strings.clone("object", allocator)
+		}
+	}
+}
+
+@(private)
+schema_fields_clone :: proc(fields: []Schema_Field, allocator: runtime.Allocator) -> []Schema_Field {
+	clones := make([]Schema_Field, len(fields), allocator)
+	for field, index in fields {
+		clones[index] = {
+			name = strings.clone(field.name, allocator),
+			type = strings.clone(field.type, allocator),
+			unit = field.unit,
+		}
+	}
+	return clones
 }
 
 @(private)

@@ -62,14 +62,17 @@ Shorthand: `vendor/rune/crates/rune/src/`.
 
 ## Repro design
 
-1. Add a `resize` command: wait idle, destroy the offscreen colour image, views,
-   and readback, create at the new extent, rebuild frame targets and TAA history,
-   then call `ui_attach_target` — the order `recreate_swapchain` uses
-   (`swapchain.odin:160-210`).
-2. `scenarios/rune-resize.json`: `size` 1440p, capture `before`, `resize` 2160p,
-   `step 1`, capture `after`. Repeat at 1080p → 1440p and at 720p → 768p.
-3. Assert a `stats` capture with `coverage` over the status-panel region: after
-   coverage must match before; before the fix it collapses.
+1. The `resize` command recreates the offscreen target: wait idle, destroy the
+   colour image, views, and readback, create at the new extent, rebuild frame
+   targets and TAA history, then call `ui_attach_target`
+   (`src/renderer/recreate.odin`).
+2. `scenarios/harness-resize.json`: `size` 1280x720, capture `text-1280`,
+   `resize` 1200x700, capture `text-1200`, `resize` 800x600, capture `text-800`,
+   then back to 1280x720. Every extent clamps to UI scale 1.0, so no relayout
+   can hide an empty atlas.
+3. A `stats` capture with `coverage.lit` over the status-panel region and
+   `require.lit_fraction_min` fails the run when the region goes dark. Reverting
+   the renderer reuse in `ui/shim/src/host.rs` collapses the fraction to 0.
 4. Determinism: one image, one readback, one step, no TAA carry.
 
 ## Fast live check

@@ -1,7 +1,6 @@
 use rune::{Key, KeyEvent, Mods, Runtime};
 
 use crate::abi::UiEvent;
-use crate::introspect;
 use crate::state::UiState;
 
 pub const POINTER_MOVE: u32 = 1;
@@ -17,8 +16,6 @@ pub const FOCUS: u32 = 11;
 pub const MOD_SHIFT: u32 = 1;
 pub const MOD_CTRL: u32 = 2;
 
-const FRAME_DT: f64 = 1.0 / 60.0;
-const MAX_DRAG_STEPS: u32 = 64;
 const LIVE_WHEEL_POINTS: f32 = 40.0;
 
 pub fn dispatch(runtime: &mut Runtime<UiState>, events: *const UiEvent, count: u32) {
@@ -72,100 +69,6 @@ pub fn dispatch(runtime: &mut Runtime<UiState>, events: *const UiEvent, count: u
             _ => {}
         }
     }
-}
-
-pub fn click_point(runtime: &mut Runtime<UiState>, x: f32, y: f32) {
-    runtime.pointer_move(x, y);
-    runtime.pointer_down(x, y);
-    advance(runtime);
-    runtime.pointer_up(x, y);
-    runtime.state.pressed_key = None;
-    advance(runtime);
-    settle(runtime);
-}
-
-pub fn drag_point(
-    runtime: &mut Runtime<UiState>,
-    x: f32,
-    y: f32,
-    dx: f32,
-    dy: f32,
-    steps: u32,
-    hold: bool,
-) {
-    let steps = steps.clamp(1, MAX_DRAG_STEPS);
-    runtime.pointer_move(x, y);
-    runtime.pointer_down(x, y);
-    let key = introspect::key_at(runtime, x, y);
-    runtime.state.pressed_key = key;
-    advance(runtime);
-    for step in 1..=steps {
-        let fraction = step as f32 / steps as f32;
-        runtime.pointer_move(x + dx * fraction, y + dy * fraction);
-        advance(runtime);
-    }
-    if hold {
-        settle(runtime);
-        return;
-    }
-    runtime.pointer_up(x + dx, y + dy);
-    runtime.state.pressed_key = None;
-    advance(runtime);
-    settle(runtime);
-}
-
-pub fn drag_element(
-    runtime: &mut Runtime<UiState>,
-    key: &str,
-    dx: f32,
-    dy: f32,
-    steps: u32,
-    hold: bool,
-) -> i32 {
-    let Some((x, y)) = introspect::element_center(runtime, key) else {
-        return 3;
-    };
-    drag_point(runtime, x, y, dx, dy, steps, hold);
-    0
-}
-
-pub fn wheel_point(runtime: &mut Runtime<UiState>, x: f32, y: f32, dx: f32, dy: f32) {
-    runtime.pointer_move(x, y);
-    runtime.wheel_xy(x, y, dx, dy);
-    advance(runtime);
-    settle(runtime);
-}
-
-pub fn wheel_element(
-    runtime: &mut Runtime<UiState>,
-    key: &str,
-    dx: f32,
-    dy: f32,
-) -> i32 {
-    let Some((x, y)) = introspect::element_center(runtime, key) else {
-        return 3;
-    };
-    wheel_point(runtime, x, y, dx, dy);
-    0
-}
-
-pub fn focus(runtime: &mut Runtime<UiState>, focused: bool) {
-    runtime.window_focus(focused);
-    if !focused {
-        runtime.state.pressed_key = None;
-    }
-    advance(runtime);
-    settle(runtime);
-}
-
-fn advance(runtime: &mut Runtime<UiState>) {
-    runtime.invalidate();
-    runtime.frame(FRAME_DT);
-}
-
-fn settle(runtime: &mut Runtime<UiState>) {
-    runtime.settle_all();
-    runtime.frame(FRAME_DT);
 }
 
 fn key_from_code(code: i32) -> Option<Key> {

@@ -8,6 +8,7 @@ import "core:strings"
 
 import "src:display"
 import "src:game"
+import "src:renderer"
 
 // The one list of conditional state sections. The build, the field resolver,
 // and the all-sections set read it.
@@ -22,7 +23,9 @@ State_Context :: struct {
 	hud:           ^game.HUD_State,
 	debug:         ^game.Debug_Mode,
 	render_digest: string,
+	renderer:      renderer.Renderer_Report,
 	ui:            Ui_Observation,
+	input:         Input_Observation,
 	allocator:     mem.Allocator,
 }
 
@@ -36,6 +39,7 @@ STATE_SECTION_ROWS := [?]State_Section_Row {
 	{.Notice, "notice", build_state_notice},
 	{.Rows, "rows", build_state_rows},
 	{.Ui, "ui", build_state_ui},
+	{.Input, "input", build_state_input},
 	{.Render_Digest, "render_digest", build_state_render_digest},
 }
 
