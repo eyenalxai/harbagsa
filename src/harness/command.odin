@@ -80,7 +80,8 @@ Capture_Command :: struct {
 
 // `at` is a pixel in the capture extent with the origin at the top left.
 Pick_Command :: struct {
-	at: [2]i32,
+	at:           [2]i32,
+	expect_state: []State_Expect,
 }
 
 Captures_Command :: struct {

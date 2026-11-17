@@ -250,6 +250,10 @@ session_step :: proc(session: ^Session, frames: int) -> string {
 		); render_error != "" {
 			return render_error
 		}
+		if expect_error := session_check_due_expects(session, due[:]); expect_error != "" {
+			session_release_captures(session, due[:])
+			return expect_error
+		}
 		session_release_captures(session, due[:])
 		if session.quit {
 			break
@@ -273,6 +277,19 @@ session_due_captures :: proc(
 		append(due, index)
 		append(requests, ..pending.requests)
 	}
+}
+
+@(private)
+session_check_due_expects :: proc(session: ^Session, due: []int) -> string {
+	for index in due {
+		if expect_error := check_state_expects(
+			session,
+			session.capture.pending[index].expect_state,
+		); expect_error != "" {
+			return expect_error
+		}
+	}
+	return ""
 }
 
 @(private)

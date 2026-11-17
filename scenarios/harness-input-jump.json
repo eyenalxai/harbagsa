@@ -1,0 +1,20 @@
+{
+  "note": "The input command's jump is a one-shot Space press pair. The first jump leaves the ground, the player lands, and a second input jump leaves it again, so the key source is released after each press.",
+  "size": "1280x720",
+  "view": {"hud": true, "debug": false, "hint": false},
+  "commands": [
+    {"cmd": "settle", "frames": 5},
+    {"cmd": "input", "jump": true},
+    {"cmd": "step", "frames": 1},
+    {"cmd": "event", "pointer": [0, 0], "expect_no_action": true,
+     "expect_state": {"player.grounded": false, "input.owner": "world",
+                      "input.events.0.sink": "game"}},
+    {"cmd": "step", "frames": 90},
+    {"cmd": "event", "pointer": [0, 0], "expect_no_action": true,
+     "expect_state": {"player.grounded": true}},
+    {"cmd": "input", "jump": true},
+    {"cmd": "step", "frames": 1},
+    {"cmd": "event", "pointer": [0, 0], "expect_no_action": true,
+     "expect_state": {"player.grounded": false}}
+  ]
+}

@@ -18,10 +18,12 @@ session_frame_events :: proc(session: ^Session) -> platform.Events {
 	}
 	if session.pending_jump {
 		push_session_event(&events, {kind = .Key_Down, key = .Space})
+		push_session_event(&events, {kind = .Key_Up, key = .Space})
 		session.pending_jump = false
 	}
 	if session.pending_sprint {
 		push_session_event(&events, {kind = .Key_Down, key = .LShift})
+		push_session_event(&events, {kind = .Key_Up, key = .LShift})
 		session.pending_sprint = false
 	}
 	return events
@@ -73,11 +75,11 @@ session_frame :: proc(
 		session.drawn_alpha = alpha
 		session.drawn_frame = session.frame
 	}
+	if session.app.routed.overflow {
+		return format_error("%s", "the input route dropped an event; a queue is full")
+	}
 	if session.collect_actions {
 		append(&session.ui_actions, ..session.app.actions[:session.app.action_count])
-		if session.app.routed.overflow {
-			return format_error("%s", "the input route dropped an event; a queue is full")
-		}
 		for index in 0 ..< session.app.action_count {
 			if session.app.action_applied[index] {
 				continue

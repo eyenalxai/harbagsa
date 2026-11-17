@@ -28,7 +28,13 @@ session_queue_capture :: proc(
 	if request_error := append_capture_requests(&requests, command, alpha, base_name); request_error != "" {
 		return false, request_error
 	}
-	return session_queue_capture_group(session, frame, command.has_frame, requests[:])
+	return session_queue_capture_group(
+		session,
+		frame,
+		command.has_frame,
+		requests[:],
+		command.expect_state,
+	)
 }
 
 session_queue_captures :: proc(
@@ -51,7 +57,7 @@ session_queue_captures :: proc(
 			return false, request_error
 		}
 	}
-	return session_queue_capture_group(session, frame, command.has_frame, requests[:])
+	return session_queue_capture_group(session, frame, command.has_frame, requests[:], nil)
 }
 
 // A command with `views` expands into one request per view. The base name is
@@ -94,6 +100,7 @@ session_queue_capture_group :: proc(
 	frame: int,
 	has_frame: bool,
 	requests: []Capture_Request,
+	expect_state: []State_Expect,
 ) -> (
 	immediate: bool,
 	error: string,
@@ -139,6 +146,7 @@ session_queue_capture_group :: proc(
 	}
 	pending: Pending_Capture
 	pending.frame = frame
+	pending.expect_state = state_expects_clone(expect_state, session.allocator)
 	pending.requests = make([]Capture_Request, len(requests), session.allocator)
 	for request, index in requests {
 		pending.requests[index] = request

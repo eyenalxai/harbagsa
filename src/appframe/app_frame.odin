@@ -126,7 +126,11 @@ run :: proc(app: ^State, frame_input: Input, options: Options, hooks: Hooks) -> 
 		return {status = .Ok, slot = -1}
 	}
 
-	scene := compose(app, options, frame_input.delta)
+	ui_events := build_ui_events(
+		app.routed.ui_events[:app.routed.ui_event_count],
+		&app.ui_events,
+	)
+	scene := compose(app, options, frame_input.delta, ui_events)
 	if options.perf != nil {
 		perf.mark(options.perf, .Build)
 	}
@@ -146,9 +150,15 @@ run :: proc(app: ^State, frame_input: Input, options: Options, hooks: Hooks) -> 
 	return result
 }
 
-// compose builds one frame's scene with the UI batch the route produced. `run`
-// and the harness pick query both use it, so there is one compose.
-compose :: proc(app: ^State, options: Options, delta: f32) -> rnd.Render_Input {
+// compose builds one frame's scene. `run` passes the batch the route produced;
+// the harness pick passes none, because a pick draws a query frame, not an input
+// frame.
+compose :: proc(
+	app: ^State,
+	options: Options,
+	delta: f32,
+	ui_events: []rnd.UI_Event,
+) -> rnd.Render_Input {
 	static := game.simulation_bake_input(
 		&app.runtime.sim,
 		&app.runtime.scratch.bake,
@@ -172,10 +182,7 @@ compose :: proc(app: ^State, options: Options, delta: f32) -> rnd.Render_Input {
 			captured = app.captured,
 			hud = options.hud,
 			bake = bake,
-			ui_events = build_ui_events(
-				app.routed.ui_events[:app.routed.ui_event_count],
-				&app.ui_events,
-			),
+			ui_events = ui_events,
 		},
 		nil,
 		static,

@@ -131,8 +131,8 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `look`: `dx`, `dy` through game sensitivity.
 - `face`: direct camera `yaw_deg` and `pitch_deg`. The body keeps its heading.
 - `input`: sets the held `forward`, `right`, and `sprint` axes and queues one
-  Space or Shift press for the next frame, so jump and sprint follow the same
-  route a key does.
+  Space or Shift press and release for the next frame, so jump and sprint
+  follow the same route a key does and a second jump works.
 - `step`: `frames` in the allowed fixed-step range.
 - `settle`: `frames`, or `until: converged`; while the menu is open it requires a
   renderer and draws frames without stepping.
@@ -140,8 +140,10 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `capture`: one output with `name`, optional `frame`, `alpha`, `note`, target,
   format, capture options, and an optional `views` list. `expect_state` checks
   state after the capture; `state.camera` resolves at the alpha the capture
-  drew.
-- `captures`: up to eight outputs from one frame.
+  drew. A capture queued for a future frame asserts when that frame draws.
+- `captures`: up to eight outputs from one frame. Each output accepts the same
+  options as `capture` except `expect_state`, which belongs to a single
+  capture.
 - `camera`: `position` plus `look_at` or `yaw_deg`/`pitch_deg`, optional
   `fov_deg`; `clear: true` removes the override.
 - `view`: `hud`, `debug`, `hint`, and `fx` flags. `fx` turns on the rune-fx
@@ -204,9 +206,11 @@ The live app and the harness run one frame path, `src/appframe/app_frame.odin`:
 drain the raw events, `input.route` to exactly one sink per event, apply the
 game intent, step, compose with the routed UI batch, draw, then apply the
 action queue. The harness supplies `platform.Events` from its commands and the
-live loop supplies them from SDL; neither calls Rune or the menu directly.
-`src/input/route.odin` records one sink per raw event, and `state.input.events`
-reports it.
+live loop supplies them from SDL; neither sends input or actions to Rune or the
+menu directly. The harness still reads the view through the shim's read
+queries: `ui_element_center` for a key's point, `ui_interaction` for focus and
+scroll, and `ui_tree_json` for the element tree. `src/input/route.odin` records
+one sink per raw event, and `state.input.events` reports it.
 
 - `menu` opens the settings dialog and changes a value. The dialog itself owns
   its keyboard path; the command is the harness's direct settings path.
@@ -289,7 +293,8 @@ settle frame; a wheel is a pointer frame, a wheel frame, and a settle frame; a
 focus change is one frame and a settle frame. Every one of those frames runs the
 live route, so a scenario asserts the same path the window runs. The settle
 frame carries a flag the shared frame passes to the shim, so running UI tracks
-land before the next command; the harness never calls the shim itself.
+land before the next command. The shared frame owns that call; the harness
+sends only events and reads only the read queries.
 The element tree and interaction fields still describe the Rune state the
 frames produced.
 `scenarios/rune-palette.json` opens the palette, selects a card by key, captures
@@ -362,6 +367,11 @@ The frame runs at zero fixed steps, so it draws and routes without advancing
 the simulation. The next `step` applies any latch the frame set, which is how
 the Space and gamepad jump scenarios prove the intent.
 
+Every harness frame fails when the route reports a dropped event. One `event`
+command queues at most two raw events, so the platform queue and the route's
+key buffer cannot overflow from a single scenario command; the guard is
+defensive, and the key scenarios assert `input.overflow` stays false.
+
 `resize` recreates the offscreen target:
 
 ```json
@@ -394,6 +404,12 @@ resizes to 1200x700 and 800x600 and back, and fails when the region's
 `scenarios/harness-look.json` turns the camera with a pointer frame's look
 delta at zero fixed steps and asserts the yaw survived the next step;
 `scenarios/harness-look-800.json` repeats it at 800x600.
+`scenarios/harness-input-jump.json` jumps with the `input` command, lands, and
+jumps again, so the queued Space press is released after each jump;
+`scenarios/harness-input-jump-800.json` repeats it at 800x600.
+`scenarios/harness-pick-batch.json` runs at 800x400, where the inspector rail
+overflows; it scrolls the rail, runs a pick, and asserts the pick did not
+re-dispatch the wheel.
 
 ## Compare panel text
 
@@ -443,7 +459,8 @@ the Rune scale. `state.ui.viewport` is the same extent in points, and
 ```
 
 `state.ui.actions` reports the actions the most recent `ui` or `event` command
-applied. A `capture` with `format: "stats"` may carry
+applied. `reset` clears the last route and UI batch with the world it replaces.
+A `capture` with `format: "stats"` may carry
 `require: {"lit_fraction_min": 0.02, "zero_fraction_max": 0.5}`; a violation
 fails the command, where a `coverage` threshold only reports the fraction.
 
@@ -650,7 +667,12 @@ A miss reports `hit: false` and no other key. A run appends every pick to
 `report.picks`; a session reply carries the same object under `pick`. `pick`
 needs a renderer, so it is a command error under `--no-render`. It is also a
 command error while the menu is open and when `at` is outside the capture
-extent.
+extent. Optional `expect_state` asserts state after the pick.
+
+A pick is a query frame: it composes without the last input frame's UI batch and
+discards any action its draw emitted, so a pick neither re-dispatches input nor
+leaves an action for the next frame. `scenarios/harness-pick-batch.json` scrolls
+the inspector rail one point, picks, and asserts the offset did not move.
 
 ```json
 {"cmd": "pick", "at": [640, 360]}

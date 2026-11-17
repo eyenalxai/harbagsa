@@ -8,8 +8,9 @@ import "src:perf"
 import "src:renderer"
 
 Pending_Capture :: struct {
-	frame:    int,
-	requests: []Capture_Request,
+	frame:        int,
+	requests:     []Capture_Request,
+	expect_state: []State_Expect,
 }
 
 pending_capture_destroy :: proc(pending: ^Pending_Capture, allocator: mem.Allocator) {
@@ -22,6 +23,8 @@ pending_capture_destroy :: proc(pending: ^Pending_Capture, allocator: mem.Alloca
 		}
 	}
 	delete(pending.requests, allocator)
+	state_expects_destroy(pending.expect_state, allocator)
+	pending.expect_state = nil
 	pending^ = {}
 }
 

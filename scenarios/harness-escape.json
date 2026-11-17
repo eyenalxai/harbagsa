@@ -1,38 +1,141 @@
 {
   "note": "One Escape press belongs to the world: it opens the settings menu and emits no UI action. The release follows the press to the same sink. The next press is the menu's, reaches Rune, and closes the dialog once. Escape in the editor palette is the game's and cancels the palette without a UI event.",
   "size": "1280x720",
-  "view": {"hud": true, "debug": false, "hint": false},
+  "view": {
+    "hud": true,
+    "debug": false,
+    "hint": false
+  },
   "commands": [
-    {"cmd": "settle", "frames": 30},
-    {"cmd": "event", "key": "Escape", "state": "down", "expect_no_action": true,
-     "expect_state": {"menu.open": true, "ui.surface": "settings", "ui.menu.open": true,
-                      "input.owner": "world", "input.captured": true,
-                      "input.events.0.kind": "key_down", "input.events.0.key": "Escape",
-                      "input.events.0.sink": "game", "input.view.menu_toggle": true}},
-    {"cmd": "event", "key": "Escape", "state": "up", "expect_no_action": true,
-     "expect_state": {"menu.open": true, "input.owner": "menu",
-                      "input.events.0.kind": "key_up", "input.events.0.sink": "game"}},
-    {"cmd": "settle", "frames": 2},
-    {"cmd": "capture", "name": "menu-open", "format": "png"},
-    {"cmd": "event", "key": "Escape", "state": "down",
-     "expect": {"kind": "Close_Menu"},
-     "expect_state": {"menu.open": false, "ui.surface": "hud", "input.owner": "menu",
-                      "input.events.0.sink": "ui", "ui.events.0.kind": "key_down",
-                      "ui.events.0.key": "Escape", "ui.actions.0.kind": "Close_Menu"}},
-    {"cmd": "event", "key": "Escape", "state": "up", "expect_no_action": true,
-     "expect_state": {"menu.open": false, "input.events.0.sink": "ui",
-                      "ui.events.0.kind": "key_up"}},
-    {"cmd": "settle", "frames": 2},
-    {"cmd": "capture", "name": "menu-closed", "format": "png"},
-    {"cmd": "debug_mode", "active": true},
-    {"cmd": "editor", "open": true, "expect_state": {"editor.palette.open": true}},
-    {"cmd": "settle", "frames": 2},
-    {"cmd": "event", "key": "Escape", "state": "down", "expect_no_action": true,
-     "expect_state": {"input.owner": "palette", "input.events.0.sink": "game",
-                      "input.actions.0": "cancel", "editor.palette.open": false}},
-    {"cmd": "event", "key": "Escape", "state": "up", "expect_no_action": true,
-     "expect_state": {"input.events.0.sink": "game"}},
-    {"cmd": "settle", "frames": 2},
-    {"cmd": "capture", "name": "palette-closed", "format": "png"}
+    {
+      "cmd": "settle",
+      "frames": 30
+    },
+    {
+      "cmd": "event",
+      "key": "Escape",
+      "state": "down",
+      "expect_no_action": true,
+      "expect_state": {
+        "menu.open": true,
+        "ui.surface": "settings",
+        "ui.menu.open": true,
+        "input.owner": "world",
+        "input.captured": true,
+        "input.events.0.kind": "key_down",
+        "input.events.0.key": "Escape",
+        "input.events.0.sink": "game",
+        "input.view.menu_toggle": true,
+        "ui.actions.count": 0
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "Escape",
+      "state": "up",
+      "expect_no_action": true,
+      "expect_state": {
+        "menu.open": true,
+        "input.owner": "menu",
+        "input.events.0.kind": "key_up",
+        "input.events.0.sink": "game",
+        "ui.actions.count": 0
+      }
+    },
+    {
+      "cmd": "settle",
+      "frames": 2
+    },
+    {
+      "cmd": "capture",
+      "name": "menu-open",
+      "format": "png"
+    },
+    {
+      "cmd": "event",
+      "key": "Escape",
+      "state": "down",
+      "expect": {
+        "kind": "Close_Menu"
+      },
+      "expect_state": {
+        "menu.open": false,
+        "ui.surface": "hud",
+        "input.owner": "menu",
+        "input.events.0.sink": "ui",
+        "ui.events.0.kind": "key_down",
+        "ui.events.0.key": "Escape",
+        "ui.actions.0.kind": "Close_Menu",
+        "ui.actions.count": 1
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "Escape",
+      "state": "up",
+      "expect_no_action": true,
+      "expect_state": {
+        "menu.open": false,
+        "input.events.0.sink": "ui",
+        "ui.events.0.kind": "key_up",
+        "ui.actions.count": 0
+      }
+    },
+    {
+      "cmd": "settle",
+      "frames": 2
+    },
+    {
+      "cmd": "capture",
+      "name": "menu-closed",
+      "format": "png"
+    },
+    {
+      "cmd": "debug_mode",
+      "active": true
+    },
+    {
+      "cmd": "editor",
+      "open": true,
+      "expect_state": {
+        "editor.palette.open": true
+      }
+    },
+    {
+      "cmd": "settle",
+      "frames": 2
+    },
+    {
+      "cmd": "event",
+      "key": "Escape",
+      "state": "down",
+      "expect_no_action": true,
+      "expect_state": {
+        "input.owner": "palette",
+        "input.events.0.sink": "game",
+        "input.actions.0": "cancel",
+        "editor.palette.open": false,
+        "ui.actions.count": 0
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "Escape",
+      "state": "up",
+      "expect_no_action": true,
+      "expect_state": {
+        "input.events.0.sink": "game",
+        "ui.actions.count": 0
+      }
+    },
+    {
+      "cmd": "settle",
+      "frames": 2
+    },
+    {
+      "cmd": "capture",
+      "name": "palette-closed",
+      "format": "png"
+    }
   ]
 }

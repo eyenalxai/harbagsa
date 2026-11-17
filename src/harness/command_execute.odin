@@ -58,7 +58,11 @@ execute_capture :: proc(session: ^Session, command: Command, reply: ^Reply) -> s
 	if capture_error != "" {
 		return capture_error
 	}
-	if immediate && len(session.capture.captures) > 0 {
+	if !immediate {
+		// A future-frame capture asserts when its draw runs.
+		return ""
+	}
+	if len(session.capture.captures) > 0 {
 		reply.capture = &session.capture.captures[len(session.capture.captures) - 1]
 	}
 	return check_state_expects(session, command.capture.expect_state)
@@ -135,10 +139,13 @@ execute_bake :: proc(session: ^Session, command: Command, reply: ^Reply) -> stri
 @(private)
 execute_pick :: proc(session: ^Session, command: Command, reply: ^Reply) -> string {
 	pick_error := session_pick(session, command.pick)
-	if pick_error == "" && len(session.picks) > 0 {
+	if pick_error != "" {
+		return pick_error
+	}
+	if len(session.picks) > 0 {
 		reply.pick = &session.picks[len(session.picks) - 1]
 	}
-	return pick_error
+	return check_state_expects(session, command.pick.expect_state)
 }
 
 @(private)

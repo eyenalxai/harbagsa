@@ -86,6 +86,16 @@ resolve_state_path :: proc(value: any, path, full_path: string) -> (Field_Value,
 	if path == "" {
 		return state_scalar(value, full_path)
 	}
+	if path == "count" {
+		ti := runtime.type_info_base(type_info_of(value.id))
+		#partial switch info in ti.variant {
+		case runtime.Type_Info_Slice:
+			slice := cast(^runtime.Raw_Slice)value.data
+			return {kind = .Number, number = f64(slice.len)}, ""
+		case runtime.Type_Info_Array:
+			return {kind = .Number, number = f64(info.count)}, ""
+		}
+	}
 	head, tail, has_tail := split_field(path)
 	if !has_tail {
 		tail = ""

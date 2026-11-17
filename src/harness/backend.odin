@@ -254,9 +254,14 @@ backend_pick :: proc(
 			hud = session.view.hud,
 		},
 		game.SIMULATION_STEP,
+		nil,
 	)
 	scene.pick_at = at
-	return renderer.pick(&data.renderer, scene)
+	hit, failure, pick_error := renderer.pick(&data.renderer, scene)
+	// A pick is a query: it neither applies nor keeps the actions its draw
+	// emitted.
+	renderer.ui_actions_clear()
+	return hit, failure, pick_error
 }
 
 @(private)

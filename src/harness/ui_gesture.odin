@@ -175,6 +175,23 @@ parse_state_expects :: proc(
 	return expects[:], ""
 }
 
+state_expects_clone :: proc(expects: []State_Expect, allocator: mem.Allocator) -> []State_Expect {
+	if len(expects) == 0 {
+		return nil
+	}
+	clones := make([]State_Expect, len(expects), allocator)
+	for expect, index in expects {
+		clones[index] = {
+			path  = strings.clone(expect.path, allocator),
+			value = expect.value,
+		}
+		if expect.value.kind == .String {
+			clones[index].value.text = strings.clone(expect.value.text, allocator)
+		}
+	}
+	return clones
+}
+
 state_expects_destroy :: proc(expects: []State_Expect, allocator: mem.Allocator) {
 	for &expect in expects {
 		delete(expect.path, allocator)

@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the harness clicks the view; the game binary does not
+#+vet !unused-procedures // the harness reads the view; the game binary does not
 package renderer
 
 import "core:log"

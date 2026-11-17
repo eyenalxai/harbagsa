@@ -1,0 +1,18 @@
+{
+  "note": "A pick draws a query frame and must not re-dispatch the last input frame's UI batch. The inspector rail is scrolled one point, then a pick runs; the offset must not move again.",
+  "size": "800x400",
+  "view": {"hud": true, "debug": false, "hint": false},
+  "commands": [
+    {"cmd": "place", "prefab": "Crate", "position": [4, 1, 4], "name": "inspector-crate"},
+    {"cmd": "place", "prefab": "Lamp", "position": [6, 2, 4], "name": "inspector-lamp"},
+    {"cmd": "debug_mode", "active": true},
+    {"cmd": "editor", "inspector": true},
+    {"cmd": "editor", "select_object": "inspector-lamp"},
+    {"cmd": "settle", "frames": 30},
+    {"cmd": "event", "pointer": [628, 208]},
+    {"cmd": "event", "wheel": 0.025,
+     "expect_state": {"ui.inspector.scroll_offset": 1, "input.events.0.sink": "ui"}},
+    {"cmd": "pick", "at": [400, 200],
+     "expect_state": {"ui.inspector.scroll_offset": 1}}
+  ]
+}

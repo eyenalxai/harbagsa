@@ -25,7 +25,8 @@
         "input.events.0.kind": "key_down",
         "input.events.0.key": "Escape",
         "input.events.0.sink": "game",
-        "input.view.menu_toggle": true
+        "input.view.menu_toggle": true,
+        "ui.actions.count": 0
       }
     },
     {
@@ -37,7 +38,8 @@
         "menu.open": true,
         "input.owner": "menu",
         "input.events.0.kind": "key_up",
-        "input.events.0.sink": "game"
+        "input.events.0.sink": "game",
+        "ui.actions.count": 0
       }
     },
     {
@@ -63,7 +65,8 @@
         "input.events.0.sink": "ui",
         "ui.events.0.kind": "key_down",
         "ui.events.0.key": "Escape",
-        "ui.actions.0.kind": "Close_Menu"
+        "ui.actions.0.kind": "Close_Menu",
+        "ui.actions.count": 1
       }
     },
     {
@@ -74,7 +77,8 @@
       "expect_state": {
         "menu.open": false,
         "input.events.0.sink": "ui",
-        "ui.events.0.kind": "key_up"
+        "ui.events.0.kind": "key_up",
+        "ui.actions.count": 0
       }
     },
     {
@@ -110,7 +114,8 @@
         "input.owner": "palette",
         "input.events.0.sink": "game",
         "input.actions.0": "cancel",
-        "editor.palette.open": false
+        "editor.palette.open": false,
+        "ui.actions.count": 0
       }
     },
     {
@@ -119,7 +124,8 @@
       "state": "up",
       "expect_no_action": true,
       "expect_state": {
-        "input.events.0.sink": "game"
+        "input.events.0.sink": "game",
+        "ui.actions.count": 0
       }
     },
     {

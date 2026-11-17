@@ -158,7 +158,11 @@ parse_event :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 			return {}, format_error("unknown key %q", name)
 		}
 		command.event.key = key
-		if state_name, has_state := string_field(object, "state"); has_state {
+		state_name, has_state, state_error := event_string(object, "state")
+		if state_error != "" {
+			return {}, state_error
+		}
+		if has_state {
 			state, state_ok := parse_key_state(state_name)
 			if !state_ok {
 				return {}, format_error("%s", "'state' must be down, up, or repeat")
@@ -178,32 +182,42 @@ parse_event :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 		}
 		command.event.pointer = pointer
 		command.event.has_pointer = true
-		if !has_wheel {
-			command.event.pointer_state = .Move
-			if state_name, has_state := string_field(object, "state"); has_state {
-				state, state_ok := parse_pointer_state(state_name)
-				if !state_ok {
-					return {}, format_error("%s", "'state' must be move, down, or up")
-				}
-				command.event.pointer_state = state
+		command.event.pointer_state = .Move
+		state_name, has_state, state_error := event_string(object, "state")
+		if state_error != "" {
+			return {}, state_error
+		}
+		if has_state {
+			state, state_ok := parse_pointer_state(state_name)
+			if !state_ok {
+				return {}, format_error("%s", "'state' must be move, down, or up")
 			}
-			if look, has_look := vec2_field(object, "look"); has_look {
-				command.event.look = look
-				command.event.has_look = true
+			command.event.pointer_state = state
+		}
+		if _, has_look := json_get(object, "look"); has_look {
+			look, look_ok := vec2_field(object, "look")
+			if !look_ok {
+				return {}, format_error("%s", "'look' must be [dx, dy]")
 			}
-			command.event.button = .Left
-			if button_name, has_button := string_field(object, "button"); has_button {
-				switch button_name {
-				case "left":
-				case "right":
-					command.event.button = .Right
-				case:
-					return {}, format_error("%s", "'button' must be left or right")
-				}
+			command.event.look = look
+			command.event.has_look = true
+		}
+		command.event.button = .Left
+		button_name, has_button, button_error := event_string(object, "button")
+		if button_error != "" {
+			return {}, button_error
+		}
+		if has_button {
+			switch button_name {
+			case "left":
+			case "right":
+				command.event.button = .Right
+			case:
+				return {}, format_error("%s", "'button' must be left or right")
 			}
-			if command.event.pointer_state == .Move && command.event.button != .Left {
-				return {}, format_error("%s", "a move carries no button")
-			}
+		}
+		if command.event.pointer_state == .Move && command.event.button != .Left {
+			return {}, format_error("%s", "a move carries no button")
 		}
 	}
 	if has_wheel {
@@ -265,6 +279,19 @@ parse_event :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, 
 }
 
 @(private)
+event_string :: proc(object: json.Object, key: string) -> (value: string, has: bool, error: string) {
+	raw, present := json_get(object, key)
+	if !present {
+		return "", false, ""
+	}
+	text, ok := json_string(raw)
+	if !ok {
+		return "", true, format_error("'%s' must be a string", key)
+	}
+	return text, true, ""
+}
+
+@(private)
 reject_event_keys :: proc(object: json.Object, names: []string) -> string {
 	for name in names {
 		if _, has := json_get(object, name); has {
@@ -323,72 +350,4 @@ parse_event_mods :: proc(object: json.Object) -> (platform.Modifiers, string) {
 		mods += {modifier}
 	}
 	return mods, ""
-}
-
-Gamepad_Command :: struct {
-	connected:     bool,
-	has_connected: bool,
-	button:        platform.Gamepad_Button,
-	has_button:    bool,
-	down:          bool,
-	left:          [2]f32,
-	has_left:      bool,
-	right:         [2]f32,
-	has_right:     bool,
-}
-
-@(private)
-parse_event_gamepad :: proc(object: json.Object) -> (Gamepad_Command, string) {
-	value, _ := json_get(object, "gamepad")
-	fields, fields_ok := json_object(value)
-	if !fields_ok {
-		return {}, format_error("%s", "'gamepad' must be an object")
-	}
-	if key, unknown := json_unknown_key(
-		fields,
-		{"connected", "button", "state", "left", "right"},
-	); unknown {
-		return {}, format_error("unknown gamepad key %q", key)
-	}
-	pad: Gamepad_Command
-	if field_error := json_optional_bool(
-		fields,
-		"connected",
-		&pad.connected,
-		&pad.has_connected,
-	); field_error != "" {
-		return {}, field_error
-	}
-	if button_name, has_button := string_field(fields, "button"); has_button {
-		button, found := gamepad_button_from_name(button_name)
-		if !found {
-			return {}, format_error("unknown gamepad button %q", button_name)
-		}
-		pad.button = button
-		pad.has_button = true
-		state_name, _ := string_field(fields, "state")
-		switch state_name {
-		case "down", "":
-			pad.down = true
-		case "up":
-			pad.down = false
-		case:
-			return {}, format_error("%s", "'gamepad.state' must be down or up")
-		}
-	}
-	if left, has_left := vec2_field(fields, "left"); has_left {
-		pad.left = left
-		pad.has_left = true
-	}
-	if right, has_right := vec2_field(fields, "right"); has_right {
-		pad.right = right
-		pad.has_right = true
-	}
-	if !pad.has_connected && !pad.has_button && !pad.has_left && !pad.has_right {
-		return {}, format_error(
-			"%s",
-			"gamepad needs 'connected', 'button', 'left', or 'right'",
-		)
-	}
-	return pad, ""
 }
