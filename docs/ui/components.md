@@ -14,7 +14,7 @@ the data in `src/ui/ui.odin`.
 Use for the player's live state. It is the persistent top-left surface while the
 settings dialog and the object palette are closed. It draws `ui.Hud.rows` as
 read-only rows. The same HUD root lays out the bottom action column with the
-notice, the capture hint, and an `F2 · I` hint; that column is
+notice, the capture hint, and a `Ctrl+Shift+F2 · I` hint; that column is
 absent while Settings or the palette is open. The panel is a local kit-styled
 surface: 380 points wide, the kit medium
 radius, raised elevation, and a translucent `hud_surface()` fill. It is not a
@@ -26,8 +26,8 @@ The row kinds map to Rune elements:
 - `Header`: tertiary text.
 - `Setting`, `Action`, `Metric`, `Detail`: a label row with a spacer and a value.
 
-The action row is the `F2 · I` debug hint. It has no button in the live world:
-the world owns the pointer, so a click belongs to the camera. Press `F2` and
+The action row is the `Ctrl+Shift+F2 · I` debug hint. It has no button in the live world:
+the world owns the pointer, so a click belongs to the camera. Press `Ctrl+Shift+F2` and
 then `I` to enter debug mode and open the inspector rail.
 
 Incorrect: measuring a row in Odin and sizing a rectangle from it. Rune measures

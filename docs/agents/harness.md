@@ -398,6 +398,8 @@ editor palette cancels the palette as a game action. `scenarios/harness-escape-8
 repeats it at 800x600. `scenarios/harness-tab-space.json` proves Tab and Space
 stay with the world and that Space jumps on the next step;
 `scenarios/harness-tab-space-800.json` repeats it at 800x600.
+`scenarios/harness-debug-chord.json` proves a plain function key does nothing and
+`Ctrl+Shift` with `F1`, `F2`, `F3`, or `F5` fires each diagnostic control.
 `scenarios/harness-gamepad.json` proves Start opens the menu, East closes it
 through Rune, the left stick becomes forward movement, and South jumps;
 `scenarios/harness-gamepad-800.json` repeats it at 800x600.
@@ -576,7 +578,7 @@ recording starts with `reset`, one `scene` snapshot, and current input.
 
 ## Live repro
 
-`F5` in the game and `repro` in the harness write one normal scenario with one
+`Ctrl+Shift+F5` in the game and `repro` in the harness write one normal scenario with one
 `scene` command. The scene carries the exact camera, placed objects and lights,
 settings, display list, view flags, and effective renderer debug overrides.
 `record` starts with the same scene.

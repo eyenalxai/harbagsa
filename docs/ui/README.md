@@ -9,7 +9,7 @@ key events only for the surface that owns the frame; pointer-leave and focus
 events always reach it so its transient state clears.
 
 The view is a technical readout built from Rune kit surfaces: a status panel in
-the top-left, a bottom action column with the `F2 · I` debug hint, a settings
+the top-left, a bottom action column with the `Ctrl+Shift+F2 · I` debug hint, a settings
 dialog over a scrim, the object palette as a card grid over a scrim, and the
 inspector rail on the right. A notice and the capture hint sit above the action
 row. Rune owns

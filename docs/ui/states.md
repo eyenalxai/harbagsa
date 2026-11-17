@@ -190,5 +190,5 @@ While the inspector owns the frame, its pointer stays free and the world pointer
 path does not run. Opening the inspector cancels an armed placement or a world
 drag; opening the palette, arming a placement, or opening Settings closes it.
 
-The status action row's `F2 · I` hint names the keyboard path. Press `F2` and
-then `I` to enter debug mode and open the inspector.
+The status action row's `Ctrl+Shift+F2 · I` hint names the keyboard path. Press
+`Ctrl+Shift+F2` and then `I` to enter debug mode and open the inspector.

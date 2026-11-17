@@ -93,7 +93,8 @@ fn hud_view(state: &UiState) -> El {
         text::weighted(&state.panel.notice, state.weight, false).color(kit.c.text_base)
     };
 
-    let key_hint = text::weighted("F2 · I", state.weight, false).color(kit.c.text_muted);
+    let key_hint =
+        text::weighted("Ctrl+Shift+F2 · I", state.weight, false).color(kit.c.text_muted);
 
     let glow = effect(crate::fx::GLOW)
         .effect_data([0.9, 0.0, 0.0, 0.0])

@@ -635,7 +635,7 @@ for the depth prepass and one for the lit pass.
 _Avoid_: Render pass (that word belongs to the Vulkan object)
 
 **HUD**:
-The Rune status panel: the player or debug rows, the notice, the capture hint, and the `F2 · I` debug hint. It is one Rune view, not an Odin draw pass. The status panel is a local kit-styled surface with the kit medium radius, raised elevation, and a translucent fill.
+The Rune status panel: the player or debug rows, the notice, the capture hint, and the `Ctrl+Shift+F2 · I` debug hint. It is one Rune view, not an Odin draw pass. The status panel is a local kit-styled surface with the kit medium radius, raised elevation, and a translucent fill.
 _Avoid_: UI, overlay draw
 
 **Settings dialog**:
@@ -864,7 +864,7 @@ _Avoid_: Debug struct, override delta
 
 **Debug override gate**:
 The `ENABLE_RENDERER_DEBUG` build define or the `--debug-renderer` flag that lets a run use renderer debug overrides. A release build without either rejects the command.
-_Avoid_: Debug mode (that word belongs to `F2`)
+_Avoid_: Debug mode (that word belongs to `Ctrl+Shift+F2`)
 
 **View flags**:
 The scenario toggles that change the frame: `hud`, `debug` draw, capture `hint`,
@@ -873,11 +873,11 @@ the render digest; `debug` and `hint` change the scene or the snapshot.
 _Avoid_: Draw flags
 
 **TAA toggle**:
-The `F3` control that enables or disables temporal anti-aliasing.
+The `Ctrl+Shift+F3` control that enables or disables temporal anti-aliasing.
 _Avoid_: AA switch
 
 **Debug mode**:
-The `F2` mode where the player becomes a free-fly camera and can edit placed
+The `Ctrl+Shift+F2` mode where the player becomes a free-fly camera and can edit placed
 objects and lights. It owns the active flag, the camera, and the saved player;
 the editor owns the editing state.
 _Avoid_: Edit mode, sandbox
@@ -1063,11 +1063,11 @@ run's scenario, revision, and dirty flag. It is visual evidence.
 
 ### Scene snapshot
 One `scene` command that carries the exact camera, placed objects (with names),
-settings, display list, view flags, and renderer debug overrides of a live view. `F5` writes one, and `record` starts with one.
+settings, display list, view flags, and renderer debug overrides of a live view. `Ctrl+Shift+F5` writes one, and `record` starts with one.
 **Avoid**: state dump, replay file.
 
 ### Repro
-The `F5` action and its harness twin, the `repro` command: write one scene
+The `Ctrl+Shift+F5` action and its harness twin, the `repro` command: write one scene
 snapshot to a file and show the notice. The key writes
 `runs/repro/repro-<unix-ms>.json`. A harness `repro` path is relative to the run
 directory (or the `session --out` directory), and an absolute path stays

@@ -213,14 +213,27 @@ apply_key :: proc(
 			out.view.reset_player = true
 		}
 	case .F1:
-		out.view.debug_view = true
+		if diagnostic_chord(edge) {
+			out.view.debug_view = true
+		}
 	case .F2:
-		out.view.debug_mode = true
+		if diagnostic_chord(edge) {
+			out.view.debug_mode = true
+		}
 	case .F3:
-		out.view.taa = true
+		if diagnostic_chord(edge) {
+			out.view.taa = true
+		}
 	case .F5:
-		out.view.repro = true
+		if diagnostic_chord(edge) {
+			out.view.repro = true
+		}
 	}
+}
+
+@(private)
+diagnostic_chord :: proc(edge: platform.Key_Event) -> bool {
+	return .Ctrl in edge.mods && .Shift in edge.mods && card(edge.mods) == 2
 }
 
 @(private)
