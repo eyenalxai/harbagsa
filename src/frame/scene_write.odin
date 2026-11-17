@@ -1,5 +1,5 @@
 #+vet explicit-allocators
-#+vet !unused-procedures // the F5 key and the harness both write a scene snapshot
+#+vet !unused-procedures // the Ctrl+Shift+F5 key and the harness both write a scene snapshot
 package frame
 
 import "core:fmt"

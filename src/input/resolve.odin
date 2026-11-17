@@ -213,7 +213,7 @@ apply_key :: proc(
 			out.view.reset_player = true
 		}
 	case .F1, .F2, .F3, .F5:
-		if function_key_chord(edge) {
+		if exact_chord(edge.mods) {
 			#partial switch edge.key {
 			case .F1:
 				out.view.debug_view = true
@@ -229,8 +229,8 @@ apply_key :: proc(
 }
 
 @(private)
-function_key_chord :: proc(edge: platform.Key_Event) -> bool {
-	return .Ctrl in edge.mods && .Shift in edge.mods && card(edge.mods) == 2
+exact_chord :: proc(mods: platform.Modifiers) -> bool {
+	return .Ctrl in mods && .Shift in mods && card(mods) == 2
 }
 
 @(private)
