@@ -93,9 +93,8 @@ HUD text to secondary below 94 percent. Reduce motion snaps kit geometry and
 keeps a short opacity fade. The dialog and its controls use kit hover, press, and
 focus states. The Controls section is a compact reference; the full keyboard
 list is under Debug mode below. `Esc`, the header close control, and `Resume`
-close the dialog. The status action row carries `Debug`, which enters debug mode
-and opens the inspector rail. Press `F2` and then `I` for the keyboard path. Type
-weight is in the inspector's Debug section, not in Settings.
+close the dialog. Press `F2` and then `I` to enter debug mode and open the
+inspector rail. Type weight is in the inspector's Debug section, not in Settings.
 
 Window mode is Borderless or Windowed. Borderless uses the selected display's
 desktop size. Windowed uses the chosen resolution and a normal title bar. The
@@ -108,8 +107,8 @@ the current run.
 
 - `WASD`: fly horizontally. Mouse: look.
 - `Space` / `Ctrl`: fly up / down.
-- `Tab`: open or close the object palette. Tab is refused while placement is
-  armed; press `Esc` to cancel placement first.
+- `Tab`: open or close the object palette; refused while placement is armed.
+  While the inspector rail is open, Tab moves focus in the rail.
 - `I`: open or close the debug inspector rail. `Esc` closes it before it cancels
   placement or opens Settings.
 - Left click: select and drag an object, or place the armed prefab.
@@ -129,6 +128,16 @@ the current run.
 - `Shift+R`: reset placed objects and the player.
 - `F5`: write a scene snapshot.
 - `F2`: leave debug mode.
+
+### Gamepad
+
+The engine opens the first gamepad at startup. The left stick moves and the
+right stick looks. In the world, `A` jumps and `Start` opens Settings. In debug
+mode, `A` picks in the palette and places when placement is armed, `B` cancels
+or closes the palette, `Start` opens Settings, and the shoulder buttons send
+`Tab`. The d-pad and left stick move palette selection; in the dialog and
+inspector they move focus, `A` activates, and `B` cancels. The engine maps the
+pad to the same keys and intents as the keyboard; no gamepad event reaches Rune.
 
 The object palette is a three-column palette grid with an isometric preview. It
 shows eleven box prefabs; each card carries the colour chip, short and full name,

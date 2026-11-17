@@ -141,8 +141,6 @@ fn card(kit: &Kit, item: &PaletteItem, index: usize, selected: bool) -> El {
         .key(format!("palette:{index}"))
         .role("button")
         .label(format!("{} — {}", item.short, item.name))
-        .focusable(true)
-        .focus_within_ring(2.0, 1.0, kit.c.border_focus)
         .hover(kit.c.hover)
         .press(kit.c.pressed)
         .on_press(move |state: &mut UiState| {

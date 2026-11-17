@@ -5,7 +5,8 @@
   "commands": [
     {"cmd": "place", "prefab": "Crate", "position": [4, 1, 4], "name": "inspector-crate"},
     {"cmd": "place", "prefab": "Lamp", "position": [6, 2, 4], "name": "inspector-lamp"},
-    {"cmd": "ui", "click": "action:2", "expect": {"kind": "Debug_Inspector"}, "expect_state": {"ui.surface": "inspector", "ui.inspector.open": true}},
+    {"cmd": "debug_mode", "active": true},
+    {"cmd": "editor", "inspector": true, "expect_state": {"ui.surface": "inspector", "ui.inspector.open": true}},
     {"cmd": "editor", "select_object": "inspector-crate"},
     {"cmd": "settle", "frames": 30},
     {"cmd": "ui", "drag": {"from": "inspector.yaw", "dx": 400, "dy": 0, "steps": 6}, "expect": {"kind": "Object_Set", "value": 1}, "expect_state": {"editor.selection.yaw_deg": 359, "editor.history.depth": 1}},

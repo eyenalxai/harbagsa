@@ -9,6 +9,7 @@ import "src:game"
 EDITOR_KEYS := [?]string {
 	"cmd",
 	"open",
+	"inspector",
 	"select",
 	"body",
 	"pick",
@@ -57,28 +58,30 @@ Editor_Place :: struct {
 }
 
 Editor_Command :: struct {
-	open:       bool,
-	has_open:   bool,
-	select:     int,
-	has_select: bool,
-	body:       game.Body_Mode,
-	has_body:   bool,
-	pick:       bool,
-	height:     f32,
-	has_height: bool,
-	yaw_deg:    f32,
-	has_yaw:    bool,
-	snap:       bool,
-	has_snap:   bool,
-	cancel:     bool,
-	camera:     Editor_Camera,
-	has_camera: bool,
-	place:      Editor_Place,
-	has_place:  bool,
-	object:       Editor_Object,
-	light:        Editor_Light,
-	input:        Editor_Input,
-	expect_state: []State_Expect,
+	open:          bool,
+	has_open:      bool,
+	inspector:     bool,
+	has_inspector: bool,
+	select:        int,
+	has_select:    bool,
+	body:          game.Body_Mode,
+	has_body:      bool,
+	pick:          bool,
+	height:        f32,
+	has_height:    bool,
+	yaw_deg:       f32,
+	has_yaw:       bool,
+	snap:          bool,
+	has_snap:      bool,
+	cancel:        bool,
+	camera:        Editor_Camera,
+	has_camera:    bool,
+	place:         Editor_Place,
+	has_place:     bool,
+	object:        Editor_Object,
+	light:         Editor_Light,
+	input:         Editor_Input,
+	expect_state:  []State_Expect,
 }
 
 parse_editor :: proc(object: json.Object, allocator: mem.Allocator) -> (Command, string) {
@@ -88,6 +91,9 @@ parse_editor :: proc(object: json.Object, allocator: mem.Allocator) -> (Command,
 
 	command := Command{kind = .Editor}
 	if field_error := json_optional_bool(object, "open", &command.editor.open, &command.editor.has_open); field_error != "" {
+		return {}, field_error
+	}
+	if field_error := json_optional_bool(object, "inspector", &command.editor.inspector, &command.editor.has_inspector); field_error != "" {
 		return {}, field_error
 	}
 	if value, has := json_get(object, "select"); has {

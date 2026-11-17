@@ -1,6 +1,5 @@
 use rune::{Cx, El, col, effect, el, row, spacer};
 
-use crate::abi::{ACTION_DEBUG_INSPECTOR, UiAction};
 use crate::components;
 use crate::inspector;
 use crate::palette;
@@ -94,11 +93,6 @@ fn hud_view(state: &UiState) -> El {
         text::weighted(&state.panel.notice, state.weight, false).color(kit.c.text_base)
     };
 
-    let debug = components::action_button(kit, "Debug", state.weight, true)
-        .key("action:2")
-        .on_press(|state: &mut UiState| {
-            state.actions.push(UiAction::new(ACTION_DEBUG_INSPECTOR));
-        });
     let key_hint = text::weighted("F2 · I", state.weight, false).color(kit.c.text_muted);
 
     let glow = effect(crate::fx::GLOW)
@@ -120,7 +114,7 @@ fn hud_view(state: &UiState) -> El {
                 if state.fx {
                     actions = actions.child(glow.absolute(0.0, 0.0).w_full().h_full());
                 }
-                actions.child(key_hint).child(debug)
+                actions.child(key_hint)
             }),
     );
     root

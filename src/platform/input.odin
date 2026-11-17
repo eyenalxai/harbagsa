@@ -5,15 +5,16 @@ import "core:c"
 import "core:log"
 import "vendor:sdl3"
 
-MAX_KEY_EDGES :: 16
-MAX_UI_EVENTS :: 64
+MAX_KEY_EVENTS :: 32
+MAX_INPUT_EVENTS :: 64
 
-Key_Edge :: struct {
+Key_Event :: struct {
+	kind: Input_Kind,
 	key:  Key,
 	mods: Modifiers,
 }
 
-UI_Input_Kind :: enum {
+Input_Kind :: enum {
 	Pointer_Move,
 	Pointer_Down,
 	Pointer_Up,
@@ -26,18 +27,18 @@ UI_Input_Kind :: enum {
 	Focus_Lost,
 }
 
-// One input event in arrival order. The collapsed fields below drive the game;
-// this list drives the Rune view, which needs the order and each pointer point.
-UI_Input_Event :: struct {
-	kind:    UI_Input_Kind,
+// One raw event in arrival order. The input module routes every event to
+// exactly one sink; the platform never decides what a key or button means.
+Input_Event :: struct {
+	kind:    Input_Kind,
 	pointer: [2]f32,
 	wheel:   f32,
 	key:     Key,
+	mods:    Modifiers,
 }
 
-// One raw frame. It holds the held state, the pointer edges, the key edges, and
-// the ordered UI events. The input module decides what a key means; platform
-// does not.
+// One raw frame: the ordered events, the held movement axes, and the first
+// gamepad's state. It holds no resolved intent.
 Events :: struct {
 	quit:    bool,
 	resized: bool,
@@ -51,18 +52,16 @@ Events :: struct {
 	look_delta:  [2]f32,
 	wheel_delta: f32,
 
-	pointer:      [2]f32,
-	pointer_down: bool,
-
+	pointer:           [2]f32,
 	primary_pressed:   bool,
 	primary_released:  bool,
 	secondary_pressed: bool,
 
-	keys:      [MAX_KEY_EDGES]Key_Edge,
-	key_count: int,
+	raw:       [MAX_INPUT_EVENTS]Input_Event,
+	raw_count: int,
+	overflow:  bool,
 
-	ui_events:      [MAX_UI_EVENTS]UI_Input_Event,
-	ui_event_count: int,
+	gamepad: Gamepad_State,
 
 	captured: bool,
 }
@@ -91,8 +90,9 @@ drain_events :: proc(window: ^Window, first: ^sdl3.Event) -> (events: Events) {
 	}
 
 	// Movement is polled with the cursor free too, so the debug camera can fly
-	// while the palette holds the pointer.
+	// with the keyboard while the palette holds the pointer.
 	read_movement(&events)
+	gamepad_read(&window.gamepad, &events.gamepad)
 	return
 }
 
@@ -133,15 +133,12 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 	case .MOUSE_BUTTON_DOWN:
 		events.pointer = pointer_for(window, event.button.x, event.button.y)
 		if event.button.button == sdl3.BUTTON_LEFT {
-			push_ui_input(events, {kind = .Pointer_Move, pointer = events.pointer})
-			push_ui_input(events, {kind = .Pointer_Down, pointer = events.pointer})
+			push_input(events, {kind = .Pointer_Move, pointer = events.pointer})
+			push_input(events, {kind = .Pointer_Down, pointer = events.pointer})
 			if events.captured {
 				events.primary_pressed = true
-			} else {
-				events.pointer_down = true
-				if window.capture_on_click {
-					events.captured = set_cursor_capture(window, true)
-				}
+			} else if window.capture_on_click {
+				events.captured = set_cursor_capture(window, true)
 			}
 		} else if event.button.button == sdl3.BUTTON_RIGHT {
 			events.secondary_pressed = true
@@ -149,13 +146,12 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 	case .MOUSE_BUTTON_UP:
 		events.pointer = pointer_for(window, event.button.x, event.button.y)
 		if event.button.button == sdl3.BUTTON_LEFT {
-			push_ui_input(events, {kind = .Pointer_Move, pointer = events.pointer})
-			push_ui_input(events, {kind = .Pointer_Up, pointer = events.pointer})
+			push_input(events, {kind = .Pointer_Move, pointer = events.pointer})
+			push_input(events, {kind = .Pointer_Up, pointer = events.pointer})
 			events.primary_released = true
-			events.pointer_down = false
 		}
 	case .MOUSE_WHEEL:
-		push_ui_input(events, {
+		push_input(events, {
 			kind = .Wheel,
 			pointer = events.pointer,
 			wheel = event.wheel.y,
@@ -166,32 +162,43 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 		if key == .None {
 			return
 		}
-		ui_kind := event.key.repeat ? UI_Input_Kind.Key_Repeat : UI_Input_Kind.Key_Down
-		push_ui_input(events, {kind = ui_kind, key = key})
-		if event.key.repeat {
-			return
-		}
-		if events.key_count >= MAX_KEY_EDGES {
-			log.warn("platform: the key edge buffer is full")
-			return
-		}
-		events.keys[events.key_count] = {key, modifiers_from_sdl(event.key.mod)}
-		events.key_count += 1
+		kind := event.key.repeat ? Input_Kind.Key_Repeat : Input_Kind.Key_Down
+		push_input(events, {
+			kind = kind,
+			key = key,
+			mods = modifiers_from_sdl(event.key.mod),
+		})
 	case .KEY_UP:
 		key := key_from_scancode(event.key.scancode)
 		if key == .None {
 			return
 		}
-		push_ui_input(events, {kind = .Key_Up, key = key})
+		push_input(events, {
+			kind = .Key_Up,
+			key = key,
+			mods = modifiers_from_sdl(event.key.mod),
+		})
+	case .GAMEPAD_BUTTON_DOWN, .GAMEPAD_BUTTON_UP:
+		if window.gamepad.handle == nil {
+			return
+		}
+		if event.gbutton.which != sdl3.GetGamepadID(window.gamepad.handle) {
+			return
+		}
+		button, ok := gamepad_button_from_sdl(sdl3.GamepadButton(event.gbutton.button))
+		if !ok {
+			return
+		}
+		gamepad_button_event(&window.gamepad, &events.gamepad, button, event.gbutton.down)
 	case .WINDOW_FOCUS_GAINED:
-		push_ui_input(events, {kind = .Focus_Gained})
+		push_input(events, {kind = .Focus_Gained})
 	case .WINDOW_FOCUS_LOST:
-		push_ui_input(events, {kind = .Focus_Lost})
+		push_input(events, {kind = .Focus_Lost})
 	case .WINDOW_MOUSE_LEAVE:
-		push_ui_input(events, {kind = .Pointer_Leave})
+		push_input(events, {kind = .Pointer_Leave})
 	case .MOUSE_MOTION:
 		events.pointer = pointer_for(window, event.motion.x, event.motion.y)
-		push_ui_input(events, {kind = .Pointer_Move, pointer = events.pointer})
+		push_input(events, {kind = .Pointer_Move, pointer = events.pointer})
 		if events.captured {
 			events.look_delta.x += event.motion.xrel
 			events.look_delta.y += event.motion.yrel
@@ -200,13 +207,14 @@ apply_event :: proc(events: ^Events, event: ^sdl3.Event, window: ^Window) {
 }
 
 @(private)
-push_ui_input :: proc(events: ^Events, event: UI_Input_Event) {
-	if events.ui_event_count >= MAX_UI_EVENTS {
-		log.warn("platform: the UI event buffer is full")
+push_input :: proc(events: ^Events, event: Input_Event) {
+	if events.raw_count >= MAX_INPUT_EVENTS {
+		events.overflow = true
+		log.warn("platform: the input event buffer is full")
 		return
 	}
-	events.ui_events[events.ui_event_count] = event
-	events.ui_event_count += 1
+	events.raw[events.raw_count] = event
+	events.raw_count += 1
 }
 
 @(private)

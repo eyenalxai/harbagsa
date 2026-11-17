@@ -142,8 +142,8 @@ is seconds or `"once"`. Capture regions and crops are pixels unless `unit` is
 - `view`: `hud`, `debug`, `hint`, and `fx` flags. `fx` turns on the rune-fx
   demo over the status action row; it is off by default.
 - `debug_mode`: `active` boolean.
-- `editor`: palette, placement, object, light, camera, pointer, and history
-  fields. `expect_state` checks state paths after the edit.
+- `editor`: palette, inspector, placement, object, light, camera, pointer, and
+  history fields. `expect_state` checks state paths after the edit.
 - `menu`: `open`, `item`, `activate`, `direction`, `opacity`, `reduce_motion`,
   and `allow_blocked`. `opacity` is a percentage in [70, 100]. A setting change
   that does not change the value fails the command; `allow_blocked` accepts an
@@ -257,9 +257,13 @@ limit in points.
 The semantic fields exist without a renderer; the interaction keys and scroll
 position need one.
 
-Pointer, wheel, key-down, key-up, key-repeat, and focus events reach Rune in one
-batch per frame. A harness click and drag use the same Rune hit path as a live
-click.
+Live, `src/input` routes each raw platform event to one owner and one sink, and
+only the UI-owned batch reaches Rune. The harness `ui` command still drives the
+Rune hit path directly; it does not exercise the live route. The shared
+raw-event harness frame and its proof are pending in HARB-375; the existing
+Rune scenarios do not prove the route.
+The element tree and interaction fields still describe the Rune state the
+commands produced.
 `scenarios/rune-palette.json` opens the palette, selects a card by key, captures
 the preview, arms it through the Place button, places its prefab, and asserts
 the new object. `scenarios/rune-palette-800.json` repeats it at 800x600.
@@ -278,9 +282,9 @@ and asserts both the offset and the limit.
 `scenarios/rune-focus-loss.json` reports a held drag, loses focus, and asserts
 the drag was cancelled and the game value did not change;
 `scenarios/rune-focus-loss-800.json` repeats it at 800x600.
-`scenarios/rune-ui.json` activates the status panel Debug action by key, opens
-the inspector, and writes `report.ui_tree`; `scenarios/rune-ui-800.json` repeats
-it at 800x600. `scenarios/rune-inspector.json` opens the inspector, selects a
+`scenarios/rune-ui.json` enters debug mode, opens the inspector through the
+`editor` command, and writes `report.ui_tree`; `scenarios/rune-ui-800.json`
+repeats it at 800x600. `scenarios/rune-inspector.json` opens the inspector, selects a
 crate, changes its body and absolute yaw, duplicates and deletes it, selects a
 lamp, changes its kind, colour, intensity, and range, changes the type weight,
 turns on the physics debug draw, and closes the rail.
@@ -343,11 +347,11 @@ defaults. `remove` deletes by id or name. Names survive undo and scene snapshots
 Enter debug mode before `editor`. The keyboard and harness build the same edit
 actions. Fields cover:
 
-- `open`, `select`, `palette_step`, and `palette_number` for the catalog. The
-  palette must be open before a catalog action; opening it starts at the next
-  prefab default (Crate until a placement is cancelled), and closing it discards
-  the tuned card. A palette action while placement is armed is refused; send
-  `cancel` first.
+- `open`, `inspector`, `select`, `palette_step`, and `palette_number` for the
+  catalog and rail. The palette must be open before a catalog action; opening
+  it starts at the next prefab default (Crate until a placement is cancelled),
+  and closing it discards the tuned card. A palette action while placement is
+  armed is refused; send `cancel` first. `inspector` opens or closes the rail.
 - `pick` arms the placement from the open palette. `height`, `yaw_deg`, `snap`,
   and `cancel` apply to the armed placement.
 - `place` for an exact transform without a placement ray.

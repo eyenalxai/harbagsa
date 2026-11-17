@@ -32,15 +32,6 @@ apply :: proc(ctx: Context, action: renderer.Ui_Action) -> Result {
 			return {handled = true, applied = true, closed_menu = true}
 		}
 		return {handled = true, applied = true}
-	case .Debug_Inspector:
-		if ctx.menu.open {
-			return edit_result(game.edit_fail(.Menu_Open))
-		}
-		if !ctx.debug.active {
-			game.debug_mode_toggle(ctx.debug, ctx.sim)
-		}
-		result := game.editor_set_inspector(&ctx.debug.editor, true)
-		return edit_result(result)
 	case .Toggle_Inspector:
 		return apply_edit(ctx, game.Inspector_Toggle{})
 	case .Palette_Select:

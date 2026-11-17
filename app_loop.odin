@@ -25,22 +25,16 @@ Loop :: struct {
 @(private)
 apply_frame_input :: proc(
 	loop: ^Loop,
-	window: ^platform.Window,
 	events: ^platform.Events,
 	intent: input.Frame_Input,
 ) {
-	// The menu owns the accumulator while it is open. The cursor sync reads the
-	// menu after the edit actions.
-	if intent.view.menu_toggle {
-		if loop.runtime.hud.menu.open {
-			game.menu_close(&loop.runtime.hud.menu)
-			loop.accumulator = 0
-		} else {
-			game.debug_mode_open_menu(&loop.runtime.debug, &loop.runtime.hud.menu)
-			loop.accumulator = game.SIMULATION_STEP
-			input.clear_latches(&loop.resolver)
-			game.menu_view(&loop.runtime.hud.menu, loop.runtime.debug.active, 0)
-		}
+	// The engine opens the menu. Rune owns closing it through Close_Menu, so a
+	// game menu-toggle never closes an open dialog.
+	if intent.view.menu_toggle && !loop.runtime.hud.menu.open {
+		game.debug_mode_open_menu(&loop.runtime.debug, &loop.runtime.hud.menu)
+		loop.accumulator = game.SIMULATION_STEP
+		input.clear_latches(&loop.resolver)
+		game.menu_view(&loop.runtime.hud.menu, loop.runtime.debug.active, 0)
 	}
 
 	if !loop.runtime.hud.menu.open {

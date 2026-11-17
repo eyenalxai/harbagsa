@@ -344,8 +344,9 @@ state, and whether the palette has freed the pointer. The menu sits beside it.
 _Avoid_: Focus (that word belongs to Selection), cursor state
 
 **Frame focus**:
-The whole ownership of one frame: the menu open flag and the editor focus, plus
-the pointer-free answer the cursor sync reads.
+The surface state one frame starts from: the menu open flag and the editor focus,
+plus the pointer-free answer. `src/input/route.odin` derives the input owner
+from it; the cursor sync reads the same focus after the frame's actions.
 _Avoid_: Input state, mode
 
 **Object palette**:
@@ -438,11 +439,21 @@ separate frame call.
 _Avoid_: Input state, controls
 
 **Frame input**:
-The resolved intent of one frame: the Input snapshot, the Editing actions, the
-menu intents, the view intents, and the pause and cursor state. `src/input` turns
-one `platform.Events` value into one `Frame_Input`. The resolver holds only the
-edge latches.
+The resolved game intent of one frame: the Input snapshot, the Editing actions,
+the menu intents, and the view intents. `src/input/route.odin` turns one
+`platform.Events` value into one `Routed_Frame`; the game intent and the UI
+batch are its two sinks. The resolver holds the edge latches, the source that
+pressed each held key, and the repeated edges shared by sources on the same key.
+A repeat or release follows the press to the same sink even after the owner
+changes.
 _Avoid_: Input state, input command
+
+**Input owner**:
+The one surface that owns one frame's input: World, Menu, Inspector, Palette, or
+Placement. Every raw event is copied to exactly one sink, the game intent or the
+UI batch. Sources that press the same key share one sink edge, so releasing one
+source does not clear another.
+_Avoid_: Input mode, input focus
 
 **Settings**:
 The runtime window, interface, and input choices: window mode, display,
@@ -624,7 +635,7 @@ for the depth prepass and one for the lit pass.
 _Avoid_: Render pass (that word belongs to the Vulkan object)
 
 **HUD**:
-The Rune status panel: the player or debug rows, the notice, the capture hint, and the `Debug` action row. It is one Rune view, not an Odin draw pass. The status panel is a local kit-styled surface with the kit medium radius, raised elevation, and a translucent fill.
+The Rune status panel: the player or debug rows, the notice, the capture hint, and the `F2 · I` debug hint. It is one Rune view, not an Odin draw pass. The status panel is a local kit-styled surface with the kit medium radius, raised elevation, and a translucent fill.
 _Avoid_: UI, overlay draw
 
 **Settings dialog**:
@@ -662,8 +673,8 @@ key-repeat, and focus events travel beside it in one event batch.
 _Avoid_: UI frame (the Odin wrapper is `UI_Frame`), scene graph
 
 **UI action**:
-One flat intent returned by the shim, such as `Close_Menu`, `Debug_Inspector`,
-`Palette_Select`, `Palette_Close`, `Palette_Pick`, `Settings_Set`, `Object_Set`,
+One flat intent returned by the shim, such as `Close_Menu`, `Palette_Select`,
+`Palette_Close`, `Palette_Pick`, `Settings_Set`, `Object_Set`,
 `Object_Duplicate`, `Object_Delete`, `Lamp_Set`, `Lamp_Kind`, `Lamp_Color`,
 `Type_Weight_Set`, `Toggle_Inspector`, or `Physics_Debug`. The game applies the
 queue after `ui_draw`. The action kind set lives in `UI_Action_Kind` in
