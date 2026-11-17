@@ -1,5 +1,5 @@
 {
-  "note": "F2 proves the plain, one-modifier, and chord cases. F1, F3, and F5 prove the plain key does nothing and the chord fires. Ctrl+Shift with F1, F2, F3, or F5 fires the control.",
+  "note": "F2 proves the plain, one-modifier, extra-modifier, and chord cases. F1, F3, and F5 prove the plain key does nothing and the chord fires.",
   "size": "1280x720",
   "view": {
     "hud": true,
@@ -46,6 +46,36 @@
       "key": "F2",
       "state": "down",
       "mods": ["Shift"],
+      "expect_state": {
+        "input.view.debug_mode": false,
+        "editor.active": false
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "F2",
+      "state": "up"
+    },
+    {
+      "cmd": "event",
+      "key": "F2",
+      "state": "down",
+      "mods": ["Ctrl", "Shift", "Alt"],
+      "expect_state": {
+        "input.view.debug_mode": false,
+        "editor.active": false
+      }
+    },
+    {
+      "cmd": "event",
+      "key": "F2",
+      "state": "up"
+    },
+    {
+      "cmd": "event",
+      "key": "F2",
+      "state": "down",
+      "mods": ["Ctrl", "Shift", "Gui"],
       "expect_state": {
         "input.view.debug_mode": false,
         "editor.active": false

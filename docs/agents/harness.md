@@ -350,7 +350,7 @@ palette state still open without a renderer, but there is no frame to click.
 ```
 
 - `key`: a `platform.Key` name. `state` is `down` (default), `up`, or `repeat`.
-  `mods` holds `Shift` and `Ctrl` names.
+  `mods` holds `Shift`, `Ctrl`, `Alt`, and `Gui` names.
 - `pointer`: `[x, y]` in view points. `state` is `move` (default), `down`, or
   `up`; `button` is `left` (default) or `right`. Optional `look` is the same
   frame's relative `[dx, dy]` motion, applied when the pointer is captured,
